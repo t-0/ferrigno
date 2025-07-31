@@ -11652,7 +11652,7 @@ unsafe extern "C" fn luaF_getlocalname(
         return 0 as *const libc::c_char;
     }
 }
-unsafe extern "C" fn luaS_eqlngstr(mut a: *mut TString, mut b: *mut TString) -> i32 {
+unsafe extern "C" fn luaS_eqlngstr(mut a: *mut TString, mut b: *mut TString) -> bool {
     unsafe {
         let mut len: u64 = (*a).u.lnglen;
         return (a == b
@@ -11661,7 +11661,7 @@ unsafe extern "C" fn luaS_eqlngstr(mut a: *mut TString, mut b: *mut TString) -> 
                     ((*a).contents).as_mut_ptr() as *const libc::c_void,
                     ((*b).contents).as_mut_ptr() as *const libc::c_void,
                     len,
-                ) == 0 as i32) as i32;
+                ) == 0 as i32);
     }
 }
 unsafe extern "C" fn luaS_hash(
@@ -17118,28 +17118,28 @@ unsafe extern "C" fn equalkey(
     mut k1: *const TValue,
     mut n2: *const Node,
     mut deadok: i32,
-) -> i32 {
+) -> bool {
     unsafe {
         if (*k1).tt_ as i32 != (*n2).u.key_tt as i32
             && !(deadok != 0
                 && (*n2).u.key_tt as i32 == 9 as i32 + 2 as i32
                 && (*k1).tt_ as i32 & (1 as i32) << 6 as i32 != 0)
         {
-            return 0 as i32;
+            return false;
         }
         match (*n2).u.key_tt as i32 {
-            0 | 1 | 17 => return 1 as i32,
-            3 => return ((*k1).value_.i == (*n2).u.key_val.i) as i32,
-            19 => return ((*k1).value_.n == (*n2).u.key_val.n) as i32,
-            2 => return ((*k1).value_.p == (*n2).u.key_val.p) as i32,
-            22 => return ((*k1).value_.f == (*n2).u.key_val.f) as i32,
+            0 | 1 | 17 => return true,
+            3 => return ((*k1).value_.i == (*n2).u.key_val.i),
+            19 => return ((*k1).value_.n == (*n2).u.key_val.n),
+            2 => return ((*k1).value_.p == (*n2).u.key_val.p),
+            22 => return ((*k1).value_.f == (*n2).u.key_val.f),
             84 => {
                 return luaS_eqlngstr(
                     &mut (*((*k1).value_.gc as *mut GCUnion)).ts,
                     &mut (*((*n2).u.key_val.gc as *mut GCUnion)).ts,
                 );
             }
-            _ => return ((*k1).value_.gc == (*n2).u.key_val.gc) as i32,
+            _ => return ((*k1).value_.gc == (*n2).u.key_val.gc),
         };
     }
 }
@@ -17186,7 +17186,7 @@ unsafe extern "C" fn getgeneric(
     unsafe {
         let mut n: *mut Node = mainpositionTV(t, key);
         loop {
-            if equalkey(key, n, deadok) != 0 {
+            if equalkey(key, n, deadok) {
                 return &mut (*n).i_val;
             } else {
                 let mut nx: i32 = (*n).u.next;
@@ -21306,7 +21306,7 @@ unsafe extern "C" fn luaV_equalobj(
                     == &mut (*((*t2).value_.gc as *mut GCUnion)).ts as *mut TString;
             }
             20 => {
-                return 0 != luaS_eqlngstr(
+                return luaS_eqlngstr(
                     &mut (*((*t1).value_.gc as *mut GCUnion)).ts,
                     &mut (*((*t2).value_.gc as *mut GCUnion)).ts,
                 );
