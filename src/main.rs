@@ -7126,11 +7126,9 @@ unsafe extern "C" fn luaO_hexavalue(mut c: libc::c_int) -> libc::c_int { unsafe 
 unsafe extern "C" fn isneg(mut s: *mut *const libc::c_char) -> libc::c_int { unsafe {
     if **s as libc::c_int == '-' as i32 {
         *s = (*s).offset(1);
-        *s;
         return 1 as libc::c_int;
     } else if **s as libc::c_int == '+' as i32 {
         *s = (*s).offset(1);
-        *s;
     }
     return 0 as libc::c_int;
 }}
@@ -16532,7 +16530,6 @@ unsafe extern "C" fn countint(
     if k != 0 as libc::c_int as libc::c_uint {
         let ref mut fresh129 = *nums.offset(luaO_ceillog2(k) as isize);
         *fresh129 = (*fresh129).wrapping_add(1);
-        *fresh129;
         return 1 as libc::c_int;
     } else {
         return 0 as libc::c_int
@@ -30138,7 +30135,6 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> libc::c_int { unsafe {
         &mut tmr;
         stm = gmtime(&mut t);
         s = s.offset(1);
-        s;
     } else {
         &mut tmr;
         stm = localtime(&mut t);
@@ -37160,7 +37156,6 @@ unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> libc::c_int { unsafe {
     if status == 0 as libc::c_int {
         lua_rotate(L, -(2 as libc::c_int), -(1 as libc::c_int));
         lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
-        *line.offset(0 as libc::c_int as isize) as libc::c_int != '\0' as i32;
     } else {
         lua_settop(L, -(2 as libc::c_int) - 1 as libc::c_int);
     }
