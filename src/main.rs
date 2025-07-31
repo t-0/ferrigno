@@ -180,7 +180,6 @@ pub struct __jmp_buf_tag {
 }
 pub type jmp_buf = [__jmp_buf_tag; 1];
 pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
-pub type va_list = __builtin_va_list;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _IO_FILE {
@@ -214,7 +213,6 @@ pub struct _IO_FILE {
     pub _mode: i32,
     pub _unused2: [libc::c_char; 20],
 }
-pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -564,7 +562,7 @@ pub struct Prototype {
     pub tt: u8,
     pub marked: u8,
     pub numparams: u8,
-    pub is_vararg: bool,
+    pub isvararg: bool,
     pub maxstacksize: u8,
     pub sizeupvalues: i32,
     pub sizek: i32,
@@ -704,7 +702,7 @@ pub const OP_LOADKX: OpCode = 4;
 pub const OP_LOADK: OpCode = 3;
 pub const OP_GETUPVAL: OpCode = 9;
 pub const OP_MOVE: OpCode = 0;
-pub type OpCode = libc::c_uint;
+pub type OpCode = u32;
 pub const OP_VARARGPREP: OpCode = 81;
 pub const OP_VARARG: OpCode = 80;
 pub const OP_CLOSURE: OpCode = 79;
@@ -788,7 +786,6 @@ pub const iABC: OpMode = 0;
 pub const iABx: OpMode = 1;
 pub const isJ: OpMode = 4;
 pub const iAsBx: OpMode = 2;
-pub type l_uacf64 = f64;
 pub type l_uacInt = libc::c_longlong;
 pub type F2Imod = libc::c_uint;
 pub const F2Iceil: F2Imod = 2;
@@ -970,7 +967,7 @@ pub struct ExpressionDescription {
     pub t: i32,
     pub f: i32,
 }
-pub type ExpressionKind = libc::c_uint;
+pub type ExpressionKind = u8;
 pub const VVARARG: ExpressionKind = 19;
 pub const VCALL: ExpressionKind = 18;
 pub const VRELOC: ExpressionKind = 17;
@@ -997,7 +994,7 @@ pub struct LHSAssign {
     pub prev: *mut LHSAssign,
     pub v: ExpressionDescription,
 }
-pub type BinaryOperator = libc::c_uint;
+pub type BinaryOperator = u8;
 pub const OPR_NOBINOPR: BinaryOperator = 21;
 pub const OPR_OR: BinaryOperator = 20;
 pub const OPR_AND: BinaryOperator = 19;
@@ -1632,7 +1629,7 @@ unsafe extern "C" fn rethook(mut L: *mut State, mut ci: *mut CallInfo, mut nres:
             let mut ftransfer: i32 = 0;
             if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
                 let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
-                if (*p).is_vararg {
+                if (*p).isvararg {
                     delta = (*ci).u.l.nextraargs + (*p).numparams as i32 + 1 as i32;
                 }
             }
@@ -5524,7 +5521,7 @@ unsafe extern "C" fn findvararg(
     mut pos: *mut StkId,
 ) -> *const libc::c_char {
     unsafe {
-        if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_vararg {
+        if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).isvararg {
             let mut nextra: i32 = (*ci).u.l.nextraargs;
             if n >= -nextra {
                 *pos = ((*ci).func.p)
@@ -5729,7 +5726,7 @@ unsafe extern "C" fn collectvalidlines(mut L: *mut State, mut f: *mut Closure) {
                     tt_: 0,
                 };
                 v.tt_ = (1 as i32 | (1 as i32) << 4 as i32) as u8;
-                if !(*p).is_vararg {
+                if !(*p).isvararg {
                     i = 0 as i32;
                 } else {
                     currentline = nextline(p, currentline, 0 as i32);
@@ -5796,7 +5793,7 @@ unsafe extern "C" fn auxgetinfo(
                         (*ar).isvararg = true;
                         (*ar).nparams = 0 as i32 as libc::c_uchar;
                     } else {
-                        (*ar).isvararg = (*(*f).l.p).is_vararg;
+                        (*ar).isvararg = (*(*f).l.p).isvararg;
                         (*ar).nparams = (*(*f).l.p).numparams;
                     }
                 }
@@ -6616,7 +6613,7 @@ unsafe extern "C" fn luaG_tracecall(mut L: *mut State) -> i32 {
         let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
         ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1);
         if (*ci).u.l.savedpc == (*p).code as *const Instruction {
-            if (*p).is_vararg {
+            if (*p).isvararg {
                 return 0 as i32;
             } else if (*ci).callstatus as i32 & (1 as i32) << 6 as i32 == 0
             {
@@ -7780,7 +7777,7 @@ unsafe extern "C" fn luaO_pushvfstring(
                         tt_: 0,
                     };
                     let mut io_1: *mut TValue = &mut num_1;
-                    (*io_1).value_.n = argp.arg::<l_uacf64>();
+                    (*io_1).value_.n = argp.arg::<f64>();
                     (*io_1).tt_ =
                         (3 as i32 | (1 as i32) << 4 as i32) as u8;
                     addnum2buff(&mut buff, &mut num_1);
@@ -11571,7 +11568,7 @@ unsafe extern "C" fn luaF_newproto(mut L: *mut State) -> *mut Prototype {
         (*f).upvalues = 0 as *mut UpValueueDescription;
         (*f).sizeupvalues = 0 as i32;
         (*f).numparams = 0 as i32 as u8;
-        (*f).is_vararg = false;
+        (*f).isvararg = false;
         (*f).maxstacksize = 0 as i32 as u8;
         (*f).locvars = 0 as *mut LocalVariable;
         (*f).sizelocvars = 0 as i32;
@@ -12494,7 +12491,7 @@ unsafe extern "C" fn loadFunction(
         (*f).linedefined = loadInt(S);
         (*f).lastlinedefined = loadInt(S);
         (*f).numparams = loadByte(S);
-        (*f).is_vararg = 0 != loadByte(S);
+        (*f).isvararg = 0 != loadByte(S);
         (*f).maxstacksize = loadByte(S);
         loadCode(S, f);
         loadConstants(S, f);
@@ -12890,7 +12887,7 @@ unsafe extern "C" fn dumpFunction(
         dumpInt(D, (*f).linedefined);
         dumpInt(D, (*f).lastlinedefined);
         dumpByte(D, (*f).numparams as i32);
-        dumpByte(D, if (*f).is_vararg { 1 } else { 0 });
+        dumpByte(D, if (*f).isvararg { 1 } else { 0 });
         dumpByte(D, (*f).maxstacksize as i32);
         dumpCode(D, f);
         dumpConstants(D, f);
@@ -14143,7 +14140,7 @@ unsafe extern "C" fn constructor(mut ls: *mut LexicalState, mut t: *mut Expressi
 }
 unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32) {
     unsafe {
-        (*(*fs).f).is_vararg = true;
+        (*(*fs).f).isvararg = true;
         luaK_codeABCk(
             fs,
             OP_VARARGPREP,
@@ -14423,7 +14420,7 @@ unsafe extern "C" fn simpleexp(mut ls: *mut LexicalState, mut v: *mut Expression
             }
             280 => {
                 let mut fs: *mut FunctionState = (*ls).fs;
-                if !(*(*fs).f).is_vararg {
+                if !(*(*fs).f).isvararg {
                     luaX_syntaxerror(
                         ls,
                         b"cannot use '...' outside a vararg function\0" as *const u8
@@ -20496,7 +20493,7 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                 as OpCode as libc::c_uint
             {
                 71 | 72 => {
-                    if !((*fs).needclose as i32 != 0 || (*p).is_vararg)
+                    if !((*fs).needclose as i32 != 0 || (*p).isvararg)
                     {
                         current_block_7 = 12599329904712511516;
                     } else {
@@ -20532,7 +20529,7 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                                 & !(!(0 as i32 as Instruction) << 1 as i32)
                                     << 0 as i32 + 7 as i32 + 8 as i32;
                     }
-                    if (*p).is_vararg {
+                    if (*p).isvararg {
                         *pc = *pc
                             & !(!(!(0 as i32 as Instruction) << 8 as i32)
                                 << 0 as i32
