@@ -31373,13 +31373,10 @@ unsafe extern "C" fn setfield(
 unsafe extern "C" fn setboolfield(
     mut L: *mut State,
     mut key: *const libc::c_char,
-    mut value: i32,
+    value: bool,
 ) {
     unsafe {
-        if value < 0 as i32 {
-            return;
-        }
-        lua_pushboolean(L, 0 != value);
+        lua_pushboolean(L, value);
         lua_setfield(L, -(2 as i32), key);
     }
 }
@@ -31436,7 +31433,7 @@ unsafe extern "C" fn setallfields(mut L: *mut State, mut stm: *mut tm) {
         setboolfield(
             L,
             b"isdst\0" as *const u8 as *const libc::c_char,
-            (*stm).tm_isdst,
+            0 != (*stm).tm_isdst,
         );
     }
 }
