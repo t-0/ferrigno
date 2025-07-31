@@ -5798,11 +5798,11 @@ unsafe extern "C" fn auxgetinfo(
                     }
                 }
                 116 => {
-                    (*ar).istailcall = (if !ci.is_null() {
+                    (*ar).istailcall = if !ci.is_null() {
                         0 != ((*ci).callstatus as i32 & ((1 as i32) << 5 as i32))
                     } else {
                         false
-                    });
+                    };
                 }
                 110 => {
                     (*ar).namewhat = getfuncname(L, ci, &mut (*ar).name);
@@ -11652,13 +11652,13 @@ unsafe extern "C" fn luaF_getlocalname(
 unsafe extern "C" fn luaS_eqlngstr(mut a: *mut TString, mut b: *mut TString) -> bool {
     unsafe {
         let mut len: u64 = (*a).u.lnglen;
-        return (a == b
+        return a == b
             || len == (*b).u.lnglen
                 && memcmp(
                     ((*a).contents).as_mut_ptr() as *const libc::c_void,
                     ((*b).contents).as_mut_ptr() as *const libc::c_void,
                     len,
-                ) == 0 as i32);
+                ) == 0 as i32;
     }
 }
 unsafe extern "C" fn luaS_hash(
@@ -17126,17 +17126,17 @@ unsafe extern "C" fn equalkey(
         }
         match (*n2).u.key_tt as i32 {
             0 | 1 | 17 => return true,
-            3 => return ((*k1).value_.i == (*n2).u.key_val.i),
-            19 => return ((*k1).value_.n == (*n2).u.key_val.n),
-            2 => return ((*k1).value_.p == (*n2).u.key_val.p),
-            22 => return ((*k1).value_.f == (*n2).u.key_val.f),
+            3 => return (*k1).value_.i == (*n2).u.key_val.i,
+            19 => return (*k1).value_.n == (*n2).u.key_val.n,
+            2 => return (*k1).value_.p == (*n2).u.key_val.p,
+            22 => return (*k1).value_.f == (*n2).u.key_val.f,
             84 => {
                 return luaS_eqlngstr(
                     &mut (*((*k1).value_.gc as *mut GCUnion)).ts,
                     &mut (*((*n2).u.key_val.gc as *mut GCUnion)).ts,
                 );
             }
-            _ => return ((*k1).value_.gc == (*n2).u.key_val.gc),
+            _ => return (*k1).value_.gc == (*n2).u.key_val.gc,
         };
     }
 }
