@@ -36704,12 +36704,11 @@ unsafe extern "C" fn checkupval(
 }
 unsafe extern "C" fn db_upvalueid(mut L: *mut State) -> i32 {
     unsafe {
-        let mut id: *mut libc::c_void =
-            checkupval(L, 1 as i32, 2 as i32, 0 as *mut i32);
-        if !id.is_null() {
-            lua_pushlightuserdata(L, id);
-        } else {
+        let mut id: *mut libc::c_void = checkupval(L, 1, 2, 0 as *mut i32);
+        if id.is_null() {
             lua_pushnil(L);
+        } else {
+            lua_pushlightuserdata(L, id);
         }
         return 1;
     }
