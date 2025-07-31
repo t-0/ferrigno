@@ -274,8 +274,8 @@ pub struct Debug {
     pub lastlinedefined: i32,
     pub nups: libc::c_uchar,
     pub nparams: libc::c_uchar,
-    pub isvararg: libc::c_char,
-    pub istailcall: libc::c_char,
+    pub isvararg: bool,
+    pub istailcall: bool,
     pub ftransfer: u16,
     pub ntransfer: u16,
     pub short_src: [libc::c_char; 60],
@@ -564,7 +564,7 @@ pub struct Prototype {
     pub tt: u8,
     pub marked: u8,
     pub numparams: u8,
-    pub is_vararg: u8,
+    pub is_vararg: bool,
     pub maxstacksize: u8,
     pub sizeupvalues: i32,
     pub sizek: i32,
@@ -1557,8 +1557,8 @@ unsafe extern "C" fn luaD_hook(
                 lastlinedefined: 0,
                 nups: 0,
                 nparams: 0,
-                isvararg: 0,
-                istailcall: 0,
+                isvararg: false,
+                istailcall: false,
                 ftransfer: 0,
                 ntransfer: 0,
                 short_src: [0; 60],
@@ -1632,7 +1632,7 @@ unsafe extern "C" fn rethook(mut L: *mut State, mut ci: *mut CallInfo, mut nres:
             let mut ftransfer: i32 = 0;
             if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
                 let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
-                if (*p).is_vararg != 0 {
+                if (*p).is_vararg {
                     delta = (*ci).u.l.nextraargs + (*p).numparams as i32 + 1 as i32;
                 }
             }
@@ -5524,7 +5524,7 @@ unsafe extern "C" fn findvararg(
     mut pos: *mut StkId,
 ) -> *const libc::c_char {
     unsafe {
-        if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_vararg != 0 {
+        if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_vararg {
             let mut nextra: i32 = (*ci).u.l.nextraargs;
             if n >= -nextra {
                 *pos = ((*ci).func.p)
@@ -5729,7 +5729,7 @@ unsafe extern "C" fn collectvalidlines(mut L: *mut State, mut f: *mut Closure) {
                     tt_: 0,
                 };
                 v.tt_ = (1 as i32 | (1 as i32) << 4 as i32) as u8;
-                if (*p).is_vararg == 0 {
+                if !(*p).is_vararg {
                     i = 0 as i32;
                 } else {
                     currentline = nextline(p, currentline, 0 as i32);
@@ -5793,19 +5793,19 @@ unsafe extern "C" fn auxgetinfo(
                         && (*f).c.tt as i32
                             == 6 as i32 | ((0 as i32) << 4 as i32))
                     {
-                        (*ar).isvararg = 1 as i32 as libc::c_char;
+                        (*ar).isvararg = true;
                         (*ar).nparams = 0 as i32 as libc::c_uchar;
                     } else {
-                        (*ar).isvararg = (*(*f).l.p).is_vararg as libc::c_char;
+                        (*ar).isvararg = (*(*f).l.p).is_vararg;
                         (*ar).nparams = (*(*f).l.p).numparams;
                     }
                 }
                 116 => {
                     (*ar).istailcall = (if !ci.is_null() {
-                        (*ci).callstatus as i32 & (1 as i32) << 5 as i32
+                        0 != ((*ci).callstatus as i32 & ((1 as i32) << 5 as i32))
                     } else {
-                        0 as i32
-                    }) as libc::c_char;
+                        false
+                    });
                 }
                 110 => {
                     (*ar).namewhat = getfuncname(L, ci, &mut (*ar).name);
@@ -6616,7 +6616,7 @@ unsafe extern "C" fn luaG_tracecall(mut L: *mut State) -> i32 {
         let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
         ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1);
         if (*ci).u.l.savedpc == (*p).code as *const Instruction {
-            if (*p).is_vararg != 0 {
+            if (*p).is_vararg {
                 return 0 as i32;
             } else if (*ci).callstatus as i32 & (1 as i32) << 6 as i32 == 0
             {
@@ -11571,7 +11571,7 @@ unsafe extern "C" fn luaF_newproto(mut L: *mut State) -> *mut Prototype {
         (*f).upvalues = 0 as *mut UpValueueDescription;
         (*f).sizeupvalues = 0 as i32;
         (*f).numparams = 0 as i32 as u8;
-        (*f).is_vararg = 0 as i32 as u8;
+        (*f).is_vararg = false;
         (*f).maxstacksize = 0 as i32 as u8;
         (*f).locvars = 0 as *mut LocalVariable;
         (*f).sizelocvars = 0 as i32;
@@ -12494,7 +12494,7 @@ unsafe extern "C" fn loadFunction(
         (*f).linedefined = loadInt(S);
         (*f).lastlinedefined = loadInt(S);
         (*f).numparams = loadByte(S);
-        (*f).is_vararg = loadByte(S);
+        (*f).is_vararg = 0 != loadByte(S);
         (*f).maxstacksize = loadByte(S);
         loadCode(S, f);
         loadConstants(S, f);
@@ -12890,7 +12890,7 @@ unsafe extern "C" fn dumpFunction(
         dumpInt(D, (*f).linedefined);
         dumpInt(D, (*f).lastlinedefined);
         dumpByte(D, (*f).numparams as i32);
-        dumpByte(D, (*f).is_vararg as i32);
+        dumpByte(D, if (*f).is_vararg { 1 } else { 0 });
         dumpByte(D, (*f).maxstacksize as i32);
         dumpCode(D, f);
         dumpConstants(D, f);
@@ -14143,7 +14143,7 @@ unsafe extern "C" fn constructor(mut ls: *mut LexicalState, mut t: *mut Expressi
 }
 unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32) {
     unsafe {
-        (*(*fs).f).is_vararg = 1 as i32 as u8;
+        (*(*fs).f).is_vararg = true;
         luaK_codeABCk(
             fs,
             OP_VARARGPREP,
@@ -14159,7 +14159,7 @@ unsafe extern "C" fn parlist(mut ls: *mut LexicalState) {
         let mut fs: *mut FunctionState = (*ls).fs;
         let mut f: *mut Prototype = (*fs).f;
         let mut nparams: i32 = 0 as i32;
-        let mut isvararg: i32 = 0 as i32;
+        let mut isvararg = false;
         if (*ls).t.token != ')' as i32 {
             loop {
                 match (*ls).t.token {
@@ -14169,7 +14169,7 @@ unsafe extern "C" fn parlist(mut ls: *mut LexicalState) {
                     }
                     280 => {
                         luaX_next(ls);
-                        isvararg = 1 as i32;
+                        isvararg = true;
                     }
                     _ => {
                         luaX_syntaxerror(
@@ -14178,14 +14178,14 @@ unsafe extern "C" fn parlist(mut ls: *mut LexicalState) {
                         );
                     }
                 }
-                if !(isvararg == 0 && testnext(ls, ',' as i32) != 0) {
+                if !(!isvararg) && testnext(ls, ',' as i32) != 0 {
                     break;
                 }
             }
         }
         adjustlocalvars(ls, nparams);
         (*f).numparams = (*fs).nactvar;
-        if isvararg != 0 {
+        if isvararg {
             setvararg(fs, (*f).numparams as i32);
         }
         luaK_reserveregs(fs, (*fs).nactvar as i32);
@@ -14423,7 +14423,7 @@ unsafe extern "C" fn simpleexp(mut ls: *mut LexicalState, mut v: *mut Expression
             }
             280 => {
                 let mut fs: *mut FunctionState = (*ls).fs;
-                if (*(*fs).f).is_vararg == 0 {
+                if !(*(*fs).f).is_vararg {
                     luaX_syntaxerror(
                         ls,
                         b"cannot use '...' outside a vararg function\0" as *const u8
@@ -20496,7 +20496,7 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                 as OpCode as libc::c_uint
             {
                 71 | 72 => {
-                    if !((*fs).needclose as i32 != 0 || (*p).is_vararg as i32 != 0)
+                    if !((*fs).needclose as i32 != 0 || (*p).is_vararg)
                     {
                         current_block_7 = 12599329904712511516;
                     } else {
@@ -20532,7 +20532,7 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                                 & !(!(0 as i32 as Instruction) << 1 as i32)
                                     << 0 as i32 + 7 as i32 + 8 as i32;
                     }
-                    if (*p).is_vararg != 0 {
+                    if (*p).is_vararg {
                         *pc = *pc
                             & !(!(!(0 as i32 as Instruction) << 8 as i32)
                                 << 0 as i32
@@ -26651,8 +26651,8 @@ unsafe extern "C" fn lastlevel(mut L: *mut State) -> i32 {
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -26702,8 +26702,8 @@ pub unsafe extern "C" fn luaL_traceback(
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -26764,7 +26764,7 @@ pub unsafe extern "C" fn luaL_traceback(
                 luaL_addvalue(&mut b);
                 pushfuncname(L, &mut ar);
                 luaL_addvalue(&mut b);
-                if ar.istailcall != 0 {
+                if ar.istailcall {
                     luaL_addstring(
                         &mut b,
                         b"\n\t(...tail calls...)\0" as *const u8 as *const libc::c_char,
@@ -26794,8 +26794,8 @@ pub unsafe extern "C" fn luaL_argerror(
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -26885,8 +26885,8 @@ pub unsafe extern "C" fn luaL_where(mut L: *mut State, mut level: i32) {
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -28519,9 +28519,9 @@ unsafe extern "C" fn luaB_collectgarbage(mut L: *mut State) -> i32 {
                 }
             }
             9 => {
-                let mut res_0: i32 = lua_gc(L, o);
-                if !(res_0 == -(1 as i32)) {
-                    lua_pushboolean(L, 0 != res_0);
+                let mut res: i32 = lua_gc(L, o);
+                if !(res == -(1 as i32)) {
+                    lua_pushboolean(L, 0 != res);
                     return 1;
                 }
             }
@@ -29312,8 +29312,8 @@ unsafe extern "C" fn auxstatus(mut L: *mut State, mut co: *mut State) -> i32 {
                         lastlinedefined: 0,
                         nups: 0,
                         nparams: 0,
-                        isvararg: 0,
-                        istailcall: 0,
+                        isvararg: false,
+                        istailcall: false,
                         ftransfer: 0,
                         ntransfer: 0,
                         short_src: [0; 60],
@@ -36375,10 +36375,10 @@ unsafe extern "C" fn settabsi(
 unsafe extern "C" fn settabsb(
     mut L: *mut State,
     mut k: *const libc::c_char,
-    mut v: i32,
+    value: bool,
 ) {
     unsafe {
-        lua_pushboolean(L, 0 != v);
+        lua_pushboolean(L, value);
         lua_setfield(L, -(2 as i32), k);
     }
 }
@@ -36410,8 +36410,8 @@ unsafe extern "C" fn db_getinfo(mut L: *mut State) -> i32 {
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -36500,7 +36500,7 @@ unsafe extern "C" fn db_getinfo(mut L: *mut State) -> i32 {
             settabsb(
                 L,
                 b"isvararg\0" as *const u8 as *const libc::c_char,
-                ar.isvararg as i32,
+                ar.isvararg,
             );
         }
         if !(strchr(options, 'n' as i32)).is_null() {
@@ -36527,7 +36527,7 @@ unsafe extern "C" fn db_getinfo(mut L: *mut State) -> i32 {
             settabsb(
                 L,
                 b"istailcall\0" as *const u8 as *const libc::c_char,
-                ar.istailcall as i32,
+                ar.istailcall,
             );
         }
         if !(strchr(options, 'L' as i32)).is_null() {
@@ -36561,8 +36561,8 @@ unsafe extern "C" fn db_getlocal(mut L: *mut State) -> i32 {
                 lastlinedefined: 0,
                 nups: 0,
                 nparams: 0,
-                isvararg: 0,
-                istailcall: 0,
+                isvararg: false,
+                istailcall: false,
                 ftransfer: 0,
                 ntransfer: 0,
                 short_src: [0; 60],
@@ -36612,8 +36612,8 @@ unsafe extern "C" fn db_setlocal(mut L: *mut State) -> i32 {
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            isvararg: 0,
-            istailcall: 0,
+            isvararg: false,
+            istailcall: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
