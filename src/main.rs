@@ -1,7 +1,6 @@
 #![allow(
     mutable_transmutes,
     non_camel_case_types,
-    non_snake_case,
     static_mut_refs,
     non_upper_case_globals
 )]
