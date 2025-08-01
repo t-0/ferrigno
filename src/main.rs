@@ -2678,7 +2678,7 @@ pub unsafe extern "C" fn lua_closeslot(state: *mut State, idx: i32) {
     }
 }
 #[inline]
-unsafe extern "C" fn reverse(mut state: *mut State, mut from: StackID, mut to: StackID) {
+unsafe extern "C" fn reverse(state: *mut State, mut from: StackID, mut to: StackID) {
     unsafe {
         while from < to {
             let mut temp: TValue = TValue {
@@ -2794,7 +2794,7 @@ pub unsafe extern "C" fn lua_type(state: *mut State, idx: i32) -> i32 {
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_typename(
-    mut state: *mut State,
+    state: *mut State,
     t: i32,
 ) -> *const libc::c_char {
     unsafe {
@@ -4847,7 +4847,7 @@ unsafe extern "C" fn luae_setdebt(g: *mut Global, mut debt: i64) {
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(
-    mut state: *mut State,
+    state: *mut State,
     mut _limit: libc::c_uint,
 ) -> i32 {
     return 200 as i32;
@@ -21689,7 +21689,7 @@ unsafe extern "C" fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 {
         };
     }
 }
-unsafe extern "C" fn luav_modf(mut state: *mut State, m: f64, n: f64) -> f64 {
+unsafe extern "C" fn luav_modf(state: *mut State, m: f64, n: f64) -> f64 {
     unsafe {
         let mut r: f64 = 0.;
         r = fmod(m, n);
@@ -27466,7 +27466,7 @@ pub unsafe extern "C" fn luaL_unref(
     }
 }
 unsafe extern "C" fn getF(
-    mut state: *mut State,
+    state: *mut State,
     ud: *mut libc::c_void,
     size: *mut u64,
 ) -> *const libc::c_char {
@@ -27633,7 +27633,7 @@ pub unsafe extern "C" fn luaL_loadfilex(
     }
 }
 unsafe extern "C" fn getS(
-    mut state: *mut State,
+    state: *mut State,
     ud: *mut libc::c_void,
     size: *mut u64,
 ) -> *const libc::c_char {
@@ -28563,7 +28563,7 @@ unsafe extern "C" fn luab_next(state: *mut State) -> i32 {
     }
 }
 unsafe extern "C" fn pairscont(
-    mut state: *mut State,
+    state: *mut State,
     mut _status: i32,
     mut _k: i64,
 ) -> i32 {
@@ -33685,7 +33685,7 @@ unsafe extern "C" fn addquoted(
     }
 }
 unsafe extern "C" fn quotefloat(
-    mut state: *mut State,
+    state: *mut State,
     buff: *mut libc::c_char,
     n: f64,
 ) -> i32 {
