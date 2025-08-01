@@ -2617,7 +2617,7 @@ pub unsafe extern "C" fn lua_atpanic(
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_version(mut state: *mut State) -> f64 {
+pub unsafe extern "C" fn lua_version(state: *mut State) -> f64 {
     return 504 as i32 as f64;
 }
 #[unsafe(no_mangle)]
