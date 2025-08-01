@@ -3,8 +3,7 @@
     non_camel_case_types,
     non_snake_case,
     static_mut_refs,
-    non_upper_case_globals,
-    unused_assignments
+    non_upper_case_globals
 )]
 #![feature(c_variadic, extern_types)]
 unsafe extern "C" {
