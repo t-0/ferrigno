@@ -1055,7 +1055,7 @@ pub const TK_THEN: RESERVED = 274;
 #[repr(C)]
 pub struct LoadState {
     pub state: *mut State,
-    pub Z: *mut ZIO,
+    pub zio: *mut ZIO,
     pub name: *const libc::c_char,
 }
 #[derive(Copy, Clone)]
@@ -2396,7 +2396,7 @@ unsafe extern "C" fn f_parser(state: *mut State, ud: *mut libc::c_void) {
                 (*p).mode,
                 b"binary\0" as *const u8 as *const libc::c_char,
             );
-            cl = luaU_undump(state, (*p).z, (*p).name);
+            cl = luau_undump(state, (*p).z, (*p).name);
         } else {
             checkmode(state, (*p).mode, b"text\0" as *const u8 as *const libc::c_char);
             cl = luay_parser(state, (*p).z, &mut (*p).buff, &mut (*p).dyd, (*p).name, c);
@@ -3290,10 +3290,10 @@ pub unsafe extern "C" fn lua_pushcclosure(
                 (*io1).value_ = (*io2).value_;
                 (*io1).tt_ = (*io2).tt_;
             }
-            let io_0: *mut TValue = &mut (*(*state).top.p).value;
+            let io0: *mut TValue = &mut (*(*state).top.p).value;
             let x_: *mut CClosure = cl;
-            (*io_0).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io_0).tt_ = (6 as i32
+            (*io0).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
+            (*io0).tt_ = (6 as i32
                 | (2 as i32) << 4 as i32
                 | (1 as i32) << 6 as i32) as u8;
             (*state).top.p = ((*state).top.p).offset(1);
@@ -4296,7 +4296,7 @@ pub unsafe extern "C" fn lua_dump(
                 | (0 as i32) << 4 as i32
                 | (1 as i32) << 6 as i32
         {
-            status = luaU_dump(
+            status = luau_dump(
                 state,
                 (*((*o).value_.gc as *mut GCUnion)).cl.l.p,
                 writer_0,
@@ -4999,20 +4999,20 @@ unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) {
             2 as i32 as libc::c_uint,
             0 as i32 as libc::c_uint,
         );
-        let io_0: *mut TValue = &mut *((*registry).array)
+        let io0: *mut TValue = &mut *((*registry).array)
             .offset((1 as i32 - 1 as i32) as isize)
             as *mut TValue;
-        let x__0: *mut State = state;
-        (*io_0).value_.gc = &mut (*(x__0 as *mut GCUnion)).gc;
-        (*io_0).tt_ = (8 as i32
+        let x0: *mut State = state;
+        (*io0).value_.gc = &mut (*(x0 as *mut GCUnion)).gc;
+        (*io0).tt_ = (8 as i32
             | (0 as i32) << 4 as i32
             | (1 as i32) << 6 as i32) as u8;
-        let io_1: *mut TValue = &mut *((*registry).array)
+        let io1: *mut TValue = &mut *((*registry).array)
             .offset((2 as i32 - 1 as i32) as isize)
             as *mut TValue;
-        let x__1: *mut Table = luah_new(state);
-        (*io_1).value_.gc = &mut (*(x__1 as *mut GCUnion)).gc;
-        (*io_1).tt_ = (5 as i32
+        let x1: *mut Table = luah_new(state);
+        (*io1).value_.gc = &mut (*(x1 as *mut GCUnion)).gc;
+        (*io1).tt_ = (5 as i32
             | (0 as i32) << 4 as i32
             | (1 as i32) << 6 as i32) as u8;
     }
@@ -7267,9 +7267,9 @@ unsafe extern "C" fn luaO_rawarith(
                         }
                     }) != 0
                 {
-                    let io_0: *mut TValue = res;
-                    (*io_0).value_.n = numarith(state, op, n1, n2);
-                    (*io_0).tt_ =
+                    let io0: *mut TValue = res;
+                    (*io0).value_.n = numarith(state, op, n1, n2);
+                    (*io0).tt_ =
                         (3 as i32 | (1 as i32) << 4 as i32) as u8;
                     return 1;
                 } else {
@@ -7284,9 +7284,9 @@ unsafe extern "C" fn luaO_rawarith(
                     && (*p2).tt_ as i32
                         == 3 as i32 | (0 as i32) << 4 as i32
                 {
-                    let io_1: *mut TValue = res;
-                    (*io_1).value_.i = intarith(state, op, (*p1).value_.i, (*p2).value_.i);
-                    (*io_1).tt_ =
+                    let io1: *mut TValue = res;
+                    (*io1).value_.i = intarith(state, op, (*p1).value_.i, (*p2).value_.i);
+                    (*io1).tt_ =
                         (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
                     return 1;
                 } else if (if (*p1).tt_ as i32
@@ -7528,9 +7528,9 @@ unsafe extern "C" fn luaO_str2num(s: *const libc::c_char, o: *mut TValue) -> u64
         } else {
             e = l_str2d(s, &mut n);
             if !e.is_null() {
-                let io_0: *mut TValue = o;
-                (*io_0).value_.n = n;
-                (*io_0).tt_ =
+                let io0: *mut TValue = o;
+                (*io0).value_.n = n;
+                (*io0).tt_ =
                     (3 as i32 | (1 as i32) << 4 as i32) as u8;
             } else {
                 return 0 as i32 as u64;
@@ -7731,9 +7731,9 @@ unsafe extern "C" fn luaO_pushvfstring(
                         },
                         tt_: 0,
                     };
-                    let io_0: *mut TValue = &mut num_0;
-                    (*io_0).value_.i = argp.arg::<i64>();
-                    (*io_0).tt_ =
+                    let io0: *mut TValue = &mut num_0;
+                    (*io0).value_.i = argp.arg::<i64>();
+                    (*io0).tt_ =
                         (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
                     addnum2buff(&mut buff, &mut num_0);
                 }
@@ -7744,9 +7744,9 @@ unsafe extern "C" fn luaO_pushvfstring(
                         },
                         tt_: 0,
                     };
-                    let io_1: *mut TValue = &mut num_1;
-                    (*io_1).value_.n = argp.arg::<f64>();
-                    (*io_1).tt_ =
+                    let io1: *mut TValue = &mut num_1;
+                    (*io1).value_.n = argp.arg::<f64>();
+                    (*io1).tt_ =
                         (3 as i32 | (1 as i32) << 4 as i32) as u8;
                     addnum2buff(&mut buff, &mut num_1);
                 }
@@ -8316,9 +8316,9 @@ unsafe extern "C" fn luaT_callorderiTM(
             (*io).value_.n = v2 as f64;
             (*io).tt_ = (3 as i32 | (1 as i32) << 4 as i32) as u8;
         } else {
-            let io_0: *mut TValue = &mut aux;
-            (*io_0).value_.i = v2 as i64;
-            (*io_0).tt_ = (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
+            let io0: *mut TValue = &mut aux;
+            (*io0).value_.i = v2 as i64;
+            (*io0).tt_ = (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
         }
         if flip != 0 {
             p2 = p1;
@@ -12030,50 +12030,50 @@ unsafe extern "C" fn luas_newudata(
         return u;
     }
 }
-unsafe extern "C" fn error(S: *mut LoadState, why: *const libc::c_char) -> ! {
+unsafe extern "C" fn error(loadstate: *mut LoadState, why: *const libc::c_char) -> ! {
     unsafe {
         luaO_pushfstring(
-            (*S).state,
+            (*loadstate).state,
             b"%s: bad binary format (%s)\0" as *const u8 as *const libc::c_char,
-            (*S).name,
+            (*loadstate).name,
             why,
         );
-        luad_throw((*S).state, 3 as i32);
+        luad_throw((*loadstate).state, 3 as i32);
     }
 }
-unsafe extern "C" fn loadBlock(S: *mut LoadState, b: *mut libc::c_void, size: u64) {
+unsafe extern "C" fn loadblock(loadstate: *mut LoadState, b: *mut libc::c_void, size: u64) {
     unsafe {
-        if luaZ_read((*S).Z, b, size) != 0 as i32 as libc::c_ulong {
-            error(S, b"truncated chunk\0" as *const u8 as *const libc::c_char);
+        if luaZ_read((*loadstate).zio, b, size) != 0 as i32 as libc::c_ulong {
+            error(loadstate, b"truncated chunk\0" as *const u8 as *const libc::c_char);
         }
     }
 }
-unsafe extern "C" fn loadByte(S: *mut LoadState) -> u8 {
+unsafe extern "C" fn loadbyte(loadstate: *mut LoadState) -> u8 {
     unsafe {
-        let fresh25 = (*(*S).Z).n;
-        (*(*S).Z).n = ((*(*S).Z).n).wrapping_sub(1);
+        let fresh25 = (*(*loadstate).zio).n;
+        (*(*loadstate).zio).n = ((*(*loadstate).zio).n).wrapping_sub(1);
         let b: i32 = if fresh25 > 0 as i32 as libc::c_ulong {
-            let fresh26 = (*(*S).Z).p;
-            (*(*S).Z).p = ((*(*S).Z).p).offset(1);
+            let fresh26 = (*(*loadstate).zio).p;
+            (*(*loadstate).zio).p = ((*(*loadstate).zio).p).offset(1);
             *fresh26 as libc::c_uchar as i32
         } else {
-            luaZ_fill((*S).Z)
+            luaZ_fill((*loadstate).zio)
         };
         if b == -(1 as i32) {
-            error(S, b"truncated chunk\0" as *const u8 as *const libc::c_char);
+            error(loadstate, b"truncated chunk\0" as *const u8 as *const libc::c_char);
         }
         return b as u8;
     }
 }
-unsafe extern "C" fn loadUnsigned(S: *mut LoadState, mut limit: u64) -> u64 {
+unsafe extern "C" fn loadunsigned(loadstate: *mut LoadState, mut limit: u64) -> u64 {
     unsafe {
         let mut x: u64 = 0 as i32 as u64;
         let mut b: i32 = 0;
         limit >>= 7 as i32;
         loop {
-            b = loadByte(S) as i32;
+            b = loadbyte(loadstate) as i32;
             if x >= limit {
-                error(S, b"integer overflow\0" as *const u8 as *const libc::c_char);
+                error(loadstate, b"integer overflow\0" as *const u8 as *const libc::c_char);
             }
             x = x << 7 as i32 | (b & 0x7f as i32) as libc::c_ulong;
             if !(b & 0x80 as i32 == 0 as i32) {
@@ -12083,21 +12083,21 @@ unsafe extern "C" fn loadUnsigned(S: *mut LoadState, mut limit: u64) -> u64 {
         return x;
     }
 }
-unsafe extern "C" fn loadSize(S: *mut LoadState) -> u64 {
+unsafe extern "C" fn loadsize(loadstate: *mut LoadState) -> u64 {
     unsafe {
-        return loadUnsigned(S, !(0 as i32 as u64));
+        return loadunsigned(loadstate, !(0 as i32 as u64));
     }
 }
-unsafe extern "C" fn loadInt(S: *mut LoadState) -> i32 {
+unsafe extern "C" fn loadint(loadstate: *mut LoadState) -> i32 {
     unsafe {
-        return loadUnsigned(S, 2147483647 as i32 as u64) as i32;
+        return loadunsigned(loadstate, 2147483647 as i32 as u64) as i32;
     }
 }
-unsafe extern "C" fn loadf64(S: *mut LoadState) -> f64 {
+unsafe extern "C" fn loadf64(loadstate: *mut LoadState) -> f64 {
     unsafe {
         let mut x: f64 = 0.;
-        loadBlock(
-            S,
+        loadblock(
+            loadstate,
             &mut x as *mut f64 as *mut libc::c_void,
             (1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<f64>() as libc::c_ulong),
@@ -12105,11 +12105,11 @@ unsafe extern "C" fn loadf64(S: *mut LoadState) -> f64 {
         return x;
     }
 }
-unsafe extern "C" fn loadi64(S: *mut LoadState) -> i64 {
+unsafe extern "C" fn loadi64(loadstate: *mut LoadState) -> i64 {
     unsafe {
         let mut x: i64 = 0;
-        loadBlock(
-            S,
+        loadblock(
+            loadstate,
             &mut x as *mut i64 as *mut libc::c_void,
             (1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<i64>() as libc::c_ulong),
@@ -12117,19 +12117,19 @@ unsafe extern "C" fn loadi64(S: *mut LoadState) -> i64 {
         return x;
     }
 }
-unsafe extern "C" fn loadStringN(S: *mut LoadState, p: *mut Prototype) -> *mut TString {
+unsafe extern "C" fn loadstringn(loadstate: *mut LoadState, p: *mut Prototype) -> *mut TString {
     unsafe {
-        let state: *mut State = (*S).state;
+        let state: *mut State = (*loadstate).state;
         let mut ts: *mut TString = 0 as *mut TString;
-        let mut size: u64 = loadSize(S);
+        let mut size: u64 = loadsize(loadstate);
         if size == 0 as i32 as libc::c_ulong {
             return 0 as *mut TString;
         } else {
             size = size.wrapping_sub(1);
             if size <= 40 as i32 as libc::c_ulong {
                 let mut buff: [libc::c_char; 40] = [0; 40];
-                loadBlock(
-                    S,
+                loadblock(
+                    loadstate,
                     buff.as_mut_ptr() as *mut libc::c_void,
                     size.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
                 );
@@ -12142,8 +12142,8 @@ unsafe extern "C" fn loadStringN(S: *mut LoadState, p: *mut Prototype) -> *mut T
                 (*io).tt_ =
                     ((*x_).tt as i32 | (1 as i32) << 6 as i32) as u8;
                 luad_inctop(state);
-                loadBlock(
-                    S,
+                loadblock(
+                    loadstate,
                     ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
                     size.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
                 );
@@ -12166,60 +12166,60 @@ unsafe extern "C" fn loadStringN(S: *mut LoadState, p: *mut Prototype) -> *mut T
         return ts;
     }
 }
-unsafe extern "C" fn loadString(S: *mut LoadState, p: *mut Prototype) -> *mut TString {
+unsafe extern "C" fn loadstring(loadstate: *mut LoadState, p: *mut Prototype) -> *mut TString {
     unsafe {
-        let st: *mut TString = loadStringN(S, p);
+        let st: *mut TString = loadstringn(loadstate, p);
         if st.is_null() {
             error(
-                S,
+                loadstate,
                 b"bad format for constant string\0" as *const u8 as *const libc::c_char,
             );
         }
         return st;
     }
 }
-unsafe extern "C" fn loadCode(S: *mut LoadState, f: *mut Prototype) {
+unsafe extern "C" fn loadcode(loadstate: *mut LoadState, f: *mut Prototype) {
     unsafe {
-        let n: i32 = loadInt(S);
+        let n: i32 = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<Instruction>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).code = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
             0 as i32,
         ) as *mut Instruction;
         (*f).sizecode = n;
-        loadBlock(
-            S,
+        loadblock(
+            loadstate,
             (*f).code as *mut libc::c_void,
             (n as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
         );
     }
 }
-unsafe extern "C" fn loadConstants(S: *mut LoadState, f: *mut Prototype) {
+unsafe extern "C" fn loadconstants(loadstate: *mut LoadState, f: *mut Prototype) {
     unsafe {
         let mut i: i32 = 0;
-        let n: i32 = loadInt(S);
+        let n: i32 = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<TValue>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).k = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<TValue>() as libc::c_ulong),
             0 as i32,
         ) as *mut TValue;
@@ -12233,7 +12233,7 @@ unsafe extern "C" fn loadConstants(S: *mut LoadState, f: *mut Prototype) {
         i = 0 as i32;
         while i < n {
             let o: *mut TValue = &mut *((*f).k).offset(i as isize) as *mut TValue;
-            let t: i32 = loadByte(S) as i32;
+            let t: i32 = loadbyte(loadstate) as i32;
             match t {
                 0 => {
                     (*o).tt_ =
@@ -12249,21 +12249,21 @@ unsafe extern "C" fn loadConstants(S: *mut LoadState, f: *mut Prototype) {
                 }
                 19 => {
                     let io: *mut TValue = o;
-                    (*io).value_.n = loadf64(S);
+                    (*io).value_.n = loadf64(loadstate);
                     (*io).tt_ =
                         (3 as i32 | (1 as i32) << 4 as i32) as u8;
                 }
                 3 => {
-                    let io_0: *mut TValue = o;
-                    (*io_0).value_.i = loadi64(S);
-                    (*io_0).tt_ =
+                    let io0: *mut TValue = o;
+                    (*io0).value_.i = loadi64(loadstate);
+                    (*io0).tt_ =
                         (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
                 }
                 4 | 20 => {
-                    let io_1: *mut TValue = o;
-                    let x_: *mut TString = loadString(S, f);
-                    (*io_1).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                    (*io_1).tt_ = ((*x_).tt as i32 | (1 as i32) << 6 as i32)
+                    let io1: *mut TValue = o;
+                    let x_: *mut TString = loadstring(loadstate, f);
+                    (*io1).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
+                    (*io1).tt_ = ((*x_).tt as i32 | (1 as i32) << 6 as i32)
                         as u8;
                 }
                 _ => {}
@@ -12272,21 +12272,21 @@ unsafe extern "C" fn loadConstants(S: *mut LoadState, f: *mut Prototype) {
         }
     }
 }
-unsafe extern "C" fn loadProtos(S: *mut LoadState, f: *mut Prototype) {
+unsafe extern "C" fn loadprotos(loadstate: *mut LoadState, f: *mut Prototype) {
     unsafe {
         let mut i: i32 = 0;
-        let n: i32 = loadInt(S);
+        let n: i32 = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<*mut Prototype>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).p = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<*mut Prototype>() as libc::c_ulong),
             0 as i32,
@@ -12301,7 +12301,7 @@ unsafe extern "C" fn loadProtos(S: *mut LoadState, f: *mut Prototype) {
         i = 0 as i32;
         while i < n {
             let ref mut fresh28 = *((*f).p).offset(i as isize);
-            *fresh28 = luaf_newproto((*S).state);
+            *fresh28 = luaf_newproto((*loadstate).state);
             if (*f).marked as i32 & (1 as i32) << 5 as i32 != 0
                 && (**((*f).p).offset(i as isize)).marked as i32
                     & ((1 as i32) << 3 as i32
@@ -12309,33 +12309,33 @@ unsafe extern "C" fn loadProtos(S: *mut LoadState, f: *mut Prototype) {
                     != 0
             {
                 luac_barrier_(
-                    (*S).state,
+                    (*loadstate).state,
                     &mut (*(f as *mut GCUnion)).gc,
                     &mut (*(*((*f).p).offset(i as isize) as *mut GCUnion)).gc,
                 );
             } else {
             };
-            loadFunction(S, *((*f).p).offset(i as isize), (*f).source);
+            loadfunction(loadstate, *((*f).p).offset(i as isize), (*f).source);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn loadUpvalues(S: *mut LoadState, f: *mut Prototype) {
+unsafe extern "C" fn loadupvalues(loadstate: *mut LoadState, f: *mut Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let mut n: i32 = 0;
-        n = loadInt(S);
+        n = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<UpValueueDescription>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).upvalues = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<UpValueueDescription>() as libc::c_ulong),
             0 as i32,
         ) as *mut UpValueueDescription;
@@ -12348,50 +12348,50 @@ unsafe extern "C" fn loadUpvalues(S: *mut LoadState, f: *mut Prototype) {
         }
         i = 0 as i32;
         while i < n {
-            (*((*f).upvalues).offset(i as isize)).instack = loadByte(S);
-            (*((*f).upvalues).offset(i as isize)).idx = loadByte(S);
-            (*((*f).upvalues).offset(i as isize)).kind = loadByte(S);
+            (*((*f).upvalues).offset(i as isize)).instack = loadbyte(loadstate);
+            (*((*f).upvalues).offset(i as isize)).idx = loadbyte(loadstate);
+            (*((*f).upvalues).offset(i as isize)).kind = loadbyte(loadstate);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn loadDebug(S: *mut LoadState, f: *mut Prototype) {
+unsafe extern "C" fn loaddebug(loadstate: *mut LoadState, f: *mut Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let mut n: i32 = 0;
-        n = loadInt(S);
+        n = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<i8>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).lineinfo = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<i8>() as libc::c_ulong),
             0 as i32,
         ) as *mut i8;
         (*f).sizelineinfo = n;
-        loadBlock(
-            S,
+        loadblock(
+            loadstate,
             (*f).lineinfo as *mut libc::c_void,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<i8>() as libc::c_ulong),
         );
-        n = loadInt(S);
+        n = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).abslineinfo = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as libc::c_ulong),
             0 as i32,
@@ -12399,22 +12399,22 @@ unsafe extern "C" fn loadDebug(S: *mut LoadState, f: *mut Prototype) {
         (*f).sizeabslineinfo = n;
         i = 0 as i32;
         while i < n {
-            (*((*f).abslineinfo).offset(i as isize)).pc = loadInt(S);
-            (*((*f).abslineinfo).offset(i as isize)).line = loadInt(S);
+            (*((*f).abslineinfo).offset(i as isize)).pc = loadint(loadstate);
+            (*((*f).abslineinfo).offset(i as isize)).line = loadint(loadstate);
             i += 1;
         }
-        n = loadInt(S);
+        n = loadint(loadstate);
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             >= ::core::mem::size_of::<u64>() as libc::c_ulong
             && (n as u64).wrapping_add(1 as i32 as libc::c_ulong)
                 > (!(0 as i32 as u64))
                     .wrapping_div(::core::mem::size_of::<LocalVariable>() as libc::c_ulong)
         {
-            luaM_toobig((*S).state);
+            luaM_toobig((*loadstate).state);
         } else {
         };
         (*f).locvars = luaM_malloc_(
-            (*S).state,
+            (*loadstate).state,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<LocalVariable>() as libc::c_ulong),
             0 as i32,
         ) as *mut LocalVariable;
@@ -12428,55 +12428,55 @@ unsafe extern "C" fn loadDebug(S: *mut LoadState, f: *mut Prototype) {
         i = 0 as i32;
         while i < n {
             let ref mut fresh31 = (*((*f).locvars).offset(i as isize)).varname;
-            *fresh31 = loadStringN(S, f);
-            (*((*f).locvars).offset(i as isize)).startpc = loadInt(S);
-            (*((*f).locvars).offset(i as isize)).endpc = loadInt(S);
+            *fresh31 = loadstringn(loadstate, f);
+            (*((*f).locvars).offset(i as isize)).startpc = loadint(loadstate);
+            (*((*f).locvars).offset(i as isize)).endpc = loadint(loadstate);
             i += 1;
         }
-        n = loadInt(S);
+        n = loadint(loadstate);
         if n != 0 as i32 {
             n = (*f).sizeupvalues;
         }
         i = 0 as i32;
         while i < n {
             let ref mut fresh32 = (*((*f).upvalues).offset(i as isize)).name;
-            *fresh32 = loadStringN(S, f);
+            *fresh32 = loadstringn(loadstate, f);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn loadFunction(
-    S: *mut LoadState,
+unsafe extern "C" fn loadfunction(
+    loadstate: *mut LoadState,
     f: *mut Prototype,
     psource: *mut TString,
 ) {
     unsafe {
-        (*f).source = loadStringN(S, f);
+        (*f).source = loadstringn(loadstate, f);
         if ((*f).source).is_null() {
             (*f).source = psource;
         }
-        (*f).linedefined = loadInt(S);
-        (*f).lastlinedefined = loadInt(S);
-        (*f).numparams = loadByte(S);
-        (*f).isvararg = 0 != loadByte(S);
-        (*f).maxstacksize = loadByte(S);
-        loadCode(S, f);
-        loadConstants(S, f);
-        loadUpvalues(S, f);
-        loadProtos(S, f);
-        loadDebug(S, f);
+        (*f).linedefined = loadint(loadstate);
+        (*f).lastlinedefined = loadint(loadstate);
+        (*f).numparams = loadbyte(loadstate);
+        (*f).isvararg = 0 != loadbyte(loadstate);
+        (*f).maxstacksize = loadbyte(loadstate);
+        loadcode(loadstate, f);
+        loadconstants(loadstate, f);
+        loadupvalues(loadstate, f);
+        loadprotos(loadstate, f);
+        loaddebug(loadstate, f);
     }
 }
 unsafe extern "C" fn checkliteral(
-    S: *mut LoadState,
+    loadstate: *mut LoadState,
     s: *const libc::c_char,
     msg: *const libc::c_char,
 ) {
     unsafe {
         let mut buff: [libc::c_char; 12] = [0; 12];
         let len: u64 = strlen(s);
-        loadBlock(
-            S,
+        loadblock(
+            loadstate,
             buff.as_mut_ptr() as *mut libc::c_void,
             len.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
@@ -12486,21 +12486,21 @@ unsafe extern "C" fn checkliteral(
             len,
         ) != 0 as i32
         {
-            error(S, msg);
+            error(loadstate, msg);
         }
     }
 }
 unsafe extern "C" fn fchecksize(
-    S: *mut LoadState,
+    loadstate: *mut LoadState,
     size: u64,
     tname: *const libc::c_char,
 ) {
     unsafe {
-        if loadByte(S) as libc::c_ulong != size {
+        if loadbyte(loadstate) as libc::c_ulong != size {
             error(
-                S,
+                loadstate,
                 luaO_pushfstring(
-                    (*S).state,
+                    (*loadstate).state,
                     b"%s size mismatch\0" as *const u8 as *const libc::c_char,
                     tname,
                 ),
@@ -12508,82 +12508,82 @@ unsafe extern "C" fn fchecksize(
         }
     }
 }
-unsafe extern "C" fn checkHeader(S: *mut LoadState) {
+unsafe extern "C" fn checkheader(loadstate: *mut LoadState) {
     unsafe {
         checkliteral(
-            S,
+            loadstate,
             &*(b"\x1BLua\0" as *const u8 as *const libc::c_char).offset(1 as i32 as isize),
             b"not a binary chunk\0" as *const u8 as *const libc::c_char,
         );
-        if loadByte(S) as i32
+        if loadbyte(loadstate) as i32
             != 504 as i32 / 100 as i32 * 16 as i32
                 + 504 as i32 % 100 as i32
         {
-            error(S, b"version mismatch\0" as *const u8 as *const libc::c_char);
+            error(loadstate, b"version mismatch\0" as *const u8 as *const libc::c_char);
         }
-        if loadByte(S) as i32 != 0 as i32 {
-            error(S, b"format mismatch\0" as *const u8 as *const libc::c_char);
+        if loadbyte(loadstate) as i32 != 0 as i32 {
+            error(loadstate, b"format mismatch\0" as *const u8 as *const libc::c_char);
         }
         checkliteral(
-            S,
+            loadstate,
             b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char,
             b"corrupted chunk\0" as *const u8 as *const libc::c_char,
         );
         fchecksize(
-            S,
+            loadstate,
             ::core::mem::size_of::<Instruction>() as libc::c_ulong,
             b"Instruction\0" as *const u8 as *const libc::c_char,
         );
         fchecksize(
-            S,
+            loadstate,
             ::core::mem::size_of::<i64>() as libc::c_ulong,
             b"i64\0" as *const u8 as *const libc::c_char,
         );
         fchecksize(
-            S,
+            loadstate,
             ::core::mem::size_of::<f64>() as libc::c_ulong,
             b"f64\0" as *const u8 as *const libc::c_char,
         );
-        if loadi64(S) != 0x5678 as i32 as libc::c_longlong {
+        if loadi64(loadstate) != 0x5678 as i32 as libc::c_longlong {
             error(
-                S,
+                loadstate,
                 b"integer format mismatch\0" as *const u8 as *const libc::c_char,
             );
         }
-        if loadf64(S) != 370.5f64 {
+        if loadf64(loadstate) != 370.5f64 {
             error(
-                S,
+                loadstate,
                 b"float format mismatch\0" as *const u8 as *const libc::c_char,
             );
         }
     }
 }
-unsafe extern "C" fn luaU_undump(
+unsafe extern "C" fn luau_undump(
     state: *mut State,
-    Z: *mut ZIO,
+    zio: *mut ZIO,
     name: *const libc::c_char,
 ) -> *mut LuaClosure {
     unsafe {
-        let mut S: LoadState = LoadState {
+        let mut loadstate: LoadState = LoadState {
             state: 0 as *mut State,
-            Z: 0 as *mut ZIO,
+            zio: 0 as *mut ZIO,
             name: 0 as *const libc::c_char,
         };
         let mut cl: *mut LuaClosure = 0 as *mut LuaClosure;
         if *name as i32 == '@' as i32 || *name as i32 == '=' as i32 {
-            S.name = name.offset(1 as i32 as isize);
+            loadstate.name = name.offset(1 as i32 as isize);
         } else if *name as i32
             == (*::core::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"\x1BLua\0"))
                 [0 as i32 as usize] as i32
         {
-            S.name = b"binary string\0" as *const u8 as *const libc::c_char;
+            loadstate.name = b"binary string\0" as *const u8 as *const libc::c_char;
         } else {
-            S.name = name;
+            loadstate.name = name;
         }
-        S.state = state;
-        S.Z = Z;
-        checkHeader(&mut S);
-        cl = luaf_newlclosure(state, loadByte(&mut S) as i32);
+        loadstate.state = state;
+        loadstate.zio = zio;
+        checkheader(&mut loadstate);
+        cl = luaf_newlclosure(state, loadbyte(&mut loadstate) as i32);
         let io: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut LuaClosure = cl;
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
@@ -12604,35 +12604,35 @@ unsafe extern "C" fn luaU_undump(
             );
         } else {
         };
-        loadFunction(&mut S, (*cl).p, 0 as *mut TString);
+        loadfunction(&mut loadstate, (*cl).p, 0 as *mut TString);
         return cl;
     }
 }
-unsafe extern "C" fn dumpBlock(
-    D: *mut DumpState,
+unsafe extern "C" fn dumpblock(
+    dumpstate: *mut DumpState,
     b: *const libc::c_void,
     size: u64,
 ) {
     unsafe {
-        if (*D).status == 0 as i32 && size > 0 as i32 as libc::c_ulong {
-            (*D).status =
-                (Some(((*D).writer).expect("non-null function pointer")))
-                    .expect("non-null function pointer")((*D).state, b, size, (*D).data);
+        if (*dumpstate).status == 0 as i32 && size > 0 as i32 as libc::c_ulong {
+            (*dumpstate).status =
+                (Some(((*dumpstate).writer).expect("non-null function pointer")))
+                    .expect("non-null function pointer")((*dumpstate).state, b, size, (*dumpstate).data);
         }
     }
 }
-unsafe extern "C" fn dumpByte(D: *mut DumpState, y: i32) {
+unsafe extern "C" fn dumpbyte(dumpstate: *mut DumpState, y: i32) {
     unsafe {
         let mut x: u8 = y as u8;
-        dumpBlock(
-            D,
+        dumpblock(
+            dumpstate,
             &mut x as *mut u8 as *const libc::c_void,
             (1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<u8>() as libc::c_ulong),
         );
     }
 }
-unsafe extern "C" fn dumpSize(D: *mut DumpState, mut x: u64) {
+unsafe extern "C" fn dumpsize(dumpstate: *mut DumpState, mut x: u64) {
     unsafe {
         let mut buff: [u8; 10] = [0; 10];
         let mut n: i32 = 0 as i32;
@@ -12661,8 +12661,8 @@ unsafe extern "C" fn dumpSize(D: *mut DumpState, mut x: u64) {
                 .wrapping_sub(1 as i32 as libc::c_ulong) as usize]
                 as i32
                 | 0x80 as i32) as u8;
-        dumpBlock(
-            D,
+        dumpblock(
+            dumpstate,
             buff.as_mut_ptr()
                 .offset(
                     (::core::mem::size_of::<u64>() as libc::c_ulong)
@@ -12676,35 +12676,35 @@ unsafe extern "C" fn dumpSize(D: *mut DumpState, mut x: u64) {
         );
     }
 }
-unsafe extern "C" fn dumpInt(D: *mut DumpState, x: i32) {
+unsafe extern "C" fn dumpint(dumpstate: *mut DumpState, x: i32) {
     unsafe {
-        dumpSize(D, x as u64);
+        dumpsize(dumpstate, x as u64);
     }
 }
-unsafe extern "C" fn dumpf64(D: *mut DumpState, mut x: f64) {
+unsafe extern "C" fn dumpf64(dumpstate: *mut DumpState, mut x: f64) {
     unsafe {
-        dumpBlock(
-            D,
+        dumpblock(
+            dumpstate,
             &mut x as *mut f64 as *const libc::c_void,
             (1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<f64>() as libc::c_ulong),
         );
     }
 }
-unsafe extern "C" fn dumpi64(D: *mut DumpState, mut x: i64) {
+unsafe extern "C" fn dumpi64(dumpstate: *mut DumpState, mut x: i64) {
     unsafe {
-        dumpBlock(
-            D,
+        dumpblock(
+            dumpstate,
             &mut x as *mut i64 as *const libc::c_void,
             (1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<i64>() as libc::c_ulong),
         );
     }
 }
-unsafe extern "C" fn dumpString(D: *mut DumpState, s: *const TString) {
+unsafe extern "C" fn dumpstring(dumpstate: *mut DumpState, s: *const TString) {
     unsafe {
         if s.is_null() {
-            dumpSize(D, 0 as i32 as u64);
+            dumpsize(dumpstate, 0 as i32 as u64);
         } else {
             let size: u64 = if (*s).shrlen as i32 != 0xff as i32 {
                 (*s).shrlen as libc::c_ulong
@@ -12712,45 +12712,45 @@ unsafe extern "C" fn dumpString(D: *mut DumpState, s: *const TString) {
                 (*s).u.lnglen
             };
             let str: *const libc::c_char = ((*s).contents).as_ptr();
-            dumpSize(D, size.wrapping_add(1 as i32 as libc::c_ulong));
-            dumpBlock(
-                D,
+            dumpsize(dumpstate, size.wrapping_add(1 as i32 as libc::c_ulong));
+            dumpblock(
+                dumpstate,
                 str as *const libc::c_void,
                 size.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
             );
         };
     }
 }
-unsafe extern "C" fn dumpCode(D: *mut DumpState, f: *const Prototype) {
+unsafe extern "C" fn dumpcode(dumpstate: *mut DumpState, f: *const Prototype) {
     unsafe {
-        dumpInt(D, (*f).sizecode);
-        dumpBlock(
-            D,
+        dumpint(dumpstate, (*f).sizecode);
+        dumpblock(
+            dumpstate,
             (*f).code as *const libc::c_void,
             ((*f).sizecode as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
         );
     }
 }
-unsafe extern "C" fn dumpConstants(D: *mut DumpState, f: *const Prototype) {
+unsafe extern "C" fn dumpconstants(dumpstate: *mut DumpState, f: *const Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let n: i32 = (*f).sizek;
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
             let o: *const TValue = &mut *((*f).k).offset(i as isize) as *mut TValue;
             let tt: i32 = (*o).tt_ as i32 & 0x3f as i32;
-            dumpByte(D, tt);
+            dumpbyte(dumpstate, tt);
             match tt {
                 19 => {
-                    dumpf64(D, (*o).value_.n);
+                    dumpf64(dumpstate, (*o).value_.n);
                 }
                 3 => {
-                    dumpi64(D, (*o).value_.i);
+                    dumpi64(dumpstate, (*o).value_.i);
                 }
                 4 | 20 => {
-                    dumpString(D, &mut (*((*o).value_.gc as *mut GCUnion)).ts);
+                    dumpstring(dumpstate, &mut (*((*o).value_.gc as *mut GCUnion)).ts);
                 }
                 _ => {}
             }
@@ -12758,148 +12758,148 @@ unsafe extern "C" fn dumpConstants(D: *mut DumpState, f: *const Prototype) {
         }
     }
 }
-unsafe extern "C" fn dumpProtos(D: *mut DumpState, f: *const Prototype) {
+unsafe extern "C" fn dumpprotos(dumpstate: *mut DumpState, f: *const Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let n: i32 = (*f).sizep;
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
-            dumpFunction(D, *((*f).p).offset(i as isize), (*f).source);
+            dumpfunction(dumpstate, *((*f).p).offset(i as isize), (*f).source);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn dumpUpvalues(D: *mut DumpState, f: *const Prototype) {
+unsafe extern "C" fn dumpupvalues(dumpstate: *mut DumpState, f: *const Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let n: i32 = (*f).sizeupvalues;
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
-            dumpByte(
-                D,
+            dumpbyte(
+                dumpstate,
                 (*((*f).upvalues).offset(i as isize)).instack as i32,
             );
-            dumpByte(D, (*((*f).upvalues).offset(i as isize)).idx as i32);
-            dumpByte(D, (*((*f).upvalues).offset(i as isize)).kind as i32);
+            dumpbyte(dumpstate, (*((*f).upvalues).offset(i as isize)).idx as i32);
+            dumpbyte(dumpstate, (*((*f).upvalues).offset(i as isize)).kind as i32);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn dumpDebug(D: *mut DumpState, f: *const Prototype) {
+unsafe extern "C" fn dumpdebug(dumpstate: *mut DumpState, f: *const Prototype) {
     unsafe {
         let mut i: i32 = 0;
         let mut n: i32 = 0;
-        n = if (*D).strip != 0 {
+        n = if (*dumpstate).strip != 0 {
             0 as i32
         } else {
             (*f).sizelineinfo
         };
-        dumpInt(D, n);
-        dumpBlock(
-            D,
+        dumpint(dumpstate, n);
+        dumpblock(
+            dumpstate,
             (*f).lineinfo as *const libc::c_void,
             (n as libc::c_ulong).wrapping_mul(::core::mem::size_of::<i8>() as libc::c_ulong),
         );
-        n = if (*D).strip != 0 {
+        n = if (*dumpstate).strip != 0 {
             0 as i32
         } else {
             (*f).sizeabslineinfo
         };
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
-            dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).pc);
-            dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).line);
+            dumpint(dumpstate, (*((*f).abslineinfo).offset(i as isize)).pc);
+            dumpint(dumpstate, (*((*f).abslineinfo).offset(i as isize)).line);
             i += 1;
         }
-        n = if (*D).strip != 0 {
+        n = if (*dumpstate).strip != 0 {
             0 as i32
         } else {
             (*f).sizelocvars
         };
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
-            dumpString(D, (*((*f).locvars).offset(i as isize)).varname);
-            dumpInt(D, (*((*f).locvars).offset(i as isize)).startpc);
-            dumpInt(D, (*((*f).locvars).offset(i as isize)).endpc);
+            dumpstring(dumpstate, (*((*f).locvars).offset(i as isize)).varname);
+            dumpint(dumpstate, (*((*f).locvars).offset(i as isize)).startpc);
+            dumpint(dumpstate, (*((*f).locvars).offset(i as isize)).endpc);
             i += 1;
         }
-        n = if (*D).strip != 0 {
+        n = if (*dumpstate).strip != 0 {
             0 as i32
         } else {
             (*f).sizeupvalues
         };
-        dumpInt(D, n);
+        dumpint(dumpstate, n);
         i = 0 as i32;
         while i < n {
-            dumpString(D, (*((*f).upvalues).offset(i as isize)).name);
+            dumpstring(dumpstate, (*((*f).upvalues).offset(i as isize)).name);
             i += 1;
         }
     }
 }
-unsafe extern "C" fn dumpFunction(
-    D: *mut DumpState,
+unsafe extern "C" fn dumpfunction(
+    dumpstate: *mut DumpState,
     f: *const Prototype,
     psource: *mut TString,
 ) {
     unsafe {
-        if (*D).strip != 0 || (*f).source == psource {
-            dumpString(D, 0 as *const TString);
+        if (*dumpstate).strip != 0 || (*f).source == psource {
+            dumpstring(dumpstate, 0 as *const TString);
         } else {
-            dumpString(D, (*f).source);
+            dumpstring(dumpstate, (*f).source);
         }
-        dumpInt(D, (*f).linedefined);
-        dumpInt(D, (*f).lastlinedefined);
-        dumpByte(D, (*f).numparams as i32);
-        dumpByte(D, if (*f).isvararg { 1 } else { 0 });
-        dumpByte(D, (*f).maxstacksize as i32);
-        dumpCode(D, f);
-        dumpConstants(D, f);
-        dumpUpvalues(D, f);
-        dumpProtos(D, f);
-        dumpDebug(D, f);
+        dumpint(dumpstate, (*f).linedefined);
+        dumpint(dumpstate, (*f).lastlinedefined);
+        dumpbyte(dumpstate, (*f).numparams as i32);
+        dumpbyte(dumpstate, if (*f).isvararg { 1 } else { 0 });
+        dumpbyte(dumpstate, (*f).maxstacksize as i32);
+        dumpcode(dumpstate, f);
+        dumpconstants(dumpstate, f);
+        dumpupvalues(dumpstate, f);
+        dumpprotos(dumpstate, f);
+        dumpdebug(dumpstate, f);
     }
 }
-unsafe extern "C" fn dumpHeader(D: *mut DumpState) {
+unsafe extern "C" fn dumpheader(dumpstate: *mut DumpState) {
     unsafe {
-        dumpBlock(
-            D,
+        dumpblock(
+            dumpstate,
             b"\x1BLua\0" as *const u8 as *const libc::c_char as *const libc::c_void,
             (::core::mem::size_of::<[libc::c_char; 5]>() as libc::c_ulong)
                 .wrapping_sub(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
-        dumpByte(
-            D,
+        dumpbyte(
+            dumpstate,
             504 as i32 / 100 as i32 * 16 as i32
                 + 504 as i32 % 100 as i32,
         );
-        dumpByte(D, 0 as i32);
-        dumpBlock(
-            D,
+        dumpbyte(dumpstate, 0 as i32);
+        dumpblock(
+            dumpstate,
             b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
             (::core::mem::size_of::<[libc::c_char; 7]>() as libc::c_ulong)
                 .wrapping_sub(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
-        dumpByte(
-            D,
+        dumpbyte(
+            dumpstate,
             ::core::mem::size_of::<Instruction>() as libc::c_ulong as i32,
         );
-        dumpByte(
-            D,
+        dumpbyte(
+            dumpstate,
             ::core::mem::size_of::<i64>() as libc::c_ulong as i32,
         );
-        dumpByte(
-            D,
+        dumpbyte(
+            dumpstate,
             ::core::mem::size_of::<f64>() as libc::c_ulong as i32,
         );
-        dumpi64(D, 0x5678 as i32 as i64);
-        dumpf64(D, 370.5f64);
+        dumpi64(dumpstate, 0x5678 as i32 as i64);
+        dumpf64(dumpstate, 370.5f64);
     }
 }
-unsafe extern "C" fn luaU_dump(
+unsafe extern "C" fn luau_dump(
     state: *mut State,
     f: *const Prototype,
     w: WriteFunction,
@@ -12907,22 +12907,22 @@ unsafe extern "C" fn luaU_dump(
     strip: i32,
 ) -> i32 {
     unsafe {
-        let mut D: DumpState = DumpState {
+        let mut dumpstate: DumpState = DumpState {
             state: 0 as *mut State,
             writer: None,
             data: 0 as *mut libc::c_void,
             strip: 0,
             status: 0,
         };
-        D.state = state;
-        D.writer = w;
-        D.data = data;
-        D.strip = strip;
-        D.status = 0 as i32;
-        dumpHeader(&mut D);
-        dumpByte(&mut D, (*f).sizeupvalues);
-        dumpFunction(&mut D, f, 0 as *mut TString);
-        return D.status;
+        dumpstate.state = state;
+        dumpstate.writer = w;
+        dumpstate.data = data;
+        dumpstate.strip = strip;
+        dumpstate.status = 0 as i32;
+        dumpheader(&mut dumpstate);
+        dumpbyte(&mut dumpstate, (*f).sizeupvalues);
+        dumpfunction(&mut dumpstate, f, 0 as *mut TString);
+        return dumpstate.status;
     }
 }
 unsafe extern "C" fn error_expected(ls: *mut LexicalState, token: i32) -> ! {
@@ -15677,10 +15677,10 @@ unsafe extern "C" fn luay_parser(
             | (1 as i32) << 6 as i32) as u8;
         luad_inctop(state);
         lexstate.h = luah_new(state);
-        let io_0: *mut TValue = &mut (*(*state).top.p).value;
-        let x__0: *mut Table = lexstate.h;
-        (*io_0).value_.gc = &mut (*(x__0 as *mut GCUnion)).gc;
-        (*io_0).tt_ = (5 as i32
+        let io0: *mut TValue = &mut (*(*state).top.p).value;
+        let x0: *mut Table = lexstate.h;
+        (*io0).value_.gc = &mut (*(x0 as *mut GCUnion)).gc;
+        (*io0).tt_ = (5 as i32
             | (0 as i32) << 4 as i32
             | (1 as i32) << 6 as i32) as u8;
         luad_inctop(state);
@@ -15855,7 +15855,7 @@ unsafe extern "C" fn luax_token2str(
         };
     }
 }
-unsafe extern "C" fn txtToken(
+unsafe extern "C" fn txttoken(
     ls: *mut LexicalState,
     token: i32,
 ) -> *const libc::c_char {
@@ -15885,7 +15885,7 @@ unsafe extern "C" fn lexerror(
                 (*ls).state,
                 b"%s near %s\0" as *const u8 as *const libc::c_char,
                 msg,
-                txtToken(ls, token),
+                txttoken(ls, token),
             );
         }
         luad_throw((*ls).state, 3 as i32);
@@ -18076,9 +18076,9 @@ unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) 
             }
             5 => {
                 if !v.is_null() {
-                    let io_0: *mut TValue = v;
-                    (*io_0).value_.n = (*e).u.nval;
-                    (*io_0).tt_ =
+                    let io0: *mut TValue = v;
+                    (*io0).value_.n = (*e).u.nval;
+                    (*io0).tt_ =
                         (3 as i32 | (1 as i32) << 4 as i32) as u8;
                 }
                 return 1;
@@ -18325,13 +18325,13 @@ unsafe extern "C" fn luak_ret(
 unsafe extern "C" fn condjump(
     fs: *mut FunctionState,
     op: OpCode,
-    A: i32,
-    B: i32,
-    C: i32,
+    a: i32,
+    b: i32,
+    c: i32,
     k: i32,
 ) -> i32 {
     unsafe {
-        luak_codeabck(fs, op, A, B, C, k);
+        luak_codeabck(fs, op, a, b, c, k);
         return luak_jump(fs);
     }
 }
@@ -18884,9 +18884,9 @@ unsafe extern "C" fn luak_numberk(fs: *mut FunctionState, r: f64) -> i32 {
                 },
                 tt_: 0,
             };
-            let io_0: *mut TValue = &mut kv;
-            (*io_0).value_.n = k;
-            (*io_0).tt_ = (3 as i32 | (1 as i32) << 4 as i32) as u8;
+            let io0: *mut TValue = &mut kv;
+            (*io0).value_.n = k;
+            (*io0).tt_ = (3 as i32 | (1 as i32) << 4 as i32) as u8;
             return addk(fs, &mut kv, &mut o);
         };
     }
@@ -19277,7 +19277,7 @@ unsafe extern "C" fn discharge2anyreg(fs: *mut FunctionState, e: *mut Expression
 }
 unsafe extern "C" fn code_loadbool(
     fs: *mut FunctionState,
-    A: i32,
+    a: i32,
     op: OpCode,
 ) -> i32 {
     unsafe {
@@ -19285,7 +19285,7 @@ unsafe extern "C" fn code_loadbool(
         return luak_codeabck(
             fs,
             op,
-            A,
+            a,
             0 as i32,
             0 as i32,
             0 as i32,
@@ -20714,9 +20714,9 @@ unsafe extern "C" fn forprep(state: *mut State, ra: StackID) -> i32 {
                             .wrapping_add(1 as libc::c_uint as libc::c_ulonglong),
                     ) as lua_Unsigned as lua_Unsigned;
                 }
-                let io_0: *mut TValue = plimit;
-                (*io_0).value_.i = count as i64;
-                (*io_0).tt_ =
+                let io0: *mut TValue = plimit;
+                (*io0).value_.i = count as i64;
+                (*io0).tt_ =
                     (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
             }
         } else {
@@ -20780,9 +20780,9 @@ unsafe extern "C" fn forprep(state: *mut State, ra: StackID) -> i32 {
             {
                 return 1;
             } else {
-                let io_1: *mut TValue = plimit;
-                (*io_1).value_.n = limit_0;
-                (*io_1).tt_ =
+                let io1: *mut TValue = plimit;
+                (*io1).value_.n = limit_0;
+                (*io1).tt_ =
                     (3 as i32 | (1 as i32) << 4 as i32) as u8;
                 let io_2: *mut TValue = pstep;
                 (*io_2).value_.n = step_0;
@@ -20815,9 +20815,9 @@ unsafe extern "C" fn floatforloop(ra: StackID) -> i32 {
         {
             let io: *mut TValue = &mut (*ra).value;
             (*io).value_.n = idx;
-            let io_0: *mut TValue = &mut (*ra.offset(3 as i32 as isize)).value;
-            (*io_0).value_.n = idx;
-            (*io_0).tt_ = (3 as i32 | (1 as i32) << 4 as i32) as u8;
+            let io0: *mut TValue = &mut (*ra.offset(3 as i32 as isize)).value;
+            (*io0).value_.n = idx;
+            (*io0).tt_ = (3 as i32 | (1 as i32) << 4 as i32) as u8;
             return 1;
         } else {
             return 0 as i32;
@@ -21595,16 +21595,16 @@ unsafe extern "C" fn luav_objlen(state: *mut State, ra: StackID, rb: *const TVal
                 }
             }
             4 => {
-                let io_0: *mut TValue = &mut (*ra).value;
-                (*io_0).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.shrlen as i64;
-                (*io_0).tt_ =
+                let io0: *mut TValue = &mut (*ra).value;
+                (*io0).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.shrlen as i64;
+                (*io0).tt_ =
                     (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
                 return;
             }
             20 => {
-                let io_1: *mut TValue = &mut (*ra).value;
-                (*io_1).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.u.lnglen as i64;
-                (*io_1).tt_ =
+                let io1: *mut TValue = &mut (*ra).value;
+                (*io1).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.u.lnglen as i64;
+                (*io1).tt_ =
                     (3 as i32 | ((0 as i32) << 4 as i32)) as u8;
                 return;
             }
@@ -21946,9 +21946,9 @@ unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) {
                                     << 8 as i32 + 8 as i32 + 1 as i32)
                                     - 1 as i32
                                     >> 1 as i32);
-                            let io_0: *mut TValue = &mut (*ra_1).value;
-                            (*io_0).value_.n = b_0 as f64;
-                            (*io_0).tt_ = (3 as i32
+                            let io0: *mut TValue = &mut (*ra_1).value;
+                            (*io0).value_.n = b_0 as f64;
+                            (*io0).tt_ = (3 as i32
                                 | (1 as i32) << 4 as i32)
                                 as u8;
                             continue;
@@ -22346,9 +22346,9 @@ unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) {
                                     },
                                     tt_: 0,
                                 };
-                                let io_1: *mut TValue = &mut key_0;
-                                (*io_1).value_.i = c as i64;
-                                (*io_1).tt_ = (3 as i32
+                                let io1: *mut TValue = &mut key_0;
+                                (*io1).value_.i = c as i64;
+                                (*io1).tt_ = (3 as i32
                                     | ((0 as i32) << 4 as i32))
                                     as u8;
                                 (*ci).u.l.savedpc = pc;
