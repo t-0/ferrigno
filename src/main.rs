@@ -11783,7 +11783,7 @@ unsafe extern "C" fn createstrobj(
     unsafe {
         let mut ts: *mut TString = 0 as *mut TString;
         let mut o: *mut Object = 0 as *mut Object;
-        let mut totalsize: u64 = (24 as libc::c_ulong).wrapping_add(
+        let totalsize: u64 = (24 as libc::c_ulong).wrapping_add(
             l.wrapping_add(1 as i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
@@ -29228,7 +29228,7 @@ unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 {
 unsafe extern "C" fn luab_cocreate(state: *mut State) -> i32 {
     unsafe {
         luaL_checktype(state, 1 as i32, 6 as i32);
-        let mut nl: *mut State = lua_newthread(state);
+        let nl: *mut State = lua_newthread(state);
         lua_pushvalue(state, 1);
         lua_xmove(state, nl, 1);
         return 1;
