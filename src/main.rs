@@ -2,7 +2,8 @@
     mutable_transmutes,
     non_camel_case_types,
     static_mut_refs,
-    non_upper_case_globals
+    non_upper_case_globals,
+    unused_assignments
 )]
 #![feature(c_variadic, extern_types)]
 unsafe extern "C" {
@@ -1595,7 +1596,6 @@ unsafe extern "C" fn rethook(state: *mut State, mut ci: *mut CallInfo, nres: i32
         if (*state).hookmask & (1 as i32) << 1 as i32 != 0 {
             let firstres: StackID = ((*state).top.p).offset(-(nres as isize));
             let mut delta: i32 = 0 as i32;
-            let mut ftransfer: i32 = 0;
             if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
                 let p: *mut Prototype = (*((*(*ci).func.p).value.value_.gc as *mut GCUnion)).cl.l.p;
                 if (*p).isvararg {
@@ -1603,8 +1603,7 @@ unsafe extern "C" fn rethook(state: *mut State, mut ci: *mut CallInfo, nres: i32
                 }
             }
             (*ci).func.p = ((*ci).func.p).offset(delta as isize);
-            ftransfer =
-                firstres.offset_from((*ci).func.p) as libc::c_long as u16 as i32;
+            let mut ftransfer: i32 = firstres.offset_from((*ci).func.p) as libc::c_long as u16 as i32;
             luad_hook(state, 1 as i32, -(1 as i32), ftransfer, nres);
             (*ci).func.p = ((*ci).func.p).offset(-(delta as isize));
         }
