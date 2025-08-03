@@ -34,7 +34,7 @@ pub struct luaL_Reg {
     pub name: *const libc::c_char,
     pub func: CFunction,
 }
-static mut loadedlibs: [luaL_Reg; 11] = unsafe {
+static mut loadedlibs: [luaL_Reg; 11] = {
     [
         {
             let mut init = luaL_Reg {

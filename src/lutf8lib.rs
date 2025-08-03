@@ -449,7 +449,7 @@ unsafe extern "C" fn iter_codes(mut L: *mut lua_State) -> i32 {
     lua_pushinteger(L, 0i32 as Integer);
     return 3i32;
 }
-static mut funcs: [luaL_Reg; 7] = unsafe {
+static mut funcs: [luaL_Reg; 7] = {
     [
         {
             let mut init = luaL_Reg {

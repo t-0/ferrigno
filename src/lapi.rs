@@ -737,7 +737,7 @@ pub unsafe extern "C" fn lua_atpanic(
     return old;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_version(mut L: *mut lua_State) -> Number {
+pub unsafe extern "C" fn lua_version(mut _L: *mut lua_State) -> Number {
     return 504i32 as Number;
 }
 #[unsafe (no_mangle)]
@@ -800,7 +800,7 @@ pub unsafe extern "C" fn lua_closeslot(mut L: *mut lua_State, mut index: i32) {
         .tt_ = (0i32 | (0i32) << 4i32) as u8;
 }
 #[inline]
-unsafe extern "C" fn reverse(mut L: *mut lua_State, mut from: StkId, mut to: StkId) {
+unsafe extern "C" fn reverse(mut _L: *mut lua_State, mut from: StkId, mut to: StkId) {
     while from < to {
         let mut temp: TValue = TValue {
             value_: Value { gc: 0 as *mut GCObject },
@@ -901,7 +901,7 @@ pub unsafe extern "C" fn lua_type(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_typename(
-    mut L: *mut lua_State,
+    mut _L: *mut lua_State,
     mut t: i32,
 ) -> *const libc::c_char {
     return luaT_typenames_[(t + 1i32) as usize];
@@ -1549,7 +1549,7 @@ pub unsafe extern "C" fn lua_geti(
         slot = 0 as *const TValue;
         0i32
     } else {
-        slot = (if (n as lua_Unsigned)
+        slot = if (n as lua_Unsigned)
             .wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
             < (*((*t).value_.gc as *mut GCUnion)).h.alimit as libc::c_ulonglong
         {
@@ -1558,7 +1558,7 @@ pub unsafe extern "C" fn lua_geti(
                 as *mut TValue as *const TValue
         } else {
             luaH_getint(&mut (*((*t).value_.gc as *mut GCUnion)).h, n)
-        });
+        };
         !((*slot).tt_ as i32 & 0xf as i32 == 0i32)
             as i32
     } != 0
@@ -1883,7 +1883,7 @@ pub unsafe extern "C" fn lua_seti(
         slot = 0 as *const TValue;
         0i32
     } else {
-        slot = (if (n as lua_Unsigned)
+        slot = if (n as lua_Unsigned)
             .wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
             < (*((*t).value_.gc as *mut GCUnion)).h.alimit as libc::c_ulonglong
         {
@@ -1892,7 +1892,7 @@ pub unsafe extern "C" fn lua_seti(
                 as *mut TValue as *const TValue
         } else {
             luaH_getint(&mut (*((*t).value_.gc as *mut GCUnion)).h, n)
-        });
+        };
         !((*slot).tt_ as i32 & 0xf as i32 == 0i32)
             as i32
     } != 0

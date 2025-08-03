@@ -609,7 +609,7 @@ unsafe extern "C" fn sort(mut L: *mut lua_State) -> i32 {
     }
     return 0i32;
 }
-static mut tab_funcs: [luaL_Reg; 8] = unsafe {
+static mut tab_funcs: [luaL_Reg; 8] = {
     [
         {
             let mut init = luaL_Reg {

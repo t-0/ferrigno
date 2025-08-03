@@ -1498,7 +1498,7 @@ unsafe extern "C" fn finishCcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
     }
     luaD_poscall(L, ci, n);
 }
-unsafe extern "C" fn unroll(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn unroll(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     loop {
         ci = (*L).ci;

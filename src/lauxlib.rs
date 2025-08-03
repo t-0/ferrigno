@@ -988,7 +988,7 @@ unsafe extern "C" fn boxgc(mut L: *mut lua_State) -> i32 {
     resizebox(L, 1i32, 0i32 as size_t);
     return 0i32;
 }
-static mut boxmt: [luaL_Reg; 3] = unsafe {
+static mut boxmt: [luaL_Reg; 3] = {
     [
         {
             let mut init = luaL_Reg {
@@ -1203,7 +1203,7 @@ pub unsafe extern "C" fn luaL_unref(
     }
 }
 unsafe extern "C" fn getF(
-    mut L: *mut lua_State,
+    mut _L: *mut lua_State,
     mut ud: *mut libc::c_void,
     mut size: *mut size_t,
 ) -> *const libc::c_char {
@@ -1370,7 +1370,7 @@ pub unsafe extern "C" fn luaL_loadfilex(
     return status;
 }
 unsafe extern "C" fn getS(
-    mut L: *mut lua_State,
+    mut _L: *mut lua_State,
     mut ud: *mut libc::c_void,
     mut size: *mut size_t,
 ) -> *const libc::c_char {
@@ -1668,9 +1668,9 @@ pub unsafe extern "C" fn luaL_gsub(
     return lua_tolstring(L, -(1i32), 0 as *mut size_t);
 }
 unsafe extern "C" fn l_alloc(
-    mut ud: *mut libc::c_void,
+    mut _ud: *mut libc::c_void,
     mut ptr: *mut libc::c_void,
-    mut osize: size_t,
+    mut _osize: size_t,
     mut nsize: size_t,
 ) -> *mut libc::c_void {
     if nsize == 0i32 as libc::c_ulong {

@@ -812,7 +812,7 @@ unsafe extern "C" fn ll_require(mut L: *mut lua_State) -> i32 {
     lua_rotate(L, -(2i32), 1i32);
     return 2i32;
 }
-static mut pk_funcs: [luaL_Reg; 8] = unsafe {
+static mut pk_funcs: [luaL_Reg; 8] = {
     [
         {
             let mut init = luaL_Reg {
@@ -876,7 +876,7 @@ static mut pk_funcs: [luaL_Reg; 8] = unsafe {
         },
     ]
 };
-static mut ll_funcs: [luaL_Reg; 2] = unsafe {
+static mut ll_funcs: [luaL_Reg; 2] = {
     [
         {
             let mut init = luaL_Reg {
@@ -897,7 +897,7 @@ static mut ll_funcs: [luaL_Reg; 2] = unsafe {
     ]
 };
 unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
-    static mut searchers: [CFunction; 5] = unsafe {
+    static mut searchers: [CFunction; 5] = {
         [
             Some(
                 searcher_preload as unsafe extern "C" fn(*mut lua_State) -> i32,

@@ -924,7 +924,7 @@ unsafe extern "C" fn db_setcstacklimit(mut L: *mut lua_State) -> i32 {
     lua_pushinteger(L, res as Integer);
     return 1i32;
 }
-static mut dblib: [luaL_Reg; 18] = unsafe {
+static mut dblib: [luaL_Reg; 18] = {
     [
         {
             let mut init = luaL_Reg {

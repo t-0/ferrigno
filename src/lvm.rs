@@ -1816,7 +1816,7 @@ pub unsafe extern "C" fn luaV_mod(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_modf(
-    mut L: *mut lua_State,
+    mut _L: *mut lua_State,
     mut m: Number,
     mut n: Number,
 ) -> Number {

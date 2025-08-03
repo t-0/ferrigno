@@ -489,7 +489,7 @@ unsafe extern "C" fn math_randomseed(mut L: *mut lua_State) -> i32 {
     }
     return 2i32;
 }
-static mut randfuncs: [luaL_Reg; 3] = unsafe {
+static mut randfuncs: [luaL_Reg; 3] = {
     [
         {
             let mut init = luaL_Reg {
@@ -529,7 +529,7 @@ unsafe extern "C" fn setrandfunc(mut L: *mut lua_State) {
     lua_settop(L, -(2i32) - 1i32);
     luaL_setfuncs(L, randfuncs.as_ptr(), 1i32);
 }
-static mut mathlib: [luaL_Reg; 28] = unsafe {
+static mut mathlib: [luaL_Reg; 28] = {
     [
         {
             let mut init = luaL_Reg {

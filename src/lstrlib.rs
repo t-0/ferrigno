@@ -783,7 +783,7 @@ unsafe extern "C" fn arith_idiv(mut L: *mut lua_State) -> i32 {
 unsafe extern "C" fn arith_unm(mut L: *mut lua_State) -> i32 {
     return arith(L, 12i32, b"__unm\0" as *const u8 as *const libc::c_char);
 }
-static mut stringmetamethods: [luaL_Reg; 10] = unsafe {
+static mut stringmetamethods: [luaL_Reg; 10] = {
     [
         {
             let mut init = luaL_Reg {
@@ -956,7 +956,7 @@ unsafe extern "C" fn match_class(
     mut cl: i32,
 ) -> i32 {
     let mut res: i32 = 0;
-    match ({
+    match {
         let mut __res: i32 = 0;
         if ::core::mem::size_of::<i32>() as libc::c_ulong
             > 1i32 as libc::c_ulong
@@ -975,7 +975,7 @@ unsafe extern "C" fn match_class(
             __res = *(*__ctype_tolower_loc()).offset(cl as isize);
         }
         __res
-    }) {
+    } {
         97 => {
             res = *(*__ctype_b_loc()).offset(c as isize) as i32
                 & _ISalpha as i32 as libc::c_ushort as i32;
@@ -2134,7 +2134,7 @@ unsafe extern "C" fn addquoted(
     *((*b).b).offset(fresh13 as isize) = '"' as i32 as libc::c_char;
 }
 unsafe extern "C" fn quotefloat(
-    mut L: *mut lua_State,
+    mut _L: *mut lua_State,
     mut buff: *mut libc::c_char,
     mut n: Number,
 ) -> i32 {
@@ -3372,7 +3372,7 @@ unsafe extern "C" fn str_unpack(mut L: *mut lua_State) -> i32 {
     );
     return n + 1i32;
 }
-static mut strlib: [luaL_Reg; 18] = unsafe {
+static mut strlib: [luaL_Reg; 18] = {
     [
         {
             let mut init = luaL_Reg {

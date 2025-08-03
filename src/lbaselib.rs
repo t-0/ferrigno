@@ -319,13 +319,13 @@ unsafe extern "C" fn b_str2int(
                 {
                     if 0 != 0 {
                         let mut __c: i32 = *s as u8 as i32;
-                        __res = (if __c < -(128i32)
+                        __res = if __c < -(128i32)
                             || __c > 255i32
                         {
                             __c
                         } else {
                             *(*__ctype_toupper_loc()).offset(__c as isize)
-                        });
+                        }
                     } else {
                         __res = toupper(*s as u8 as i32);
                     }
@@ -645,9 +645,9 @@ unsafe extern "C" fn luaB_next(mut L: *mut lua_State) -> i32 {
     };
 }
 unsafe extern "C" fn pairscont(
-    mut L: *mut lua_State,
-    mut status: i32,
-    mut k: lua_KContext,
+    mut _L: *mut lua_State,
+    mut _status: i32,
+    mut _k: lua_KContext,
 ) -> i32 {
     return 3i32;
 }
@@ -752,7 +752,7 @@ unsafe extern "C" fn luaB_loadfile(mut L: *mut lua_State) -> i32 {
 }
 unsafe extern "C" fn generic_reader(
     mut L: *mut lua_State,
-    mut ud: *mut libc::c_void,
+    mut _ud: *mut libc::c_void,
     mut size: *mut size_t,
 ) -> *const libc::c_char {
     luaL_checkstack(
@@ -836,8 +836,8 @@ unsafe extern "C" fn luaB_load(mut L: *mut lua_State) -> i32 {
 }
 unsafe extern "C" fn dofilecont(
     mut L: *mut lua_State,
-    mut d1: i32,
-    mut d2: lua_KContext,
+    mut _d1: i32,
+    mut _d2: lua_KContext,
 ) -> i32 {
     return lua_gettop(L) - 1i32;
 }
@@ -975,7 +975,7 @@ unsafe extern "C" fn luaB_tostring(mut L: *mut lua_State) -> i32 {
     luaL_tolstring(L, 1i32, 0 as *mut size_t);
     return 1i32;
 }
-static mut base_funcs: [luaL_Reg; 26] = unsafe {
+static mut base_funcs: [luaL_Reg; 26] = {
     [
         {
             let mut init = luaL_Reg {

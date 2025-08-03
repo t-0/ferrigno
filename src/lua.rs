@@ -335,7 +335,7 @@ unsafe extern "C" fn setsignal(
     sigemptyset(&mut sa.sa_mask);
     sigaction(sig, &mut sa, 0 as *mut sigaction);
 }
-unsafe extern "C" fn lstop(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
+unsafe extern "C" fn lstop(mut L: *mut lua_State, mut _ar: *mut lua_Debug) {
     lua_sethook(L, None, 0i32, 0i32);
     luaL_error(L, b"interrupted!\0" as *const u8 as *const libc::c_char);
 }
@@ -759,11 +759,11 @@ unsafe extern "C" fn get_prompt(
 ) -> *const libc::c_char {
     if lua_getglobal(
         L,
-        (if firstline != 0 {
+        if firstline != 0 {
             b"_PROMPT\0" as *const u8 as *const libc::c_char
         } else {
             b"_PROMPT2\0" as *const u8 as *const libc::c_char
-        }),
+        },
     ) == 0i32
     {
         return if firstline != 0 {

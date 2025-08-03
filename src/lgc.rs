@@ -824,13 +824,13 @@ unsafe extern "C" fn traverseweakvalue(mut g: *mut global_State, mut h: *mut Tab
             if hasclears == 0
                 && iscleared(
                     g,
-                    (if (*n).i_val.tt_ as i32
+                    if (*n).i_val.tt_ as i32
                         & (1i32) << 6i32 != 0
                     {
                         (*n).i_val.value_.gc
                     } else {
                         0 as *mut GCObject
-                    }),
+                    },
                 ) != 0
             {
                 hasclears = 1i32;
@@ -1585,7 +1585,7 @@ unsafe extern "C" fn udata2finalize(mut g: *mut global_State) -> *mut GCObject {
     }
     return o;
 }
-unsafe extern "C" fn dothecall(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn dothecall(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
     luaD_callnoyield(
         L,
         ((*L).top.p).offset(-(2i32 as isize)),
@@ -1724,13 +1724,13 @@ pub unsafe extern "C" fn luaC_checkfinalizer(
         || (if mt.is_null() {
             0 as *const TValue
         } else {
-            (if (*mt).flags as libc::c_uint & (1 as libc::c_uint) << TM_GC as i32
+            if (*mt).flags as libc::c_uint & (1 as libc::c_uint) << TM_GC as i32
                 != 0
             {
                 0 as *const TValue
             } else {
                 luaT_gettm(mt, TM_GC, (*g).tmname[TM_GC as i32 as usize])
-            })
+            }
         })
             .is_null() || (*g).gcstp as i32 & 4i32 != 0
     {

@@ -729,11 +729,11 @@ unsafe extern "C" fn read_number(
     if count > 0i32
         && test2(
             &mut rn,
-            (if hex != 0 {
+            if hex != 0 {
                 b"pP\0" as *const u8 as *const libc::c_char
             } else {
                 b"eE\0" as *const u8 as *const libc::c_char
-            }),
+            },
         ) != 0
     {
         test2(&mut rn, b"-+\0" as *const u8 as *const libc::c_char);
@@ -1190,7 +1190,7 @@ unsafe extern "C" fn f_flush(mut L: *mut lua_State) -> i32 {
         0 as *const libc::c_char,
     );
 }
-static mut iolib: [luaL_Reg; 12] = unsafe {
+static mut iolib: [luaL_Reg; 12] = {
     [
         {
             let mut init = luaL_Reg {
@@ -1300,7 +1300,7 @@ static mut iolib: [luaL_Reg; 12] = unsafe {
         },
     ]
 };
-static mut meth: [luaL_Reg; 8] = unsafe {
+static mut meth: [luaL_Reg; 8] = {
     [
         {
             let mut init = luaL_Reg {
@@ -1370,7 +1370,7 @@ static mut meth: [luaL_Reg; 8] = unsafe {
         },
     ]
 };
-static mut metameth: [luaL_Reg; 5] = unsafe {
+static mut metameth: [luaL_Reg; 5] = {
     [
         {
             let mut init = luaL_Reg {

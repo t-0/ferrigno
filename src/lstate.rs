@@ -542,8 +542,8 @@ pub unsafe extern "C" fn luaE_setdebt(mut g: *mut global_State, mut debt: l_mem)
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(
-    mut L: *mut lua_State,
-    mut limit: libc::c_uint,
+    mut _L: *mut lua_State,
+    mut _limit: libc::c_uint,
 ) -> i32 {
     return 200i32;
 }
@@ -718,7 +718,7 @@ unsafe extern "C" fn init_registry(mut L: *mut lua_State, mut g: *mut global_Sta
         .tt_ = (5i32 | (0i32) << 4i32
         | (1i32) << 6i32) as u8;
 }
-unsafe extern "C" fn f_luaopen(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn f_luaopen(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
     let mut g: *mut global_State = (*L).l_G;
     stack_init(L, L);
     init_registry(L, g);

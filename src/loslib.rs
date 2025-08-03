@@ -647,7 +647,7 @@ unsafe extern "C" fn os_exit(mut L: *mut lua_State) -> i32 {
     }
     return 0i32;
 }
-static mut syslib: [luaL_Reg; 12] = unsafe {
+static mut syslib: [luaL_Reg; 12] = {
     [
         {
             let mut init = luaL_Reg {

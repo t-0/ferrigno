@@ -293,7 +293,7 @@ unsafe extern "C" fn luaB_close(mut L: *mut lua_State) -> i32 {
         }
     };
 }
-static mut co_funcs: [luaL_Reg; 9] = unsafe {
+static mut co_funcs: [luaL_Reg; 9] = {
     [
         {
             let mut init = luaL_Reg {
