@@ -22,7 +22,7 @@ unsafe extern "C" {
     fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tothread(L: *mut lua_State, index: libc::c_int) -> *mut lua_State;
     fn lua_pushstring(L: *mut lua_State, s: *const libc::c_char) -> *const libc::c_char;
-    fn lua_pushcclosure(L: *mut lua_State, fn_0: lua_CFunction, n: libc::c_int);
+    fn lua_pushcclosure(L: *mut lua_State, fn_0: CFunction, n: libc::c_int);
     fn lua_pushboolean(L: *mut lua_State, b: libc::c_int);
     fn lua_pushthread(L: *mut lua_State) -> libc::c_int;
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
@@ -47,7 +47,7 @@ unsafe extern "C" {
         level: libc::c_int,
         ar: *mut lua_Debug,
     ) -> libc::c_int;
-    fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
+    fn luaL_checkversion_(L: *mut lua_State, ver: Number, sz: size_t);
     fn luaL_typeerror(
         L: *mut lua_State,
         arg: libc::c_int,
@@ -60,10 +60,10 @@ unsafe extern "C" {
 }
 pub type size_t = libc::c_ulong;
 pub type intptr_t = libc::c_long;
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
+pub type Number = f64;
+pub type Integer = i64;
 pub type lua_KContext = intptr_t;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 pub type lua_KFunction = Option::<
     unsafe extern "C" fn(*mut lua_State, libc::c_int, lua_KContext) -> libc::c_int,
 >;
@@ -92,7 +92,7 @@ pub struct lua_Debug {
 #[repr(C)]
 pub struct luaL_Reg {
     pub name: *const libc::c_char,
-    pub func: lua_CFunction,
+    pub func: CFunction,
 }
 unsafe extern "C" fn getco(mut L: *mut lua_State) -> *mut lua_State {
     let mut co: *mut lua_State = lua_tothread(L, 1 as libc::c_int);
@@ -381,10 +381,10 @@ static mut co_funcs: [luaL_Reg; 9] = unsafe {
 pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,
-        504 as libc::c_int as lua_Number,
-        (::core::mem::size_of::<lua_Integer>() as libc::c_ulong)
+        504 as libc::c_int as Number,
+        (::core::mem::size_of::<Integer>() as libc::c_ulong)
             .wrapping_mul(16 as libc::c_int as libc::c_ulong)
-            .wrapping_add(::core::mem::size_of::<lua_Number>() as libc::c_ulong),
+            .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,

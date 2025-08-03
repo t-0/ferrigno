@@ -73,7 +73,7 @@ unsafe extern "C" {
     fn luaK_nil(fs: *mut FuncState, from: libc::c_int, n: libc::c_int);
     fn luaK_reserveregs(fs: *mut FuncState, n: libc::c_int);
     fn luaK_checkstack(fs: *mut FuncState, n: libc::c_int);
-    fn luaK_int(fs: *mut FuncState, reg: libc::c_int, n: lua_Integer);
+    fn luaK_int(fs: *mut FuncState, reg: libc::c_int, n: Integer);
     fn luaK_dischargevars(fs: *mut FuncState, e: *mut expdesc);
     fn luaK_exp2anyreg(fs: *mut FuncState, e: *mut expdesc) -> libc::c_int;
     fn luaK_exp2anyregup(fs: *mut FuncState, e: *mut expdesc);
@@ -261,14 +261,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -351,7 +351,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -440,10 +440,10 @@ pub type ls_byte = libc::c_schar;
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 #[derive(Copy, Clone)]
@@ -515,7 +515,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -593,8 +593,8 @@ pub const TK_AND: RESERVED = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union SemInfo {
-    pub r: lua_Number,
-    pub i: lua_Integer,
+    pub r: Number,
+    pub i: Integer,
     pub ts: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -815,8 +815,8 @@ pub struct expdesc {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_11 {
-    pub ival: lua_Integer,
-    pub nval: lua_Number,
+    pub ival: Integer,
+    pub nval: Number,
     pub strval: *mut TString,
     pub info: libc::c_int,
     pub ind: C2RustUnnamed_13,
@@ -2956,7 +2956,7 @@ unsafe extern "C" fn fornum(
     if testnext(ls, ',' as i32) != 0 {
         exp1(ls);
     } else {
-        luaK_int(fs, (*fs).freereg as libc::c_int, 1 as libc::c_int as lua_Integer);
+        luaK_int(fs, (*fs).freereg as libc::c_int, 1 as libc::c_int as Integer);
         luaK_reserveregs(fs, 1 as libc::c_int);
     }
     adjustlocalvars(ls, 3 as libc::c_int);

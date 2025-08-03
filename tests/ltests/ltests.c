@@ -1105,7 +1105,7 @@ static int newuserdata (lua_State *L) {
 
 
 static int pushuserdata (lua_State *L) {
-  lua_Integer u = luaL_checkinteger(L, 1);
+  Integer u = luaL_checkinteger(L, 1);
   lua_pushlightuserdata(L, cast_voidp(cast_sizet(u)));
   return 1;
 }
@@ -1455,7 +1455,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_copy(L1, f, getindex);
     }
     else if EQ("func2num") {
-      lua_CFunction func = lua_tocfunction(L1, getindex);
+      CFunction func = lua_tocfunction(L1, getindex);
       lua_pushnumber(L1, cast_sizet(func));
     }
     else if EQ("getfield") {
@@ -1592,7 +1592,7 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       lua_pushnil(L1);
     }
     else if EQ("pushnum") {
-      lua_pushnumber(L1, (lua_Number)getnum);
+      lua_pushnumber(L1, (Number)getnum);
     }
     else if EQ("pushstatus") {
       lua_pushstring(L1, statcodes[status]);

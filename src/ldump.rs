@@ -143,14 +143,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -233,7 +233,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -323,10 +323,10 @@ pub type ls_byte = libc::c_schar;
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 #[derive(Copy, Clone)]
@@ -398,7 +398,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -504,20 +504,20 @@ unsafe extern "C" fn dumpSize(mut D: *mut DumpState, mut x: size_t) {
 unsafe extern "C" fn dumpInt(mut D: *mut DumpState, mut x: libc::c_int) {
     dumpSize(D, x as size_t);
 }
-unsafe extern "C" fn dumpNumber(mut D: *mut DumpState, mut x: lua_Number) {
+unsafe extern "C" fn dumpNumber(mut D: *mut DumpState, mut x: Number) {
     dumpBlock(
         D,
-        &mut x as *mut lua_Number as *const libc::c_void,
+        &mut x as *mut Number as *const libc::c_void,
         (1 as libc::c_int as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<lua_Number>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
 }
-unsafe extern "C" fn dumpInteger(mut D: *mut DumpState, mut x: lua_Integer) {
+unsafe extern "C" fn dumpInteger(mut D: *mut DumpState, mut x: Integer) {
     dumpBlock(
         D,
-        &mut x as *mut lua_Integer as *const libc::c_void,
+        &mut x as *mut Integer as *const libc::c_void,
         (1 as libc::c_int as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<lua_Integer>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<Integer>() as libc::c_ulong),
     );
 }
 unsafe extern "C" fn dumpString(mut D: *mut DumpState, mut s: *const TString) {
@@ -677,9 +677,9 @@ unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
             .wrapping_sub(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
     );
     dumpByte(D, ::core::mem::size_of::<Instruction>() as libc::c_ulong as libc::c_int);
-    dumpByte(D, ::core::mem::size_of::<lua_Integer>() as libc::c_ulong as libc::c_int);
-    dumpByte(D, ::core::mem::size_of::<lua_Number>() as libc::c_ulong as libc::c_int);
-    dumpInteger(D, 0x5678 as libc::c_int as lua_Integer);
+    dumpByte(D, ::core::mem::size_of::<Integer>() as libc::c_ulong as libc::c_int);
+    dumpByte(D, ::core::mem::size_of::<Number>() as libc::c_ulong as libc::c_int);
+    dumpInteger(D, 0x5678 as libc::c_int as Integer);
     dumpNumber(D, 370.5f64);
 }
 #[unsafe (no_mangle)]

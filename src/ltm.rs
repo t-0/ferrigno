@@ -163,14 +163,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -253,7 +253,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -335,10 +335,10 @@ pub type ls_byte = libc::c_schar;
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 #[derive(Copy, Clone)]
@@ -410,7 +410,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -771,7 +771,7 @@ pub unsafe extern "C" fn luaT_trybinassocTM(
 pub unsafe extern "C" fn luaT_trybiniTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
-    mut i2: lua_Integer,
+    mut i2: Integer,
     mut flip: libc::c_int,
     mut res: StkId,
     mut event: TMS,
@@ -816,13 +816,13 @@ pub unsafe extern "C" fn luaT_callorderiTM(
     let mut p2: *const TValue = 0 as *const TValue;
     if isfloat != 0 {
         let mut io: *mut TValue = &mut aux;
-        (*io).value_.n = v2 as lua_Number;
+        (*io).value_.n = v2 as Number;
         (*io)
             .tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
             as u8;
     } else {
         let mut io_0: *mut TValue = &mut aux;
-        (*io_0).value_.i = v2 as lua_Integer;
+        (*io_0).value_.i = v2 as Integer;
         (*io_0)
             .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
             as u8;

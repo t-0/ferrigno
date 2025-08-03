@@ -40,7 +40,7 @@ unsafe extern "C" {
     ) -> *const libc::c_char;
     fn lua_tothread(L: *mut lua_State, index: libc::c_int) -> *mut lua_State;
     fn lua_pushnil(L: *mut lua_State);
-    fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
+    fn lua_pushinteger(L: *mut lua_State, n: Integer);
     fn lua_pushlstring(
         L: *mut lua_State,
         s: *const libc::c_char,
@@ -143,7 +143,7 @@ unsafe extern "C" {
     fn lua_gethookmask(L: *mut lua_State) -> libc::c_int;
     fn lua_gethookcount(L: *mut lua_State) -> libc::c_int;
     fn lua_setcstacklimit(L: *mut lua_State, limit: libc::c_uint) -> libc::c_int;
-    fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
+    fn luaL_checkversion_(L: *mut lua_State, ver: Number, sz: size_t);
     fn luaL_tolstring(
         L: *mut lua_State,
         index: libc::c_int,
@@ -170,12 +170,12 @@ unsafe extern "C" {
         def: *const libc::c_char,
         l: *mut size_t,
     ) -> *const libc::c_char;
-    fn luaL_checkinteger(L: *mut lua_State, arg: libc::c_int) -> lua_Integer;
+    fn luaL_checkinteger(L: *mut lua_State, arg: libc::c_int) -> Integer;
     fn luaL_optinteger(
         L: *mut lua_State,
         arg: libc::c_int,
-        def: lua_Integer,
-    ) -> lua_Integer;
+        def: Integer,
+    ) -> Integer;
     fn luaL_checktype(L: *mut lua_State, arg: libc::c_int, t: libc::c_int);
     fn luaL_checkany(L: *mut lua_State, arg: libc::c_int);
     fn luaL_error(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> libc::c_int;
@@ -238,10 +238,10 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 pub type intptr_t = libc::c_long;
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
+pub type Number = f64;
+pub type Integer = i64;
 pub type lua_KContext = intptr_t;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 pub type lua_KFunction = Option::<
     unsafe extern "C" fn(*mut lua_State, libc::c_int, lua_KContext) -> libc::c_int,
 >;
@@ -271,7 +271,7 @@ pub type lua_Hook = Option::<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug
 #[repr(C)]
 pub struct luaL_Reg {
     pub name: *const libc::c_char,
-    pub func: lua_CFunction,
+    pub func: CFunction,
 }
 static mut HOOKKEY: *const libc::c_char = b"_HOOKKEY\0" as *const u8
     as *const libc::c_char;
@@ -314,7 +314,7 @@ unsafe extern "C" fn db_getuservalue(mut L: *mut lua_State) -> libc::c_int {
     let mut n: libc::c_int = luaL_optinteger(
         L,
         2 as libc::c_int,
-        1 as libc::c_int as lua_Integer,
+        1 as libc::c_int as Integer,
     ) as libc::c_int;
     if lua_type(L, 1 as libc::c_int) != 7 as libc::c_int {
         lua_pushnil(L);
@@ -328,7 +328,7 @@ unsafe extern "C" fn db_setuservalue(mut L: *mut lua_State) -> libc::c_int {
     let mut n: libc::c_int = luaL_optinteger(
         L,
         3 as libc::c_int,
-        1 as libc::c_int as lua_Integer,
+        1 as libc::c_int as Integer,
     ) as libc::c_int;
     luaL_checktype(L, 1 as libc::c_int, 7 as libc::c_int);
     luaL_checkany(L, 2 as libc::c_int);
@@ -363,7 +363,7 @@ unsafe extern "C" fn settabsi(
     mut k: *const libc::c_char,
     mut v: libc::c_int,
 ) {
-    lua_pushinteger(L, v as lua_Integer);
+    lua_pushinteger(L, v as Integer);
     lua_setfield(L, -(2 as libc::c_int), k);
 }
 unsafe extern "C" fn settabsb(
@@ -724,7 +724,7 @@ unsafe extern "C" fn hookf(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
     if lua_rawget(L, -(2 as libc::c_int)) == 6 as libc::c_int {
         lua_pushstring(L, hooknames[(*ar).event as usize]);
         if (*ar).currentline >= 0 as libc::c_int {
-            lua_pushinteger(L, (*ar).currentline as lua_Integer);
+            lua_pushinteger(L, (*ar).currentline as Integer);
         } else {
             lua_pushnil(L);
         }
@@ -800,7 +800,7 @@ unsafe extern "C" fn db_sethook(mut L: *mut lua_State) -> libc::c_int {
         count = luaL_optinteger(
             L,
             arg + 3 as libc::c_int,
-            0 as libc::c_int as lua_Integer,
+            0 as libc::c_int as Integer,
         ) as libc::c_int;
         func = Some(hookf as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ());
         mask = makemask(smask, count);
@@ -847,7 +847,7 @@ unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> libc::c_int {
         lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     }
     lua_pushstring(L, unmakemask(mask, buff.as_mut_ptr()));
-    lua_pushinteger(L, lua_gethookcount(L1) as lua_Integer);
+    lua_pushinteger(L, lua_gethookcount(L1) as Integer);
     return 3 as libc::c_int;
 }
 unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> libc::c_int {
@@ -913,7 +913,7 @@ unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> libc::c_int {
         let mut level: libc::c_int = luaL_optinteger(
             L,
             arg + 2 as libc::c_int,
-            (if L == L1 { 1 as libc::c_int } else { 0 as libc::c_int }) as lua_Integer,
+            (if L == L1 { 1 as libc::c_int } else { 0 as libc::c_int }) as Integer,
         ) as libc::c_int;
         luaL_traceback(L, L1, msg, level);
     }
@@ -922,7 +922,7 @@ unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> libc::c_int {
 unsafe extern "C" fn db_setcstacklimit(mut L: *mut lua_State) -> libc::c_int {
     let mut limit: libc::c_int = luaL_checkinteger(L, 1 as libc::c_int) as libc::c_int;
     let mut res: libc::c_int = lua_setcstacklimit(L, limit as libc::c_uint);
-    lua_pushinteger(L, res as lua_Integer);
+    lua_pushinteger(L, res as Integer);
     return 1 as libc::c_int;
 }
 static mut dblib: [luaL_Reg; 18] = unsafe {
@@ -1098,10 +1098,10 @@ static mut dblib: [luaL_Reg; 18] = unsafe {
 pub unsafe extern "C" fn luaopen_debug(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,
-        504 as libc::c_int as lua_Number,
-        (::core::mem::size_of::<lua_Integer>() as libc::c_ulong)
+        504 as libc::c_int as Number,
+        (::core::mem::size_of::<Integer>() as libc::c_ulong)
             .wrapping_mul(16 as libc::c_int as libc::c_ulong)
-            .wrapping_add(::core::mem::size_of::<lua_Number>() as libc::c_ulong),
+            .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,

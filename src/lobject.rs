@@ -45,14 +45,14 @@ unsafe extern "C" {
     ) -> *mut TString;
     fn luaV_tointegerns(
         obj: *const TValue,
-        p: *mut lua_Integer,
+        p: *mut Integer,
         mode: F2Imod,
     ) -> libc::c_int;
     fn luaV_concat(L: *mut lua_State, total: libc::c_int);
-    fn luaV_idiv(L: *mut lua_State, x: lua_Integer, y: lua_Integer) -> lua_Integer;
-    fn luaV_mod(L: *mut lua_State, x: lua_Integer, y: lua_Integer) -> lua_Integer;
-    fn luaV_modf(L: *mut lua_State, x: lua_Number, y: lua_Number) -> lua_Number;
-    fn luaV_shiftl(x: lua_Integer, y: lua_Integer) -> lua_Integer;
+    fn luaV_idiv(L: *mut lua_State, x: Integer, y: Integer) -> Integer;
+    fn luaV_mod(L: *mut lua_State, x: Integer, y: Integer) -> Integer;
+    fn luaV_modf(L: *mut lua_State, x: Number, y: Number) -> Number;
+    fn luaV_shiftl(x: Integer, y: Integer) -> Integer;
 }
 pub type __builtin_va_list = [__va_list_tag; 1];
 #[derive(Copy, Clone)]
@@ -224,14 +224,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -314,7 +314,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -399,10 +399,10 @@ pub type l_uacInt = i64;
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 #[derive(Copy, Clone)]
@@ -474,7 +474,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -817,43 +817,43 @@ pub unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> libc::c_int {
 unsafe extern "C" fn intarith(
     mut L: *mut lua_State,
     mut op: libc::c_int,
-    mut v1: lua_Integer,
-    mut v2: lua_Integer,
-) -> lua_Integer {
+    mut v1: Integer,
+    mut v2: Integer,
+) -> Integer {
     match op {
-        0 => return (v1 as lua_Unsigned).wrapping_add(v2 as lua_Unsigned) as lua_Integer,
-        1 => return (v1 as lua_Unsigned).wrapping_sub(v2 as lua_Unsigned) as lua_Integer,
-        2 => return (v1 as lua_Unsigned).wrapping_mul(v2 as lua_Unsigned) as lua_Integer,
+        0 => return (v1 as lua_Unsigned).wrapping_add(v2 as lua_Unsigned) as Integer,
+        1 => return (v1 as lua_Unsigned).wrapping_sub(v2 as lua_Unsigned) as Integer,
+        2 => return (v1 as lua_Unsigned).wrapping_mul(v2 as lua_Unsigned) as Integer,
         3 => return luaV_mod(L, v1, v2),
         6 => return luaV_idiv(L, v1, v2),
-        7 => return (v1 as lua_Unsigned & v2 as lua_Unsigned) as lua_Integer,
-        8 => return (v1 as lua_Unsigned | v2 as lua_Unsigned) as lua_Integer,
-        9 => return (v1 as lua_Unsigned ^ v2 as lua_Unsigned) as lua_Integer,
+        7 => return (v1 as lua_Unsigned & v2 as lua_Unsigned) as Integer,
+        8 => return (v1 as lua_Unsigned | v2 as lua_Unsigned) as Integer,
+        9 => return (v1 as lua_Unsigned ^ v2 as lua_Unsigned) as Integer,
         10 => return luaV_shiftl(v1, v2),
         11 => {
             return luaV_shiftl(
                 v1,
                 (0 as libc::c_int as lua_Unsigned).wrapping_sub(v2 as lua_Unsigned)
-                    as lua_Integer,
+                    as Integer,
             );
         }
         12 => {
             return (0 as libc::c_int as lua_Unsigned).wrapping_sub(v1 as lua_Unsigned)
-                as lua_Integer;
+                as Integer;
         }
         13 => {
             return (!(0 as libc::c_int as lua_Unsigned) ^ v1 as lua_Unsigned)
-                as lua_Integer;
+                as Integer;
         }
-        _ => return 0 as libc::c_int as lua_Integer,
+        _ => return 0 as libc::c_int as Integer,
     };
 }
 unsafe extern "C" fn numarith(
     mut L: *mut lua_State,
     mut op: libc::c_int,
-    mut v1: lua_Number,
-    mut v2: lua_Number,
-) -> lua_Number {
+    mut v1: Number,
+    mut v2: Number,
+) -> Number {
     match op {
         0 => return v1 + v2,
         1 => return v1 - v2,
@@ -869,7 +869,7 @@ unsafe extern "C" fn numarith(
         6 => return (v1 / v2).floor(),
         12 => return -v1,
         3 => return luaV_modf(L, v1, v2),
-        _ => return 0 as libc::c_int as lua_Number,
+        _ => return 0 as libc::c_int as Number,
     };
 }
 #[unsafe (no_mangle)]
@@ -882,8 +882,8 @@ pub unsafe extern "C" fn luaO_rawarith(
 ) -> libc::c_int {
     match op {
         7 | 8 | 9 | 10 | 11 | 13 => {
-            let mut i1: lua_Integer = 0;
-            let mut i2: lua_Integer = 0;
+            let mut i1: Integer = 0;
+            let mut i2: Integer = 0;
             if (if (((*p1).tt_ as libc::c_int
                 == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
                 as libc::c_int != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
@@ -915,8 +915,8 @@ pub unsafe extern "C" fn luaO_rawarith(
             }
         }
         5 | 4 => {
-            let mut n1: lua_Number = 0.;
-            let mut n2: lua_Number = 0.;
+            let mut n1: Number = 0.;
+            let mut n2: Number = 0.;
             if (if (*p1).tt_ as libc::c_int
                 == 3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
             {
@@ -926,7 +926,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (if (*p1).tt_ as libc::c_int
                     == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
                 {
-                    n1 = (*p1).value_.i as lua_Number;
+                    n1 = (*p1).value_.i as Number;
                     1 as libc::c_int
                 } else {
                     0 as libc::c_int
@@ -941,7 +941,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                     (if (*p2).tt_ as libc::c_int
                         == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
                     {
-                        n2 = (*p2).value_.i as lua_Number;
+                        n2 = (*p2).value_.i as Number;
                         1 as libc::c_int
                     } else {
                         0 as libc::c_int
@@ -959,8 +959,8 @@ pub unsafe extern "C" fn luaO_rawarith(
             }
         }
         _ => {
-            let mut n1_0: lua_Number = 0.;
-            let mut n2_0: lua_Number = 0.;
+            let mut n1_0: Number = 0.;
+            let mut n2_0: Number = 0.;
             if (*p1).tt_ as libc::c_int
                 == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
                 && (*p2).tt_ as libc::c_int
@@ -981,7 +981,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (if (*p1).tt_ as libc::c_int
                     == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
                 {
-                    n1_0 = (*p1).value_.i as lua_Number;
+                    n1_0 = (*p1).value_.i as Number;
                     1 as libc::c_int
                 } else {
                     0 as libc::c_int
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                     (if (*p2).tt_ as libc::c_int
                         == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
                     {
-                        n2_0 = (*p2).value_.i as lua_Number;
+                        n2_0 = (*p2).value_.i as Number;
                         1 as libc::c_int
                     } else {
                         0 as libc::c_int
@@ -1056,7 +1056,7 @@ unsafe extern "C" fn isneg(mut s: *mut *const libc::c_char) -> libc::c_int {
 }
 unsafe extern "C" fn l_str2dloc(
     mut s: *const libc::c_char,
-    mut result: *mut lua_Number,
+    mut result: *mut Number,
     mut mode: libc::c_int,
 ) -> *const libc::c_char {
     let mut endptr: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -1082,7 +1082,7 @@ unsafe extern "C" fn l_str2dloc(
 }
 unsafe extern "C" fn l_str2d(
     mut s: *const libc::c_char,
-    mut result: *mut lua_Number,
+    mut result: *mut Number,
 ) -> *const libc::c_char {
     let mut endptr: *const libc::c_char = 0 as *const libc::c_char;
     let mut pmode: *const libc::c_char = strpbrk(
@@ -1118,7 +1118,7 @@ unsafe extern "C" fn l_str2d(
 }
 unsafe extern "C" fn l_str2int(
     mut s: *const libc::c_char,
-    mut result: *mut lua_Integer,
+    mut result: *mut Integer,
 ) -> *const libc::c_char {
     let mut a: lua_Unsigned = 0 as libc::c_int as lua_Unsigned;
     let mut empty: libc::c_int = 1 as libc::c_int;
@@ -1184,7 +1184,7 @@ unsafe extern "C" fn l_str2int(
             (0 as libc::c_uint as libc::c_ulonglong).wrapping_sub(a)
         } else {
             a
-        }) as lua_Integer;
+        }) as Integer;
         return s;
     };
 }
@@ -1193,8 +1193,8 @@ pub unsafe extern "C" fn luaO_str2num(
     mut s: *const libc::c_char,
     mut o: *mut TValue,
 ) -> size_t {
-    let mut i: lua_Integer = 0;
-    let mut n: lua_Number = 0.;
+    let mut i: Integer = 0;
+    let mut n: Number = 0.;
     let mut e: *const libc::c_char = 0 as *const libc::c_char;
     e = l_str2int(s, &mut i);
     if !e.is_null() {
@@ -1399,7 +1399,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                     tt_: 0,
                 };
                 let mut io: *mut TValue = &mut num;
-                (*io).value_.i = argp.arg::<libc::c_int>() as lua_Integer;
+                (*io).value_.i = argp.arg::<libc::c_int>() as Integer;
                 (*io)
                     .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
                     as u8;

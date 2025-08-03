@@ -44,7 +44,7 @@ unsafe extern "C" {
         fmt: *const libc::c_char,
         _: ...
     ) -> *const libc::c_char;
-    fn lua_pushcclosure(L: *mut lua_State, fn_0: lua_CFunction, n: libc::c_int);
+    fn lua_pushcclosure(L: *mut lua_State, fn_0: CFunction, n: libc::c_int);
     fn lua_pushboolean(L: *mut lua_State, b: libc::c_int);
     fn lua_pushlightuserdata(L: *mut lua_State, p: *mut libc::c_void);
     fn lua_getfield(
@@ -52,10 +52,10 @@ unsafe extern "C" {
         index: libc::c_int,
         k: *const libc::c_char,
     ) -> libc::c_int;
-    fn lua_rawgeti(L: *mut lua_State, index: libc::c_int, n: lua_Integer) -> libc::c_int;
+    fn lua_rawgeti(L: *mut lua_State, index: libc::c_int, n: Integer) -> libc::c_int;
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
     fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
-    fn lua_rawseti(L: *mut lua_State, index: libc::c_int, n: lua_Integer);
+    fn lua_rawseti(L: *mut lua_State, index: libc::c_int, n: Integer);
     fn lua_setmetatable(L: *mut lua_State, objindex: libc::c_int) -> libc::c_int;
     fn lua_callk(
         L: *mut lua_State,
@@ -64,7 +64,7 @@ unsafe extern "C" {
         ctx: lua_KContext,
         k: lua_KFunction,
     );
-    fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
+    fn luaL_checkversion_(L: *mut lua_State, ver: Number, sz: size_t);
     fn luaL_checklstring(
         L: *mut lua_State,
         arg: libc::c_int,
@@ -82,7 +82,7 @@ unsafe extern "C" {
         filename: *const libc::c_char,
         mode: *const libc::c_char,
     ) -> libc::c_int;
-    fn luaL_len(L: *mut lua_State, index: libc::c_int) -> lua_Integer;
+    fn luaL_len(L: *mut lua_State, index: libc::c_int) -> Integer;
     fn luaL_addgsub(
         b: *mut luaL_Buffer,
         s: *const libc::c_char,
@@ -154,10 +154,10 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 pub type intptr_t = libc::c_long;
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
+pub type Number = f64;
+pub type Integer = i64;
 pub type lua_KContext = intptr_t;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 pub type lua_KFunction = Option::<
     unsafe extern "C" fn(*mut lua_State, libc::c_int, lua_KContext) -> libc::c_int,
 >;
@@ -173,10 +173,10 @@ pub struct luaL_Buffer {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed {
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
     pub b: [libc::c_char; 1024],
 }
@@ -184,7 +184,7 @@ pub union C2RustUnnamed {
 #[repr(C)]
 pub struct luaL_Reg {
     pub name: *const libc::c_char,
-    pub func: lua_CFunction,
+    pub func: CFunction,
 }
 static mut CLIBS: *const libc::c_char = b"_CLIBS\0" as *const u8 as *const libc::c_char;
 unsafe extern "C" fn lsys_unloadlib(mut lib: *mut libc::c_void) {
@@ -211,10 +211,10 @@ unsafe extern "C" fn lsys_sym(
     mut L: *mut lua_State,
     mut lib: *mut libc::c_void,
     mut sym: *const libc::c_char,
-) -> lua_CFunction {
-    let mut f: lua_CFunction = ::core::mem::transmute::<
+) -> CFunction {
+    let mut f: CFunction = ::core::mem::transmute::<
         *mut libc::c_void,
-        lua_CFunction,
+        CFunction,
     >(dlsym(lib, sym));
     if (f.is_none() as libc::c_int != 0 as libc::c_int) as libc::c_int as libc::c_long
         != 0
@@ -337,7 +337,7 @@ unsafe extern "C" fn addtoclib(
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
 unsafe extern "C" fn gctm(mut L: *mut lua_State) -> libc::c_int {
-    let mut n: lua_Integer = luaL_len(L, 1 as libc::c_int);
+    let mut n: Integer = luaL_len(L, 1 as libc::c_int);
     while n >= 1 as libc::c_int as i64 {
         lua_rawgeti(L, 1 as libc::c_int, n);
         lsys_unloadlib(lua_touserdata(L, -(1 as libc::c_int)));
@@ -364,7 +364,7 @@ unsafe extern "C" fn lookforfunc(
         lua_pushboolean(L, 1 as libc::c_int);
         return 0 as libc::c_int;
     } else {
-        let mut f: lua_CFunction = lsys_sym(L, reg, sym);
+        let mut f: CFunction = lsys_sym(L, reg, sym);
         if f.is_none() {
             return 2 as libc::c_int;
         }
@@ -737,7 +737,7 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
     i = 1 as libc::c_int;
     loop {
         luaL_addstring(&mut msg, b"\n\t\0" as *const u8 as *const libc::c_char);
-        if ((lua_rawgeti(L, 3 as libc::c_int, i as lua_Integer) == 0 as libc::c_int)
+        if ((lua_rawgeti(L, 3 as libc::c_int, i as Integer) == 0 as libc::c_int)
             as libc::c_int != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
         {
             lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
@@ -901,7 +901,7 @@ static mut ll_funcs: [luaL_Reg; 2] = unsafe {
     ]
 };
 unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
-    static mut searchers: [lua_CFunction; 5] = unsafe {
+    static mut searchers: [CFunction; 5] = unsafe {
         [
             Some(
                 searcher_preload as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
@@ -915,8 +915,8 @@ unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
     let mut i: libc::c_int = 0;
     lua_createtable(
         L,
-        (::core::mem::size_of::<[lua_CFunction; 5]>() as libc::c_ulong)
-            .wrapping_div(::core::mem::size_of::<lua_CFunction>() as libc::c_ulong)
+        (::core::mem::size_of::<[CFunction; 5]>() as libc::c_ulong)
+            .wrapping_div(::core::mem::size_of::<CFunction>() as libc::c_ulong)
             .wrapping_sub(1 as libc::c_int as libc::c_ulong) as libc::c_int,
         0 as libc::c_int,
     );
@@ -924,7 +924,7 @@ unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
     while (searchers[i as usize]).is_some() {
         lua_pushvalue(L, -(2 as libc::c_int));
         lua_pushcclosure(L, searchers[i as usize], 1 as libc::c_int);
-        lua_rawseti(L, -(2 as libc::c_int), (i + 1 as libc::c_int) as lua_Integer);
+        lua_rawseti(L, -(2 as libc::c_int), (i + 1 as libc::c_int) as Integer);
         i += 1;
         i;
     }
@@ -950,10 +950,10 @@ pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> libc::c_int {
     createclibstable(L);
     luaL_checkversion_(
         L,
-        504 as libc::c_int as lua_Number,
-        (::core::mem::size_of::<lua_Integer>() as libc::c_ulong)
+        504 as libc::c_int as Number,
+        (::core::mem::size_of::<Integer>() as libc::c_ulong)
             .wrapping_mul(16 as libc::c_int as libc::c_ulong)
-            .wrapping_add(::core::mem::size_of::<lua_Number>() as libc::c_ulong),
+            .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,
@@ -1007,7 +1007,7 @@ pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> libc::c_int {
     lua_rawgeti(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int,
-        2 as libc::c_int as lua_Integer,
+        2 as libc::c_int as Integer,
     );
     lua_pushvalue(L, -(2 as libc::c_int));
     luaL_setfuncs(L, ll_funcs.as_ptr(), 1 as libc::c_int);

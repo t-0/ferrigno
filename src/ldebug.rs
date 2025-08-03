@@ -44,13 +44,13 @@ unsafe extern "C" {
     fn luaH_setint(
         L: *mut lua_State,
         t: *mut Table,
-        key: lua_Integer,
+        key: Integer,
         value: *mut TValue,
     );
     fn luaH_new(L: *mut lua_State) -> *mut Table;
     fn luaV_tointegerns(
         obj: *const TValue,
-        p: *mut lua_Integer,
+        p: *mut Integer,
         mode: F2Imod,
     ) -> libc::c_int;
 }
@@ -196,14 +196,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -286,7 +286,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -438,7 +438,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -469,10 +469,10 @@ pub struct Udata {
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 pub type TMS = libc::c_uint;
@@ -947,7 +947,7 @@ unsafe extern "C" fn collectvalidlines(mut L: *mut lua_State, mut f: *mut Closur
             }
             while i < (*p).sizelineinfo {
                 currentline = nextline(p, currentline, i);
-                luaH_setint(L, t, currentline as lua_Integer, &mut v);
+                luaH_setint(L, t, currentline as Integer, &mut v);
                 i += 1;
                 i;
             }
@@ -1618,7 +1618,7 @@ pub unsafe extern "C" fn luaG_tointerror(
     mut p1: *const TValue,
     mut p2: *const TValue,
 ) -> ! {
-    let mut temp: lua_Integer = 0;
+    let mut temp: Integer = 0;
     if luaV_tointegerns(p1, &mut temp, F2Ieq) == 0 {
         p2 = p1;
     }

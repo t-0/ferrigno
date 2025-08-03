@@ -24,16 +24,16 @@ unsafe extern "C" {
     fn luaL_requiref(
         L: *mut lua_State,
         modname: *const libc::c_char,
-        openf: lua_CFunction,
+        openf: CFunction,
         glb: libc::c_int,
     );
 }
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct luaL_Reg {
     pub name: *const libc::c_char,
-    pub func: lua_CFunction,
+    pub func: CFunction,
 }
 static mut loadedlibs: [luaL_Reg; 11] = unsafe {
     [

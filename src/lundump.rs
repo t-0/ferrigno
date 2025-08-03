@@ -173,14 +173,14 @@ pub struct C2RustUnnamed_4 {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
-    pub i: lua_Integer,
-    pub n: lua_Number,
+    pub f: CFunction,
+    pub i: Integer,
+    pub n: Number,
     pub ub: u8,
 }
-pub type lua_Number = f64;
-pub type lua_Integer = i64;
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type Number = f64;
+pub type Integer = i64;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -263,7 +263,7 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut lua_State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut lua_State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
@@ -352,10 +352,10 @@ pub type ls_byte = libc::c_schar;
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: lua_Number,
+    pub n: Number,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: lua_Integer,
+    pub i: Integer,
     pub l: libc::c_long,
 }
 #[derive(Copy, Clone)]
@@ -427,7 +427,7 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
 #[derive(Copy, Clone)]
@@ -531,23 +531,23 @@ unsafe extern "C" fn loadSize(mut S: *mut LoadState) -> size_t {
 unsafe extern "C" fn loadInt(mut S: *mut LoadState) -> libc::c_int {
     return loadUnsigned(S, 2147483647 as libc::c_int as size_t) as libc::c_int;
 }
-unsafe extern "C" fn loadNumber(mut S: *mut LoadState) -> lua_Number {
-    let mut x: lua_Number = 0.;
+unsafe extern "C" fn loadNumber(mut S: *mut LoadState) -> Number {
+    let mut x: Number = 0.;
     loadBlock(
         S,
-        &mut x as *mut lua_Number as *mut libc::c_void,
+        &mut x as *mut Number as *mut libc::c_void,
         (1 as libc::c_int as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<lua_Number>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     return x;
 }
-unsafe extern "C" fn loadInteger(mut S: *mut LoadState) -> lua_Integer {
-    let mut x: lua_Integer = 0;
+unsafe extern "C" fn loadInteger(mut S: *mut LoadState) -> Integer {
+    let mut x: Integer = 0;
     loadBlock(
         S,
-        &mut x as *mut lua_Integer as *mut libc::c_void,
+        &mut x as *mut Integer as *mut libc::c_void,
         (1 as libc::c_int as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<lua_Integer>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<Integer>() as libc::c_ulong),
     );
     return x;
 }
@@ -979,13 +979,13 @@ unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
     );
     fchecksize(
         S,
-        ::core::mem::size_of::<lua_Integer>() as libc::c_ulong,
-        b"lua_Integer\0" as *const u8 as *const libc::c_char,
+        ::core::mem::size_of::<Integer>() as libc::c_ulong,
+        b"Integer\0" as *const u8 as *const libc::c_char,
     );
     fchecksize(
         S,
-        ::core::mem::size_of::<lua_Number>() as libc::c_ulong,
-        b"lua_Number\0" as *const u8 as *const libc::c_char,
+        ::core::mem::size_of::<Number>() as libc::c_ulong,
+        b"Number\0" as *const u8 as *const libc::c_char,
     );
     if loadInteger(S) != 0x5678 as libc::c_int as i64 {
         error(S, b"integer format mismatch\0" as *const u8 as *const libc::c_char);
