@@ -39,7 +39,6 @@ mod lstring;
 mod lstrlib;
 mod ltable;
 mod ltablib;
-mod ltests;
 mod ltm;
 mod lua;
 mod lundump;
