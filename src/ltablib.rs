@@ -26,8 +26,8 @@ unsafe extern "C" {
     fn lua_toboolean(L: *mut lua_State, index: i32) -> i32;
     fn lua_compare(
         L: *mut lua_State,
-        idx1: i32,
-        idx2: i32,
+        index1: i32,
+        index2: i32,
         op: i32,
     ) -> i32;
     fn lua_pushnil(L: *mut lua_State);

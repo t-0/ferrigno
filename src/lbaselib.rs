@@ -41,8 +41,8 @@ unsafe extern "C" {
     fn lua_rawlen(L: *mut lua_State, index: i32) -> lua_Unsigned;
     fn lua_rawequal(
         L: *mut lua_State,
-        idx1: i32,
-        idx2: i32,
+        index1: i32,
+        index2: i32,
     ) -> i32;
     fn lua_pushnil(L: *mut lua_State);
     fn lua_pushnumber(L: *mut lua_State, n: Number);

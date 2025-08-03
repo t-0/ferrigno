@@ -87,8 +87,8 @@ unsafe extern "C" {
     fn lua_topointer(L: *mut lua_State, index: i32) -> *const libc::c_void;
     fn lua_rawequal(
         L: *mut lua_State,
-        idx1: i32,
-        idx2: i32,
+        index1: i32,
+        index2: i32,
     ) -> i32;
     fn lua_pushnil(L: *mut lua_State);
     fn lua_pushinteger(L: *mut lua_State, n: Integer);
