@@ -22,10 +22,10 @@ pub type intptr_t = libc::c_long;
 #[repr(C)]
 pub struct lua_State {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub status: lu_byte,
-    pub allowhook: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub status: u8,
+    pub allowhook: u8,
     pub nci: libc::c_ushort,
     pub top: StkIdRel,
     pub l_G: *mut global_State,
@@ -61,8 +61,8 @@ pub struct lua_Debug {
     pub currentline: libc::c_int,
     pub linedefined: libc::c_int,
     pub lastlinedefined: libc::c_int,
-    pub nups: libc::c_uchar,
-    pub nparams: libc::c_uchar,
+    pub nups: u8,
+    pub nparams: u8,
     pub isvararg: libc::c_char,
     pub istailcall: libc::c_char,
     pub ftransfer: libc::c_ushort,
@@ -138,10 +138,9 @@ pub union StackValue {
 #[repr(C)]
 pub struct C2RustUnnamed_4 {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
     pub delta: libc::c_ushort,
 }
-pub type lu_byte = libc::c_uchar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -150,7 +149,7 @@ pub union Value {
     pub f: lua_CFunction,
     pub i: lua_Integer,
     pub n: lua_Number,
-    pub ub: lu_byte,
+    pub ub: u8,
 }
 pub type lua_Number = f64;
 pub type lua_Integer = i64;
@@ -159,21 +158,21 @@ pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::
 #[repr(C)]
 pub struct GCObject {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpVal {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub v: C2RustUnnamed_7,
     pub u: C2RustUnnamed_5,
 }
@@ -208,17 +207,17 @@ pub struct global_State {
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: libc::c_uint,
-    pub currentwhite: lu_byte,
-    pub gcstate: lu_byte,
-    pub gckind: lu_byte,
-    pub gcstopem: lu_byte,
-    pub genminormul: lu_byte,
-    pub genmajormul: lu_byte,
-    pub gcstp: lu_byte,
-    pub gcemergency: lu_byte,
-    pub gcpause: lu_byte,
-    pub gcstepmul: lu_byte,
-    pub gcstepsize: lu_byte,
+    pub currentwhite: u8,
+    pub gcstate: u8,
+    pub gckind: u8,
+    pub gcstopem: u8,
+    pub genminormul: u8,
+    pub genmajormul: u8,
+    pub gcstp: u8,
+    pub gcemergency: u8,
+    pub gcpause: u8,
+    pub gcstepmul: u8,
+    pub gcstepsize: u8,
     pub allgc: *mut GCObject,
     pub sweepgc: *mut *mut GCObject,
     pub finobj: *mut GCObject,
@@ -253,10 +252,10 @@ pub type lua_WarnFunction = Option::<
 #[repr(C)]
 pub struct TString {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub extra: lu_byte,
-    pub shrlen: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub extra: u8,
+    pub shrlen: u8,
     pub hash: libc::c_uint,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
@@ -271,10 +270,10 @@ pub union C2RustUnnamed_8 {
 #[repr(C)]
 pub struct Table {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub flags: lu_byte,
-    pub lsizenode: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub flags: u8,
+    pub lsizenode: u8,
     pub alimit: libc::c_uint,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -292,8 +291,8 @@ pub union Node {
 #[repr(C)]
 pub struct NodeKey {
     pub value_: Value,
-    pub tt_: lu_byte,
-    pub key_tt: lu_byte,
+    pub tt_: u8,
+    pub key_tt: u8,
     pub next: libc::c_int,
     pub key_val: Value,
 }

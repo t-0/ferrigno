@@ -19,7 +19,7 @@ unsafe extern "C" {
         fmt: *const libc::c_char,
         _: ...
     ) -> *const libc::c_char;
-    static luai_ctype_: [lu_byte; 257];
+    static luai_ctype_: [u8; 257];
     fn luaM_saferealloc_(
         L: *mut lua_State,
         block: *mut libc::c_void,
@@ -59,10 +59,10 @@ pub type intptr_t = libc::c_long;
 #[repr(C)]
 pub struct lua_State {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub status: lu_byte,
-    pub allowhook: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub status: u8,
+    pub allowhook: u8,
     pub nci: libc::c_ushort,
     pub top: StkIdRel,
     pub l_G: *mut global_State,
@@ -98,8 +98,8 @@ pub struct lua_Debug {
     pub currentline: libc::c_int,
     pub linedefined: libc::c_int,
     pub lastlinedefined: libc::c_int,
-    pub nups: libc::c_uchar,
-    pub nparams: libc::c_uchar,
+    pub nups: u8,
+    pub nparams: u8,
     pub isvararg: libc::c_char,
     pub istailcall: libc::c_char,
     pub ftransfer: libc::c_ushort,
@@ -175,10 +175,9 @@ pub union StackValue {
 #[repr(C)]
 pub struct C2RustUnnamed_4 {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
     pub delta: libc::c_ushort,
 }
-pub type lu_byte = libc::c_uchar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -187,7 +186,7 @@ pub union Value {
     pub f: lua_CFunction,
     pub i: lua_Integer,
     pub n: lua_Number,
-    pub ub: lu_byte,
+    pub ub: u8,
 }
 pub type lua_Number = f64;
 pub type lua_Integer = i64;
@@ -196,21 +195,21 @@ pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::
 #[repr(C)]
 pub struct GCObject {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpVal {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub v: C2RustUnnamed_7,
     pub u: C2RustUnnamed_5,
 }
@@ -245,17 +244,17 @@ pub struct global_State {
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: libc::c_uint,
-    pub currentwhite: lu_byte,
-    pub gcstate: lu_byte,
-    pub gckind: lu_byte,
-    pub gcstopem: lu_byte,
-    pub genminormul: lu_byte,
-    pub genmajormul: lu_byte,
-    pub gcstp: lu_byte,
-    pub gcemergency: lu_byte,
-    pub gcpause: lu_byte,
-    pub gcstepmul: lu_byte,
-    pub gcstepsize: lu_byte,
+    pub currentwhite: u8,
+    pub gcstate: u8,
+    pub gckind: u8,
+    pub gcstopem: u8,
+    pub genminormul: u8,
+    pub genmajormul: u8,
+    pub gcstp: u8,
+    pub gcemergency: u8,
+    pub gcpause: u8,
+    pub gcstepmul: u8,
+    pub gcstepsize: u8,
     pub allgc: *mut GCObject,
     pub sweepgc: *mut *mut GCObject,
     pub finobj: *mut GCObject,
@@ -290,10 +289,10 @@ pub type lua_WarnFunction = Option::<
 #[repr(C)]
 pub struct TString {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub extra: lu_byte,
-    pub shrlen: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub extra: u8,
+    pub shrlen: u8,
     pub hash: libc::c_uint,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
@@ -308,10 +307,10 @@ pub union C2RustUnnamed_8 {
 #[repr(C)]
 pub struct Table {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub flags: lu_byte,
-    pub lsizenode: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub flags: u8,
+    pub lsizenode: u8,
     pub alimit: libc::c_uint,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -329,8 +328,8 @@ pub union Node {
 #[repr(C)]
 pub struct NodeKey {
     pub value_: Value,
-    pub tt_: lu_byte,
-    pub key_tt: lu_byte,
+    pub tt_: u8,
+    pub key_tt: u8,
     pub next: libc::c_int,
     pub key_val: Value,
 }
@@ -373,8 +372,8 @@ pub union UValue {
 #[repr(C)]
 pub struct Udata {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub nuvalue: libc::c_ushort,
     pub len: size_t,
     pub metatable: *mut Table,
@@ -385,9 +384,9 @@ pub struct Udata {
 #[repr(C)]
 pub struct Upvaldesc {
     pub name: *mut TString,
-    pub instack: lu_byte,
-    pub index: lu_byte,
-    pub kind: lu_byte,
+    pub instack: u8,
+    pub index: u8,
+    pub kind: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -406,11 +405,11 @@ pub struct AbsLineInfo {
 #[repr(C)]
 pub struct Proto {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub numparams: lu_byte,
-    pub is_vararg: lu_byte,
-    pub maxstacksize: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub numparams: u8,
+    pub is_vararg: u8,
+    pub maxstacksize: u8,
     pub sizeupvalues: libc::c_int,
     pub sizek: libc::c_int,
     pub sizecode: libc::c_int,
@@ -434,9 +433,9 @@ pub struct Proto {
 #[repr(C)]
 pub struct CClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub f: lua_CFunction,
     pub upvalue: [TValue; 1],
@@ -445,9 +444,9 @@ pub struct CClosure {
 #[repr(C)]
 pub struct LClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub p: *mut Proto,
     pub upvals: [*mut UpVal; 1],
@@ -575,8 +574,8 @@ pub struct Labeldesc {
     pub name: *mut TString,
     pub pc: libc::c_int,
     pub line: libc::c_int,
-    pub nactvar: lu_byte,
-    pub close: lu_byte,
+    pub nactvar: u8,
+    pub close: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -595,9 +594,9 @@ pub union Vardesc {
 #[repr(C)]
 pub struct C2RustUnnamed_10 {
     pub value_: Value,
-    pub tt_: lu_byte,
-    pub kind: lu_byte,
-    pub ridx: lu_byte,
+    pub tt_: u8,
+    pub kind: u8,
+    pub ridx: u8,
     pub pidx: libc::c_short,
     pub name: *mut TString,
 }
@@ -617,11 +616,11 @@ pub struct FuncState {
     pub firstlocal: libc::c_int,
     pub firstlabel: libc::c_int,
     pub ndebugvars: libc::c_short,
-    pub nactvar: lu_byte,
-    pub nups: lu_byte,
-    pub freereg: lu_byte,
-    pub iwthabs: lu_byte,
-    pub needclose: lu_byte,
+    pub nactvar: u8,
+    pub nups: u8,
+    pub freereg: u8,
+    pub iwthabs: u8,
+    pub needclose: u8,
 }
 static mut luaX_tokens: [*const libc::c_char; 37] = [
     b"and\0" as *const u8 as *const libc::c_char,
@@ -716,7 +715,7 @@ pub unsafe extern "C" fn luaX_init(mut L: *mut lua_State) {
     {
         let mut ts: *mut TString = luaS_new(L, luaX_tokens[i as usize]);
         luaC_fix(L, &mut (*(ts as *mut GCUnion)).gc);
-        (*ts).extra = (i + 1 as libc::c_int) as lu_byte;
+        (*ts).extra = (i + 1 as libc::c_int) as u8;
         i += 1;
         i;
     }
@@ -818,7 +817,7 @@ pub unsafe extern "C" fn luaX_newstring(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-            as lu_byte;
+            as u8;
         luaH_finishset(L, (*ls).h, stv, o, stv);
         if (*(*L).l_G).GCdebt > 0 as libc::c_int as libc::c_long {
             luaC_step(L);
@@ -836,7 +835,7 @@ unsafe extern "C" fn inclinenumber(mut ls: *mut LexState) {
         .current = if fresh2 > 0 as libc::c_int as libc::c_ulong {
         let fresh3 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh3 as libc::c_uchar as libc::c_int
+        *fresh3 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     };
@@ -849,7 +848,7 @@ unsafe extern "C" fn inclinenumber(mut ls: *mut LexState) {
             .current = if fresh4 > 0 as libc::c_int as libc::c_ulong {
             let fresh5 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh5 as libc::c_uchar as libc::c_int
+            *fresh5 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         };
@@ -910,7 +909,7 @@ unsafe extern "C" fn check_next1(
             .current = if fresh6 > 0 as libc::c_int as libc::c_ulong {
             let fresh7 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh7 as libc::c_uchar as libc::c_int
+            *fresh7 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         };
@@ -933,7 +932,7 @@ unsafe extern "C" fn check_next2(
             .current = (if fresh8 > 0 as libc::c_int as libc::c_ulong {
             let fresh9 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh9 as libc::c_uchar as libc::c_int
+            *fresh9 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         });
@@ -959,7 +958,7 @@ unsafe extern "C" fn read_numeral(
         .current = (if fresh10 > 0 as libc::c_int as libc::c_ulong {
         let fresh11 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh11 as libc::c_uchar as libc::c_int
+        *fresh11 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -985,7 +984,7 @@ unsafe extern "C" fn read_numeral(
                 .current = (if fresh12 > 0 as libc::c_int as libc::c_ulong {
                 let fresh13 = (*(*ls).z).p;
                 (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                *fresh13 as libc::c_uchar as libc::c_int
+                *fresh13 as u8 as libc::c_int
             } else {
                 luaZ_fill((*ls).z)
             });
@@ -1001,7 +1000,7 @@ unsafe extern "C" fn read_numeral(
             .current = (if fresh14 > 0 as libc::c_int as libc::c_ulong {
             let fresh15 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh15 as libc::c_uchar as libc::c_int
+            *fresh15 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         });
@@ -1035,7 +1034,7 @@ unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> size_t {
         .current = (if fresh16 > 0 as libc::c_int as libc::c_ulong {
         let fresh17 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh17 as libc::c_uchar as libc::c_int
+        *fresh17 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1047,7 +1046,7 @@ unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> size_t {
             .current = (if fresh18 > 0 as libc::c_int as libc::c_ulong {
             let fresh19 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh19 as libc::c_uchar as libc::c_int
+            *fresh19 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         });
@@ -1077,7 +1076,7 @@ unsafe extern "C" fn read_long_string(
         .current = (if fresh20 > 0 as libc::c_int as libc::c_ulong {
         let fresh21 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh21 as libc::c_uchar as libc::c_int
+        *fresh21 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1112,7 +1111,7 @@ unsafe extern "C" fn read_long_string(
                     .current = (if fresh22 > 0 as libc::c_int as libc::c_ulong {
                     let fresh23 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh23 as libc::c_uchar as libc::c_int
+                    *fresh23 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 });
@@ -1134,7 +1133,7 @@ unsafe extern "C" fn read_long_string(
                         .current = (if fresh24 > 0 as libc::c_int as libc::c_ulong {
                         let fresh25 = (*(*ls).z).p;
                         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                        *fresh25 as libc::c_uchar as libc::c_int
+                        *fresh25 as u8 as libc::c_int
                     } else {
                         luaZ_fill((*ls).z)
                     });
@@ -1145,7 +1144,7 @@ unsafe extern "C" fn read_long_string(
                         .current = if fresh26 > 0 as libc::c_int as libc::c_ulong {
                         let fresh27 = (*(*ls).z).p;
                         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                        *fresh27 as libc::c_uchar as libc::c_int
+                        *fresh27 as u8 as libc::c_int
                     } else {
                         luaZ_fill((*ls).z)
                     };
@@ -1177,7 +1176,7 @@ unsafe extern "C" fn esccheck(
                 .current = (if fresh28 > 0 as libc::c_int as libc::c_ulong {
                 let fresh29 = (*(*ls).z).p;
                 (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                *fresh29 as libc::c_uchar as libc::c_int
+                *fresh29 as u8 as libc::c_int
             } else {
                 luaZ_fill((*ls).z)
             });
@@ -1193,7 +1192,7 @@ unsafe extern "C" fn gethexa(mut ls: *mut LexState) -> libc::c_int {
         .current = (if fresh30 > 0 as libc::c_int as libc::c_ulong {
         let fresh31 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh31 as libc::c_uchar as libc::c_int
+        *fresh31 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1223,7 +1222,7 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
         .current = (if fresh32 > 0 as libc::c_int as libc::c_ulong {
         let fresh33 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh33 as libc::c_uchar as libc::c_int
+        *fresh33 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1241,7 +1240,7 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
             .current = (if fresh34 > 0 as libc::c_int as libc::c_ulong {
             let fresh35 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh35 as libc::c_uchar as libc::c_int
+            *fresh35 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         });
@@ -1272,7 +1271,7 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
         .current = if fresh36 > 0 as libc::c_int as libc::c_ulong {
         let fresh37 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh37 as libc::c_uchar as libc::c_int
+        *fresh37 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     };
@@ -1306,7 +1305,7 @@ unsafe extern "C" fn readdecesc(mut ls: *mut LexState) -> libc::c_int {
             .current = (if fresh38 > 0 as libc::c_int as libc::c_ulong {
             let fresh39 = (*(*ls).z).p;
             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-            *fresh39 as libc::c_uchar as libc::c_int
+            *fresh39 as u8 as libc::c_int
         } else {
             luaZ_fill((*ls).z)
         });
@@ -1336,7 +1335,7 @@ unsafe extern "C" fn read_string(
         .current = (if fresh40 > 0 as libc::c_int as libc::c_ulong {
         let fresh41 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh41 as libc::c_uchar as libc::c_int
+        *fresh41 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1365,7 +1364,7 @@ unsafe extern "C" fn read_string(
                     .current = (if fresh42 > 0 as libc::c_int as libc::c_ulong {
                     let fresh43 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh43 as libc::c_uchar as libc::c_int
+                    *fresh43 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 });
@@ -1429,7 +1428,7 @@ unsafe extern "C" fn read_string(
                             .current = if fresh44 > 0 as libc::c_int as libc::c_ulong {
                             let fresh45 = (*(*ls).z).p;
                             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                            *fresh45 as libc::c_uchar as libc::c_int
+                            *fresh45 as u8 as libc::c_int
                         } else {
                             luaZ_fill((*ls).z)
                         };
@@ -1447,7 +1446,7 @@ unsafe extern "C" fn read_string(
                                     .current = if fresh46 > 0 as libc::c_int as libc::c_ulong {
                                     let fresh47 = (*(*ls).z).p;
                                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                                    *fresh47 as libc::c_uchar as libc::c_int
+                                    *fresh47 as u8 as libc::c_int
                                 } else {
                                     luaZ_fill((*ls).z)
                                 };
@@ -1475,7 +1474,7 @@ unsafe extern "C" fn read_string(
                             .current = if fresh48 > 0 as libc::c_int as libc::c_ulong {
                             let fresh49 = (*(*ls).z).p;
                             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                            *fresh49 as libc::c_uchar as libc::c_int
+                            *fresh49 as u8 as libc::c_int
                         } else {
                             luaZ_fill((*ls).z)
                         };
@@ -1495,7 +1494,7 @@ unsafe extern "C" fn read_string(
                     .current = (if fresh50 > 0 as libc::c_int as libc::c_ulong {
                     let fresh51 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh51 as libc::c_uchar as libc::c_int
+                    *fresh51 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 });
@@ -1509,7 +1508,7 @@ unsafe extern "C" fn read_string(
         .current = (if fresh52 > 0 as libc::c_int as libc::c_ulong {
         let fresh53 = (*(*ls).z).p;
         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-        *fresh53 as libc::c_uchar as libc::c_int
+        *fresh53 as u8 as libc::c_int
     } else {
         luaZ_fill((*ls).z)
     });
@@ -1538,7 +1537,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh54 > 0 as libc::c_int as libc::c_ulong {
                     let fresh55 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh55 as libc::c_uchar as libc::c_int
+                    *fresh55 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1550,7 +1549,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh56 > 0 as libc::c_int as libc::c_ulong {
                     let fresh57 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh57 as libc::c_uchar as libc::c_int
+                    *fresh57 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1563,7 +1562,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh58 > 0 as libc::c_int as libc::c_ulong {
                     let fresh59 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh59 as libc::c_uchar as libc::c_int
+                    *fresh59 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1593,7 +1592,7 @@ unsafe extern "C" fn llex(
                                 .current = if fresh60 > 0 as libc::c_int as libc::c_ulong {
                                 let fresh61 = (*(*ls).z).p;
                                 (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                                *fresh61 as libc::c_uchar as libc::c_int
+                                *fresh61 as u8 as libc::c_int
                             } else {
                                 luaZ_fill((*ls).z)
                             };
@@ -1623,7 +1622,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh62 > 0 as libc::c_int as libc::c_ulong {
                     let fresh63 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh63 as libc::c_uchar as libc::c_int
+                    *fresh63 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1640,7 +1639,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh64 > 0 as libc::c_int as libc::c_ulong {
                     let fresh65 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh65 as libc::c_uchar as libc::c_int
+                    *fresh65 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1659,7 +1658,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh66 > 0 as libc::c_int as libc::c_ulong {
                     let fresh67 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh67 as libc::c_uchar as libc::c_int
+                    *fresh67 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1678,7 +1677,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh68 > 0 as libc::c_int as libc::c_ulong {
                     let fresh69 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh69 as libc::c_uchar as libc::c_int
+                    *fresh69 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1695,7 +1694,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh70 > 0 as libc::c_int as libc::c_ulong {
                     let fresh71 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh71 as libc::c_uchar as libc::c_int
+                    *fresh71 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1712,7 +1711,7 @@ unsafe extern "C" fn llex(
                     .current = if fresh72 > 0 as libc::c_int as libc::c_ulong {
                     let fresh73 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh73 as libc::c_uchar as libc::c_int
+                    *fresh73 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 };
@@ -1734,7 +1733,7 @@ unsafe extern "C" fn llex(
                     .current = (if fresh74 > 0 as libc::c_int as libc::c_ulong {
                     let fresh75 = (*(*ls).z).p;
                     (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                    *fresh75 as libc::c_uchar as libc::c_int
+                    *fresh75 as u8 as libc::c_int
                 } else {
                     luaZ_fill((*ls).z)
                 });
@@ -1769,7 +1768,7 @@ unsafe extern "C" fn llex(
                             .current = (if fresh76 > 0 as libc::c_int as libc::c_ulong {
                             let fresh77 = (*(*ls).z).p;
                             (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                            *fresh77 as libc::c_uchar as libc::c_int
+                            *fresh77 as u8 as libc::c_int
                         } else {
                             luaZ_fill((*ls).z)
                         });
@@ -1801,7 +1800,7 @@ unsafe extern "C" fn llex(
                         .current = if fresh78 > 0 as libc::c_int as libc::c_ulong {
                         let fresh79 = (*(*ls).z).p;
                         (*(*ls).z).p = ((*(*ls).z).p).offset(1);
-                        *fresh79 as libc::c_uchar as libc::c_int
+                        *fresh79 as u8 as libc::c_int
                     } else {
                         luaZ_fill((*ls).z)
                     };

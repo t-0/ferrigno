@@ -297,7 +297,7 @@ unsafe extern "C" fn getc_unlocked(mut __fp: *mut FILE) -> libc::c_int {
     } else {
         let fresh0 = (*__fp)._IO_read_ptr;
         (*__fp)._IO_read_ptr = ((*__fp)._IO_read_ptr).offset(1);
-        *(fresh0 as *mut libc::c_uchar) as libc::c_int
+        *(fresh0 as *mut u8) as libc::c_int
     };
 }
 unsafe extern "C" fn l_checkmode(mut mode: *const libc::c_char) -> libc::c_int {

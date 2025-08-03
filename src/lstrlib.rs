@@ -290,7 +290,7 @@ pub struct MatchState {
     pub p_end: *const libc::c_char,
     pub L: *mut lua_State,
     pub matchdepth: libc::c_int,
-    pub level: libc::c_uchar,
+    pub level: u8,
     pub capture: [C2RustUnnamed_3; 32],
 }
 #[derive(Copy, Clone)]
@@ -435,11 +435,11 @@ unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> libc::c_int {
                 i as isize,
             ) = ({
             let mut __res: libc::c_int = 0;
-            if ::core::mem::size_of::<libc::c_uchar>() as libc::c_ulong
+            if ::core::mem::size_of::<u8>() as libc::c_ulong
                 > 1 as libc::c_int as libc::c_ulong
             {
                 if 0 != 0 {
-                    let mut __c: libc::c_int = *s.offset(i as isize) as libc::c_uchar
+                    let mut __c: libc::c_int = *s.offset(i as isize) as u8
                         as libc::c_int;
                     __res = if __c < -(128 as libc::c_int) || __c > 255 as libc::c_int {
                         __c
@@ -448,13 +448,13 @@ unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> libc::c_int {
                     };
                 } else {
                     __res = tolower(
-                        *s.offset(i as isize) as libc::c_uchar as libc::c_int,
+                        *s.offset(i as isize) as u8 as libc::c_int,
                     );
                 }
             } else {
                 __res = *(*__ctype_tolower_loc())
                     .offset(
-                        *s.offset(i as isize) as libc::c_uchar as libc::c_int as isize,
+                        *s.offset(i as isize) as u8 as libc::c_int as isize,
                     );
             }
             __res
@@ -484,11 +484,11 @@ unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> libc::c_int {
                 i as isize,
             ) = ({
             let mut __res: libc::c_int = 0;
-            if ::core::mem::size_of::<libc::c_uchar>() as libc::c_ulong
+            if ::core::mem::size_of::<u8>() as libc::c_ulong
                 > 1 as libc::c_int as libc::c_ulong
             {
                 if 0 != 0 {
-                    let mut __c: libc::c_int = *s.offset(i as isize) as libc::c_uchar
+                    let mut __c: libc::c_int = *s.offset(i as isize) as u8
                         as libc::c_int;
                     __res = if __c < -(128 as libc::c_int) || __c > 255 as libc::c_int {
                         __c
@@ -497,13 +497,13 @@ unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> libc::c_int {
                     };
                 } else {
                     __res = toupper(
-                        *s.offset(i as isize) as libc::c_uchar as libc::c_int,
+                        *s.offset(i as isize) as u8 as libc::c_int,
                     );
                 }
             } else {
                 __res = *(*__ctype_toupper_loc())
                     .offset(
-                        *s.offset(i as isize) as libc::c_uchar as libc::c_int as isize,
+                        *s.offset(i as isize) as u8 as libc::c_int as isize,
                     );
             }
             __res
@@ -628,7 +628,7 @@ unsafe extern "C" fn str_byte(mut L: *mut lua_State) -> libc::c_int {
                     posi
                         .wrapping_add(i as libc::c_ulong)
                         .wrapping_sub(1 as libc::c_int as libc::c_ulong) as isize,
-                ) as libc::c_uchar as lua_Integer,
+                ) as u8 as lua_Integer,
         );
         i += 1;
         i;
@@ -658,7 +658,7 @@ unsafe extern "C" fn str_char(mut L: *mut lua_State) -> libc::c_int {
                 i,
                 b"value out of range\0" as *const u8 as *const libc::c_char,
             ) != 0) as libc::c_int;
-        *p.offset((i - 1 as libc::c_int) as isize) = c as libc::c_uchar as libc::c_char;
+        *p.offset((i - 1 as libc::c_int) as isize) = c as u8 as libc::c_char;
         i += 1;
         i;
     }
@@ -1058,19 +1058,19 @@ unsafe extern "C" fn matchbracketclass(
         if *p as libc::c_int == '%' as i32 {
             p = p.offset(1);
             p;
-            if match_class(c, *p as libc::c_uchar as libc::c_int) != 0 {
+            if match_class(c, *p as u8 as libc::c_int) != 0 {
                 return sig;
             }
         } else if *p.offset(1 as libc::c_int as isize) as libc::c_int == '-' as i32
             && p.offset(2 as libc::c_int as isize) < ec
         {
             p = p.offset(2 as libc::c_int as isize);
-            if *p.offset(-(2 as libc::c_int as isize)) as libc::c_uchar as libc::c_int
-                <= c && c <= *p as libc::c_uchar as libc::c_int
+            if *p.offset(-(2 as libc::c_int as isize)) as u8 as libc::c_int
+                <= c && c <= *p as u8 as libc::c_int
             {
                 return sig;
             }
-        } else if *p as libc::c_uchar as libc::c_int == c {
+        } else if *p as u8 as libc::c_int == c {
             return sig
         }
     }
@@ -1085,17 +1085,17 @@ unsafe extern "C" fn singlematch(
     if s >= (*ms).src_end {
         return 0 as libc::c_int
     } else {
-        let mut c: libc::c_int = *s as libc::c_uchar as libc::c_int;
+        let mut c: libc::c_int = *s as u8 as libc::c_int;
         match *p as libc::c_int {
             46 => return 1 as libc::c_int,
             37 => {
                 return match_class(
                     c,
-                    *p.offset(1 as libc::c_int as isize) as libc::c_uchar as libc::c_int,
+                    *p.offset(1 as libc::c_int as isize) as u8 as libc::c_int,
                 );
             }
             91 => return matchbracketclass(c, p, ep.offset(-(1 as libc::c_int as isize))),
-            _ => return (*p as libc::c_uchar as libc::c_int == c) as libc::c_int,
+            _ => return (*p as u8 as libc::c_int == c) as libc::c_int,
         }
     };
 }
@@ -1197,7 +1197,7 @@ unsafe extern "C" fn start_capture(
     }
     (*ms).capture[level as usize].init = s;
     (*ms).capture[level as usize].len = what as ptrdiff_t;
-    (*ms).level = (level + 1 as libc::c_int) as libc::c_uchar;
+    (*ms).level = (level + 1 as libc::c_int) as u8;
     res = match_0(ms, s, p);
     if res.is_null() {
         (*ms).level = ((*ms).level).wrapping_sub(1);
@@ -1333,12 +1333,12 @@ unsafe extern "C" fn match_0(
                                     *s.offset(-(1 as libc::c_int as isize)) as libc::c_int
                                 }) as libc::c_char;
                                 if matchbracketclass(
-                                    previous as libc::c_uchar as libc::c_int,
+                                    previous as u8 as libc::c_int,
                                     p,
                                     ep.offset(-(1 as libc::c_int as isize)),
                                 ) == 0
                                     && matchbracketclass(
-                                        *s as libc::c_uchar as libc::c_int,
+                                        *s as u8 as libc::c_int,
                                         p,
                                         ep.offset(-(1 as libc::c_int as isize)),
                                     ) != 0
@@ -1355,7 +1355,7 @@ unsafe extern "C" fn match_0(
                                 s = match_capture(
                                     ms,
                                     s,
-                                    *p.offset(1 as libc::c_int as isize) as libc::c_uchar
+                                    *p.offset(1 as libc::c_int as isize) as u8
                                         as libc::c_int,
                                 );
                                 if s.is_null() {
@@ -1403,12 +1403,12 @@ unsafe extern "C" fn match_0(
                                     *s.offset(-(1 as libc::c_int as isize)) as libc::c_int
                                 }) as libc::c_char;
                                 if matchbracketclass(
-                                    previous as libc::c_uchar as libc::c_int,
+                                    previous as u8 as libc::c_int,
                                     p,
                                     ep.offset(-(1 as libc::c_int as isize)),
                                 ) == 0
                                     && matchbracketclass(
-                                        *s as libc::c_uchar as libc::c_int,
+                                        *s as u8 as libc::c_int,
                                         p,
                                         ep.offset(-(1 as libc::c_int as isize)),
                                     ) != 0
@@ -1425,7 +1425,7 @@ unsafe extern "C" fn match_0(
                                 s = match_capture(
                                     ms,
                                     s,
-                                    *p.offset(1 as libc::c_int as isize) as libc::c_uchar
+                                    *p.offset(1 as libc::c_int as isize) as u8
                                         as libc::c_int,
                                 );
                                 if s.is_null() {
@@ -1473,12 +1473,12 @@ unsafe extern "C" fn match_0(
                                     *s.offset(-(1 as libc::c_int as isize)) as libc::c_int
                                 }) as libc::c_char;
                                 if matchbracketclass(
-                                    previous as libc::c_uchar as libc::c_int,
+                                    previous as u8 as libc::c_int,
                                     p,
                                     ep.offset(-(1 as libc::c_int as isize)),
                                 ) == 0
                                     && matchbracketclass(
-                                        *s as libc::c_uchar as libc::c_int,
+                                        *s as u8 as libc::c_int,
                                         p,
                                         ep.offset(-(1 as libc::c_int as isize)),
                                     ) != 0
@@ -1495,7 +1495,7 @@ unsafe extern "C" fn match_0(
                                 s = match_capture(
                                     ms,
                                     s,
-                                    *p.offset(1 as libc::c_int as isize) as libc::c_uchar
+                                    *p.offset(1 as libc::c_int as isize) as u8
                                         as libc::c_int,
                                 );
                                 if s.is_null() {
@@ -1731,7 +1731,7 @@ unsafe extern "C" fn prepstate(
     (*ms).p_end = p.offset(lp as isize);
 }
 unsafe extern "C" fn reprepstate(mut ms: *mut MatchState) {
-    (*ms).level = 0 as libc::c_int as libc::c_uchar;
+    (*ms).level = 0 as libc::c_int as u8;
 }
 unsafe extern "C" fn str_find_aux(
     mut L: *mut lua_State,
@@ -1912,7 +1912,7 @@ unsafe extern "C" fn add_s(
             *((*b).b).offset(fresh5 as isize) = *p;
         } else if *p as libc::c_int == '0' as i32 {
             luaL_addlstring(b, s, e.offset_from(s) as libc::c_long as size_t);
-        } else if *(*__ctype_b_loc()).offset(*p as libc::c_uchar as libc::c_int as isize)
+        } else if *(*__ctype_b_loc()).offset(*p as u8 as libc::c_int as isize)
             as libc::c_int & _ISdigit as libc::c_int as libc::c_ushort as libc::c_int
             != 0
         {
@@ -2108,14 +2108,14 @@ unsafe extern "C" fn addquoted(
             let fresh11 = (*b).n;
             (*b).n = ((*b).n).wrapping_add(1);
             *((*b).b).offset(fresh11 as isize) = *s;
-        } else if *(*__ctype_b_loc()).offset(*s as libc::c_uchar as libc::c_int as isize)
+        } else if *(*__ctype_b_loc()).offset(*s as u8 as libc::c_int as isize)
             as libc::c_int & _IScntrl as libc::c_int as libc::c_ushort as libc::c_int
             != 0
         {
             let mut buff: [libc::c_char; 10] = [0; 10];
             if *(*__ctype_b_loc())
                 .offset(
-                    *s.offset(1 as libc::c_int as isize) as libc::c_uchar as libc::c_int
+                    *s.offset(1 as libc::c_int as isize) as u8 as libc::c_int
                         as isize,
                 ) as libc::c_int
                 & _ISdigit as libc::c_int as libc::c_ushort as libc::c_int == 0
@@ -2124,14 +2124,14 @@ unsafe extern "C" fn addquoted(
                     buff.as_mut_ptr(),
                     ::core::mem::size_of::<[libc::c_char; 10]>() as libc::c_ulong,
                     b"\\%d\0" as *const u8 as *const libc::c_char,
-                    *s as libc::c_uchar as libc::c_int,
+                    *s as u8 as libc::c_int,
                 );
             } else {
                 snprintf(
                     buff.as_mut_ptr(),
                     ::core::mem::size_of::<[libc::c_char; 10]>() as libc::c_ulong,
                     b"\\%03d\0" as *const u8 as *const libc::c_char,
-                    *s as libc::c_uchar as libc::c_int,
+                    *s as u8 as libc::c_int,
                 );
             }
             luaL_addstring(b, buff.as_mut_ptr());
@@ -2242,12 +2242,12 @@ unsafe extern "C" fn addliteral(
     };
 }
 unsafe extern "C" fn get2digits(mut s: *const libc::c_char) -> *const libc::c_char {
-    if *(*__ctype_b_loc()).offset(*s as libc::c_uchar as libc::c_int as isize)
+    if *(*__ctype_b_loc()).offset(*s as u8 as libc::c_int as isize)
         as libc::c_int & _ISdigit as libc::c_int as libc::c_ushort as libc::c_int != 0
     {
         s = s.offset(1);
         s;
-        if *(*__ctype_b_loc()).offset(*s as libc::c_uchar as libc::c_int as isize)
+        if *(*__ctype_b_loc()).offset(*s as u8 as libc::c_int as isize)
             as libc::c_int & _ISdigit as libc::c_int as libc::c_ushort as libc::c_int
             != 0
         {
@@ -2273,7 +2273,7 @@ unsafe extern "C" fn checkformat(
             spec = get2digits(spec);
         }
     }
-    if *(*__ctype_b_loc()).offset(*spec as libc::c_uchar as libc::c_int as isize)
+    if *(*__ctype_b_loc()).offset(*spec as u8 as libc::c_int as isize)
         as libc::c_int & _ISalpha as libc::c_int as libc::c_ushort as libc::c_int == 0
     {
         luaL_error(
@@ -3206,7 +3206,7 @@ unsafe extern "C" fn unpackint(
                 .offset(
                     (if islittle != 0 { i } else { size - 1 as libc::c_int - i })
                         as isize,
-                ) as libc::c_uchar as lua_Unsigned;
+                ) as u8 as lua_Unsigned;
         i -= 1;
         i;
     }
@@ -3232,7 +3232,7 @@ unsafe extern "C" fn unpackint(
                 .offset(
                     (if islittle != 0 { i } else { size - 1 as libc::c_int - i })
                         as isize,
-                ) as libc::c_uchar as libc::c_int != mask_0) as libc::c_int
+                ) as u8 as libc::c_int != mask_0) as libc::c_int
                 != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
             {
                 luaL_error(

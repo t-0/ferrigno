@@ -163,10 +163,10 @@ pub type intptr_t = libc::c_long;
 #[repr(C)]
 pub struct lua_State {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub status: lu_byte,
-    pub allowhook: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub status: u8,
+    pub allowhook: u8,
     pub nci: libc::c_ushort,
     pub top: StkIdRel,
     pub l_G: *mut global_State,
@@ -202,8 +202,8 @@ pub struct lua_Debug {
     pub currentline: libc::c_int,
     pub linedefined: libc::c_int,
     pub lastlinedefined: libc::c_int,
-    pub nups: libc::c_uchar,
-    pub nparams: libc::c_uchar,
+    pub nups: u8,
+    pub nparams: u8,
     pub isvararg: libc::c_char,
     pub istailcall: libc::c_char,
     pub ftransfer: libc::c_ushort,
@@ -279,10 +279,9 @@ pub union StackValue {
 #[repr(C)]
 pub struct C2RustUnnamed_4 {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
     pub delta: libc::c_ushort,
 }
-pub type lu_byte = libc::c_uchar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -291,7 +290,7 @@ pub union Value {
     pub f: lua_CFunction,
     pub i: lua_Integer,
     pub n: lua_Number,
-    pub ub: lu_byte,
+    pub ub: u8,
 }
 pub type lua_Number = f64;
 pub type lua_Integer = i64;
@@ -300,21 +299,21 @@ pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::
 #[repr(C)]
 pub struct GCObject {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpVal {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub v: C2RustUnnamed_7,
     pub u: C2RustUnnamed_5,
 }
@@ -349,17 +348,17 @@ pub struct global_State {
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: libc::c_uint,
-    pub currentwhite: lu_byte,
-    pub gcstate: lu_byte,
-    pub gckind: lu_byte,
-    pub gcstopem: lu_byte,
-    pub genminormul: lu_byte,
-    pub genmajormul: lu_byte,
-    pub gcstp: lu_byte,
-    pub gcemergency: lu_byte,
-    pub gcpause: lu_byte,
-    pub gcstepmul: lu_byte,
-    pub gcstepsize: lu_byte,
+    pub currentwhite: u8,
+    pub gcstate: u8,
+    pub gckind: u8,
+    pub gcstopem: u8,
+    pub genminormul: u8,
+    pub genmajormul: u8,
+    pub gcstp: u8,
+    pub gcemergency: u8,
+    pub gcpause: u8,
+    pub gcstepmul: u8,
+    pub gcstepsize: u8,
     pub allgc: *mut GCObject,
     pub sweepgc: *mut *mut GCObject,
     pub finobj: *mut GCObject,
@@ -394,10 +393,10 @@ pub type lua_WarnFunction = Option::<
 #[repr(C)]
 pub struct TString {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub extra: lu_byte,
-    pub shrlen: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub extra: u8,
+    pub shrlen: u8,
     pub hash: libc::c_uint,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
@@ -412,10 +411,10 @@ pub union C2RustUnnamed_8 {
 #[repr(C)]
 pub struct Table {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub flags: lu_byte,
-    pub lsizenode: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub flags: u8,
+    pub lsizenode: u8,
     pub alimit: libc::c_uint,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -433,8 +432,8 @@ pub union Node {
 #[repr(C)]
 pub struct NodeKey {
     pub value_: Value,
-    pub tt_: lu_byte,
-    pub key_tt: lu_byte,
+    pub tt_: u8,
+    pub key_tt: u8,
     pub next: libc::c_int,
     pub key_val: Value,
 }
@@ -475,9 +474,9 @@ pub type lua_Writer = Option::<
 #[repr(C)]
 pub struct CClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub f: lua_CFunction,
     pub upvalue: [TValue; 1],
@@ -492,9 +491,9 @@ pub union Closure {
 #[repr(C)]
 pub struct LClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub p: *mut Proto,
     pub upvals: [*mut UpVal; 1],
@@ -503,11 +502,11 @@ pub struct LClosure {
 #[repr(C)]
 pub struct Proto {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub numparams: lu_byte,
-    pub is_vararg: lu_byte,
-    pub maxstacksize: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub numparams: u8,
+    pub is_vararg: u8,
+    pub maxstacksize: u8,
     pub sizeupvalues: libc::c_int,
     pub sizek: libc::c_int,
     pub sizecode: libc::c_int,
@@ -545,9 +544,9 @@ pub type ls_byte = libc::c_schar;
 #[repr(C)]
 pub struct Upvaldesc {
     pub name: *mut TString,
-    pub instack: lu_byte,
-    pub index: lu_byte,
-    pub kind: lu_byte,
+    pub instack: u8,
+    pub index: u8,
+    pub kind: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -565,8 +564,8 @@ pub union GCUnion {
 #[repr(C)]
 pub struct Udata {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub nuvalue: libc::c_ushort,
     pub len: size_t,
     pub metatable: *mut Table,
@@ -781,7 +780,7 @@ pub unsafe extern "C" fn lua_settop(mut L: *mut lua_State, mut index: libc::c_in
             (*fresh0)
                 .val
                 .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-                as lu_byte;
+                as u8;
             diff -= 1;
             diff;
         }
@@ -801,7 +800,7 @@ pub unsafe extern "C" fn lua_closeslot(mut L: *mut lua_State, mut index: libc::c
     level = luaF_close(L, level, -(1 as libc::c_int), 0 as libc::c_int);
     (*level)
         .val
-        .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+        .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
 }
 #[inline]
 unsafe extern "C" fn reverse(mut L: *mut lua_State, mut from: StkId, mut to: StkId) {
@@ -1249,7 +1248,7 @@ pub unsafe extern "C" fn lua_topointer(
 pub unsafe extern "C" fn lua_pushnil(mut L: *mut lua_State) {
     (*(*L).top.p)
         .val
-        .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+        .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
 }
@@ -1257,7 +1256,7 @@ pub unsafe extern "C" fn lua_pushnil(mut L: *mut lua_State) {
 pub unsafe extern "C" fn lua_pushnumber(mut L: *mut lua_State, mut n: lua_Number) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     (*io).value_.n = n;
-    (*io).tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+    (*io).tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
 }
@@ -1265,7 +1264,7 @@ pub unsafe extern "C" fn lua_pushnumber(mut L: *mut lua_State, mut n: lua_Number
 pub unsafe extern "C" fn lua_pushinteger(mut L: *mut lua_State, mut n: lua_Integer) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     (*io).value_.i = n;
-    (*io).tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+    (*io).tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
 }
@@ -1286,7 +1285,7 @@ pub unsafe extern "C" fn lua_pushlstring(
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-        as lu_byte;
+        as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     if (*(*L).l_G).GCdebt > 0 as libc::c_int as libc::c_long {
@@ -1303,7 +1302,7 @@ pub unsafe extern "C" fn lua_pushstring(
         (*(*L).top.p)
             .val
             .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
     } else {
         let mut ts: *mut TString = 0 as *mut TString;
         ts = luaS_new(L, s);
@@ -1312,7 +1311,7 @@ pub unsafe extern "C" fn lua_pushstring(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-            as lu_byte;
+            as u8;
         s = ((*ts).contents).as_mut_ptr();
     }
     (*L).top.p = ((*L).top.p).offset(1);
@@ -1361,7 +1360,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
         (*io).value_.f = fn_0;
         (*io)
             .tt_ = (6 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
     } else {
@@ -1387,7 +1386,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
         (*io_0).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io_0)
             .tt_ = (6 as libc::c_int | (2 as libc::c_int) << 4 as libc::c_int
-            | (1 as libc::c_int) << 6 as libc::c_int) as lu_byte;
+            | (1 as libc::c_int) << 6 as libc::c_int) as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
         if (*(*L).l_G).GCdebt > 0 as libc::c_int as libc::c_long {
@@ -1401,12 +1400,12 @@ pub unsafe extern "C" fn lua_pushboolean(mut L: *mut lua_State, mut b: libc::c_i
         (*(*L).top.p)
             .val
             .tt_ = (1 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
     } else {
         (*(*L).top.p)
             .val
             .tt_ = (1 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
     }
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
@@ -1418,7 +1417,7 @@ pub unsafe extern "C" fn lua_pushlightuserdata(
 ) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     (*io).value_.p = p;
-    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
 }
@@ -1429,7 +1428,7 @@ pub unsafe extern "C" fn lua_pushthread(mut L: *mut lua_State) -> libc::c_int {
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = (8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 6 as libc::c_int) as lu_byte;
+        | (1 as libc::c_int) << 6 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     return ((*(*L).l_G).mainthread == L) as libc::c_int;
@@ -1466,7 +1465,7 @@ unsafe extern "C" fn auxgetstr(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-            as lu_byte;
+            as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
         luaV_finishget(
@@ -1582,7 +1581,7 @@ pub unsafe extern "C" fn lua_geti(
         (*io).value_.i = n;
         (*io)
             .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
         luaV_finishget(L, t, &mut aux, (*L).top.p, slot);
     }
     (*L).top.p = ((*L).top.p).offset(1);
@@ -1599,7 +1598,7 @@ unsafe extern "C" fn finishrawget(
         (*(*L).top.p)
             .val
             .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
     } else {
         let mut io1: *mut TValue = &mut (*(*L).top.p).val;
         let mut io2: *const TValue = val;
@@ -1655,7 +1654,7 @@ pub unsafe extern "C" fn lua_rawgetp(
     t = gettable(L, index);
     let mut io: *mut TValue = &mut k;
     (*io).value_.p = p as *mut libc::c_void;
-    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
     return finishrawget(L, luaH_get(t, &mut k));
 }
 #[unsafe (no_mangle)]
@@ -1671,7 +1670,7 @@ pub unsafe extern "C" fn lua_createtable(
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = (5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 6 as libc::c_int) as lu_byte;
+        | (1 as libc::c_int) << 6 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     if narray > 0 as libc::c_int || nrec > 0 as libc::c_int {
@@ -1708,7 +1707,7 @@ pub unsafe extern "C" fn lua_getmetatable(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = (5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-            | (1 as libc::c_int) << 6 as libc::c_int) as lu_byte;
+            | (1 as libc::c_int) << 6 as libc::c_int) as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
         res = 1 as libc::c_int;
@@ -1730,7 +1729,7 @@ pub unsafe extern "C" fn lua_getiuservalue(
         (*(*L).top.p)
             .val
             .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
         t = -(1 as libc::c_int);
     } else {
         let mut io1: *mut TValue = &mut (*(*L).top.p).val;
@@ -1792,7 +1791,7 @@ unsafe extern "C" fn auxsetstr(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-            as lu_byte;
+            as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
         luaV_finishset(
@@ -1931,7 +1930,7 @@ pub unsafe extern "C" fn lua_seti(
         (*io).value_.i = n;
         (*io)
             .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
         luaV_finishset(
             L,
             t,
@@ -1955,7 +1954,7 @@ unsafe extern "C" fn aux_rawset(
     (*t)
         .flags = ((*t).flags as libc::c_uint
         & !!(!(0 as libc::c_uint) << TM_EQ as libc::c_int + 1 as libc::c_int))
-        as lu_byte;
+        as u8;
     if (*((*L).top.p).offset(-(1 as libc::c_int as isize))).val.tt_ as libc::c_int
         & (1 as libc::c_int) << 6 as libc::c_int != 0
     {
@@ -1992,7 +1991,7 @@ pub unsafe extern "C" fn lua_rawsetp(
     };
     let mut io: *mut TValue = &mut k;
     (*io).value_.p = p as *mut libc::c_void;
-    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
+    (*io).tt_ = (2 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
     aux_rawset(L, index, &mut k, 1 as libc::c_int);
 }
 #[unsafe (no_mangle)]
@@ -2333,11 +2332,11 @@ pub unsafe extern "C" fn lua_gc(
     argp = args.clone();
     match what {
         0 => {
-            (*g).gcstp = 1 as libc::c_int as lu_byte;
+            (*g).gcstp = 1 as libc::c_int as u8;
         }
         1 => {
             luaE_setdebt(g, 0 as libc::c_int as l_mem);
-            (*g).gcstp = 0 as libc::c_int as lu_byte;
+            (*g).gcstp = 0 as libc::c_int as u8;
         }
         2 => {
             luaC_fullgc(L, 0 as libc::c_int);
@@ -2353,8 +2352,8 @@ pub unsafe extern "C" fn lua_gc(
         5 => {
             let mut data: libc::c_int = argp.arg::<libc::c_int>();
             let mut debt: l_mem = 1 as libc::c_int as l_mem;
-            let mut oldstp: lu_byte = (*g).gcstp;
-            (*g).gcstp = 0 as libc::c_int as lu_byte;
+            let mut oldstp: u8 = (*g).gcstp;
+            (*g).gcstp = 0 as libc::c_int as u8;
             if data == 0 as libc::c_int {
                 luaE_setdebt(g, 0 as libc::c_int as l_mem);
                 luaC_step(L);
@@ -2375,12 +2374,12 @@ pub unsafe extern "C" fn lua_gc(
         6 => {
             let mut data_0: libc::c_int = argp.arg::<libc::c_int>();
             res = (*g).gcpause as libc::c_int * 4 as libc::c_int;
-            (*g).gcpause = (data_0 / 4 as libc::c_int) as lu_byte;
+            (*g).gcpause = (data_0 / 4 as libc::c_int) as u8;
         }
         7 => {
             let mut data_1: libc::c_int = argp.arg::<libc::c_int>();
             res = (*g).gcstepmul as libc::c_int * 4 as libc::c_int;
-            (*g).gcstepmul = (data_1 / 4 as libc::c_int) as lu_byte;
+            (*g).gcstepmul = (data_1 / 4 as libc::c_int) as u8;
         }
         9 => {
             res = ((*g).gcstp as libc::c_int == 0 as libc::c_int) as libc::c_int;
@@ -2396,10 +2395,10 @@ pub unsafe extern "C" fn lua_gc(
                 11 as libc::c_int
             };
             if minormul != 0 as libc::c_int {
-                (*g).genminormul = minormul as lu_byte;
+                (*g).genminormul = minormul as u8;
             }
             if majormul != 0 as libc::c_int {
-                (*g).genmajormul = (majormul / 4 as libc::c_int) as lu_byte;
+                (*g).genmajormul = (majormul / 4 as libc::c_int) as u8;
             }
             luaC_changemode(L, 1 as libc::c_int);
         }
@@ -2415,13 +2414,13 @@ pub unsafe extern "C" fn lua_gc(
                 11 as libc::c_int
             };
             if pause != 0 as libc::c_int {
-                (*g).gcpause = (pause / 4 as libc::c_int) as lu_byte;
+                (*g).gcpause = (pause / 4 as libc::c_int) as u8;
             }
             if stepmul != 0 as libc::c_int {
-                (*g).gcstepmul = (stepmul / 4 as libc::c_int) as lu_byte;
+                (*g).gcstepmul = (stepmul / 4 as libc::c_int) as u8;
             }
             if stepsize != 0 as libc::c_int {
-                (*g).gcstepsize = stepsize as lu_byte;
+                (*g).gcstepsize = stepsize as u8;
             }
             luaC_changemode(L, 0 as libc::c_int);
         }
@@ -2488,7 +2487,7 @@ pub unsafe extern "C" fn lua_concat(mut L: *mut lua_State, mut n: libc::c_int) {
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io)
             .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-            as lu_byte;
+            as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
     }
@@ -2555,7 +2554,7 @@ pub unsafe extern "C" fn lua_newuserdatauv(
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = (7 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 6 as libc::c_int) as lu_byte;
+        | (1 as libc::c_int) << 6 as libc::c_int) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     if (*(*L).l_G).GCdebt > 0 as libc::c_int as libc::c_long {

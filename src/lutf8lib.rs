@@ -110,7 +110,7 @@ unsafe extern "C" fn utf8_decode(
         0x200000 as libc::c_uint,
         0x4000000 as libc::c_uint,
     ];
-    let mut c: libc::c_uint = *s.offset(0 as libc::c_int as isize) as libc::c_uchar
+    let mut c: libc::c_uint = *s.offset(0 as libc::c_int as isize) as u8
         as libc::c_uint;
     let mut res: utfint = 0 as libc::c_int as utfint;
     if c < 0x80 as libc::c_int as libc::c_uint {
@@ -119,7 +119,7 @@ unsafe extern "C" fn utf8_decode(
         let mut count: libc::c_int = 0 as libc::c_int;
         while c & 0x40 as libc::c_int as libc::c_uint != 0 {
             count += 1;
-            let mut cc: libc::c_uint = *s.offset(count as isize) as libc::c_uchar
+            let mut cc: libc::c_uint = *s.offset(count as isize) as u8
                 as libc::c_uint;
             if !(cc & 0xc0 as libc::c_int as libc::c_uint
                 == 0x80 as libc::c_int as libc::c_uint)

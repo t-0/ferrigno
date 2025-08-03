@@ -306,25 +306,25 @@ unsafe extern "C" fn b_str2int(
         s = s.offset(1);
         s;
     }
-    if *(*__ctype_b_loc()).offset(*s as libc::c_uchar as libc::c_int as isize)
+    if *(*__ctype_b_loc()).offset(*s as u8 as libc::c_int as isize)
         as libc::c_int & _ISalnum as libc::c_int as libc::c_ushort as libc::c_int == 0
     {
         return 0 as *const libc::c_char;
     }
     loop {
         let mut digit: libc::c_int = if *(*__ctype_b_loc())
-            .offset(*s as libc::c_uchar as libc::c_int as isize) as libc::c_int
+            .offset(*s as u8 as libc::c_int as isize) as libc::c_int
             & _ISdigit as libc::c_int as libc::c_ushort as libc::c_int != 0
         {
             *s as libc::c_int - '0' as i32
         } else {
             ({
                 let mut __res: libc::c_int = 0;
-                if ::core::mem::size_of::<libc::c_uchar>() as libc::c_ulong
+                if ::core::mem::size_of::<u8>() as libc::c_ulong
                     > 1 as libc::c_int as libc::c_ulong
                 {
                     if 0 != 0 {
-                        let mut __c: libc::c_int = *s as libc::c_uchar as libc::c_int;
+                        let mut __c: libc::c_int = *s as u8 as libc::c_int;
                         __res = (if __c < -(128 as libc::c_int)
                             || __c > 255 as libc::c_int
                         {
@@ -333,11 +333,11 @@ unsafe extern "C" fn b_str2int(
                             *(*__ctype_toupper_loc()).offset(__c as isize)
                         });
                     } else {
-                        __res = toupper(*s as libc::c_uchar as libc::c_int);
+                        __res = toupper(*s as u8 as libc::c_int);
                     }
                 } else {
                     __res = *(*__ctype_toupper_loc())
-                        .offset(*s as libc::c_uchar as libc::c_int as isize);
+                        .offset(*s as u8 as libc::c_int as isize);
                 }
                 __res
             }) - 'A' as i32 + 10 as libc::c_int
@@ -350,7 +350,7 @@ unsafe extern "C" fn b_str2int(
             .wrapping_add(digit as libc::c_ulonglong);
         s = s.offset(1);
         s;
-        if !(*(*__ctype_b_loc()).offset(*s as libc::c_uchar as libc::c_int as isize)
+        if !(*(*__ctype_b_loc()).offset(*s as u8 as libc::c_int as isize)
             as libc::c_int & _ISalnum as libc::c_int as libc::c_ushort as libc::c_int
             != 0)
         {

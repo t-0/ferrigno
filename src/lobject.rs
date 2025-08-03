@@ -36,7 +36,7 @@ unsafe extern "C" {
         res: StkId,
         event: TMS,
     );
-    static luai_ctype_: [lu_byte; 257];
+    static luai_ctype_: [u8; 257];
     fn luaG_runerror(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> !;
     fn luaS_newlstr(
         L: *mut lua_State,
@@ -100,10 +100,10 @@ pub type intptr_t = libc::c_long;
 #[repr(C)]
 pub struct lua_State {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub status: lu_byte,
-    pub allowhook: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub status: u8,
+    pub allowhook: u8,
     pub nci: libc::c_ushort,
     pub top: StkIdRel,
     pub l_G: *mut global_State,
@@ -139,8 +139,8 @@ pub struct lua_Debug {
     pub currentline: libc::c_int,
     pub linedefined: libc::c_int,
     pub lastlinedefined: libc::c_int,
-    pub nups: libc::c_uchar,
-    pub nparams: libc::c_uchar,
+    pub nups: u8,
+    pub nparams: u8,
     pub isvararg: libc::c_char,
     pub istailcall: libc::c_char,
     pub ftransfer: libc::c_ushort,
@@ -216,10 +216,9 @@ pub union StackValue {
 #[repr(C)]
 pub struct C2RustUnnamed_4 {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
     pub delta: libc::c_ushort,
 }
-pub type lu_byte = libc::c_uchar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -228,7 +227,7 @@ pub union Value {
     pub f: lua_CFunction,
     pub i: lua_Integer,
     pub n: lua_Number,
-    pub ub: lu_byte,
+    pub ub: u8,
 }
 pub type lua_Number = f64;
 pub type lua_Integer = i64;
@@ -237,21 +236,21 @@ pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::
 #[repr(C)]
 pub struct GCObject {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
     pub value_: Value,
-    pub tt_: lu_byte,
+    pub tt_: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpVal {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub v: C2RustUnnamed_7,
     pub u: C2RustUnnamed_5,
 }
@@ -286,17 +285,17 @@ pub struct global_State {
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: libc::c_uint,
-    pub currentwhite: lu_byte,
-    pub gcstate: lu_byte,
-    pub gckind: lu_byte,
-    pub gcstopem: lu_byte,
-    pub genminormul: lu_byte,
-    pub genmajormul: lu_byte,
-    pub gcstp: lu_byte,
-    pub gcemergency: lu_byte,
-    pub gcpause: lu_byte,
-    pub gcstepmul: lu_byte,
-    pub gcstepsize: lu_byte,
+    pub currentwhite: u8,
+    pub gcstate: u8,
+    pub gckind: u8,
+    pub gcstopem: u8,
+    pub genminormul: u8,
+    pub genmajormul: u8,
+    pub gcstp: u8,
+    pub gcemergency: u8,
+    pub gcpause: u8,
+    pub gcstepmul: u8,
+    pub gcstepsize: u8,
     pub allgc: *mut GCObject,
     pub sweepgc: *mut *mut GCObject,
     pub finobj: *mut GCObject,
@@ -331,10 +330,10 @@ pub type lua_WarnFunction = Option::<
 #[repr(C)]
 pub struct TString {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub extra: lu_byte,
-    pub shrlen: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub extra: u8,
+    pub shrlen: u8,
     pub hash: libc::c_uint,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
@@ -349,10 +348,10 @@ pub union C2RustUnnamed_8 {
 #[repr(C)]
 pub struct Table {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub flags: lu_byte,
-    pub lsizenode: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub flags: u8,
+    pub lsizenode: u8,
     pub alimit: libc::c_uint,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -370,8 +369,8 @@ pub union Node {
 #[repr(C)]
 pub struct NodeKey {
     pub value_: Value,
-    pub tt_: lu_byte,
-    pub key_tt: lu_byte,
+    pub tt_: u8,
+    pub key_tt: u8,
     pub next: libc::c_int,
     pub key_val: Value,
 }
@@ -410,8 +409,8 @@ pub union UValue {
 #[repr(C)]
 pub struct Udata {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
     pub nuvalue: libc::c_ushort,
     pub len: size_t,
     pub metatable: *mut Table,
@@ -422,9 +421,9 @@ pub struct Udata {
 #[repr(C)]
 pub struct Upvaldesc {
     pub name: *mut TString,
-    pub instack: lu_byte,
-    pub index: lu_byte,
-    pub kind: lu_byte,
+    pub instack: u8,
+    pub index: u8,
+    pub kind: u8,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -443,11 +442,11 @@ pub struct AbsLineInfo {
 #[repr(C)]
 pub struct Proto {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub numparams: lu_byte,
-    pub is_vararg: lu_byte,
-    pub maxstacksize: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub numparams: u8,
+    pub is_vararg: u8,
+    pub maxstacksize: u8,
     pub sizeupvalues: libc::c_int,
     pub sizek: libc::c_int,
     pub sizecode: libc::c_int,
@@ -471,9 +470,9 @@ pub struct Proto {
 #[repr(C)]
 pub struct CClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub f: lua_CFunction,
     pub upvalue: [TValue; 1],
@@ -482,9 +481,9 @@ pub struct CClosure {
 #[repr(C)]
 pub struct LClosure {
     pub next: *mut GCObject,
-    pub tt: lu_byte,
-    pub marked: lu_byte,
-    pub nupvalues: lu_byte,
+    pub tt: u8,
+    pub marked: u8,
+    pub nupvalues: u8,
     pub gclist: *mut GCObject,
     pub p: *mut Proto,
     pub upvals: [*mut UpVal; 1],
@@ -548,263 +547,263 @@ pub struct BuffFS {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> libc::c_int {
-    static mut log_2: [lu_byte; 256] = [
-        0 as libc::c_int as lu_byte,
-        1 as libc::c_int as lu_byte,
-        2 as libc::c_int as lu_byte,
-        2 as libc::c_int as lu_byte,
-        3 as libc::c_int as lu_byte,
-        3 as libc::c_int as lu_byte,
-        3 as libc::c_int as lu_byte,
-        3 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        4 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        5 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        6 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        7 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
-        8 as libc::c_int as lu_byte,
+    static mut log_2: [u8; 256] = [
+        0 as libc::c_int as u8,
+        1 as libc::c_int as u8,
+        2 as libc::c_int as u8,
+        2 as libc::c_int as u8,
+        3 as libc::c_int as u8,
+        3 as libc::c_int as u8,
+        3 as libc::c_int as u8,
+        3 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        4 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        5 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        6 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        7 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
+        8 as libc::c_int as u8,
     ];
     let mut l: libc::c_int = 0 as libc::c_int;
     x = x.wrapping_sub(1);
@@ -909,7 +908,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (*io).value_.i = intarith(L, op, i1, i2);
                 (*io)
                     .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 return 1 as libc::c_int;
             } else {
                 return 0 as libc::c_int
@@ -953,7 +952,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (*io_0).value_.n = numarith(L, op, n1, n2);
                 (*io_0)
                     .tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 return 1 as libc::c_int;
             } else {
                 return 0 as libc::c_int
@@ -971,7 +970,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (*io_1).value_.i = intarith(L, op, (*p1).value_.i, (*p2).value_.i);
                 (*io_1)
                     .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 return 1 as libc::c_int;
             } else if (if (*p1).tt_ as libc::c_int
                 == 3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
@@ -1008,7 +1007,7 @@ pub unsafe extern "C" fn luaO_rawarith(
                 (*io_2).value_.n = numarith(L, op, n1_0, n2_0);
                 (*io_2)
                     .tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 return 1 as libc::c_int;
             } else {
                 return 0 as libc::c_int
@@ -1069,7 +1068,7 @@ unsafe extern "C" fn l_str2dloc(
     if endptr == s as *mut libc::c_char {
         return 0 as *const libc::c_char;
     }
-    while luai_ctype_[(*endptr as libc::c_uchar as libc::c_int + 1 as libc::c_int)
+    while luai_ctype_[(*endptr as u8 as libc::c_int + 1 as libc::c_int)
         as usize] as libc::c_int & (1 as libc::c_int) << 3 as libc::c_int != 0
     {
         endptr = endptr.offset(1);
@@ -1091,7 +1090,7 @@ unsafe extern "C" fn l_str2d(
         b".xXnN\0" as *const u8 as *const libc::c_char,
     );
     let mut mode: libc::c_int = if !pmode.is_null() {
-        *pmode as libc::c_uchar as libc::c_int | 'A' as i32 ^ 'a' as i32
+        *pmode as u8 as libc::c_int | 'A' as i32 ^ 'a' as i32
     } else {
         0 as libc::c_int
     };
@@ -1124,7 +1123,7 @@ unsafe extern "C" fn l_str2int(
     let mut a: lua_Unsigned = 0 as libc::c_int as lua_Unsigned;
     let mut empty: libc::c_int = 1 as libc::c_int;
     let mut neg: libc::c_int = 0;
-    while luai_ctype_[(*s as libc::c_uchar as libc::c_int + 1 as libc::c_int) as usize]
+    while luai_ctype_[(*s as u8 as libc::c_int + 1 as libc::c_int) as usize]
         as libc::c_int & (1 as libc::c_int) << 3 as libc::c_int != 0
     {
         s = s.offset(1);
@@ -1136,7 +1135,7 @@ unsafe extern "C" fn l_str2int(
             || *s.offset(1 as libc::c_int as isize) as libc::c_int == 'X' as i32)
     {
         s = s.offset(2 as libc::c_int as isize);
-        while luai_ctype_[(*s as libc::c_uchar as libc::c_int + 1 as libc::c_int)
+        while luai_ctype_[(*s as u8 as libc::c_int + 1 as libc::c_int)
             as usize] as libc::c_int & (1 as libc::c_int) << 4 as libc::c_int != 0
         {
             a = a
@@ -1147,7 +1146,7 @@ unsafe extern "C" fn l_str2int(
             s;
         }
     } else {
-        while luai_ctype_[(*s as libc::c_uchar as libc::c_int + 1 as libc::c_int)
+        while luai_ctype_[(*s as u8 as libc::c_int + 1 as libc::c_int)
             as usize] as libc::c_int & (1 as libc::c_int) << 1 as libc::c_int != 0
         {
             let mut d: libc::c_int = *s as libc::c_int - '0' as i32;
@@ -1172,7 +1171,7 @@ unsafe extern "C" fn l_str2int(
             s;
         }
     }
-    while luai_ctype_[(*s as libc::c_uchar as libc::c_int + 1 as libc::c_int) as usize]
+    while luai_ctype_[(*s as u8 as libc::c_int + 1 as libc::c_int) as usize]
         as libc::c_int & (1 as libc::c_int) << 3 as libc::c_int != 0
     {
         s = s.offset(1);
@@ -1203,7 +1202,7 @@ pub unsafe extern "C" fn luaO_str2num(
         (*io).value_.i = i;
         (*io)
             .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-            as lu_byte;
+            as u8;
     } else {
         e = l_str2d(s, &mut n);
         if !e.is_null() {
@@ -1211,7 +1210,7 @@ pub unsafe extern "C" fn luaO_str2num(
             (*io_0).value_.n = n;
             (*io_0)
                 .tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-                as lu_byte;
+                as u8;
         } else {
             return 0 as libc::c_int as size_t
         }
@@ -1299,7 +1298,7 @@ pub unsafe extern "C" fn luaO_tostring(mut L: *mut lua_State, mut obj: *mut TVal
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-        as lu_byte;
+        as u8;
 }
 unsafe extern "C" fn pushstr(
     mut buff: *mut BuffFS,
@@ -1312,7 +1311,7 @@ unsafe extern "C" fn pushstr(
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = ((*x_).tt as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int)
-        as lu_byte;
+        as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     if (*buff).pushed == 0 {
@@ -1386,7 +1385,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 addstr2buff(&mut buff, s, strlen(s));
             }
             99 => {
-                let mut c: libc::c_char = argp.arg::<libc::c_int>() as libc::c_uchar
+                let mut c: libc::c_char = argp.arg::<libc::c_int>() as u8
                     as libc::c_char;
                 addstr2buff(
                     &mut buff,
@@ -1403,7 +1402,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 (*io).value_.i = argp.arg::<libc::c_int>() as lua_Integer;
                 (*io)
                     .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 addnum2buff(&mut buff, &mut num);
             }
             73 => {
@@ -1415,7 +1414,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 (*io_0).value_.i = argp.arg::<l_uacInt>();
                 (*io_0)
                     .tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 addnum2buff(&mut buff, &mut num_0);
             }
             102 => {
@@ -1427,7 +1426,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 (*io_1).value_.n = argp.arg::<l_uacNumber>();
                 (*io_1)
                     .tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int)
-                    as lu_byte;
+                    as u8;
                 addnum2buff(&mut buff, &mut num_1);
             }
             112 => {
