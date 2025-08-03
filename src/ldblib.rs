@@ -280,73 +280,73 @@ unsafe extern "C" fn checkstack(
     mut L1: *mut lua_State,
     mut n: i32,
 ) {
-    if ((L != L1 && lua_checkstack(L1, n) == 0) as i32 != 0 as i32)
+    if ((L != L1 && lua_checkstack(L1, n) == 0) as i32 != 0i32)
         as i32 as libc::c_long != 0
     {
         luaL_error(L, b"stack overflow\0" as *const u8 as *const libc::c_char);
     }
 }
 unsafe extern "C" fn db_getregistry(mut L: *mut lua_State) -> i32 {
-    lua_pushvalue(L, -(1000000 as i32) - 1000 as i32);
-    return 1 as i32;
+    lua_pushvalue(L, -(1000000i32) - 1000i32);
+    return 1i32;
 }
 unsafe extern "C" fn db_getmetatable(mut L: *mut lua_State) -> i32 {
-    luaL_checkany(L, 1 as i32);
-    if lua_getmetatable(L, 1 as i32) == 0 {
+    luaL_checkany(L, 1i32);
+    if lua_getmetatable(L, 1i32) == 0 {
         lua_pushnil(L);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn db_setmetatable(mut L: *mut lua_State) -> i32 {
-    let mut t: i32 = lua_type(L, 2 as i32);
-    (((t == 0 as i32 || t == 5 as i32) as i32
-        != 0 as i32) as i32 as libc::c_long != 0
+    let mut t: i32 = lua_type(L, 2i32);
+    (((t == 0i32 || t == 5i32) as i32
+        != 0i32) as i32 as libc::c_long != 0
         || luaL_typeerror(
             L,
-            2 as i32,
+            2i32,
             b"nil or table\0" as *const u8 as *const libc::c_char,
         ) != 0) as i32;
-    lua_settop(L, 2 as i32);
-    lua_setmetatable(L, 1 as i32);
-    return 1 as i32;
+    lua_settop(L, 2i32);
+    lua_setmetatable(L, 1i32);
+    return 1i32;
 }
 unsafe extern "C" fn db_getuservalue(mut L: *mut lua_State) -> i32 {
     let mut n: i32 = luaL_optinteger(
         L,
-        2 as i32,
-        1 as i32 as Integer,
+        2i32,
+        1i32 as Integer,
     ) as i32;
-    if lua_type(L, 1 as i32) != 7 as i32 {
+    if lua_type(L, 1i32) != 7i32 {
         lua_pushnil(L);
-    } else if lua_getiuservalue(L, 1 as i32, n) != -(1 as i32) {
-        lua_pushboolean(L, 1 as i32);
-        return 2 as i32;
+    } else if lua_getiuservalue(L, 1i32, n) != -(1i32) {
+        lua_pushboolean(L, 1i32);
+        return 2i32;
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn db_setuservalue(mut L: *mut lua_State) -> i32 {
     let mut n: i32 = luaL_optinteger(
         L,
-        3 as i32,
-        1 as i32 as Integer,
+        3i32,
+        1i32 as Integer,
     ) as i32;
-    luaL_checktype(L, 1 as i32, 7 as i32);
-    luaL_checkany(L, 2 as i32);
-    lua_settop(L, 2 as i32);
-    if lua_setiuservalue(L, 1 as i32, n) == 0 {
+    luaL_checktype(L, 1i32, 7i32);
+    luaL_checkany(L, 2i32);
+    lua_settop(L, 2i32);
+    if lua_setiuservalue(L, 1i32, n) == 0 {
         lua_pushnil(L);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn getthread(
     mut L: *mut lua_State,
     mut arg: *mut i32,
 ) -> *mut lua_State {
-    if lua_type(L, 1 as i32) == 8 as i32 {
-        *arg = 1 as i32;
-        return lua_tothread(L, 1 as i32);
+    if lua_type(L, 1i32) == 8i32 {
+        *arg = 1i32;
+        return lua_tothread(L, 1i32);
     } else {
-        *arg = 0 as i32;
+        *arg = 0i32;
         return L;
     };
 }
@@ -356,7 +356,7 @@ unsafe extern "C" fn settabss(
     mut v: *const libc::c_char,
 ) {
     lua_pushstring(L, v);
-    lua_setfield(L, -(2 as i32), k);
+    lua_setfield(L, -(2i32), k);
 }
 unsafe extern "C" fn settabsi(
     mut L: *mut lua_State,
@@ -364,7 +364,7 @@ unsafe extern "C" fn settabsi(
     mut v: i32,
 ) {
     lua_pushinteger(L, v as Integer);
-    lua_setfield(L, -(2 as i32), k);
+    lua_setfield(L, -(2i32), k);
 }
 unsafe extern "C" fn settabsb(
     mut L: *mut lua_State,
@@ -372,7 +372,7 @@ unsafe extern "C" fn settabsb(
     mut v: i32,
 ) {
     lua_pushboolean(L, v);
-    lua_setfield(L, -(2 as i32), k);
+    lua_setfield(L, -(2i32), k);
 }
 unsafe extern "C" fn treatstackoption(
     mut L: *mut lua_State,
@@ -380,11 +380,11 @@ unsafe extern "C" fn treatstackoption(
     mut fname: *const libc::c_char,
 ) {
     if L == L1 {
-        lua_rotate(L, -(2 as i32), 1 as i32);
+        lua_rotate(L, -(2i32), 1i32);
     } else {
-        lua_xmove(L1, L, 1 as i32);
+        lua_xmove(L1, L, 1i32);
     }
-    lua_setfield(L, -(2 as i32), fname);
+    lua_setfield(L, -(2i32), fname);
 }
 unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> i32 {
     let mut ar: lua_Debug = lua_Debug {
@@ -410,48 +410,48 @@ unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> i32 {
     let mut L1: *mut lua_State = getthread(L, &mut arg);
     let mut options: *const libc::c_char = luaL_optlstring(
         L,
-        arg + 2 as i32,
+        arg + 2i32,
         b"flnSrtu\0" as *const u8 as *const libc::c_char,
         0 as *mut size_t,
     );
-    checkstack(L, L1, 3 as i32);
-    (((*options.offset(0 as i32 as isize) as i32 != '>' as i32)
-        as i32 != 0 as i32) as i32 as libc::c_long != 0
+    checkstack(L, L1, 3i32);
+    (((*options.offset(0i32 as isize) as i32 != '>' as i32)
+        as i32 != 0i32) as i32 as libc::c_long != 0
         || luaL_argerror(
             L,
-            arg + 2 as i32,
+            arg + 2i32,
             b"invalid option '>'\0" as *const u8 as *const libc::c_char,
         ) != 0) as i32;
-    if lua_type(L, arg + 1 as i32) == 6 as i32 {
+    if lua_type(L, arg + 1i32) == 6i32 {
         options = lua_pushfstring(
             L,
             b">%s\0" as *const u8 as *const libc::c_char,
             options,
         );
-        lua_pushvalue(L, arg + 1 as i32);
-        lua_xmove(L, L1, 1 as i32);
+        lua_pushvalue(L, arg + 1i32);
+        lua_xmove(L, L1, 1i32);
     } else if lua_getstack(
         L1,
-        luaL_checkinteger(L, arg + 1 as i32) as i32,
+        luaL_checkinteger(L, arg + 1i32) as i32,
         &mut ar,
     ) == 0
     {
         lua_pushnil(L);
-        return 1 as i32;
+        return 1i32;
     }
     if lua_getinfo(L1, options, &mut ar) == 0 {
         return luaL_argerror(
             L,
-            arg + 2 as i32,
+            arg + 2i32,
             b"invalid option\0" as *const u8 as *const libc::c_char,
         );
     }
-    lua_createtable(L, 0 as i32, 0 as i32);
+    lua_createtable(L, 0i32, 0i32);
     if !(strchr(options, 'S' as i32)).is_null() {
         lua_pushlstring(L, ar.source, ar.srclen);
         lua_setfield(
             L,
-            -(2 as i32),
+            -(2i32),
             b"source\0" as *const u8 as *const libc::c_char,
         );
         settabss(
@@ -524,17 +524,17 @@ unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> i32 {
     if !(strchr(options, 'f' as i32)).is_null() {
         treatstackoption(L, L1, b"func\0" as *const u8 as *const libc::c_char);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn db_getlocal(mut L: *mut lua_State) -> i32 {
     let mut arg: i32 = 0;
     let mut L1: *mut lua_State = getthread(L, &mut arg);
-    let mut nvar: i32 = luaL_checkinteger(L, arg + 2 as i32)
+    let mut nvar: i32 = luaL_checkinteger(L, arg + 2i32)
         as i32;
-    if lua_type(L, arg + 1 as i32) == 6 as i32 {
-        lua_pushvalue(L, arg + 1 as i32);
+    if lua_type(L, arg + 1i32) == 6i32 {
+        lua_pushvalue(L, arg + 1i32);
         lua_pushstring(L, lua_getlocal(L, 0 as *const lua_Debug, nvar));
-        return 1 as i32;
+        return 1i32;
     } else {
         let mut ar: lua_Debug = lua_Debug {
             event: 0,
@@ -556,27 +556,27 @@ unsafe extern "C" fn db_getlocal(mut L: *mut lua_State) -> i32 {
             i_ci: 0 as *mut CallInfo,
         };
         let mut name: *const libc::c_char = 0 as *const libc::c_char;
-        let mut level: i32 = luaL_checkinteger(L, arg + 1 as i32)
+        let mut level: i32 = luaL_checkinteger(L, arg + 1i32)
             as i32;
-        if ((lua_getstack(L1, level, &mut ar) == 0) as i32 != 0 as i32)
+        if ((lua_getstack(L1, level, &mut ar) == 0) as i32 != 0i32)
             as i32 as libc::c_long != 0
         {
             return luaL_argerror(
                 L,
-                arg + 1 as i32,
+                arg + 1i32,
                 b"level out of range\0" as *const u8 as *const libc::c_char,
             );
         }
-        checkstack(L, L1, 1 as i32);
+        checkstack(L, L1, 1i32);
         name = lua_getlocal(L1, &mut ar, nvar);
         if !name.is_null() {
-            lua_xmove(L1, L, 1 as i32);
+            lua_xmove(L1, L, 1i32);
             lua_pushstring(L, name);
-            lua_rotate(L, -(2 as i32), 1 as i32);
-            return 2 as i32;
+            lua_rotate(L, -(2i32), 1i32);
+            return 2i32;
         } else {
             lua_pushnil(L);
-            return 1 as i32;
+            return 1i32;
         }
     };
 }
@@ -603,55 +603,55 @@ unsafe extern "C" fn db_setlocal(mut L: *mut lua_State) -> i32 {
         short_src: [0; 60],
         i_ci: 0 as *mut CallInfo,
     };
-    let mut level: i32 = luaL_checkinteger(L, arg + 1 as i32)
+    let mut level: i32 = luaL_checkinteger(L, arg + 1i32)
         as i32;
-    let mut nvar: i32 = luaL_checkinteger(L, arg + 2 as i32)
+    let mut nvar: i32 = luaL_checkinteger(L, arg + 2i32)
         as i32;
-    if ((lua_getstack(L1, level, &mut ar) == 0) as i32 != 0 as i32)
+    if ((lua_getstack(L1, level, &mut ar) == 0) as i32 != 0i32)
         as i32 as libc::c_long != 0
     {
         return luaL_argerror(
             L,
-            arg + 1 as i32,
+            arg + 1i32,
             b"level out of range\0" as *const u8 as *const libc::c_char,
         );
     }
-    luaL_checkany(L, arg + 3 as i32);
-    lua_settop(L, arg + 3 as i32);
-    checkstack(L, L1, 1 as i32);
-    lua_xmove(L, L1, 1 as i32);
+    luaL_checkany(L, arg + 3i32);
+    lua_settop(L, arg + 3i32);
+    checkstack(L, L1, 1i32);
+    lua_xmove(L, L1, 1i32);
     name = lua_setlocal(L1, &mut ar, nvar);
     if name.is_null() {
-        lua_settop(L1, -(1 as i32) - 1 as i32);
+        lua_settop(L1, -(1i32) - 1i32);
     }
     lua_pushstring(L, name);
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn auxupvalue(
     mut L: *mut lua_State,
     mut get: i32,
 ) -> i32 {
     let mut name: *const libc::c_char = 0 as *const libc::c_char;
-    let mut n: i32 = luaL_checkinteger(L, 2 as i32) as i32;
-    luaL_checktype(L, 1 as i32, 6 as i32);
+    let mut n: i32 = luaL_checkinteger(L, 2i32) as i32;
+    luaL_checktype(L, 1i32, 6i32);
     name = if get != 0 {
-        lua_getupvalue(L, 1 as i32, n)
+        lua_getupvalue(L, 1i32, n)
     } else {
-        lua_setupvalue(L, 1 as i32, n)
+        lua_setupvalue(L, 1i32, n)
     };
     if name.is_null() {
-        return 0 as i32;
+        return 0i32;
     }
     lua_pushstring(L, name);
-    lua_rotate(L, -(get + 1 as i32), 1 as i32);
-    return get + 1 as i32;
+    lua_rotate(L, -(get + 1i32), 1i32);
+    return get + 1i32;
 }
 unsafe extern "C" fn db_getupvalue(mut L: *mut lua_State) -> i32 {
-    return auxupvalue(L, 1 as i32);
+    return auxupvalue(L, 1i32);
 }
 unsafe extern "C" fn db_setupvalue(mut L: *mut lua_State) -> i32 {
-    luaL_checkany(L, 3 as i32);
-    return auxupvalue(L, 0 as i32);
+    luaL_checkany(L, 3i32);
+    return auxupvalue(L, 0i32);
 }
 unsafe extern "C" fn checkupval(
     mut L: *mut lua_State,
@@ -661,10 +661,10 @@ unsafe extern "C" fn checkupval(
 ) -> *mut libc::c_void {
     let mut id: *mut libc::c_void = 0 as *mut libc::c_void;
     let mut nup: i32 = luaL_checkinteger(L, argnup) as i32;
-    luaL_checktype(L, argf, 6 as i32);
+    luaL_checktype(L, argf, 6i32);
     id = lua_upvalueid(L, argf, nup);
     if !pnup.is_null() {
-        (((id != 0 as *mut libc::c_void) as i32 != 0 as i32)
+        (((id != 0 as *mut libc::c_void) as i32 != 0i32)
             as i32 as libc::c_long != 0
             || luaL_argerror(
                 L,
@@ -678,8 +678,8 @@ unsafe extern "C" fn checkupval(
 unsafe extern "C" fn db_upvalueid(mut L: *mut lua_State) -> i32 {
     let mut id: *mut libc::c_void = checkupval(
         L,
-        1 as i32,
-        2 as i32,
+        1i32,
+        2i32,
         0 as *mut i32,
     );
     if !id.is_null() {
@@ -687,29 +687,29 @@ unsafe extern "C" fn db_upvalueid(mut L: *mut lua_State) -> i32 {
     } else {
         lua_pushnil(L);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn db_upvaluejoin(mut L: *mut lua_State) -> i32 {
     let mut n1: i32 = 0;
     let mut n2: i32 = 0;
-    checkupval(L, 1 as i32, 2 as i32, &mut n1);
-    checkupval(L, 3 as i32, 4 as i32, &mut n2);
-    (((lua_iscfunction(L, 1 as i32) == 0) as i32 != 0 as i32)
+    checkupval(L, 1i32, 2i32, &mut n1);
+    checkupval(L, 3i32, 4i32, &mut n2);
+    (((lua_iscfunction(L, 1i32) == 0) as i32 != 0i32)
         as i32 as libc::c_long != 0
         || luaL_argerror(
             L,
-            1 as i32,
+            1i32,
             b"Lua function expected\0" as *const u8 as *const libc::c_char,
         ) != 0) as i32;
-    (((lua_iscfunction(L, 3 as i32) == 0) as i32 != 0 as i32)
+    (((lua_iscfunction(L, 3i32) == 0) as i32 != 0i32)
         as i32 as libc::c_long != 0
         || luaL_argerror(
             L,
-            3 as i32,
+            3i32,
             b"Lua function expected\0" as *const u8 as *const libc::c_char,
         ) != 0) as i32;
-    lua_upvaluejoin(L, 1 as i32, n1, 3 as i32, n2);
-    return 0 as i32;
+    lua_upvaluejoin(L, 1i32, n1, 3i32, n2);
+    return 0i32;
 }
 unsafe extern "C" fn hookf(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
     static mut hooknames: [*const libc::c_char; 5] = [
@@ -719,20 +719,20 @@ unsafe extern "C" fn hookf(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
         b"count\0" as *const u8 as *const libc::c_char,
         b"tail call\0" as *const u8 as *const libc::c_char,
     ];
-    lua_getfield(L, -(1000000 as i32) - 1000 as i32, HOOKKEY);
+    lua_getfield(L, -(1000000i32) - 1000i32, HOOKKEY);
     lua_pushthread(L);
-    if lua_rawget(L, -(2 as i32)) == 6 as i32 {
+    if lua_rawget(L, -(2i32)) == 6i32 {
         lua_pushstring(L, hooknames[(*ar).event as usize]);
-        if (*ar).currentline >= 0 as i32 {
+        if (*ar).currentline >= 0i32 {
             lua_pushinteger(L, (*ar).currentline as Integer);
         } else {
             lua_pushnil(L);
         }
         lua_callk(
             L,
-            2 as i32,
-            0 as i32,
-            0 as i32 as lua_KContext,
+            2i32,
+            0i32,
+            0i32 as lua_KContext,
             None,
         );
     }
@@ -741,18 +741,18 @@ unsafe extern "C" fn makemask(
     mut smask: *const libc::c_char,
     mut count: i32,
 ) -> i32 {
-    let mut mask: i32 = 0 as i32;
+    let mut mask: i32 = 0i32;
     if !(strchr(smask, 'c' as i32)).is_null() {
-        mask |= (1 as i32) << 0 as i32;
+        mask |= (1i32) << 0i32;
     }
     if !(strchr(smask, 'r' as i32)).is_null() {
-        mask |= (1 as i32) << 1 as i32;
+        mask |= (1i32) << 1i32;
     }
     if !(strchr(smask, 'l' as i32)).is_null() {
-        mask |= (1 as i32) << 2 as i32;
+        mask |= (1i32) << 2i32;
     }
-    if count > 0 as i32 {
-        mask |= (1 as i32) << 3 as i32;
+    if count > 0i32 {
+        mask |= (1i32) << 3i32;
     }
     return mask;
 }
@@ -760,18 +760,18 @@ unsafe extern "C" fn unmakemask(
     mut mask: i32,
     mut smask: *mut libc::c_char,
 ) -> *mut libc::c_char {
-    let mut i: i32 = 0 as i32;
-    if mask & (1 as i32) << 0 as i32 != 0 {
+    let mut i: i32 = 0i32;
+    if mask & (1i32) << 0i32 != 0 {
         let fresh0 = i;
         i = i + 1;
         *smask.offset(fresh0 as isize) = 'c' as i32 as libc::c_char;
     }
-    if mask & (1 as i32) << 1 as i32 != 0 {
+    if mask & (1i32) << 1i32 != 0 {
         let fresh1 = i;
         i = i + 1;
         *smask.offset(fresh1 as isize) = 'r' as i32 as libc::c_char;
     }
-    if mask & (1 as i32) << 2 as i32 != 0 {
+    if mask & (1i32) << 2i32 != 0 {
         let fresh2 = i;
         i = i + 1;
         *smask.offset(fresh2 as isize) = 'l' as i32 as libc::c_char;
@@ -785,44 +785,44 @@ unsafe extern "C" fn db_sethook(mut L: *mut lua_State) -> i32 {
     let mut count: i32 = 0;
     let mut func: lua_Hook = None;
     let mut L1: *mut lua_State = getthread(L, &mut arg);
-    if lua_type(L, arg + 1 as i32) <= 0 as i32 {
-        lua_settop(L, arg + 1 as i32);
+    if lua_type(L, arg + 1i32) <= 0i32 {
+        lua_settop(L, arg + 1i32);
         func = None;
-        mask = 0 as i32;
-        count = 0 as i32;
+        mask = 0i32;
+        count = 0i32;
     } else {
         let mut smask: *const libc::c_char = luaL_checklstring(
             L,
-            arg + 2 as i32,
+            arg + 2i32,
             0 as *mut size_t,
         );
-        luaL_checktype(L, arg + 1 as i32, 6 as i32);
+        luaL_checktype(L, arg + 1i32, 6i32);
         count = luaL_optinteger(
             L,
-            arg + 3 as i32,
-            0 as i32 as Integer,
+            arg + 3i32,
+            0i32 as Integer,
         ) as i32;
         func = Some(hookf as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ());
         mask = makemask(smask, count);
     }
-    if luaL_getsubtable(L, -(1000000 as i32) - 1000 as i32, HOOKKEY) == 0
+    if luaL_getsubtable(L, -(1000000i32) - 1000i32, HOOKKEY) == 0
     {
         lua_pushstring(L, b"k\0" as *const u8 as *const libc::c_char);
         lua_setfield(
             L,
-            -(2 as i32),
+            -(2i32),
             b"__mode\0" as *const u8 as *const libc::c_char,
         );
-        lua_pushvalue(L, -(1 as i32));
-        lua_setmetatable(L, -(2 as i32));
+        lua_pushvalue(L, -(1i32));
+        lua_setmetatable(L, -(2i32));
     }
-    checkstack(L, L1, 1 as i32);
+    checkstack(L, L1, 1i32);
     lua_pushthread(L1);
-    lua_xmove(L1, L, 1 as i32);
-    lua_pushvalue(L, arg + 1 as i32);
-    lua_rawset(L, -(3 as i32));
+    lua_xmove(L1, L, 1i32);
+    lua_pushvalue(L, arg + 1i32);
+    lua_rawset(L, -(3i32));
     lua_sethook(L1, func, mask, count);
-    return 0 as i32;
+    return 0i32;
 }
 unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> i32 {
     let mut arg: i32 = 0;
@@ -832,23 +832,23 @@ unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> i32 {
     let mut hook: lua_Hook = lua_gethook(L1);
     if hook.is_none() {
         lua_pushnil(L);
-        return 1 as i32;
+        return 1i32;
     } else if hook
         != Some(hookf as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ())
     {
         lua_pushstring(L, b"external hook\0" as *const u8 as *const libc::c_char);
     } else {
-        lua_getfield(L, -(1000000 as i32) - 1000 as i32, HOOKKEY);
-        checkstack(L, L1, 1 as i32);
+        lua_getfield(L, -(1000000i32) - 1000i32, HOOKKEY);
+        checkstack(L, L1, 1i32);
         lua_pushthread(L1);
-        lua_xmove(L1, L, 1 as i32);
-        lua_rawget(L, -(2 as i32));
-        lua_rotate(L, -(2 as i32), -(1 as i32));
-        lua_settop(L, -(1 as i32) - 1 as i32);
+        lua_xmove(L1, L, 1i32);
+        lua_rawget(L, -(2i32));
+        lua_rotate(L, -(2i32), -(1i32));
+        lua_settop(L, -(1i32) - 1i32);
     }
     lua_pushstring(L, unmakemask(mask, buff.as_mut_ptr()));
     lua_pushinteger(L, lua_gethookcount(L1) as Integer);
-    return 3 as i32;
+    return 3i32;
 }
 unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> i32 {
     loop {
@@ -869,9 +869,9 @@ unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> i32 {
             || strcmp(
                 buffer.as_mut_ptr(),
                 b"cont\n\0" as *const u8 as *const libc::c_char,
-            ) == 0 as i32
+            ) == 0i32
         {
-            return 0 as i32;
+            return 0i32;
         }
         if luaL_loadbufferx(
             L,
@@ -882,21 +882,21 @@ unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> i32 {
         ) != 0
             || lua_pcallk(
                 L,
-                0 as i32,
-                0 as i32,
-                0 as i32,
-                0 as i32 as lua_KContext,
+                0i32,
+                0i32,
+                0i32,
+                0i32 as lua_KContext,
                 None,
             ) != 0
         {
             fprintf(
                 stderr,
                 b"%s\n\0" as *const u8 as *const libc::c_char,
-                luaL_tolstring(L, -(1 as i32), 0 as *mut size_t),
+                luaL_tolstring(L, -(1i32), 0 as *mut size_t),
             );
             fflush(stderr);
         }
-        lua_settop(L, 0 as i32);
+        lua_settop(L, 0i32);
     };
 }
 unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> i32 {
@@ -904,26 +904,26 @@ unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> i32 {
     let mut L1: *mut lua_State = getthread(L, &mut arg);
     let mut msg: *const libc::c_char = lua_tolstring(
         L,
-        arg + 1 as i32,
+        arg + 1i32,
         0 as *mut size_t,
     );
-    if msg.is_null() && !(lua_type(L, arg + 1 as i32) <= 0 as i32) {
-        lua_pushvalue(L, arg + 1 as i32);
+    if msg.is_null() && !(lua_type(L, arg + 1i32) <= 0i32) {
+        lua_pushvalue(L, arg + 1i32);
     } else {
         let mut level: i32 = luaL_optinteger(
             L,
-            arg + 2 as i32,
-            (if L == L1 { 1 as i32 } else { 0 as i32 }) as Integer,
+            arg + 2i32,
+            (if L == L1 { 1i32 } else { 0i32 }) as Integer,
         ) as i32;
         luaL_traceback(L, L1, msg, level);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn db_setcstacklimit(mut L: *mut lua_State) -> i32 {
-    let mut limit: i32 = luaL_checkinteger(L, 1 as i32) as i32;
+    let mut limit: i32 = luaL_checkinteger(L, 1i32) as i32;
     let mut res: i32 = lua_setcstacklimit(L, limit as libc::c_uint);
     lua_pushinteger(L, res as Integer);
-    return 1 as i32;
+    return 1i32;
 }
 static mut dblib: [luaL_Reg; 18] = unsafe {
     [
@@ -1098,18 +1098,18 @@ static mut dblib: [luaL_Reg; 18] = unsafe {
 pub unsafe extern "C" fn luaopen_debug(mut L: *mut lua_State) -> i32 {
     luaL_checkversion_(
         L,
-        504 as i32 as Number,
+        504i32 as Number,
         (::core::mem::size_of::<Integer>() as libc::c_ulong)
-            .wrapping_mul(16 as i32 as libc::c_ulong)
+            .wrapping_mul(16i32 as libc::c_ulong)
             .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,
-        0 as i32,
+        0i32,
         (::core::mem::size_of::<[luaL_Reg; 18]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<luaL_Reg>() as libc::c_ulong)
-            .wrapping_sub(1 as i32 as libc::c_ulong) as i32,
+            .wrapping_sub(1i32 as libc::c_ulong) as i32,
     );
-    luaL_setfuncs(L, dblib.as_ptr(), 0 as i32);
-    return 1 as i32;
+    luaL_setfuncs(L, dblib.as_ptr(), 0i32);
+    return 1i32;
 }

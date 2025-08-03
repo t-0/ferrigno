@@ -143,8 +143,8 @@ pub unsafe extern "C" fn luaL_openlibs(mut L: *mut lua_State) {
     let mut lib: *const luaL_Reg = 0 as *const luaL_Reg;
     lib = loadedlibs.as_ptr();
     while ((*lib).func).is_some() {
-        luaL_requiref(L, (*lib).name, (*lib).func, 1 as i32);
-        lua_settop(L, -(1 as i32) - 1 as i32);
+        luaL_requiref(L, (*lib).name, (*lib).func, 1i32);
+        lua_settop(L, -(1i32) - 1i32);
         lib = lib.offset(1);
     }
 }

@@ -198,9 +198,9 @@ unsafe extern "C" fn lsys_load(
     let mut lib: *mut libc::c_void = dlopen(
         path,
         0x2 as i32
-            | (if seeglb != 0 { 0x100 as i32 } else { 0 as i32 }),
+            | (if seeglb != 0 { 0x100 as i32 } else { 0i32 }),
     );
-    if ((lib == 0 as *mut libc::c_void) as i32 != 0 as i32)
+    if ((lib == 0 as *mut libc::c_void) as i32 != 0i32)
         as i32 as libc::c_long != 0
     {
         lua_pushstring(L, dlerror());
@@ -216,7 +216,7 @@ unsafe extern "C" fn lsys_sym(
         *mut libc::c_void,
         CFunction,
     >(dlsym(lib, sym));
-    if (f.is_none() as i32 != 0 as i32) as i32 as libc::c_long
+    if (f.is_none() as i32 != 0i32) as i32 as libc::c_long
         != 0
     {
         lua_pushstring(L, dlerror());
@@ -227,11 +227,11 @@ unsafe extern "C" fn noenv(mut L: *mut lua_State) -> i32 {
     let mut b: i32 = 0;
     lua_getfield(
         L,
-        -(1000000 as i32) - 1000 as i32,
+        -(1000000i32) - 1000i32,
         b"LUA_NOENV\0" as *const u8 as *const libc::c_char,
     );
-    b = lua_toboolean(L, -(1 as i32));
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    b = lua_toboolean(L, -(1i32));
+    lua_settop(L, -(1i32) - 1i32);
     return b;
 }
 unsafe extern "C" fn setpath(
@@ -274,7 +274,7 @@ unsafe extern "C" fn setpath(
                     dftmark.offset_from(path) as libc::c_long as size_t,
                 );
                 (b.n < b.size
-                    || !(luaL_prepbuffsize(&mut b, 1 as i32 as size_t))
+                    || !(luaL_prepbuffsize(&mut b, 1i32 as size_t))
                         .is_null()) as i32;
                 let fresh0 = b.n;
                 b.n = (b.n).wrapping_add(1);
@@ -284,9 +284,9 @@ unsafe extern "C" fn setpath(
                     ) = *(b";\0" as *const u8 as *const libc::c_char);
             }
             luaL_addstring(&mut b, dft);
-            if dftmark < path.offset(len as isize).offset(-(2 as i32 as isize)) {
+            if dftmark < path.offset(len as isize).offset(-(2i32 as isize)) {
                 (b.n < b.size
-                    || !(luaL_prepbuffsize(&mut b, 1 as i32 as size_t))
+                    || !(luaL_prepbuffsize(&mut b, 1i32 as size_t))
                         .is_null()) as i32;
                 let fresh1 = b.n;
                 b.n = (b.n).wrapping_add(1);
@@ -296,28 +296,28 @@ unsafe extern "C" fn setpath(
                     ) = *(b";\0" as *const u8 as *const libc::c_char);
                 luaL_addlstring(
                     &mut b,
-                    dftmark.offset(2 as i32 as isize),
+                    dftmark.offset(2i32 as isize),
                     path
                         .offset(len as isize)
-                        .offset(-(2 as i32 as isize))
+                        .offset(-(2i32 as isize))
                         .offset_from(dftmark) as libc::c_long as size_t,
                 );
             }
             luaL_pushresult(&mut b);
         }
     }
-    lua_setfield(L, -(3 as i32), fieldname);
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    lua_setfield(L, -(3i32), fieldname);
+    lua_settop(L, -(1i32) - 1i32);
 }
 unsafe extern "C" fn checkclib(
     mut L: *mut lua_State,
     mut path: *const libc::c_char,
 ) -> *mut libc::c_void {
     let mut plib: *mut libc::c_void = 0 as *mut libc::c_void;
-    lua_getfield(L, -(1000000 as i32) - 1000 as i32, CLIBS);
-    lua_getfield(L, -(1 as i32), path);
-    plib = lua_touserdata(L, -(1 as i32));
-    lua_settop(L, -(2 as i32) - 1 as i32);
+    lua_getfield(L, -(1000000i32) - 1000i32, CLIBS);
+    lua_getfield(L, -(1i32), path);
+    plib = lua_touserdata(L, -(1i32));
+    lua_settop(L, -(2i32) - 1i32);
     return plib;
 }
 unsafe extern "C" fn addtoclib(
@@ -325,26 +325,26 @@ unsafe extern "C" fn addtoclib(
     mut path: *const libc::c_char,
     mut plib: *mut libc::c_void,
 ) {
-    lua_getfield(L, -(1000000 as i32) - 1000 as i32, CLIBS);
+    lua_getfield(L, -(1000000i32) - 1000i32, CLIBS);
     lua_pushlightuserdata(L, plib);
-    lua_pushvalue(L, -(1 as i32));
-    lua_setfield(L, -(3 as i32), path);
+    lua_pushvalue(L, -(1i32));
+    lua_setfield(L, -(3i32), path);
     lua_rawseti(
         L,
-        -(2 as i32),
-        luaL_len(L, -(2 as i32)) + 1 as i32 as i64,
+        -(2i32),
+        luaL_len(L, -(2i32)) + 1i32 as i64,
     );
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    lua_settop(L, -(1i32) - 1i32);
 }
 unsafe extern "C" fn gctm(mut L: *mut lua_State) -> i32 {
-    let mut n: Integer = luaL_len(L, 1 as i32);
-    while n >= 1 as i32 as i64 {
-        lua_rawgeti(L, 1 as i32, n);
-        lsys_unloadlib(lua_touserdata(L, -(1 as i32)));
-        lua_settop(L, -(1 as i32) - 1 as i32);
+    let mut n: Integer = luaL_len(L, 1i32);
+    while n >= 1i32 as i64 {
+        lua_rawgeti(L, 1i32, n);
+        lsys_unloadlib(lua_touserdata(L, -(1i32)));
+        lua_settop(L, -(1i32) - 1i32);
         n -= 1;
     }
-    return 0 as i32;
+    return 0i32;
 }
 unsafe extern "C" fn lookforfunc(
     mut L: *mut lua_State,
@@ -355,59 +355,59 @@ unsafe extern "C" fn lookforfunc(
     if reg.is_null() {
         reg = lsys_load(L, path, (*sym as i32 == '*' as i32) as i32);
         if reg.is_null() {
-            return 1 as i32;
+            return 1i32;
         }
         addtoclib(L, path, reg);
     }
     if *sym as i32 == '*' as i32 {
-        lua_pushboolean(L, 1 as i32);
-        return 0 as i32;
+        lua_pushboolean(L, 1i32);
+        return 0i32;
     } else {
         let mut f: CFunction = lsys_sym(L, reg, sym);
         if f.is_none() {
-            return 2 as i32;
+            return 2i32;
         }
-        lua_pushcclosure(L, f, 0 as i32);
-        return 0 as i32;
+        lua_pushcclosure(L, f, 0i32);
+        return 0i32;
     };
 }
 unsafe extern "C" fn ll_loadlib(mut L: *mut lua_State) -> i32 {
     let mut path: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     let mut init: *const libc::c_char = luaL_checklstring(
         L,
-        2 as i32,
+        2i32,
         0 as *mut size_t,
     );
     let mut stat: i32 = lookforfunc(L, path, init);
-    if ((stat == 0 as i32) as i32 != 0 as i32) as i32
+    if ((stat == 0i32) as i32 != 0i32) as i32
         as libc::c_long != 0
     {
-        return 1 as i32
+        return 1i32
     } else {
         lua_pushnil(L);
-        lua_rotate(L, -(2 as i32), 1 as i32);
+        lua_rotate(L, -(2i32), 1i32);
         lua_pushstring(
             L,
-            if stat == 1 as i32 {
+            if stat == 1i32 {
                 b"open\0" as *const u8 as *const libc::c_char
             } else {
                 b"init\0" as *const u8 as *const libc::c_char
             },
         );
-        return 3 as i32;
+        return 3i32;
     };
 }
 unsafe extern "C" fn readable(mut filename: *const libc::c_char) -> i32 {
     let mut f: *mut FILE = fopen(filename, b"r\0" as *const u8 as *const libc::c_char);
     if f.is_null() {
-        return 0 as i32;
+        return 0i32;
     }
     fclose(f);
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn getnextfilename(
     mut path: *mut *mut libc::c_char,
@@ -476,13 +476,13 @@ unsafe extern "C" fn searchpath(
     luaL_buffinit(L, &mut buff);
     luaL_addgsub(&mut buff, path, b"?\0" as *const u8 as *const libc::c_char, name);
     (buff.n < buff.size
-        || !(luaL_prepbuffsize(&mut buff, 1 as i32 as size_t)).is_null())
+        || !(luaL_prepbuffsize(&mut buff, 1i32 as size_t)).is_null())
         as i32;
     let fresh2 = buff.n;
     buff.n = (buff.n).wrapping_add(1);
     *(buff.b).offset(fresh2 as isize) = '\0' as i32 as libc::c_char;
     pathname = buff.b;
-    endpathname = pathname.offset(buff.n as isize).offset(-(1 as i32 as isize));
+    endpathname = pathname.offset(buff.n as isize).offset(-(1i32 as isize));
     loop {
         filename = getnextfilename(&mut pathname, endpathname);
         if filename.is_null() {
@@ -493,33 +493,33 @@ unsafe extern "C" fn searchpath(
         }
     }
     luaL_pushresult(&mut buff);
-    pusherrornotfound(L, lua_tolstring(L, -(1 as i32), 0 as *mut size_t));
+    pusherrornotfound(L, lua_tolstring(L, -(1i32), 0 as *mut size_t));
     return 0 as *const libc::c_char;
 }
 unsafe extern "C" fn ll_searchpath(mut L: *mut lua_State) -> i32 {
     let mut f: *const libc::c_char = searchpath(
         L,
-        luaL_checklstring(L, 1 as i32, 0 as *mut size_t),
-        luaL_checklstring(L, 2 as i32, 0 as *mut size_t),
+        luaL_checklstring(L, 1i32, 0 as *mut size_t),
+        luaL_checklstring(L, 2i32, 0 as *mut size_t),
         luaL_optlstring(
             L,
-            3 as i32,
+            3i32,
             b".\0" as *const u8 as *const libc::c_char,
             0 as *mut size_t,
         ),
         luaL_optlstring(
             L,
-            4 as i32,
+            4i32,
             b"/\0" as *const u8 as *const libc::c_char,
             0 as *mut size_t,
         ),
     );
     if !f.is_null() {
-        return 1 as i32
+        return 1i32
     } else {
         lua_pushnil(L);
-        lua_rotate(L, -(2 as i32), 1 as i32);
-        return 2 as i32;
+        lua_rotate(L, -(2i32), 1i32);
+        return 2i32;
     };
 }
 unsafe extern "C" fn findfile(
@@ -531,12 +531,12 @@ unsafe extern "C" fn findfile(
     let mut path: *const libc::c_char = 0 as *const libc::c_char;
     lua_getfield(
         L,
-        -(1000000 as i32) - 1000 as i32 - 1 as i32,
+        -(1000000i32) - 1000i32 - 1i32,
         pname,
     );
-    path = lua_tolstring(L, -(1 as i32), 0 as *mut size_t);
+    path = lua_tolstring(L, -(1i32), 0 as *mut size_t);
     if ((path == 0 as *mut libc::c_void as *const libc::c_char) as i32
-        != 0 as i32) as i32 as libc::c_long != 0
+        != 0i32) as i32 as libc::c_long != 0
     {
         luaL_error(
             L,
@@ -551,17 +551,17 @@ unsafe extern "C" fn checkload(
     mut stat: i32,
     mut filename: *const libc::c_char,
 ) -> i32 {
-    if (stat != 0 as i32) as i32 as libc::c_long != 0 {
+    if (stat != 0i32) as i32 as libc::c_long != 0 {
         lua_pushstring(L, filename);
-        return 2 as i32;
+        return 2i32;
     } else {
         return luaL_error(
             L,
             b"error loading module '%s' from file '%s':\n\t%s\0" as *const u8
                 as *const libc::c_char,
-            lua_tolstring(L, 1 as i32, 0 as *mut size_t),
+            lua_tolstring(L, 1i32, 0 as *mut size_t),
             filename,
-            lua_tolstring(L, -(1 as i32), 0 as *mut size_t),
+            lua_tolstring(L, -(1i32), 0 as *mut size_t),
         )
     };
 }
@@ -569,7 +569,7 @@ unsafe extern "C" fn searcher_Lua(mut L: *mut lua_State) -> i32 {
     let mut filename: *const libc::c_char = 0 as *const libc::c_char;
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     filename = findfile(
@@ -579,11 +579,11 @@ unsafe extern "C" fn searcher_Lua(mut L: *mut lua_State) -> i32 {
         b"/\0" as *const u8 as *const libc::c_char,
     );
     if filename.is_null() {
-        return 1 as i32;
+        return 1i32;
     }
     return checkload(
         L,
-        (luaL_loadfilex(L, filename, 0 as *const libc::c_char) == 0 as i32)
+        (luaL_loadfilex(L, filename, 0 as *const libc::c_char) == 0i32)
             as i32,
         filename,
     );
@@ -615,10 +615,10 @@ unsafe extern "C" fn loadfunc(
             openfunc,
         );
         stat = lookforfunc(L, filename, openfunc);
-        if stat != 2 as i32 {
+        if stat != 2i32 {
             return stat;
         }
-        modname = mark.offset(1 as i32 as isize);
+        modname = mark.offset(1i32 as isize);
     }
     openfunc = lua_pushfstring(
         L,
@@ -630,7 +630,7 @@ unsafe extern "C" fn loadfunc(
 unsafe extern "C" fn searcher_C(mut L: *mut lua_State) -> i32 {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     let mut filename: *const libc::c_char = findfile(
@@ -640,11 +640,11 @@ unsafe extern "C" fn searcher_C(mut L: *mut lua_State) -> i32 {
         b"/\0" as *const u8 as *const libc::c_char,
     );
     if filename.is_null() {
-        return 1 as i32;
+        return 1i32;
     }
     return checkload(
         L,
-        (loadfunc(L, filename, name) == 0 as i32) as i32,
+        (loadfunc(L, filename, name) == 0i32) as i32,
         filename,
     );
 }
@@ -652,28 +652,28 @@ unsafe extern "C" fn searcher_Croot(mut L: *mut lua_State) -> i32 {
     let mut filename: *const libc::c_char = 0 as *const libc::c_char;
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     let mut p: *const libc::c_char = strchr(name, '.' as i32);
     let mut stat: i32 = 0;
     if p.is_null() {
-        return 0 as i32;
+        return 0i32;
     }
     lua_pushlstring(L, name, p.offset_from(name) as libc::c_long as size_t);
     filename = findfile(
         L,
-        lua_tolstring(L, -(1 as i32), 0 as *mut size_t),
+        lua_tolstring(L, -(1i32), 0 as *mut size_t),
         b"cpath\0" as *const u8 as *const libc::c_char,
         b"/\0" as *const u8 as *const libc::c_char,
     );
     if filename.is_null() {
-        return 1 as i32;
+        return 1i32;
     }
     stat = loadfunc(L, filename, name);
-    if stat != 0 as i32 {
-        if stat != 2 as i32 {
-            return checkload(L, 0 as i32, filename)
+    if stat != 0i32 {
+        if stat != 2i32 {
+            return checkload(L, 0i32, filename)
         } else {
             lua_pushfstring(
                 L,
@@ -681,33 +681,33 @@ unsafe extern "C" fn searcher_Croot(mut L: *mut lua_State) -> i32 {
                 name,
                 filename,
             );
-            return 1 as i32;
+            return 1i32;
         }
     }
     lua_pushstring(L, filename);
-    return 2 as i32;
+    return 2i32;
 }
 unsafe extern "C" fn searcher_preload(mut L: *mut lua_State) -> i32 {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     lua_getfield(
         L,
-        -(1000000 as i32) - 1000 as i32,
+        -(1000000i32) - 1000i32,
         b"_PRELOAD\0" as *const u8 as *const libc::c_char,
     );
-    if lua_getfield(L, -(1 as i32), name) == 0 as i32 {
+    if lua_getfield(L, -(1i32), name) == 0i32 {
         lua_pushfstring(
             L,
             b"no field package.preload['%s']\0" as *const u8 as *const libc::c_char,
             name,
         );
-        return 1 as i32;
+        return 1i32;
     } else {
         lua_pushstring(L, b":preload:\0" as *const u8 as *const libc::c_char);
-        return 2 as i32;
+        return 2i32;
     };
 }
 unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_char) {
@@ -721,9 +721,9 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
     };
     if ((lua_getfield(
         L,
-        -(1000000 as i32) - 1000 as i32 - 1 as i32,
+        -(1000000i32) - 1000i32 - 1i32,
         b"searchers\0" as *const u8 as *const libc::c_char,
-    ) != 5 as i32) as i32 != 0 as i32) as i32
+    ) != 5i32) as i32 != 0i32) as i32
         as libc::c_long != 0
     {
         luaL_error(
@@ -732,42 +732,42 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
         );
     }
     luaL_buffinit(L, &mut msg);
-    i = 1 as i32;
+    i = 1i32;
     loop {
         luaL_addstring(&mut msg, b"\n\t\0" as *const u8 as *const libc::c_char);
-        if ((lua_rawgeti(L, 3 as i32, i as Integer) == 0 as i32)
-            as i32 != 0 as i32) as i32 as libc::c_long != 0
+        if ((lua_rawgeti(L, 3i32, i as Integer) == 0i32)
+            as i32 != 0i32) as i32 as libc::c_long != 0
         {
-            lua_settop(L, -(1 as i32) - 1 as i32);
+            lua_settop(L, -(1i32) - 1i32);
             msg
                 .n = (msg.n as libc::c_ulong)
-                .wrapping_sub(2 as i32 as libc::c_ulong) as size_t as size_t;
+                .wrapping_sub(2i32 as libc::c_ulong) as size_t as size_t;
             luaL_pushresult(&mut msg);
             luaL_error(
                 L,
                 b"module '%s' not found:%s\0" as *const u8 as *const libc::c_char,
                 name,
-                lua_tolstring(L, -(1 as i32), 0 as *mut size_t),
+                lua_tolstring(L, -(1i32), 0 as *mut size_t),
             );
         }
         lua_pushstring(L, name);
         lua_callk(
             L,
-            1 as i32,
-            2 as i32,
-            0 as i32 as lua_KContext,
+            1i32,
+            2i32,
+            0i32 as lua_KContext,
             None,
         );
-        if lua_type(L, -(2 as i32)) == 6 as i32 {
+        if lua_type(L, -(2i32)) == 6i32 {
             return
-        } else if lua_isstring(L, -(2 as i32)) != 0 {
-            lua_settop(L, -(1 as i32) - 1 as i32);
+        } else if lua_isstring(L, -(2i32)) != 0 {
+            lua_settop(L, -(1i32) - 1i32);
             luaL_addvalue(&mut msg);
         } else {
-            lua_settop(L, -(2 as i32) - 1 as i32);
+            lua_settop(L, -(2i32) - 1i32);
             msg
                 .n = (msg.n as libc::c_ulong)
-                .wrapping_sub(2 as i32 as libc::c_ulong) as size_t as size_t;
+                .wrapping_sub(2i32 as libc::c_ulong) as size_t as size_t;
         }
         i += 1;
     };
@@ -775,43 +775,43 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
 unsafe extern "C" fn ll_require(mut L: *mut lua_State) -> i32 {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
-    lua_settop(L, 1 as i32);
+    lua_settop(L, 1i32);
     lua_getfield(
         L,
-        -(1000000 as i32) - 1000 as i32,
+        -(1000000i32) - 1000i32,
         b"_LOADED\0" as *const u8 as *const libc::c_char,
     );
-    lua_getfield(L, 2 as i32, name);
-    if lua_toboolean(L, -(1 as i32)) != 0 {
-        return 1 as i32;
+    lua_getfield(L, 2i32, name);
+    if lua_toboolean(L, -(1i32)) != 0 {
+        return 1i32;
     }
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    lua_settop(L, -(1i32) - 1i32);
     findloader(L, name);
-    lua_rotate(L, -(2 as i32), 1 as i32);
-    lua_pushvalue(L, 1 as i32);
-    lua_pushvalue(L, -(3 as i32));
+    lua_rotate(L, -(2i32), 1i32);
+    lua_pushvalue(L, 1i32);
+    lua_pushvalue(L, -(3i32));
     lua_callk(
         L,
-        2 as i32,
-        1 as i32,
-        0 as i32 as lua_KContext,
+        2i32,
+        1i32,
+        0i32 as lua_KContext,
         None,
     );
-    if !(lua_type(L, -(1 as i32)) == 0 as i32) {
-        lua_setfield(L, 2 as i32, name);
+    if !(lua_type(L, -(1i32)) == 0i32) {
+        lua_setfield(L, 2i32, name);
     } else {
-        lua_settop(L, -(1 as i32) - 1 as i32);
+        lua_settop(L, -(1i32) - 1i32);
     }
-    if lua_getfield(L, 2 as i32, name) == 0 as i32 {
-        lua_pushboolean(L, 1 as i32);
-        lua_copy(L, -(1 as i32), -(2 as i32));
-        lua_setfield(L, 2 as i32, name);
+    if lua_getfield(L, 2i32, name) == 0i32 {
+        lua_pushboolean(L, 1i32);
+        lua_copy(L, -(1i32), -(2i32));
+        lua_setfield(L, 2i32, name);
     }
-    lua_rotate(L, -(2 as i32), 1 as i32);
-    return 2 as i32;
+    lua_rotate(L, -(2i32), 1i32);
+    return 2i32;
 }
 static mut pk_funcs: [luaL_Reg; 8] = unsafe {
     [
@@ -914,51 +914,51 @@ unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
         L,
         (::core::mem::size_of::<[CFunction; 5]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<CFunction>() as libc::c_ulong)
-            .wrapping_sub(1 as i32 as libc::c_ulong) as i32,
-        0 as i32,
+            .wrapping_sub(1i32 as libc::c_ulong) as i32,
+        0i32,
     );
-    i = 0 as i32;
+    i = 0i32;
     while (searchers[i as usize]).is_some() {
-        lua_pushvalue(L, -(2 as i32));
-        lua_pushcclosure(L, searchers[i as usize], 1 as i32);
-        lua_rawseti(L, -(2 as i32), (i + 1 as i32) as Integer);
+        lua_pushvalue(L, -(2i32));
+        lua_pushcclosure(L, searchers[i as usize], 1i32);
+        lua_rawseti(L, -(2i32), (i + 1i32) as Integer);
         i += 1;
     }
     lua_setfield(
         L,
-        -(2 as i32),
+        -(2i32),
         b"searchers\0" as *const u8 as *const libc::c_char,
     );
 }
 unsafe extern "C" fn createclibstable(mut L: *mut lua_State) {
-    luaL_getsubtable(L, -(1000000 as i32) - 1000 as i32, CLIBS);
-    lua_createtable(L, 0 as i32, 1 as i32);
+    luaL_getsubtable(L, -(1000000i32) - 1000i32, CLIBS);
+    lua_createtable(L, 0i32, 1i32);
     lua_pushcclosure(
         L,
         Some(gctm as unsafe extern "C" fn(*mut lua_State) -> i32),
-        0 as i32,
+        0i32,
     );
-    lua_setfield(L, -(2 as i32), b"__gc\0" as *const u8 as *const libc::c_char);
-    lua_setmetatable(L, -(2 as i32));
+    lua_setfield(L, -(2i32), b"__gc\0" as *const u8 as *const libc::c_char);
+    lua_setmetatable(L, -(2i32));
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> i32 {
     createclibstable(L);
     luaL_checkversion_(
         L,
-        504 as i32 as Number,
+        504i32 as Number,
         (::core::mem::size_of::<Integer>() as libc::c_ulong)
-            .wrapping_mul(16 as i32 as libc::c_ulong)
+            .wrapping_mul(16i32 as libc::c_ulong)
             .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,
-        0 as i32,
+        0i32,
         (::core::mem::size_of::<[luaL_Reg; 8]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<luaL_Reg>() as libc::c_ulong)
-            .wrapping_sub(1 as i32 as libc::c_ulong) as i32,
+            .wrapping_sub(1i32 as libc::c_ulong) as i32,
     );
-    luaL_setfuncs(L, pk_funcs.as_ptr(), 0 as i32);
+    luaL_setfuncs(L, pk_funcs.as_ptr(), 0i32);
     createsearcherstable(L);
     setpath(
         L,
@@ -977,36 +977,36 @@ pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> i32 {
     lua_pushstring(L, b"/\n;\n?\n!\n-\n\0" as *const u8 as *const libc::c_char);
     lua_setfield(
         L,
-        -(2 as i32),
+        -(2i32),
         b"config\0" as *const u8 as *const libc::c_char,
     );
     luaL_getsubtable(
         L,
-        -(1000000 as i32) - 1000 as i32,
+        -(1000000i32) - 1000i32,
         b"_LOADED\0" as *const u8 as *const libc::c_char,
     );
     lua_setfield(
         L,
-        -(2 as i32),
+        -(2i32),
         b"loaded\0" as *const u8 as *const libc::c_char,
     );
     luaL_getsubtable(
         L,
-        -(1000000 as i32) - 1000 as i32,
+        -(1000000i32) - 1000i32,
         b"_PRELOAD\0" as *const u8 as *const libc::c_char,
     );
     lua_setfield(
         L,
-        -(2 as i32),
+        -(2i32),
         b"preload\0" as *const u8 as *const libc::c_char,
     );
     lua_rawgeti(
         L,
-        -(1000000 as i32) - 1000 as i32,
-        2 as i32 as Integer,
+        -(1000000i32) - 1000i32,
+        2i32 as Integer,
     );
-    lua_pushvalue(L, -(2 as i32));
-    luaL_setfuncs(L, ll_funcs.as_ptr(), 1 as i32);
-    lua_settop(L, -(1 as i32) - 1 as i32);
-    return 1 as i32;
+    lua_pushvalue(L, -(2i32));
+    luaL_setfuncs(L, ll_funcs.as_ptr(), 1i32);
+    lua_settop(L, -(1i32) - 1i32);
+    return 1i32;
 }

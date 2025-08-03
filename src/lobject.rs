@@ -548,268 +548,268 @@ pub struct BuffFS {
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> i32 {
     static mut log_2: [u8; 256] = [
-        0 as i32 as u8,
-        1 as i32 as u8,
-        2 as i32 as u8,
-        2 as i32 as u8,
-        3 as i32 as u8,
-        3 as i32 as u8,
-        3 as i32 as u8,
-        3 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        4 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        5 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        6 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        7 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
-        8 as i32 as u8,
+        0i32 as u8,
+        1i32 as u8,
+        2i32 as u8,
+        2i32 as u8,
+        3i32 as u8,
+        3i32 as u8,
+        3i32 as u8,
+        3i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        4i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        5i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        6i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        7i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
+        8i32 as u8,
     ];
-    let mut l: i32 = 0 as i32;
+    let mut l: i32 = 0i32;
     x = x.wrapping_sub(1);
-    while x >= 256 as i32 as libc::c_uint {
-        l += 8 as i32;
-        x >>= 8 as i32;
+    while x >= 256i32 as libc::c_uint {
+        l += 8i32;
+        x >>= 8i32;
     }
     return l + log_2[x as usize] as i32;
 }
@@ -832,19 +832,19 @@ unsafe extern "C" fn intarith(
         11 => {
             return luaV_shiftl(
                 v1,
-                (0 as i32 as lua_Unsigned).wrapping_sub(v2 as lua_Unsigned)
+                (0i32 as lua_Unsigned).wrapping_sub(v2 as lua_Unsigned)
                     as Integer,
             );
         }
         12 => {
-            return (0 as i32 as lua_Unsigned).wrapping_sub(v1 as lua_Unsigned)
+            return (0i32 as lua_Unsigned).wrapping_sub(v1 as lua_Unsigned)
                 as Integer;
         }
         13 => {
-            return (!(0 as i32 as lua_Unsigned) ^ v1 as lua_Unsigned)
+            return (!(0i32 as lua_Unsigned) ^ v1 as lua_Unsigned)
                 as Integer;
         }
-        _ => return 0 as i32 as Integer,
+        _ => return 0i32 as Integer,
     };
 }
 unsafe extern "C" fn numarith(
@@ -859,7 +859,7 @@ unsafe extern "C" fn numarith(
         2 => return v1 * v2,
         5 => return v1 / v2,
         4 => {
-            return (if v2 == 2 as i32 as f64 {
+            return (if v2 == 2i32 as f64 {
                 v1 * v1
             } else {
                 pow(v1, v2)
@@ -868,7 +868,7 @@ unsafe extern "C" fn numarith(
         6 => return (v1 / v2).floor(),
         12 => return -v1,
         3 => return luaV_modf(L, v1, v2),
-        _ => return 0 as i32 as Number,
+        _ => return 0i32 as Number,
     };
 }
 #[unsafe (no_mangle)]
@@ -884,21 +884,21 @@ pub unsafe extern "C" fn luaO_rawarith(
             let mut i1: Integer = 0;
             let mut i2: Integer = 0;
             if (if (((*p1).tt_ as i32
-                == 3 as i32 | (0 as i32) << 4 as i32)
-                as i32 != 0 as i32) as i32 as libc::c_long != 0
+                == 3i32 | (0i32) << 4i32)
+                as i32 != 0i32) as i32 as libc::c_long != 0
             {
                 i1 = (*p1).value_.i;
-                1 as i32
+                1i32
             } else {
                 luaV_tointegerns(p1, &mut i1, F2Ieq)
             }) != 0
                 && (if (((*p2).tt_ as i32
-                    == 3 as i32 | (0 as i32) << 4 as i32)
-                    as i32 != 0 as i32) as i32 as libc::c_long
+                    == 3i32 | (0i32) << 4i32)
+                    as i32 != 0i32) as i32 as libc::c_long
                     != 0
                 {
                     i2 = (*p2).value_.i;
-                    1 as i32
+                    1i32
                 } else {
                     luaV_tointegerns(p2, &mut i2, F2Ieq)
                 }) != 0
@@ -906,110 +906,110 @@ pub unsafe extern "C" fn luaO_rawarith(
                 let mut io: *mut TValue = res;
                 (*io).value_.i = intarith(L, op, i1, i2);
                 (*io)
-                    .tt_ = (3 as i32 | (0 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (0i32) << 4i32)
                     as u8;
-                return 1 as i32;
+                return 1i32;
             } else {
-                return 0 as i32
+                return 0i32
             }
         }
         5 | 4 => {
             let mut n1: Number = 0.;
             let mut n2: Number = 0.;
             if (if (*p1).tt_ as i32
-                == 3 as i32 | (1 as i32) << 4 as i32
+                == 3i32 | (1i32) << 4i32
             {
                 n1 = (*p1).value_.n;
-                1 as i32
+                1i32
             } else {
                 (if (*p1).tt_ as i32
-                    == 3 as i32 | (0 as i32) << 4 as i32
+                    == 3i32 | (0i32) << 4i32
                 {
                     n1 = (*p1).value_.i as Number;
-                    1 as i32
+                    1i32
                 } else {
-                    0 as i32
+                    0i32
                 })
             }) != 0
                 && (if (*p2).tt_ as i32
-                    == 3 as i32 | (1 as i32) << 4 as i32
+                    == 3i32 | (1i32) << 4i32
                 {
                     n2 = (*p2).value_.n;
-                    1 as i32
+                    1i32
                 } else {
                     (if (*p2).tt_ as i32
-                        == 3 as i32 | (0 as i32) << 4 as i32
+                        == 3i32 | (0i32) << 4i32
                     {
                         n2 = (*p2).value_.i as Number;
-                        1 as i32
+                        1i32
                     } else {
-                        0 as i32
+                        0i32
                     })
                 }) != 0
             {
                 let mut io_0: *mut TValue = res;
                 (*io_0).value_.n = numarith(L, op, n1, n2);
                 (*io_0)
-                    .tt_ = (3 as i32 | (1 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (1i32) << 4i32)
                     as u8;
-                return 1 as i32;
+                return 1i32;
             } else {
-                return 0 as i32
+                return 0i32
             }
         }
         _ => {
             let mut n1_0: Number = 0.;
             let mut n2_0: Number = 0.;
             if (*p1).tt_ as i32
-                == 3 as i32 | (0 as i32) << 4 as i32
+                == 3i32 | (0i32) << 4i32
                 && (*p2).tt_ as i32
-                    == 3 as i32 | (0 as i32) << 4 as i32
+                    == 3i32 | (0i32) << 4i32
             {
                 let mut io_1: *mut TValue = res;
                 (*io_1).value_.i = intarith(L, op, (*p1).value_.i, (*p2).value_.i);
                 (*io_1)
-                    .tt_ = (3 as i32 | (0 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (0i32) << 4i32)
                     as u8;
-                return 1 as i32;
+                return 1i32;
             } else if (if (*p1).tt_ as i32
-                == 3 as i32 | (1 as i32) << 4 as i32
+                == 3i32 | (1i32) << 4i32
             {
                 n1_0 = (*p1).value_.n;
-                1 as i32
+                1i32
             } else {
                 (if (*p1).tt_ as i32
-                    == 3 as i32 | (0 as i32) << 4 as i32
+                    == 3i32 | (0i32) << 4i32
                 {
                     n1_0 = (*p1).value_.i as Number;
-                    1 as i32
+                    1i32
                 } else {
-                    0 as i32
+                    0i32
                 })
             }) != 0
                 && (if (*p2).tt_ as i32
-                    == 3 as i32 | (1 as i32) << 4 as i32
+                    == 3i32 | (1i32) << 4i32
                 {
                     n2_0 = (*p2).value_.n;
-                    1 as i32
+                    1i32
                 } else {
                     (if (*p2).tt_ as i32
-                        == 3 as i32 | (0 as i32) << 4 as i32
+                        == 3i32 | (0i32) << 4i32
                     {
                         n2_0 = (*p2).value_.i as Number;
-                        1 as i32
+                        1i32
                     } else {
-                        0 as i32
+                        0i32
                     })
                 }) != 0
             {
                 let mut io_2: *mut TValue = res;
                 (*io_2).value_.n = numarith(L, op, n1_0, n2_0);
                 (*io_2)
-                    .tt_ = (3 as i32 | (1 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (1i32) << 4i32)
                     as u8;
-                return 1 as i32;
+                return 1i32;
             } else {
-                return 0 as i32
+                return 0i32
             }
         }
     };
@@ -1028,30 +1028,30 @@ pub unsafe extern "C" fn luaO_arith(
             p1,
             p2,
             res,
-            (op - 0 as i32 + TM_ADD as i32) as TMS,
+            (op - 0i32 + TM_ADD as i32) as TMS,
         );
     }
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_hexavalue(mut c: i32) -> i32 {
-    if luai_ctype_[(c + 1 as i32) as usize] as i32
-        & (1 as i32) << 1 as i32 != 0
+    if luai_ctype_[(c + 1i32) as usize] as i32
+        & (1i32) << 1i32 != 0
     {
         return c - '0' as i32
     } else {
-        return (c | 'A' as i32 ^ 'a' as i32) - 'a' as i32 + 10 as i32
+        return (c | 'A' as i32 ^ 'a' as i32) - 'a' as i32 + 10i32
     };
 }
 unsafe extern "C" fn isneg(mut s: *mut *const libc::c_char) -> i32 {
     if **s as i32 == '-' as i32 {
         *s = (*s).offset(1);
         *s;
-        return 1 as i32;
+        return 1i32;
     } else if **s as i32 == '+' as i32 {
         *s = (*s).offset(1);
         *s;
     }
-    return 0 as i32;
+    return 0i32;
 }
 unsafe extern "C" fn l_str2dloc(
     mut s: *const libc::c_char,
@@ -1067,8 +1067,8 @@ unsafe extern "C" fn l_str2dloc(
     if endptr == s as *mut libc::c_char {
         return 0 as *const libc::c_char;
     }
-    while luai_ctype_[(*endptr as u8 as i32 + 1 as i32)
-        as usize] as i32 & (1 as i32) << 3 as i32 != 0
+    while luai_ctype_[(*endptr as u8 as i32 + 1i32)
+        as usize] as i32 & (1i32) << 3i32 != 0
     {
         endptr = endptr.offset(1);
     }
@@ -1090,7 +1090,7 @@ unsafe extern "C" fn l_str2d(
     let mut mode: i32 = if !pmode.is_null() {
         *pmode as u8 as i32 | 'A' as i32 ^ 'a' as i32
     } else {
-        0 as i32
+        0i32
     };
     if mode == 'n' as i32 {
         return 0 as *const libc::c_char;
@@ -1099,13 +1099,13 @@ unsafe extern "C" fn l_str2d(
     if endptr.is_null() {
         let mut buff: [libc::c_char; 201] = [0; 201];
         let mut pdot: *const libc::c_char = strchr(s, '.' as i32);
-        if pdot.is_null() || strlen(s) > 200 as i32 as libc::c_ulong {
+        if pdot.is_null() || strlen(s) > 200i32 as libc::c_ulong {
             return 0 as *const libc::c_char;
         }
         strcpy(buff.as_mut_ptr(), s);
         buff[pdot.offset_from(s) as libc::c_long
             as usize] = *((*localeconv()).decimal_point)
-            .offset(0 as i32 as isize);
+            .offset(0i32 as isize);
         endptr = l_str2dloc(buff.as_mut_ptr(), result, mode);
         if !endptr.is_null() {
             endptr = s
@@ -1118,56 +1118,56 @@ unsafe extern "C" fn l_str2int(
     mut s: *const libc::c_char,
     mut result: *mut Integer,
 ) -> *const libc::c_char {
-    let mut a: lua_Unsigned = 0 as i32 as lua_Unsigned;
-    let mut empty: i32 = 1 as i32;
+    let mut a: lua_Unsigned = 0i32 as lua_Unsigned;
+    let mut empty: i32 = 1i32;
     let mut neg: i32 = 0;
-    while luai_ctype_[(*s as u8 as i32 + 1 as i32) as usize]
-        as i32 & (1 as i32) << 3 as i32 != 0
+    while luai_ctype_[(*s as u8 as i32 + 1i32) as usize]
+        as i32 & (1i32) << 3i32 != 0
     {
         s = s.offset(1);
     }
     neg = isneg(&mut s);
-    if *s.offset(0 as i32 as isize) as i32 == '0' as i32
-        && (*s.offset(1 as i32 as isize) as i32 == 'x' as i32
-            || *s.offset(1 as i32 as isize) as i32 == 'X' as i32)
+    if *s.offset(0i32 as isize) as i32 == '0' as i32
+        && (*s.offset(1i32 as isize) as i32 == 'x' as i32
+            || *s.offset(1i32 as isize) as i32 == 'X' as i32)
     {
-        s = s.offset(2 as i32 as isize);
-        while luai_ctype_[(*s as u8 as i32 + 1 as i32)
-            as usize] as i32 & (1 as i32) << 4 as i32 != 0
+        s = s.offset(2i32 as isize);
+        while luai_ctype_[(*s as u8 as i32 + 1i32)
+            as usize] as i32 & (1i32) << 4i32 != 0
         {
             a = a
-                .wrapping_mul(16 as i32 as libc::c_ulonglong)
+                .wrapping_mul(16i32 as libc::c_ulonglong)
                 .wrapping_add(luaO_hexavalue(*s as i32) as libc::c_ulonglong);
-            empty = 0 as i32;
+            empty = 0i32;
             s = s.offset(1);
         }
     } else {
-        while luai_ctype_[(*s as u8 as i32 + 1 as i32)
-            as usize] as i32 & (1 as i32) << 1 as i32 != 0
+        while luai_ctype_[(*s as u8 as i32 + 1i32)
+            as usize] as i32 & (1i32) << 1i32 != 0
         {
             let mut d: i32 = *s as i32 - '0' as i32;
             if a
-                >= (9223372036854775807 as i64
-                    / 10 as i32 as i64) as lua_Unsigned
+                >= (9223372036854775807i64
+                    / 10i32 as i64) as lua_Unsigned
                 && (a
-                    > (9223372036854775807 as i64
-                        / 10 as i32 as i64) as lua_Unsigned
+                    > (9223372036854775807i64
+                        / 10i32 as i64) as lua_Unsigned
                     || d
-                        > (9223372036854775807 as i64
-                            % 10 as i32 as i64) as i32
+                        > (9223372036854775807i64
+                            % 10i32 as i64) as i32
                             + neg)
             {
                 return 0 as *const libc::c_char;
             }
             a = a
-                .wrapping_mul(10 as i32 as libc::c_ulonglong)
+                .wrapping_mul(10i32 as libc::c_ulonglong)
                 .wrapping_add(d as libc::c_ulonglong);
-            empty = 0 as i32;
+            empty = 0i32;
             s = s.offset(1);
         }
     }
-    while luai_ctype_[(*s as u8 as i32 + 1 as i32) as usize]
-        as i32 & (1 as i32) << 3 as i32 != 0
+    while luai_ctype_[(*s as u8 as i32 + 1i32) as usize]
+        as i32 & (1i32) << 3i32 != 0
     {
         s = s.offset(1);
     }
@@ -1195,7 +1195,7 @@ pub unsafe extern "C" fn luaO_str2num(
         let mut io: *mut TValue = o;
         (*io).value_.i = i;
         (*io)
-            .tt_ = (3 as i32 | (0 as i32) << 4 as i32)
+            .tt_ = (3i32 | (0i32) << 4i32)
             as u8;
     } else {
         e = l_str2d(s, &mut n);
@@ -1203,13 +1203,13 @@ pub unsafe extern "C" fn luaO_str2num(
             let mut io_0: *mut TValue = o;
             (*io_0).value_.n = n;
             (*io_0)
-                .tt_ = (3 as i32 | (1 as i32) << 4 as i32)
+                .tt_ = (3i32 | (1i32) << 4i32)
                 as u8;
         } else {
-            return 0 as i32 as size_t
+            return 0i32 as size_t
         }
     }
-    return (e.offset_from(s) as libc::c_long + 1 as i32 as libc::c_long)
+    return (e.offset_from(s) as libc::c_long + 1i32 as libc::c_long)
         as size_t;
 }
 #[unsafe (no_mangle)]
@@ -1217,9 +1217,9 @@ pub unsafe extern "C" fn luaO_utf8esc(
     mut buff: *mut libc::c_char,
     mut x: libc::c_ulong,
 ) -> i32 {
-    let mut n: i32 = 1 as i32;
+    let mut n: i32 = 1i32;
     if x < 0x80 as i32 as libc::c_ulong {
-        *buff.offset((8 as i32 - 1 as i32) as isize) = x as libc::c_char;
+        *buff.offset((8i32 - 1i32) as isize) = x as libc::c_char;
     } else {
         let mut mfb: libc::c_uint = 0x3f as i32 as libc::c_uint;
         loop {
@@ -1227,19 +1227,19 @@ pub unsafe extern "C" fn luaO_utf8esc(
             n = n + 1;
             *buff
                 .offset(
-                    (8 as i32 - fresh0) as isize,
+                    (8i32 - fresh0) as isize,
                 ) = (0x80 as i32 as libc::c_ulong
                 | x & 0x3f as i32 as libc::c_ulong) as libc::c_char;
-            x >>= 6 as i32;
-            mfb >>= 1 as i32;
+            x >>= 6i32;
+            mfb >>= 1i32;
             if !(x > mfb as libc::c_ulong) {
                 break;
             }
         }
         *buff
             .offset(
-                (8 as i32 - n) as isize,
-            ) = ((!mfb << 1 as i32) as libc::c_ulong | x) as libc::c_char;
+                (8i32 - n) as isize,
+            ) = ((!mfb << 1i32) as libc::c_ulong | x) as libc::c_char;
     }
     return n;
 }
@@ -1249,18 +1249,18 @@ unsafe extern "C" fn tostringbuff(
 ) -> i32 {
     let mut len: i32 = 0;
     if (*obj).tt_ as i32
-        == 3 as i32 | (0 as i32) << 4 as i32
+        == 3i32 | (0i32) << 4i32
     {
         len = snprintf(
             buff,
-            44 as i32 as libc::c_ulong,
+            44i32 as libc::c_ulong,
             b"%lld\0" as *const u8 as *const libc::c_char,
             (*obj).value_.i,
         );
     } else {
         len = snprintf(
             buff,
-            44 as i32 as libc::c_ulong,
+            44i32 as libc::c_ulong,
             b"%.14g\0" as *const u8 as *const libc::c_char,
             (*obj).value_.n,
         );
@@ -1275,7 +1275,7 @@ unsafe extern "C" fn tostringbuff(
             *buff
                 .offset(
                     fresh1 as isize,
-                ) = *((*localeconv()).decimal_point).offset(0 as i32 as isize);
+                ) = *((*localeconv()).decimal_point).offset(0i32 as isize);
             let fresh2 = len;
             len = len + 1;
             *buff.offset(fresh2 as isize) = '0' as i32 as libc::c_char;
@@ -1291,7 +1291,7 @@ pub unsafe extern "C" fn luaO_tostring(mut L: *mut lua_State, mut obj: *mut TVal
     let mut x_: *mut TString = luaS_newlstr(L, buff.as_mut_ptr(), len as size_t);
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
-        .tt_ = ((*x_).tt as i32 | (1 as i32) << 6 as i32)
+        .tt_ = ((*x_).tt as i32 | (1i32) << 6i32)
         as u8;
 }
 unsafe extern "C" fn pushstr(
@@ -1304,25 +1304,25 @@ unsafe extern "C" fn pushstr(
     let mut x_: *mut TString = luaS_newlstr(L, str, lstr);
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
-        .tt_ = ((*x_).tt as i32 | (1 as i32) << 6 as i32)
+        .tt_ = ((*x_).tt as i32 | (1i32) << 6i32)
         as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     if (*buff).pushed == 0 {
-        (*buff).pushed = 1 as i32;
+        (*buff).pushed = 1i32;
     } else {
-        luaV_concat(L, 2 as i32);
+        luaV_concat(L, 2i32);
     };
 }
 unsafe extern "C" fn clearbuff(mut buff: *mut BuffFS) {
     pushstr(buff, ((*buff).space).as_mut_ptr(), (*buff).blen as size_t);
-    (*buff).blen = 0 as i32;
+    (*buff).blen = 0i32;
 }
 unsafe extern "C" fn getbuff(
     mut buff: *mut BuffFS,
     mut sz: i32,
 ) -> *mut libc::c_char {
-    if sz > 60 as i32 + 44 as i32 + 95 as i32 - (*buff).blen {
+    if sz > 60i32 + 44i32 + 95i32 - (*buff).blen {
         clearbuff(buff);
     }
     return ((*buff).space).as_mut_ptr().offset((*buff).blen as isize);
@@ -1333,7 +1333,7 @@ unsafe extern "C" fn addstr2buff(
     mut slen: size_t,
 ) {
     if slen
-        <= (60 as i32 + 44 as i32 + 95 as i32) as libc::c_ulong
+        <= (60i32 + 44i32 + 95i32) as libc::c_ulong
     {
         let mut bf: *mut libc::c_char = getbuff(buff, slen as i32);
         memcpy(bf as *mut libc::c_void, str as *const libc::c_void, slen);
@@ -1344,7 +1344,7 @@ unsafe extern "C" fn addstr2buff(
     };
 }
 unsafe extern "C" fn addnum2buff(mut buff: *mut BuffFS, mut num: *mut TValue) {
-    let mut numbuff: *mut libc::c_char = getbuff(buff, 44 as i32);
+    let mut numbuff: *mut libc::c_char = getbuff(buff, 44i32);
     let mut len: i32 = tostringbuff(num, numbuff);
     (*buff).blen += len;
 }
@@ -1361,7 +1361,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
         space: [0; 199],
     };
     let mut e: *const libc::c_char = 0 as *const libc::c_char;
-    buff.blen = 0 as i32;
+    buff.blen = 0i32;
     buff.pushed = buff.blen;
     buff.L = L;
     loop {
@@ -1370,7 +1370,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
             break;
         }
         addstr2buff(&mut buff, fmt, e.offset_from(fmt) as libc::c_long as size_t);
-        match *e.offset(1 as i32 as isize) as i32 {
+        match *e.offset(1i32 as isize) as i32 {
             115 => {
                 let mut s: *const libc::c_char = argp.arg::<*mut libc::c_char>();
                 if s.is_null() {
@@ -1395,7 +1395,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 let mut io: *mut TValue = &mut num;
                 (*io).value_.i = argp.arg::<i32>() as Integer;
                 (*io)
-                    .tt_ = (3 as i32 | (0 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (0i32) << 4i32)
                     as u8;
                 addnum2buff(&mut buff, &mut num);
             }
@@ -1407,7 +1407,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 let mut io_0: *mut TValue = &mut num_0;
                 (*io_0).value_.i = argp.arg::<l_uacInt>();
                 (*io_0)
-                    .tt_ = (3 as i32 | (0 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (0i32) << 4i32)
                     as u8;
                 addnum2buff(&mut buff, &mut num_0);
             }
@@ -1419,16 +1419,16 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 let mut io_1: *mut TValue = &mut num_1;
                 (*io_1).value_.n = argp.arg::<l_uacNumber>();
                 (*io_1)
-                    .tt_ = (3 as i32 | (1 as i32) << 4 as i32)
+                    .tt_ = (3i32 | (1i32) << 4i32)
                     as u8;
                 addnum2buff(&mut buff, &mut num_1);
             }
             112 => {
-                let sz: i32 = (3 as i32 as libc::c_ulong)
+                let sz: i32 = (3i32 as libc::c_ulong)
                     .wrapping_mul(
                         ::core::mem::size_of::<*mut libc::c_void>() as libc::c_ulong,
                     )
-                    .wrapping_add(8 as i32 as libc::c_ulong) as i32;
+                    .wrapping_add(8i32 as libc::c_ulong) as i32;
                 let mut bf: *mut libc::c_char = getbuff(&mut buff, sz);
                 let mut p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                 let mut len: i32 = snprintf(
@@ -1449,7 +1449,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                     &mut buff,
                     bf_0
                         .as_mut_ptr()
-                        .offset(8 as i32 as isize)
+                        .offset(8i32 as isize)
                         .offset(-(len_0 as isize)),
                     len_0 as size_t,
                 );
@@ -1458,7 +1458,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                 addstr2buff(
                     &mut buff,
                     b"%\0" as *const u8 as *const libc::c_char,
-                    1 as i32 as size_t,
+                    1i32 as size_t,
                 );
             }
             _ => {
@@ -1466,15 +1466,15 @@ pub unsafe extern "C" fn luaO_pushvfstring(
                     L,
                     b"invalid option '%%%c' to 'lua_pushfstring'\0" as *const u8
                         as *const libc::c_char,
-                    *e.offset(1 as i32 as isize) as i32,
+                    *e.offset(1i32 as isize) as i32,
                 );
             }
         }
-        fmt = e.offset(2 as i32 as isize);
+        fmt = e.offset(2i32 as isize);
     }
     addstr2buff(&mut buff, fmt, strlen(fmt));
     clearbuff(&mut buff);
-    return ((*((*((*L).top.p).offset(-(1 as i32 as isize))).val.value_.gc
+    return ((*((*((*L).top.p).offset(-(1i32 as isize))).val.value_.gc
         as *mut GCUnion))
         .ts
         .contents)
@@ -1498,12 +1498,12 @@ pub unsafe extern "C" fn luaO_chunkid(
     mut source: *const libc::c_char,
     mut srclen: size_t,
 ) {
-    let mut bufflen: size_t = 60 as i32 as size_t;
+    let mut bufflen: size_t = 60i32 as size_t;
     if *source as i32 == '=' as i32 {
         if srclen <= bufflen {
             memcpy(
                 out as *mut libc::c_void,
-                source.offset(1 as i32 as isize) as *const libc::c_void,
+                source.offset(1i32 as isize) as *const libc::c_void,
                 srclen
                     .wrapping_mul(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
@@ -1512,16 +1512,16 @@ pub unsafe extern "C" fn luaO_chunkid(
         } else {
             memcpy(
                 out as *mut libc::c_void,
-                source.offset(1 as i32 as isize) as *const libc::c_void,
+                source.offset(1i32 as isize) as *const libc::c_void,
                 bufflen
-                    .wrapping_sub(1 as i32 as libc::c_ulong)
+                    .wrapping_sub(1i32 as libc::c_ulong)
                     .wrapping_mul(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     ),
             );
             out = out
                 .offset(
-                    bufflen.wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                    bufflen.wrapping_sub(1i32 as libc::c_ulong) as isize,
                 );
             *out = '\0' as i32 as libc::c_char;
         }
@@ -1529,7 +1529,7 @@ pub unsafe extern "C" fn luaO_chunkid(
         if srclen <= bufflen {
             memcpy(
                 out as *mut libc::c_void,
-                source.offset(1 as i32 as isize) as *const libc::c_void,
+                source.offset(1i32 as isize) as *const libc::c_void,
                 srclen
                     .wrapping_mul(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
@@ -1543,7 +1543,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                     .wrapping_div(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     )
-                    .wrapping_sub(1 as i32 as libc::c_ulong)
+                    .wrapping_sub(1i32 as libc::c_ulong)
                     .wrapping_mul(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     ),
@@ -1554,7 +1554,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                         .wrapping_div(
                             ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                         )
-                        .wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                        .wrapping_sub(1i32 as libc::c_ulong) as isize,
                 );
             bufflen = (bufflen as libc::c_ulong)
                 .wrapping_sub(
@@ -1562,12 +1562,12 @@ pub unsafe extern "C" fn luaO_chunkid(
                         .wrapping_div(
                             ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                         )
-                        .wrapping_sub(1 as i32 as libc::c_ulong),
+                        .wrapping_sub(1i32 as libc::c_ulong),
                 ) as size_t as size_t;
             memcpy(
                 out as *mut libc::c_void,
                 source
-                    .offset(1 as i32 as isize)
+                    .offset(1i32 as isize)
                     .offset(srclen as isize)
                     .offset(-(bufflen as isize)) as *const libc::c_void,
                 bufflen
@@ -1583,7 +1583,7 @@ pub unsafe extern "C" fn luaO_chunkid(
             b"[string \"\0" as *const u8 as *const libc::c_char as *const libc::c_void,
             (::core::mem::size_of::<[libc::c_char; 10]>() as libc::c_ulong)
                 .wrapping_div(::core::mem::size_of::<libc::c_char>() as libc::c_ulong)
-                .wrapping_sub(1 as i32 as libc::c_ulong)
+                .wrapping_sub(1i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
         out = out
@@ -1592,7 +1592,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                     .wrapping_div(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     )
-                    .wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                    .wrapping_sub(1i32 as libc::c_ulong) as isize,
             );
         bufflen = (bufflen as libc::c_ulong)
             .wrapping_sub(
@@ -1600,8 +1600,8 @@ pub unsafe extern "C" fn luaO_chunkid(
                     .wrapping_div(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     )
-                    .wrapping_sub(1 as i32 as libc::c_ulong)
-                    .wrapping_add(1 as i32 as libc::c_ulong),
+                    .wrapping_sub(1i32 as libc::c_ulong)
+                    .wrapping_add(1i32 as libc::c_ulong),
             ) as size_t as size_t;
         if srclen < bufflen && nl.is_null() {
             memcpy(
@@ -1636,7 +1636,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                     .wrapping_div(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     )
-                    .wrapping_sub(1 as i32 as libc::c_ulong)
+                    .wrapping_sub(1i32 as libc::c_ulong)
                     .wrapping_mul(
                         ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                     ),
@@ -1647,7 +1647,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                         .wrapping_div(
                             ::core::mem::size_of::<libc::c_char>() as libc::c_ulong,
                         )
-                        .wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                        .wrapping_sub(1i32 as libc::c_ulong) as isize,
                 );
         }
         memcpy(
@@ -1655,8 +1655,8 @@ pub unsafe extern "C" fn luaO_chunkid(
             b"\"]\0" as *const u8 as *const libc::c_char as *const libc::c_void,
             (::core::mem::size_of::<[libc::c_char; 3]>() as libc::c_ulong)
                 .wrapping_div(::core::mem::size_of::<libc::c_char>() as libc::c_ulong)
-                .wrapping_sub(1 as i32 as libc::c_ulong)
-                .wrapping_add(1 as i32 as libc::c_ulong)
+                .wrapping_sub(1i32 as libc::c_ulong)
+                .wrapping_add(1i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
     };

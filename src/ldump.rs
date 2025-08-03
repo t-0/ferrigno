@@ -444,7 +444,7 @@ unsafe extern "C" fn dumpBlock(
     mut b: *const libc::c_void,
     mut size: size_t,
 ) {
-    if (*D).status == 0 as i32 && size > 0 as i32 as libc::c_ulong {
+    if (*D).status == 0i32 && size > 0i32 as libc::c_ulong {
         (*D)
             .status = (Some(((*D).writer).expect("non-null function pointer")))
             .expect("non-null function pointer")((*D).L, b, size, (*D).data);
@@ -455,36 +455,36 @@ unsafe extern "C" fn dumpByte(mut D: *mut DumpState, mut y: i32) {
     dumpBlock(
         D,
         &mut x as *mut u8 as *const libc::c_void,
-        (1 as i32 as libc::c_ulong)
+        (1i32 as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<u8>() as libc::c_ulong),
     );
 }
 unsafe extern "C" fn dumpSize(mut D: *mut DumpState, mut x: size_t) {
     let mut buff: [u8; 10] = [0; 10];
-    let mut n: i32 = 0 as i32;
+    let mut n: i32 = 0i32;
     loop {
         n += 1;
         buff[(::core::mem::size_of::<size_t>() as libc::c_ulong)
-            .wrapping_mul(8 as i32 as libc::c_ulong)
-            .wrapping_add(6 as i32 as libc::c_ulong)
-            .wrapping_div(7 as i32 as libc::c_ulong)
+            .wrapping_mul(8i32 as libc::c_ulong)
+            .wrapping_add(6i32 as libc::c_ulong)
+            .wrapping_div(7i32 as libc::c_ulong)
             .wrapping_sub(n as libc::c_ulong)
             as usize] = (x & 0x7f as i32 as libc::c_ulong) as u8;
-        x >>= 7 as i32;
-        if !(x != 0 as i32 as libc::c_ulong) {
+        x >>= 7i32;
+        if !(x != 0i32 as libc::c_ulong) {
             break;
         }
     }
     buff[(::core::mem::size_of::<size_t>() as libc::c_ulong)
-        .wrapping_mul(8 as i32 as libc::c_ulong)
-        .wrapping_add(6 as i32 as libc::c_ulong)
-        .wrapping_div(7 as i32 as libc::c_ulong)
-        .wrapping_sub(1 as i32 as libc::c_ulong)
+        .wrapping_mul(8i32 as libc::c_ulong)
+        .wrapping_add(6i32 as libc::c_ulong)
+        .wrapping_div(7i32 as libc::c_ulong)
+        .wrapping_sub(1i32 as libc::c_ulong)
         as usize] = (buff[(::core::mem::size_of::<size_t>() as libc::c_ulong)
-        .wrapping_mul(8 as i32 as libc::c_ulong)
-        .wrapping_add(6 as i32 as libc::c_ulong)
-        .wrapping_div(7 as i32 as libc::c_ulong)
-        .wrapping_sub(1 as i32 as libc::c_ulong) as usize] as i32
+        .wrapping_mul(8i32 as libc::c_ulong)
+        .wrapping_add(6i32 as libc::c_ulong)
+        .wrapping_div(7i32 as libc::c_ulong)
+        .wrapping_sub(1i32 as libc::c_ulong) as usize] as i32
         | 0x80 as i32) as u8;
     dumpBlock(
         D,
@@ -492,9 +492,9 @@ unsafe extern "C" fn dumpSize(mut D: *mut DumpState, mut x: size_t) {
             .as_mut_ptr()
             .offset(
                 (::core::mem::size_of::<size_t>() as libc::c_ulong)
-                    .wrapping_mul(8 as i32 as libc::c_ulong)
-                    .wrapping_add(6 as i32 as libc::c_ulong)
-                    .wrapping_div(7 as i32 as libc::c_ulong) as isize,
+                    .wrapping_mul(8i32 as libc::c_ulong)
+                    .wrapping_add(6i32 as libc::c_ulong)
+                    .wrapping_div(7i32 as libc::c_ulong) as isize,
             )
             .offset(-(n as isize)) as *const libc::c_void,
         (n as libc::c_ulong)
@@ -508,7 +508,7 @@ unsafe extern "C" fn dumpNumber(mut D: *mut DumpState, mut x: Number) {
     dumpBlock(
         D,
         &mut x as *mut Number as *const libc::c_void,
-        (1 as i32 as libc::c_ulong)
+        (1i32 as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
 }
@@ -516,13 +516,13 @@ unsafe extern "C" fn dumpInteger(mut D: *mut DumpState, mut x: Integer) {
     dumpBlock(
         D,
         &mut x as *mut Integer as *const libc::c_void,
-        (1 as i32 as libc::c_ulong)
+        (1i32 as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<Integer>() as libc::c_ulong),
     );
 }
 unsafe extern "C" fn dumpString(mut D: *mut DumpState, mut s: *const TString) {
     if s.is_null() {
-        dumpSize(D, 0 as i32 as size_t);
+        dumpSize(D, 0i32 as size_t);
     } else {
         let mut size: size_t = if (*s).shrlen as i32 != 0xff as i32 {
             (*s).shrlen as libc::c_ulong
@@ -530,7 +530,7 @@ unsafe extern "C" fn dumpString(mut D: *mut DumpState, mut s: *const TString) {
             (*s).u.lnglen
         };
         let mut str: *const libc::c_char = ((*s).contents).as_ptr();
-        dumpSize(D, size.wrapping_add(1 as i32 as libc::c_ulong));
+        dumpSize(D, size.wrapping_add(1i32 as libc::c_ulong));
         dumpBlock(
             D,
             str as *const libc::c_void,
@@ -551,7 +551,7 @@ unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Proto) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizek;
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         let mut o: *const TValue = &mut *((*f).k).offset(i as isize) as *mut TValue;
         let mut tt: i32 = (*o).tt_ as i32 & 0x3f as i32;
@@ -575,7 +575,7 @@ unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Proto) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizep;
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         dumpFunction(D, *((*f).p).offset(i as isize), (*f).source);
         i += 1;
@@ -585,7 +585,7 @@ unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizeupvalues;
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         dumpByte(D, (*((*f).upvalues).offset(i as isize)).instack as i32);
         dumpByte(D, (*((*f).upvalues).offset(i as isize)).index as i32);
@@ -596,7 +596,7 @@ unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto) {
 unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
     let mut i: i32 = 0;
     let mut n: i32 = 0;
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelineinfo };
+    n = if (*D).strip != 0 { 0i32 } else { (*f).sizelineinfo };
     dumpInt(D, n);
     dumpBlock(
         D,
@@ -604,26 +604,26 @@ unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
         (n as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<ls_byte>() as libc::c_ulong),
     );
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizeabslineinfo };
+    n = if (*D).strip != 0 { 0i32 } else { (*f).sizeabslineinfo };
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).pc);
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).line);
         i += 1;
     }
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelocvars };
+    n = if (*D).strip != 0 { 0i32 } else { (*f).sizelocvars };
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         dumpString(D, (*((*f).locvars).offset(i as isize)).varname);
         dumpInt(D, (*((*f).locvars).offset(i as isize)).startpc);
         dumpInt(D, (*((*f).locvars).offset(i as isize)).endpc);
         i += 1;
     }
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizeupvalues };
+    n = if (*D).strip != 0 { 0i32 } else { (*f).sizeupvalues };
     dumpInt(D, n);
-    i = 0 as i32;
+    i = 0i32;
     while i < n {
         dumpString(D, (*((*f).upvalues).offset(i as isize)).name);
         i += 1;
@@ -659,10 +659,10 @@ unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
     );
     dumpByte(
         D,
-        504 as i32 / 100 as i32 * 16 as i32
-            + 504 as i32 % 100 as i32,
+        504i32 / 100i32 * 16i32
+            + 504i32 % 100i32,
     );
-    dumpByte(D, 0 as i32);
+    dumpByte(D, 0i32);
     dumpBlock(
         D,
         b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char
@@ -695,7 +695,7 @@ pub unsafe extern "C" fn luaU_dump(
     D.writer = w;
     D.data = data;
     D.strip = strip;
-    D.status = 0 as i32;
+    D.status = 0i32;
     dumpHeader(&mut D);
     dumpByte(&mut D, (*f).sizeupvalues);
     dumpFunction(&mut D, f, 0 as *mut TString);

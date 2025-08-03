@@ -338,10 +338,10 @@ pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> i32 {
     let mut L: *mut lua_State = (*z).L;
     let mut buff: *const libc::c_char = 0 as *const libc::c_char;
     buff = ((*z).reader).expect("non-null function pointer")(L, (*z).data, &mut size);
-    if buff.is_null() || size == 0 as i32 as libc::c_ulong {
-        return -(1 as i32);
+    if buff.is_null() || size == 0i32 as libc::c_ulong {
+        return -(1i32);
     }
-    (*z).n = size.wrapping_sub(1 as i32 as libc::c_ulong);
+    (*z).n = size.wrapping_sub(1i32 as libc::c_ulong);
     (*z).p = buff;
     let fresh0 = (*z).p;
     (*z).p = ((*z).p).offset(1);
@@ -357,7 +357,7 @@ pub unsafe extern "C" fn luaZ_init(
     (*z).L = L;
     (*z).reader = reader;
     (*z).data = data;
-    (*z).n = 0 as i32 as size_t;
+    (*z).n = 0i32 as size_t;
     (*z).p = 0 as *const libc::c_char;
 }
 #[unsafe (no_mangle)]
@@ -368,8 +368,8 @@ pub unsafe extern "C" fn luaZ_read(
 ) -> size_t {
     while n != 0 {
         let mut m: size_t = 0;
-        if (*z).n == 0 as i32 as libc::c_ulong {
-            if luaZ_fill(z) == -(1 as i32) {
+        if (*z).n == 0i32 as libc::c_ulong {
+            if luaZ_fill(z) == -(1i32) {
                 return n
             } else {
                 (*z).n = ((*z).n).wrapping_add(1);
@@ -385,5 +385,5 @@ pub unsafe extern "C" fn luaZ_read(
         b = (b as *mut libc::c_char).offset(m as isize) as *mut libc::c_void;
         n = (n as libc::c_ulong).wrapping_sub(m) as size_t as size_t;
     }
-    return 0 as i32 as size_t;
+    return 0i32 as size_t;
 }

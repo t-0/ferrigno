@@ -15,253 +15,253 @@ pub const iABx: OpMode = 1;
 pub const iABC: OpMode = 0;
 #[unsafe (no_mangle)]
 pub static mut luaP_opmodes: [u8; 83] = [
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iAsBx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iAsBx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | isJ as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
-        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
-        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
-    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
-    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
-        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
-        | (0 as i32) << 3 as i32 | iAx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iAsBx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iAsBx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((1i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((1i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((1i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | isJ as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (1i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (1i32) << 6i32
+        | (1i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (1i32) << 6i32
+        | (1i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (1i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (1i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABx as i32) as u8,
+    ((0i32) << 7i32 | (1i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (1i32) << 5i32 | (0i32) << 4i32
+        | (1i32) << 3i32 | iABC as i32) as u8,
+    ((0i32) << 7i32 | (0i32) << 6i32
+        | (0i32) << 5i32 | (0i32) << 4i32
+        | (0i32) << 3i32 | iAx as i32) as u8,
 ];

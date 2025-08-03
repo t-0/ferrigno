@@ -463,7 +463,7 @@ pub unsafe extern "C" fn luaS_eqlngstr(
                 ((*a).contents).as_mut_ptr() as *const libc::c_void,
                 ((*b).contents).as_mut_ptr() as *const libc::c_void,
                 len,
-            ) == 0 as i32) as i32;
+            ) == 0i32) as i32;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_hash(
@@ -472,14 +472,14 @@ pub unsafe extern "C" fn luaS_hash(
     mut seed: libc::c_uint,
 ) -> libc::c_uint {
     let mut h: libc::c_uint = seed ^ l as libc::c_uint;
-    while l > 0 as i32 as libc::c_ulong {
+    while l > 0i32 as libc::c_ulong {
         h
-            ^= (h << 5 as i32)
-                .wrapping_add(h >> 2 as i32)
+            ^= (h << 5i32)
+                .wrapping_add(h >> 2i32)
                 .wrapping_add(
                     *str
                         .offset(
-                            l.wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                            l.wrapping_sub(1i32 as libc::c_ulong) as isize,
                         ) as u8 as libc::c_uint,
                 );
         l = l.wrapping_sub(1);
@@ -488,10 +488,10 @@ pub unsafe extern "C" fn luaS_hash(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_hashlongstr(mut ts: *mut TString) -> libc::c_uint {
-    if (*ts).extra as i32 == 0 as i32 {
+    if (*ts).extra as i32 == 0i32 {
         let mut len: size_t = (*ts).u.lnglen;
         (*ts).hash = luaS_hash(((*ts).contents).as_mut_ptr(), len, (*ts).hash);
-        (*ts).extra = 1 as i32 as u8;
+        (*ts).extra = 1i32 as u8;
     }
     return (*ts).hash;
 }
@@ -507,7 +507,7 @@ unsafe extern "C" fn tablerehash(
         *fresh0 = 0 as *mut TString;
         i += 1;
     }
-    i = 0 as i32;
+    i = 0i32;
     while i < osize {
         let mut p: *mut TString = *vect.offset(i as isize);
         let ref mut fresh1 = *vect.offset(i as isize);
@@ -515,7 +515,7 @@ unsafe extern "C" fn tablerehash(
         while !p.is_null() {
             let mut hnext: *mut TString = (*p).u.hnext;
             let mut h: libc::c_uint = ((*p).hash
-                & (nsize - 1 as i32) as libc::c_uint) as i32
+                & (nsize - 1i32) as libc::c_uint) as i32
                 as libc::c_uint;
             (*p).u.hnext = *vect.offset(h as isize);
             let ref mut fresh2 = *vect.offset(h as isize);
@@ -542,7 +542,7 @@ pub unsafe extern "C" fn luaS_resize(mut L: *mut lua_State, mut nsize: i32) {
             .wrapping_mul(::core::mem::size_of::<*mut TString>() as libc::c_ulong),
     ) as *mut *mut TString;
     if ((newvect == 0 as *mut libc::c_void as *mut *mut TString) as i32
-        != 0 as i32) as i32 as libc::c_long != 0
+        != 0i32) as i32 as libc::c_long != 0
     {
         if nsize < osize {
             tablerehash((*tb).hash, nsize, osize);
@@ -559,13 +559,13 @@ pub unsafe extern "C" fn luaS_resize(mut L: *mut lua_State, mut nsize: i32) {
 pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
     let mut i: i32 = 0;
     let mut j: i32 = 0;
-    i = 0 as i32;
-    while i < 53 as i32 {
-        j = 0 as i32;
-        while j < 2 as i32 {
+    i = 0i32;
+    while i < 53i32 {
+        j = 0i32;
+        while j < 2i32 {
             if (*(*g).strcache[i as usize][j as usize]).marked as i32
-                & ((1 as i32) << 3 as i32
-                    | (1 as i32) << 4 as i32) != 0
+                & ((1i32) << 3i32
+                    | (1i32) << 4i32) != 0
             {
                 (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
             }
@@ -583,25 +583,25 @@ pub unsafe extern "C" fn luaS_init(mut L: *mut lua_State) {
     (*tb)
         .hash = luaM_malloc_(
         L,
-        (128 as i32 as libc::c_ulong)
+        (128i32 as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<*mut TString>() as libc::c_ulong),
-        0 as i32,
+        0i32,
     ) as *mut *mut TString;
-    tablerehash((*tb).hash, 0 as i32, 128 as i32);
-    (*tb).size = 128 as i32;
+    tablerehash((*tb).hash, 0i32, 128i32);
+    (*tb).size = 128i32;
     (*g)
         .memerrmsg = luaS_newlstr(
         L,
         b"not enough memory\0" as *const u8 as *const libc::c_char,
         (::core::mem::size_of::<[libc::c_char; 18]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<libc::c_char>() as libc::c_ulong)
-            .wrapping_sub(1 as i32 as libc::c_ulong),
+            .wrapping_sub(1i32 as libc::c_ulong),
     );
     luaC_fix(L, &mut (*((*g).memerrmsg as *mut GCUnion)).gc);
-    i = 0 as i32;
-    while i < 53 as i32 {
-        j = 0 as i32;
-        while j < 2 as i32 {
+    i = 0i32;
+    while i < 53i32 {
+        j = 0i32;
+        while j < 2i32 {
             (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
             j += 1;
         }
@@ -620,13 +620,13 @@ unsafe extern "C" fn createstrobj(
     totalsize = (24 as libc::c_ulong)
         .wrapping_add(
             l
-                .wrapping_add(1 as i32 as libc::c_ulong)
+                .wrapping_add(1i32 as libc::c_ulong)
                 .wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
     o = luaC_newobj(L, tag, totalsize);
     ts = &mut (*(o as *mut GCUnion)).ts;
     (*ts).hash = h;
-    (*ts).extra = 0 as i32 as u8;
+    (*ts).extra = 0i32 as u8;
     *((*ts).contents).as_mut_ptr().offset(l as isize) = '\0' as i32 as libc::c_char;
     return ts;
 }
@@ -638,7 +638,7 @@ pub unsafe extern "C" fn luaS_createlngstrobj(
     let mut ts: *mut TString = createstrobj(
         L,
         l,
-        4 as i32 | (1 as i32) << 4 as i32,
+        4i32 | (1i32) << 4i32,
         (*(*L).l_G).seed,
     );
     (*ts).u.lnglen = l;
@@ -650,7 +650,7 @@ pub unsafe extern "C" fn luaS_remove(mut L: *mut lua_State, mut ts: *mut TString
     let mut tb: *mut stringtable = &mut (*(*L).l_G).strt;
     let mut p: *mut *mut TString = &mut *((*tb).hash)
         .offset(
-            ((*ts).hash & ((*tb).size - 1 as i32) as libc::c_uint) as i32
+            ((*ts).hash & ((*tb).size - 1i32) as libc::c_uint) as i32
                 as isize,
         ) as *mut *mut TString;
     while *p != ts {
@@ -661,27 +661,27 @@ pub unsafe extern "C" fn luaS_remove(mut L: *mut lua_State, mut ts: *mut TString
     (*tb).nuse;
 }
 unsafe extern "C" fn growstrtab(mut L: *mut lua_State, mut tb: *mut stringtable) {
-    if (((*tb).nuse == 2147483647 as i32) as i32 != 0 as i32)
+    if (((*tb).nuse == 2147483647i32) as i32 != 0i32)
         as i32 as libc::c_long != 0
     {
-        luaC_fullgc(L, 1 as i32);
-        if (*tb).nuse == 2147483647 as i32 {
-            luaD_throw(L, 4 as i32);
+        luaC_fullgc(L, 1i32);
+        if (*tb).nuse == 2147483647i32 {
+            luaD_throw(L, 4i32);
         }
     }
     if (*tb).size
-        <= (if 2147483647 as i32 as size_t
-            <= (!(0 as i32 as size_t))
+        <= (if 2147483647i32 as size_t
+            <= (!(0i32 as size_t))
                 .wrapping_div(::core::mem::size_of::<*mut TString>() as libc::c_ulong)
         {
-            2147483647 as i32 as libc::c_uint
+            2147483647i32 as libc::c_uint
         } else {
-            (!(0 as i32 as size_t))
+            (!(0i32 as size_t))
                 .wrapping_div(::core::mem::size_of::<*mut TString>() as libc::c_ulong)
                 as libc::c_uint
-        }) as i32 / 2 as i32
+        }) as i32 / 2i32
     {
-        luaS_resize(L, (*tb).size * 2 as i32);
+        luaS_resize(L, (*tb).size * 2i32);
     }
 }
 unsafe extern "C" fn internshrstr(
@@ -695,7 +695,7 @@ unsafe extern "C" fn internshrstr(
     let mut h: libc::c_uint = luaS_hash(str, l, (*g).seed);
     let mut list: *mut *mut TString = &mut *((*tb).hash)
         .offset(
-            (h & ((*tb).size - 1 as i32) as libc::c_uint) as i32 as isize,
+            (h & ((*tb).size - 1i32) as libc::c_uint) as i32 as isize,
         ) as *mut *mut TString;
     ts = *list;
     while !ts.is_null() {
@@ -704,17 +704,17 @@ unsafe extern "C" fn internshrstr(
                 str as *const libc::c_void,
                 ((*ts).contents).as_mut_ptr() as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
-            ) == 0 as i32
+            ) == 0i32
         {
             if (*ts).marked as i32
                 & ((*g).currentwhite as i32
-                    ^ ((1 as i32) << 3 as i32
-                        | (1 as i32) << 4 as i32)) != 0
+                    ^ ((1i32) << 3i32
+                        | (1i32) << 4i32)) != 0
             {
                 (*ts)
                     .marked = ((*ts).marked as i32
-                    ^ ((1 as i32) << 3 as i32
-                        | (1 as i32) << 4 as i32)) as u8;
+                    ^ ((1i32) << 3i32
+                        | (1i32) << 4i32)) as u8;
             }
             return ts;
         }
@@ -724,14 +724,14 @@ unsafe extern "C" fn internshrstr(
         growstrtab(L, tb);
         list = &mut *((*tb).hash)
             .offset(
-                (h & ((*tb).size - 1 as i32) as libc::c_uint) as i32
+                (h & ((*tb).size - 1i32) as libc::c_uint) as i32
                     as isize,
             ) as *mut *mut TString;
     }
     ts = createstrobj(
         L,
         l,
-        4 as i32 | (0 as i32) << 4 as i32,
+        4i32 | (0i32) << 4i32,
         h,
     );
     (*ts).shrlen = l as u8;
@@ -752,7 +752,7 @@ pub unsafe extern "C" fn luaS_newlstr(
     mut str: *const libc::c_char,
     mut l: size_t,
 ) -> *mut TString {
-    if l <= 40 as i32 as libc::c_ulong {
+    if l <= 40i32 as libc::c_ulong {
         return internshrstr(L, str, l)
     } else {
         let mut ts: *mut TString = 0 as *mut TString;
@@ -760,12 +760,12 @@ pub unsafe extern "C" fn luaS_newlstr(
             >= (if (::core::mem::size_of::<size_t>() as libc::c_ulong)
                 < ::core::mem::size_of::<Integer>() as libc::c_ulong
             {
-                !(0 as i32 as size_t)
+                !(0i32 as size_t)
             } else {
-                9223372036854775807 as i64 as size_t
+9223372036854775807i64 as size_t
             })
                 .wrapping_sub(::core::mem::size_of::<TString>() as libc::c_ulong))
-            as i32 != 0 as i32) as i32 as libc::c_long != 0
+            as i32 != 0i32) as i32 as libc::c_long != 0
         {
             luaM_toobig(L);
         }
@@ -784,30 +784,30 @@ pub unsafe extern "C" fn luaS_new(
     mut str: *const libc::c_char,
 ) -> *mut TString {
     let mut i: libc::c_uint = ((str as uintptr_t
-        & (2147483647 as i32 as libc::c_uint)
+        & (2147483647i32 as libc::c_uint)
             .wrapping_mul(2 as libc::c_uint)
             .wrapping_add(1 as libc::c_uint) as libc::c_ulong) as libc::c_uint)
-        .wrapping_rem(53 as i32 as libc::c_uint);
+        .wrapping_rem(53i32 as libc::c_uint);
     let mut j: i32 = 0;
     let mut p: *mut *mut TString = ((*(*L).l_G).strcache[i as usize]).as_mut_ptr();
-    j = 0 as i32;
-    while j < 2 as i32 {
+    j = 0i32;
+    while j < 2i32 {
         if strcmp(str, ((**p.offset(j as isize)).contents).as_mut_ptr())
-            == 0 as i32
+            == 0i32
         {
             return *p.offset(j as isize);
         }
         j += 1;
     }
-    j = 2 as i32 - 1 as i32;
-    while j > 0 as i32 {
+    j = 2i32 - 1i32;
+    while j > 0i32 {
         let ref mut fresh3 = *p.offset(j as isize);
-        *fresh3 = *p.offset((j - 1 as i32) as isize);
+        *fresh3 = *p.offset((j - 1i32) as isize);
         j -= 1;
     }
-    let ref mut fresh4 = *p.offset(0 as i32 as isize);
+    let ref mut fresh4 = *p.offset(0i32 as isize);
     *fresh4 = luaS_newlstr(L, str, strlen(str));
-    return *p.offset(0 as i32 as isize);
+    return *p.offset(0i32 as isize);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_newudata(
@@ -822,12 +822,12 @@ pub unsafe extern "C" fn luaS_newudata(
         > (if (::core::mem::size_of::<size_t>() as libc::c_ulong)
             < ::core::mem::size_of::<Integer>() as libc::c_ulong
         {
-            !(0 as i32 as size_t)
+            !(0i32 as size_t)
         } else {
-            9223372036854775807 as i64 as size_t
+9223372036854775807i64 as size_t
         })
             .wrapping_sub(
-                (if nuvalue == 0 as i32 {
+                (if nuvalue == 0i32 {
                     32 as libc::c_ulong
                 } else {
                     (40 as libc::c_ulong)
@@ -836,14 +836,14 @@ pub unsafe extern "C" fn luaS_newudata(
                                 .wrapping_mul(nuvalue as libc::c_ulong),
                         )
                 }),
-            )) as i32 != 0 as i32) as i32 as libc::c_long != 0
+            )) as i32 != 0i32) as i32 as libc::c_long != 0
     {
         luaM_toobig(L);
     }
     o = luaC_newobj(
         L,
-        7 as i32 | (0 as i32) << 4 as i32,
-        (if nuvalue == 0 as i32 {
+        7i32 | (0i32) << 4i32,
+        (if nuvalue == 0i32 {
             32 as libc::c_ulong
         } else {
             (40 as libc::c_ulong)
@@ -858,11 +858,11 @@ pub unsafe extern "C" fn luaS_newudata(
     (*u).len = s;
     (*u).nuvalue = nuvalue as libc::c_ushort;
     (*u).metatable = 0 as *mut Table;
-    i = 0 as i32;
+    i = 0i32;
     while i < nuvalue {
         (*((*u).uv).as_mut_ptr().offset(i as isize))
             .uv
-            .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
+            .tt_ = (0i32 | (0i32) << 4i32)
             as u8;
         i += 1;
     }

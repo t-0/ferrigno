@@ -470,7 +470,7 @@ pub unsafe extern "C" fn luaF_newCclosure(
 ) -> *mut CClosure {
     let mut o: *mut GCObject = luaC_newobj(
         L,
-        6 as i32 | (2 as i32) << 4 as i32,
+        6i32 | (2i32) << 4i32,
         (32 as libc::c_ulong as i32
             + ::core::mem::size_of::<TValue>() as libc::c_ulong as i32 * nupvals)
             as size_t,
@@ -486,7 +486,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
 ) -> *mut LClosure {
     let mut o: *mut GCObject = luaC_newobj(
         L,
-        6 as i32 | (0 as i32) << 4 as i32,
+        6i32 | (0i32) << 4i32,
         (32 as libc::c_ulong as i32
             + ::core::mem::size_of::<*mut TValue>() as libc::c_ulong as i32
                 * nupvals) as size_t,
@@ -508,24 +508,24 @@ pub unsafe extern "C" fn luaF_newLclosure(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_initupvals(mut L: *mut lua_State, mut cl: *mut LClosure) {
     let mut i: i32 = 0;
-    i = 0 as i32;
+    i = 0i32;
     while i < (*cl).nupvalues as i32 {
         let mut o: *mut GCObject = luaC_newobj(
             L,
-            9 as i32 | (0 as i32) << 4 as i32,
+            9i32 | (0i32) << 4i32,
             ::core::mem::size_of::<UpVal>() as libc::c_ulong,
         );
         let mut uv: *mut UpVal = &mut (*(o as *mut GCUnion)).upv;
         (*uv).v.p = &mut (*uv).u.value;
         (*(*uv).v.p)
-            .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
+            .tt_ = (0i32 | (0i32) << 4i32)
             as u8;
         let ref mut fresh2 = *((*cl).upvals).as_mut_ptr().offset(i as isize);
         *fresh2 = uv;
-        if (*cl).marked as i32 & (1 as i32) << 5 as i32 != 0
+        if (*cl).marked as i32 & (1i32) << 5i32 != 0
             && (*uv).marked as i32
-                & ((1 as i32) << 3 as i32
-                    | (1 as i32) << 4 as i32) != 0
+                & ((1i32) << 3i32
+                    | (1i32) << 4i32) != 0
         {
             luaC_barrier_(
                 L,
@@ -543,7 +543,7 @@ unsafe extern "C" fn newupval(
 ) -> *mut UpVal {
     let mut o: *mut GCObject = luaC_newobj(
         L,
-        9 as i32 | (0 as i32) << 4 as i32,
+        9i32 | (0i32) << 4i32,
         ::core::mem::size_of::<UpVal>() as libc::c_ulong,
     );
     let mut uv: *mut UpVal = &mut (*(o as *mut GCUnion)).upv;
@@ -592,24 +592,24 @@ unsafe extern "C" fn callclosemethod(
     let mut io2: *const TValue = tm;
     (*io1).value_ = (*io2).value_;
     (*io1).tt_ = (*io2).tt_;
-    let mut io1_0: *mut TValue = &mut (*top.offset(1 as i32 as isize)).val;
+    let mut io1_0: *mut TValue = &mut (*top.offset(1i32 as isize)).val;
     let mut io2_0: *const TValue = obj;
     (*io1_0).value_ = (*io2_0).value_;
     (*io1_0).tt_ = (*io2_0).tt_;
-    let mut io1_1: *mut TValue = &mut (*top.offset(2 as i32 as isize)).val;
+    let mut io1_1: *mut TValue = &mut (*top.offset(2i32 as isize)).val;
     let mut io2_1: *const TValue = err;
     (*io1_1).value_ = (*io2_1).value_;
     (*io1_1).tt_ = (*io2_1).tt_;
-    (*L).top.p = top.offset(3 as i32 as isize);
+    (*L).top.p = top.offset(3i32 as isize);
     if yy != 0 {
-        luaD_call(L, top, 0 as i32);
+        luaD_call(L, top, 0i32);
     } else {
-        luaD_callnoyield(L, top, 0 as i32);
+        luaD_callnoyield(L, top, 0i32);
     };
 }
 unsafe extern "C" fn checkclosemth(mut L: *mut lua_State, mut level: StkId) {
     let mut tm: *const TValue = luaT_gettmbyobj(L, &mut (*level).val, TM_CLOSE);
-    if (*tm).tt_ as i32 & 0xf as i32 == 0 as i32 {
+    if (*tm).tt_ as i32 & 0xf as i32 == 0i32 {
         let mut index: i32 = level.offset_from((*(*L).ci).func.p) as libc::c_long
             as i32;
         let mut vname: *const libc::c_char = luaG_findlocal(
@@ -637,19 +637,19 @@ unsafe extern "C" fn prepcallclosemth(
 ) {
     let mut uv: *mut TValue = &mut (*level).val;
     let mut errobj: *mut TValue = 0 as *mut TValue;
-    if status == -(1 as i32) {
+    if status == -(1i32) {
         errobj = &mut (*(*L).l_G).nilvalue;
     } else {
-        errobj = &mut (*level.offset(1 as i32 as isize)).val;
-        luaD_seterrorobj(L, status, level.offset(1 as i32 as isize));
+        errobj = &mut (*level.offset(1i32 as isize)).val;
+        luaD_seterrorobj(L, status, level.offset(1i32 as isize));
     }
     callclosemethod(L, uv, errobj, yy);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkId) {
     if (*level).val.tt_ as i32
-        == 1 as i32 | (0 as i32) << 4 as i32
-        || (*level).val.tt_ as i32 & 0xf as i32 == 0 as i32
+        == 1i32 | (0i32) << 4i32
+        || (*level).val.tt_ as i32 & 0xf as i32 == 0i32
     {
         return;
     }
@@ -658,9 +658,9 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkI
         as libc::c_ulong
         > ((256 as libc::c_ulong)
             << (::core::mem::size_of::<libc::c_ushort>() as libc::c_ulong)
-                .wrapping_sub(1 as i32 as libc::c_ulong)
-                .wrapping_mul(8 as i32 as libc::c_ulong))
-            .wrapping_sub(1 as i32 as libc::c_ulong)
+                .wrapping_sub(1i32 as libc::c_ulong)
+                .wrapping_mul(8i32 as libc::c_ulong))
+            .wrapping_sub(1i32 as libc::c_ulong)
     {
         (*L)
             .tbclist
@@ -668,11 +668,11 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkI
             .offset(
                 ((256 as libc::c_ulong)
                     << (::core::mem::size_of::<libc::c_ushort>() as libc::c_ulong)
-                        .wrapping_sub(1 as i32 as libc::c_ulong)
-                        .wrapping_mul(8 as i32 as libc::c_ulong))
-                    .wrapping_sub(1 as i32 as libc::c_ulong) as isize,
+                        .wrapping_sub(1i32 as libc::c_ulong)
+                        .wrapping_mul(8i32 as libc::c_ulong))
+                    .wrapping_sub(1i32 as libc::c_ulong) as isize,
             );
-        (*(*L).tbclist.p).tbclist.delta = 0 as i32 as libc::c_ushort;
+        (*(*L).tbclist.p).tbclist.delta = 0i32 as libc::c_ushort;
     }
     (*level)
         .tbclist
@@ -708,18 +708,18 @@ pub unsafe extern "C" fn luaF_closeupval(mut L: *mut lua_State, mut level: StkId
         (*io1).tt_ = (*io2).tt_;
         (*uv).v.p = slot;
         if (*uv).marked as i32
-            & ((1 as i32) << 3 as i32
-                | (1 as i32) << 4 as i32) == 0
+            & ((1i32) << 3i32
+                | (1i32) << 4i32) == 0
         {
             (*uv)
                 .marked = ((*uv).marked as i32
-                | (1 as i32) << 5 as i32) as u8;
-            if (*slot).tt_ as i32 & (1 as i32) << 6 as i32 != 0 {
-                if (*uv).marked as i32 & (1 as i32) << 5 as i32
+                | (1i32) << 5i32) as u8;
+            if (*slot).tt_ as i32 & (1i32) << 6i32 != 0 {
+                if (*uv).marked as i32 & (1i32) << 5i32
                     != 0
                     && (*(*slot).value_.gc).marked as i32
-                        & ((1 as i32) << 3 as i32
-                            | (1 as i32) << 4 as i32) != 0
+                        & ((1i32) << 3i32
+                            | (1i32) << 4i32) != 0
                 {
                     luaC_barrier_(
                         L,
@@ -734,14 +734,14 @@ pub unsafe extern "C" fn luaF_closeupval(mut L: *mut lua_State, mut level: StkId
 unsafe extern "C" fn poptbclist(mut L: *mut lua_State) {
     let mut tbc: StkId = (*L).tbclist.p;
     tbc = tbc.offset(-((*tbc).tbclist.delta as i32 as isize));
-    while tbc > (*L).stack.p && (*tbc).tbclist.delta as i32 == 0 as i32 {
+    while tbc > (*L).stack.p && (*tbc).tbclist.delta as i32 == 0i32 {
         tbc = tbc
             .offset(
                 -(((256 as libc::c_ulong)
                     << (::core::mem::size_of::<libc::c_ushort>() as libc::c_ulong)
-                        .wrapping_sub(1 as i32 as libc::c_ulong)
-                        .wrapping_mul(8 as i32 as libc::c_ulong))
-                    .wrapping_sub(1 as i32 as libc::c_ulong) as isize),
+                        .wrapping_sub(1i32 as libc::c_ulong)
+                        .wrapping_mul(8i32 as libc::c_ulong))
+                    .wrapping_sub(1i32 as libc::c_ulong) as isize),
             );
     }
     (*L).tbclist.p = tbc;
@@ -768,29 +768,29 @@ pub unsafe extern "C" fn luaF_close(
 pub unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
     let mut o: *mut GCObject = luaC_newobj(
         L,
-        9 as i32 + 1 as i32 | (0 as i32) << 4 as i32,
+        9i32 + 1i32 | (0i32) << 4i32,
         ::core::mem::size_of::<Proto>() as libc::c_ulong,
     );
     let mut f: *mut Proto = &mut (*(o as *mut GCUnion)).p;
     (*f).k = 0 as *mut TValue;
-    (*f).sizek = 0 as i32;
+    (*f).sizek = 0i32;
     (*f).p = 0 as *mut *mut Proto;
-    (*f).sizep = 0 as i32;
+    (*f).sizep = 0i32;
     (*f).code = 0 as *mut Instruction;
-    (*f).sizecode = 0 as i32;
+    (*f).sizecode = 0i32;
     (*f).lineinfo = 0 as *mut ls_byte;
-    (*f).sizelineinfo = 0 as i32;
+    (*f).sizelineinfo = 0i32;
     (*f).abslineinfo = 0 as *mut AbsLineInfo;
-    (*f).sizeabslineinfo = 0 as i32;
+    (*f).sizeabslineinfo = 0i32;
     (*f).upvalues = 0 as *mut Upvaldesc;
-    (*f).sizeupvalues = 0 as i32;
-    (*f).numparams = 0 as i32 as u8;
-    (*f).is_vararg = 0 as i32 as u8;
-    (*f).maxstacksize = 0 as i32 as u8;
+    (*f).sizeupvalues = 0i32;
+    (*f).numparams = 0i32 as u8;
+    (*f).is_vararg = 0i32 as u8;
+    (*f).maxstacksize = 0i32 as u8;
     (*f).locvars = 0 as *mut LocVar;
-    (*f).sizelocvars = 0 as i32;
-    (*f).linedefined = 0 as i32;
-    (*f).lastlinedefined = 0 as i32;
+    (*f).sizelocvars = 0i32;
+    (*f).linedefined = 0i32;
+    (*f).lastlinedefined = 0i32;
     (*f).source = 0 as *mut TString;
     return f;
 }
@@ -851,11 +851,11 @@ pub unsafe extern "C" fn luaF_getlocalname(
     mut pc: i32,
 ) -> *const libc::c_char {
     let mut i: i32 = 0;
-    i = 0 as i32;
+    i = 0i32;
     while i < (*f).sizelocvars && (*((*f).locvars).offset(i as isize)).startpc <= pc {
         if pc < (*((*f).locvars).offset(i as isize)).endpc {
             local_number -= 1;
-            if local_number == 0 as i32 {
+            if local_number == 0i32 {
                 return ((*(*((*f).locvars).offset(i as isize)).varname).contents)
                     .as_mut_ptr();
             }

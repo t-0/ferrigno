@@ -165,48 +165,48 @@ pub struct luaL_Reg {
 unsafe extern "C" fn os_execute(mut L: *mut lua_State) -> i32 {
     let mut cmd: *const libc::c_char = luaL_optlstring(
         L,
-        1 as i32,
+        1i32,
         0 as *const libc::c_char,
         0 as *mut size_t,
     );
     let mut stat: i32 = 0;
-    *__errno_location() = 0 as i32;
+    *__errno_location() = 0i32;
     stat = system(cmd);
     if !cmd.is_null() {
         return luaL_execresult(L, stat)
     } else {
         lua_pushboolean(L, stat);
-        return 1 as i32;
+        return 1i32;
     };
 }
 unsafe extern "C" fn os_remove(mut L: *mut lua_State) -> i32 {
     let mut filename: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
-    *__errno_location() = 0 as i32;
+    *__errno_location() = 0i32;
     return luaL_fileresult(
         L,
-        (remove(filename) == 0 as i32) as i32,
+        (remove(filename) == 0i32) as i32,
         filename,
     );
 }
 unsafe extern "C" fn os_rename(mut L: *mut lua_State) -> i32 {
     let mut fromname: *const libc::c_char = luaL_checklstring(
         L,
-        1 as i32,
+        1i32,
         0 as *mut size_t,
     );
     let mut toname: *const libc::c_char = luaL_checklstring(
         L,
-        2 as i32,
+        2i32,
         0 as *mut size_t,
     );
-    *__errno_location() = 0 as i32;
+    *__errno_location() = 0i32;
     return luaL_fileresult(
         L,
-        (rename(fromname, toname) == 0 as i32) as i32,
+        (rename(fromname, toname) == 0i32) as i32,
         0 as *const libc::c_char,
     );
 }
@@ -215,29 +215,29 @@ unsafe extern "C" fn os_tmpname(mut L: *mut lua_State) -> i32 {
     let mut err: i32 = 0;
     strcpy(buff.as_mut_ptr(), b"/tmp/lua_XXXXXX\0" as *const u8 as *const libc::c_char);
     err = mkstemp(buff.as_mut_ptr());
-    if err != -(1 as i32) {
+    if err != -(1i32) {
         close(err);
     }
-    err = (err == -(1 as i32)) as i32;
-    if (err != 0 as i32) as i32 as libc::c_long != 0 {
+    err = (err == -(1i32)) as i32;
+    if (err != 0i32) as i32 as libc::c_long != 0 {
         return luaL_error(
             L,
             b"unable to generate a unique filename\0" as *const u8 as *const libc::c_char,
         );
     }
     lua_pushstring(L, buff.as_mut_ptr());
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn os_getenv(mut L: *mut lua_State) -> i32 {
-    lua_pushstring(L, getenv(luaL_checklstring(L, 1 as i32, 0 as *mut size_t)));
-    return 1 as i32;
+    lua_pushstring(L, getenv(luaL_checklstring(L, 1i32, 0 as *mut size_t)));
+    return 1i32;
 }
 unsafe extern "C" fn os_clock(mut L: *mut lua_State) -> i32 {
     lua_pushnumber(
         L,
-        clock() as Number / 1000000 as i32 as __clock_t as Number,
+        clock() as Number / 1000000i32 as __clock_t as Number,
     );
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn setfield(
     mut L: *mut lua_State,
@@ -246,67 +246,67 @@ unsafe extern "C" fn setfield(
     mut delta: i32,
 ) {
     lua_pushinteger(L, value as Integer + delta as i64);
-    lua_setfield(L, -(2 as i32), key);
+    lua_setfield(L, -(2i32), key);
 }
 unsafe extern "C" fn setboolfield(
     mut L: *mut lua_State,
     mut key: *const libc::c_char,
     mut value: i32,
 ) {
-    if value < 0 as i32 {
+    if value < 0i32 {
         return;
     }
     lua_pushboolean(L, value);
-    lua_setfield(L, -(2 as i32), key);
+    lua_setfield(L, -(2i32), key);
 }
 unsafe extern "C" fn setallfields(mut L: *mut lua_State, mut stm: *mut tm) {
     setfield(
         L,
         b"year\0" as *const u8 as *const libc::c_char,
         (*stm).tm_year,
-        1900 as i32,
+        1900i32,
     );
     setfield(
         L,
         b"month\0" as *const u8 as *const libc::c_char,
         (*stm).tm_mon,
-        1 as i32,
+        1i32,
     );
     setfield(
         L,
         b"day\0" as *const u8 as *const libc::c_char,
         (*stm).tm_mday,
-        0 as i32,
+        0i32,
     );
     setfield(
         L,
         b"hour\0" as *const u8 as *const libc::c_char,
         (*stm).tm_hour,
-        0 as i32,
+        0i32,
     );
     setfield(
         L,
         b"min\0" as *const u8 as *const libc::c_char,
         (*stm).tm_min,
-        0 as i32,
+        0i32,
     );
     setfield(
         L,
         b"sec\0" as *const u8 as *const libc::c_char,
         (*stm).tm_sec,
-        0 as i32,
+        0i32,
     );
     setfield(
         L,
         b"yday\0" as *const u8 as *const libc::c_char,
         (*stm).tm_yday,
-        1 as i32,
+        1i32,
     );
     setfield(
         L,
         b"wday\0" as *const u8 as *const libc::c_char,
         (*stm).tm_wday,
-        1 as i32,
+        1i32,
     );
     setboolfield(L, b"isdst\0" as *const u8 as *const libc::c_char, (*stm).tm_isdst);
 }
@@ -315,12 +315,12 @@ unsafe extern "C" fn getboolfield(
     mut key: *const libc::c_char,
 ) -> i32 {
     let mut res: i32 = 0;
-    res = if lua_getfield(L, -(1 as i32), key) == 0 as i32 {
-        -(1 as i32)
+    res = if lua_getfield(L, -(1i32), key) == 0i32 {
+        -(1i32)
     } else {
-        lua_toboolean(L, -(1 as i32))
+        lua_toboolean(L, -(1i32))
     };
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    lua_settop(L, -(1i32) - 1i32);
     return res;
 }
 unsafe extern "C" fn getfield(
@@ -330,10 +330,10 @@ unsafe extern "C" fn getfield(
     mut delta: i32,
 ) -> i32 {
     let mut isnum: i32 = 0;
-    let mut t: i32 = lua_getfield(L, -(1 as i32), key);
-    let mut res: Integer = lua_tointegerx(L, -(1 as i32), &mut isnum);
+    let mut t: i32 = lua_getfield(L, -(1i32), key);
+    let mut res: Integer = lua_tointegerx(L, -(1i32), &mut isnum);
     if isnum == 0 {
-        if ((t != 0 as i32) as i32 != 0 as i32) as i32
+        if ((t != 0i32) as i32 != 0i32) as i32
             as libc::c_long != 0
         {
             return luaL_error(
@@ -341,7 +341,7 @@ unsafe extern "C" fn getfield(
                 b"field '%s' is not an integer\0" as *const u8 as *const libc::c_char,
                 key,
             )
-        } else if ((d < 0 as i32) as i32 != 0 as i32)
+        } else if ((d < 0i32) as i32 != 0i32)
             as i32 as libc::c_long != 0
         {
             return luaL_error(
@@ -353,11 +353,11 @@ unsafe extern "C" fn getfield(
         }
         res = d as Integer;
     } else {
-        if if res >= 0 as i32 as i64 {
+        if if res >= 0i32 as i64 {
             (res - delta as i64
-                <= 2147483647 as i32 as i64) as i32
+                <= 2147483647i32 as i64) as i32
         } else {
-            ((-(2147483647 as i32) - 1 as i32 + delta)
+            ((-(2147483647i32) - 1i32 + delta)
                 as i64 <= res) as i32
         } == 0
         {
@@ -369,7 +369,7 @@ unsafe extern "C" fn getfield(
         }
         res -= delta as i64;
     }
-    lua_settop(L, -(1 as i32) - 1 as i32);
+    lua_settop(L, -(1i32) - 1i32);
     return res as i32;
 }
 unsafe extern "C" fn checkoption(
@@ -380,7 +380,7 @@ unsafe extern "C" fn checkoption(
 ) -> *const libc::c_char {
     let mut option: *const libc::c_char = b"aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy\0"
         as *const u8 as *const libc::c_char;
-    let mut oplen: i32 = 1 as i32;
+    let mut oplen: i32 = 1i32;
     while *option as i32 != '\0' as i32 && oplen as libc::c_long <= convlen {
         if *option as i32 == '|' as i32 {
             oplen += 1;
@@ -388,7 +388,7 @@ unsafe extern "C" fn checkoption(
             conv as *const libc::c_void,
             option as *const libc::c_void,
             oplen as libc::c_ulong,
-        ) == 0 as i32
+        ) == 0i32
         {
             memcpy(
                 buff as *mut libc::c_void,
@@ -402,7 +402,7 @@ unsafe extern "C" fn checkoption(
     }
     luaL_argerror(
         L,
-        1 as i32,
+        1i32,
         lua_pushfstring(
             L,
             b"invalid conversion specifier '%%%s'\0" as *const u8 as *const libc::c_char,
@@ -413,7 +413,7 @@ unsafe extern "C" fn checkoption(
 }
 unsafe extern "C" fn l_checktime(mut L: *mut lua_State, mut arg: i32) -> time_t {
     let mut t: Integer = luaL_checkinteger(L, arg);
-    (((t as time_t as i64 == t) as i32 != 0 as i32)
+    (((t as time_t as i64 == t) as i32 != 0i32)
         as i32 as libc::c_long != 0
         || luaL_argerror(
             L,
@@ -426,14 +426,14 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
     let mut slen: size_t = 0;
     let mut s: *const libc::c_char = luaL_optlstring(
         L,
-        1 as i32,
+        1i32,
         b"%c\0" as *const u8 as *const libc::c_char,
         &mut slen,
     );
-    let mut t: time_t = if lua_type(L, 2 as i32) <= 0 as i32 {
+    let mut t: time_t = if lua_type(L, 2i32) <= 0i32 {
         time(0 as *mut time_t)
     } else {
-        l_checktime(L, 2 as i32)
+        l_checktime(L, 2i32)
     };
     let mut se: *const libc::c_char = s.offset(slen as isize);
     let mut tmr: tm = tm {
@@ -463,8 +463,8 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
                 as *const libc::c_char,
         );
     }
-    if strcmp(s, b"*t\0" as *const u8 as *const libc::c_char) == 0 as i32 {
-        lua_createtable(L, 0 as i32, 9 as i32);
+    if strcmp(s, b"*t\0" as *const u8 as *const libc::c_char) == 0i32 {
+        lua_createtable(L, 0i32, 9i32);
         setallfields(L, stm);
     } else {
         let mut cc: [libc::c_char; 4] = [0; 4];
@@ -475,12 +475,12 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
             L: 0 as *mut lua_State,
             init: C2RustUnnamed { n: 0. },
         };
-        cc[0 as i32 as usize] = '%' as i32 as libc::c_char;
+        cc[0i32 as usize] = '%' as i32 as libc::c_char;
         luaL_buffinit(L, &mut b);
         while s < se {
             if *s as i32 != '%' as i32 {
                 (b.n < b.size
-                    || !(luaL_prepbuffsize(&mut b, 1 as i32 as size_t))
+                    || !(luaL_prepbuffsize(&mut b, 1i32 as size_t))
                         .is_null()) as i32;
                 let fresh0 = s;
                 s = s.offset(1);
@@ -491,18 +491,18 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
                 let mut reslen: size_t = 0;
                 let mut buff: *mut libc::c_char = luaL_prepbuffsize(
                     &mut b,
-                    250 as i32 as size_t,
+                    250i32 as size_t,
                 );
                 s = s.offset(1);
                 s = checkoption(
                     L,
                     s,
                     se.offset_from(s) as libc::c_long,
-                    cc.as_mut_ptr().offset(1 as i32 as isize),
+                    cc.as_mut_ptr().offset(1i32 as isize),
                 );
                 reslen = strftime(
                     buff,
-                    250 as i32 as size_t,
+                    250i32 as size_t,
                     cc.as_mut_ptr(),
                     stm,
                 );
@@ -511,11 +511,11 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
         }
         luaL_pushresult(&mut b);
     }
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn os_time(mut L: *mut lua_State) -> i32 {
     let mut t: time_t = 0;
-    if lua_type(L, 1 as i32) <= 0 as i32 {
+    if lua_type(L, 1i32) <= 0i32 {
         t = time(0 as *mut time_t);
     } else {
         let mut ts: tm = tm {
@@ -531,55 +531,55 @@ unsafe extern "C" fn os_time(mut L: *mut lua_State) -> i32 {
             __tm_gmtoff: 0,
             __tm_zone: 0 as *const libc::c_char,
         };
-        luaL_checktype(L, 1 as i32, 5 as i32);
-        lua_settop(L, 1 as i32);
+        luaL_checktype(L, 1i32, 5i32);
+        lua_settop(L, 1i32);
         ts
             .tm_year = getfield(
             L,
             b"year\0" as *const u8 as *const libc::c_char,
-            -(1 as i32),
-            1900 as i32,
+            -(1i32),
+            1900i32,
         );
         ts
             .tm_mon = getfield(
             L,
             b"month\0" as *const u8 as *const libc::c_char,
-            -(1 as i32),
-            1 as i32,
+            -(1i32),
+            1i32,
         );
         ts
             .tm_mday = getfield(
             L,
             b"day\0" as *const u8 as *const libc::c_char,
-            -(1 as i32),
-            0 as i32,
+            -(1i32),
+            0i32,
         );
         ts
             .tm_hour = getfield(
             L,
             b"hour\0" as *const u8 as *const libc::c_char,
-            12 as i32,
-            0 as i32,
+            12i32,
+            0i32,
         );
         ts
             .tm_min = getfield(
             L,
             b"min\0" as *const u8 as *const libc::c_char,
-            0 as i32,
-            0 as i32,
+            0i32,
+            0i32,
         );
         ts
             .tm_sec = getfield(
             L,
             b"sec\0" as *const u8 as *const libc::c_char,
-            0 as i32,
-            0 as i32,
+            0i32,
+            0i32,
         );
         ts.tm_isdst = getboolfield(L, b"isdst\0" as *const u8 as *const libc::c_char);
         t = mktime(&mut ts);
         setallfields(L, &mut ts);
     }
-    if t != t as Integer as time_t || t == -(1 as i32) as time_t {
+    if t != t as Integer as time_t || t == -(1i32) as time_t {
         return luaL_error(
             L,
             b"time result cannot be represented in this installation\0" as *const u8
@@ -587,22 +587,22 @@ unsafe extern "C" fn os_time(mut L: *mut lua_State) -> i32 {
         );
     }
     lua_pushinteger(L, t as Integer);
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn os_difftime(mut L: *mut lua_State) -> i32 {
-    let mut t1: time_t = l_checktime(L, 1 as i32);
-    let mut t2: time_t = l_checktime(L, 2 as i32);
+    let mut t1: time_t = l_checktime(L, 1i32);
+    let mut t2: time_t = l_checktime(L, 2i32);
     lua_pushnumber(L, difftime(t1, t2));
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn os_setlocale(mut L: *mut lua_State) -> i32 {
     static mut cat: [i32; 6] = [
-        6 as i32,
-        3 as i32,
-        0 as i32,
-        4 as i32,
-        1 as i32,
-        2 as i32,
+        6i32,
+        3i32,
+        0i32,
+        4i32,
+        1i32,
+        2i32,
     ];
     static mut catnames: [*const libc::c_char; 7] = [
         b"all\0" as *const u8 as *const libc::c_char,
@@ -615,38 +615,38 @@ unsafe extern "C" fn os_setlocale(mut L: *mut lua_State) -> i32 {
     ];
     let mut l: *const libc::c_char = luaL_optlstring(
         L,
-        1 as i32,
+        1i32,
         0 as *const libc::c_char,
         0 as *mut size_t,
     );
     let mut op: i32 = luaL_checkoption(
         L,
-        2 as i32,
+        2i32,
         b"all\0" as *const u8 as *const libc::c_char,
         catnames.as_ptr(),
     );
     lua_pushstring(L, setlocale(cat[op as usize], l));
-    return 1 as i32;
+    return 1i32;
 }
 unsafe extern "C" fn os_exit(mut L: *mut lua_State) -> i32 {
     let mut status: i32 = 0;
-    if lua_type(L, 1 as i32) == 1 as i32 {
-        status = if lua_toboolean(L, 1 as i32) != 0 {
-            0 as i32
+    if lua_type(L, 1i32) == 1i32 {
+        status = if lua_toboolean(L, 1i32) != 0 {
+            0i32
         } else {
-            1 as i32
+            1i32
         };
     } else {
-        status = luaL_optinteger(L, 1 as i32, 0 as i32 as Integer)
+        status = luaL_optinteger(L, 1i32, 0i32 as Integer)
             as i32;
     }
-    if lua_toboolean(L, 2 as i32) != 0 {
+    if lua_toboolean(L, 2i32) != 0 {
         lua_close(L);
     }
     if !L.is_null() {
         exit(status);
     }
-    return 0 as i32;
+    return 0i32;
 }
 static mut syslib: [luaL_Reg; 12] = unsafe {
     [
@@ -762,18 +762,18 @@ static mut syslib: [luaL_Reg; 12] = unsafe {
 pub unsafe extern "C" fn luaopen_os(mut L: *mut lua_State) -> i32 {
     luaL_checkversion_(
         L,
-        504 as i32 as Number,
+        504i32 as Number,
         (::core::mem::size_of::<Integer>() as libc::c_ulong)
-            .wrapping_mul(16 as i32 as libc::c_ulong)
+            .wrapping_mul(16i32 as libc::c_ulong)
             .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
     );
     lua_createtable(
         L,
-        0 as i32,
+        0i32,
         (::core::mem::size_of::<[luaL_Reg; 12]>() as libc::c_ulong)
             .wrapping_div(::core::mem::size_of::<luaL_Reg>() as libc::c_ulong)
-            .wrapping_sub(1 as i32 as libc::c_ulong) as i32,
+            .wrapping_sub(1i32 as libc::c_ulong) as i32,
     );
-    luaL_setfuncs(L, syslib.as_ptr(), 0 as i32);
-    return 1 as i32;
+    luaL_setfuncs(L, syslib.as_ptr(), 0i32);
+    return 1i32;
 }
