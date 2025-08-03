@@ -7,11 +7,10 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
-    pub type lua_longjmp;
     fn luaT_gettmbyobj(L: *mut lua_State, o: *const TValue, event: TMS) -> *const TValue;
-    fn luaM_free_(L: *mut lua_State, block: *mut libc::c_void, osize: size_t);
+    fn luaM_free_(L: *mut lua_State, block: *mut libc::c_void, osize: u64);
     fn luaG_findlocal(
         L: *mut lua_State,
         ci: *mut CallInfo,
@@ -22,13 +21,10 @@ unsafe extern "C" {
     fn luaD_seterrorobj(L: *mut lua_State, errcode: i32, oldtop: StkId);
     fn luaD_call(L: *mut lua_State, func: StkId, nResults: i32);
     fn luaD_callnoyield(L: *mut lua_State, func: StkId, nResults: i32);
-    fn luaC_newobj(L: *mut lua_State, tt: i32, sz: size_t) -> *mut GCObject;
+    fn luaC_newobj(L: *mut lua_State, tt: i32, sz: u64) -> *mut GCObject;
     fn luaC_barrier_(L: *mut lua_State, o: *mut GCObject, v: *mut GCObject);
 }
-pub type ptrdiff_t = libc::c_long;
-pub type size_t = libc::c_ulong;
-pub type __sig_atomic_t = i32;
-pub type intptr_t = libc::c_long;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -47,18 +43,18 @@ pub struct lua_State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut lua_State,
-    pub errorJmp: *mut lua_longjmp,
+    pub errorJmp: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
-    pub errfunc: ptrdiff_t,
-    pub nCcalls: l_uint32,
+    pub errfunc: i64,
+    pub nCcalls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: sig_atomic_t,
 }
-pub type sig_atomic_t = __sig_atomic_t;
-pub type l_uint32 = libc::c_uint;
+pub type sig_atomic_t = i32;
+
 pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -68,7 +64,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -117,10 +113,10 @@ pub union C2RustUnnamed_1 {
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub k: lua_KFunction,
-    pub old_errfunc: ptrdiff_t,
+    pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -129,12 +125,12 @@ pub struct C2RustUnnamed_3 {
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
 }
-pub type Instruction = l_uint32;
+pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
@@ -156,8 +152,8 @@ pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
     pub f: CFunction,
-    pub i: Integer,
-    pub n: Number,
+    pub i: i64,
+    pub n: f64,
     pub ub: u8,
 }
 
@@ -200,7 +196,7 @@ pub struct C2RustUnnamed_6 {
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub p: *mut TValue,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -214,7 +210,7 @@ pub struct global_State {
     pub strt: stringtable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
-    pub seed: libc::c_uint,
+    pub seed: u32,
     pub currentwhite: u8,
     pub gcstate: u8,
     pub gckind: u8,
@@ -263,14 +259,14 @@ pub struct TString {
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
-    pub hash: libc::c_uint,
+    pub hash: u32,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_8 {
-    pub lnglen: size_t,
+    pub lnglen: u64,
     pub hnext: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -281,7 +277,7 @@ pub struct Table {
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
-    pub alimit: libc::c_uint,
+    pub alimit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub lastfree: *mut Node,
@@ -310,21 +306,21 @@ pub struct stringtable {
     pub nuse: i32,
     pub size: i32,
 }
-pub type lu_mem = size_t;
-pub type l_mem = ptrdiff_t;
+pub type lu_mem = u64;
+pub type l_mem = i64;
 pub type lua_Alloc = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
 pub type ls_byte = libc::c_schar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: Number,
+    pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: Integer,
-    pub l: libc::c_long,
+    pub i: i64,
+    pub l: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -333,7 +329,7 @@ pub struct Udata {
     pub tt: u8,
     pub marked: u8,
     pub nuvalue: libc::c_ushort,
-    pub len: size_t,
+    pub len: u64,
     pub metatable: *mut Table,
     pub gclist: *mut GCObject,
     pub uv: [UValue; 1],
@@ -415,7 +411,7 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type TMS = libc::c_uint;
+pub type TMS = u32;
 pub const TM_N: TMS = 25;
 pub const TM_CLOSE: TMS = 24;
 pub const TM_CALL: TMS = 23;
@@ -463,7 +459,7 @@ pub unsafe extern "C" fn luaF_newCclosure(
         L,
         6i32 | (2i32) << 4i32,
         (32 as libc::c_ulong as i32
-            + ::core::mem::size_of::<TValue>() as libc::c_ulong as i32 * nupvals) as size_t,
+            + ::core::mem::size_of::<TValue>() as libc::c_ulong as i32 * nupvals) as u64,
     );
     let mut c: *mut CClosure = &mut (*(o as *mut GCUnion)).cl.c;
     (*c).nupvalues = nupvals as u8;
@@ -479,7 +475,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
         6i32 | (0i32) << 4i32,
         (32 as libc::c_ulong as i32
             + ::core::mem::size_of::<*mut TValue>() as libc::c_ulong as i32 * nupvals)
-            as size_t,
+            as u64,
     );
     let mut c: *mut LClosure = &mut (*(o as *mut GCUnion)).cl.l;
     (*c).p = 0 as *mut Proto;
@@ -594,7 +590,7 @@ unsafe extern "C" fn callclosemethod(
 unsafe extern "C" fn checkclosemth(mut L: *mut lua_State, mut level: StkId) {
     let mut tm: *const TValue = luaT_gettmbyobj(L, &mut (*level).val, TM_CLOSE);
     if (*tm).tt_ as i32 & 0xf as i32 == 0i32 {
-        let mut index: i32 = level.offset_from((*(*L).ci).func.p) as libc::c_long as i32;
+        let mut index: i32 = level.offset_from((*(*L).ci).func.p) as i64 as i32;
         let mut vname: *const libc::c_char = luaG_findlocal(L, (*L).ci, index, 0 as *mut StkId);
         if vname.is_null() {
             vname = b"?\0" as *const u8 as *const libc::c_char;
@@ -630,7 +626,7 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkI
         return;
     }
     checkclosemth(L, level);
-    while level.offset_from((*L).tbclist.p) as libc::c_long as libc::c_uint as libc::c_ulong
+    while level.offset_from((*L).tbclist.p) as i64 as u32 as libc::c_ulong
         > ((256 as libc::c_ulong)
             << (::core::mem::size_of::<libc::c_ushort>() as libc::c_ulong)
                 .wrapping_sub(1i32 as libc::c_ulong)
@@ -646,7 +642,7 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkI
         );
         (*(*L).tbclist.p).tbclist.delta = 0i32 as libc::c_ushort;
     }
-    (*level).tbclist.delta = level.offset_from((*L).tbclist.p) as libc::c_long as libc::c_ushort;
+    (*level).tbclist.delta = level.offset_from((*L).tbclist.p) as i64 as libc::c_ushort;
     (*L).tbclist.p = level;
 }
 #[unsafe(no_mangle)]
@@ -714,8 +710,8 @@ pub unsafe extern "C" fn luaF_close(
     mut status: i32,
     mut yy: i32,
 ) -> StkId {
-    let mut levelrel: ptrdiff_t =
-        (level as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char) as libc::c_long;
+    let mut levelrel: i64 =
+        (level as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char) as i64;
     luaF_closeupval(L, level);
     while (*L).tbclist.p >= level {
         let mut tbc: StkId = (*L).tbclist.p;

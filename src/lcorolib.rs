@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     pub type CallInfo;
@@ -33,17 +33,15 @@ unsafe extern "C" {
     fn lua_error(L: *mut lua_State) -> i32;
     fn lua_concat(L: *mut lua_State, n: i32);
     fn lua_getstack(L: *mut lua_State, level: i32, ar: *mut lua_Debug) -> i32;
-    fn luaL_checkversion_(L: *mut lua_State, ver: Number, sz: size_t);
+    fn luaL_checkversion_(L: *mut lua_State, ver: f64, sz: u64);
     fn luaL_typeerror(L: *mut lua_State, arg: i32, tname: *const libc::c_char) -> i32;
     fn luaL_checktype(L: *mut lua_State, arg: i32, t: i32);
     fn luaL_where(L: *mut lua_State, lvl: i32);
     fn luaL_error(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> i32;
     fn luaL_setfuncs(L: *mut lua_State, l: *const luaL_Reg, nup: i32);
 }
-pub type size_t = libc::c_ulong;
-pub type intptr_t = libc::c_long;
 
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
@@ -54,7 +52,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -75,7 +73,7 @@ pub struct luaL_Reg {
 }
 unsafe extern "C" fn getco(mut L: *mut lua_State) -> *mut lua_State {
     let mut co: *mut lua_State = lua_tothread(L, 1i32);
-    ((co != 0 as *mut lua_State) as i32 as libc::c_long != 0
+    ((co != 0 as *mut lua_State) as i32 as i64 != 0
         || luaL_typeerror(L, 1i32, b"thread\0" as *const u8 as *const libc::c_char) != 0)
         as i32;
     return co;
@@ -87,7 +85,7 @@ unsafe extern "C" fn auxresume(
 ) -> i32 {
     let mut status: i32 = 0;
     let mut nres: i32 = 0;
-    if ((lua_checkstack(co, narg) == 0) as i32 != 0i32) as i32 as libc::c_long != 0 {
+    if ((lua_checkstack(co, narg) == 0) as i32 != 0i32) as i32 as i64 != 0 {
         lua_pushstring(
             L,
             b"too many arguments to resume\0" as *const u8 as *const libc::c_char,
@@ -96,8 +94,8 @@ unsafe extern "C" fn auxresume(
     }
     lua_xmove(L, co, narg);
     status = lua_resume(co, L, narg, &mut nres);
-    if ((status == 0i32 || status == 1i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
-        if ((lua_checkstack(L, nres + 1i32) == 0) as i32 != 0i32) as i32 as libc::c_long != 0 {
+    if ((status == 0i32 || status == 1i32) as i32 != 0i32) as i32 as i64 != 0 {
+        if ((lua_checkstack(L, nres + 1i32) == 0) as i32 != 0i32) as i32 as i64 != 0 {
             lua_settop(co, -nres - 1i32);
             lua_pushstring(
                 L,
@@ -116,7 +114,7 @@ unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> i32 {
     let mut co: *mut lua_State = getco(L);
     let mut r: i32 = 0;
     r = auxresume(L, co, lua_gettop(L) - 1i32);
-    if ((r < 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+    if ((r < 0i32) as i32 != 0i32) as i32 as i64 != 0 {
         lua_pushboolean(L, 0i32);
         lua_rotate(L, -(2i32), 1i32);
         return 2i32;
@@ -129,7 +127,7 @@ unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> i32 {
 unsafe extern "C" fn luaB_auxwrap(mut L: *mut lua_State) -> i32 {
     let mut co: *mut lua_State = lua_tothread(L, -(1000000i32) - 1000i32 - 1i32);
     let mut r: i32 = auxresume(L, co, lua_gettop(L));
-    if ((r < 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+    if ((r < 0i32) as i32 != 0i32) as i32 as i64 != 0 {
         let mut stat: i32 = lua_status(co);
         if stat != 0i32 && stat != 1i32 {
             stat = lua_closethread(co, L);
@@ -322,10 +320,10 @@ static mut co_funcs: [luaL_Reg; 9] = {
 pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> i32 {
     luaL_checkversion_(
         L,
-        504i32 as Number,
-        (::core::mem::size_of::<Integer>() as libc::c_ulong)
+        504i32 as f64,
+        (::core::mem::size_of::<i64>() as libc::c_ulong)
             .wrapping_mul(16i32 as libc::c_ulong)
-            .wrapping_add(::core::mem::size_of::<Number>() as libc::c_ulong),
+            .wrapping_add(::core::mem::size_of::<f64>() as libc::c_ulong),
     );
     lua_createtable(
         L,

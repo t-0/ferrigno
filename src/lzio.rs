@@ -8,14 +8,10 @@
     unused_mut
 )]
 unsafe extern "C" {
-    pub type lua_longjmp;
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
 }
-use crate::types::{Integer, Number};
-pub type size_t = libc::c_ulong;
-pub type ptrdiff_t = libc::c_long;
-pub type __sig_atomic_t = i32;
-pub type intptr_t = libc::c_long;
+use crate::types::*;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -34,18 +30,18 @@ pub struct lua_State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut lua_State,
-    pub errorJmp: *mut lua_longjmp,
+    pub errorJmp: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
-    pub errfunc: ptrdiff_t,
-    pub nCcalls: l_uint32,
+    pub errfunc: i64,
+    pub nCcalls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: sig_atomic_t,
 }
-pub type sig_atomic_t = __sig_atomic_t;
-pub type l_uint32 = libc::c_uint;
+pub type sig_atomic_t = i32;
+
 pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -55,7 +51,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -104,10 +100,10 @@ pub union C2RustUnnamed_1 {
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub k: lua_KFunction,
-    pub old_errfunc: ptrdiff_t,
+    pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -116,12 +112,12 @@ pub struct C2RustUnnamed_3 {
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
 }
-pub type Instruction = l_uint32;
+pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
@@ -143,8 +139,8 @@ pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
     pub f: CFunction,
-    pub i: Integer,
-    pub n: Number,
+    pub i: i64,
+    pub n: f64,
     pub ub: u8,
 }
 
@@ -187,7 +183,7 @@ pub struct C2RustUnnamed_6 {
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub p: *mut TValue,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -201,7 +197,7 @@ pub struct global_State {
     pub strt: stringtable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
-    pub seed: libc::c_uint,
+    pub seed: u32,
     pub currentwhite: u8,
     pub gcstate: u8,
     pub gckind: u8,
@@ -250,14 +246,14 @@ pub struct TString {
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
-    pub hash: libc::c_uint,
+    pub hash: u32,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_8 {
-    pub lnglen: size_t,
+    pub lnglen: u64,
     pub hnext: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -268,7 +264,7 @@ pub struct Table {
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
-    pub alimit: libc::c_uint,
+    pub alimit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub lastfree: *mut Node,
@@ -297,18 +293,18 @@ pub struct stringtable {
     pub nuse: i32,
     pub size: i32,
 }
-pub type lu_mem = size_t;
-pub type l_mem = ptrdiff_t;
+pub type lu_mem = u64;
+pub type l_mem = i64;
 pub type lua_Alloc = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
 pub type lua_Reader = Option<
-    unsafe extern "C" fn(*mut lua_State, *mut libc::c_void, *mut size_t) -> *const libc::c_char,
+    unsafe extern "C" fn(*mut lua_State, *mut libc::c_void, *mut u64) -> *const libc::c_char,
 >;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Zio {
-    pub n: size_t,
+    pub n: u64,
     pub p: *const libc::c_char,
     pub reader: lua_Reader,
     pub data: *mut libc::c_void,
@@ -317,7 +313,7 @@ pub struct Zio {
 pub type ZIO = Zio;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> i32 {
-    let mut size: size_t = 0;
+    let mut size: u64 = 0;
     let mut L: *mut lua_State = (*z).L;
     let mut buff: *const libc::c_char = 0 as *const libc::c_char;
     buff = ((*z).reader).expect("non-null function pointer")(L, (*z).data, &mut size);
@@ -340,17 +336,13 @@ pub unsafe extern "C" fn luaZ_init(
     (*z).L = L;
     (*z).reader = reader;
     (*z).data = data;
-    (*z).n = 0i32 as size_t;
+    (*z).n = 0i32 as u64;
     (*z).p = 0 as *const libc::c_char;
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaZ_read(
-    mut z: *mut ZIO,
-    mut b: *mut libc::c_void,
-    mut n: size_t,
-) -> size_t {
+pub unsafe extern "C" fn luaZ_read(mut z: *mut ZIO, mut b: *mut libc::c_void, mut n: u64) -> u64 {
     while n != 0 {
-        let mut m: size_t = 0;
+        let mut m: u64 = 0;
         if (*z).n == 0i32 as libc::c_ulong {
             if luaZ_fill(z) == -(1i32) {
                 return n;
@@ -363,10 +355,10 @@ pub unsafe extern "C" fn luaZ_read(
         }
         m = if n <= (*z).n { n } else { (*z).n };
         memcpy(b, (*z).p as *const libc::c_void, m);
-        (*z).n = ((*z).n as libc::c_ulong).wrapping_sub(m) as size_t as size_t;
+        (*z).n = ((*z).n as libc::c_ulong).wrapping_sub(m) as u64 as u64;
         (*z).p = ((*z).p).offset(m as isize);
         b = (b as *mut libc::c_char).offset(m as isize) as *mut libc::c_void;
-        n = (n as libc::c_ulong).wrapping_sub(m) as size_t as size_t;
+        n = (n as libc::c_ulong).wrapping_sub(m) as u64 as u64;
     }
-    return 0i32 as size_t;
+    return 0i32 as u64;
 }

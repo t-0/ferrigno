@@ -7,8 +7,8 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
-pub type OpMode = libc::c_uint;
+use crate::types::*;
+pub type OpMode = u32;
 pub const isJ: OpMode = 4;
 pub const iAx: OpMode = 3;
 pub const iAsBx: OpMode = 2;

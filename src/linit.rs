@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     fn lua_settop(L: *mut lua_State, index: i32);

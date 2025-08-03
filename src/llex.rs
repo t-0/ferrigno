@@ -7,12 +7,11 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
-    pub type lua_longjmp;
     pub type BlockCnt;
     fn luaO_utf8esc(buff: *mut libc::c_char, x: libc::c_ulong) -> i32;
-    fn luaO_str2num(s: *const libc::c_char, o: *mut TValue) -> size_t;
+    fn luaO_str2num(s: *const libc::c_char, o: *mut TValue) -> u64;
     fn luaO_hexavalue(c: i32) -> i32;
     fn luaO_pushfstring(L: *mut lua_State, fmt: *const libc::c_char, _: ...)
         -> *const libc::c_char;
@@ -20,8 +19,8 @@ unsafe extern "C" {
     fn luaM_saferealloc_(
         L: *mut lua_State,
         block: *mut libc::c_void,
-        oldsize: size_t,
-        size: size_t,
+        oldsize: u64,
+        size: u64,
     ) -> *mut libc::c_void;
     fn luaZ_fill(z: *mut ZIO) -> i32;
     fn luaG_addinfo(
@@ -33,7 +32,7 @@ unsafe extern "C" {
     fn luaD_throw(L: *mut lua_State, errcode: i32) -> !;
     fn luaC_fix(L: *mut lua_State, o: *mut GCObject);
     fn luaC_step(L: *mut lua_State);
-    fn luaS_newlstr(L: *mut lua_State, str: *const libc::c_char, l: size_t) -> *mut TString;
+    fn luaS_newlstr(L: *mut lua_State, str: *const libc::c_char, l: u64) -> *mut TString;
     fn luaS_new(L: *mut lua_State, str: *const libc::c_char) -> *mut TString;
     fn luaH_getstr(t: *mut Table, key: *mut TString) -> *const TValue;
     fn luaH_finishset(
@@ -44,10 +43,7 @@ unsafe extern "C" {
         value: *mut TValue,
     );
 }
-pub type size_t = libc::c_ulong;
-pub type ptrdiff_t = libc::c_long;
-pub type __sig_atomic_t = i32;
-pub type intptr_t = libc::c_long;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -66,18 +62,18 @@ pub struct lua_State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut lua_State,
-    pub errorJmp: *mut lua_longjmp,
+    pub errorJmp: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
-    pub errfunc: ptrdiff_t,
-    pub nCcalls: l_uint32,
+    pub errfunc: i64,
+    pub nCcalls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: sig_atomic_t,
 }
-pub type sig_atomic_t = __sig_atomic_t;
-pub type l_uint32 = libc::c_uint;
+pub type sig_atomic_t = i32;
+
 pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -87,7 +83,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -136,10 +132,10 @@ pub union C2RustUnnamed_1 {
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub k: lua_KFunction,
-    pub old_errfunc: ptrdiff_t,
+    pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -148,12 +144,12 @@ pub struct C2RustUnnamed_3 {
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
 }
-pub type Instruction = l_uint32;
+pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
@@ -175,8 +171,8 @@ pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
     pub f: CFunction,
-    pub i: Integer,
-    pub n: Number,
+    pub i: i64,
+    pub n: f64,
     pub ub: u8,
 }
 
@@ -219,7 +215,7 @@ pub struct C2RustUnnamed_6 {
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub p: *mut TValue,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -233,7 +229,7 @@ pub struct global_State {
     pub strt: stringtable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
-    pub seed: libc::c_uint,
+    pub seed: u32,
     pub currentwhite: u8,
     pub gcstate: u8,
     pub gckind: u8,
@@ -282,14 +278,14 @@ pub struct TString {
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
-    pub hash: libc::c_uint,
+    pub hash: u32,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_8 {
-    pub lnglen: size_t,
+    pub lnglen: u64,
     pub hnext: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -300,7 +296,7 @@ pub struct Table {
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
-    pub alimit: libc::c_uint,
+    pub alimit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub lastfree: *mut Node,
@@ -329,24 +325,24 @@ pub struct stringtable {
     pub nuse: i32,
     pub size: i32,
 }
-pub type lu_mem = size_t;
-pub type l_mem = ptrdiff_t;
+pub type lu_mem = u64;
+pub type l_mem = i64;
 pub type lua_Alloc = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
 pub type lua_Reader = Option<
-    unsafe extern "C" fn(*mut lua_State, *mut libc::c_void, *mut size_t) -> *const libc::c_char,
+    unsafe extern "C" fn(*mut lua_State, *mut libc::c_void, *mut u64) -> *const libc::c_char,
 >;
 pub type ls_byte = libc::c_schar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: Number,
+    pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: Integer,
-    pub l: libc::c_long,
+    pub i: i64,
+    pub l: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -355,7 +351,7 @@ pub struct Udata {
     pub tt: u8,
     pub marked: u8,
     pub nuvalue: libc::c_ushort,
-    pub len: size_t,
+    pub len: u64,
     pub metatable: *mut Table,
     pub gclist: *mut GCObject,
     pub uv: [UValue; 1],
@@ -440,7 +436,7 @@ pub union Closure {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Zio {
-    pub n: size_t,
+    pub n: u64,
     pub p: *const libc::c_char,
     pub reader: lua_Reader,
     pub data: *mut libc::c_void,
@@ -451,8 +447,8 @@ pub type ZIO = Zio;
 #[repr(C)]
 pub struct Mbuffer {
     pub buffer: *mut libc::c_char,
-    pub n: size_t,
-    pub buffsize: size_t,
+    pub n: u64,
+    pub buffsize: u64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -466,7 +462,7 @@ pub union GCUnion {
     pub th: lua_State,
     pub upv: UpVal,
 }
-pub type RESERVED = libc::c_uint;
+pub type RESERVED = u32;
 pub const TK_STRING: RESERVED = 292;
 pub const TK_NAME: RESERVED = 291;
 pub const TK_INT: RESERVED = 290;
@@ -507,8 +503,8 @@ pub const TK_AND: RESERVED = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union SemInfo {
-    pub r: Number,
-    pub i: Integer,
+    pub r: f64,
+    pub i: i64,
     pub ts: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -644,14 +640,14 @@ static mut luaX_tokens: [*const libc::c_char; 37] = [
 unsafe extern "C" fn save(mut ls: *mut LexState, mut c: i32) {
     let mut b: *mut Mbuffer = (*ls).buff;
     if ((*b).n).wrapping_add(1i32 as libc::c_ulong) > (*b).buffsize {
-        let mut newsize: size_t = 0;
+        let mut newsize: u64 = 0;
         if (*b).buffsize
-            >= (if (::core::mem::size_of::<size_t>() as libc::c_ulong)
-                < ::core::mem::size_of::<Integer>() as libc::c_ulong
+            >= (if (::core::mem::size_of::<u64>() as libc::c_ulong)
+                < ::core::mem::size_of::<i64>() as libc::c_ulong
             {
-                !(0i32 as size_t)
+                !(0i32 as u64)
             } else {
-                9223372036854775807i64 as size_t
+                9223372036854775807i64 as u64
             })
             .wrapping_div(2i32 as libc::c_ulong)
         {
@@ -762,7 +758,7 @@ pub unsafe extern "C" fn luaX_syntaxerror(
 pub unsafe extern "C" fn luaX_newstring(
     mut ls: *mut LexState,
     mut str: *const libc::c_char,
-    mut l: size_t,
+    mut l: u64,
 ) -> *mut TString {
     let mut L: *mut lua_State = (*ls).L;
     let mut ts: *mut TString = luaS_newlstr(L, str, l);
@@ -778,7 +774,7 @@ pub unsafe extern "C" fn luaX_newstring(
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io).tt_ = ((*x_).tt as i32 | (1i32) << 6i32) as u8;
         luaH_finishset(L, (*ls).h, stv, o, stv);
-        if (*(*L).l_G).GCdebt > 0i32 as libc::c_long {
+        if (*(*L).l_G).GCdebt > 0i32 as i64 {
             luaC_step(L);
         }
         (*L).top.p = ((*L).top.p).offset(-1);
@@ -849,7 +845,7 @@ pub unsafe extern "C" fn luaX_setinput(
         (32i32 as libc::c_ulong)
             .wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
     ) as *mut libc::c_char;
-    (*(*ls).buff).buffsize = 32i32 as size_t;
+    (*(*ls).buff).buffsize = 32i32 as u64;
 }
 unsafe extern "C" fn check_next1(mut ls: *mut LexState, mut c: i32) -> i32 {
     if (*ls).current == c {
@@ -957,8 +953,8 @@ unsafe extern "C" fn read_numeral(mut ls: *mut LexState, mut seminfo: *mut SemIn
         return TK_FLT as i32;
     };
 }
-unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> size_t {
-    let mut count: size_t = 0i32 as size_t;
+unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> u64 {
+    let mut count: u64 = 0i32 as u64;
     let mut s: i32 = (*ls).current;
     save(ls, (*ls).current);
     let fresh16 = (*(*ls).z).n;
@@ -996,7 +992,7 @@ unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> size_t {
 unsafe extern "C" fn read_long_string(
     mut ls: *mut LexState,
     mut seminfo: *mut SemInfo,
-    mut sep: size_t,
+    mut sep: u64,
 ) {
     let mut line: i32 = (*ls).linenumber;
     save(ls, (*ls).current);
@@ -1049,7 +1045,7 @@ unsafe extern "C" fn read_long_string(
                 save(ls, '\n' as i32);
                 inclinenumber(ls);
                 if seminfo.is_null() {
-                    (*(*ls).buff).n = 0i32 as size_t;
+                    (*(*ls).buff).n = 0i32 as u64;
                 }
             }
             _ => {
@@ -1125,7 +1121,7 @@ unsafe extern "C" fn readhexaesc(mut ls: *mut LexState) -> i32 {
     let mut r: i32 = gethexa(ls);
     r = (r << 4i32) + gethexa(ls);
     (*(*ls).buff).n =
-        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(2i32 as libc::c_ulong) as size_t as size_t;
+        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(2i32 as libc::c_ulong) as u64 as u64;
     return r;
 }
 unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
@@ -1164,7 +1160,7 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
         i += 1;
         esccheck(
             ls,
-            (r <= (0x7fffffff as libc::c_uint >> 4i32) as libc::c_ulong) as i32,
+            (r <= (0x7fffffff as u32 >> 4i32) as libc::c_ulong) as i32,
             b"UTF-8 value too large\0" as *const u8 as *const libc::c_char,
         );
         r = (r << 4i32).wrapping_add(luaO_hexavalue((*ls).current) as libc::c_ulong);
@@ -1184,7 +1180,7 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
         luaZ_fill((*ls).z)
     };
     (*(*ls).buff).n =
-        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(i as libc::c_ulong) as size_t as size_t;
+        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(i as libc::c_ulong) as u64 as u64;
     return r;
 }
 unsafe extern "C" fn utf8esc(mut ls: *mut LexState) {
@@ -1219,7 +1215,7 @@ unsafe extern "C" fn readdecesc(mut ls: *mut LexState) -> i32 {
         b"decimal escape too large\0" as *const u8 as *const libc::c_char,
     );
     (*(*ls).buff).n =
-        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(i as libc::c_ulong) as size_t as size_t;
+        ((*(*ls).buff).n as libc::c_ulong).wrapping_sub(i as libc::c_ulong) as u64 as u64;
     return r;
 }
 unsafe extern "C" fn read_string(mut ls: *mut LexState, mut del: i32, mut seminfo: *mut SemInfo) {
@@ -1314,7 +1310,7 @@ unsafe extern "C" fn read_string(mut ls: *mut LexState, mut del: i32, mut seminf
                     122 => {
                         (*(*ls).buff).n = ((*(*ls).buff).n as libc::c_ulong)
                             .wrapping_sub(1i32 as libc::c_ulong)
-                            as size_t as size_t;
+                            as u64 as u64;
                         let fresh44 = (*(*ls).z).n;
                         (*(*ls).z).n = ((*(*ls).z).n).wrapping_sub(1);
                         (*ls).current = if fresh44 > 0i32 as libc::c_ulong {
@@ -1368,8 +1364,8 @@ unsafe extern "C" fn read_string(mut ls: *mut LexState, mut del: i32, mut seminf
                     _ => {}
                 }
                 (*(*ls).buff).n = ((*(*ls).buff).n as libc::c_ulong)
-                    .wrapping_sub(1i32 as libc::c_ulong) as size_t
-                    as size_t;
+                    .wrapping_sub(1i32 as libc::c_ulong) as u64
+                    as u64;
                 save(ls, c);
             }
             _ => {
@@ -1403,7 +1399,7 @@ unsafe extern "C" fn read_string(mut ls: *mut LexState, mut del: i32, mut seminf
     );
 }
 unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) -> i32 {
-    (*(*ls).buff).n = 0i32 as size_t;
+    (*(*ls).buff).n = 0i32 as u64;
     loop {
         let mut current_block_85: u64;
         match (*ls).current {
@@ -1444,11 +1440,11 @@ unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) -> i
                     luaZ_fill((*ls).z)
                 };
                 if (*ls).current == '[' as i32 {
-                    let mut sep: size_t = skip_sep(ls);
-                    (*(*ls).buff).n = 0i32 as size_t;
+                    let mut sep: u64 = skip_sep(ls);
+                    (*(*ls).buff).n = 0i32 as u64;
                     if sep >= 2i32 as libc::c_ulong {
                         read_long_string(ls, 0 as *mut SemInfo, sep);
-                        (*(*ls).buff).n = 0i32 as size_t;
+                        (*(*ls).buff).n = 0i32 as u64;
                         current_block_85 = 10512632378975961025;
                     } else {
                         current_block_85 = 3512920355445576850;
@@ -1476,7 +1472,7 @@ unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) -> i
                 }
             }
             91 => {
-                let mut sep_0: size_t = skip_sep(ls);
+                let mut sep_0: u64 = skip_sep(ls);
                 if sep_0 >= 2i32 as libc::c_ulong {
                     read_long_string(ls, seminfo, sep_0);
                     return TK_STRING as i32;

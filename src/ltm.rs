@@ -7,9 +7,8 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
-    pub type lua_longjmp;
     fn luaG_concaterror(L: *mut lua_State, p1: *const TValue, p2: *const TValue) -> !;
     fn luaG_opinterror(
         L: *mut lua_State,
@@ -27,10 +26,7 @@ unsafe extern "C" {
     fn luaS_new(L: *mut lua_State, str: *const libc::c_char) -> *mut TString;
     fn luaH_getshortstr(t: *mut Table, key: *mut TString) -> *const TValue;
 }
-pub type size_t = libc::c_ulong;
-pub type ptrdiff_t = libc::c_long;
-pub type __sig_atomic_t = i32;
-pub type intptr_t = libc::c_long;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -49,18 +45,18 @@ pub struct lua_State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut lua_State,
-    pub errorJmp: *mut lua_longjmp,
+    pub errorJmp: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
-    pub errfunc: ptrdiff_t,
-    pub nCcalls: l_uint32,
+    pub errfunc: i64,
+    pub nCcalls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: sig_atomic_t,
 }
-pub type sig_atomic_t = __sig_atomic_t;
-pub type l_uint32 = libc::c_uint;
+pub type sig_atomic_t = i32;
+
 pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -70,7 +66,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -119,10 +115,10 @@ pub union C2RustUnnamed_1 {
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub k: lua_KFunction,
-    pub old_errfunc: ptrdiff_t,
+    pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -131,12 +127,12 @@ pub struct C2RustUnnamed_3 {
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
 }
-pub type Instruction = l_uint32;
+pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
@@ -158,8 +154,8 @@ pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
     pub f: CFunction,
-    pub i: Integer,
-    pub n: Number,
+    pub i: i64,
+    pub n: f64,
     pub ub: u8,
 }
 
@@ -202,7 +198,7 @@ pub struct C2RustUnnamed_6 {
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub p: *mut TValue,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -216,7 +212,7 @@ pub struct global_State {
     pub strt: stringtable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
-    pub seed: libc::c_uint,
+    pub seed: u32,
     pub currentwhite: u8,
     pub gcstate: u8,
     pub gckind: u8,
@@ -265,14 +261,14 @@ pub struct TString {
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
-    pub hash: libc::c_uint,
+    pub hash: u32,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_8 {
-    pub lnglen: size_t,
+    pub lnglen: u64,
     pub hnext: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -283,7 +279,7 @@ pub struct Table {
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
-    pub alimit: libc::c_uint,
+    pub alimit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub lastfree: *mut Node,
@@ -312,21 +308,21 @@ pub struct stringtable {
     pub nuse: i32,
     pub size: i32,
 }
-pub type lu_mem = size_t;
-pub type l_mem = ptrdiff_t;
+pub type lu_mem = u64;
+pub type l_mem = i64;
 pub type lua_Alloc = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
 pub type ls_byte = libc::c_schar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: Number,
+    pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: Integer,
-    pub l: libc::c_long,
+    pub i: i64,
+    pub l: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -335,7 +331,7 @@ pub struct Udata {
     pub tt: u8,
     pub marked: u8,
     pub nuvalue: libc::c_ushort,
-    pub len: size_t,
+    pub len: u64,
     pub metatable: *mut Table,
     pub gclist: *mut GCObject,
     pub uv: [UValue; 1],
@@ -417,7 +413,7 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type TMS = libc::c_uint;
+pub type TMS = u32;
 pub const TM_N: TMS = 25;
 pub const TM_CLOSE: TMS = 24;
 pub const TM_CALL: TMS = 23;
@@ -523,9 +519,8 @@ pub unsafe extern "C" fn luaT_gettm(
 ) -> *const TValue {
     let mut tm: *const TValue = luaH_getshortstr(events, ename);
     if (*tm).tt_ as i32 & 0xf as i32 == 0i32 {
-        (*events).flags = ((*events).flags as i32
-            | ((1 as libc::c_uint) << event as libc::c_uint) as u8 as i32)
-            as u8;
+        (*events).flags =
+            ((*events).flags as i32 | ((1 as u32) << event as u32) as u8 as i32) as u8;
         return 0 as *const TValue;
     } else {
         return tm;
@@ -618,8 +613,8 @@ pub unsafe extern "C" fn luaT_callTMres(
     mut p2: *const TValue,
     mut res: StkId,
 ) {
-    let mut result: ptrdiff_t =
-        (res as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char) as libc::c_long;
+    let mut result: i64 =
+        (res as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char) as i64;
     let mut func: StkId = (*L).top.p;
     let mut io1: *mut TValue = &mut (*func).val;
     let mut io2: *const TValue = f;
@@ -671,8 +666,8 @@ pub unsafe extern "C" fn luaT_trybinTM(
     mut res: StkId,
     mut event: TMS,
 ) {
-    if ((callbinTM(L, p1, p2, res, event) == 0) as i32 != 0i32) as i32 as libc::c_long != 0 {
-        match event as libc::c_uint {
+    if ((callbinTM(L, p1, p2, res, event) == 0) as i32 != 0i32) as i32 as i64 != 0 {
+        match event as u32 {
             13 | 14 | 15 | 16 | 17 | 19 => {
                 if (*p1).tt_ as i32 & 0xf as i32 == 3i32 && (*p2).tt_ as i32 & 0xf as i32 == 3i32 {
                     luaG_tointerror(L, p1, p2);
@@ -706,7 +701,7 @@ pub unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut lua_State) {
         top.offset(-(2i32 as isize)),
         TM_CONCAT,
     ) == 0) as i32
-        != 0i32) as i32 as libc::c_long
+        != 0i32) as i32 as i64
         != 0
     {
         luaG_concaterror(
@@ -735,7 +730,7 @@ pub unsafe extern "C" fn luaT_trybinassocTM(
 pub unsafe extern "C" fn luaT_trybiniTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
-    mut i2: Integer,
+    mut i2: i64,
     mut flip: i32,
     mut res: StkId,
     mut event: TMS,
@@ -782,11 +777,11 @@ pub unsafe extern "C" fn luaT_callorderiTM(
     let mut p2: *const TValue = 0 as *const TValue;
     if isfloat != 0 {
         let mut io: *mut TValue = &mut aux;
-        (*io).value_.n = v2 as Number;
+        (*io).value_.n = v2 as f64;
         (*io).tt_ = (3i32 | (1i32) << 4i32) as u8;
     } else {
         let mut io_0: *mut TValue = &mut aux;
-        (*io_0).value_.i = v2 as Integer;
+        (*io_0).value_.i = v2 as i64;
         (*io_0).tt_ = (3i32 | (0i32) << 4i32) as u8;
     }
     if flip != 0 {
@@ -805,12 +800,12 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
     mut p: *const Proto,
 ) {
     let mut i: i32 = 0;
-    let mut actual: i32 = ((*L).top.p).offset_from((*ci).func.p) as libc::c_long as i32 - 1i32;
+    let mut actual: i32 = ((*L).top.p).offset_from((*ci).func.p) as i64 as i32 - 1i32;
     let mut nextra: i32 = actual - nfixparams;
     (*ci).u.l.nextraargs = nextra;
-    if ((((*L).stack_last.p).offset_from((*L).top.p) as libc::c_long
-        <= ((*p).maxstacksize as i32 + 1i32) as libc::c_long) as i32
-        != 0i32) as i32 as libc::c_long
+    if ((((*L).stack_last.p).offset_from((*L).top.p) as i64
+        <= ((*p).maxstacksize as i32 + 1i32) as i64) as i32
+        != 0i32) as i32 as i64
         != 0
     {
         luaD_growstack(L, (*p).maxstacksize as i32 + 1i32, 1i32);
@@ -846,15 +841,14 @@ pub unsafe extern "C" fn luaT_getvarargs(
     let mut nextra: i32 = (*ci).u.l.nextraargs;
     if wanted < 0i32 {
         wanted = nextra;
-        if ((((*L).stack_last.p).offset_from((*L).top.p) as libc::c_long <= nextra as libc::c_long)
-            as i32
-            != 0i32) as i32 as libc::c_long
+        if ((((*L).stack_last.p).offset_from((*L).top.p) as i64 <= nextra as i64) as i32 != 0i32)
+            as i32 as i64
             != 0
         {
-            let mut t__: ptrdiff_t = (where_0 as *mut libc::c_char)
+            let mut t__: i64 = (where_0 as *mut libc::c_char)
                 .offset_from((*L).stack.p as *mut libc::c_char)
-                as libc::c_long;
-            if (*(*L).l_G).GCdebt > 0i32 as libc::c_long {
+                as i64;
+            if (*(*L).l_G).GCdebt > 0i32 as i64 {
                 luaC_step(L);
             }
             luaD_growstack(L, nextra, 1i32);

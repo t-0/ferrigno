@@ -7,15 +7,14 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer, Number};
+use crate::types::*;
 unsafe extern "C" {
-    pub type lua_longjmp;
     fn pow(_: f64, _: f64) -> f64;
     fn fmod(_: f64, _: f64) -> f64;
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
     fn strcoll(__s1: *const libc::c_char, __s2: *const libc::c_char) -> i32;
     fn strlen(_: *const libc::c_char) -> libc::c_ulong;
-    fn luaO_str2num(s: *const libc::c_char, o: *mut TValue) -> size_t;
+    fn luaO_str2num(s: *const libc::c_char, o: *mut TValue) -> u64;
     fn luaO_tostring(L: *mut lua_State, obj: *mut TValue);
     fn luaT_gettm(events: *mut Table, event: TMS, ename: *mut TString) -> *const TValue;
     fn luaT_gettmbyobj(L: *mut lua_State, o: *const TValue, event: TMS) -> *const TValue;
@@ -52,7 +51,7 @@ unsafe extern "C" {
     fn luaT_trybiniTM(
         L: *mut lua_State,
         p1: *const TValue,
-        i2: Integer,
+        i2: i64,
         inv: i32,
         res: StkId,
         event: TMS,
@@ -94,9 +93,9 @@ unsafe extern "C" {
     fn luaC_barrier_(L: *mut lua_State, o: *mut GCObject, v: *mut GCObject);
     fn luaC_barrierback_(L: *mut lua_State, o: *mut GCObject);
     fn luaS_eqlngstr(a: *mut TString, b: *mut TString) -> i32;
-    fn luaS_newlstr(L: *mut lua_State, str: *const libc::c_char, l: size_t) -> *mut TString;
-    fn luaS_createlngstrobj(L: *mut lua_State, l: size_t) -> *mut TString;
-    fn luaH_getint(t: *mut Table, key: Integer) -> *const TValue;
+    fn luaS_newlstr(L: *mut lua_State, str: *const libc::c_char, l: u64) -> *mut TString;
+    fn luaS_createlngstrobj(L: *mut lua_State, l: u64) -> *mut TString;
+    fn luaH_getint(t: *mut Table, key: i64) -> *const TValue;
     fn luaH_getshortstr(t: *mut Table, key: *mut TString) -> *const TValue;
     fn luaH_getstr(t: *mut Table, key: *mut TString) -> *const TValue;
     fn luaH_get(t: *mut Table, key: *const TValue) -> *const TValue;
@@ -108,15 +107,12 @@ unsafe extern "C" {
         value: *mut TValue,
     );
     fn luaH_new(L: *mut lua_State) -> *mut Table;
-    fn luaH_resize(L: *mut lua_State, t: *mut Table, nasize: libc::c_uint, nhsize: libc::c_uint);
-    fn luaH_resizearray(L: *mut lua_State, t: *mut Table, nasize: libc::c_uint);
-    fn luaH_getn(t: *mut Table) -> lua_Unsigned;
-    fn luaH_realasize(t: *const Table) -> libc::c_uint;
+    fn luaH_resize(L: *mut lua_State, t: *mut Table, nasize: u32, nhsize: u32);
+    fn luaH_resizearray(L: *mut lua_State, t: *mut Table, nasize: u32);
+    fn luaH_getn(t: *mut Table) -> u64;
+    fn luaH_realasize(t: *const Table) -> u32;
 }
-pub type __sig_atomic_t = i32;
-pub type size_t = libc::c_ulong;
-pub type ptrdiff_t = libc::c_long;
-pub type intptr_t = libc::c_long;
+
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -135,18 +131,18 @@ pub struct lua_State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut lua_State,
-    pub errorJmp: *mut lua_longjmp,
+    pub errorJmp: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
-    pub errfunc: ptrdiff_t,
-    pub nCcalls: l_uint32,
+    pub errfunc: i64,
+    pub nCcalls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: sig_atomic_t,
 }
-pub type sig_atomic_t = __sig_atomic_t;
-pub type l_uint32 = libc::c_uint;
+pub type sig_atomic_t = i32;
+
 pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -156,7 +152,7 @@ pub struct lua_Debug {
     pub namewhat: *const libc::c_char,
     pub what: *const libc::c_char,
     pub source: *const libc::c_char,
-    pub srclen: size_t,
+    pub srclen: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,
@@ -205,10 +201,10 @@ pub union C2RustUnnamed_1 {
 #[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub k: lua_KFunction,
-    pub old_errfunc: ptrdiff_t,
+    pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = intptr_t;
+pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -217,12 +213,12 @@ pub struct C2RustUnnamed_3 {
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
 }
-pub type Instruction = l_uint32;
+pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
@@ -244,8 +240,8 @@ pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
     pub f: CFunction,
-    pub i: Integer,
-    pub n: Number,
+    pub i: i64,
+    pub n: f64,
     pub ub: u8,
 }
 
@@ -288,7 +284,7 @@ pub struct C2RustUnnamed_6 {
 #[repr(C)]
 pub union C2RustUnnamed_7 {
     pub p: *mut TValue,
-    pub offset: ptrdiff_t,
+    pub offset: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -302,7 +298,7 @@ pub struct global_State {
     pub strt: stringtable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
-    pub seed: libc::c_uint,
+    pub seed: u32,
     pub currentwhite: u8,
     pub gcstate: u8,
     pub gckind: u8,
@@ -351,14 +347,14 @@ pub struct TString {
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
-    pub hash: libc::c_uint,
+    pub hash: u32,
     pub u: C2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_8 {
-    pub lnglen: size_t,
+    pub lnglen: u64,
     pub hnext: *mut TString,
 }
 #[derive(Copy, Clone)]
@@ -369,7 +365,7 @@ pub struct Table {
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
-    pub alimit: libc::c_uint,
+    pub alimit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub lastfree: *mut Node,
@@ -398,22 +394,22 @@ pub struct stringtable {
     pub nuse: i32,
     pub size: i32,
 }
-pub type lu_mem = size_t;
-pub type l_mem = ptrdiff_t;
+pub type lu_mem = u64;
+pub type l_mem = i64;
 pub type lua_Alloc = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
-pub type lua_Unsigned = libc::c_ulonglong;
+
 pub type ls_byte = libc::c_schar;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
-    pub n: Number,
+    pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
-    pub i: Integer,
-    pub l: libc::c_long,
+    pub i: i64,
+    pub l: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -422,7 +418,7 @@ pub struct Udata {
     pub tt: u8,
     pub marked: u8,
     pub nuvalue: libc::c_ushort,
-    pub len: size_t,
+    pub len: u64,
     pub metatable: *mut Table,
     pub gclist: *mut GCObject,
     pub uv: [UValue; 1],
@@ -504,7 +500,7 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type TMS = libc::c_uint;
+pub type TMS = u32;
 pub const TM_N: TMS = 25;
 pub const TM_CLOSE: TMS = 24;
 pub const TM_CALL: TMS = 23;
@@ -543,7 +539,7 @@ pub union GCUnion {
     pub th: lua_State,
     pub upv: UpVal,
 }
-pub type OpCode = libc::c_uint;
+pub type OpCode = u32;
 pub const OP_EXTRAARG: OpCode = 82;
 pub const OP_VARARGPREP: OpCode = 81;
 pub const OP_VARARG: OpCode = 80;
@@ -627,7 +623,7 @@ pub const OP_LOADK: OpCode = 3;
 pub const OP_LOADF: OpCode = 2;
 pub const OP_LOADI: OpCode = 1;
 pub const OP_MOVE: OpCode = 0;
-pub type F2Imod = libc::c_uint;
+pub type F2Imod = u32;
 pub const F2Iceil: F2Imod = 2;
 pub const F2Ifloor: F2Imod = 1;
 pub const F2Ieq: F2Imod = 0;
@@ -646,7 +642,7 @@ unsafe extern "C" fn l_strton(mut obj: *const TValue, mut result: *mut TValue) -
     };
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_tonumber_(mut obj: *const TValue, mut n: *mut Number) -> i32 {
+pub unsafe extern "C" fn luaV_tonumber_(mut obj: *const TValue, mut n: *mut f64) -> i32 {
     let mut v: TValue = TValue {
         value_: Value {
             gc: 0 as *mut GCObject,
@@ -654,11 +650,11 @@ pub unsafe extern "C" fn luaV_tonumber_(mut obj: *const TValue, mut n: *mut Numb
         tt_: 0,
     };
     if (*obj).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-        *n = (*obj).value_.i as Number;
+        *n = (*obj).value_.i as f64;
         return 1i32;
     } else if l_strton(obj, &mut v) != 0 {
         *n = if v.tt_ as i32 == 3i32 | (0i32) << 4i32 {
-            v.value_.i as Number
+            v.value_.i as f64
         } else {
             v.value_.n
         };
@@ -668,16 +664,12 @@ pub unsafe extern "C" fn luaV_tonumber_(mut obj: *const TValue, mut n: *mut Numb
     };
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_flttointeger(
-    mut n: Number,
-    mut p: *mut Integer,
-    mut mode: F2Imod,
-) -> i32 {
-    let mut f: Number = n.floor();
+pub unsafe extern "C" fn luaV_flttointeger(mut n: f64, mut p: *mut i64, mut mode: F2Imod) -> i32 {
+    let mut f: f64 = n.floor();
     if n != f {
-        if mode as libc::c_uint == F2Ieq as i32 as libc::c_uint {
+        if mode as u32 == F2Ieq as i32 as u32 {
             return 0i32;
-        } else if mode as libc::c_uint == F2Iceil as i32 as libc::c_uint {
+        } else if mode as u32 == F2Iceil as i32 as u32 {
             f += 1i32 as f64;
         }
     }
@@ -691,7 +683,7 @@ pub unsafe extern "C" fn luaV_flttointeger(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaV_tointegerns(
     mut obj: *const TValue,
-    mut p: *mut Integer,
+    mut p: *mut i64,
     mut mode: F2Imod,
 ) -> i32 {
     if (*obj).tt_ as i32 == 3i32 | (1i32) << 4i32 {
@@ -706,7 +698,7 @@ pub unsafe extern "C" fn luaV_tointegerns(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaV_tointeger(
     mut obj: *const TValue,
-    mut p: *mut Integer,
+    mut p: *mut i64,
     mut mode: F2Imod,
 ) -> i32 {
     let mut v: TValue = TValue {
@@ -722,10 +714,10 @@ pub unsafe extern "C" fn luaV_tointeger(
 }
 unsafe extern "C" fn forlimit(
     mut L: *mut lua_State,
-    mut init: Integer,
+    mut init: i64,
     mut lim: *const TValue,
-    mut p: *mut Integer,
-    mut step: Integer,
+    mut p: *mut i64,
+    mut step: i64,
 ) -> i32 {
     if luaV_tointeger(
         lim,
@@ -737,7 +729,7 @@ unsafe extern "C" fn forlimit(
         }) as F2Imod,
     ) == 0
     {
-        let mut flim: Number = 0.;
+        let mut flim: f64 = 0.;
         if if (*lim).tt_ as i32 == 3i32 | (1i32) << 4i32 {
             flim = (*lim).value_.n;
             1i32
@@ -771,9 +763,9 @@ unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> i32 {
     let mut pstep: *mut TValue = &mut (*ra.offset(2i32 as isize)).val;
     if (*pinit).tt_ as i32 == 3i32 | (0i32) << 4i32 && (*pstep).tt_ as i32 == 3i32 | (0i32) << 4i32
     {
-        let mut init: Integer = (*pinit).value_.i;
-        let mut step: Integer = (*pstep).value_.i;
-        let mut limit: Integer = 0;
+        let mut init: i64 = (*pinit).value_.i;
+        let mut step: i64 = (*pstep).value_.i;
+        let mut limit: i64 = 0;
         if step == 0i32 as i64 {
             luaG_runerror(
                 L,
@@ -786,35 +778,33 @@ unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> i32 {
         if forlimit(L, init, plimit, &mut limit, step) != 0 {
             return 1i32;
         } else {
-            let mut count: lua_Unsigned = 0;
+            let mut count: u64 = 0;
             if step > 0i32 as i64 {
-                count = (limit as lua_Unsigned).wrapping_sub(init as lua_Unsigned);
+                count = (limit as u64).wrapping_sub(init as u64);
                 if step != 1i32 as i64 {
-                    count = (count as libc::c_ulonglong).wrapping_div(step as lua_Unsigned)
-                        as lua_Unsigned as lua_Unsigned;
+                    count = (count as u64).wrapping_div(step as u64) as u64 as u64;
                 }
             } else {
-                count = (init as lua_Unsigned).wrapping_sub(limit as lua_Unsigned);
-                count = (count as libc::c_ulonglong).wrapping_div(
-                    (-(step + 1i32 as i64) as lua_Unsigned)
-                        .wrapping_add(1 as libc::c_uint as libc::c_ulonglong),
-                ) as lua_Unsigned as lua_Unsigned;
+                count = (init as u64).wrapping_sub(limit as u64);
+                count = (count as u64)
+                    .wrapping_div((-(step + 1i32 as i64) as u64).wrapping_add(1 as u32 as u64))
+                    as u64 as u64;
             }
             let mut io_0: *mut TValue = plimit;
-            (*io_0).value_.i = count as Integer;
+            (*io_0).value_.i = count as i64;
             (*io_0).tt_ = (3i32 | (0i32) << 4i32) as u8;
         }
     } else {
-        let mut init_0: Number = 0.;
-        let mut limit_0: Number = 0.;
-        let mut step_0: Number = 0.;
+        let mut init_0: f64 = 0.;
+        let mut limit_0: f64 = 0.;
+        let mut step_0: f64 = 0.;
         if (((if (*plimit).tt_ as i32 == 3i32 | (1i32) << 4i32 {
             limit_0 = (*plimit).value_.n;
             1i32
         } else {
             luaV_tonumber_(plimit, &mut limit_0)
         }) == 0) as i32
-            != 0i32) as i32 as libc::c_long
+            != 0i32) as i32 as i64
             != 0
         {
             luaG_forerror(L, plimit, b"limit\0" as *const u8 as *const libc::c_char);
@@ -825,7 +815,7 @@ unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> i32 {
         } else {
             luaV_tonumber_(pstep, &mut step_0)
         }) == 0) as i32
-            != 0i32) as i32 as libc::c_long
+            != 0i32) as i32 as i64
             != 0
         {
             luaG_forerror(L, pstep, b"step\0" as *const u8 as *const libc::c_char);
@@ -836,7 +826,7 @@ unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> i32 {
         } else {
             luaV_tonumber_(pinit, &mut init_0)
         }) == 0) as i32
-            != 0i32) as i32 as libc::c_long
+            != 0i32) as i32 as i64
             != 0
         {
             luaG_forerror(
@@ -876,9 +866,9 @@ unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> i32 {
     return 0i32;
 }
 unsafe extern "C" fn floatforloop(mut ra: StkId) -> i32 {
-    let mut step: Number = (*ra.offset(2i32 as isize)).val.value_.n;
-    let mut limit: Number = (*ra.offset(1i32 as isize)).val.value_.n;
-    let mut index: Number = (*ra).val.value_.n;
+    let mut step: f64 = (*ra.offset(2i32 as isize)).val.value_.n;
+    let mut limit: f64 = (*ra.offset(1i32 as isize)).val.value_.n;
+    let mut index: f64 = (*ra).val.value_.n;
     index = index + step;
     if if (0i32 as f64) < step {
         (index <= limit) as i32
@@ -910,15 +900,14 @@ pub unsafe extern "C" fn luaV_finishget(
     while loop_0 < 2000i32 {
         if slot.is_null() {
             tm = luaT_gettmbyobj(L, t, TM_INDEX);
-            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as libc::c_long != 0
-            {
+            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as i64 != 0 {
                 luaG_typeerror(L, t, b"index\0" as *const u8 as *const libc::c_char);
             }
         } else {
             tm = if ((*((*t).value_.gc as *mut GCUnion)).h.metatable).is_null() {
                 0 as *const TValue
-            } else if (*(*((*t).value_.gc as *mut GCUnion)).h.metatable).flags as libc::c_uint
-                & (1 as libc::c_uint) << TM_INDEX as i32
+            } else if (*(*((*t).value_.gc as *mut GCUnion)).h.metatable).flags as u32
+                & (1 as u32) << TM_INDEX as i32
                 != 0
             {
                 0 as *const TValue
@@ -976,10 +965,7 @@ pub unsafe extern "C" fn luaV_finishset(
             let mut h: *mut Table = &mut (*((*t).value_.gc as *mut GCUnion)).h;
             tm = if ((*h).metatable).is_null() {
                 0 as *const TValue
-            } else if (*(*h).metatable).flags as libc::c_uint
-                & (1 as libc::c_uint) << TM_NEWINDEX as i32
-                != 0
-            {
+            } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_NEWINDEX as i32 != 0 {
                 0 as *const TValue
             } else {
                 luaT_gettm(
@@ -998,9 +984,7 @@ pub unsafe extern "C" fn luaV_finishset(
                 luaH_finishset(L, h, key, slot, val);
                 (*L).top.p = ((*L).top.p).offset(-1);
                 (*L).top.p;
-                (*h).flags = ((*h).flags as libc::c_uint
-                    & !!(!(0 as libc::c_uint) << TM_EQ as i32 + 1i32))
-                    as u8;
+                (*h).flags = ((*h).flags as u32 & !!(!(0 as u32) << TM_EQ as i32 + 1i32)) as u8;
                 if (*val).tt_ as i32 & (1i32) << 6i32 != 0 {
                     if (*(h as *mut GCUnion)).gc.marked as i32 & (1i32) << 5i32 != 0
                         && (*(*val).value_.gc).marked as i32 & ((1i32) << 3i32 | (1i32) << 4i32)
@@ -1015,8 +999,7 @@ pub unsafe extern "C" fn luaV_finishset(
             }
         } else {
             tm = luaT_gettmbyobj(L, t, TM_NEWINDEX);
-            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as libc::c_long != 0
-            {
+            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as i64 != 0 {
                 luaG_typeerror(L, t, b"index\0" as *const u8 as *const libc::c_char);
             }
         }
@@ -1057,13 +1040,13 @@ pub unsafe extern "C" fn luaV_finishset(
 }
 unsafe extern "C" fn l_strcmp(mut ts1: *const TString, mut ts2: *const TString) -> i32 {
     let mut s1: *const libc::c_char = ((*ts1).contents).as_ptr();
-    let mut rl1: size_t = if (*ts1).shrlen as i32 != 0xff as i32 {
+    let mut rl1: u64 = if (*ts1).shrlen as i32 != 0xff as i32 {
         (*ts1).shrlen as libc::c_ulong
     } else {
         (*ts1).u.lnglen
     };
     let mut s2: *const libc::c_char = ((*ts2).contents).as_ptr();
-    let mut rl2: size_t = if (*ts2).shrlen as i32 != 0xff as i32 {
+    let mut rl2: u64 = if (*ts2).shrlen as i32 != 0xff as i32 {
         (*ts2).shrlen as libc::c_ulong
     } else {
         (*ts2).u.lnglen
@@ -1073,8 +1056,8 @@ unsafe extern "C" fn l_strcmp(mut ts1: *const TString, mut ts2: *const TString) 
         if temp != 0i32 {
             return temp;
         } else {
-            let mut zl1: size_t = strlen(s1);
-            let mut zl2: size_t = strlen(s2);
+            let mut zl1: u64 = strlen(s1);
+            let mut zl2: u64 = strlen(s2);
             if zl2 == rl2 {
                 return if zl1 == rl1 { 0i32 } else { 1i32 };
             } else if zl1 == rl1 {
@@ -1083,20 +1066,20 @@ unsafe extern "C" fn l_strcmp(mut ts1: *const TString, mut ts2: *const TString) 
             zl1 = zl1.wrapping_add(1);
             zl2 = zl2.wrapping_add(1);
             s1 = s1.offset(zl1 as isize);
-            rl1 = (rl1 as libc::c_ulong).wrapping_sub(zl1) as size_t as size_t;
+            rl1 = (rl1 as libc::c_ulong).wrapping_sub(zl1) as u64 as u64;
             s2 = s2.offset(zl2 as isize);
-            rl2 = (rl2 as libc::c_ulong).wrapping_sub(zl2) as size_t as size_t;
+            rl2 = (rl2 as libc::c_ulong).wrapping_sub(zl2) as u64 as u64;
         }
     }
 }
 #[inline]
-unsafe extern "C" fn LTintfloat(mut i: Integer, mut f: Number) -> i32 {
-    if ((1i32 as lua_Unsigned) << 53i32).wrapping_add(i as lua_Unsigned)
-        <= (2i32 as libc::c_ulonglong).wrapping_mul((1i32 as lua_Unsigned) << 53i32)
+unsafe extern "C" fn LTintfloat(mut i: i64, mut f: f64) -> i32 {
+    if ((1i32 as u64) << 53i32).wrapping_add(i as u64)
+        <= (2i32 as u64).wrapping_mul((1i32 as u64) << 53i32)
     {
-        return ((i as Number) < f) as i32;
+        return ((i as f64) < f) as i32;
     } else {
-        let mut fi: Integer = 0;
+        let mut fi: i64 = 0;
         if luaV_flttointeger(f, &mut fi, F2Iceil) != 0 {
             return (i < fi) as i32;
         } else {
@@ -1105,13 +1088,13 @@ unsafe extern "C" fn LTintfloat(mut i: Integer, mut f: Number) -> i32 {
     };
 }
 #[inline]
-unsafe extern "C" fn LEintfloat(mut i: Integer, mut f: Number) -> i32 {
-    if ((1i32 as lua_Unsigned) << 53i32).wrapping_add(i as lua_Unsigned)
-        <= (2i32 as libc::c_ulonglong).wrapping_mul((1i32 as lua_Unsigned) << 53i32)
+unsafe extern "C" fn LEintfloat(mut i: i64, mut f: f64) -> i32 {
+    if ((1i32 as u64) << 53i32).wrapping_add(i as u64)
+        <= (2i32 as u64).wrapping_mul((1i32 as u64) << 53i32)
     {
-        return (i as Number <= f) as i32;
+        return (i as f64 <= f) as i32;
     } else {
-        let mut fi: Integer = 0;
+        let mut fi: i64 = 0;
         if luaV_flttointeger(f, &mut fi, F2Ifloor) != 0 {
             return (i <= fi) as i32;
         } else {
@@ -1120,13 +1103,13 @@ unsafe extern "C" fn LEintfloat(mut i: Integer, mut f: Number) -> i32 {
     };
 }
 #[inline]
-unsafe extern "C" fn LTfloatint(mut f: Number, mut i: Integer) -> i32 {
-    if ((1i32 as lua_Unsigned) << 53i32).wrapping_add(i as lua_Unsigned)
-        <= (2i32 as libc::c_ulonglong).wrapping_mul((1i32 as lua_Unsigned) << 53i32)
+unsafe extern "C" fn LTfloatint(mut f: f64, mut i: i64) -> i32 {
+    if ((1i32 as u64) << 53i32).wrapping_add(i as u64)
+        <= (2i32 as u64).wrapping_mul((1i32 as u64) << 53i32)
     {
-        return (f < i as Number) as i32;
+        return (f < i as f64) as i32;
     } else {
-        let mut fi: Integer = 0;
+        let mut fi: i64 = 0;
         if luaV_flttointeger(f, &mut fi, F2Ifloor) != 0 {
             return (fi < i) as i32;
         } else {
@@ -1135,13 +1118,13 @@ unsafe extern "C" fn LTfloatint(mut f: Number, mut i: Integer) -> i32 {
     };
 }
 #[inline]
-unsafe extern "C" fn LEfloatint(mut f: Number, mut i: Integer) -> i32 {
-    if ((1i32 as lua_Unsigned) << 53i32).wrapping_add(i as lua_Unsigned)
-        <= (2i32 as libc::c_ulonglong).wrapping_mul((1i32 as lua_Unsigned) << 53i32)
+unsafe extern "C" fn LEfloatint(mut f: f64, mut i: i64) -> i32 {
+    if ((1i32 as u64) << 53i32).wrapping_add(i as u64)
+        <= (2i32 as u64).wrapping_mul((1i32 as u64) << 53i32)
     {
-        return (f <= i as Number) as i32;
+        return (f <= i as f64) as i32;
     } else {
-        let mut fi: Integer = 0;
+        let mut fi: i64 = 0;
         if luaV_flttointeger(f, &mut fi, F2Iceil) != 0 {
             return (fi <= i) as i32;
         } else {
@@ -1152,14 +1135,14 @@ unsafe extern "C" fn LEfloatint(mut f: Number, mut i: Integer) -> i32 {
 #[inline]
 unsafe extern "C" fn LTnum(mut l: *const TValue, mut r: *const TValue) -> i32 {
     if (*l).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-        let mut li: Integer = (*l).value_.i;
+        let mut li: i64 = (*l).value_.i;
         if (*r).tt_ as i32 == 3i32 | (0i32) << 4i32 {
             return (li < (*r).value_.i) as i32;
         } else {
             return LTintfloat(li, (*r).value_.n);
         }
     } else {
-        let mut lf: Number = (*l).value_.n;
+        let mut lf: f64 = (*l).value_.n;
         if (*r).tt_ as i32 == 3i32 | (1i32) << 4i32 {
             return (lf < (*r).value_.n) as i32;
         } else {
@@ -1170,14 +1153,14 @@ unsafe extern "C" fn LTnum(mut l: *const TValue, mut r: *const TValue) -> i32 {
 #[inline]
 unsafe extern "C" fn LEnum(mut l: *const TValue, mut r: *const TValue) -> i32 {
     if (*l).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-        let mut li: Integer = (*l).value_.i;
+        let mut li: i64 = (*l).value_.i;
         if (*r).tt_ as i32 == 3i32 | (0i32) << 4i32 {
             return (li <= (*r).value_.i) as i32;
         } else {
             return LEintfloat(li, (*r).value_.n);
         }
     } else {
-        let mut lf: Number = (*l).value_.n;
+        let mut lf: f64 = (*l).value_.n;
         if (*r).tt_ as i32 == 3i32 | (1i32) << 4i32 {
             return (lf <= (*r).value_.n) as i32;
         } else {
@@ -1250,8 +1233,8 @@ pub unsafe extern "C" fn luaV_equalobj(
         {
             return 0i32;
         } else {
-            let mut i1: Integer = 0;
-            let mut i2: Integer = 0;
+            let mut i1: i64 = 0;
+            let mut i2: i64 = 0;
             return (luaV_tointegerns(t1, &mut i1, F2Ieq) != 0
                 && luaV_tointegerns(t2, &mut i2, F2Ieq) != 0
                 && i1 == i2) as i32;
@@ -1284,8 +1267,8 @@ pub unsafe extern "C" fn luaV_equalobj(
             }
             tm = if ((*((*t1).value_.gc as *mut GCUnion)).u.metatable).is_null() {
                 0 as *const TValue
-            } else if (*(*((*t1).value_.gc as *mut GCUnion)).u.metatable).flags as libc::c_uint
-                & (1 as libc::c_uint) << TM_EQ as i32
+            } else if (*(*((*t1).value_.gc as *mut GCUnion)).u.metatable).flags as u32
+                & (1 as u32) << TM_EQ as i32
                 != 0
             {
                 0 as *const TValue
@@ -1299,8 +1282,8 @@ pub unsafe extern "C" fn luaV_equalobj(
             if tm.is_null() {
                 tm = if ((*((*t2).value_.gc as *mut GCUnion)).u.metatable).is_null() {
                     0 as *const TValue
-                } else if (*(*((*t2).value_.gc as *mut GCUnion)).u.metatable).flags as libc::c_uint
-                    & (1 as libc::c_uint) << TM_EQ as i32
+                } else if (*(*((*t2).value_.gc as *mut GCUnion)).u.metatable).flags as u32
+                    & (1 as u32) << TM_EQ as i32
                     != 0
                 {
                     0 as *const TValue
@@ -1323,8 +1306,8 @@ pub unsafe extern "C" fn luaV_equalobj(
             }
             tm = if ((*((*t1).value_.gc as *mut GCUnion)).h.metatable).is_null() {
                 0 as *const TValue
-            } else if (*(*((*t1).value_.gc as *mut GCUnion)).h.metatable).flags as libc::c_uint
-                & (1 as libc::c_uint) << TM_EQ as i32
+            } else if (*(*((*t1).value_.gc as *mut GCUnion)).h.metatable).flags as u32
+                & (1 as u32) << TM_EQ as i32
                 != 0
             {
                 0 as *const TValue
@@ -1338,8 +1321,8 @@ pub unsafe extern "C" fn luaV_equalobj(
             if tm.is_null() {
                 tm = if ((*((*t2).value_.gc as *mut GCUnion)).h.metatable).is_null() {
                     0 as *const TValue
-                } else if (*(*((*t2).value_.gc as *mut GCUnion)).h.metatable).flags as libc::c_uint
-                    & (1 as libc::c_uint) << TM_EQ as i32
+                } else if (*(*((*t2).value_.gc as *mut GCUnion)).h.metatable).flags as u32
+                    & (1 as u32) << TM_EQ as i32
                     != 0
                 {
                     0 as *const TValue
@@ -1363,11 +1346,11 @@ pub unsafe extern "C" fn luaV_equalobj(
     };
 }
 unsafe extern "C" fn copy2buff(mut top: StkId, mut n: i32, mut buff: *mut libc::c_char) {
-    let mut tl: size_t = 0i32 as size_t;
+    let mut tl: u64 = 0i32 as u64;
     loop {
         let mut st: *mut TString =
             &mut (*((*top.offset(-(n as isize))).val.value_.gc as *mut GCUnion)).ts;
-        let mut l: size_t = if (*st).shrlen as i32 != 0xff as i32 {
+        let mut l: u64 = if (*st).shrlen as i32 != 0xff as i32 {
             (*st).shrlen as libc::c_ulong
         } else {
             (*st).u.lnglen
@@ -1377,7 +1360,7 @@ unsafe extern "C" fn copy2buff(mut top: StkId, mut n: i32, mut buff: *mut libc::
             ((*st).contents).as_mut_ptr() as *const libc::c_void,
             l.wrapping_mul(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
         );
-        tl = (tl as libc::c_ulong).wrapping_add(l) as size_t as size_t;
+        tl = (tl as libc::c_ulong).wrapping_add(l) as u64 as u64;
         n -= 1;
         if !(n > 0i32) {
             break;
@@ -1425,8 +1408,7 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: i32) {
             (*io1).value_ = (*io2).value_;
             (*io1).tt_ = (*io2).tt_;
         } else {
-            let mut tl: size_t = if (*((*top.offset(-(1i32 as isize))).val.value_.gc
-                as *mut GCUnion))
+            let mut tl: u64 = if (*((*top.offset(-(1i32 as isize))).val.value_.gc as *mut GCUnion))
                 .ts
                 .shrlen as i32
                 != 0xff as i32
@@ -1461,7 +1443,7 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: i32) {
                             1i32 != 0
                         })
             {
-                let mut l: size_t = if (*((*top.offset(-(n as isize)).offset(-(1i32 as isize)))
+                let mut l: u64 = if (*((*top.offset(-(n as isize)).offset(-(1i32 as isize)))
                     .val
                     .value_
                     .gc as *mut GCUnion))
@@ -1485,16 +1467,16 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: i32) {
                         .lnglen
                 };
                 if ((l
-                    >= (if (::core::mem::size_of::<size_t>() as libc::c_ulong)
-                        < ::core::mem::size_of::<Integer>() as libc::c_ulong
+                    >= (if (::core::mem::size_of::<u64>() as libc::c_ulong)
+                        < ::core::mem::size_of::<i64>() as libc::c_ulong
                     {
-                        !(0i32 as size_t)
+                        !(0i32 as u64)
                     } else {
-                        9223372036854775807i64 as size_t
+                        9223372036854775807i64 as u64
                     })
                     .wrapping_sub(::core::mem::size_of::<TString>() as libc::c_ulong)
                     .wrapping_sub(tl)) as i32
-                    != 0i32) as i32 as libc::c_long
+                    != 0i32) as i32 as i64
                     != 0
                 {
                     (*L).top.p = top.offset(-(total as isize));
@@ -1503,7 +1485,7 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: i32) {
                         b"string length overflow\0" as *const u8 as *const libc::c_char,
                     );
                 }
-                tl = (tl as libc::c_ulong).wrapping_add(l) as size_t as size_t;
+                tl = (tl as libc::c_ulong).wrapping_add(l) as u64 as u64;
                 n += 1;
             }
             if tl <= 40i32 as libc::c_ulong {
@@ -1534,9 +1516,7 @@ pub unsafe extern "C" fn luaV_objlen(mut L: *mut lua_State, mut ra: StkId, mut r
             let mut h: *mut Table = &mut (*((*rb).value_.gc as *mut GCUnion)).h;
             tm = if ((*h).metatable).is_null() {
                 0 as *const TValue
-            } else if (*(*h).metatable).flags as libc::c_uint & (1 as libc::c_uint) << TM_LEN as i32
-                != 0
-            {
+            } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
                 0 as *const TValue
             } else {
                 luaT_gettm(
@@ -1547,27 +1527,26 @@ pub unsafe extern "C" fn luaV_objlen(mut L: *mut lua_State, mut ra: StkId, mut r
             };
             if tm.is_null() {
                 let mut io: *mut TValue = &mut (*ra).val;
-                (*io).value_.i = luaH_getn(h) as Integer;
+                (*io).value_.i = luaH_getn(h) as i64;
                 (*io).tt_ = (3i32 | (0i32) << 4i32) as u8;
                 return;
             }
         }
         4 => {
             let mut io_0: *mut TValue = &mut (*ra).val;
-            (*io_0).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.shrlen as Integer;
+            (*io_0).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.shrlen as i64;
             (*io_0).tt_ = (3i32 | (0i32) << 4i32) as u8;
             return;
         }
         20 => {
             let mut io_1: *mut TValue = &mut (*ra).val;
-            (*io_1).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.u.lnglen as Integer;
+            (*io_1).value_.i = (*((*rb).value_.gc as *mut GCUnion)).ts.u.lnglen as i64;
             (*io_1).tt_ = (3i32 | (0i32) << 4i32) as u8;
             return;
         }
         _ => {
             tm = luaT_gettmbyobj(L, rb, TM_LEN);
-            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as libc::c_long != 0
-            {
+            if (((*tm).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as i64 != 0 {
                 luaG_typeerror(
                     L,
                     rb,
@@ -1579,14 +1558,8 @@ pub unsafe extern "C" fn luaV_objlen(mut L: *mut lua_State, mut ra: StkId, mut r
     luaT_callTMres(L, tm, rb, rb, ra);
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_idiv(
-    mut L: *mut lua_State,
-    mut m: Integer,
-    mut n: Integer,
-) -> Integer {
-    if (((n as lua_Unsigned).wrapping_add(1 as libc::c_uint as libc::c_ulonglong)
-        <= 1 as libc::c_uint as libc::c_ulonglong) as i32
-        != 0i32) as i32 as libc::c_long
+pub unsafe extern "C" fn luaV_idiv(mut L: *mut lua_State, mut m: i64, mut n: i64) -> i64 {
+    if (((n as u64).wrapping_add(1 as u32 as u64) <= 1 as u32 as u64) as i32 != 0i32) as i32 as i64
         != 0
     {
         if n == 0i32 as i64 {
@@ -1595,9 +1568,9 @@ pub unsafe extern "C" fn luaV_idiv(
                 b"attempt to divide by zero\0" as *const u8 as *const libc::c_char,
             );
         }
-        return (0i32 as lua_Unsigned).wrapping_sub(m as lua_Unsigned) as Integer;
+        return (0i32 as u64).wrapping_sub(m as u64) as i64;
     } else {
-        let mut q: Integer = m / n;
+        let mut q: i64 = m / n;
         if m ^ n < 0i32 as i64 && m % n != 0i32 as i64 {
             q -= 1i32 as i64;
         }
@@ -1605,14 +1578,8 @@ pub unsafe extern "C" fn luaV_idiv(
     };
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_mod(
-    mut L: *mut lua_State,
-    mut m: Integer,
-    mut n: Integer,
-) -> Integer {
-    if (((n as lua_Unsigned).wrapping_add(1 as libc::c_uint as libc::c_ulonglong)
-        <= 1 as libc::c_uint as libc::c_ulonglong) as i32
-        != 0i32) as i32 as libc::c_long
+pub unsafe extern "C" fn luaV_mod(mut L: *mut lua_State, mut m: i64, mut n: i64) -> i64 {
+    if (((n as u64).wrapping_add(1 as u32 as u64) <= 1 as u32 as u64) as i32 != 0i32) as i32 as i64
         != 0
     {
         if n == 0i32 as i64 {
@@ -1621,9 +1588,9 @@ pub unsafe extern "C" fn luaV_mod(
                 b"attempt to perform 'n%%0'\0" as *const u8 as *const libc::c_char,
             );
         }
-        return 0i32 as Integer;
+        return 0i32 as i64;
     } else {
-        let mut r: Integer = m % n;
+        let mut r: i64 = m % n;
         if r != 0i32 as i64 && r ^ n < 0i32 as i64 {
             r += n;
         }
@@ -1631,8 +1598,8 @@ pub unsafe extern "C" fn luaV_mod(
     };
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_modf(mut _L: *mut lua_State, mut m: Number, mut n: Number) -> Number {
-    let mut r: Number = 0.;
+pub unsafe extern "C" fn luaV_modf(mut _L: *mut lua_State, mut m: f64, mut n: f64) -> f64 {
+    let mut r: f64 = 0.;
     r = fmod(m, n);
     if if r > 0i32 as f64 {
         (n < 0i32 as f64) as i32
@@ -1645,22 +1612,22 @@ pub unsafe extern "C" fn luaV_modf(mut _L: *mut lua_State, mut m: Number, mut n:
     return r;
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaV_shiftl(mut x: Integer, mut y: Integer) -> Integer {
+pub unsafe extern "C" fn luaV_shiftl(mut x: i64, mut y: i64) -> i64 {
     if y < 0i32 as i64 {
-        if y <= -((::core::mem::size_of::<Integer>() as libc::c_ulong)
+        if y <= -((::core::mem::size_of::<i64>() as libc::c_ulong)
             .wrapping_mul(8i32 as libc::c_ulong) as i32) as i64
         {
-            return 0i32 as Integer;
+            return 0i32 as i64;
         } else {
-            return (x as lua_Unsigned >> -y as lua_Unsigned) as Integer;
+            return (x as u64 >> -y as u64) as i64;
         }
     } else if y
-        >= (::core::mem::size_of::<Integer>() as libc::c_ulong).wrapping_mul(8i32 as libc::c_ulong)
+        >= (::core::mem::size_of::<i64>() as libc::c_ulong).wrapping_mul(8i32 as libc::c_ulong)
             as i32 as i64
     {
-        return 0i32 as Integer;
+        return 0i32 as i64;
     } else {
-        return ((x as lua_Unsigned) << y as lua_Unsigned) as Integer;
+        return ((x as u64) << y as u64) as i64;
     };
 }
 unsafe extern "C" fn pushclosure(
@@ -1712,7 +1679,7 @@ pub unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
     let mut base: StkId = ((*ci).func.p).offset(1i32 as isize);
     let mut inst: Instruction = *((*ci).u.l.savedpc).offset(-(1i32 as isize));
     let mut op: OpCode = (inst >> 0i32 & !(!(0i32 as Instruction) << 7i32) << 0i32) as OpCode;
-    match op as libc::c_uint {
+    match op as u32 {
         46 | 47 | 48 => {
             let mut io1: *mut TValue = &mut (*base.offset(
                 (*((*ci).u.l.savedpc).offset(-(2i32 as isize)) >> 0i32 + 7i32
@@ -1754,7 +1721,7 @@ pub unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
                 (inst >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32) as i32;
             let mut total: i32 =
                 top.offset(-(1i32 as isize))
-                    .offset_from(base.offset(a as isize)) as libc::c_long as i32;
+                    .offset_from(base.offset(a as isize)) as i64 as i32;
             let mut io1_1: *mut TValue = &mut (*top.offset(-(2i32 as isize))).val;
             let mut io2_1: *const TValue = &mut (*top).val;
             (*io1_1).value_ = (*io2_1).value_;
@@ -1796,22 +1763,20 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
             cl = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l;
             k = (*(*cl).p).k;
             pc = (*ci).u.l.savedpc;
-            if (trap != 0i32) as i32 as libc::c_long != 0 {
+            if (trap != 0i32) as i32 as i64 != 0 {
                 trap = luaG_tracecall(L);
             }
             base = ((*ci).func.p).offset(1i32 as isize);
             loop {
                 i = 0;
-                if (trap != 0i32) as i32 as libc::c_long != 0 {
+                if (trap != 0i32) as i32 as i64 != 0 {
                     trap = luaG_traceexec(L, pc);
                     base = ((*ci).func.p).offset(1i32 as isize);
                 }
                 let fresh2 = pc;
                 pc = pc.offset(1);
                 i = *fresh2;
-                match (i >> 0i32 & !(!(0i32 as Instruction) << 7i32) << 0i32) as OpCode
-                    as libc::c_uint
-                {
+                match (i >> 0i32 & !(!(0i32 as Instruction) << 7i32) << 0i32) as OpCode as u32 {
                     0 => {
                         let mut ra: StkId = base.offset(
                             (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32) as i32
@@ -1833,11 +1798,11 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32) as i32
                                 as isize,
                         );
-                        let mut b: Integer = ((i >> 0i32 + 7i32 + 8i32
+                        let mut b: i64 = ((i >> 0i32 + 7i32 + 8i32
                             & !(!(0i32 as Instruction) << 8i32 + 8i32 + 1i32) << 0i32)
                             as i32
                             - (((1i32) << 8i32 + 8i32 + 1i32) - 1i32 >> 1i32))
-                            as Integer;
+                            as i64;
                         let mut io: *mut TValue = &mut (*ra_0).val;
                         (*io).value_.i = b;
                         (*io).tt_ = (3i32 | (0i32) << 4i32) as u8;
@@ -1853,7 +1818,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             as i32
                             - (((1i32) << 8i32 + 8i32 + 1i32) - 1i32 >> 1i32);
                         let mut io_0: *mut TValue = &mut (*ra_1).val;
-                        (*io_0).value_.n = b_0 as Number;
+                        (*io_0).value_.n = b_0 as f64;
                         (*io_0).tt_ = (3i32 | (1i32) << 4i32) as u8;
                         continue;
                     }
@@ -2042,25 +2007,24 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut n: lua_Unsigned = 0;
+                        let mut n: u64 = 0;
                         if if (*rc_0).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            n = (*rc_0).value_.i as lua_Unsigned;
+                            n = (*rc_0).value_.i as u64;
                             if !((*rb_1).tt_ as i32 == 5i32 | (0i32) << 4i32 | (1i32) << 6i32) {
                                 slot_0 = 0 as *const TValue;
                                 0i32
                             } else {
-                                slot_0 = if n.wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-                                    < (*((*rb_1).value_.gc as *mut GCUnion)).h.alimit
-                                        as libc::c_ulonglong
+                                slot_0 = if n.wrapping_sub(1 as u32 as u64)
+                                    < (*((*rb_1).value_.gc as *mut GCUnion)).h.alimit as u64
                                 {
                                     &mut *((*((*rb_1).value_.gc as *mut GCUnion)).h.array)
-                                        .offset(n.wrapping_sub(1i32 as libc::c_ulonglong) as isize)
+                                        .offset(n.wrapping_sub(1i32 as u64) as isize)
                                         as *mut TValue
                                         as *const TValue
                                 } else {
                                     luaH_getint(
                                         &mut (*((*rb_1).value_.gc as *mut GCUnion)).h,
-                                        n as Integer,
+                                        n as i64,
                                     )
                                 };
                                 !((*slot_0).tt_ as i32 & 0xf as i32 == 0i32) as i32
@@ -2104,19 +2068,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             slot_1 = 0 as *const TValue;
                             0i32
                         } else {
-                            slot_1 = if (c as lua_Unsigned)
-                                .wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-                                < (*((*rb_2).value_.gc as *mut GCUnion)).h.alimit
-                                    as libc::c_ulonglong
+                            slot_1 = if (c as u64).wrapping_sub(1 as u32 as u64)
+                                < (*((*rb_2).value_.gc as *mut GCUnion)).h.alimit as u64
                             {
                                 &mut *((*((*rb_2).value_.gc as *mut GCUnion)).h.array)
                                     .offset((c - 1i32) as isize)
                                     as *mut TValue as *const TValue
                             } else {
-                                luaH_getint(
-                                    &mut (*((*rb_2).value_.gc as *mut GCUnion)).h,
-                                    c as Integer,
-                                )
+                                luaH_getint(&mut (*((*rb_2).value_.gc as *mut GCUnion)).h, c as i64)
                             };
                             !((*slot_1).tt_ as i32 & 0xf as i32 == 0i32) as i32
                         } != 0
@@ -2133,7 +2092,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 tt_: 0,
                             };
                             let mut io_1: *mut TValue = &mut key_0;
-                            (*io_1).value_.i = c as Integer;
+                            (*io_1).value_.i = c as i64;
                             (*io_1).tt_ = (3i32 | (0i32) << 4i32) as u8;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -2198,7 +2157,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         );
                         let mut rc_2: *mut TValue =
-                            if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                            if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                                 k.offset(
                                     (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                                         & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -2261,7 +2220,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         ))
                         .val;
                         let mut rc_3: *mut TValue =
-                            if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                            if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                                 k.offset(
                                     (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                                         & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -2275,27 +2234,25 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 ))
                                 .val
                             };
-                        let mut n_0: lua_Unsigned = 0;
+                        let mut n_0: u64 = 0;
                         if if (*rb_5).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            n_0 = (*rb_5).value_.i as lua_Unsigned;
+                            n_0 = (*rb_5).value_.i as u64;
                             if !((*ra_14).val.tt_ as i32 == 5i32 | (0i32) << 4i32 | (1i32) << 6i32)
                             {
                                 slot_4 = 0 as *const TValue;
                                 0i32
                             } else {
-                                slot_4 = if n_0.wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-                                    < (*((*ra_14).val.value_.gc as *mut GCUnion)).h.alimit
-                                        as libc::c_ulonglong
+                                slot_4 = if n_0.wrapping_sub(1 as u32 as u64)
+                                    < (*((*ra_14).val.value_.gc as *mut GCUnion)).h.alimit as u64
                                 {
                                     &mut *((*((*ra_14).val.value_.gc as *mut GCUnion)).h.array)
-                                        .offset(
-                                            n_0.wrapping_sub(1i32 as libc::c_ulonglong)
-                                                as isize,
-                                        ) as *mut TValue as *const TValue
+                                        .offset(n_0.wrapping_sub(1i32 as u64) as isize)
+                                        as *mut TValue
+                                        as *const TValue
                                 } else {
                                     luaH_getint(
                                         &mut (*((*ra_14).val.value_.gc as *mut GCUnion)).h,
-                                        n_0 as Integer,
+                                        n_0 as i64,
                                     )
                                 };
                                 !((*slot_4).tt_ as i32 & 0xf as i32 == 0i32) as i32
@@ -2344,7 +2301,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
                             as i32;
                         let mut rc_4: *mut TValue =
-                            if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                            if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                                 k.offset(
                                     (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                                         & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -2362,10 +2319,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             slot_5 = 0 as *const TValue;
                             0i32
                         } else {
-                            slot_5 = if (c_0 as lua_Unsigned)
-                                .wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-                                < (*((*ra_15).val.value_.gc as *mut GCUnion)).h.alimit
-                                    as libc::c_ulonglong
+                            slot_5 = if (c_0 as u64).wrapping_sub(1 as u32 as u64)
+                                < (*((*ra_15).val.value_.gc as *mut GCUnion)).h.alimit as u64
                             {
                                 &mut *((*((*ra_15).val.value_.gc as *mut GCUnion)).h.array)
                                     .offset((c_0 - 1i32) as isize)
@@ -2373,7 +2328,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             } else {
                                 luaH_getint(
                                     &mut (*((*ra_15).val.value_.gc as *mut GCUnion)).h,
-                                    c_0 as Integer,
+                                    c_0 as i64,
                                 )
                             };
                             !((*slot_5).tt_ as i32 & 0xf as i32 == 0i32) as i32
@@ -2402,7 +2357,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 tt_: 0,
                             };
                             let mut io_2: *mut TValue = &mut key_3;
-                            (*io_2).value_.i = c_0 as Integer;
+                            (*io_2).value_.i = c_0 as i64;
                             (*io_2).tt_ = (3i32 | (0i32) << 4i32) as u8;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -2423,7 +2378,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         );
                         let mut rc_5: *mut TValue =
-                            if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                            if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                                 k.offset(
                                     (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                                         & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -2488,7 +2443,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if b_3 > 0i32 {
                             b_3 = (1i32) << b_3 - 1i32;
                         }
-                        if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                        if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                             c_1 += (*pc >> 0i32 + 7i32
                                 & !(!(0i32 as Instruction) << 8i32 + 8i32 + 1i32 + 8i32) << 0i32)
                                 as i32
@@ -2502,9 +2457,9 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         (*io_3).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
                         (*io_3).tt_ = (5i32 | (0i32) << 4i32 | (1i32) << 6i32) as u8;
                         if b_3 != 0i32 || c_1 != 0i32 {
-                            luaH_resize(L, t, c_1 as libc::c_uint, b_3 as libc::c_uint);
+                            luaH_resize(L, t, c_1 as u32, b_3 as u32);
                         }
-                        if (*(*L).l_G).GCdebt > 0i32 as libc::c_long {
+                        if (*(*L).l_G).GCdebt > 0i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = ra_17.offset(1i32 as isize);
                             luaC_step(L);
@@ -2525,7 +2480,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         ))
                         .val;
                         let mut rc_6: *mut TValue =
-                            if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                            if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                                 k.offset(
                                     (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                                         & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -2582,15 +2537,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             as i32
                             - (((1i32) << 8i32) - 1i32 >> 1i32);
                         if (*v1).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            let mut iv1: Integer = (*v1).value_.i;
+                            let mut iv1: i64 = (*v1).value_.i;
                             pc = pc.offset(1);
                             let mut io_4: *mut TValue = &mut (*ra_19).val;
-                            (*io_4).value_.i =
-                                (iv1 as lua_Unsigned).wrapping_add(imm as lua_Unsigned) as Integer;
+                            (*io_4).value_.i = (iv1 as u64).wrapping_add(imm as u64) as i64;
                             (*io_4).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else if (*v1).tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            let mut nb: Number = (*v1).value_.n;
-                            let mut fimm: Number = imm as Number;
+                            let mut nb: f64 = (*v1).value_.n;
+                            let mut fimm: f64 = imm as f64;
                             pc = pc.offset(1);
                             let mut io_5: *mut TValue = &mut (*ra_19).val;
                             (*io_5).value_.n = nb + fimm;
@@ -2617,22 +2571,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_0).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1: Integer = (*v1_0).value_.i;
-                            let mut i2: Integer = (*v2).value_.i;
+                            let mut i1: i64 = (*v1_0).value_.i;
+                            let mut i2: i64 = (*v2).value_.i;
                             pc = pc.offset(1);
                             let mut io_6: *mut TValue = &mut (*ra_20).val;
-                            (*io_6).value_.i =
-                                (i1 as lua_Unsigned).wrapping_add(i2 as lua_Unsigned) as Integer;
+                            (*io_6).value_.i = (i1 as u64).wrapping_add(i2 as u64) as i64;
                             (*io_6).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1: Number = 0.;
-                            let mut n2: Number = 0.;
+                            let mut n1: f64 = 0.;
+                            let mut n2: f64 = 0.;
                             if (if (*v1_0).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1 = (*v1_0).value_.n;
                                 1i32
                             } else {
                                 if (*v1_0).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1 = (*v1_0).value_.i as Number;
+                                    n1 = (*v1_0).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2643,7 +2596,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2 = (*v2).value_.i as Number;
+                                        n2 = (*v2).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -2677,23 +2630,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_1).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_0).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_0: Integer = (*v1_1).value_.i;
-                            let mut i2_0: Integer = (*v2_0).value_.i;
+                            let mut i1_0: i64 = (*v1_1).value_.i;
+                            let mut i2_0: i64 = (*v2_0).value_.i;
                             pc = pc.offset(1);
                             let mut io_8: *mut TValue = &mut (*ra_21).val;
-                            (*io_8).value_.i = (i1_0 as lua_Unsigned)
-                                .wrapping_sub(i2_0 as lua_Unsigned)
-                                as Integer;
+                            (*io_8).value_.i = (i1_0 as u64).wrapping_sub(i2_0 as u64) as i64;
                             (*io_8).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_0: Number = 0.;
-                            let mut n2_0: Number = 0.;
+                            let mut n1_0: f64 = 0.;
+                            let mut n2_0: f64 = 0.;
                             if (if (*v1_1).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_0 = (*v1_1).value_.n;
                                 1i32
                             } else {
                                 if (*v1_1).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_0 = (*v1_1).value_.i as Number;
+                                    n1_0 = (*v1_1).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2704,7 +2655,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_0).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_0 = (*v2_0).value_.i as Number;
+                                        n2_0 = (*v2_0).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -2738,23 +2689,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_2).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_1).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_1: Integer = (*v1_2).value_.i;
-                            let mut i2_1: Integer = (*v2_1).value_.i;
+                            let mut i1_1: i64 = (*v1_2).value_.i;
+                            let mut i2_1: i64 = (*v2_1).value_.i;
                             pc = pc.offset(1);
                             let mut io_10: *mut TValue = &mut (*ra_22).val;
-                            (*io_10).value_.i = (i1_1 as lua_Unsigned)
-                                .wrapping_mul(i2_1 as lua_Unsigned)
-                                as Integer;
+                            (*io_10).value_.i = (i1_1 as u64).wrapping_mul(i2_1 as u64) as i64;
                             (*io_10).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_1: Number = 0.;
-                            let mut n2_1: Number = 0.;
+                            let mut n1_1: f64 = 0.;
+                            let mut n2_1: f64 = 0.;
                             if (if (*v1_2).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_1 = (*v1_2).value_.n;
                                 1i32
                             } else {
                                 if (*v1_2).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_1 = (*v1_2).value_.i as Number;
+                                    n1_1 = (*v1_2).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2765,7 +2714,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_1).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_1 = (*v2_1).value_.i as Number;
+                                        n2_1 = (*v2_1).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -2801,21 +2750,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_3).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_2).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_2: Integer = (*v1_3).value_.i;
-                            let mut i2_2: Integer = (*v2_2).value_.i;
+                            let mut i1_2: i64 = (*v1_3).value_.i;
+                            let mut i2_2: i64 = (*v2_2).value_.i;
                             pc = pc.offset(1);
                             let mut io_12: *mut TValue = &mut (*ra_23).val;
                             (*io_12).value_.i = luaV_mod(L, i1_2, i2_2);
                             (*io_12).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_2: Number = 0.;
-                            let mut n2_2: Number = 0.;
+                            let mut n1_2: f64 = 0.;
+                            let mut n2_2: f64 = 0.;
                             if (if (*v1_3).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_2 = (*v1_3).value_.n;
                                 1i32
                             } else {
                                 if (*v1_3).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_2 = (*v1_3).value_.i as Number;
+                                    n1_2 = (*v1_3).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2826,7 +2775,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_2).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_2 = (*v2_2).value_.i as Number;
+                                        n2_2 = (*v2_2).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -2857,14 +2806,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut n1_3: Number = 0.;
-                        let mut n2_3: Number = 0.;
+                        let mut n1_3: f64 = 0.;
+                        let mut n2_3: f64 = 0.;
                         if (if (*v1_4).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                             n1_3 = (*v1_4).value_.n;
                             1i32
                         } else {
                             if (*v1_4).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                n1_3 = (*v1_4).value_.i as Number;
+                                n1_3 = (*v1_4).value_.i as f64;
                                 1i32
                             } else {
                                 0i32
@@ -2875,7 +2824,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 1i32
                             } else {
                                 if (*v2_3).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n2_3 = (*v2_3).value_.i as Number;
+                                    n2_3 = (*v2_3).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2909,14 +2858,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut n1_4: Number = 0.;
-                        let mut n2_4: Number = 0.;
+                        let mut n1_4: f64 = 0.;
+                        let mut n2_4: f64 = 0.;
                         if (if (*v1_5).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                             n1_4 = (*v1_5).value_.n;
                             1i32
                         } else {
                             if (*v1_5).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                n1_4 = (*v1_5).value_.i as Number;
+                                n1_4 = (*v1_5).value_.i as f64;
                                 1i32
                             } else {
                                 0i32
@@ -2927,7 +2876,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 1i32
                             } else {
                                 if (*v2_4).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n2_4 = (*v2_4).value_.i as Number;
+                                    n2_4 = (*v2_4).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2962,21 +2911,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_6).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_5).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_3: Integer = (*v1_6).value_.i;
-                            let mut i2_3: Integer = (*v2_5).value_.i;
+                            let mut i1_3: i64 = (*v1_6).value_.i;
+                            let mut i2_3: i64 = (*v2_5).value_.i;
                             pc = pc.offset(1);
                             let mut io_16: *mut TValue = &mut (*ra_26).val;
                             (*io_16).value_.i = luaV_idiv(L, i1_3, i2_3);
                             (*io_16).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_5: Number = 0.;
-                            let mut n2_5: Number = 0.;
+                            let mut n1_5: f64 = 0.;
+                            let mut n2_5: f64 = 0.;
                             if (if (*v1_6).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_5 = (*v1_6).value_.n;
                                 1i32
                             } else {
                                 if (*v1_6).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_5 = (*v1_6).value_.i as Number;
+                                    n1_5 = (*v1_6).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -2987,7 +2936,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_5).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_5 = (*v2_5).value_.i as Number;
+                                        n2_5 = (*v2_5).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3018,10 +2967,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut i1_4: Integer = 0;
-                        let mut i2_4: Integer = (*v2_6).value_.i;
+                        let mut i1_4: i64 = 0;
+                        let mut i2_4: i64 = (*v2_6).value_.i;
                         if if (((*v1_7).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             i1_4 = (*v1_7).value_.i;
@@ -3032,8 +2981,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_18: *mut TValue = &mut (*ra_27).val;
-                            (*io_18).value_.i =
-                                (i1_4 as lua_Unsigned & i2_4 as lua_Unsigned) as Integer;
+                            (*io_18).value_.i = (i1_4 as u64 & i2_4 as u64) as i64;
                             (*io_18).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3054,10 +3002,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut i1_5: Integer = 0;
-                        let mut i2_5: Integer = (*v2_7).value_.i;
+                        let mut i1_5: i64 = 0;
+                        let mut i2_5: i64 = (*v2_7).value_.i;
                         if if (((*v1_8).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             i1_5 = (*v1_8).value_.i;
@@ -3068,8 +3016,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_19: *mut TValue = &mut (*ra_28).val;
-                            (*io_19).value_.i =
-                                (i1_5 as lua_Unsigned | i2_5 as lua_Unsigned) as Integer;
+                            (*io_19).value_.i = (i1_5 as u64 | i2_5 as u64) as i64;
                             (*io_19).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3090,10 +3037,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut i1_6: Integer = 0;
-                        let mut i2_6: Integer = (*v2_8).value_.i;
+                        let mut i1_6: i64 = 0;
+                        let mut i2_6: i64 = (*v2_8).value_.i;
                         if if (((*v1_9).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             i1_6 = (*v1_9).value_.i;
@@ -3104,8 +3051,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_20: *mut TValue = &mut (*ra_29).val;
-                            (*io_20).value_.i =
-                                (i1_6 as lua_Unsigned ^ i2_6 as lua_Unsigned) as Integer;
+                            (*io_20).value_.i = (i1_6 as u64 ^ i2_6 as u64) as i64;
                             (*io_20).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3125,9 +3071,9 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
                             as i32
                             - (((1i32) << 8i32) - 1i32 >> 1i32);
-                        let mut ib: Integer = 0;
+                        let mut ib: i64 = 0;
                         if if (((*rb_8).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             ib = (*rb_8).value_.i;
@@ -3138,7 +3084,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_21: *mut TValue = &mut (*ra_30).val;
-                            (*io_21).value_.i = luaV_shiftl(ib, -ic as Integer);
+                            (*io_21).value_.i = luaV_shiftl(ib, -ic as i64);
                             (*io_21).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3158,9 +3104,9 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
                             as i32
                             - (((1i32) << 8i32) - 1i32 >> 1i32);
-                        let mut ib_0: Integer = 0;
+                        let mut ib_0: i64 = 0;
                         if if (((*rb_9).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             ib_0 = (*rb_9).value_.i;
@@ -3171,7 +3117,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_22: *mut TValue = &mut (*ra_31).val;
-                            (*io_22).value_.i = luaV_shiftl(ic_0 as Integer, ib_0);
+                            (*io_22).value_.i = luaV_shiftl(ic_0 as i64, ib_0);
                             (*io_22).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3196,23 +3142,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_10).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_9).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_7: Integer = (*v1_10).value_.i;
-                            let mut i2_7: Integer = (*v2_9).value_.i;
+                            let mut i1_7: i64 = (*v1_10).value_.i;
+                            let mut i2_7: i64 = (*v2_9).value_.i;
                             pc = pc.offset(1);
                             let mut io_23: *mut TValue = &mut (*ra_32).val;
-                            (*io_23).value_.i = (i1_7 as lua_Unsigned)
-                                .wrapping_add(i2_7 as lua_Unsigned)
-                                as Integer;
+                            (*io_23).value_.i = (i1_7 as u64).wrapping_add(i2_7 as u64) as i64;
                             (*io_23).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_6: Number = 0.;
-                            let mut n2_6: Number = 0.;
+                            let mut n1_6: f64 = 0.;
+                            let mut n2_6: f64 = 0.;
                             if (if (*v1_10).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_6 = (*v1_10).value_.n;
                                 1i32
                             } else {
                                 if (*v1_10).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_6 = (*v1_10).value_.i as Number;
+                                    n1_6 = (*v1_10).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3223,7 +3167,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_9).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_6 = (*v2_9).value_.i as Number;
+                                        n2_6 = (*v2_9).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3258,23 +3202,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_11).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_10).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_8: Integer = (*v1_11).value_.i;
-                            let mut i2_8: Integer = (*v2_10).value_.i;
+                            let mut i1_8: i64 = (*v1_11).value_.i;
+                            let mut i2_8: i64 = (*v2_10).value_.i;
                             pc = pc.offset(1);
                             let mut io_25: *mut TValue = &mut (*ra_33).val;
-                            (*io_25).value_.i = (i1_8 as lua_Unsigned)
-                                .wrapping_sub(i2_8 as lua_Unsigned)
-                                as Integer;
+                            (*io_25).value_.i = (i1_8 as u64).wrapping_sub(i2_8 as u64) as i64;
                             (*io_25).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_7: Number = 0.;
-                            let mut n2_7: Number = 0.;
+                            let mut n1_7: f64 = 0.;
+                            let mut n2_7: f64 = 0.;
                             if (if (*v1_11).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_7 = (*v1_11).value_.n;
                                 1i32
                             } else {
                                 if (*v1_11).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_7 = (*v1_11).value_.i as Number;
+                                    n1_7 = (*v1_11).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3285,7 +3227,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_10).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_7 = (*v2_10).value_.i as Number;
+                                        n2_7 = (*v2_10).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3320,23 +3262,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_12).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_11).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_9: Integer = (*v1_12).value_.i;
-                            let mut i2_9: Integer = (*v2_11).value_.i;
+                            let mut i1_9: i64 = (*v1_12).value_.i;
+                            let mut i2_9: i64 = (*v2_11).value_.i;
                             pc = pc.offset(1);
                             let mut io_27: *mut TValue = &mut (*ra_34).val;
-                            (*io_27).value_.i = (i1_9 as lua_Unsigned)
-                                .wrapping_mul(i2_9 as lua_Unsigned)
-                                as Integer;
+                            (*io_27).value_.i = (i1_9 as u64).wrapping_mul(i2_9 as u64) as i64;
                             (*io_27).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_8: Number = 0.;
-                            let mut n2_8: Number = 0.;
+                            let mut n1_8: f64 = 0.;
+                            let mut n2_8: f64 = 0.;
                             if (if (*v1_12).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_8 = (*v1_12).value_.n;
                                 1i32
                             } else {
                                 if (*v1_12).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_8 = (*v1_12).value_.i as Number;
+                                    n1_8 = (*v1_12).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3347,7 +3287,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_11).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_8 = (*v2_11).value_.i as Number;
+                                        n2_8 = (*v2_11).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3384,21 +3324,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_13).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_12).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_10: Integer = (*v1_13).value_.i;
-                            let mut i2_10: Integer = (*v2_12).value_.i;
+                            let mut i1_10: i64 = (*v1_13).value_.i;
+                            let mut i2_10: i64 = (*v2_12).value_.i;
                             pc = pc.offset(1);
                             let mut io_29: *mut TValue = &mut (*ra_35).val;
                             (*io_29).value_.i = luaV_mod(L, i1_10, i2_10);
                             (*io_29).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_9: Number = 0.;
-                            let mut n2_9: Number = 0.;
+                            let mut n1_9: f64 = 0.;
+                            let mut n2_9: f64 = 0.;
                             if (if (*v1_13).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_9 = (*v1_13).value_.n;
                                 1i32
                             } else {
                                 if (*v1_13).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_9 = (*v1_13).value_.i as Number;
+                                    n1_9 = (*v1_13).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3409,7 +3349,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_12).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_9 = (*v2_12).value_.i as Number;
+                                        n2_9 = (*v2_12).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3441,14 +3381,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut n1_10: Number = 0.;
-                        let mut n2_10: Number = 0.;
+                        let mut n1_10: f64 = 0.;
+                        let mut n2_10: f64 = 0.;
                         if (if (*v1_14).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                             n1_10 = (*v1_14).value_.n;
                             1i32
                         } else {
                             if (*v1_14).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                n1_10 = (*v1_14).value_.i as Number;
+                                n1_10 = (*v1_14).value_.i as f64;
                                 1i32
                             } else {
                                 0i32
@@ -3459,7 +3399,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 1i32
                             } else {
                                 if (*v2_13).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n2_10 = (*v2_13).value_.i as Number;
+                                    n2_10 = (*v2_13).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3494,14 +3434,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut n1_11: Number = 0.;
-                        let mut n2_11: Number = 0.;
+                        let mut n1_11: f64 = 0.;
+                        let mut n2_11: f64 = 0.;
                         if (if (*v1_15).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                             n1_11 = (*v1_15).value_.n;
                             1i32
                         } else {
                             if (*v1_15).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                n1_11 = (*v1_15).value_.i as Number;
+                                n1_11 = (*v1_15).value_.i as f64;
                                 1i32
                             } else {
                                 0i32
@@ -3512,7 +3452,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 1i32
                             } else {
                                 if (*v2_14).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n2_11 = (*v2_14).value_.i as Number;
+                                    n2_11 = (*v2_14).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3548,21 +3488,21 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*v1_16).tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*v2_15).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut i1_11: Integer = (*v1_16).value_.i;
-                            let mut i2_11: Integer = (*v2_15).value_.i;
+                            let mut i1_11: i64 = (*v1_16).value_.i;
+                            let mut i2_11: i64 = (*v2_15).value_.i;
                             pc = pc.offset(1);
                             let mut io_33: *mut TValue = &mut (*ra_38).val;
                             (*io_33).value_.i = luaV_idiv(L, i1_11, i2_11);
                             (*io_33).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
-                            let mut n1_12: Number = 0.;
-                            let mut n2_12: Number = 0.;
+                            let mut n1_12: f64 = 0.;
+                            let mut n2_12: f64 = 0.;
                             if (if (*v1_16).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                                 n1_12 = (*v1_16).value_.n;
                                 1i32
                             } else {
                                 if (*v1_16).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                    n1_12 = (*v1_16).value_.i as Number;
+                                    n1_12 = (*v1_16).value_.i as f64;
                                     1i32
                                 } else {
                                     0i32
@@ -3573,7 +3513,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     1i32
                                 } else {
                                     if (*v2_15).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                                        n2_12 = (*v2_15).value_.i as Number;
+                                        n2_12 = (*v2_15).value_.i as f64;
                                         1i32
                                     } else {
                                         0i32
@@ -3605,10 +3545,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut i1_12: Integer = 0;
-                        let mut i2_12: Integer = 0;
+                        let mut i1_12: i64 = 0;
+                        let mut i2_12: i64 = 0;
                         if (if (((*v1_17).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                            as i32 as libc::c_long
+                            as i32 as i64
                             != 0
                         {
                             i1_12 = (*v1_17).value_.i;
@@ -3617,7 +3557,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_17, &mut i1_12, F2Ieq)
                         }) != 0
                             && (if (((*v2_16).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                                as i32 as libc::c_long
+                                as i32 as i64
                                 != 0
                             {
                                 i2_12 = (*v2_16).value_.i;
@@ -3628,8 +3568,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_35: *mut TValue = &mut (*ra_39).val;
-                            (*io_35).value_.i =
-                                (i1_12 as lua_Unsigned & i2_12 as lua_Unsigned) as Integer;
+                            (*io_35).value_.i = (i1_12 as u64 & i2_12 as u64) as i64;
                             (*io_35).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3651,10 +3590,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut i1_13: Integer = 0;
-                        let mut i2_13: Integer = 0;
+                        let mut i1_13: i64 = 0;
+                        let mut i2_13: i64 = 0;
                         if (if (((*v1_18).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                            as i32 as libc::c_long
+                            as i32 as i64
                             != 0
                         {
                             i1_13 = (*v1_18).value_.i;
@@ -3663,7 +3602,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_18, &mut i1_13, F2Ieq)
                         }) != 0
                             && (if (((*v2_17).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                                as i32 as libc::c_long
+                                as i32 as i64
                                 != 0
                             {
                                 i2_13 = (*v2_17).value_.i;
@@ -3674,8 +3613,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_36: *mut TValue = &mut (*ra_40).val;
-                            (*io_36).value_.i =
-                                (i1_13 as lua_Unsigned | i2_13 as lua_Unsigned) as Integer;
+                            (*io_36).value_.i = (i1_13 as u64 | i2_13 as u64) as i64;
                             (*io_36).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3697,10 +3635,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut i1_14: Integer = 0;
-                        let mut i2_14: Integer = 0;
+                        let mut i1_14: i64 = 0;
+                        let mut i2_14: i64 = 0;
                         if (if (((*v1_19).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                            as i32 as libc::c_long
+                            as i32 as i64
                             != 0
                         {
                             i1_14 = (*v1_19).value_.i;
@@ -3709,7 +3647,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_19, &mut i1_14, F2Ieq)
                         }) != 0
                             && (if (((*v2_18).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                                as i32 as libc::c_long
+                                as i32 as i64
                                 != 0
                             {
                                 i2_14 = (*v2_18).value_.i;
@@ -3720,8 +3658,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_37: *mut TValue = &mut (*ra_41).val;
-                            (*io_37).value_.i =
-                                (i1_14 as lua_Unsigned ^ i2_14 as lua_Unsigned) as Integer;
+                            (*io_37).value_.i = (i1_14 as u64 ^ i2_14 as u64) as i64;
                             (*io_37).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3743,10 +3680,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut i1_15: Integer = 0;
-                        let mut i2_15: Integer = 0;
+                        let mut i1_15: i64 = 0;
+                        let mut i2_15: i64 = 0;
                         if (if (((*v1_20).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                            as i32 as libc::c_long
+                            as i32 as i64
                             != 0
                         {
                             i1_15 = (*v1_20).value_.i;
@@ -3755,7 +3692,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_20, &mut i1_15, F2Ieq)
                         }) != 0
                             && (if (((*v2_19).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                                as i32 as libc::c_long
+                                as i32 as i64
                                 != 0
                             {
                                 i2_15 = (*v2_19).value_.i;
@@ -3766,11 +3703,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             pc = pc.offset(1);
                             let mut io_38: *mut TValue = &mut (*ra_42).val;
-                            (*io_38).value_.i = luaV_shiftl(
-                                i1_15,
-                                (0i32 as lua_Unsigned).wrapping_sub(i2_15 as lua_Unsigned)
-                                    as Integer,
-                            );
+                            (*io_38).value_.i =
+                                luaV_shiftl(i1_15, (0i32 as u64).wrapping_sub(i2_15 as u64) as i64);
                             (*io_38).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         }
                         continue;
@@ -3792,10 +3726,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut i1_16: Integer = 0;
-                        let mut i2_16: Integer = 0;
+                        let mut i1_16: i64 = 0;
+                        let mut i2_16: i64 = 0;
                         if (if (((*v1_21).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                            as i32 as libc::c_long
+                            as i32 as i64
                             != 0
                         {
                             i1_16 = (*v1_21).value_.i;
@@ -3804,7 +3738,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_21, &mut i1_16, F2Ieq)
                         }) != 0
                             && (if (((*v2_20).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32)
-                                as i32 as libc::c_long
+                                as i32 as i64
                                 != 0
                             {
                                 i2_16 = (*v2_20).value_.i;
@@ -3867,14 +3801,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         );
                         (*ci).u.l.savedpc = pc;
                         (*L).top.p = (*ci).top.p;
-                        luaT_trybiniTM(
-                            L,
-                            &mut (*ra_45).val,
-                            imm_0 as Integer,
-                            flip,
-                            result_0,
-                            tm_0,
-                        );
+                        luaT_trybiniTM(L, &mut (*ra_45).val, imm_0 as i64, flip, result_0, tm_0);
                         trap = (*ci).u.l.trap;
                         continue;
                     }
@@ -3916,19 +3843,17 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut nb_0: Number = 0.;
+                        let mut nb_0: f64 = 0.;
                         if (*rb_11).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            let mut ib_1: Integer = (*rb_11).value_.i;
+                            let mut ib_1: i64 = (*rb_11).value_.i;
                             let mut io_40: *mut TValue = &mut (*ra_47).val;
-                            (*io_40).value_.i = (0i32 as lua_Unsigned)
-                                .wrapping_sub(ib_1 as lua_Unsigned)
-                                as Integer;
+                            (*io_40).value_.i = (0i32 as u64).wrapping_sub(ib_1 as u64) as i64;
                             (*io_40).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else if if (*rb_11).tt_ as i32 == 3i32 | (1i32) << 4i32 {
                             nb_0 = (*rb_11).value_.n;
                             1i32
                         } else if (*rb_11).tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            nb_0 = (*rb_11).value_.i as Number;
+                            nb_0 = (*rb_11).value_.i as f64;
                             1i32
                         } else {
                             0i32
@@ -3956,9 +3881,9 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut ib_2: Integer = 0;
+                        let mut ib_2: i64 = 0;
                         if if (((*rb_12).tt_ as i32 == 3i32 | (0i32) << 4i32) as i32 != 0i32) as i32
-                            as libc::c_long
+                            as i64
                             != 0
                         {
                             ib_2 = (*rb_12).value_.i;
@@ -3968,8 +3893,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             let mut io_42: *mut TValue = &mut (*ra_48).val;
-                            (*io_42).value_.i =
-                                (!(0i32 as lua_Unsigned) ^ ib_2 as lua_Unsigned) as Integer;
+                            (*io_42).value_.i = (!(0i32 as u64) ^ ib_2 as u64) as i64;
                             (*io_42).tt_ = (3i32 | (0i32) << 4i32) as u8;
                         } else {
                             (*ci).u.l.savedpc = pc;
@@ -4031,7 +3955,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         (*ci).u.l.savedpc = pc;
                         luaV_concat(L, n_1);
                         trap = (*ci).u.l.trap;
-                        if (*(*L).l_G).GCdebt > 0i32 as libc::c_long {
+                        if (*(*L).l_G).GCdebt > 0i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*L).top.p;
                             luaC_step(L);
@@ -4120,8 +4044,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_55).val.tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*rb_15).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut ia: Integer = (*ra_55).val.value_.i;
-                            let mut ib_3: Integer = (*rb_15).value_.i;
+                            let mut ia: i64 = (*ra_55).val.value_.i;
+                            let mut ib_3: i64 = (*rb_15).value_.i;
                             cond_0 = (ia < ib_3) as i32;
                         } else if (*ra_55).val.tt_ as i32 & 0xf as i32 == 3i32
                             && (*rb_15).tt_ as i32 & 0xf as i32 == 3i32
@@ -4166,8 +4090,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_56).val.tt_ as i32 == 3i32 | (0i32) << 4i32
                             && (*rb_16).tt_ as i32 == 3i32 | (0i32) << 4i32
                         {
-                            let mut ia_0: Integer = (*ra_56).val.value_.i;
-                            let mut ib_4: Integer = (*rb_16).value_.i;
+                            let mut ia_0: i64 = (*ra_56).val.value_.i;
+                            let mut ib_4: i64 = (*rb_16).value_.i;
                             cond_1 = (ia_0 <= ib_4) as i32;
                         } else if (*ra_56).val.tt_ as i32 & 0xf as i32 == 3i32
                             && (*rb_16).tt_ as i32 & 0xf as i32 == 3i32
@@ -4240,7 +4164,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_58).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
                             cond_3 = ((*ra_58).val.value_.i == im as i64) as i32;
                         } else if (*ra_58).val.tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            cond_3 = ((*ra_58).val.value_.n == im as Number) as i32;
+                            cond_3 = ((*ra_58).val.value_.n == im as f64) as i32;
                         } else {
                             cond_3 = 0i32;
                         }
@@ -4275,8 +4199,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_59).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
                             cond_4 = ((*ra_59).val.value_.i < im_0 as i64) as i32;
                         } else if (*ra_59).val.tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            let mut fa: Number = (*ra_59).val.value_.n;
-                            let mut fim: Number = im_0 as Number;
+                            let mut fa: f64 = (*ra_59).val.value_.n;
+                            let mut fim: f64 = im_0 as f64;
                             cond_4 = (fa < fim) as i32;
                         } else {
                             let mut isf: i32 = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
@@ -4319,8 +4243,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_60).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
                             cond_5 = ((*ra_60).val.value_.i <= im_1 as i64) as i32;
                         } else if (*ra_60).val.tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            let mut fa_0: Number = (*ra_60).val.value_.n;
-                            let mut fim_0: Number = im_1 as Number;
+                            let mut fa_0: f64 = (*ra_60).val.value_.n;
+                            let mut fim_0: f64 = im_1 as f64;
                             cond_5 = (fa_0 <= fim_0) as i32;
                         } else {
                             let mut isf_0: i32 = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
@@ -4363,8 +4287,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_61).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
                             cond_6 = ((*ra_61).val.value_.i > im_2 as i64) as i32;
                         } else if (*ra_61).val.tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            let mut fa_1: Number = (*ra_61).val.value_.n;
-                            let mut fim_1: Number = im_2 as Number;
+                            let mut fa_1: f64 = (*ra_61).val.value_.n;
+                            let mut fim_1: f64 = im_2 as f64;
                             cond_6 = (fa_1 > fim_1) as i32;
                         } else {
                             let mut isf_1: i32 = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
@@ -4407,8 +4331,8 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if (*ra_62).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
                             cond_7 = ((*ra_62).val.value_.i >= im_3 as i64) as i32;
                         } else if (*ra_62).val.tt_ as i32 == 3i32 | (1i32) << 4i32 {
-                            let mut fa_2: Number = (*ra_62).val.value_.n;
-                            let mut fim_2: Number = im_3 as Number;
+                            let mut fa_2: f64 = (*ra_62).val.value_.n;
+                            let mut fim_2: f64 = im_3 as f64;
                             cond_7 = (fa_2 >= fim_2) as i32;
                         } else {
                             let mut isf_2: i32 = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
@@ -4543,10 +4467,10 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         if b_5 != 0i32 {
                             (*L).top.p = ra_66.offset(b_5 as isize);
                         } else {
-                            b_5 = ((*L).top.p).offset_from(ra_66) as libc::c_long as i32;
+                            b_5 = ((*L).top.p).offset_from(ra_66) as i64 as i32;
                         }
                         (*ci).u.l.savedpc = pc;
-                        if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                        if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                             luaF_closeupval(L, base);
                         }
                         n_2 = luaD_pretailcall(L, ci, ra_66, b_5, delta);
@@ -4571,17 +4495,17 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
                             as i32;
                         if n_3 < 0i32 {
-                            n_3 = ((*L).top.p).offset_from(ra_67) as libc::c_long as i32;
+                            n_3 = ((*L).top.p).offset_from(ra_67) as i64 as i32;
                         }
                         (*ci).u.l.savedpc = pc;
-                        if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                        if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                             (*ci).u2.nres = n_3;
                             if (*L).top.p < (*ci).top.p {
                                 (*L).top.p = (*ci).top.p;
                             }
                             luaF_close(L, base, -(1i32), 1i32);
                             trap = (*ci).u.l.trap;
-                            if (trap != 0i32) as i32 as libc::c_long != 0 {
+                            if (trap != 0i32) as i32 as i64 != 0 {
                                 base = ((*ci).func.p).offset(1i32 as isize);
                                 ra_67 = base.offset(
                                     (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32)
@@ -4599,7 +4523,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         break;
                     }
                     71 => {
-                        if ((*L).hookmask != 0i32) as i32 as libc::c_long != 0 {
+                        if ((*L).hookmask != 0i32) as i32 as i64 != 0 {
                             let mut ra_68: StkId = base.offset(
                                 (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                     as i32 as isize,
@@ -4613,7 +4537,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             (*L).ci = (*ci).previous;
                             (*L).top.p = base.offset(-(1i32 as isize));
                             nres = (*ci).nresults as i32;
-                            while ((nres > 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+                            while ((nres > 0i32) as i32 != 0i32) as i32 as i64 != 0 {
                                 let fresh5 = (*L).top.p;
                                 (*L).top.p = ((*L).top.p).offset(1);
                                 (*fresh5).val.tt_ = (0i32 | (0i32) << 4i32) as u8;
@@ -4623,7 +4547,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         break;
                     }
                     72 => {
-                        if ((*L).hookmask != 0i32) as i32 as libc::c_long != 0 {
+                        if ((*L).hookmask != 0i32) as i32 as i64 != 0 {
                             let mut ra_69: StkId = base.offset(
                                 (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32)
                                     as i32 as isize,
@@ -4648,7 +4572,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 (*io1_15).value_ = (*io2_15).value_;
                                 (*io1_15).tt_ = (*io2_15).tt_;
                                 (*L).top.p = base;
-                                while ((nres_0 > 1i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+                                while ((nres_0 > 1i32) as i32 != 0i32) as i32 as i64 != 0 {
                                     let fresh6 = (*L).top.p;
                                     (*L).top.p = ((*L).top.p).offset(1);
                                     (*fresh6).val.tt_ = (0i32 | (0i32) << 4i32) as u8;
@@ -4664,17 +4588,14 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as isize,
                         );
                         if (*ra_71.offset(2i32 as isize)).val.tt_ as i32 == 3i32 | (0i32) << 4i32 {
-                            let mut count: lua_Unsigned =
-                                (*ra_71.offset(1i32 as isize)).val.value_.i as lua_Unsigned;
-                            if count > 0i32 as libc::c_ulonglong {
-                                let mut step: Integer = (*ra_71.offset(2i32 as isize)).val.value_.i;
-                                let mut index: Integer = (*ra_71).val.value_.i;
+                            let mut count: u64 = (*ra_71.offset(1i32 as isize)).val.value_.i as u64;
+                            if count > 0i32 as u64 {
+                                let mut step: i64 = (*ra_71.offset(2i32 as isize)).val.value_.i;
+                                let mut index: i64 = (*ra_71).val.value_.i;
                                 let mut io_43: *mut TValue =
                                     &mut (*ra_71.offset(1i32 as isize)).val;
-                                (*io_43).value_.i =
-                                    count.wrapping_sub(1i32 as libc::c_ulonglong) as Integer;
-                                index = (index as lua_Unsigned).wrapping_add(step as lua_Unsigned)
-                                    as Integer;
+                                (*io_43).value_.i = count.wrapping_sub(1i32 as u64) as i64;
+                                index = (index as u64).wrapping_add(step as u64) as i64;
                                 let mut io_44: *mut TValue = &mut (*ra_71).val;
                                 (*io_44).value_.i = index;
                                 let mut io_45: *mut TValue =
@@ -4746,24 +4667,23 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         let mut n_4: i32 = (i >> 0i32 + 7i32 + 8i32 + 1i32
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
                             as i32;
-                        let mut last: libc::c_uint = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
+                        let mut last: u32 = (i >> 0i32 + 7i32 + 8i32 + 1i32 + 8i32
                             & !(!(0i32 as Instruction) << 8i32) << 0i32)
-                            as i32
-                            as libc::c_uint;
+                            as i32 as u32;
                         let mut h: *mut Table = &mut (*((*ra_76).val.value_.gc as *mut GCUnion)).h;
                         if n_4 == 0i32 {
-                            n_4 = ((*L).top.p).offset_from(ra_76) as libc::c_long as i32 - 1i32;
+                            n_4 = ((*L).top.p).offset_from(ra_76) as i64 as i32 - 1i32;
                         } else {
                             (*L).top.p = (*ci).top.p;
                         }
-                        last = last.wrapping_add(n_4 as libc::c_uint);
-                        if (i & (1 as libc::c_uint) << 0i32 + 7i32 + 8i32) as i32 != 0 {
+                        last = last.wrapping_add(n_4 as u32);
+                        if (i & (1 as u32) << 0i32 + 7i32 + 8i32) as i32 != 0 {
                             last = last.wrapping_add(
                                 ((*pc >> 0i32 + 7i32
                                     & !(!(0i32 as Instruction) << 8i32 + 8i32 + 1i32 + 8i32)
                                         << 0i32) as i32
                                     * (((1i32) << 8i32) - 1i32 + 1i32))
-                                    as libc::c_uint,
+                                    as u32,
                             );
                             pc = pc.offset(1);
                         }
@@ -4773,7 +4693,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         while n_4 > 0i32 {
                             let mut val: *mut TValue = &mut (*ra_76.offset(n_4 as isize)).val;
                             let mut io1_17: *mut TValue = &mut *((*h).array)
-                                .offset(last.wrapping_sub(1i32 as libc::c_uint) as isize)
+                                .offset(last.wrapping_sub(1i32 as u32) as isize)
                                 as *mut TValue;
                             let mut io2_17: *const TValue = val;
                             (*io1_17).value_ = (*io2_17).value_;
@@ -4808,7 +4728,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         (*ci).u.l.savedpc = pc;
                         (*L).top.p = (*ci).top.p;
                         pushclosure(L, p, ((*cl).upvals).as_mut_ptr(), base, ra_77);
-                        if (*(*L).l_G).GCdebt > 0i32 as libc::c_long {
+                        if (*(*L).l_G).GCdebt > 0i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = ra_77.offset(1i32 as isize);
                             luaC_step(L);
@@ -4840,7 +4760,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             (*cl).p,
                         );
                         trap = (*ci).u.l.trap;
-                        if (trap != 0i32) as i32 as libc::c_long != 0 {
+                        if (trap != 0i32) as i32 as i64 != 0 {
                             luaD_hookcall(L, ci);
                             (*L).oldpc = 1i32;
                         }
@@ -4875,7 +4795,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 as i32,
                         );
                         trap = (*ci).u.l.trap;
-                        if (trap != 0i32) as i32 as libc::c_long != 0 {
+                        if (trap != 0i32) as i32 as i64 != 0 {
                             base = ((*ci).func.p).offset(1i32 as isize);
                             ra_74 = base.offset(
                                 (i >> 0i32 + 7i32 & !(!(0i32 as Instruction) << 8i32) << 0i32)
