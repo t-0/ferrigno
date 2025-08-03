@@ -59,7 +59,7 @@ pub fn main() {
     unsafe {
         ::std::process::exit(
             crate::lua::main_0(
-                (args.len() - 1) as libc::c_int,
+                (args.len() - 1) as i32,
                 args.as_mut_ptr() as *mut *mut libc::c_char,
             ) as i32,
         )

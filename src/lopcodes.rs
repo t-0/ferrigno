@@ -15,253 +15,253 @@ pub const iABx: OpMode = 1;
 pub const iABC: OpMode = 0;
 #[unsafe (no_mangle)]
 pub static mut luaP_opmodes: [u8; 83] = [
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iAsBx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iAsBx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((1 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((1 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((1 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | isJ as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int
-        | (1 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int
-        | (1 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (1 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (1 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABx as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (1 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (1 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (1 as libc::c_int) << 3 as libc::c_int | iABC as libc::c_int) as u8,
-    ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
-        | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
-        | (0 as libc::c_int) << 3 as libc::c_int | iAx as libc::c_int) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iAsBx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iAsBx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((1 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | isJ as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (1 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
+        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
+        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABx as i32) as u8,
+    ((0 as i32) << 7 as i32 | (1 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (1 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (1 as i32) << 3 as i32 | iABC as i32) as u8,
+    ((0 as i32) << 7 as i32 | (0 as i32) << 6 as i32
+        | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
+        | (0 as i32) << 3 as i32 | iAx as i32) as u8,
 ];
