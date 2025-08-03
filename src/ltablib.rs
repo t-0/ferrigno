@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn memcpy(
         _: *mut libc::c_void,
@@ -679,7 +679,7 @@ static mut tab_funcs: [luaL_Reg; 8] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_table(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

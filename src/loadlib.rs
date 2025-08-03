@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
@@ -945,7 +945,7 @@ unsafe extern "C" fn createclibstable(mut L: *mut lua_State) {
     lua_setfield(L, -(2 as libc::c_int), b"__gc\0" as *const u8 as *const libc::c_char);
     lua_setmetatable(L, -(2 as libc::c_int));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> libc::c_int {
     createclibstable(L);
     luaL_checkversion_(

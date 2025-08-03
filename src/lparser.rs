@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
     fn luaE_incCstack(L: *mut lua_State);
@@ -1123,7 +1123,7 @@ unsafe extern "C" fn reglevel(
     }
     return 0 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaY_nvarstack(mut fs: *mut FuncState) -> libc::c_int {
     return reglevel(fs, (*fs).nactvar as libc::c_int);
 }
@@ -3445,7 +3445,7 @@ unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FuncState) {
     check(ls, TK_EOS as libc::c_int);
     close_func(ls);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaY_parser(
     mut L: *mut lua_State,
     mut z: *mut ZIO,

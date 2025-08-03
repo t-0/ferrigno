@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     pub type BlockCnt;
     fn ldexp(_: libc::c_double, _: libc::c_int) -> libc::c_double;
@@ -788,7 +788,7 @@ pub const TM_MODE: TMS = 3;
 pub const TM_GC: TMS = 2;
 pub const TM_NEWINDEX: TMS = 1;
 pub const TM_INDEX: TMS = 0;
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_semerror(
     mut ls: *mut LexState,
     mut msg: *const libc::c_char,
@@ -833,7 +833,7 @@ unsafe extern "C" fn const2val(
 ) -> *mut TValue {
     return &mut (*((*(*(*fs).ls).dyd).actvar.arr).offset((*e).u.info as isize)).k;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_exp2const(
     mut fs: *mut FuncState,
     mut e: *const expdesc,
@@ -889,7 +889,7 @@ unsafe extern "C" fn previousinstruction(mut fs: *mut FuncState) -> *mut Instruc
         return &invalidinstruction as *const Instruction as *mut Instruction
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_nil(
     mut fs: *mut FuncState,
     mut from: libc::c_int,
@@ -1002,7 +1002,7 @@ unsafe extern "C" fn fixjump(
                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                     + 8 as libc::c_int) << 0 as libc::c_int + 7 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_concat(
     mut fs: *mut FuncState,
     mut l1: *mut libc::c_int,
@@ -1025,11 +1025,11 @@ pub unsafe extern "C" fn luaK_concat(
         fixjump(fs, list, l2);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_jump(mut fs: *mut FuncState) -> libc::c_int {
     return codesJ(fs, OP_JMP, -(1 as libc::c_int), 0 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_ret(
     mut fs: *mut FuncState,
     mut first: libc::c_int,
@@ -1067,7 +1067,7 @@ unsafe extern "C" fn condjump(
     luaK_codeABCk(fs, op, A, B, C, k);
     return luaK_jump(fs);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_getlabel(mut fs: *mut FuncState) -> libc::c_int {
     (*fs).lasttarget = (*fs).pc;
     return (*fs).pc;
@@ -1163,7 +1163,7 @@ unsafe extern "C" fn patchlistaux(
         list = next;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_patchlist(
     mut fs: *mut FuncState,
     mut list: libc::c_int,
@@ -1177,7 +1177,7 @@ pub unsafe extern "C" fn luaK_patchlist(
         target,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_patchtohere(
     mut fs: *mut FuncState,
     mut list: libc::c_int,
@@ -1265,7 +1265,7 @@ unsafe extern "C" fn removelastinstruction(mut fs: *mut FuncState) {
     (*fs).pc -= 1;
     (*fs).pc;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_code(
     mut fs: *mut FuncState,
     mut i: Instruction,
@@ -1296,7 +1296,7 @@ pub unsafe extern "C" fn luaK_code(
     savelineinfo(fs, f, (*(*fs).ls).lastline);
     return (*fs).pc - 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_codeABCk(
     mut fs: *mut FuncState,
     mut o: OpCode,
@@ -1319,7 +1319,7 @@ pub unsafe extern "C" fn luaK_codeABCk(
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_codeABx(
     mut fs: *mut FuncState,
     mut o: OpCode,
@@ -1397,7 +1397,7 @@ unsafe extern "C" fn luaK_codek(
         return p;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_checkstack(mut fs: *mut FuncState, mut n: libc::c_int) {
     let mut newstack: libc::c_int = (*fs).freereg as libc::c_int + n;
     if newstack > (*(*fs).f).maxstacksize as libc::c_int {
@@ -1411,7 +1411,7 @@ pub unsafe extern "C" fn luaK_checkstack(mut fs: *mut FuncState, mut n: libc::c_
         (*(*fs).f).maxstacksize = newstack as lu_byte;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_reserveregs(mut fs: *mut FuncState, mut n: libc::c_int) {
     luaK_checkstack(fs, n);
     (*fs).freereg = ((*fs).freereg as libc::c_int + n) as lu_byte;
@@ -1664,7 +1664,7 @@ unsafe extern "C" fn fitsBx(mut i: lua_Integer) -> libc::c_int {
                     - 1 as libc::c_int >> 1 as libc::c_int)) as libc::c_longlong)
         as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_int(
     mut fs: *mut FuncState,
     mut reg: libc::c_int,
@@ -1714,7 +1714,7 @@ unsafe extern "C" fn const2exp(mut v: *mut TValue, mut e: *mut expdesc) {
         _ => {}
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_setreturns(
     mut fs: *mut FuncState,
     mut e: *mut expdesc,
@@ -1757,7 +1757,7 @@ unsafe extern "C" fn str2K(mut fs: *mut FuncState, mut e: *mut expdesc) {
     (*e).u.info = stringK(fs, (*e).u.strval);
     (*e).k = VK;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_setoneret(mut fs: *mut FuncState, mut e: *mut expdesc) {
     if (*e).k as libc::c_uint == VCALL as libc::c_int as libc::c_uint {
         (*e).k = VNONRELOC;
@@ -1784,7 +1784,7 @@ pub unsafe extern "C" fn luaK_setoneret(mut fs: *mut FuncState, mut e: *mut expd
         (*e).k = VRELOC;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_dischargevars(
     mut fs: *mut FuncState,
     mut e: *mut expdesc,
@@ -2028,14 +2028,14 @@ unsafe extern "C" fn exp2reg(
     (*e).u.info = reg;
     (*e).k = VNONRELOC;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_exp2nextreg(mut fs: *mut FuncState, mut e: *mut expdesc) {
     luaK_dischargevars(fs, e);
     freeexp(fs, e);
     luaK_reserveregs(fs, 1 as libc::c_int);
     exp2reg(fs, e, (*fs).freereg as libc::c_int - 1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_exp2anyreg(
     mut fs: *mut FuncState,
     mut e: *mut expdesc,
@@ -2053,7 +2053,7 @@ pub unsafe extern "C" fn luaK_exp2anyreg(
     luaK_exp2nextreg(fs, e);
     return (*e).u.info;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_exp2anyregup(mut fs: *mut FuncState, mut e: *mut expdesc) {
     if (*e).k as libc::c_uint != VUPVAL as libc::c_int as libc::c_uint
         || (*e).t != (*e).f
@@ -2061,7 +2061,7 @@ pub unsafe extern "C" fn luaK_exp2anyregup(mut fs: *mut FuncState, mut e: *mut e
         luaK_exp2anyreg(fs, e);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_exp2val(mut fs: *mut FuncState, mut e: *mut expdesc) {
     if (*e).k as libc::c_uint == VJMP as libc::c_int as libc::c_uint || (*e).t != (*e).f
     {
@@ -2126,7 +2126,7 @@ unsafe extern "C" fn codeABRK(
     let mut k: libc::c_int = exp2RK(fs, ec);
     luaK_codeABCk(fs, o, a, b, (*ec).u.info, k);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_storevar(
     mut fs: *mut FuncState,
     mut var: *mut expdesc,
@@ -2189,7 +2189,7 @@ pub unsafe extern "C" fn luaK_storevar(
     }
     freeexp(fs, ex);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_self(
     mut fs: *mut FuncState,
     mut e: *mut expdesc,
@@ -2255,7 +2255,7 @@ unsafe extern "C" fn jumponcond(
         cond,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FuncState, mut e: *mut expdesc) {
     let mut pc: libc::c_int = 0;
     luaK_dischargevars(fs, e);
@@ -2275,7 +2275,7 @@ pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FuncState, mut e: *mut expde
     luaK_patchtohere(fs, (*e).t);
     (*e).t = -(1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_goiffalse(mut fs: *mut FuncState, mut e: *mut expdesc) {
     let mut pc: libc::c_int = 0;
     luaK_dischargevars(fs, e);
@@ -2373,7 +2373,7 @@ unsafe extern "C" fn isSCnumber(
         return 0 as libc::c_int
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_indexed(
     mut fs: *mut FuncState,
     mut t: *mut expdesc,
@@ -2772,7 +2772,7 @@ unsafe extern "C" fn codeeq(
     );
     (*e1).k = VJMP;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_prefix(
     mut fs: *mut FuncState,
     mut opr: UnOpr,
@@ -2825,7 +2825,7 @@ pub unsafe extern "C" fn luaK_prefix(
         _ => {}
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_infix(
     mut fs: *mut FuncState,
     mut op: BinOpr,
@@ -2907,7 +2907,7 @@ unsafe extern "C" fn codeconcat(
         luaK_fixline(fs, line);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_posfix(
     mut fs: *mut FuncState,
     mut opr: BinOpr,
@@ -3007,12 +3007,12 @@ pub unsafe extern "C" fn luaK_posfix(
         _ => {}
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_fixline(mut fs: *mut FuncState, mut line: libc::c_int) {
     removelastlineinfo(fs);
     savelineinfo(fs, (*fs).f, line);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_settablesize(
     mut fs: *mut FuncState,
     mut pc: libc::c_int,
@@ -3048,7 +3048,7 @@ pub unsafe extern "C" fn luaK_settablesize(
         ) = (OP_EXTRAARG as libc::c_int as Instruction) << 0 as libc::c_int
         | (extra as Instruction) << 0 as libc::c_int + 7 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_setlist(
     mut fs: *mut FuncState,
     mut base: libc::c_int,
@@ -3101,7 +3101,7 @@ unsafe extern "C" fn finaltarget(
     }
     return i;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
     let mut i: libc::c_int = 0;
     let mut p: *mut Proto = (*fs).f;

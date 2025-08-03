@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-extern "C" {
+unsafe extern "C" {
     fn _setjmp(_: *mut __jmp_buf_tag) -> libc::c_int;
     fn _longjmp(__env: *mut __jmp_buf_tag, __val: libc::c_int) -> !;
     fn abort() -> !;
@@ -614,7 +614,7 @@ pub struct CloseP {
     pub level: StkId,
     pub status: libc::c_int,
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_seterrorobj(
     mut L: *mut lua_State,
     mut errcode: libc::c_int,
@@ -646,7 +646,7 @@ pub unsafe extern "C" fn luaD_seterrorobj(
     }
     (*L).top.p = oldtop.offset(1 as libc::c_int as isize);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_throw(
     mut L: *mut lua_State,
     mut errcode: libc::c_int,
@@ -679,7 +679,7 @@ pub unsafe extern "C" fn luaD_throw(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_rawrunprotected(
     mut L: *mut lua_State,
     mut f: Pfunc,
@@ -778,7 +778,7 @@ unsafe extern "C" fn correctstack(mut L: *mut lua_State) {
         ci = (*ci).previous;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_errerr(mut L: *mut lua_State) -> ! {
     let mut msg: *mut TString = luaS_newlstr(
         L,
@@ -797,7 +797,7 @@ pub unsafe extern "C" fn luaD_errerr(mut L: *mut lua_State) -> ! {
     (*L).top.p;
     luaD_throw(L, 5 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_reallocstack(
     mut L: *mut lua_State,
     mut newsize: libc::c_int,
@@ -843,7 +843,7 @@ pub unsafe extern "C" fn luaD_reallocstack(
     }
     return 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_growstack(
     mut L: *mut lua_State,
     mut n: libc::c_int,
@@ -898,7 +898,7 @@ unsafe extern "C" fn stackinuse(mut L: *mut lua_State) -> libc::c_int {
     }
     return res;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_shrinkstack(mut L: *mut lua_State) {
     let mut inuse: libc::c_int = stackinuse(L);
     let mut max: libc::c_int = if inuse > 1000000 as libc::c_int / 3 as libc::c_int {
@@ -920,7 +920,7 @@ pub unsafe extern "C" fn luaD_shrinkstack(mut L: *mut lua_State) {
     }
     luaE_shrinkCI(L);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_inctop(mut L: *mut lua_State) {
     if ((((*L).stack_last.p).offset_from((*L).top.p) as libc::c_long
         <= 1 as libc::c_int as libc::c_long) as libc::c_int != 0 as libc::c_int)
@@ -931,7 +931,7 @@ pub unsafe extern "C" fn luaD_inctop(mut L: *mut lua_State) {
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_hook(
     mut L: *mut lua_State,
     mut event: libc::c_int,
@@ -1000,7 +1000,7 @@ pub unsafe extern "C" fn luaD_hook(
         (*ci).callstatus = ((*ci).callstatus as libc::c_int & !mask) as libc::c_ushort;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_hookcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
     (*L).oldpc = 0 as libc::c_int;
     if (*L).hookmask & (1 as libc::c_int) << 0 as libc::c_int != 0 {
@@ -1182,7 +1182,7 @@ unsafe extern "C" fn moveresults(
     }
     (*L).top.p = res.offset(wanted as isize);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_poscall(
     mut L: *mut lua_State,
     mut ci: *mut CallInfo,
@@ -1259,7 +1259,7 @@ unsafe extern "C" fn precallC(
     luaD_poscall(L, ci, n);
     return n;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_pretailcall(
     mut L: *mut lua_State,
     mut ci: *mut CallInfo,
@@ -1337,7 +1337,7 @@ pub unsafe extern "C" fn luaD_pretailcall(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_precall(
     mut L: *mut lua_State,
     mut func: StkId,
@@ -1443,7 +1443,7 @@ unsafe extern "C" fn ccall(
         .nCcalls = ((*L).nCcalls as libc::c_uint).wrapping_sub(inc) as l_uint32
         as l_uint32;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_call(
     mut L: *mut lua_State,
     mut func: StkId,
@@ -1451,7 +1451,7 @@ pub unsafe extern "C" fn luaD_call(
 ) {
     ccall(L, func, nResults, 1 as libc::c_int as l_uint32);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_callnoyield(
     mut L: *mut lua_State,
     mut func: StkId,
@@ -1608,7 +1608,7 @@ unsafe extern "C" fn precover(
     }
     return status;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_resume(
     mut L: *mut lua_State,
     mut from: *mut lua_State,
@@ -1679,12 +1679,12 @@ pub unsafe extern "C" fn lua_resume(
     };
     return status;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isyieldable(mut L: *mut lua_State) -> libc::c_int {
     return ((*L).nCcalls & 0xffff0000 as libc::c_uint
         == 0 as libc::c_int as libc::c_uint) as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_yieldk(
     mut L: *mut lua_State,
     mut nresults: libc::c_int,
@@ -1726,7 +1726,7 @@ unsafe extern "C" fn closepaux(mut L: *mut lua_State, mut ud: *mut libc::c_void)
     let mut pcl: *mut CloseP = ud as *mut CloseP;
     luaF_close(L, (*pcl).level, (*pcl).status, 0 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_closeprotected(
     mut L: *mut lua_State,
     mut level: ptrdiff_t,
@@ -1759,7 +1759,7 @@ pub unsafe extern "C" fn luaD_closeprotected(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_pcall(
     mut L: *mut lua_State,
     mut func: Pfunc,
@@ -1833,7 +1833,7 @@ unsafe extern "C" fn f_parser(mut L: *mut lua_State, mut ud: *mut libc::c_void) 
     }
     luaF_initupvals(L, cl);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaD_protectedparser(
     mut L: *mut lua_State,
     mut z: *mut ZIO,

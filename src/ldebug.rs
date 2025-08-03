@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(c_variadic, extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
     fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
@@ -626,7 +626,7 @@ unsafe extern "C" fn getbaseline(
         return (*((*f).abslineinfo).offset(i as isize)).line;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_getfuncline(
     mut f: *const Proto,
     mut pc: libc::c_int,
@@ -665,7 +665,7 @@ unsafe extern "C" fn settraps(mut ci: *mut CallInfo) {
         ci = (*ci).previous;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_sethook(
     mut L: *mut lua_State,
     mut func: lua_Hook,
@@ -687,19 +687,19 @@ pub unsafe extern "C" fn lua_sethook(
         settraps((*L).ci);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_gethook(mut L: *mut lua_State) -> lua_Hook {
     return (*L).hook;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_gethookmask(mut L: *mut lua_State) -> libc::c_int {
     return (*L).hookmask;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_gethookcount(mut L: *mut lua_State) -> libc::c_int {
     return (*L).basehookcount;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getstack(
     mut L: *mut lua_State,
     mut level: libc::c_int,
@@ -751,7 +751,7 @@ unsafe extern "C" fn findvararg(
     }
     return 0 as *const libc::c_char;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_findlocal(
     mut L: *mut lua_State,
     mut ci: *mut CallInfo,
@@ -796,7 +796,7 @@ pub unsafe extern "C" fn luaG_findlocal(
     }
     return name;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getlocal(
     mut L: *mut lua_State,
     mut ar: *const lua_Debug,
@@ -834,7 +834,7 @@ pub unsafe extern "C" fn lua_getlocal(
     }
     return name;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setlocal(
     mut L: *mut lua_State,
     mut ar: *const lua_Debug,
@@ -1048,7 +1048,7 @@ unsafe extern "C" fn auxgetinfo(
     }
     return status;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getinfo(
     mut L: *mut lua_State,
     mut what: *const libc::c_char,
@@ -1552,7 +1552,7 @@ unsafe extern "C" fn typeerror(
         extra,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_typeerror(
     mut L: *mut lua_State,
     mut o: *const TValue,
@@ -1560,7 +1560,7 @@ pub unsafe extern "C" fn luaG_typeerror(
 ) -> ! {
     typeerror(L, o, op, varinfo(L, o));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_callerror(
     mut L: *mut lua_State,
     mut o: *const TValue,
@@ -1575,7 +1575,7 @@ pub unsafe extern "C" fn luaG_callerror(
     };
     typeerror(L, o, b"call\0" as *const u8 as *const libc::c_char, extra);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_forerror(
     mut L: *mut lua_State,
     mut o: *const TValue,
@@ -1588,7 +1588,7 @@ pub unsafe extern "C" fn luaG_forerror(
         luaT_objtypename(L, o),
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_concaterror(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -1601,7 +1601,7 @@ pub unsafe extern "C" fn luaG_concaterror(
     }
     luaG_typeerror(L, p1, b"concatenate\0" as *const u8 as *const libc::c_char);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_opinterror(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -1613,7 +1613,7 @@ pub unsafe extern "C" fn luaG_opinterror(
     }
     luaG_typeerror(L, p2, msg);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_tointerror(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -1629,7 +1629,7 @@ pub unsafe extern "C" fn luaG_tointerror(
         varinfo(L, p2),
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_ordererror(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -1652,7 +1652,7 @@ pub unsafe extern "C" fn luaG_ordererror(
         );
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_addinfo(
     mut L: *mut lua_State,
     mut msg: *const libc::c_char,
@@ -1682,7 +1682,7 @@ pub unsafe extern "C" fn luaG_addinfo(
         msg,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_errormsg(mut L: *mut lua_State) -> ! {
     if (*L).errfunc != 0 as libc::c_int as libc::c_long {
         let mut errfunc: StkId = ((*L).stack.p as *mut libc::c_char)
@@ -1709,7 +1709,7 @@ pub unsafe extern "C" fn luaG_errormsg(mut L: *mut lua_State) -> ! {
     }
     luaD_throw(L, 2 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_runerror(
     mut L: *mut lua_State,
     mut fmt: *const libc::c_char,
@@ -1769,7 +1769,7 @@ unsafe extern "C" fn changedline(
     }
     return (luaG_getfuncline(p, oldpc) != luaG_getfuncline(p, newpc)) as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_tracecall(mut L: *mut lua_State) -> libc::c_int {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut p: *mut Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
@@ -1788,7 +1788,7 @@ pub unsafe extern "C" fn luaG_tracecall(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaG_traceexec(
     mut L: *mut lua_State,
     mut pc: *const Instruction,

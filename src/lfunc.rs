@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn luaT_gettmbyobj(L: *mut lua_State, o: *const TValue, event: TMS) -> *const TValue;
     fn luaM_free_(L: *mut lua_State, block: *mut libc::c_void, osize: size_t);
@@ -464,7 +464,7 @@ pub union GCUnion {
     pub th: lua_State,
     pub upv: UpVal,
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_newCclosure(
     mut L: *mut lua_State,
     mut nupvals: libc::c_int,
@@ -480,7 +480,7 @@ pub unsafe extern "C" fn luaF_newCclosure(
     (*c).nupvalues = nupvals as lu_byte;
     return c;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_newLclosure(
     mut L: *mut lua_State,
     mut nupvals: libc::c_int,
@@ -506,7 +506,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
     }
     return c;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_initupvals(mut L: *mut lua_State, mut cl: *mut LClosure) {
     let mut i: libc::c_int = 0;
     i = 0 as libc::c_int;
@@ -563,7 +563,7 @@ unsafe extern "C" fn newupval(
     }
     return uv;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_findupval(
     mut L: *mut lua_State,
     mut level: StkId,
@@ -647,7 +647,7 @@ unsafe extern "C" fn prepcallclosemth(
     }
     callclosemethod(L, uv, errobj, yy);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkId) {
     if (*level).val.tt_ as libc::c_int
         == 1 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
@@ -681,14 +681,14 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkI
         .delta = level.offset_from((*L).tbclist.p) as libc::c_long as libc::c_ushort;
     (*L).tbclist.p = level;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_unlinkupval(mut uv: *mut UpVal) {
     *(*uv).u.open.previous = (*uv).u.open.next;
     if !((*uv).u.open.next).is_null() {
         (*(*uv).u.open.next).u.open.previous = (*uv).u.open.previous;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_closeupval(mut L: *mut lua_State, mut level: StkId) {
     let mut uv: *mut UpVal = 0 as *mut UpVal;
     let mut upl: StkId = 0 as *mut StackValue;
@@ -748,7 +748,7 @@ unsafe extern "C" fn poptbclist(mut L: *mut lua_State) {
     }
     (*L).tbclist.p = tbc;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_close(
     mut L: *mut lua_State,
     mut level: StkId,
@@ -766,7 +766,7 @@ pub unsafe extern "C" fn luaF_close(
     }
     return level;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
     let mut o: *mut GCObject = luaC_newobj(
         L,
@@ -796,7 +796,7 @@ pub unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
     (*f).source = 0 as *mut TString;
     return f;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_freeproto(mut L: *mut lua_State, mut f: *mut Proto) {
     luaM_free_(
         L,
@@ -846,7 +846,7 @@ pub unsafe extern "C" fn luaF_freeproto(mut L: *mut lua_State, mut f: *mut Proto
         ::core::mem::size_of::<Proto>() as libc::c_ulong,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaF_getlocalname(
     mut f: *const Proto,
     mut local_number: libc::c_int,

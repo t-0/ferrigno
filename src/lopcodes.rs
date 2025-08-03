@@ -14,7 +14,7 @@ pub const iAx: OpMode = 3;
 pub const iAsBx: OpMode = 2;
 pub const iABx: OpMode = 1;
 pub const iABC: OpMode = 0;
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub static mut luaP_opmodes: [lu_byte; 83] = [
     ((0 as libc::c_int) << 7 as libc::c_int | (0 as libc::c_int) << 6 as libc::c_int
         | (0 as libc::c_int) << 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int

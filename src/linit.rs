@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn lua_settop(L: *mut lua_State, idx: libc::c_int);
     fn luaopen_base(L: *mut lua_State) -> libc::c_int;
@@ -138,7 +138,7 @@ static mut loadedlibs: [luaL_Reg; 11] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_openlibs(mut L: *mut lua_State) {
     let mut lib: *const luaL_Reg = 0 as *const luaL_Reg;
     lib = loadedlibs.as_ptr();

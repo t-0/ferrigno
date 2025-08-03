@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn __errno_location() -> *mut libc::c_int;
     fn setlocale(
@@ -761,7 +761,7 @@ static mut syslib: [luaL_Reg; 12] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_os(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

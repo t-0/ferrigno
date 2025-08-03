@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
 }
 pub type ptrdiff_t = libc::c_long;
@@ -683,7 +683,7 @@ unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
     dumpInteger(D, 0x5678 as libc::c_int as lua_Integer);
     dumpNumber(D, 370.5f64);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaU_dump(
     mut L: *mut lua_State,
     mut f: *const Proto,

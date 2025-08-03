@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(c_variadic, extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
@@ -435,7 +435,7 @@ unsafe extern "C" fn lastlevel(mut L: *mut lua_State) -> libc::c_int {
     }
     return le - 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_traceback(
     mut L: *mut lua_State,
     mut L1: *mut lua_State,
@@ -533,7 +533,7 @@ pub unsafe extern "C" fn luaL_traceback(
     }
     luaL_pushresult(&mut b);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_argerror(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -597,7 +597,7 @@ pub unsafe extern "C" fn luaL_argerror(
         extramsg,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_typeerror(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -629,7 +629,7 @@ unsafe extern "C" fn tag_error(
 ) {
     luaL_typeerror(L, arg, lua_typename(L, tag));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_where(mut L: *mut lua_State, mut level: libc::c_int) {
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
@@ -664,7 +664,7 @@ pub unsafe extern "C" fn luaL_where(mut L: *mut lua_State, mut level: libc::c_in
     }
     lua_pushfstring(L, b"\0" as *const u8 as *const libc::c_char);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_error(
     mut L: *mut lua_State,
     mut fmt: *const libc::c_char,
@@ -677,7 +677,7 @@ pub unsafe extern "C" fn luaL_error(
     lua_concat(L, 2 as libc::c_int);
     return lua_error(L);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_fileresult(
     mut L: *mut lua_State,
     mut stat: libc::c_int,
@@ -709,7 +709,7 @@ pub unsafe extern "C" fn luaL_fileresult(
         return 3 as libc::c_int;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_execresult(
     mut L: *mut lua_State,
     mut stat: libc::c_int,
@@ -737,7 +737,7 @@ pub unsafe extern "C" fn luaL_execresult(
         return 3 as libc::c_int;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_newmetatable(
     mut L: *mut lua_State,
     mut tname: *const libc::c_char,
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn luaL_newmetatable(
     lua_setfield(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, tname);
     return 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_setmetatable(
     mut L: *mut lua_State,
     mut tname: *const libc::c_char,
@@ -767,7 +767,7 @@ pub unsafe extern "C" fn luaL_setmetatable(
     lua_getfield(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, tname);
     lua_setmetatable(L, -(2 as libc::c_int));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_testudata(
     mut L: *mut lua_State,
     mut ud: libc::c_int,
@@ -786,7 +786,7 @@ pub unsafe extern "C" fn luaL_testudata(
     }
     return 0 as *mut libc::c_void;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkudata(
     mut L: *mut lua_State,
     mut ud: libc::c_int,
@@ -797,7 +797,7 @@ pub unsafe extern "C" fn luaL_checkudata(
         as libc::c_long != 0 || luaL_typeerror(L, ud, tname) != 0) as libc::c_int;
     return p;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkoption(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -828,7 +828,7 @@ pub unsafe extern "C" fn luaL_checkoption(
         ),
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkstack(
     mut L: *mut lua_State,
     mut space: libc::c_int,
@@ -848,7 +848,7 @@ pub unsafe extern "C" fn luaL_checkstack(
         }
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checktype(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -860,7 +860,7 @@ pub unsafe extern "C" fn luaL_checktype(
         tag_error(L, arg, t);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkany(mut L: *mut lua_State, mut arg: libc::c_int) {
     if ((lua_type(L, arg) == -(1 as libc::c_int)) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
@@ -868,7 +868,7 @@ pub unsafe extern "C" fn luaL_checkany(mut L: *mut lua_State, mut arg: libc::c_i
         luaL_argerror(L, arg, b"value expected\0" as *const u8 as *const libc::c_char);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checklstring(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -882,7 +882,7 @@ pub unsafe extern "C" fn luaL_checklstring(
     }
     return s;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optlstring(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -902,7 +902,7 @@ pub unsafe extern "C" fn luaL_optlstring(
         return luaL_checklstring(L, arg, len)
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checknumber(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -916,7 +916,7 @@ pub unsafe extern "C" fn luaL_checknumber(
     }
     return d;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optnumber(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -939,7 +939,7 @@ unsafe extern "C" fn interror(mut L: *mut lua_State, mut arg: libc::c_int) {
         tag_error(L, arg, 3 as libc::c_int);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkinteger(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -953,7 +953,7 @@ pub unsafe extern "C" fn luaL_checkinteger(
     }
     return d;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optinteger(
     mut L: *mut lua_State,
     mut arg: libc::c_int,
@@ -1080,14 +1080,14 @@ unsafe extern "C" fn prepbuffsize(
         return newbuff.offset((*B).n as isize);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_prepbuffsize(
     mut B: *mut luaL_Buffer,
     mut sz: size_t,
 ) -> *mut libc::c_char {
     return prepbuffsize(B, sz, -(1 as libc::c_int));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addlstring(
     mut B: *mut luaL_Buffer,
     mut s: *const libc::c_char,
@@ -1103,14 +1103,14 @@ pub unsafe extern "C" fn luaL_addlstring(
         (*B).n = ((*B).n as libc::c_ulong).wrapping_add(l) as size_t as size_t;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addstring(
     mut B: *mut luaL_Buffer,
     mut s: *const libc::c_char,
 ) {
     luaL_addlstring(B, s, strlen(s));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_pushresult(mut B: *mut luaL_Buffer) {
     let mut L: *mut lua_State = (*B).L;
     lua_pushlstring(L, (*B).b, (*B).n);
@@ -1120,12 +1120,12 @@ pub unsafe extern "C" fn luaL_pushresult(mut B: *mut luaL_Buffer) {
     lua_rotate(L, -(2 as libc::c_int), -(1 as libc::c_int));
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_pushresultsize(mut B: *mut luaL_Buffer, mut sz: size_t) {
     (*B).n = ((*B).n as libc::c_ulong).wrapping_add(sz) as size_t as size_t;
     luaL_pushresult(B);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
     let mut L: *mut lua_State = (*B).L;
     let mut len: size_t = 0;
@@ -1139,7 +1139,7 @@ pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
     (*B).n = ((*B).n as libc::c_ulong).wrapping_add(len) as size_t as size_t;
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_buffinit(mut L: *mut lua_State, mut B: *mut luaL_Buffer) {
     (*B).L = L;
     (*B).b = ((*B).init.b).as_mut_ptr();
@@ -1151,7 +1151,7 @@ pub unsafe extern "C" fn luaL_buffinit(mut L: *mut lua_State, mut B: *mut luaL_B
         as libc::c_int as size_t;
     lua_pushlightuserdata(L, B as *mut libc::c_void);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_buffinitsize(
     mut L: *mut lua_State,
     mut B: *mut luaL_Buffer,
@@ -1160,7 +1160,7 @@ pub unsafe extern "C" fn luaL_buffinitsize(
     luaL_buffinit(L, B);
     return prepbuffsize(B, sz, -(1 as libc::c_int));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_ref(
     mut L: *mut lua_State,
     mut t: libc::c_int,
@@ -1191,7 +1191,7 @@ pub unsafe extern "C" fn luaL_ref(
     lua_rawseti(L, t, ref_0 as lua_Integer);
     return ref_0;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_unref(
     mut L: *mut lua_State,
     mut t: libc::c_int,
@@ -1288,7 +1288,7 @@ unsafe extern "C" fn skipcomment(
         return 0 as libc::c_int
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadfilex(
     mut L: *mut lua_State,
     mut filename: *const libc::c_char,
@@ -1385,7 +1385,7 @@ unsafe extern "C" fn getS(
     (*ls).size = 0 as libc::c_int as size_t;
     return (*ls).s;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadbufferx(
     mut L: *mut lua_State,
     mut buff: *const libc::c_char,
@@ -1414,14 +1414,14 @@ pub unsafe extern "C" fn luaL_loadbufferx(
         mode,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadstring(
     mut L: *mut lua_State,
     mut s: *const libc::c_char,
 ) -> libc::c_int {
     return luaL_loadbufferx(L, s, strlen(s), s, 0 as *const libc::c_char);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_getmetafield(
     mut L: *mut lua_State,
     mut obj: libc::c_int,
@@ -1442,7 +1442,7 @@ pub unsafe extern "C" fn luaL_getmetafield(
         return tt;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_callmeta(
     mut L: *mut lua_State,
     mut obj: libc::c_int,
@@ -1462,7 +1462,7 @@ pub unsafe extern "C" fn luaL_callmeta(
     );
     return 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_len(
     mut L: *mut lua_State,
     mut idx: libc::c_int,
@@ -1482,7 +1482,7 @@ pub unsafe extern "C" fn luaL_len(
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     return l;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_tolstring(
     mut L: *mut lua_State,
     mut idx: libc::c_int,
@@ -1556,7 +1556,7 @@ pub unsafe extern "C" fn luaL_tolstring(
     }
     return lua_tolstring(L, -(1 as libc::c_int), len);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_setfuncs(
     mut L: *mut lua_State,
     mut l: *const luaL_Reg,
@@ -1582,7 +1582,7 @@ pub unsafe extern "C" fn luaL_setfuncs(
     }
     lua_settop(L, -nup - 1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_getsubtable(
     mut L: *mut lua_State,
     mut idx: libc::c_int,
@@ -1599,7 +1599,7 @@ pub unsafe extern "C" fn luaL_getsubtable(
         return 0 as libc::c_int;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_requiref(
     mut L: *mut lua_State,
     mut modname: *const libc::c_char,
@@ -1633,7 +1633,7 @@ pub unsafe extern "C" fn luaL_requiref(
         lua_setglobal(L, modname);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addgsub(
     mut b: *mut luaL_Buffer,
     mut s: *const libc::c_char,
@@ -1653,7 +1653,7 @@ pub unsafe extern "C" fn luaL_addgsub(
     }
     luaL_addstring(b, s);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_gsub(
     mut L: *mut lua_State,
     mut s: *const libc::c_char,
@@ -1815,7 +1815,7 @@ unsafe extern "C" fn warnfon(
     fflush(stderr);
     warnfcont(ud, message, tocont);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
     let mut L: *mut lua_State = lua_newstate(
         Some(
@@ -1849,7 +1849,7 @@ pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
     }
     return L;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkversion_(
     mut L: *mut lua_State,
     mut ver: lua_Number,

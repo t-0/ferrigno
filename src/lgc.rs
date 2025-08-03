@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
     fn luaE_setdebt(g: *mut global_State, debt: l_mem);
@@ -532,7 +532,7 @@ unsafe extern "C" fn iscleared(
                 | (1 as libc::c_int) << 4 as libc::c_int)
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_barrier_(
     mut L: *mut lua_State,
     mut o: *mut GCObject,
@@ -558,7 +558,7 @@ pub unsafe extern "C" fn luaC_barrier_(
             as lu_byte;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_barrierback_(mut L: *mut lua_State, mut o: *mut GCObject) {
     let mut g: *mut global_State = (*L).l_G;
     if (*o).marked as libc::c_int & 7 as libc::c_int == 6 as libc::c_int {
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn luaC_barrierback_(mut L: *mut lua_State, mut o: *mut GC
             | 5 as libc::c_int) as lu_byte;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_fix(mut L: *mut lua_State, mut o: *mut GCObject) {
     let mut g: *mut global_State = (*L).l_G;
     (*o)
@@ -593,7 +593,7 @@ pub unsafe extern "C" fn luaC_fix(mut L: *mut lua_State, mut o: *mut GCObject) {
     (*o).next = (*g).fixedgc;
     (*g).fixedgc = o;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_newobjdt(
     mut L: *mut lua_State,
     mut tt: libc::c_int,
@@ -613,7 +613,7 @@ pub unsafe extern "C" fn luaC_newobjdt(
     (*g).allgc = o;
     return o;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_newobj(
     mut L: *mut lua_State,
     mut tt: libc::c_int,
@@ -1738,7 +1738,7 @@ unsafe extern "C" fn correctpointers(mut g: *mut global_State, mut o: *mut GCObj
     checkpointer(&mut (*g).reallyold, o);
     checkpointer(&mut (*g).firstold1, o);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_checkfinalizer(
     mut L: *mut lua_State,
     mut o: *mut GCObject,
@@ -2092,7 +2092,7 @@ unsafe extern "C" fn enterinc(mut g: *mut global_State) {
     (*g).gckind = 0 as libc::c_int as lu_byte;
     (*g).lastatomic = 0 as libc::c_int as lu_mem;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_changemode(
     mut L: *mut lua_State,
     mut newmode: libc::c_int,
@@ -2177,7 +2177,7 @@ unsafe extern "C" fn deletelist(
         p = next;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_freeallobjects(mut L: *mut lua_State) {
     let mut g: *mut global_State = (*L).l_G;
     (*g).gcstp = 4 as libc::c_int as lu_byte;
@@ -2307,7 +2307,7 @@ unsafe extern "C" fn singlestep(mut L: *mut lua_State) -> lu_mem {
     (*g).gcstopem = 0 as libc::c_int as lu_byte;
     return work;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_runtilstate(
     mut L: *mut lua_State,
     mut statesmask: libc::c_int,
@@ -2350,7 +2350,7 @@ unsafe extern "C" fn incstep(mut L: *mut lua_State, mut g: *mut global_State) {
         luaE_setdebt(g, debt);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_step(mut L: *mut lua_State) {
     let mut g: *mut global_State = (*L).l_G;
     if !((*g).gcstp as libc::c_int == 0 as libc::c_int) {
@@ -2374,7 +2374,7 @@ unsafe extern "C" fn fullinc(mut L: *mut lua_State, mut g: *mut global_State) {
     luaC_runtilstate(L, (1 as libc::c_int) << 8 as libc::c_int);
     setpause(g);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaC_fullgc(
     mut L: *mut lua_State,
     mut isemergency: libc::c_int,

@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn acos(_: libc::c_double) -> libc::c_double;
     fn asin(_: libc::c_double) -> libc::c_double;
@@ -784,7 +784,7 @@ static mut mathlib: [luaL_Reg; 28] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_math(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

@@ -8,7 +8,7 @@
     unused_mut
 )]
 pub type lu_byte = libc::c_uchar;
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub static mut luai_ctype_: [lu_byte; 257] = [
     0 as libc::c_int as lu_byte,
     0 as libc::c_int as lu_byte,

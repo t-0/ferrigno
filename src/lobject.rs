@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(c_variadic, extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn localeconv() -> *mut lconv;
     fn pow(_: libc::c_double, _: libc::c_double) -> libc::c_double;
@@ -547,7 +547,7 @@ pub struct BuffFS {
     pub blen: libc::c_int,
     pub space: [libc::c_char; 199],
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> libc::c_int {
     static mut log_2: [lu_byte; 256] = [
         0 as libc::c_int as lu_byte,
@@ -874,7 +874,7 @@ unsafe extern "C" fn numarith(
         _ => return 0 as libc::c_int as lua_Number,
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_rawarith(
     mut L: *mut lua_State,
     mut op: libc::c_int,
@@ -1017,7 +1017,7 @@ pub unsafe extern "C" fn luaO_rawarith(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_arith(
     mut L: *mut lua_State,
     mut op: libc::c_int,
@@ -1035,7 +1035,7 @@ pub unsafe extern "C" fn luaO_arith(
         );
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_hexavalue(mut c: libc::c_int) -> libc::c_int {
     if luai_ctype_[(c + 1 as libc::c_int) as usize] as libc::c_int
         & (1 as libc::c_int) << 1 as libc::c_int != 0
@@ -1190,7 +1190,7 @@ unsafe extern "C" fn l_str2int(
         return s;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_str2num(
     mut s: *const libc::c_char,
     mut o: *mut TValue,
@@ -1220,7 +1220,7 @@ pub unsafe extern "C" fn luaO_str2num(
     return (e.offset_from(s) as libc::c_long + 1 as libc::c_int as libc::c_long)
         as size_t;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_utf8esc(
     mut buff: *mut libc::c_char,
     mut x: libc::c_ulong,
@@ -1291,7 +1291,7 @@ unsafe extern "C" fn tostringbuff(
     }
     return len;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_tostring(mut L: *mut lua_State, mut obj: *mut TValue) {
     let mut buff: [libc::c_char; 44] = [0; 44];
     let mut len: libc::c_int = tostringbuff(obj, buff.as_mut_ptr());
@@ -1356,7 +1356,7 @@ unsafe extern "C" fn addnum2buff(mut buff: *mut BuffFS, mut num: *mut TValue) {
     let mut len: libc::c_int = tostringbuff(num, numbuff);
     (*buff).blen += len;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_pushvfstring(
     mut L: *mut lua_State,
     mut fmt: *const libc::c_char,
@@ -1488,7 +1488,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
         .contents)
         .as_mut_ptr();
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_pushfstring(
     mut L: *mut lua_State,
     mut fmt: *const libc::c_char,
@@ -1500,7 +1500,7 @@ pub unsafe extern "C" fn luaO_pushfstring(
     msg = luaO_pushvfstring(L, fmt, argp.as_va_list());
     return msg;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaO_chunkid(
     mut out: *mut libc::c_char,
     mut source: *const libc::c_char,

@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
@@ -1471,7 +1471,7 @@ unsafe extern "C" fn createstdfile(
     }
     lua_setfield(L, -(2 as libc::c_int), fname);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_io(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

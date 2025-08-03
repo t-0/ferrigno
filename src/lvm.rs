@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn pow(_: libc::c_double, _: libc::c_double) -> libc::c_double;
     fn floor(_: libc::c_double) -> libc::c_double;
@@ -703,7 +703,7 @@ unsafe extern "C" fn l_strton(
                 .wrapping_add(1 as libc::c_int as libc::c_ulong)) as libc::c_int;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_tonumber_(
     mut obj: *const TValue,
     mut n: *mut lua_Number,
@@ -730,7 +730,7 @@ pub unsafe extern "C" fn luaV_tonumber_(
         return 0 as libc::c_int
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_flttointeger(
     mut n: lua_Number,
     mut p: *mut lua_Integer,
@@ -755,7 +755,7 @@ pub unsafe extern "C" fn luaV_flttointeger(
             1 as libc::c_int != 0
         }) as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_tointegerns(
     mut obj: *const TValue,
     mut p: *mut lua_Integer,
@@ -774,7 +774,7 @@ pub unsafe extern "C" fn luaV_tointegerns(
         return 0 as libc::c_int
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_tointeger(
     mut obj: *const TValue,
     mut p: *mut lua_Integer,
@@ -986,7 +986,7 @@ unsafe extern "C" fn floatforloop(mut ra: StkId) -> libc::c_int {
         return 0 as libc::c_int
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_finishget(
     mut L: *mut lua_State,
     mut t: *const TValue,
@@ -1058,7 +1058,7 @@ pub unsafe extern "C" fn luaV_finishget(
         b"'__index' chain too long; possible loop\0" as *const u8 as *const libc::c_char,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_finishset(
     mut L: *mut lua_State,
     mut t: *const TValue,
@@ -1336,7 +1336,7 @@ unsafe extern "C" fn lessthanothers(
         return luaT_callorderTM(L, l, r, TM_LT)
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_lessthan(
     mut L: *mut lua_State,
     mut l: *const TValue,
@@ -1366,7 +1366,7 @@ unsafe extern "C" fn lessequalothers(
         return luaT_callorderTM(L, l, r, TM_LE)
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_lessequal(
     mut L: *mut lua_State,
     mut l: *const TValue,
@@ -1380,7 +1380,7 @@ pub unsafe extern "C" fn luaV_lessequal(
         return lessequalothers(L, l, r)
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_equalobj(
     mut L: *mut lua_State,
     mut t1: *const TValue,
@@ -1532,7 +1532,7 @@ unsafe extern "C" fn copy2buff(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: libc::c_int) {
     if total == 1 as libc::c_int {
         return;
@@ -1697,7 +1697,7 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: libc::c_i
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_objlen(
     mut L: *mut lua_State,
     mut ra: StkId,
@@ -1764,7 +1764,7 @@ pub unsafe extern "C" fn luaV_objlen(
     }
     luaT_callTMres(L, tm, rb, rb, ra);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_idiv(
     mut L: *mut lua_State,
     mut m: lua_Integer,
@@ -1792,7 +1792,7 @@ pub unsafe extern "C" fn luaV_idiv(
         return q;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_mod(
     mut L: *mut lua_State,
     mut m: lua_Integer,
@@ -1819,7 +1819,7 @@ pub unsafe extern "C" fn luaV_mod(
         return r;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_modf(
     mut L: *mut lua_State,
     mut m: lua_Number,
@@ -1838,7 +1838,7 @@ pub unsafe extern "C" fn luaV_modf(
     }
     return r;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_shiftl(
     mut x: lua_Integer,
     mut y: lua_Integer,
@@ -1910,7 +1910,7 @@ unsafe extern "C" fn pushclosure(
         i;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut base: StkId = ((*ci).func.p).offset(1 as libc::c_int as isize);
@@ -2001,7 +2001,7 @@ pub unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
         _ => {}
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) {
     let mut i: Instruction = 0;
     let mut ra_65: StkId = 0 as *mut StackValue;

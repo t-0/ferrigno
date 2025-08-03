@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     pub type BlockCnt;
     fn luaO_utf8esc(buff: *mut libc::c_char, x: libc::c_ulong) -> libc::c_int;
@@ -697,7 +697,7 @@ unsafe extern "C" fn save(mut ls: *mut LexState, mut c: libc::c_int) {
     (*b).n = ((*b).n).wrapping_add(1);
     *((*b).buffer).offset(fresh0 as isize) = c as libc::c_char;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_init(mut L: *mut lua_State) {
     let mut i: libc::c_int = 0;
     let mut e: *mut TString = luaS_newlstr(
@@ -721,7 +721,7 @@ pub unsafe extern "C" fn luaX_init(mut L: *mut lua_State) {
         i;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_token2str(
     mut ls: *mut LexState,
     mut token: libc::c_int,
@@ -791,14 +791,14 @@ unsafe extern "C" fn lexerror(
     }
     luaD_throw((*ls).L, 3 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_syntaxerror(
     mut ls: *mut LexState,
     mut msg: *const libc::c_char,
 ) -> ! {
     lexerror(ls, msg, (*ls).t.token);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_newstring(
     mut ls: *mut LexState,
     mut str: *const libc::c_char,
@@ -863,7 +863,7 @@ unsafe extern "C" fn inclinenumber(mut ls: *mut LexState) {
         );
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_setinput(
     mut L: *mut lua_State,
     mut ls: *mut LexState,
@@ -1811,7 +1811,7 @@ unsafe extern "C" fn llex(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_next(mut ls: *mut LexState) {
     (*ls).lastline = (*ls).linenumber;
     if (*ls).lookahead.token != TK_EOS as libc::c_int {
@@ -1821,7 +1821,7 @@ pub unsafe extern "C" fn luaX_next(mut ls: *mut LexState) {
         (*ls).t.token = llex(ls, &mut (*ls).t.seminfo);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaX_lookahead(mut ls: *mut LexState) -> libc::c_int {
     (*ls).lookahead.token = llex(ls, &mut (*ls).lookahead.seminfo);
     return (*ls).lookahead.token;

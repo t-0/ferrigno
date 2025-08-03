@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     pub type CallInfo;
     fn lua_newthread(L: *mut lua_State) -> *mut lua_State;
@@ -377,7 +377,7 @@ static mut co_funcs: [luaL_Reg; 9] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

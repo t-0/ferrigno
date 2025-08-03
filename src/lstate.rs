@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn memcpy(
         _: *mut libc::c_void,
@@ -533,7 +533,7 @@ unsafe extern "C" fn luai_makeseed(mut L: *mut lua_State) -> libc::c_uint {
         as libc::c_int;
     return luaS_hash(buff.as_mut_ptr(), p as size_t, h);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_setdebt(mut g: *mut global_State, mut debt: l_mem) {
     let mut tb: l_mem = ((*g).totalbytes + (*g).GCdebt) as lu_mem as l_mem;
     if debt < tb - (!(0 as libc::c_int as lu_mem) >> 1 as libc::c_int) as l_mem {
@@ -542,14 +542,14 @@ pub unsafe extern "C" fn luaE_setdebt(mut g: *mut global_State, mut debt: l_mem)
     (*g).totalbytes = tb - debt;
     (*g).GCdebt = debt;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(
     mut L: *mut lua_State,
     mut limit: libc::c_uint,
 ) -> libc::c_int {
     return 200 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_extendCI(mut L: *mut lua_State) -> *mut CallInfo {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     ci = luaM_malloc_(
@@ -587,7 +587,7 @@ unsafe extern "C" fn freeCI(mut L: *mut lua_State) {
         (*L).nci;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_shrinkCI(mut L: *mut lua_State) {
     let mut ci: *mut CallInfo = (*(*L).ci).next;
     let mut next: *mut CallInfo = 0 as *mut CallInfo;
@@ -615,7 +615,7 @@ pub unsafe extern "C" fn luaE_shrinkCI(mut L: *mut lua_State) {
         ci = next2;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_checkcstack(mut L: *mut lua_State) {
     if (*L).nCcalls & 0xffff as libc::c_int as libc::c_uint
         == 200 as libc::c_int as libc::c_uint
@@ -627,7 +627,7 @@ pub unsafe extern "C" fn luaE_checkcstack(mut L: *mut lua_State) {
         luaD_errerr(L);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_incCstack(mut L: *mut lua_State) {
     (*L).nCcalls = ((*L).nCcalls).wrapping_add(1);
     (*L).nCcalls;
@@ -783,7 +783,7 @@ unsafe extern "C" fn close_state(mut L: *mut lua_State) {
         0 as libc::c_int as size_t,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State {
     let mut g: *mut global_State = (*L).l_G;
     let mut o: *mut GCObject = 0 as *mut GCObject;
@@ -825,7 +825,7 @@ pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State 
     stack_init(L1, L);
     return L1;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_freethread(mut L: *mut lua_State, mut L1: *mut lua_State) {
     let mut l: *mut LX = (L1 as *mut lu_byte).offset(-(8 as libc::c_ulong as isize))
         as *mut LX;
@@ -833,7 +833,7 @@ pub unsafe extern "C" fn luaE_freethread(mut L: *mut lua_State, mut L1: *mut lua
     freestack(L1);
     luaM_free_(L, l as *mut libc::c_void, ::core::mem::size_of::<LX>() as libc::c_ulong);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_resetthread(
     mut L: *mut lua_State,
     mut status: libc::c_int,
@@ -864,7 +864,7 @@ pub unsafe extern "C" fn luaE_resetthread(
     );
     return status;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_closethread(
     mut L: *mut lua_State,
     mut from: *mut lua_State,
@@ -879,11 +879,11 @@ pub unsafe extern "C" fn lua_closethread(
     status = luaE_resetthread(L, (*L).status as libc::c_int);
     return status;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_resetthread(mut L: *mut lua_State) -> libc::c_int {
     return lua_closethread(L, 0 as *mut lua_State);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newstate(
     mut f: lua_Alloc,
     mut ud: *mut libc::c_void,
@@ -980,12 +980,12 @@ pub unsafe extern "C" fn lua_newstate(
     }
     return L;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_close(mut L: *mut lua_State) {
     L = (*(*L).l_G).mainthread;
     close_state(L);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_warning(
     mut L: *mut lua_State,
     mut msg: *const libc::c_char,
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn luaE_warning(
         wf.expect("non-null function pointer")((*(*L).l_G).ud_warn, msg, tocont);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaE_warnerror(
     mut L: *mut lua_State,
     mut where_0: *const libc::c_char,

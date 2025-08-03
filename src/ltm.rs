@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn luaG_concaterror(L: *mut lua_State, p1: *const TValue, p2: *const TValue) -> !;
     fn luaG_opinterror(
@@ -473,7 +473,7 @@ pub union GCUnion {
 static mut udatatypename: [libc::c_char; 9] = unsafe {
     *::core::mem::transmute::<&[u8; 9], &[libc::c_char; 9]>(b"userdata\0")
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub static mut luaT_typenames_: [*const libc::c_char; 12] = unsafe {
     [
         b"no value\0" as *const u8 as *const libc::c_char,
@@ -490,7 +490,7 @@ pub static mut luaT_typenames_: [*const libc::c_char; 12] = unsafe {
         b"proto\0" as *const u8 as *const libc::c_char,
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_init(mut L: *mut lua_State) {
     static mut luaT_eventname: [*const libc::c_char; 25] = [
         b"__index\0" as *const u8 as *const libc::c_char,
@@ -533,7 +533,7 @@ pub unsafe extern "C" fn luaT_init(mut L: *mut lua_State) {
         i;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_gettm(
     mut events: *mut Table,
     mut event: TMS,
@@ -550,7 +550,7 @@ pub unsafe extern "C" fn luaT_gettm(
         return tm
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_gettmbyobj(
     mut L: *mut lua_State,
     mut o: *const TValue,
@@ -574,7 +574,7 @@ pub unsafe extern "C" fn luaT_gettmbyobj(
         &mut (*(*L).l_G).nilvalue as *mut TValue as *const TValue
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_objtypename(
     mut L: *mut lua_State,
     mut o: *const TValue,
@@ -606,7 +606,7 @@ pub unsafe extern "C" fn luaT_objtypename(
     return luaT_typenames_[(((*o).tt_ as libc::c_int & 0xf as libc::c_int)
         + 1 as libc::c_int) as usize];
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_callTM(
     mut L: *mut lua_State,
     mut f: *const TValue,
@@ -641,7 +641,7 @@ pub unsafe extern "C" fn luaT_callTM(
         luaD_callnoyield(L, func, 0 as libc::c_int);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_callTMres(
     mut L: *mut lua_State,
     mut f: *const TValue,
@@ -697,7 +697,7 @@ unsafe extern "C" fn callbinTM(
     luaT_callTMres(L, tm, p1, p2, res);
     return 1 as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_trybinTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -735,7 +735,7 @@ pub unsafe extern "C" fn luaT_trybinTM(
         }
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut lua_State) {
     let mut top: StkId = (*L).top.p;
     if ((callbinTM(
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut lua_State) {
         );
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_trybinassocTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -768,7 +768,7 @@ pub unsafe extern "C" fn luaT_trybinassocTM(
         luaT_trybinTM(L, p1, p2, res, event);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_trybiniTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -786,7 +786,7 @@ pub unsafe extern "C" fn luaT_trybiniTM(
     (*io).tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
     luaT_trybinassocTM(L, p1, &mut aux, flip, res, event);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_callorderTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -801,7 +801,7 @@ pub unsafe extern "C" fn luaT_callorderTM(
     }
     luaG_ordererror(L, p1, p2);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_callorderiTM(
     mut L: *mut lua_State,
     mut p1: *const TValue,
@@ -836,7 +836,7 @@ pub unsafe extern "C" fn luaT_callorderiTM(
     }
     return luaT_callorderTM(L, p1, p2, event);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_adjustvarargs(
     mut L: *mut lua_State,
     mut nfixparams: libc::c_int,
@@ -882,7 +882,7 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
     (*ci).func.p = ((*ci).func.p).offset((actual + 1 as libc::c_int) as isize);
     (*ci).top.p = ((*ci).top.p).offset((actual + 1 as libc::c_int) as isize);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaT_getvarargs(
     mut L: *mut lua_State,
     mut ci: *mut CallInfo,

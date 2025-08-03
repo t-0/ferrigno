@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
@@ -1094,7 +1094,7 @@ static mut dblib: [luaL_Reg; 18] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_debug(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

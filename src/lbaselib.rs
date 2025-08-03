@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
@@ -1217,7 +1217,7 @@ static mut base_funcs: [luaL_Reg; 26] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_base(mut L: *mut lua_State) -> libc::c_int {
     lua_rawgeti(
         L,

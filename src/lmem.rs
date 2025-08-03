@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn luaG_runerror(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> !;
     fn luaD_throw(L: *mut lua_State, errcode: libc::c_int) -> !;
@@ -314,7 +314,7 @@ pub type lua_Alloc = Option::<
         size_t,
     ) -> *mut libc::c_void,
 >;
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_growaux_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -356,7 +356,7 @@ pub unsafe extern "C" fn luaM_growaux_(
     *psize = size;
     return newblock;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_shrinkvector_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -371,14 +371,14 @@ pub unsafe extern "C" fn luaM_shrinkvector_(
     *size = final_n;
     return newblock;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_toobig(mut L: *mut lua_State) -> ! {
     luaG_runerror(
         L,
         b"memory allocation error: block too big\0" as *const u8 as *const libc::c_char,
     );
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_free_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -408,7 +408,7 @@ unsafe extern "C" fn tryagain(
         return 0 as *mut libc::c_void
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_realloc_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -432,7 +432,7 @@ pub unsafe extern "C" fn luaM_realloc_(
         as l_mem;
     return newblock;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_saferealloc_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -447,7 +447,7 @@ pub unsafe extern "C" fn luaM_saferealloc_(
     }
     return newblock;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaM_malloc_(
     mut L: *mut lua_State,
     mut size: size_t,

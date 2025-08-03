@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn lua_gettop(L: *mut lua_State) -> libc::c_int;
     fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
@@ -514,7 +514,7 @@ static mut funcs: [luaL_Reg; 7] = unsafe {
         },
     ]
 };
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_utf8(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,

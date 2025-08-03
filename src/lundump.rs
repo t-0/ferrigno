@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn memcmp(
         _: *const libc::c_void,
@@ -995,7 +995,7 @@ unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
         error(S, b"float format mismatch\0" as *const u8 as *const libc::c_char);
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaU_undump(
     mut L: *mut lua_State,
     mut Z: *mut ZIO,

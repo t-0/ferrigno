@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn memcpy(
         _: *mut libc::c_void,
@@ -333,7 +333,7 @@ pub struct Zio {
     pub L: *mut lua_State,
 }
 pub type ZIO = Zio;
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> libc::c_int {
     let mut size: size_t = 0;
     let mut L: *mut lua_State = (*z).L;
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> libc::c_int {
     (*z).p = ((*z).p).offset(1);
     return *fresh0 as libc::c_uchar as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaZ_init(
     mut L: *mut lua_State,
     mut z: *mut ZIO,
@@ -361,7 +361,7 @@ pub unsafe extern "C" fn luaZ_init(
     (*z).n = 0 as libc::c_int as size_t;
     (*z).p = 0 as *const libc::c_char;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaZ_read(
     mut z: *mut ZIO,
     mut b: *mut libc::c_void,

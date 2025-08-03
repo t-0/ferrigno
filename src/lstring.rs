@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn memcpy(
         _: *mut libc::c_void,
@@ -452,7 +452,7 @@ pub union GCUnion {
     pub th: lua_State,
     pub upv: UpVal,
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_eqlngstr(
     mut a: *mut TString,
     mut b: *mut TString,
@@ -466,7 +466,7 @@ pub unsafe extern "C" fn luaS_eqlngstr(
                 len,
             ) == 0 as libc::c_int) as libc::c_int;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_hash(
     mut str: *const libc::c_char,
     mut l: size_t,
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn luaS_hash(
     }
     return h;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_hashlongstr(mut ts: *mut TString) -> libc::c_uint {
     if (*ts).extra as libc::c_int == 0 as libc::c_int {
         let mut len: size_t = (*ts).u.lnglen;
@@ -529,7 +529,7 @@ unsafe extern "C" fn tablerehash(
         i;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_resize(mut L: *mut lua_State, mut nsize: libc::c_int) {
     let mut tb: *mut stringtable = &mut (*(*L).l_G).strt;
     let mut osize: libc::c_int = (*tb).size;
@@ -559,7 +559,7 @@ pub unsafe extern "C" fn luaS_resize(mut L: *mut lua_State, mut nsize: libc::c_i
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
     let mut i: libc::c_int = 0;
     let mut j: libc::c_int = 0;
@@ -580,7 +580,7 @@ pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
         i;
     }
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_init(mut L: *mut lua_State) {
     let mut g: *mut global_State = (*L).l_G;
     let mut i: libc::c_int = 0;
@@ -638,7 +638,7 @@ unsafe extern "C" fn createstrobj(
     *((*ts).contents).as_mut_ptr().offset(l as isize) = '\0' as i32 as libc::c_char;
     return ts;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_createlngstrobj(
     mut L: *mut lua_State,
     mut l: size_t,
@@ -653,7 +653,7 @@ pub unsafe extern "C" fn luaS_createlngstrobj(
     (*ts).shrlen = 0xff as libc::c_int as lu_byte;
     return ts;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_remove(mut L: *mut lua_State, mut ts: *mut TString) {
     let mut tb: *mut stringtable = &mut (*(*L).l_G).strt;
     let mut p: *mut *mut TString = &mut *((*tb).hash)
@@ -754,7 +754,7 @@ unsafe extern "C" fn internshrstr(
     (*tb).nuse;
     return ts;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_newlstr(
     mut L: *mut lua_State,
     mut str: *const libc::c_char,
@@ -786,7 +786,7 @@ pub unsafe extern "C" fn luaS_newlstr(
         return ts;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_new(
     mut L: *mut lua_State,
     mut str: *const libc::c_char,
@@ -819,7 +819,7 @@ pub unsafe extern "C" fn luaS_new(
     *fresh4 = luaS_newlstr(L, str, strlen(str));
     return *p.offset(0 as libc::c_int as isize);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaS_newudata(
     mut L: *mut lua_State,
     mut s: size_t,

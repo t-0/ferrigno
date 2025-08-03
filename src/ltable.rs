@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_longjmp;
     fn frexp(_: libc::c_double, _: *mut libc::c_int) -> libc::c_double;
     fn luaO_ceillog2(x: libc::c_uint) -> libc::c_int;
@@ -692,7 +692,7 @@ unsafe extern "C" fn equalkey(
         _ => return ((*k1).value_.gc == (*n2).u.key_val.gc) as libc::c_int,
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_realasize(mut t: *const Table) -> libc::c_uint {
     if (*t).flags as libc::c_int & (1 as libc::c_int) << 7 as libc::c_int == 0
         || (*t).alimit & ((*t).alimit).wrapping_sub(1 as libc::c_int as libc::c_uint)
@@ -804,7 +804,7 @@ unsafe extern "C" fn findindex(
         return i.wrapping_add(1 as libc::c_int as libc::c_uint).wrapping_add(asize);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_next(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1076,7 +1076,7 @@ unsafe extern "C" fn exchangehashpart(mut t1: *mut Table, mut t2: *mut Table) {
     (*t2).node = node;
     (*t2).lastfree = lastfree;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_resize(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1149,7 +1149,7 @@ pub unsafe extern "C" fn luaH_resize(
     reinsert(L, &mut newt, t);
     freehash(L, &mut newt);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_resizearray(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1197,7 +1197,7 @@ unsafe extern "C" fn rehash(
     asize = computesizes(nums.as_mut_ptr(), &mut na);
     luaH_resize(L, t, asize, (totaluse as libc::c_uint).wrapping_sub(na));
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
     let mut o: *mut GCObject = luaC_newobj(
         L,
@@ -1214,7 +1214,7 @@ pub unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
     setnodevector(L, t, 0 as libc::c_int as libc::c_uint);
     return t;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_free(mut L: *mut lua_State, mut t: *mut Table) {
     freehash(L, t);
     luaM_free_(
@@ -1336,7 +1336,7 @@ unsafe extern "C" fn luaH_newkey(
     (*io1).value_ = (*io2).value_;
     (*io1).tt_ = (*io2).tt_;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_getint(
     mut t: *mut Table,
     mut key: lua_Integer,
@@ -1374,7 +1374,7 @@ pub unsafe extern "C" fn luaH_getint(
         return &absentkey;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_getshortstr(
     mut t: *mut Table,
     mut key: *mut TString,
@@ -1401,7 +1401,7 @@ pub unsafe extern "C" fn luaH_getshortstr(
         }
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_getstr(
     mut t: *mut Table,
     mut key: *mut TString,
@@ -1424,7 +1424,7 @@ pub unsafe extern "C" fn luaH_getstr(
         return getgeneric(t, &mut ko, 0 as libc::c_int);
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_get(
     mut t: *mut Table,
     mut key: *const TValue,
@@ -1443,7 +1443,7 @@ pub unsafe extern "C" fn luaH_get(
     }
     return getgeneric(t, key, 0 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_finishset(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1462,7 +1462,7 @@ pub unsafe extern "C" fn luaH_finishset(
         (*io1).tt_ = (*io2).tt_;
     };
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_set(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1472,7 +1472,7 @@ pub unsafe extern "C" fn luaH_set(
     let mut slot: *const TValue = luaH_get(t, key);
     luaH_finishset(L, t, key, slot, value);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_setint(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1566,7 +1566,7 @@ unsafe extern "C" fn binsearch(
     }
     return i;
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaH_getn(mut t: *mut Table) -> lua_Unsigned {
     let mut limit: libc::c_uint = (*t).alimit;
     if limit > 0 as libc::c_int as libc::c_uint

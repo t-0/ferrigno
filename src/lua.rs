@@ -8,23 +8,29 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
     pub type lua_State;
     pub type CallInfo;
+    static mut stdin: *mut FILE;
     static mut stdout: *mut FILE;
     static mut stderr: *mut FILE;
     fn fflush(__stream: *mut FILE) -> libc::c_int;
     fn fprintf(_: *mut FILE, _: *const libc::c_char, _: ...) -> libc::c_int;
+    fn fgets(
+        __s: *mut libc::c_char,
+        __n: libc::c_int,
+        __stream: *mut FILE,
+    ) -> *mut libc::c_char;
+    fn fputs(__s: *const libc::c_char, __stream: *mut FILE) -> libc::c_int;
     fn fwrite(
         _: *const libc::c_void,
         _: libc::c_ulong,
         _: libc::c_ulong,
         _: *mut FILE,
     ) -> libc::c_ulong;
-    fn free(_: *mut libc::c_void);
     fn getenv(__name: *const libc::c_char) -> *mut libc::c_char;
     fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
     fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
@@ -126,9 +132,6 @@ extern "C" {
     );
     fn luaL_openlibs(L: *mut lua_State);
     fn isatty(__fd: libc::c_int) -> libc::c_int;
-    fn readline(_: *const libc::c_char) -> *mut libc::c_char;
-    static mut rl_readline_name: *const libc::c_char;
-    fn add_history(_: *const libc::c_char);
 }
 pub type size_t = libc::c_ulong;
 pub type __uint32_t = libc::c_uint;
@@ -822,9 +825,10 @@ unsafe extern "C" fn pushline(
     let mut b: *mut libc::c_char = buffer.as_mut_ptr();
     let mut l: size_t = 0;
     let mut prmt: *const libc::c_char = get_prompt(L, firstline);
-    b = readline(prmt);
-    let mut readstatus: libc::c_int = (b != 0 as *mut libc::c_void as *mut libc::c_char)
-        as libc::c_int;
+    fputs(prmt, stdout);
+    fflush(stdout);
+    let mut readstatus: libc::c_int = (fgets(b, 512 as libc::c_int, stdin)
+        != 0 as *mut libc::c_void as *mut libc::c_char) as libc::c_int;
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     if readstatus == 0 as libc::c_int {
         return 0 as libc::c_int;
@@ -848,7 +852,6 @@ unsafe extern "C" fn pushline(
     } else {
         lua_pushlstring(L, b, l);
     }
-    free(b as *mut libc::c_void);
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> libc::c_int {
@@ -872,9 +875,7 @@ unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> libc::c_int {
     if status == 0 as libc::c_int {
         lua_rotate(L, -(2 as libc::c_int), -(1 as libc::c_int));
         lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
-        if *line.offset(0 as libc::c_int as isize) as libc::c_int != '\0' as i32 {
-            add_history(line);
-        }
+        *line.offset(0 as libc::c_int as isize) as libc::c_int != '\0' as i32;
     } else {
         lua_settop(L, -(2 as libc::c_int) - 1 as libc::c_int);
     }
@@ -892,7 +893,6 @@ unsafe extern "C" fn multiline(mut L: *mut lua_State) -> libc::c_int {
             0 as *const libc::c_char,
         );
         if incomplete(L, status) == 0 || pushline(L, 0 as libc::c_int) == 0 {
-            add_history(line);
             return status;
         }
         lua_rotate(L, -(2 as libc::c_int), -(1 as libc::c_int));
@@ -950,7 +950,6 @@ unsafe extern "C" fn doREPL(mut L: *mut lua_State) {
     let mut status: libc::c_int = 0;
     let mut oldprogname: *const libc::c_char = progname;
     progname = 0 as *const libc::c_char;
-    rl_readline_name = b"lua\0" as *const u8 as *const libc::c_char;
     loop {
         status = loadline(L);
         if !(status != -(1 as libc::c_int)) {
@@ -1040,7 +1039,7 @@ unsafe extern "C" fn pmain(mut L: *mut lua_State) -> libc::c_int {
     lua_pushboolean(L, 1 as libc::c_int);
     return 1 as libc::c_int;
 }
-unsafe fn main_0(
+pub unsafe fn main_0(
     mut argc: libc::c_int,
     mut argv: *mut *mut libc::c_char,
 ) -> libc::c_int {
@@ -1079,23 +1078,4 @@ unsafe fn main_0(
     } else {
         1 as libc::c_int
     };
-}
-pub fn main() {
-    let mut args: Vec::<*mut libc::c_char> = Vec::new();
-    for arg in ::std::env::args() {
-        args.push(
-            (::std::ffi::CString::new(arg))
-                .expect("Failed to convert argument into CString.")
-                .into_raw(),
-        );
-    }
-    args.push(::core::ptr::null_mut());
-    unsafe {
-        ::std::process::exit(
-            main_0(
-                (args.len() - 1) as libc::c_int,
-                args.as_mut_ptr() as *mut *mut libc::c_char,
-            ) as i32,
-        )
-    }
 }

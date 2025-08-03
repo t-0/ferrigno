@@ -8,7 +8,7 @@
     unused_mut
 )]
 #![feature(extern_types)]
-extern "C" {
+unsafe extern "C" {
     pub type lua_State;
     fn __ctype_b_loc() -> *mut *const libc::c_ushort;
     fn __ctype_tolower_loc() -> *mut *const __int32_t;
@@ -3580,7 +3580,7 @@ unsafe extern "C" fn createmetatable(mut L: *mut lua_State) {
     );
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
-#[no_mangle]
+#[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaopen_string(mut L: *mut lua_State) -> libc::c_int {
     luaL_checkversion_(
         L,
