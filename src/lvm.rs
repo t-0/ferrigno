@@ -1048,7 +1048,7 @@ pub unsafe extern "C" fn luaV_finishget(
             return;
         }
         loop_0 += 1;
-        loop_0;
+
     }
     luaG_runerror(
         L,
@@ -1154,7 +1154,7 @@ pub unsafe extern "C" fn luaV_finishset(
             return;
         }
         loop_0 += 1;
-        loop_0;
+
     }
     luaG_runerror(
         L,
@@ -6142,7 +6142,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             (*io1_17).value_ = (*io2_17).value_;
                             (*io1_17).tt_ = (*io2_17).tt_;
                             last = last.wrapping_sub(1);
-                            last;
+
                             if (*val).tt_ as i32
                                 & (1i32) << 6i32 != 0
                             {

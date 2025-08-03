@@ -533,7 +533,6 @@ unsafe extern "C" fn dolibrary(
     } else {
         *modname = '\0' as i32 as libc::c_char;
         modname = modname.offset(1);
-        modname;
     }
     lua_getglobal(L, b"require\0" as *const u8 as *const libc::c_char);
     lua_pushstring(L, modname);

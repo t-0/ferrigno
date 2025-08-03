@@ -1582,7 +1582,7 @@ unsafe extern "C" fn lmemfind(
             }
         {
             init = init.offset(1);
-            init;
+
             if memcmp(
                 init as *const libc::c_void,
                 s2.offset(1i32 as isize) as *const libc::c_void,
@@ -1773,7 +1773,7 @@ unsafe extern "C" fn str_find_aux(
         if anchor != 0 {
             p = p.offset(1);
             lp = lp.wrapping_sub(1);
-            lp;
+
         }
         prepstate(&mut ms, L, s, ls, p, lp);
         loop {
@@ -1834,7 +1834,7 @@ unsafe extern "C" fn gmatch_aux(mut L: *mut lua_State) -> i32 {
             return push_captures(&mut (*gm).ms, src, e);
         }
         src = src.offset(1);
-        src;
+
     }
     return 0i32;
 }
@@ -2016,7 +2016,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> i32 {
     if anchor != 0 {
         p = p.offset(1);
         lp = lp.wrapping_sub(1);
-        lp;
+
     }
     prepstate(&mut ms, L, src, srcl, p, lp);
     while n < max_s {
@@ -2251,7 +2251,7 @@ unsafe extern "C" fn checkformat(
         spec = get2digits(spec);
         if *spec as i32 == '.' as i32 && precision != 0 {
             spec = spec.offset(1);
-            spec;
+
             spec = get2digits(spec);
         }
     }
@@ -2276,7 +2276,7 @@ unsafe extern "C" fn getformat(
         b"-+#0 123456789.\0" as *const u8 as *const libc::c_char,
     );
     len = len.wrapping_add(1);
-    len;
+
     if len >= (32i32 - 10i32) as libc::c_ulong {
         luaL_error(
             L,
@@ -2907,7 +2907,6 @@ unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> i32 {
             *(b.b).offset(fresh26 as isize) = 0i32 as libc::c_char;
         }
         arg += 1;
-        arg;
         let mut current_block_33: u64;
         match opt as libc::c_uint {
             0 => {
@@ -3101,7 +3100,6 @@ unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> i32 {
         match current_block_33 {
             16285809747685596942 => {
                 arg -= 1;
-                arg;
             }
             _ => {}
         }

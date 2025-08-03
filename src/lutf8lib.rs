@@ -324,7 +324,6 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> i32 {
                 == 0x80 as i32
         {
             posi -= 1;
-            posi;
         }
     } else {
         if *s.offset(posi as isize) as i32 & 0xc0 as i32
@@ -342,7 +341,6 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> i32 {
             {
                 loop {
                     posi -= 1;
-                    posi;
                     if !(posi > 0i32 as i64
                         && *s.offset(posi as isize) as i32 & 0xc0 as i32
                             == 0x80 as i32)
@@ -359,7 +357,6 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> i32 {
             while n > 0i32 as i64 && posi < len as Integer {
                 loop {
                     posi += 1;
-                    posi;
                     if !(*s.offset(posi as isize) as i32 & 0xc0 as i32
                         == 0x80 as i32)
                     {

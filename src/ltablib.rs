@@ -221,7 +221,6 @@ unsafe extern "C" fn tremove(mut L: *mut lua_State) -> i32 {
         lua_geti(L, 1i32, pos + 1i32 as i64);
         lua_seti(L, 1i32, pos);
         pos += 1;
-        pos;
     }
     lua_pushnil(L);
     lua_seti(L, 1i32, pos);

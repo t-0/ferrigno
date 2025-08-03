@@ -705,7 +705,6 @@ pub unsafe extern "C" fn luaH_realasize(mut t: *const Table) -> libc::c_uint {
         size |= size >> 8i32;
         size |= size >> 16i32;
         size = size.wrapping_add(1);
-        size;
         return size;
     };
 }
@@ -930,7 +929,7 @@ unsafe extern "C" fn numusearray(
                 .tt_ as i32 & 0xf as i32 == 0i32)
             {
                 lc = lc.wrapping_add(1);
-                lc;
+
             }
             i = i.wrapping_add(1);
         }
@@ -938,7 +937,7 @@ unsafe extern "C" fn numusearray(
         *fresh1 = (*fresh1).wrapping_add(lc);
         ause = ause.wrapping_add(lc);
         lg += 1;
-        lg;
+
         ttlg = ttlg.wrapping_mul(2i32 as libc::c_uint);
     }
     return ause;
