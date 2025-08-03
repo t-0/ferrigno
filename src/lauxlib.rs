@@ -1824,7 +1824,7 @@ pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
         ),
         0 as *mut libc::c_void,
     );
-    if (L != 0 as *mut lua_State) as i32 as libc::c_long != 0 {
+    if L != (0 as *mut lua_State) {
         lua_atpanic(
             L,
             Some(panic as unsafe extern "C" fn(*mut lua_State) -> i32),
