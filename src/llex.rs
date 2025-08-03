@@ -717,7 +717,6 @@ pub unsafe extern "C" fn luaX_init(mut L: *mut lua_State) {
         luaC_fix(L, &mut (*(ts as *mut GCUnion)).gc);
         (*ts).extra = (i + 1 as i32) as u8;
         i += 1;
-        i;
     }
 }
 #[unsafe (no_mangle)]
@@ -1051,7 +1050,6 @@ unsafe extern "C" fn skip_sep(mut ls: *mut LexState) -> size_t {
             luaZ_fill((*ls).z)
         });
         count = count.wrapping_add(1);
-        count;
     }
     return if (*ls).current == s {
         count.wrapping_add(2 as i32 as libc::c_ulong)
@@ -1250,7 +1248,6 @@ unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> libc::c_ulong {
             break;
         }
         i += 1;
-        i;
         esccheck(
             ls,
             (r <= (0x7fffffff as libc::c_uint >> 4 as i32) as libc::c_ulong)
@@ -1286,7 +1283,6 @@ unsafe extern "C" fn utf8esc(mut ls: *mut LexState) {
     while n > 0 as i32 {
         save(ls, buff[(8 as i32 - n) as usize] as i32);
         n -= 1;
-        n;
     }
 }
 unsafe extern "C" fn readdecesc(mut ls: *mut LexState) -> i32 {
@@ -1310,7 +1306,6 @@ unsafe extern "C" fn readdecesc(mut ls: *mut LexState) -> i32 {
             luaZ_fill((*ls).z)
         });
         i += 1;
-        i;
     }
     esccheck(
         ls,

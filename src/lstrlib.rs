@@ -411,7 +411,6 @@ unsafe extern "C" fn str_reverse(mut L: *mut lua_State) -> i32 {
                     as isize,
             );
         i = i.wrapping_add(1);
-        i;
     }
     luaL_pushresultsize(&mut b, l);
     return 1 as i32;
@@ -460,7 +459,6 @@ unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> i32 {
             __res
         }) as libc::c_char;
         i = i.wrapping_add(1);
-        i;
     }
     luaL_pushresultsize(&mut b, l);
     return 1 as i32;
@@ -509,7 +507,6 @@ unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> i32 {
             __res
         }) as libc::c_char;
         i = i.wrapping_add(1);
-        i;
     }
     luaL_pushresultsize(&mut b, l);
     return 1 as i32;
@@ -631,7 +628,6 @@ unsafe extern "C" fn str_byte(mut L: *mut lua_State) -> i32 {
                 ) as u8 as Integer,
         );
         i += 1;
-        i;
     }
     return n;
 }
@@ -660,7 +656,6 @@ unsafe extern "C" fn str_char(mut L: *mut lua_State) -> i32 {
             ) != 0) as i32;
         *p.offset((i - 1 as i32) as isize) = c as u8 as libc::c_char;
         i += 1;
-        i;
     }
     luaL_pushresultsize(&mut b, n as size_t);
     return 1 as i32;
@@ -899,13 +894,11 @@ unsafe extern "C" fn check_capture(
 unsafe extern "C" fn capture_to_close(mut ms: *mut MatchState) -> i32 {
     let mut level: i32 = (*ms).level as i32;
     level -= 1;
-    level;
     while level >= 0 as i32 {
         if (*ms).capture[level as usize].len == -(1 as i32) as libc::c_long {
             return level;
         }
         level -= 1;
-        level;
     }
     return luaL_error(
         (*ms).L,
@@ -934,7 +927,6 @@ unsafe extern "C" fn classend(
         91 => {
             if *p as i32 == '^' as i32 {
                 p = p.offset(1);
-                p;
             }
             loop {
                 if ((p == (*ms).p_end) as i32 != 0 as i32) as i32
@@ -950,7 +942,6 @@ unsafe extern "C" fn classend(
                 p = p.offset(1);
                 if *fresh2 as i32 == '%' as i32 && p < (*ms).p_end {
                     p = p.offset(1);
-                    p;
                 }
                 if !(*p as i32 != ']' as i32) {
                     break;
@@ -1048,7 +1039,6 @@ unsafe extern "C" fn matchbracketclass(
     if *p.offset(1 as i32 as isize) as i32 == '^' as i32 {
         sig = 0 as i32;
         p = p.offset(1);
-        p;
     }
     loop {
         p = p.offset(1);
@@ -1057,7 +1047,6 @@ unsafe extern "C" fn matchbracketclass(
         }
         if *p as i32 == '%' as i32 {
             p = p.offset(1);
-            p;
             if match_class(c, *p as u8 as i32) != 0 {
                 return sig;
             }
@@ -1131,7 +1120,6 @@ unsafe extern "C" fn matchbalance(
                 }
             } else if *s as i32 == b {
                 cont += 1;
-                cont;
             }
         }
     }
@@ -1146,7 +1134,6 @@ unsafe extern "C" fn max_expand(
     let mut i: ptrdiff_t = 0 as i32 as ptrdiff_t;
     while singlematch(ms, s.offset(i as isize), p, ep) != 0 {
         i += 1;
-        i;
     }
     while i >= 0 as i32 as libc::c_long {
         let mut res: *const libc::c_char = match_0(
@@ -1158,7 +1145,6 @@ unsafe extern "C" fn max_expand(
             return res;
         }
         i -= 1;
-        i;
     }
     return 0 as *const libc::c_char;
 }
@@ -1687,7 +1673,6 @@ unsafe extern "C" fn push_captures(
     while i < nlevels {
         push_onecapture(ms, i, s, e);
         i += 1;
-        i;
     }
     return nlevels;
 }
@@ -1787,7 +1772,6 @@ unsafe extern "C" fn str_find_aux(
         let mut anchor: i32 = (*p as i32 == '^' as i32) as i32;
         if anchor != 0 {
             p = p.offset(1);
-            p;
             lp = lp.wrapping_sub(1);
             lp;
         }
@@ -1902,7 +1886,6 @@ unsafe extern "C" fn add_s(
         }
         luaL_addlstring(b, news, p.offset_from(news) as libc::c_long as size_t);
         p = p.offset(1);
-        p;
         if *p as i32 == '%' as i32 {
             ((*b).n < (*b).size
                 || !(luaL_prepbuffsize(b, 1 as i32 as size_t)).is_null())
@@ -2032,7 +2015,6 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> i32 {
     luaL_buffinit(L, &mut b);
     if anchor != 0 {
         p = p.offset(1);
-        p;
         lp = lp.wrapping_sub(1);
         lp;
     }
@@ -2829,7 +2811,6 @@ unsafe extern "C" fn packint(
             & (((1 as i32) << 8 as i32) - 1 as i32)
                 as libc::c_ulonglong) as libc::c_char;
         i += 1;
-        i;
     }
     if neg != 0
         && size > ::core::mem::size_of::<Integer>() as libc::c_ulong as i32
@@ -2843,7 +2824,6 @@ unsafe extern "C" fn packint(
                 ) = (((1 as i32) << 8 as i32) - 1 as i32)
                 as libc::c_char;
             i += 1;
-            i;
         }
     }
     (*b)
@@ -3208,7 +3188,6 @@ unsafe extern "C" fn unpackint(
                         as isize,
                 ) as u8 as lua_Unsigned;
         i -= 1;
-        i;
     }
     if size < ::core::mem::size_of::<Integer>() as libc::c_ulong as i32 {
         if issigned != 0 {
@@ -3243,7 +3222,6 @@ unsafe extern "C" fn unpackint(
                 );
             }
             i += 1;
-            i;
         }
     }
     return res as Integer;

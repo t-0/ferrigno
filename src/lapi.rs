@@ -725,7 +725,6 @@ pub unsafe extern "C" fn lua_xmove(
         (*to).top.p = ((*to).top.p).offset(1);
         (*to).top.p;
         i += 1;
-        i;
     }
 }
 #[unsafe (no_mangle)]
@@ -782,7 +781,6 @@ pub unsafe extern "C" fn lua_settop(mut L: *mut lua_State, mut index: i32) {
                 .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
                 as u8;
             diff -= 1;
-            diff;
         }
     } else {
         diff = (index + 1 as i32) as ptrdiff_t;
@@ -822,9 +820,7 @@ unsafe extern "C" fn reverse(mut L: *mut lua_State, mut from: StkId, mut to: Stk
         (*io1_1).value_ = (*io2_1).value_;
         (*io1_1).tt_ = (*io2_1).tt_;
         from = from.offset(1);
-        from;
         to = to.offset(-1);
-        to;
     }
 }
 #[unsafe (no_mangle)]

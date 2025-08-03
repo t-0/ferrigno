@@ -830,7 +830,6 @@ pub unsafe extern "C" fn luaH_next(
             return 1 as i32;
         }
         i = i.wrapping_add(1);
-        i;
     }
     i = i.wrapping_sub(asize);
     while (i as i32) < (1 as i32) << (*t).lsizenode as i32 {
@@ -850,7 +849,6 @@ pub unsafe extern "C" fn luaH_next(
             return 1 as i32;
         }
         i = i.wrapping_add(1);
-        i;
     }
     return 0 as i32;
 }
@@ -884,7 +882,6 @@ unsafe extern "C" fn computesizes(
             na = a;
         }
         i += 1;
-        i;
         twotoi = twotoi.wrapping_mul(2 as i32 as libc::c_uint);
     }
     *pna = na;
@@ -937,7 +934,6 @@ unsafe extern "C" fn numusearray(
                 lc;
             }
             i = i.wrapping_add(1);
-            i;
         }
         let ref mut fresh1 = *nums.offset(lg as isize);
         *fresh1 = (*fresh1).wrapping_add(lc);
@@ -970,7 +966,6 @@ unsafe extern "C" fn numusehash(
                 ause += countint((*n).u.key_val.i, nums);
             }
             totaluse += 1;
-            totaluse;
         }
     }
     *pna = (*pna).wrapping_add(ause as libc::c_uint);
@@ -1033,7 +1028,6 @@ unsafe extern "C" fn setnodevector(
                 .tt_ = (0 as i32 | (1 as i32) << 4 as i32)
                 as u8;
             i += 1;
-            i;
         }
         (*t).lsizenode = lsize as u8;
         (*t).lastfree = &mut *((*t).node).offset(size as isize) as *mut Node;
@@ -1061,7 +1055,6 @@ unsafe extern "C" fn reinsert(
             luaH_set(L, t, &mut k, &mut (*old).i_val);
         }
         j += 1;
-        j;
     }
 }
 unsafe extern "C" fn exchangehashpart(mut t1: *mut Table, mut t2: *mut Table) {
@@ -1115,7 +1108,6 @@ pub unsafe extern "C" fn luaH_resize(
                 );
             }
             i = i.wrapping_add(1);
-            i;
         }
         (*t).alimit = oldasize;
         exchangehashpart(t, &mut newt);
@@ -1143,7 +1135,6 @@ pub unsafe extern "C" fn luaH_resize(
             .tt_ = (0 as i32 | (1 as i32) << 4 as i32)
             as u8;
         i = i.wrapping_add(1);
-        i;
     }
     reinsert(L, &mut newt, t);
     freehash(L, &mut newt);
@@ -1179,7 +1170,6 @@ unsafe extern "C" fn rehash(
     {
         nums[i as usize] = 0 as i32 as libc::c_uint;
         i += 1;
-        i;
     }
     setlimittosize(t);
     na = numusearray(t, nums.as_mut_ptr());
@@ -1192,7 +1182,6 @@ unsafe extern "C" fn rehash(
             .wrapping_add(countint((*ek).value_.i, nums.as_mut_ptr()) as libc::c_uint);
     }
     totaluse += 1;
-    totaluse;
     asize = computesizes(nums.as_mut_ptr(), &mut na);
     luaH_resize(L, t, asize, (totaluse as libc::c_uint).wrapping_sub(na));
 }
@@ -1506,7 +1495,6 @@ unsafe extern "C" fn hash_search(
     let mut i: lua_Unsigned = 0;
     if j == 0 as i32 as libc::c_ulonglong {
         j = j.wrapping_add(1);
-        j;
     }
     loop {
         i = j;

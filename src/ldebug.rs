@@ -619,7 +619,6 @@ unsafe extern "C" fn getbaseline(
             && pc >= (*((*f).abslineinfo).offset((i + 1 as i32) as isize)).pc
         {
             i += 1;
-            i;
         }
         *basepc = (*((*f).abslineinfo).offset(i as isize)).pc;
         return (*((*f).abslineinfo).offset(i as isize)).line;
@@ -712,7 +711,6 @@ pub unsafe extern "C" fn lua_getstack(
     ci = (*L).ci;
     while level > 0 as i32 && ci != &mut (*L).base_ci as *mut CallInfo {
         level -= 1;
-        level;
         ci = (*ci).previous;
     }
     if level == 0 as i32 && ci != &mut (*L).base_ci as *mut CallInfo {
@@ -949,7 +947,6 @@ unsafe extern "C" fn collectvalidlines(mut L: *mut lua_State, mut f: *mut Closur
                 currentline = nextline(p, currentline, i);
                 luaH_setint(L, t, currentline as Integer, &mut v);
                 i += 1;
-                i;
             }
         }
     };
@@ -1043,7 +1040,6 @@ unsafe extern "C" fn auxgetinfo(
             }
         }
         what = what.offset(1);
-        what;
     }
     return status;
 }
@@ -1061,7 +1057,6 @@ pub unsafe extern "C" fn lua_getinfo(
         ci = 0 as *mut CallInfo;
         func = &mut (*((*L).top.p).offset(-(1 as i32 as isize))).val;
         what = what.offset(1);
-        what;
         (*L).top.p = ((*L).top.p).offset(-1);
         (*L).top.p;
     } else {
@@ -1112,7 +1107,6 @@ unsafe extern "C" fn findsetreg(
         as OpCode as usize] as i32 & (1 as i32) << 7 as i32 != 0
     {
         lastpc -= 1;
-        lastpc;
     }
     pc = 0 as i32;
     while pc < lastpc {
@@ -1163,7 +1157,6 @@ unsafe extern "C" fn findsetreg(
             setreg = filterpc(pc, jmptarget);
         }
         pc += 1;
-        pc;
     }
     return setreg;
 }
@@ -1473,7 +1466,6 @@ unsafe extern "C" fn instack(
             return pos;
         }
         pos += 1;
-        pos;
     }
     return -(1 as i32);
 }
@@ -1493,7 +1485,6 @@ unsafe extern "C" fn getupvalname(
             return strupval.as_ptr();
         }
         i += 1;
-        i;
     }
     return 0 as *const libc::c_char;
 }
@@ -1807,7 +1798,6 @@ pub unsafe extern "C" fn luaG_traceexec(
         return 0 as i32;
     }
     pc = pc.offset(1);
-    pc;
     (*ci).u.l.savedpc = pc;
     counthook = (mask as i32 & (1 as i32) << 3 as i32 != 0
         && {

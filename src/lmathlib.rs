@@ -297,7 +297,6 @@ unsafe extern "C" fn math_min(mut L: *mut lua_State) -> i32 {
             imin = i;
         }
         i += 1;
-        i;
     }
     lua_pushvalue(L, imin);
     return 1 as i32;
@@ -319,7 +318,6 @@ unsafe extern "C" fn math_max(mut L: *mut lua_State) -> i32 {
             imax = i;
         }
         i += 1;
-        i;
     }
     lua_pushvalue(L, imax);
     return 1 as i32;
@@ -465,7 +463,6 @@ unsafe extern "C" fn setseed(
     while i < 16 as i32 {
         nextrand(state);
         i += 1;
-        i;
     }
     lua_pushinteger(L, n1 as Integer);
     lua_pushinteger(L, n2 as Integer);

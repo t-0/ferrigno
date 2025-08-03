@@ -483,7 +483,6 @@ pub unsafe extern "C" fn luaS_hash(
                         ) as u8 as libc::c_uint,
                 );
         l = l.wrapping_sub(1);
-        l;
     }
     return h;
 }
@@ -507,7 +506,6 @@ unsafe extern "C" fn tablerehash(
         let ref mut fresh0 = *vect.offset(i as isize);
         *fresh0 = 0 as *mut TString;
         i += 1;
-        i;
     }
     i = 0 as i32;
     while i < osize {
@@ -525,7 +523,6 @@ unsafe extern "C" fn tablerehash(
             p = hnext;
         }
         i += 1;
-        i;
     }
 }
 #[unsafe (no_mangle)]
@@ -573,10 +570,8 @@ pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
                 (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
             }
             j += 1;
-            j;
         }
         i += 1;
-        i;
     }
 }
 #[unsafe (no_mangle)]
@@ -609,10 +604,8 @@ pub unsafe extern "C" fn luaS_init(mut L: *mut lua_State) {
         while j < 2 as i32 {
             (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
             j += 1;
-            j;
         }
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn createstrobj(
@@ -805,14 +798,12 @@ pub unsafe extern "C" fn luaS_new(
             return *p.offset(j as isize);
         }
         j += 1;
-        j;
     }
     j = 2 as i32 - 1 as i32;
     while j > 0 as i32 {
         let ref mut fresh3 = *p.offset(j as isize);
         *fresh3 = *p.offset((j - 1 as i32) as isize);
         j -= 1;
-        j;
     }
     let ref mut fresh4 = *p.offset(0 as i32 as isize);
     *fresh4 = luaS_newlstr(L, str, strlen(str));
@@ -874,7 +865,6 @@ pub unsafe extern "C" fn luaS_newudata(
             .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
             as u8;
         i += 1;
-        i;
     }
     return u;
 }

@@ -807,7 +807,6 @@ pub unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> i32 {
     ];
     let mut l: i32 = 0 as i32;
     x = x.wrapping_sub(1);
-    x;
     while x >= 256 as i32 as libc::c_uint {
         l += 8 as i32;
         x >>= 8 as i32;
@@ -1072,7 +1071,6 @@ unsafe extern "C" fn l_str2dloc(
         as usize] as i32 & (1 as i32) << 3 as i32 != 0
     {
         endptr = endptr.offset(1);
-        endptr;
     }
     return if *endptr as i32 == '\0' as i32 {
         endptr
@@ -1127,7 +1125,6 @@ unsafe extern "C" fn l_str2int(
         as i32 & (1 as i32) << 3 as i32 != 0
     {
         s = s.offset(1);
-        s;
     }
     neg = isneg(&mut s);
     if *s.offset(0 as i32 as isize) as i32 == '0' as i32
@@ -1143,7 +1140,6 @@ unsafe extern "C" fn l_str2int(
                 .wrapping_add(luaO_hexavalue(*s as i32) as libc::c_ulonglong);
             empty = 0 as i32;
             s = s.offset(1);
-            s;
         }
     } else {
         while luai_ctype_[(*s as u8 as i32 + 1 as i32)
@@ -1168,14 +1164,12 @@ unsafe extern "C" fn l_str2int(
                 .wrapping_add(d as libc::c_ulonglong);
             empty = 0 as i32;
             s = s.offset(1);
-            s;
         }
     }
     while luai_ctype_[(*s as u8 as i32 + 1 as i32) as usize]
         as i32 & (1 as i32) << 3 as i32 != 0
     {
         s = s.offset(1);
-        s;
     }
     if empty != 0 || *s as i32 != '\0' as i32 {
         return 0 as *const libc::c_char

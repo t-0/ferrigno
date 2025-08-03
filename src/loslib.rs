@@ -384,7 +384,6 @@ unsafe extern "C" fn checkoption(
     while *option as i32 != '\0' as i32 && oplen as libc::c_long <= convlen {
         if *option as i32 == '|' as i32 {
             oplen += 1;
-            oplen;
         } else if memcmp(
             conv as *const libc::c_void,
             option as *const libc::c_void,
@@ -454,7 +453,6 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
     if *s as i32 == '!' as i32 {
         stm = gmtime_r(&mut t, &mut tmr);
         s = s.offset(1);
-        s;
     } else {
         stm = localtime_r(&mut t, &mut tmr);
     }
@@ -496,7 +494,6 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
                     250 as i32 as size_t,
                 );
                 s = s.offset(1);
-                s;
                 s = checkoption(
                     L,
                     s,

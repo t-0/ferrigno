@@ -534,7 +534,6 @@ pub unsafe extern "C" fn luaF_initupvals(mut L: *mut lua_State, mut cl: *mut LCl
             );
         } else {};
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn newupval(
@@ -856,14 +855,12 @@ pub unsafe extern "C" fn luaF_getlocalname(
     while i < (*f).sizelocvars && (*((*f).locvars).offset(i as isize)).startpc <= pc {
         if pc < (*((*f).locvars).offset(i as isize)).endpc {
             local_number -= 1;
-            local_number;
             if local_number == 0 as i32 {
                 return ((*(*((*f).locvars).offset(i as isize)).varname).contents)
                     .as_mut_ptr();
             }
         }
         i += 1;
-        i;
     }
     return 0 as *const libc::c_char;
 }

@@ -656,7 +656,6 @@ unsafe extern "C" fn stack_init(mut L1: *mut lua_State, mut L: *mut lua_State) {
             .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
             as u8;
         i += 1;
-        i;
     }
     (*L1).top.p = (*L1).stack.p;
     (*L1)
@@ -966,7 +965,6 @@ pub unsafe extern "C" fn lua_newstate(
     while i < 9 as i32 {
         (*g).mt[i as usize] = 0 as *mut Table;
         i += 1;
-        i;
     }
     if luaD_rawrunprotected(
         L,

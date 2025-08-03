@@ -343,7 +343,6 @@ unsafe extern "C" fn gctm(mut L: *mut lua_State) -> i32 {
         lsys_unloadlib(lua_touserdata(L, -(1 as i32)));
         lua_settop(L, -(1 as i32) - 1 as i32);
         n -= 1;
-        n;
     }
     return 0 as i32;
 }
@@ -421,7 +420,6 @@ unsafe extern "C" fn getnextfilename(
     } else if *name as i32 == '\0' as i32 {
         *name = *(b";\0" as *const u8 as *const libc::c_char);
         name = name.offset(1);
-        name;
     }
     sep = strchr(name, *(b";\0" as *const u8 as *const libc::c_char) as i32);
     if sep.is_null() {
@@ -772,7 +770,6 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
                 .wrapping_sub(2 as i32 as libc::c_ulong) as size_t as size_t;
         }
         i += 1;
-        i;
     };
 }
 unsafe extern "C" fn ll_require(mut L: *mut lua_State) -> i32 {
@@ -926,7 +923,6 @@ unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
         lua_pushcclosure(L, searchers[i as usize], 1 as i32);
         lua_rawseti(L, -(2 as i32), (i + 1 as i32) as Integer);
         i += 1;
-        i;
     }
     lua_setfield(
         L,

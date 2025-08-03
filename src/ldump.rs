@@ -569,7 +569,6 @@ unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Proto) {
             _ => {}
         }
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Proto) {
@@ -580,7 +579,6 @@ unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Proto) {
     while i < n {
         dumpFunction(D, *((*f).p).offset(i as isize), (*f).source);
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto) {
@@ -593,7 +591,6 @@ unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto) {
         dumpByte(D, (*((*f).upvalues).offset(i as isize)).index as i32);
         dumpByte(D, (*((*f).upvalues).offset(i as isize)).kind as i32);
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
@@ -614,7 +611,6 @@ unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).pc);
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).line);
         i += 1;
-        i;
     }
     n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelocvars };
     dumpInt(D, n);
@@ -624,7 +620,6 @@ unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
         dumpInt(D, (*((*f).locvars).offset(i as isize)).startpc);
         dumpInt(D, (*((*f).locvars).offset(i as isize)).endpc);
         i += 1;
-        i;
     }
     n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizeupvalues };
     dumpInt(D, n);
@@ -632,7 +627,6 @@ unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
     while i < n {
         dumpString(D, (*((*f).upvalues).offset(i as isize)).name);
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn dumpFunction(

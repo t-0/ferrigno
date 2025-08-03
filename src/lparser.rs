@@ -1199,7 +1199,6 @@ unsafe extern "C" fn adjustlocalvars(mut ls: *mut LexState, mut nvars: i32) {
         (*var).vd.ridx = fresh7 as u8;
         (*var).vd.pidx = registerlocalvar(ls, fs, (*var).vd.name) as libc::c_short;
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn removevars(mut fs: *mut FuncState, mut tolevel: i32) {
@@ -1224,7 +1223,6 @@ unsafe extern "C" fn searchupvalue(
             return i;
         }
         i += 1;
-        i;
     }
     return -(1 as i32);
 }
@@ -1314,7 +1312,6 @@ unsafe extern "C" fn searchvar(
             return (*var).k as i32;
         }
         i -= 1;
-        i;
     }
     return -(1 as i32);
 }
@@ -1448,7 +1445,6 @@ unsafe extern "C" fn solvegoto(
         *((*gl).arr)
             .offset(i as isize) = *((*gl).arr).offset((i + 1 as i32) as isize);
         i += 1;
-        i;
     }
     (*gl).n -= 1;
     (*gl).n;
@@ -1467,7 +1463,6 @@ unsafe extern "C" fn findlabel(
             return lb;
         }
         i += 1;
-        i;
     }
     return 0 as *mut Labeldesc;
 }
@@ -1528,7 +1523,6 @@ unsafe extern "C" fn solvegotos(
             solvegoto(ls, i, lb);
         } else {
             i += 1;
-            i;
         }
     }
     return needsclose;
@@ -1574,7 +1568,6 @@ unsafe extern "C" fn movegotosout(mut fs: *mut FuncState, mut bl: *mut BlockCnt)
         }
         (*gt).nactvar = (*bl).nactvar;
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn enterblock(
@@ -2032,7 +2025,6 @@ unsafe extern "C" fn parlist(mut ls: *mut LexState) {
                 291 => {
                     new_localvar(ls, str_checkname(ls));
                     nparams += 1;
-                    nparams;
                 }
                 280 => {
                     luaX_next(ls);
@@ -2126,7 +2118,6 @@ unsafe extern "C" fn explist(mut ls: *mut LexState, mut v: *mut expdesc) -> i32 
         luaK_exp2nextreg((*ls).fs, v);
         expr(ls, v);
         n += 1;
-        n;
     }
     return n;
 }
@@ -3017,7 +3008,6 @@ unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TString)
     while testnext(ls, ',' as i32) != 0 {
         new_localvar(ls, str_checkname(ls));
         nvars += 1;
-        nvars;
     }
     checknext(ls, TK_IN as i32);
     line = (*ls).linenumber;
@@ -3217,7 +3207,6 @@ unsafe extern "C" fn localstat(mut ls: *mut LexState) {
             toclose = (*fs).nactvar as i32 + nvars;
         }
         nvars += 1;
-        nvars;
         if !(testnext(ls, ',' as i32) != 0) {
             break;
         }

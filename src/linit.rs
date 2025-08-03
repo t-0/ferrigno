@@ -146,6 +146,5 @@ pub unsafe extern "C" fn luaL_openlibs(mut L: *mut lua_State) {
         luaL_requiref(L, (*lib).name, (*lib).func, 1 as i32);
         lua_settop(L, -(1 as i32) - 1 as i32);
         lib = lib.offset(1);
-        lib;
     }
 }

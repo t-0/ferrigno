@@ -3096,7 +3096,6 @@ unsafe extern "C" fn finaltarget(
                         + 8 as i32) - 1 as i32 >> 1 as i32)
                 + 1 as i32;
         count += 1;
-        count;
     }
     return i;
 }
@@ -3168,6 +3167,5 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
             _ => {}
         }
         i += 1;
-        i;
     }
 }

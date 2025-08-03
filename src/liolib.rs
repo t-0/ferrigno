@@ -314,7 +314,6 @@ unsafe extern "C" fn l_checkmode(mut mode: *const libc::c_char) -> i32 {
         && (*mode as i32 != '+' as i32
             || {
                 mode = mode.offset(1);
-                mode;
                 1 as i32 != 0
             })
         && strspn(mode, b"b\0" as *const u8 as *const libc::c_char) == strlen(mode))
@@ -686,7 +685,6 @@ unsafe extern "C" fn readdigits(mut rn: *mut RN, mut hex: i32) -> i32 {
     }) != 0 && nextc(rn) != 0
     {
         count += 1;
-        count;
     }
     return count;
 }
@@ -936,7 +934,6 @@ unsafe extern "C" fn g_read(
                 );
                 if *p as i32 == '*' as i32 {
                     p = p.offset(1);
-                    p;
                 }
                 match *p as i32 {
                     110 => {
@@ -962,7 +959,6 @@ unsafe extern "C" fn g_read(
                 }
             }
             n += 1;
-            n;
         }
     }
     if ferror(f) != 0 {
@@ -1010,7 +1006,6 @@ unsafe extern "C" fn io_readline(mut L: *mut lua_State) -> i32 {
             -(1000000 as i32) - 1000 as i32 - (3 as i32 + i),
         );
         i += 1;
-        i;
     }
     n = g_read(L, (*p).f, 2 as i32);
     if lua_toboolean(L, -n) != 0 {
@@ -1079,7 +1074,6 @@ unsafe extern "C" fn g_write(
                 ) == l) as i32;
         }
         arg += 1;
-        arg;
     }
     if (status != 0 as i32) as i32 as libc::c_long != 0 {
         return 1 as i32

@@ -838,7 +838,6 @@ pub unsafe extern "C" fn luaD_reallocstack(
             .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
             as u8;
         i += 1;
-        i;
     }
     return 1 as i32;
 }
@@ -1090,7 +1089,6 @@ unsafe extern "C" fn tryfuncTM(mut L: *mut lua_State, mut func: StkId) -> StkId 
         (*io1).value_ = (*io2).value_;
         (*io1).tt_ = (*io2).tt_;
         p = p.offset(-1);
-        p;
     }
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
@@ -1169,7 +1167,6 @@ unsafe extern "C" fn moveresults(
         (*io1_0).value_ = (*io2_0).value_;
         (*io1_0).tt_ = (*io2_0).tt_;
         i += 1;
-        i;
     }
     while i < wanted {
         (*res.offset(i as isize))
@@ -1177,7 +1174,6 @@ unsafe extern "C" fn moveresults(
             .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
             as u8;
         i += 1;
-        i;
     }
     (*L).top.p = res.offset(wanted as isize);
 }
@@ -1307,7 +1303,6 @@ pub unsafe extern "C" fn luaD_pretailcall(
                     (*io1).value_ = (*io2).value_;
                     (*io1).tt_ = (*io2).tt_;
                     i += 1;
-                    i;
                 }
                 func = (*ci).func.p;
                 while narg1 <= nfixparams {
@@ -1316,7 +1311,6 @@ pub unsafe extern "C" fn luaD_pretailcall(
                         .tt_ = (0 as i32
                         | (0 as i32) << 4 as i32) as u8;
                     narg1 += 1;
-                    narg1;
                 }
                 (*ci)
                     .top
@@ -1331,7 +1325,6 @@ pub unsafe extern "C" fn luaD_pretailcall(
             _ => {
                 func = tryfuncTM(L, func);
                 narg1 += 1;
-                narg1;
             }
         }
     };
@@ -1397,7 +1390,6 @@ pub unsafe extern "C" fn luaD_precall(
                         .tt_ = (0 as i32
                         | (0 as i32) << 4 as i32) as u8;
                     narg += 1;
-                    narg;
                 }
                 return ci;
             }

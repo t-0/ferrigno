@@ -571,7 +571,6 @@ pub unsafe extern "C" fn luaL_argerror(
         == 0 as i32
     {
         arg -= 1;
-        arg;
         if arg == 0 as i32 {
             return luaL_error(
                 L,
@@ -816,7 +815,6 @@ pub unsafe extern "C" fn luaL_checkoption(
             return i;
         }
         i += 1;
-        i;
     }
     return luaL_argerror(
         L,
@@ -1572,13 +1570,11 @@ pub unsafe extern "C" fn luaL_setfuncs(
             while i < nup {
                 lua_pushvalue(L, -nup);
                 i += 1;
-                i;
             }
             lua_pushcclosure(L, (*l).func, nup);
         }
         lua_setfield(L, -(nup + 2 as i32), (*l).name);
         l = l.offset(1);
-        l;
     }
     lua_settop(L, -nup - 1 as i32);
 }

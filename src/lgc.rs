@@ -709,7 +709,6 @@ unsafe extern "C" fn markmt(mut g: *mut global_State) {
             }
         }
         i += 1;
-        i;
     }
 }
 unsafe extern "C" fn markbeingfnz(mut g: *mut global_State) -> lu_mem {
@@ -718,7 +717,6 @@ unsafe extern "C" fn markbeingfnz(mut g: *mut global_State) -> lu_mem {
     o = (*g).tobefnz;
     while !o.is_null() {
         count = count.wrapping_add(1);
-        count;
         if (*o).marked as i32
             & ((1 as i32) << 3 as i32
                 | (1 as i32) << 4 as i32) != 0
@@ -739,7 +737,6 @@ unsafe extern "C" fn remarkupvals(mut g: *mut global_State) -> i32 {
             break;
         }
         work += 1;
-        work;
         if (*thread).marked as i32
             & ((1 as i32) << 3 as i32
                 | (1 as i32) << 4 as i32) == 0
@@ -753,7 +750,6 @@ unsafe extern "C" fn remarkupvals(mut g: *mut global_State) -> i32 {
             uv = (*thread).openupval;
             while !uv.is_null() {
                 work += 1;
-                work;
                 if (*uv).marked as i32
                     & ((1 as i32) << 3 as i32
                         | (1 as i32) << 4 as i32) == 0
@@ -842,7 +838,6 @@ unsafe extern "C" fn traverseweakvalue(mut g: *mut global_State, mut h: *mut Tab
             }
         }
         n = n.offset(1);
-        n;
     }
     if (*g).gcstate as i32 == 2 as i32 && hasclears != 0 {
         linkgclist_(&mut (*(h as *mut GCUnion)).gc, &mut (*h).gclist, &mut (*g).weak);
@@ -878,7 +873,6 @@ unsafe extern "C" fn traverseephemeron(
             reallymarkobject(g, (*((*h).array).offset(i as isize)).value_.gc);
         }
         i = i.wrapping_add(1);
-        i;
     }
     i = 0 as i32 as libc::c_uint;
     while i < nsize {
@@ -922,7 +916,6 @@ unsafe extern "C" fn traverseephemeron(
             reallymarkobject(g, (*n).i_val.value_.gc);
         }
         i = i.wrapping_add(1);
-        i;
     }
     if (*g).gcstate as i32 == 0 as i32 {
         linkgclist_(
@@ -961,7 +954,6 @@ unsafe extern "C" fn traversestrongtable(mut g: *mut global_State, mut h: *mut T
             reallymarkobject(g, (*((*h).array).offset(i as isize)).value_.gc);
         }
         i = i.wrapping_add(1);
-        i;
     }
     n = &mut *((*h).node).offset(0 as i32 as isize) as *mut Node;
     while n < limit {
@@ -985,7 +977,6 @@ unsafe extern "C" fn traversestrongtable(mut g: *mut global_State, mut h: *mut T
             }
         }
         n = n.offset(1);
-        n;
     }
     genlink(g, &mut (*(h as *mut GCUnion)).gc);
 }
@@ -1077,7 +1068,6 @@ unsafe extern "C" fn traverseudata(
             );
         }
         i += 1;
-        i;
     }
     genlink(g, &mut (*(u as *mut GCUnion)).gc);
     return 1 as i32 + (*u).nuvalue as i32;
@@ -1106,7 +1096,6 @@ unsafe extern "C" fn traverseproto(
             reallymarkobject(g, (*((*f).k).offset(i as isize)).value_.gc);
         }
         i += 1;
-        i;
     }
     i = 0 as i32;
     while i < (*f).sizeupvalues {
@@ -1123,7 +1112,6 @@ unsafe extern "C" fn traverseproto(
             }
         }
         i += 1;
-        i;
     }
     i = 0 as i32;
     while i < (*f).sizep {
@@ -1139,7 +1127,6 @@ unsafe extern "C" fn traverseproto(
             }
         }
         i += 1;
-        i;
     }
     i = 0 as i32;
     while i < (*f).sizelocvars {
@@ -1157,7 +1144,6 @@ unsafe extern "C" fn traverseproto(
             }
         }
         i += 1;
-        i;
     }
     return 1 as i32 + (*f).sizek + (*f).sizeupvalues + (*f).sizep
         + (*f).sizelocvars;
@@ -1182,7 +1168,6 @@ unsafe extern "C" fn traverseCclosure(
             );
         }
         i += 1;
-        i;
     }
     return 1 as i32 + (*cl).nupvalues as i32;
 }
@@ -1211,7 +1196,6 @@ unsafe extern "C" fn traverseLclosure(
             }
         }
         i += 1;
-        i;
     }
     return 1 as i32 + (*cl).nupvalues as i32;
 }
@@ -1242,7 +1226,6 @@ unsafe extern "C" fn traversethread(
             reallymarkobject(g, (*o).val.value_.gc);
         }
         o = o.offset(1);
-        o;
     }
     uv = (*th).openupval;
     while !uv.is_null() {
@@ -1265,7 +1248,6 @@ unsafe extern "C" fn traversethread(
                 .tt_ = (0 as i32 | (0 as i32) << 4 as i32)
                 as u8;
             o = o.offset(1);
-            o;
         }
         if !((*th).twups != th) && !((*th).openupval).is_null() {
             (*th).twups = (*g).twups;
@@ -1357,7 +1339,6 @@ unsafe extern "C" fn clearbykeys(mut g: *mut global_State, mut l: *mut GCObject)
                 clearkey(n);
             }
             n = n.offset(1);
-            n;
         }
         l = (*(l as *mut GCUnion)).h.gclist;
     }
@@ -1395,7 +1376,6 @@ unsafe extern "C" fn clearbyvalues(
                     as u8;
             }
             i = i.wrapping_add(1);
-            i;
         }
         n = &mut *((*h).node).offset(0 as i32 as isize) as *mut Node;
         while n < limit {
@@ -1419,7 +1399,6 @@ unsafe extern "C" fn clearbyvalues(
                 clearkey(n);
             }
             n = n.offset(1);
-            n;
         }
         l = (*(l as *mut GCUnion)).h.gclist;
     }
@@ -1550,7 +1529,6 @@ unsafe extern "C" fn sweeplist(
             p = &mut (*curr).next;
         }
         i += 1;
-        i;
     }
     if !countout.is_null() {
         *countout = i;
@@ -1685,7 +1663,6 @@ unsafe extern "C" fn runafewfinalizers(
     while i < n && !((*g).tobefnz).is_null() {
         GCTM(L);
         i += 1;
-        i;
     }
     return i;
 }

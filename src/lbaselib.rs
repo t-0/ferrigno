@@ -257,7 +257,6 @@ unsafe extern "C" fn luaB_print(mut L: *mut lua_State) -> i32 {
         );
         lua_settop(L, -(1 as i32) - 1 as i32);
         i += 1;
-        i;
     }
     fwrite(
         b"\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
@@ -276,13 +275,11 @@ unsafe extern "C" fn luaB_warn(mut L: *mut lua_State) -> i32 {
     while i <= n {
         luaL_checklstring(L, i, 0 as *mut size_t);
         i += 1;
-        i;
     }
     i = 1 as i32;
     while i < n {
         lua_warning(L, lua_tolstring(L, i, 0 as *mut size_t), 1 as i32);
         i += 1;
-        i;
     }
     lua_warning(L, lua_tolstring(L, n, 0 as *mut size_t), 0 as i32);
     return 0 as i32;
@@ -300,11 +297,9 @@ unsafe extern "C" fn b_str2int(
         );
     if *s as i32 == '-' as i32 {
         s = s.offset(1);
-        s;
         neg = 1 as i32;
     } else if *s as i32 == '+' as i32 {
         s = s.offset(1);
-        s;
     }
     if *(*__ctype_b_loc()).offset(*s as u8 as i32 as isize)
         as i32 & _ISalnum as i32 as libc::c_ushort as i32 == 0
@@ -349,7 +344,6 @@ unsafe extern "C" fn b_str2int(
             .wrapping_mul(base as libc::c_ulonglong)
             .wrapping_add(digit as libc::c_ulonglong);
         s = s.offset(1);
-        s;
         if !(*(*__ctype_b_loc()).offset(*s as u8 as i32 as isize)
             as i32 & _ISalnum as i32 as libc::c_ushort as i32
             != 0)
