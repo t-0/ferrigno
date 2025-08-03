@@ -1191,9 +1191,7 @@ unsafe extern "C" fn l_strcmp(
                 return -(1i32)
             }
             zl1 = zl1.wrapping_add(1);
-            zl1;
             zl2 = zl2.wrapping_add(1);
-            zl2;
             s1 = s1.offset(zl1 as isize);
             rl1 = (rl1 as libc::c_ulong).wrapping_sub(zl1) as size_t as size_t;
             s2 = s2.offset(zl2 as isize);
@@ -2136,7 +2134,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     as isize,
                             );
                         pc = pc.offset(1);
-                        pc;
                         let mut io1_1: *mut TValue = &mut (*ra_3).val;
                         let mut io2_1: *const TValue = rb_0;
                         (*io1_1).value_ = (*io2_1).value_;
@@ -2168,7 +2165,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             .tt_ = (1i32
                             | (0i32) << 4i32) as u8;
                         pc = pc.offset(1);
-                        pc;
                         continue;
                     }
                     7 => {
@@ -2945,7 +2941,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                         - 1i32 + 1i32);
                         }
                         pc = pc.offset(1);
-                        pc;
                         (*L).top.p = ra_17.offset(1i32 as isize);
                         t = luaH_new(L);
                         let mut io_3: *mut TValue = &mut (*ra_17).val;
@@ -3070,7 +3065,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         {
                             let mut iv1: Integer = (*v1).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_4: *mut TValue = &mut (*ra_19).val;
                             (*io_4)
                                 .value_
@@ -3085,7 +3079,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut nb: Number = (*v1).value_.n;
                             let mut fimm: Number = imm as Number;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_5: *mut TValue = &mut (*ra_19).val;
                             (*io_5).value_.n = nb + fimm;
                             (*io_5)
@@ -3126,7 +3119,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1: Integer = (*v1_0).value_.i;
                             let mut i2: Integer = (*v2).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_6: *mut TValue = &mut (*ra_20).val;
                             (*io_6)
                                 .value_
@@ -3170,7 +3162,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_7: *mut TValue = &mut (*ra_20).val;
                                 (*io_7).value_.n = n1 + n2;
                                 (*io_7)
@@ -3212,7 +3203,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_0: Integer = (*v1_1).value_.i;
                             let mut i2_0: Integer = (*v2_0).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_8: *mut TValue = &mut (*ra_21).val;
                             (*io_8)
                                 .value_
@@ -3256,7 +3246,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_9: *mut TValue = &mut (*ra_21).val;
                                 (*io_9).value_.n = n1_0 - n2_0;
                                 (*io_9)
@@ -3298,7 +3287,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_1: Integer = (*v1_2).value_.i;
                             let mut i2_1: Integer = (*v2_1).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_10: *mut TValue = &mut (*ra_22).val;
                             (*io_10)
                                 .value_
@@ -3342,7 +3330,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_11: *mut TValue = &mut (*ra_22).val;
                                 (*io_11).value_.n = n1_1 * n2_1;
                                 (*io_11)
@@ -3386,7 +3373,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_2: Integer = (*v1_3).value_.i;
                             let mut i2_2: Integer = (*v2_2).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_12: *mut TValue = &mut (*ra_23).val;
                             (*io_12).value_.i = luaV_mod(L, i1_2, i2_2);
                             (*io_12)
@@ -3427,7 +3413,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_13: *mut TValue = &mut (*ra_23).val;
                                 (*io_13).value_.n = luaV_modf(L, n1_2, n2_2);
                                 (*io_13)
@@ -3495,7 +3480,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_14: *mut TValue = &mut (*ra_24).val;
                             (*io_14)
                                 .value_
@@ -3568,7 +3552,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_15: *mut TValue = &mut (*ra_25).val;
                             (*io_15).value_.n = n1_4 / n2_4;
                             (*io_15)
@@ -3611,7 +3594,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_3: Integer = (*v1_6).value_.i;
                             let mut i2_3: Integer = (*v2_5).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_16: *mut TValue = &mut (*ra_26).val;
                             (*io_16).value_.i = luaV_idiv(L, i1_3, i2_3);
                             (*io_16)
@@ -3652,7 +3634,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_17: *mut TValue = &mut (*ra_26).val;
                                 (*io_17).value_.n = (n1_5 / n2_5).floor();
                                 (*io_17)
@@ -3700,7 +3681,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_18: *mut TValue = &mut (*ra_27).val;
                             (*io_18)
                                 .value_
@@ -3750,7 +3730,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_19: *mut TValue = &mut (*ra_28).val;
                             (*io_19)
                                 .value_
@@ -3800,7 +3779,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_20: *mut TValue = &mut (*ra_29).val;
                             (*io_20)
                                 .value_
@@ -3848,7 +3826,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_21: *mut TValue = &mut (*ra_30).val;
                             (*io_21).value_.i = luaV_shiftl(ib, -ic as Integer);
                             (*io_21)
@@ -3893,7 +3870,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                         } != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_22: *mut TValue = &mut (*ra_31).val;
                             (*io_22).value_.i = luaV_shiftl(ic_0 as Integer, ib_0);
                             (*io_22)
@@ -3935,7 +3911,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_7: Integer = (*v1_10).value_.i;
                             let mut i2_7: Integer = (*v2_9).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_23: *mut TValue = &mut (*ra_32).val;
                             (*io_23)
                                 .value_
@@ -3979,7 +3954,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_24: *mut TValue = &mut (*ra_32).val;
                                 (*io_24).value_.n = n1_6 + n2_6;
                                 (*io_24)
@@ -4022,7 +3996,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_8: Integer = (*v1_11).value_.i;
                             let mut i2_8: Integer = (*v2_10).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_25: *mut TValue = &mut (*ra_33).val;
                             (*io_25)
                                 .value_
@@ -4066,7 +4039,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_26: *mut TValue = &mut (*ra_33).val;
                                 (*io_26).value_.n = n1_7 - n2_7;
                                 (*io_26)
@@ -4109,7 +4081,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_9: Integer = (*v1_12).value_.i;
                             let mut i2_9: Integer = (*v2_11).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_27: *mut TValue = &mut (*ra_34).val;
                             (*io_27)
                                 .value_
@@ -4153,7 +4124,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_28: *mut TValue = &mut (*ra_34).val;
                                 (*io_28).value_.n = n1_8 * n2_8;
                                 (*io_28)
@@ -4198,7 +4168,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_10: Integer = (*v1_13).value_.i;
                             let mut i2_10: Integer = (*v2_12).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_29: *mut TValue = &mut (*ra_35).val;
                             (*io_29).value_.i = luaV_mod(L, i1_10, i2_10);
                             (*io_29)
@@ -4239,7 +4208,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_30: *mut TValue = &mut (*ra_35).val;
                                 (*io_30).value_.n = luaV_modf(L, n1_9, n2_9);
                                 (*io_30)
@@ -4308,7 +4276,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_31: *mut TValue = &mut (*ra_36).val;
                             (*io_31)
                                 .value_
@@ -4382,7 +4349,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_32: *mut TValue = &mut (*ra_37).val;
                             (*io_32).value_.n = n1_11 / n2_11;
                             (*io_32)
@@ -4426,7 +4392,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             let mut i1_11: Integer = (*v1_16).value_.i;
                             let mut i2_11: Integer = (*v2_15).value_.i;
                             pc = pc.offset(1);
-                            pc;
                             let mut io_33: *mut TValue = &mut (*ra_38).val;
                             (*io_33).value_.i = luaV_idiv(L, i1_11, i2_11);
                             (*io_33)
@@ -4467,7 +4432,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 }) != 0
                             {
                                 pc = pc.offset(1);
-                                pc;
                                 let mut io_34: *mut TValue = &mut (*ra_38).val;
                                 (*io_34).value_.n = (n1_12 / n2_12).floor();
                                 (*io_34)
@@ -4526,7 +4490,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_35: *mut TValue = &mut (*ra_39).val;
                             (*io_35)
                                 .value_
@@ -4587,7 +4550,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_36: *mut TValue = &mut (*ra_40).val;
                             (*io_36)
                                 .value_
@@ -4648,7 +4610,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_37: *mut TValue = &mut (*ra_41).val;
                             (*io_37)
                                 .value_
@@ -4709,7 +4670,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_38: *mut TValue = &mut (*ra_42).val;
                             (*io_38)
                                 .value_
@@ -4773,7 +4733,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                             }) != 0
                         {
                             pc = pc.offset(1);
-                            pc;
                             let mut io_39: *mut TValue = &mut (*ra_43).val;
                             (*io_39).value_.i = luaV_shiftl(i1_16, i2_16);
                             (*io_39)
@@ -5156,7 +5115,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni: Instruction = *pc;
                             pc = pc
@@ -5218,7 +5176,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_0: Instruction = *pc;
                             pc = pc
@@ -5280,7 +5237,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_1: Instruction = *pc;
                             pc = pc
@@ -5325,7 +5281,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_2: Instruction = *pc;
                             pc = pc
@@ -5378,7 +5333,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_3: Instruction = *pc;
                             pc = pc
@@ -5447,7 +5401,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_4: Instruction = *pc;
                             pc = pc
@@ -5516,7 +5469,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_5: Instruction = *pc;
                             pc = pc
@@ -5585,7 +5537,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_6: Instruction = *pc;
                             pc = pc
@@ -5654,7 +5605,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_7: Instruction = *pc;
                             pc = pc
@@ -5690,7 +5640,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut ni_8: Instruction = *pc;
                             pc = pc
@@ -5734,7 +5683,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     << 0i32) as i32
                         {
                             pc = pc.offset(1);
-                            pc;
                         } else {
                             let mut io1_14: *mut TValue = &mut (*ra_64).val;
                             let mut io2_14: *const TValue = rb_18;
@@ -5916,7 +5864,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                     .tt_ = (0i32
                                     | (0i32) << 4i32) as u8;
                                 nres -= 1;
-                                nres;
                             }
                         }
                         break;
@@ -5964,7 +5911,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                         .tt_ = (0i32
                                         | (0i32) << 4i32) as u8;
                                     nres_0 -= 1;
-                                    nres_0;
                                 }
                             }
                         }
@@ -6126,7 +6072,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                             - 1i32 + 1i32)) as libc::c_uint,
                                 );
                             pc = pc.offset(1);
-                            pc;
                         }
                         if last > luaH_realasize(h) {
                             luaH_resizearray(L, h, last);
@@ -6156,7 +6101,6 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallIn
                                 } else {};
                             } else {};
                             n_4 -= 1;
-                            n_4;
                         }
                         continue;
                     }
