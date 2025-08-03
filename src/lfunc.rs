@@ -163,8 +163,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -331,7 +331,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -353,7 +353,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -612,12 +612,12 @@ unsafe extern "C" fn callclosemethod(
 unsafe extern "C" fn checkclosemth(mut L: *mut lua_State, mut level: StkId) {
     let mut tm: *const TValue = luaT_gettmbyobj(L, &mut (*level).val, TM_CLOSE);
     if (*tm).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int {
-        let mut idx: libc::c_int = level.offset_from((*(*L).ci).func.p) as libc::c_long
+        let mut index: libc::c_int = level.offset_from((*(*L).ci).func.p) as libc::c_long
             as libc::c_int;
         let mut vname: *const libc::c_char = luaG_findlocal(
             L,
             (*L).ci,
-            idx,
+            index,
             0 as *mut StkId,
         );
         if vname.is_null() {

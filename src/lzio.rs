@@ -154,8 +154,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]

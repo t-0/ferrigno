@@ -62,30 +62,30 @@ unsafe extern "C" {
     fn strlen(_: *const libc::c_char) -> libc::c_ulong;
     fn strerror(_: libc::c_int) -> *mut libc::c_char;
     fn lua_gettop(L: *mut lua_State) -> libc::c_int;
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
-    fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
-    fn lua_rotate(L: *mut lua_State, idx: libc::c_int, n: libc::c_int);
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
+    fn lua_pushvalue(L: *mut lua_State, index: libc::c_int);
+    fn lua_rotate(L: *mut lua_State, index: libc::c_int, n: libc::c_int);
     fn lua_copy(L: *mut lua_State, fromidx: libc::c_int, toidx: libc::c_int);
-    fn lua_isinteger(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
-    fn lua_type(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_isinteger(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
+    fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tonumberx(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         isnum: *mut libc::c_int,
     ) -> lua_Number;
     fn lua_tointegerx(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         isnum: *mut libc::c_int,
     ) -> lua_Integer;
-    fn lua_toboolean(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_toboolean(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tolstring(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         len: *mut size_t,
     ) -> *const libc::c_char;
-    fn lua_rawlen(L: *mut lua_State, idx: libc::c_int) -> lua_Unsigned;
-    fn lua_touserdata(L: *mut lua_State, idx: libc::c_int) -> *mut libc::c_void;
+    fn lua_rawlen(L: *mut lua_State, index: libc::c_int) -> lua_Unsigned;
+    fn lua_touserdata(L: *mut lua_State, index: libc::c_int) -> *mut libc::c_void;
     fn lua_pushnil(L: *mut lua_State);
     fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
     fn lua_pushstring(L: *mut lua_State, s: *const libc::c_char) -> *const libc::c_char;
@@ -98,7 +98,7 @@ unsafe extern "C" {
     fn lua_pushboolean(L: *mut lua_State, b: libc::c_int);
     fn lua_getfield(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         k: *const libc::c_char,
     ) -> libc::c_int;
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
@@ -107,7 +107,7 @@ unsafe extern "C" {
         sz: size_t,
         nuvalue: libc::c_int,
     ) -> *mut libc::c_void;
-    fn lua_setfield(L: *mut lua_State, idx: libc::c_int, k: *const libc::c_char);
+    fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
     fn lua_stringtonumber(L: *mut lua_State, s: *const libc::c_char) -> size_t;
     fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
     fn luaL_argerror(
@@ -244,8 +244,8 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 pub type off_t = __off64_t;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
@@ -261,7 +261,7 @@ pub struct luaL_Buffer {
 #[repr(C)]
 pub union C2RustUnnamed_0 {
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,

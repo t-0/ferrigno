@@ -10,7 +10,7 @@
 #![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_State;
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
     fn luaopen_base(L: *mut lua_State) -> libc::c_int;
     fn luaopen_coroutine(L: *mut lua_State) -> libc::c_int;
     fn luaopen_table(L: *mut lua_State) -> libc::c_int;

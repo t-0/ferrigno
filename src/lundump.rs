@@ -179,8 +179,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -354,7 +354,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -376,7 +376,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -797,7 +797,7 @@ unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) {
     i = 0 as libc::c_int;
     while i < n {
         (*((*f).upvalues).offset(i as isize)).instack = loadByte(S);
-        (*((*f).upvalues).offset(i as isize)).idx = loadByte(S);
+        (*((*f).upvalues).offset(i as isize)).index = loadByte(S);
         (*((*f).upvalues).offset(i as isize)).kind = loadByte(S);
         i += 1;
         i;
@@ -988,7 +988,7 @@ unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
         ::core::mem::size_of::<lua_Number>() as libc::c_ulong,
         b"lua_Number\0" as *const u8 as *const libc::c_char,
     );
-    if loadInteger(S) != 0x5678 as libc::c_int as libc::c_longlong {
+    if loadInteger(S) != 0x5678 as libc::c_int as i64 {
         error(S, b"integer format mismatch\0" as *const u8 as *const libc::c_char);
     }
     if loadNumber(S) != 370.5f64 {

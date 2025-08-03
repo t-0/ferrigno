@@ -267,8 +267,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -442,7 +442,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -464,7 +464,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -832,7 +832,7 @@ pub struct C2RustUnnamed_12 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_13 {
-    pub idx: libc::c_short,
+    pub index: libc::c_short,
     pub t: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -1135,8 +1135,8 @@ unsafe extern "C" fn localdebuginfo(
     if (*vd).vd.kind as libc::c_int == 3 as libc::c_int {
         return 0 as *mut LocVar
     } else {
-        let mut idx: libc::c_int = (*vd).vd.pidx as libc::c_int;
-        return &mut *((*(*fs).f).locvars).offset(idx as isize) as *mut LocVar;
+        let mut index: libc::c_int = (*vd).vd.pidx as libc::c_int;
+        return &mut *((*(*fs).f).locvars).offset(index as isize) as *mut LocVar;
     };
 }
 unsafe extern "C" fn init_var(
@@ -1276,11 +1276,11 @@ unsafe extern "C" fn newupvalue(
     let mut prev: *mut FuncState = (*fs).prev;
     if (*v).k as libc::c_uint == VLOCAL as libc::c_int as libc::c_uint {
         (*up).instack = 1 as libc::c_int as lu_byte;
-        (*up).idx = (*v).u.var.ridx;
+        (*up).index = (*v).u.var.ridx;
         (*up).kind = (*getlocalvardesc(prev, (*v).u.var.vidx as libc::c_int)).vd.kind;
     } else {
         (*up).instack = 0 as libc::c_int as lu_byte;
-        (*up).idx = (*v).u.info as lu_byte;
+        (*up).index = (*v).u.info as lu_byte;
         (*up).kind = (*((*(*prev).f).upvalues).offset((*v).u.info as isize)).kind;
     }
     (*up).name = name;
@@ -1348,18 +1348,18 @@ unsafe extern "C" fn singlevaraux(
                 markupval(fs, (*var).u.var.vidx as libc::c_int);
             }
         } else {
-            let mut idx: libc::c_int = searchupvalue(fs, n);
-            if idx < 0 as libc::c_int {
+            let mut index: libc::c_int = searchupvalue(fs, n);
+            if index < 0 as libc::c_int {
                 singlevaraux((*fs).prev, n, var, 0 as libc::c_int);
                 if (*var).k as libc::c_uint == VLOCAL as libc::c_int as libc::c_uint
                     || (*var).k as libc::c_uint == VUPVAL as libc::c_int as libc::c_uint
                 {
-                    idx = newupvalue(fs, n, var);
+                    index = newupvalue(fs, n, var);
                 } else {
                     return
                 }
             }
-            init_exp(var, VUPVAL, idx);
+            init_exp(var, VUPVAL, index);
         }
     };
 }
@@ -2588,10 +2588,10 @@ unsafe extern "C" fn check_conflict(
                 }
                 if (*lh).v.k as libc::c_uint == VINDEXED as libc::c_int as libc::c_uint
                     && (*v).k as libc::c_uint == VLOCAL as libc::c_int as libc::c_uint
-                    && (*lh).v.u.ind.idx as libc::c_int == (*v).u.var.ridx as libc::c_int
+                    && (*lh).v.u.ind.index as libc::c_int == (*v).u.var.ridx as libc::c_int
                 {
                     conflict = 1 as libc::c_int;
-                    (*lh).v.u.ind.idx = extra as libc::c_short;
+                    (*lh).v.u.ind.index = extra as libc::c_short;
                 }
             }
         }
@@ -3426,7 +3426,7 @@ unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FuncState) {
     setvararg(fs, 0 as libc::c_int);
     env = allocupvalue(fs);
     (*env).instack = 1 as libc::c_int as lu_byte;
-    (*env).idx = 0 as libc::c_int as lu_byte;
+    (*env).index = 0 as libc::c_int as lu_byte;
     (*env).kind = 0 as libc::c_int as lu_byte;
     (*env).name = (*ls).envn;
     if (*(*fs).f).marked as libc::c_int & (1 as libc::c_int) << 5 as libc::c_int != 0

@@ -11,13 +11,13 @@
 unsafe extern "C" {
     pub type lua_State;
     fn lua_gettop(L: *mut lua_State) -> libc::c_int;
-    fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
+    fn lua_pushvalue(L: *mut lua_State, index: libc::c_int);
     fn lua_tointegerx(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         isnum: *mut libc::c_int,
     ) -> lua_Integer;
-    fn lua_toboolean(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_toboolean(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_pushnil(L: *mut lua_State);
     fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
     fn lua_pushlstring(
@@ -32,7 +32,7 @@ unsafe extern "C" {
     ) -> *const libc::c_char;
     fn lua_pushcclosure(L: *mut lua_State, fn_0: lua_CFunction, n: libc::c_int);
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
-    fn lua_setfield(L: *mut lua_State, idx: libc::c_int, k: *const libc::c_char);
+    fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
     fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
     fn luaL_argerror(
         L: *mut lua_State,
@@ -58,8 +58,8 @@ unsafe extern "C" {
     fn luaL_pushresult(B: *mut luaL_Buffer);
 }
 pub type size_t = libc::c_ulong;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
@@ -75,7 +75,7 @@ pub struct luaL_Buffer {
 #[repr(C)]
 pub union C2RustUnnamed {
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -89,12 +89,12 @@ pub struct luaL_Reg {
 }
 pub type utfint = libc::c_uint;
 unsafe extern "C" fn u_posrelat(mut pos: lua_Integer, mut len: size_t) -> lua_Integer {
-    if pos >= 0 as libc::c_int as libc::c_longlong {
+    if pos >= 0 as libc::c_int as i64 {
         return pos
     } else if (0 as libc::c_uint as libc::c_ulong).wrapping_sub(pos as size_t) > len {
         return 0 as libc::c_int as lua_Integer
     } else {
-        return len as lua_Integer + pos + 1 as libc::c_int as libc::c_longlong
+        return len as lua_Integer + pos + 1 as libc::c_int as i64
     };
 }
 unsafe extern "C" fn utf8_decode(
@@ -162,7 +162,7 @@ unsafe extern "C" fn utflen(mut L: *mut lua_State) -> libc::c_int {
         len,
     );
     let mut lax: libc::c_int = lua_toboolean(L, 4 as libc::c_int);
-    (((1 as libc::c_int as libc::c_longlong <= posi
+    (((1 as libc::c_int as i64 <= posi
         && {
             posi -= 1;
             posi <= len as lua_Integer
@@ -188,7 +188,7 @@ unsafe extern "C" fn utflen(mut L: *mut lua_State) -> libc::c_int {
         );
         if s1.is_null() {
             lua_pushnil(L);
-            lua_pushinteger(L, posi + 1 as libc::c_int as libc::c_longlong);
+            lua_pushinteger(L, posi + 1 as libc::c_int as i64);
             return 2 as libc::c_int;
         }
         posi = s1.offset_from(s) as libc::c_long as lua_Integer;
@@ -212,7 +212,7 @@ unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> libc::c_int {
     let mut lax: libc::c_int = lua_toboolean(L, 4 as libc::c_int);
     let mut n: libc::c_int = 0;
     let mut se: *const libc::c_char = 0 as *const libc::c_char;
-    (((posi >= 1 as libc::c_int as libc::c_longlong) as libc::c_int != 0 as libc::c_int)
+    (((posi >= 1 as libc::c_int as i64) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
         || luaL_argerror(
             L,
@@ -229,7 +229,7 @@ unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> libc::c_int {
     if posi > pose {
         return 0 as libc::c_int;
     }
-    if pose - posi >= 2147483647 as libc::c_int as libc::c_longlong {
+    if pose - posi >= 2147483647 as libc::c_int as i64 {
         return luaL_error(
             L,
             b"string slice too long\0" as *const u8 as *const libc::c_char,
@@ -243,7 +243,7 @@ unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> libc::c_int {
     );
     n = 0 as libc::c_int;
     se = s.offset(pose as isize);
-    s = s.offset((posi - 1 as libc::c_int as libc::c_longlong) as isize);
+    s = s.offset((posi - 1 as libc::c_int as i64) as isize);
     while s < se {
         let mut code: utfint = 0;
         s = utf8_decode(s, &mut code, (lax == 0) as libc::c_int);
@@ -303,13 +303,13 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
     let mut len: size_t = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1 as libc::c_int, &mut len);
     let mut n: lua_Integer = luaL_checkinteger(L, 2 as libc::c_int);
-    let mut posi: lua_Integer = (if n >= 0 as libc::c_int as libc::c_longlong {
+    let mut posi: lua_Integer = (if n >= 0 as libc::c_int as i64 {
         1 as libc::c_int as libc::c_ulong
     } else {
         len.wrapping_add(1 as libc::c_int as libc::c_ulong)
     }) as lua_Integer;
     posi = u_posrelat(luaL_optinteger(L, 3 as libc::c_int, posi), len);
-    (((1 as libc::c_int as libc::c_longlong <= posi
+    (((1 as libc::c_int as i64 <= posi
         && {
             posi -= 1;
             posi <= len as lua_Integer
@@ -319,8 +319,8 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
             3 as libc::c_int,
             b"position out of bounds\0" as *const u8 as *const libc::c_char,
         ) != 0) as libc::c_int;
-    if n == 0 as libc::c_int as libc::c_longlong {
-        while posi > 0 as libc::c_int as libc::c_longlong
+    if n == 0 as libc::c_int as i64 {
+        while posi > 0 as libc::c_int as i64
             && *s.offset(posi as isize) as libc::c_int & 0xc0 as libc::c_int
                 == 0x80 as libc::c_int
         {
@@ -337,14 +337,14 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
                     as *const libc::c_char,
             );
         }
-        if n < 0 as libc::c_int as libc::c_longlong {
-            while n < 0 as libc::c_int as libc::c_longlong
-                && posi > 0 as libc::c_int as libc::c_longlong
+        if n < 0 as libc::c_int as i64 {
+            while n < 0 as libc::c_int as i64
+                && posi > 0 as libc::c_int as i64
             {
                 loop {
                     posi -= 1;
                     posi;
-                    if !(posi > 0 as libc::c_int as libc::c_longlong
+                    if !(posi > 0 as libc::c_int as i64
                         && *s.offset(posi as isize) as libc::c_int & 0xc0 as libc::c_int
                             == 0x80 as libc::c_int)
                     {
@@ -357,7 +357,7 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
         } else {
             n -= 1;
             n;
-            while n > 0 as libc::c_int as libc::c_longlong && posi < len as lua_Integer {
+            while n > 0 as libc::c_int as i64 && posi < len as lua_Integer {
                 loop {
                     posi += 1;
                     posi;
@@ -372,8 +372,8 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
             }
         }
     }
-    if n == 0 as libc::c_int as libc::c_longlong {
-        lua_pushinteger(L, posi + 1 as libc::c_int as libc::c_longlong);
+    if n == 0 as libc::c_int as i64 {
+        lua_pushinteger(L, posi + 1 as libc::c_int as i64);
     } else {
         lua_pushnil(L);
     }

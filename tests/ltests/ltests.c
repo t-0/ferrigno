@@ -1663,13 +1663,13 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       if (L1 != L) {
         int i;
         for (i = 0; i < n; i++) {
-          int idx = -(n - i);
-          switch (lua_type(L1, idx)) {
+          int index = -(n - i);
+          switch (lua_type(L1, index)) {
             case LUA_TBOOLEAN:
-              lua_pushboolean(L, lua_toboolean(L1, idx));
+              lua_pushboolean(L, lua_toboolean(L1, index));
               break;
             default:
-              lua_pushstring(L, lua_tostring(L1, idx));
+              lua_pushstring(L, lua_tostring(L1, index));
               break;
           }
         }
@@ -1700,8 +1700,8 @@ static int runC (lua_State *L, lua_State *L1, const char *pc) {
       sethookaux(L1, mask, count, s);
     }
     else if EQ("setmetatable") {
-      int idx = getindex;
-      lua_setmetatable(L1, idx);
+      int index = getindex;
+      lua_setmetatable(L1, index);
     }
     else if EQ("settable") {
       lua_settable(L1, getindex);

@@ -14,13 +14,13 @@ unsafe extern "C" {
     fn lua_newthread(L: *mut lua_State) -> *mut lua_State;
     fn lua_closethread(L: *mut lua_State, from: *mut lua_State) -> libc::c_int;
     fn lua_gettop(L: *mut lua_State) -> libc::c_int;
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
-    fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
-    fn lua_rotate(L: *mut lua_State, idx: libc::c_int, n: libc::c_int);
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
+    fn lua_pushvalue(L: *mut lua_State, index: libc::c_int);
+    fn lua_rotate(L: *mut lua_State, index: libc::c_int, n: libc::c_int);
     fn lua_checkstack(L: *mut lua_State, n: libc::c_int) -> libc::c_int;
     fn lua_xmove(from: *mut lua_State, to: *mut lua_State, n: libc::c_int);
-    fn lua_type(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
-    fn lua_tothread(L: *mut lua_State, idx: libc::c_int) -> *mut lua_State;
+    fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
+    fn lua_tothread(L: *mut lua_State, index: libc::c_int) -> *mut lua_State;
     fn lua_pushstring(L: *mut lua_State, s: *const libc::c_char) -> *const libc::c_char;
     fn lua_pushcclosure(L: *mut lua_State, fn_0: lua_CFunction, n: libc::c_int);
     fn lua_pushboolean(L: *mut lua_State, b: libc::c_int);
@@ -60,8 +60,8 @@ unsafe extern "C" {
 }
 pub type size_t = libc::c_ulong;
 pub type intptr_t = libc::c_long;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_KContext = intptr_t;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 pub type lua_KFunction = Option::<

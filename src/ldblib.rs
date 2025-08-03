@@ -26,19 +26,19 @@ unsafe extern "C" {
     fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
     fn strchr(_: *const libc::c_char, _: libc::c_int) -> *mut libc::c_char;
     fn strlen(_: *const libc::c_char) -> libc::c_ulong;
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
-    fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
-    fn lua_rotate(L: *mut lua_State, idx: libc::c_int, n: libc::c_int);
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
+    fn lua_pushvalue(L: *mut lua_State, index: libc::c_int);
+    fn lua_rotate(L: *mut lua_State, index: libc::c_int, n: libc::c_int);
     fn lua_checkstack(L: *mut lua_State, n: libc::c_int) -> libc::c_int;
     fn lua_xmove(from: *mut lua_State, to: *mut lua_State, n: libc::c_int);
-    fn lua_iscfunction(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
-    fn lua_type(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_iscfunction(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
+    fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tolstring(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         len: *mut size_t,
     ) -> *const libc::c_char;
-    fn lua_tothread(L: *mut lua_State, idx: libc::c_int) -> *mut lua_State;
+    fn lua_tothread(L: *mut lua_State, index: libc::c_int) -> *mut lua_State;
     fn lua_pushnil(L: *mut lua_State);
     fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
     fn lua_pushlstring(
@@ -57,23 +57,23 @@ unsafe extern "C" {
     fn lua_pushthread(L: *mut lua_State) -> libc::c_int;
     fn lua_getfield(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         k: *const libc::c_char,
     ) -> libc::c_int;
-    fn lua_rawget(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_rawget(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
     fn lua_getmetatable(L: *mut lua_State, objindex: libc::c_int) -> libc::c_int;
     fn lua_getiuservalue(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         n: libc::c_int,
     ) -> libc::c_int;
-    fn lua_setfield(L: *mut lua_State, idx: libc::c_int, k: *const libc::c_char);
-    fn lua_rawset(L: *mut lua_State, idx: libc::c_int);
+    fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
+    fn lua_rawset(L: *mut lua_State, index: libc::c_int);
     fn lua_setmetatable(L: *mut lua_State, objindex: libc::c_int) -> libc::c_int;
     fn lua_setiuservalue(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         n: libc::c_int,
     ) -> libc::c_int;
     fn lua_callk(
@@ -146,7 +146,7 @@ unsafe extern "C" {
     fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
     fn luaL_tolstring(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         len: *mut size_t,
     ) -> *const libc::c_char;
     fn luaL_argerror(
@@ -189,7 +189,7 @@ unsafe extern "C" {
     fn luaL_setfuncs(L: *mut lua_State, l: *const luaL_Reg, nup: libc::c_int);
     fn luaL_getsubtable(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         fname: *const libc::c_char,
     ) -> libc::c_int;
     fn luaL_traceback(
@@ -238,8 +238,8 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 pub type intptr_t = libc::c_long;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_KContext = intptr_t;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 pub type lua_KFunction = Option::<

@@ -10,7 +10,7 @@
 #![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
-    fn frexp(_: libc::c_double, _: *mut libc::c_int) -> libc::c_double;
+    fn frexp(_: f64, _: *mut libc::c_int) -> f64;
     fn luaO_ceillog2(x: libc::c_uint) -> libc::c_int;
     fn luaM_realloc_(
         L: *mut lua_State,
@@ -175,8 +175,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -344,7 +344,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -366,7 +366,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -533,13 +533,13 @@ unsafe extern "C" fn l_hashfloat(mut n: lua_Number) -> libc::c_int {
     n = frexp(n, &mut i)
         * -((-(2147483647 as libc::c_int) - 1 as libc::c_int) as lua_Number);
     if !(n
-        >= (-(9223372036854775807 as libc::c_longlong) - 1 as libc::c_longlong)
-            as libc::c_double
+        >= (-(9223372036854775807 as i64) - 1 as i64)
+            as f64
         && n
-            < -((-(9223372036854775807 as libc::c_longlong) - 1 as libc::c_longlong)
-                as libc::c_double)
+            < -((-(9223372036854775807 as i64) - 1 as i64)
+                as f64)
         && {
-            ni = n as libc::c_longlong;
+            ni = n as i64;
             1 as libc::c_int != 0
         })
     {
@@ -1346,14 +1346,14 @@ pub unsafe extern "C" fn luaH_getint(
         < alimit
     {
         return &mut *((*t).array)
-            .offset((key - 1 as libc::c_int as libc::c_longlong) as isize) as *mut TValue
+            .offset((key - 1 as libc::c_int as i64) as isize) as *mut TValue
     } else if (*t).flags as libc::c_int & (1 as libc::c_int) << 7 as libc::c_int != 0
         && (key as lua_Unsigned).wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
             & !alimit.wrapping_sub(1 as libc::c_uint as libc::c_ulonglong) < alimit
     {
         (*t).alimit = key as libc::c_uint;
         return &mut *((*t).array)
-            .offset((key - 1 as libc::c_int as libc::c_longlong) as isize)
+            .offset((key - 1 as libc::c_int as i64) as isize)
             as *mut TValue;
     } else {
         let mut n: *mut Node = hashint(t, key);
@@ -1512,7 +1512,7 @@ unsafe extern "C" fn hash_search(
     loop {
         i = j;
         if j
-            <= (9223372036854775807 as libc::c_longlong as lua_Unsigned)
+            <= (9223372036854775807 as i64 as lua_Unsigned)
                 .wrapping_div(2 as libc::c_int as libc::c_ulonglong)
         {
             j = (j as libc::c_ulonglong)
@@ -1524,7 +1524,7 @@ unsafe extern "C" fn hash_search(
                 break;
             }
         } else {
-            j = 9223372036854775807 as libc::c_longlong as lua_Unsigned;
+            j = 9223372036854775807 as i64 as lua_Unsigned;
             if (*luaH_getint(t, j as lua_Integer)).tt_ as libc::c_int
                 & 0xf as libc::c_int == 0 as libc::c_int
             {

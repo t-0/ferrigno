@@ -33,7 +33,7 @@ unsafe extern "C" {
     fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> libc::c_int;
     fn clock() -> clock_t;
     fn time(__timer: *mut time_t) -> time_t;
-    fn difftime(__time1: time_t, __time0: time_t) -> libc::c_double;
+    fn difftime(__time1: time_t, __time0: time_t) -> f64;
     fn mktime(__tp: *mut tm) -> time_t;
     fn strftime(
         __s: *mut libc::c_char,
@@ -44,14 +44,14 @@ unsafe extern "C" {
     fn gmtime_r(__timer: *const time_t, __tp: *mut tm) -> *mut tm;
     fn localtime_r(__timer: *const time_t, __tp: *mut tm) -> *mut tm;
     fn lua_close(L: *mut lua_State);
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
-    fn lua_type(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
+    fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tointegerx(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         isnum: *mut libc::c_int,
     ) -> lua_Integer;
-    fn lua_toboolean(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_toboolean(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_pushnumber(L: *mut lua_State, n: lua_Number);
     fn lua_pushinteger(L: *mut lua_State, n: lua_Integer);
     fn lua_pushstring(L: *mut lua_State, s: *const libc::c_char) -> *const libc::c_char;
@@ -63,11 +63,11 @@ unsafe extern "C" {
     fn lua_pushboolean(L: *mut lua_State, b: libc::c_int);
     fn lua_getfield(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         k: *const libc::c_char,
     ) -> libc::c_int;
     fn lua_createtable(L: *mut lua_State, narr: libc::c_int, nrec: libc::c_int);
-    fn lua_setfield(L: *mut lua_State, idx: libc::c_int, k: *const libc::c_char);
+    fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
     fn remove(__filename: *const libc::c_char) -> libc::c_int;
     fn rename(__old: *const libc::c_char, __new: *const libc::c_char) -> libc::c_int;
     fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
@@ -134,8 +134,8 @@ pub struct tm {
     pub __tm_zone: *const libc::c_char,
 }
 pub type ptrdiff_t = libc::c_long;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -150,7 +150,7 @@ pub struct luaL_Buffer {
 #[repr(C)]
 pub union C2RustUnnamed {
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -245,7 +245,7 @@ unsafe extern "C" fn setfield(
     mut value: libc::c_int,
     mut delta: libc::c_int,
 ) {
-    lua_pushinteger(L, value as lua_Integer + delta as libc::c_longlong);
+    lua_pushinteger(L, value as lua_Integer + delta as i64);
     lua_setfield(L, -(2 as libc::c_int), key);
 }
 unsafe extern "C" fn setboolfield(
@@ -353,12 +353,12 @@ unsafe extern "C" fn getfield(
         }
         res = d as lua_Integer;
     } else {
-        if if res >= 0 as libc::c_int as libc::c_longlong {
-            (res - delta as libc::c_longlong
-                <= 2147483647 as libc::c_int as libc::c_longlong) as libc::c_int
+        if if res >= 0 as libc::c_int as i64 {
+            (res - delta as i64
+                <= 2147483647 as libc::c_int as i64) as libc::c_int
         } else {
             ((-(2147483647 as libc::c_int) - 1 as libc::c_int + delta)
-                as libc::c_longlong <= res) as libc::c_int
+                as i64 <= res) as libc::c_int
         } == 0
         {
             return luaL_error(
@@ -367,7 +367,7 @@ unsafe extern "C" fn getfield(
                 key,
             );
         }
-        res -= delta as libc::c_longlong;
+        res -= delta as i64;
     }
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     return res as libc::c_int;
@@ -414,7 +414,7 @@ unsafe extern "C" fn checkoption(
 }
 unsafe extern "C" fn l_checktime(mut L: *mut lua_State, mut arg: libc::c_int) -> time_t {
     let mut t: lua_Integer = luaL_checkinteger(L, arg);
-    (((t as time_t as libc::c_longlong == t) as libc::c_int != 0 as libc::c_int)
+    (((t as time_t as i64 == t) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
         || luaL_argerror(
             L,

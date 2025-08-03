@@ -10,33 +10,24 @@
 #![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_State;
-    fn acos(_: libc::c_double) -> libc::c_double;
-    fn asin(_: libc::c_double) -> libc::c_double;
-    fn atan2(_: libc::c_double, _: libc::c_double) -> libc::c_double;
-    fn cos(_: libc::c_double) -> libc::c_double;
-    fn sin(_: libc::c_double) -> libc::c_double;
-    fn tan(_: libc::c_double) -> libc::c_double;
-    fn exp(_: libc::c_double) -> libc::c_double;
-    fn log(_: libc::c_double) -> libc::c_double;
-    fn log10(_: libc::c_double) -> libc::c_double;
-    fn log2(_: libc::c_double) -> libc::c_double;
-    fn sqrt(_: libc::c_double) -> libc::c_double;
-    fn ceil(_: libc::c_double) -> libc::c_double;
-    fn fabs(_: libc::c_double) -> libc::c_double;
-    fn floor(_: libc::c_double) -> libc::c_double;
-    fn fmod(_: libc::c_double, _: libc::c_double) -> libc::c_double;
+    fn atan2(_: f64, _: f64) -> f64;
+    fn exp(_: f64) -> f64;
+    fn log(_: f64) -> f64;
+    fn log10(_: f64) -> f64;
+    fn log2(_: f64) -> f64;
+    fn fmod(_: f64, _: f64) -> f64;
     fn time(__timer: *mut time_t) -> time_t;
     fn lua_gettop(L: *mut lua_State) -> libc::c_int;
-    fn lua_settop(L: *mut lua_State, idx: libc::c_int);
-    fn lua_pushvalue(L: *mut lua_State, idx: libc::c_int);
-    fn lua_isinteger(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
-    fn lua_type(L: *mut lua_State, idx: libc::c_int) -> libc::c_int;
+    fn lua_settop(L: *mut lua_State, index: libc::c_int);
+    fn lua_pushvalue(L: *mut lua_State, index: libc::c_int);
+    fn lua_isinteger(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
+    fn lua_type(L: *mut lua_State, index: libc::c_int) -> libc::c_int;
     fn lua_tointegerx(
         L: *mut lua_State,
-        idx: libc::c_int,
+        index: libc::c_int,
         isnum: *mut libc::c_int,
     ) -> lua_Integer;
-    fn lua_touserdata(L: *mut lua_State, idx: libc::c_int) -> *mut libc::c_void;
+    fn lua_touserdata(L: *mut lua_State, index: libc::c_int) -> *mut libc::c_void;
     fn lua_compare(
         L: *mut lua_State,
         idx1: libc::c_int,
@@ -54,7 +45,7 @@ unsafe extern "C" {
         sz: size_t,
         nuvalue: libc::c_int,
     ) -> *mut libc::c_void;
-    fn lua_setfield(L: *mut lua_State, idx: libc::c_int, k: *const libc::c_char);
+    fn lua_setfield(L: *mut lua_State, index: libc::c_int, k: *const libc::c_char);
     fn luaL_checkversion_(L: *mut lua_State, ver: lua_Number, sz: size_t);
     fn luaL_argerror(
         L: *mut lua_State,
@@ -80,8 +71,8 @@ unsafe extern "C" {
 pub type __time_t = libc::c_long;
 pub type size_t = libc::c_ulong;
 pub type time_t = __time_t;
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
@@ -102,34 +93,34 @@ unsafe extern "C" fn math_abs(mut L: *mut lua_State) -> libc::c_int {
             1 as libc::c_int,
             0 as *mut libc::c_int,
         );
-        if n < 0 as libc::c_int as libc::c_longlong {
+        if n < 0 as libc::c_int as i64 {
             n = (0 as libc::c_uint as libc::c_ulonglong).wrapping_sub(n as lua_Unsigned)
                 as lua_Integer;
         }
         lua_pushinteger(L, n);
     } else {
-        lua_pushnumber(L, fabs(luaL_checknumber(L, 1 as libc::c_int)));
+        lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).abs());
     }
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_sin(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, sin(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).sin());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_cos(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, cos(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).cos());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_tan(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, tan(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).tan());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_asin(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, asin(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).asin());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_acos(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, acos(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).acos());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_atan(mut L: *mut lua_State) -> libc::c_int {
@@ -156,13 +147,13 @@ unsafe extern "C" fn math_toint(mut L: *mut lua_State) -> libc::c_int {
 unsafe extern "C" fn pushnumint(mut L: *mut lua_State, mut d: lua_Number) {
     let mut n: lua_Integer = 0;
     if d
-        >= (-(9223372036854775807 as libc::c_longlong) - 1 as libc::c_longlong)
-            as libc::c_double
+        >= (-(9223372036854775807 as i64) - 1 as i64)
+            as f64
         && d
-            < -((-(9223372036854775807 as libc::c_longlong) - 1 as libc::c_longlong)
-                as libc::c_double)
+            < -((-(9223372036854775807 as i64) - 1 as i64)
+                as f64)
         && {
-            n = d as libc::c_longlong;
+            n = d as i64;
             1 as libc::c_int != 0
         }
     {
@@ -175,7 +166,7 @@ unsafe extern "C" fn math_floor(mut L: *mut lua_State) -> libc::c_int {
     if lua_isinteger(L, 1 as libc::c_int) != 0 {
         lua_settop(L, 1 as libc::c_int);
     } else {
-        let mut d: lua_Number = floor(luaL_checknumber(L, 1 as libc::c_int));
+        let mut d: lua_Number = luaL_checknumber(L, 1 as libc::c_int).floor();
         pushnumint(L, d);
     }
     return 1 as libc::c_int;
@@ -184,7 +175,7 @@ unsafe extern "C" fn math_ceil(mut L: *mut lua_State) -> libc::c_int {
     if lua_isinteger(L, 1 as libc::c_int) != 0 {
         lua_settop(L, 1 as libc::c_int);
     } else {
-        let mut d: lua_Number = ceil(luaL_checknumber(L, 1 as libc::c_int));
+        let mut d: lua_Number = luaL_checknumber(L, 1 as libc::c_int).ceil();
         pushnumint(L, d);
     }
     return 1 as libc::c_int;
@@ -200,7 +191,7 @@ unsafe extern "C" fn math_fmod(mut L: *mut lua_State) -> libc::c_int {
         if (d as lua_Unsigned).wrapping_add(1 as libc::c_uint as libc::c_ulonglong)
             <= 1 as libc::c_uint as libc::c_ulonglong
         {
-            (((d != 0 as libc::c_int as libc::c_longlong) as libc::c_int
+            (((d != 0 as libc::c_int as i64) as libc::c_int
                 != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
                 || luaL_argerror(
                     L,
@@ -231,10 +222,10 @@ unsafe extern "C" fn math_modf(mut L: *mut lua_State) -> libc::c_int {
         lua_pushnumber(L, 0 as libc::c_int as lua_Number);
     } else {
         let mut n: lua_Number = luaL_checknumber(L, 1 as libc::c_int);
-        let mut ip: lua_Number = if n < 0 as libc::c_int as libc::c_double {
-            ceil(n)
+        let mut ip: lua_Number = if n < 0 as libc::c_int as f64 {
+            n.ceil()
         } else {
-            floor(n)
+            n.floor()
         };
         pushnumint(L, ip);
         lua_pushnumber(L, if n == ip { 0.0f64 } else { n - ip });
@@ -242,7 +233,7 @@ unsafe extern "C" fn math_modf(mut L: *mut lua_State) -> libc::c_int {
     return 2 as libc::c_int;
 }
 unsafe extern "C" fn math_sqrt(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, sqrt(luaL_checknumber(L, 1 as libc::c_int)));
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).sqrt());
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_ult(mut L: *mut lua_State) -> libc::c_int {
@@ -374,7 +365,7 @@ unsafe extern "C" fn I2d(mut x: libc::c_ulong) -> lua_Number {
     let mut res: lua_Number = sx as lua_Number
         * (0.5f64
             / ((1 as libc::c_int as libc::c_ulong)
-                << 53 as libc::c_int - 1 as libc::c_int) as libc::c_double);
+                << 53 as libc::c_int - 1 as libc::c_int) as f64);
     if sx < 0 as libc::c_int as libc::c_long {
         res += 1.0f64;
     }
@@ -425,7 +416,7 @@ unsafe extern "C" fn math_random(mut L: *mut lua_State) -> libc::c_int {
         1 => {
             low = 1 as libc::c_int as lua_Integer;
             up = luaL_checkinteger(L, 1 as libc::c_int);
-            if up == 0 as libc::c_int as libc::c_longlong {
+            if up == 0 as libc::c_int as i64 {
                 lua_pushinteger(
                     L,
                     (rv & 0xffffffffffffffff as libc::c_ulong) as lua_Unsigned
@@ -805,7 +796,7 @@ pub unsafe extern "C" fn luaopen_math(mut L: *mut lua_State) -> libc::c_int {
     lua_setfield(L, -(2 as libc::c_int), b"pi\0" as *const u8 as *const libc::c_char);
     lua_pushnumber(L, ::core::f64::INFINITY);
     lua_setfield(L, -(2 as libc::c_int), b"huge\0" as *const u8 as *const libc::c_char);
-    lua_pushinteger(L, 9223372036854775807 as libc::c_longlong);
+    lua_pushinteger(L, 9223372036854775807 as i64);
     lua_setfield(
         L,
         -(2 as libc::c_int),
@@ -813,7 +804,7 @@ pub unsafe extern "C" fn luaopen_math(mut L: *mut lua_State) -> libc::c_int {
     );
     lua_pushinteger(
         L,
-        -(9223372036854775807 as libc::c_longlong) - 1 as libc::c_longlong,
+        -(9223372036854775807 as i64) - 1 as i64,
     );
     lua_setfield(
         L,

@@ -11,7 +11,7 @@
 unsafe extern "C" {
     pub type lua_longjmp;
     pub type BlockCnt;
-    fn ldexp(_: libc::c_double, _: libc::c_int) -> libc::c_double;
+    fn ldexp(_: f64, _: libc::c_int) -> f64;
     fn abs(_: libc::c_int) -> libc::c_int;
     fn luaO_ceillog2(x: libc::c_uint) -> libc::c_int;
     fn luaO_rawarith(
@@ -196,8 +196,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -372,7 +372,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -394,7 +394,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -713,7 +713,7 @@ pub struct C2RustUnnamed_12 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_13 {
-    pub idx: libc::c_short,
+    pub index: libc::c_short,
     pub t: lu_byte,
 }
 pub type BinOpr = libc::c_uint;
@@ -1472,13 +1472,13 @@ unsafe extern "C" fn addk(
     };
     let mut L: *mut lua_State = (*(*fs).ls).L;
     let mut f: *mut Proto = (*fs).f;
-    let mut idx: *const TValue = luaH_get((*(*fs).ls).h, key);
+    let mut index: *const TValue = luaH_get((*(*fs).ls).h, key);
     let mut k: libc::c_int = 0;
     let mut oldsize: libc::c_int = 0;
-    if (*idx).tt_ as libc::c_int
+    if (*index).tt_ as libc::c_int
         == 3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
     {
-        k = (*idx).value_.i as libc::c_int;
+        k = (*index).value_.i as libc::c_int;
         if k < (*fs).nk
             && (*((*f).k).offset(k as isize)).tt_ as libc::c_int & 0x3f as libc::c_int
                 == (*v).tt_ as libc::c_int & 0x3f as libc::c_int
@@ -1493,7 +1493,7 @@ unsafe extern "C" fn addk(
     let mut io: *mut TValue = &mut val;
     (*io).value_.i = k as lua_Integer;
     (*io).tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
-    luaH_finishset(L, (*(*fs).ls).h, key, idx, &mut val);
+    luaH_finishset(L, (*(*fs).ls).h, key, index, &mut val);
     (*f)
         .k = luaM_growaux_(
         L,
@@ -1591,7 +1591,7 @@ unsafe extern "C" fn luaK_numberK(
     } else {
         let nbm: libc::c_int = 53 as libc::c_int;
         let q: lua_Number = ldexp(1.0f64, -nbm + 1 as libc::c_int);
-        let k: lua_Number = if ik == 0 as libc::c_int as libc::c_longlong {
+        let k: lua_Number = if ik == 0 as libc::c_int as i64 {
             q
         } else {
             r + r * q
@@ -1654,14 +1654,14 @@ unsafe extern "C" fn fitsC(mut i: lua_Integer) -> libc::c_int {
 unsafe extern "C" fn fitsBx(mut i: lua_Integer) -> libc::c_int {
     return (-(((1 as libc::c_int)
         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int) - 1 as libc::c_int
-        >> 1 as libc::c_int) as libc::c_longlong <= i
+        >> 1 as libc::c_int) as i64 <= i
         && i
             <= (((1 as libc::c_int)
                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                 - 1 as libc::c_int
                 - (((1 as libc::c_int)
                     << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
-                    - 1 as libc::c_int >> 1 as libc::c_int)) as libc::c_longlong)
+                    - 1 as libc::c_int >> 1 as libc::c_int)) as i64)
         as libc::c_int;
 }
 #[unsafe (no_mangle)]
@@ -1819,7 +1819,7 @@ pub unsafe extern "C" fn luaK_dischargevars(
                 OP_GETTABUP,
                 0 as libc::c_int,
                 (*e).u.ind.t as libc::c_int,
-                (*e).u.ind.idx as libc::c_int,
+                (*e).u.ind.index as libc::c_int,
                 0 as libc::c_int,
             );
             (*e).k = VRELOC;
@@ -1833,7 +1833,7 @@ pub unsafe extern "C" fn luaK_dischargevars(
                 OP_GETI,
                 0 as libc::c_int,
                 (*e).u.ind.t as libc::c_int,
-                (*e).u.ind.idx as libc::c_int,
+                (*e).u.ind.index as libc::c_int,
                 0 as libc::c_int,
             );
             (*e).k = VRELOC;
@@ -1847,13 +1847,13 @@ pub unsafe extern "C" fn luaK_dischargevars(
                 OP_GETFIELD,
                 0 as libc::c_int,
                 (*e).u.ind.t as libc::c_int,
-                (*e).u.ind.idx as libc::c_int,
+                (*e).u.ind.index as libc::c_int,
                 0 as libc::c_int,
             );
             (*e).k = VRELOC;
         }
         12 => {
-            freeregs(fs, (*e).u.ind.t as libc::c_int, (*e).u.ind.idx as libc::c_int);
+            freeregs(fs, (*e).u.ind.t as libc::c_int, (*e).u.ind.index as libc::c_int);
             (*e)
                 .u
                 .info = luaK_codeABCk(
@@ -1861,7 +1861,7 @@ pub unsafe extern "C" fn luaK_dischargevars(
                 OP_GETTABLE,
                 0 as libc::c_int,
                 (*e).u.ind.t as libc::c_int,
-                (*e).u.ind.idx as libc::c_int,
+                (*e).u.ind.index as libc::c_int,
                 0 as libc::c_int,
             );
             (*e).k = VRELOC;
@@ -2154,7 +2154,7 @@ pub unsafe extern "C" fn luaK_storevar(
                 fs,
                 OP_SETTABUP,
                 (*var).u.ind.t as libc::c_int,
-                (*var).u.ind.idx as libc::c_int,
+                (*var).u.ind.index as libc::c_int,
                 ex,
             );
         }
@@ -2163,7 +2163,7 @@ pub unsafe extern "C" fn luaK_storevar(
                 fs,
                 OP_SETI,
                 (*var).u.ind.t as libc::c_int,
-                (*var).u.ind.idx as libc::c_int,
+                (*var).u.ind.index as libc::c_int,
                 ex,
             );
         }
@@ -2172,7 +2172,7 @@ pub unsafe extern "C" fn luaK_storevar(
                 fs,
                 OP_SETFIELD,
                 (*var).u.ind.t as libc::c_int,
-                (*var).u.ind.idx as libc::c_int,
+                (*var).u.ind.index as libc::c_int,
                 ex,
             );
         }
@@ -2181,7 +2181,7 @@ pub unsafe extern "C" fn luaK_storevar(
                 fs,
                 OP_SETTABLE,
                 (*var).u.ind.t as libc::c_int,
-                (*var).u.ind.idx as libc::c_int,
+                (*var).u.ind.index as libc::c_int,
                 ex,
             );
         }
@@ -2390,7 +2390,7 @@ pub unsafe extern "C" fn luaK_indexed(
     if (*t).k as libc::c_uint == VUPVAL as libc::c_int as libc::c_uint {
         let mut temp: libc::c_int = (*t).u.info;
         (*t).u.ind.t = temp as lu_byte;
-        (*t).u.ind.idx = (*k).u.info as libc::c_short;
+        (*t).u.ind.index = (*k).u.info as libc::c_short;
         (*t).k = VINDEXUP;
     } else {
         (*t)
@@ -2402,13 +2402,13 @@ pub unsafe extern "C" fn luaK_indexed(
             (*t).u.info
         }) as lu_byte;
         if isKstr(fs, k) != 0 {
-            (*t).u.ind.idx = (*k).u.info as libc::c_short;
+            (*t).u.ind.index = (*k).u.info as libc::c_short;
             (*t).k = VINDEXSTR;
         } else if isCint(k) != 0 {
-            (*t).u.ind.idx = (*k).u.ival as libc::c_int as libc::c_short;
+            (*t).u.ind.index = (*k).u.ival as libc::c_int as libc::c_short;
             (*t).k = VINDEXI;
         } else {
-            (*t).u.ind.idx = luaK_exp2anyreg(fs, k) as libc::c_short;
+            (*t).u.ind.index = luaK_exp2anyreg(fs, k) as libc::c_short;
             (*t).k = VINDEXED;
         }
     };
@@ -2431,7 +2431,7 @@ unsafe extern "C" fn validop(
                 (*v2).value_.i as lua_Number
             } else {
                 (*v2).value_.n
-            }) != 0 as libc::c_int as libc::c_double) as libc::c_int;
+            }) != 0 as libc::c_int as f64) as libc::c_int;
         }
         _ => return 1 as libc::c_int,
     };
@@ -2467,7 +2467,7 @@ unsafe extern "C" fn constfolding(
         (*e1).u.ival = res.value_.i;
     } else {
         let mut n: lua_Number = res.value_.n;
-        if !(n == n) || n == 0 as libc::c_int as libc::c_double {
+        if !(n == n) || n == 0 as libc::c_int as f64 {
             return 0 as libc::c_int;
         }
         (*e1).k = VKFLT;

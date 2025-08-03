@@ -178,8 +178,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -346,7 +346,7 @@ pub type ls_byte = libc::c_schar;
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -368,7 +368,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -770,7 +770,7 @@ pub unsafe extern "C" fn luaS_newlstr(
             {
                 !(0 as libc::c_int as size_t)
             } else {
-                9223372036854775807 as libc::c_longlong as size_t
+                9223372036854775807 as i64 as size_t
             })
                 .wrapping_sub(::core::mem::size_of::<TString>() as libc::c_ulong))
             as libc::c_int != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
@@ -834,7 +834,7 @@ pub unsafe extern "C" fn luaS_newudata(
         {
             !(0 as libc::c_int as size_t)
         } else {
-            9223372036854775807 as libc::c_longlong as size_t
+            9223372036854775807 as i64 as size_t
         })
             .wrapping_sub(
                 (if nuvalue == 0 as libc::c_int {

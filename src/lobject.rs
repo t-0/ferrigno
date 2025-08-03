@@ -11,15 +11,14 @@
 unsafe extern "C" {
     pub type lua_longjmp;
     fn localeconv() -> *mut lconv;
-    fn pow(_: libc::c_double, _: libc::c_double) -> libc::c_double;
-    fn floor(_: libc::c_double) -> libc::c_double;
+    fn pow(_: f64, _: f64) -> f64;
     fn snprintf(
         _: *mut libc::c_char,
         _: libc::c_ulong,
         _: *const libc::c_char,
         _: ...
     ) -> libc::c_int;
-    fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char) -> libc::c_double;
+    fn strtod(_: *const libc::c_char, _: *mut *mut libc::c_char) -> f64;
     fn memcpy(
         _: *mut libc::c_void,
         _: *const libc::c_void,
@@ -231,8 +230,8 @@ pub union Value {
     pub n: lua_Number,
     pub ub: lu_byte,
 }
-pub type lua_Number = libc::c_double;
-pub type lua_Integer = libc::c_longlong;
+pub type lua_Number = f64;
+pub type lua_Integer = i64;
 pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -395,14 +394,14 @@ pub type lua_Alloc = Option::<
 >;
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type ls_byte = libc::c_schar;
-pub type l_uacNumber = libc::c_double;
-pub type l_uacInt = libc::c_longlong;
+pub type l_uacNumber = f64;
+pub type l_uacInt = i64;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UValue {
     pub uv: TValue,
     pub n: lua_Number,
-    pub u: libc::c_double,
+    pub u: f64,
     pub s: *mut libc::c_void,
     pub i: lua_Integer,
     pub l: libc::c_long,
@@ -424,7 +423,7 @@ pub struct Udata {
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: lu_byte,
-    pub idx: lu_byte,
+    pub index: lu_byte,
     pub kind: lu_byte,
 }
 #[derive(Copy, Clone)]
@@ -862,13 +861,13 @@ unsafe extern "C" fn numarith(
         2 => return v1 * v2,
         5 => return v1 / v2,
         4 => {
-            return (if v2 == 2 as libc::c_int as libc::c_double {
+            return (if v2 == 2 as libc::c_int as f64 {
                 v1 * v1
             } else {
                 pow(v1, v2)
             });
         }
-        6 => return floor(v1 / v2),
+        6 => return (v1 / v2).floor(),
         12 => return -v1,
         3 => return luaV_modf(L, v1, v2),
         _ => return 0 as libc::c_int as lua_Number,
@@ -1153,14 +1152,14 @@ unsafe extern "C" fn l_str2int(
         {
             let mut d: libc::c_int = *s as libc::c_int - '0' as i32;
             if a
-                >= (9223372036854775807 as libc::c_longlong
-                    / 10 as libc::c_int as libc::c_longlong) as lua_Unsigned
+                >= (9223372036854775807 as i64
+                    / 10 as libc::c_int as i64) as lua_Unsigned
                 && (a
-                    > (9223372036854775807 as libc::c_longlong
-                        / 10 as libc::c_int as libc::c_longlong) as lua_Unsigned
+                    > (9223372036854775807 as i64
+                        / 10 as libc::c_int as i64) as lua_Unsigned
                     || d
-                        > (9223372036854775807 as libc::c_longlong
-                            % 10 as libc::c_int as libc::c_longlong) as libc::c_int
+                        > (9223372036854775807 as i64
+                            % 10 as libc::c_int as i64) as libc::c_int
                             + neg)
             {
                 return 0 as *const libc::c_char;
