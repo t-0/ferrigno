@@ -184,7 +184,7 @@ unsafe extern "C" fn tinsert(mut L: *mut lua_State) -> i32 {
                 lua_geti(L, 1i32, i - 1i32 as i64);
                 lua_seti(L, 1i32, i);
                 i -= 1;
-                i;
+
             }
         }
         _ => {
@@ -268,7 +268,7 @@ unsafe extern "C" fn tmove(mut L: *mut lua_State) -> i32 {
                 lua_geti(L, 1i32, f + i);
                 lua_seti(L, tt, t + i);
                 i += 1;
-                i;
+
             }
         } else {
             i = n - 1i32 as i64;
@@ -276,7 +276,7 @@ unsafe extern "C" fn tmove(mut L: *mut lua_State) -> i32 {
                 lua_geti(L, 1i32, f + i);
                 lua_seti(L, tt, t + i);
                 i -= 1;
-                i;
+
             }
         }
     }
@@ -330,7 +330,7 @@ unsafe extern "C" fn tconcat(mut L: *mut lua_State) -> i32 {
         addfield(L, &mut b, i);
         luaL_addlstring(&mut b, sep, lsep);
         i += 1;
-        i;
+
     }
     if i == last {
         addfield(L, &mut b, i);
@@ -347,7 +347,7 @@ unsafe extern "C" fn tpack(mut L: *mut lua_State) -> i32 {
     while i >= 1i32 {
         lua_seti(L, 1i32, i as Integer);
         i -= 1;
-        i;
+
     }
     lua_pushinteger(L, n as Integer);
     lua_setfield(L, 1i32, b"n\0" as *const u8 as *const libc::c_char);
@@ -383,7 +383,7 @@ unsafe extern "C" fn tunpack(mut L: *mut lua_State) -> i32 {
     while i < e {
         lua_geti(L, 1i32, i);
         i += 1;
-        i;
+
     }
     lua_geti(L, 1i32, e);
     return n as i32;
@@ -422,7 +422,7 @@ unsafe extern "C" fn l_randomizePivot() -> libc::c_uint {
     {
         rnd = rnd.wrapping_add(buff[i as usize]);
         i = i.wrapping_add(1);
-        i;
+
     }
     return rnd;
 }

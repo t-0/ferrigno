@@ -528,7 +528,7 @@ pub unsafe extern "C" fn luaT_init(mut L: *mut lua_State) {
                 .gc,
         );
         i += 1;
-        i;
+
     }
 }
 #[unsafe (no_mangle)]
@@ -875,7 +875,7 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
             .tt_ = (0i32 | (0i32) << 4i32)
             as u8;
         i += 1;
-        i;
+
     }
     (*ci).func.p = ((*ci).func.p).offset((actual + 1i32) as isize);
     (*ci).top.p = ((*ci).top.p).offset((actual + 1i32) as isize);
@@ -915,7 +915,7 @@ pub unsafe extern "C" fn luaT_getvarargs(
         (*io1).value_ = (*io2).value_;
         (*io1).tt_ = (*io2).tt_;
         i += 1;
-        i;
+
     }
     while i < wanted {
         (*where_0.offset(i as isize))
@@ -923,6 +923,6 @@ pub unsafe extern "C" fn luaT_getvarargs(
             .tt_ = (0i32 | (0i32) << 4i32)
             as u8;
         i += 1;
-        i;
+
     }
 }

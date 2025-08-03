@@ -1164,7 +1164,7 @@ unsafe extern "C" fn min_expand(
             return res
         } else if singlematch(ms, s, p, ep) != 0 {
             s = s.offset(1);
-            s;
+
         } else {
             return 0 as *const libc::c_char
         }
@@ -1528,7 +1528,7 @@ unsafe extern "C" fn match_0(
                 }
                 43 => {
                     s = s.offset(1);
-                    s;
+
                     current_block = 417003359394161306;
                     break;
                 }
@@ -1543,7 +1543,7 @@ unsafe extern "C" fn match_0(
                 }
                 _ => {
                     s = s.offset(1);
-                    s;
+
                     p = ep_0;
                 }
             }
@@ -1572,7 +1572,7 @@ unsafe extern "C" fn lmemfind(
     } else {
         let mut init: *const libc::c_char = 0 as *const libc::c_char;
         l2 = l2.wrapping_sub(1);
-        l2;
+
         l1 = l1.wrapping_sub(l2);
         while l1 > 0i32 as libc::c_ulong
             && {
@@ -2025,7 +2025,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> i32 {
         e = match_0(&mut ms, src, p);
         if !e.is_null() && e != lastmatch {
             n += 1;
-            n;
+
             changed = add_value(&mut ms, &mut b, src, e, tr) | changed;
             lastmatch = e;
             src = lastmatch;
@@ -2126,7 +2126,7 @@ unsafe extern "C" fn addquoted(
             *((*b).b).offset(fresh12 as isize) = *s;
         }
         s = s.offset(1);
-        s;
+
     }
     ((*b).n < (*b).size || !(luaL_prepbuffsize(b, 1i32 as size_t)).is_null())
         as i32;
@@ -2228,13 +2228,13 @@ unsafe extern "C" fn get2digits(mut s: *const libc::c_char) -> *const libc::c_ch
         as i32 & _ISdigit as i32 as libc::c_ushort as i32 != 0
     {
         s = s.offset(1);
-        s;
+
         if *(*__ctype_b_loc()).offset(*s as u8 as i32 as isize)
             as i32 & _ISdigit as i32 as libc::c_ushort as i32
             != 0
         {
             s = s.offset(1);
-            s;
+
         }
     }
     return s;
@@ -3278,7 +3278,7 @@ unsafe extern "C" fn str_unpack(mut L: *mut lua_State) -> i32 {
             b"too many results\0" as *const u8 as *const libc::c_char,
         );
         n += 1;
-        n;
+
         match opt as libc::c_uint {
             0 | 1 => {
                 let mut res: Integer = unpackint(
@@ -3362,7 +3362,7 @@ unsafe extern "C" fn str_unpack(mut L: *mut lua_State) -> i32 {
             }
             9 | 8 | 10 => {
                 n -= 1;
-                n;
+
             }
             _ => {}
         }

@@ -491,7 +491,7 @@ unsafe extern "C" fn createargtable(
         lua_pushstring(L, *argv.offset(i as isize));
         lua_rawseti(L, -(2i32), (i - script) as Integer);
         i += 1;
-        i;
+
     }
     lua_setglobal(L, b"arg\0" as *const u8 as *const libc::c_char);
 }
@@ -563,7 +563,7 @@ unsafe extern "C" fn pushargs(mut L: *mut lua_State) -> i32 {
     while i <= n {
         lua_rawgeti(L, -i, i as Integer);
         i += 1;
-        i;
+
     }
     lua_rotate(L, -i, -(1i32));
     lua_settop(L, -(1i32) - 1i32);
@@ -675,7 +675,7 @@ unsafe extern "C" fn collectargs(
                     as i32 == '\0' as i32
                 {
                     i += 1;
-                    i;
+
                     if (*argv.offset(i as isize)).is_null()
                         || *(*argv.offset(i as isize)).offset(0i32 as isize)
                             as i32 == '-' as i32
@@ -687,7 +687,7 @@ unsafe extern "C" fn collectargs(
             _ => {}
         }
         i += 1;
-        i;
+
     }
     *first = 0i32;
     return args;
@@ -734,7 +734,7 @@ unsafe extern "C" fn runargs(
             _ => {}
         }
         i += 1;
-        i;
+
     }
     return 1i32;
 }

@@ -669,7 +669,7 @@ unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Proto) {
             .tt_ = (0i32 | (0i32) << 4i32)
             as u8;
         i += 1;
-        i;
+
     }
     i = 0i32;
     while i < n {
@@ -716,7 +716,7 @@ unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Proto) {
             _ => {}
         }
         i += 1;
-        i;
+
     }
 }
 unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
@@ -743,7 +743,7 @@ unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
         let ref mut fresh2 = *((*f).p).offset(i as isize);
         *fresh2 = 0 as *mut Proto;
         i += 1;
-        i;
+
     }
     i = 0i32;
     while i < n {
@@ -762,7 +762,7 @@ unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
         } else {};
         loadFunction(S, *((*f).p).offset(i as isize), (*f).source);
         i += 1;
-        i;
+
     }
 }
 unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) {
@@ -790,7 +790,7 @@ unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) {
         let ref mut fresh4 = (*((*f).upvalues).offset(i as isize)).name;
         *fresh4 = 0 as *mut TString;
         i += 1;
-        i;
+
     }
     i = 0i32;
     while i < n {
@@ -798,7 +798,7 @@ unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) {
         (*((*f).upvalues).offset(i as isize)).index = loadByte(S);
         (*((*f).upvalues).offset(i as isize)).kind = loadByte(S);
         i += 1;
-        i;
+
     }
 }
 unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
@@ -849,7 +849,7 @@ unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         (*((*f).abslineinfo).offset(i as isize)).pc = loadInt(S);
         (*((*f).abslineinfo).offset(i as isize)).line = loadInt(S);
         i += 1;
-        i;
+
     }
     n = loadInt(S);
     if ::core::mem::size_of::<i32>() as libc::c_ulong
@@ -873,7 +873,7 @@ unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         let ref mut fresh5 = (*((*f).locvars).offset(i as isize)).varname;
         *fresh5 = 0 as *mut TString;
         i += 1;
-        i;
+
     }
     i = 0i32;
     while i < n {
@@ -882,7 +882,7 @@ unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         (*((*f).locvars).offset(i as isize)).startpc = loadInt(S);
         (*((*f).locvars).offset(i as isize)).endpc = loadInt(S);
         i += 1;
-        i;
+
     }
     n = loadInt(S);
     if n != 0i32 {
@@ -893,7 +893,7 @@ unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         let ref mut fresh7 = (*((*f).upvalues).offset(i as isize)).name;
         *fresh7 = loadStringN(S, f);
         i += 1;
-        i;
+
     }
 }
 unsafe extern "C" fn loadFunction(

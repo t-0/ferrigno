@@ -1670,7 +1670,7 @@ pub unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: i32) {
                 }
                 tl = (tl as libc::c_ulong).wrapping_add(l) as size_t as size_t;
                 n += 1;
-                n;
+
             }
             if tl <= 40i32 as libc::c_ulong {
                 let mut buff: [libc::c_char; 40] = [0; 40];
@@ -1904,7 +1904,7 @@ unsafe extern "C" fn pushclosure(
             );
         } else {};
         i += 1;
-        i;
+
     }
 }
 #[unsafe (no_mangle)]

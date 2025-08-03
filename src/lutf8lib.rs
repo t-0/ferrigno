@@ -192,7 +192,7 @@ unsafe extern "C" fn utflen(mut L: *mut lua_State) -> i32 {
         }
         posi = s1.offset_from(s) as libc::c_long as Integer;
         n += 1;
-        n;
+
     }
     lua_pushinteger(L, n);
     return 1i32;
@@ -254,7 +254,7 @@ unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> i32 {
         }
         lua_pushinteger(L, code as Integer);
         n += 1;
-        n;
+
     }
     return n;
 }
@@ -292,7 +292,7 @@ unsafe extern "C" fn utfchar(mut L: *mut lua_State) -> i32 {
             pushutfchar(L, i);
             luaL_addvalue(&mut b);
             i += 1;
-            i;
+
         }
         luaL_pushresult(&mut b);
     }
@@ -351,11 +351,11 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> i32 {
                     }
                 }
                 n += 1;
-                n;
+
             }
         } else {
             n -= 1;
-            n;
+
             while n > 0i32 as i64 && posi < len as Integer {
                 loop {
                     posi += 1;
@@ -367,7 +367,7 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> i32 {
                     }
                 }
                 n -= 1;
-                n;
+
             }
         }
     }
@@ -391,7 +391,7 @@ unsafe extern "C" fn iter_aux(
             == 0x80 as i32
         {
             n = n.wrapping_add(1);
-            n;
+
         }
     }
     if n >= len as libc::c_ulonglong {
