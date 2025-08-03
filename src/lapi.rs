@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(c_variadic, extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn luaE_setdebt(g: *mut global_State, debt: l_mem);
