@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer,Number};
+use crate::types::{Integer, Number};
 unsafe extern "C" {
     pub type lua_longjmp;
     fn frexp(_: f64, _: *mut i32) -> f64;
@@ -19,22 +19,14 @@ unsafe extern "C" {
         size: size_t,
     ) -> *mut libc::c_void;
     fn luaM_free_(L: *mut lua_State, block: *mut libc::c_void, osize: size_t);
-    fn luaM_malloc_(
-        L: *mut lua_State,
-        size: size_t,
-        tag: i32,
-    ) -> *mut libc::c_void;
+    fn luaM_malloc_(L: *mut lua_State, size: size_t, tag: i32) -> *mut libc::c_void;
     fn luaG_runerror(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> !;
     fn luaD_throw(L: *mut lua_State, errcode: i32) -> !;
     fn luaC_newobj(L: *mut lua_State, tt: i32, sz: size_t) -> *mut GCObject;
     fn luaC_barrierback_(L: *mut lua_State, o: *mut GCObject);
     fn luaS_hashlongstr(ts: *mut TString) -> libc::c_uint;
     fn luaS_eqlngstr(a: *mut TString, b: *mut TString) -> i32;
-    fn luaV_flttointeger(
-        n: Number,
-        p: *mut Integer,
-        mode: F2Imod,
-    ) -> i32;
+    fn luaV_flttointeger(n: Number, p: *mut Integer, mode: F2Imod) -> i32;
 }
 pub type __sig_atomic_t = i32;
 pub type ptrdiff_t = libc::c_long;
@@ -71,7 +63,7 @@ pub struct lua_State {
 }
 pub type sig_atomic_t = __sig_atomic_t;
 pub type l_uint32 = libc::c_uint;
-pub type lua_Hook = Option::<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
+pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_Debug {
@@ -133,9 +125,7 @@ pub struct C2RustUnnamed_2 {
     pub ctx: lua_KContext,
 }
 pub type lua_KContext = intptr_t;
-pub type lua_KFunction = Option::<
-    unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32,
->;
+pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_3 {
@@ -175,7 +165,7 @@ pub union Value {
     pub ub: u8,
 }
 
-pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
+pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -267,9 +257,8 @@ pub struct global_State {
     pub warnf: lua_WarnFunction,
     pub ud_warn: *mut libc::c_void,
 }
-pub type lua_WarnFunction = Option::<
-    unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> (),
->;
+pub type lua_WarnFunction =
+    Option<unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
@@ -327,13 +316,8 @@ pub struct stringtable {
 }
 pub type lu_mem = size_t;
 pub type l_mem = ptrdiff_t;
-pub type lua_Alloc = Option::<
-    unsafe extern "C" fn(
-        *mut libc::c_void,
-        *mut libc::c_void,
-        size_t,
-        size_t,
-    ) -> *mut libc::c_void,
+pub type lua_Alloc = Option<
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
 >;
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type ls_byte = libc::c_schar;
@@ -486,8 +470,7 @@ static mut dummynode_: Node = Node {
                 gc: 0 as *const GCObject as *mut GCObject,
             },
             tt_: (0i32 | (1i32) << 4i32) as u8,
-            key_tt: (0i32 | (0i32) << 4i32)
-                as u8,
+            key_tt: (0i32 | (0i32) << 4i32) as u8,
             next: 0i32,
             key_val: Value {
                 gc: 0 as *const GCObject as *mut GCObject,
@@ -509,49 +492,37 @@ unsafe extern "C" fn hashint(mut t: *const Table, mut i: Integer) -> *mut Node {
     let mut ui: lua_Unsigned = i as lua_Unsigned;
     if ui <= 2147483647i32 as libc::c_uint as libc::c_ulonglong {
         return &mut *((*t).node)
-            .offset(
-                (ui as i32
-                    % (((1i32) << (*t).lsizenode as i32)
-                        - 1i32 | 1i32)) as isize,
-            ) as *mut Node
+            .offset((ui as i32 % (((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32)) as isize)
+            as *mut Node;
     } else {
         return &mut *((*t).node)
-            .offset(
-                ui
-                    .wrapping_rem(
-                        (((1i32) << (*t).lsizenode as i32)
-                            - 1i32 | 1i32) as libc::c_ulonglong,
-                    ) as isize,
-            ) as *mut Node
+            .offset(ui.wrapping_rem(
+                (((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32) as libc::c_ulonglong,
+            ) as isize) as *mut Node;
     };
 }
 unsafe extern "C" fn l_hashfloat(mut n: Number) -> i32 {
     let mut i: i32 = 0;
     let mut ni: Integer = 0;
-    n = frexp(n, &mut i)
-        * -((-(2147483647i32) - 1i32) as Number);
-    if !(n
-        >= (-(9223372036854775807i64) -1i64)
-            as f64
-        && n
-            < -((-(9223372036854775807i64) -1i64)
-                as f64)
+    n = frexp(n, &mut i) * -((-(2147483647i32) - 1i32) as Number);
+    if !(n >= (-(9223372036854775807i64) - 1i64) as f64
+        && n < -((-(9223372036854775807i64) - 1i64) as f64)
         && {
             ni = n as i64;
             1i32 != 0
         })
     {
-        return 0i32
+        return 0i32;
     } else {
         let mut u: libc::c_uint = (i as libc::c_uint).wrapping_add(ni as libc::c_uint);
-        return (if u <= 2147483647i32 as libc::c_uint { u } else { !u })
-            as i32;
+        return (if u <= 2147483647i32 as libc::c_uint {
+            u
+        } else {
+            !u
+        }) as i32;
     };
 }
-unsafe extern "C" fn mainpositionTV(
-    mut t: *const Table,
-    mut key: *const TValue,
-) -> *mut Node {
+unsafe extern "C" fn mainpositionTV(mut t: *const Table, mut key: *const TValue) -> *mut Node {
     match (*key).tt_ as i32 & 0x3f as i32 {
         3 => {
             let mut i: Integer = (*key).value_.i;
@@ -559,102 +530,80 @@ unsafe extern "C" fn mainpositionTV(
         }
         19 => {
             let mut n: Number = (*key).value_.n;
-            return &mut *((*t).node)
-                .offset(
-                    ((l_hashfloat as unsafe extern "C" fn(Number) -> i32)(n)
-                        % (((1i32) << (*t).lsizenode as i32)
-                            - 1i32 | 1i32)) as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((l_hashfloat as unsafe extern "C" fn(Number) -> i32)(n)
+                    % (((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32)) as isize,
+            ) as *mut Node;
         }
         4 => {
             let mut ts: *mut TString = &mut (*((*key).value_.gc as *mut GCUnion)).ts;
-            return &mut *((*t).node)
-                .offset(
-                    ((*ts).hash
-                        & (((1i32) << (*t).lsizenode as i32)
-                            - 1i32) as libc::c_uint) as i32 as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((*ts).hash & (((1i32) << (*t).lsizenode as i32) - 1i32) as libc::c_uint) as i32
+                    as isize,
+            ) as *mut Node;
         }
         20 => {
             let mut ts_0: *mut TString = &mut (*((*key).value_.gc as *mut GCUnion)).ts;
-            return &mut *((*t).node)
-                .offset(
-                    ((luaS_hashlongstr
-                        as unsafe extern "C" fn(*mut TString) -> libc::c_uint)(ts_0)
-                        & (((1i32) << (*t).lsizenode as i32)
-                            - 1i32) as libc::c_uint) as i32 as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((luaS_hashlongstr as unsafe extern "C" fn(*mut TString) -> libc::c_uint)(ts_0)
+                    & (((1i32) << (*t).lsizenode as i32) - 1i32) as libc::c_uint)
+                    as i32 as isize,
+            ) as *mut Node;
         }
         1 => {
             return &mut *((*t).node)
-                .offset(
-                    (0i32
-                        & ((1i32) << (*t).lsizenode as i32)
-                            - 1i32) as isize,
-                ) as *mut Node;
+                .offset((0i32 & ((1i32) << (*t).lsizenode as i32) - 1i32) as isize)
+                as *mut Node;
         }
         17 => {
             return &mut *((*t).node)
-                .offset(
-                    (1i32
-                        & ((1i32) << (*t).lsizenode as i32)
-                            - 1i32) as isize,
-                ) as *mut Node;
+                .offset((1i32 & ((1i32) << (*t).lsizenode as i32) - 1i32) as isize)
+                as *mut Node;
         }
         2 => {
             let mut p: *mut libc::c_void = (*key).value_.p;
-            return &mut *((*t).node)
-                .offset(
-                    ((p as uintptr_t
-                        & (2147483647i32 as libc::c_uint)
-                            .wrapping_mul(2 as libc::c_uint)
-                            .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
-                        as libc::c_uint)
-                        .wrapping_rem(
-                            (((1i32) << (*t).lsizenode as i32)
-                                - 1i32 | 1i32) as libc::c_uint,
-                        ) as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((p as uintptr_t
+                    & (2147483647i32 as libc::c_uint)
+                        .wrapping_mul(2 as libc::c_uint)
+                        .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
+                    as libc::c_uint)
+                    .wrapping_rem((((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32) as libc::c_uint)
+                    as isize,
+            ) as *mut Node;
         }
         22 => {
             let mut f: CFunction = (*key).value_.f;
-            return &mut *((*t).node)
-                .offset(
-                    ((::core::mem::transmute::<CFunction, uintptr_t>(f)
-                        & (2147483647i32 as libc::c_uint)
-                            .wrapping_mul(2 as libc::c_uint)
-                            .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
-                        as libc::c_uint)
-                        .wrapping_rem(
-                            (((1i32) << (*t).lsizenode as i32)
-                                - 1i32 | 1i32) as libc::c_uint,
-                        ) as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((::core::mem::transmute::<CFunction, uintptr_t>(f)
+                    & (2147483647i32 as libc::c_uint)
+                        .wrapping_mul(2 as libc::c_uint)
+                        .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
+                    as libc::c_uint)
+                    .wrapping_rem((((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32) as libc::c_uint)
+                    as isize,
+            ) as *mut Node;
         }
         _ => {
             let mut o: *mut GCObject = (*key).value_.gc;
-            return &mut *((*t).node)
-                .offset(
-                    ((o as uintptr_t
-                        & (2147483647i32 as libc::c_uint)
-                            .wrapping_mul(2 as libc::c_uint)
-                            .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
-                        as libc::c_uint)
-                        .wrapping_rem(
-                            (((1i32) << (*t).lsizenode as i32)
-                                - 1i32 | 1i32) as libc::c_uint,
-                        ) as isize,
-                ) as *mut Node;
+            return &mut *((*t).node).offset(
+                ((o as uintptr_t
+                    & (2147483647i32 as libc::c_uint)
+                        .wrapping_mul(2 as libc::c_uint)
+                        .wrapping_add(1 as libc::c_uint) as libc::c_ulong)
+                    as libc::c_uint)
+                    .wrapping_rem((((1i32) << (*t).lsizenode as i32) - 1i32 | 1i32) as libc::c_uint)
+                    as isize,
+            ) as *mut Node;
         }
     };
 }
 #[inline]
-unsafe extern "C" fn mainpositionfromnode(
-    mut t: *const Table,
-    mut nd: *mut Node,
-) -> *mut Node {
+unsafe extern "C" fn mainpositionfromnode(mut t: *const Table, mut nd: *mut Node) -> *mut Node {
     let mut key: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value {
+            gc: 0 as *mut GCObject,
+        },
         tt_: 0,
     };
     let mut io_: *mut TValue = &mut key;
@@ -663,11 +612,7 @@ unsafe extern "C" fn mainpositionfromnode(
     (*io_).tt_ = (*n_).u.key_tt;
     return mainpositionTV(t, &mut key);
 }
-unsafe extern "C" fn equalkey(
-    mut k1: *const TValue,
-    mut n2: *const Node,
-    mut deadok: i32,
-) -> i32 {
+unsafe extern "C" fn equalkey(mut k1: *const TValue, mut n2: *const Node, mut deadok: i32) -> i32 {
     if (*k1).tt_ as i32 != (*n2).u.key_tt as i32
         && !(deadok != 0
             && (*n2).u.key_tt as i32 == 9i32 + 2i32
@@ -690,13 +635,12 @@ unsafe extern "C" fn equalkey(
         _ => return ((*k1).value_.gc == (*n2).u.key_val.gc) as i32,
     };
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_realasize(mut t: *const Table) -> libc::c_uint {
     if (*t).flags as i32 & (1i32) << 7i32 == 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint)
-            == 0i32 as libc::c_uint
+        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint) == 0i32 as libc::c_uint
     {
-        return (*t).alimit
+        return (*t).alimit;
     } else {
         let mut size: libc::c_uint = (*t).alimit;
         size |= size >> 1i32;
@@ -710,15 +654,12 @@ pub unsafe extern "C" fn luaH_realasize(mut t: *const Table) -> libc::c_uint {
 }
 unsafe extern "C" fn ispow2realasize(mut t: *const Table) -> i32 {
     return ((*t).flags as i32 & (1i32) << 7i32 != 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint)
-            == 0i32 as libc::c_uint) as i32;
+        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint) == 0i32 as libc::c_uint)
+        as i32;
 }
 unsafe extern "C" fn setlimittosize(mut t: *mut Table) -> libc::c_uint {
     (*t).alimit = luaH_realasize(t);
-    (*t)
-        .flags = ((*t).flags as i32
-        & !((1i32) << 7i32) as u8 as i32)
-        as u8;
+    (*t).flags = ((*t).flags as i32 & !((1i32) << 7i32) as u8 as i32) as u8;
     return (*t).alimit;
 }
 unsafe extern "C" fn getgeneric(
@@ -729,7 +670,7 @@ unsafe extern "C" fn getgeneric(
     let mut n: *mut Node = mainpositionTV(t, key);
     loop {
         if equalkey(key, n, deadok) != 0 {
-            return &mut (*n).i_val
+            return &mut (*n).i_val;
         } else {
             let mut nx: i32 = (*n).u.next;
             if nx == 0i32 {
@@ -737,31 +678,28 @@ unsafe extern "C" fn getgeneric(
             }
             n = n.offset(nx as isize);
         }
-    };
+    }
 }
 unsafe extern "C" fn arrayindex(mut k: Integer) -> libc::c_uint {
     if (k as lua_Unsigned).wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
         < (if ((1 as libc::c_uint)
             << (::core::mem::size_of::<i32>() as libc::c_ulong)
                 .wrapping_mul(8i32 as libc::c_ulong)
-                .wrapping_sub(1i32 as libc::c_ulong) as i32)
-            as size_t
-            <= (!(0i32 as size_t))
-                .wrapping_div(::core::mem::size_of::<TValue>() as libc::c_ulong)
+                .wrapping_sub(1i32 as libc::c_ulong) as i32) as size_t
+            <= (!(0i32 as size_t)).wrapping_div(::core::mem::size_of::<TValue>() as libc::c_ulong)
         {
             (1 as libc::c_uint)
                 << (::core::mem::size_of::<i32>() as libc::c_ulong)
                     .wrapping_mul(8i32 as libc::c_ulong)
                     .wrapping_sub(1i32 as libc::c_ulong) as i32
         } else {
-            (!(0i32 as size_t))
-                .wrapping_div(::core::mem::size_of::<TValue>() as libc::c_ulong)
+            (!(0i32 as size_t)).wrapping_div(::core::mem::size_of::<TValue>() as libc::c_ulong)
                 as libc::c_uint
         }) as libc::c_ulonglong
     {
-        return k as libc::c_uint
+        return k as libc::c_uint;
     } else {
-        return 0i32 as libc::c_uint
+        return 0i32 as libc::c_uint;
     };
 }
 unsafe extern "C" fn findindex(
@@ -774,34 +712,27 @@ unsafe extern "C" fn findindex(
     if (*key).tt_ as i32 & 0xf as i32 == 0i32 {
         return 0i32 as libc::c_uint;
     }
-    i = if (*key).tt_ as i32
-        == 3i32 | (0i32) << 4i32
-    {
+    i = if (*key).tt_ as i32 == 3i32 | (0i32) << 4i32 {
         arrayindex((*key).value_.i)
     } else {
         0i32 as libc::c_uint
     };
     if i.wrapping_sub(1 as libc::c_uint) < asize {
-        return i
+        return i;
     } else {
         let mut n: *const TValue = getgeneric(t, key, 1i32);
-        if (((*n).tt_ as i32
-            == 0i32 | (2i32) << 4i32) as i32
-            != 0i32) as i32 as libc::c_long != 0
-        {
+        if (((*n).tt_ as i32 == 0i32 | (2i32) << 4i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
             luaG_runerror(
                 L,
                 b"invalid key to 'next'\0" as *const u8 as *const libc::c_char,
             );
         }
-        i = (n as *mut Node)
-            .offset_from(
-                &mut *((*t).node).offset(0i32 as isize) as *mut Node,
-            ) as libc::c_long as i32 as libc::c_uint;
+        i = (n as *mut Node).offset_from(&mut *((*t).node).offset(0i32 as isize) as *mut Node)
+            as libc::c_long as i32 as libc::c_uint;
         return i.wrapping_add(1i32 as libc::c_uint).wrapping_add(asize);
     };
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_next(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -810,19 +741,12 @@ pub unsafe extern "C" fn luaH_next(
     let mut asize: libc::c_uint = luaH_realasize(t);
     let mut i: libc::c_uint = findindex(L, t, &mut (*key).val, asize);
     while i < asize {
-        if !((*((*t).array).offset(i as isize)).tt_ as i32 & 0xf as i32
-            == 0i32)
-        {
+        if !((*((*t).array).offset(i as isize)).tt_ as i32 & 0xf as i32 == 0i32) {
             let mut io: *mut TValue = &mut (*key).val;
-            (*io)
-                .value_
-                .i = i.wrapping_add(1i32 as libc::c_uint) as Integer;
-            (*io)
-                .tt_ = (3i32 | (0i32) << 4i32)
-                as u8;
+            (*io).value_.i = i.wrapping_add(1i32 as libc::c_uint) as Integer;
+            (*io).tt_ = (3i32 | (0i32) << 4i32) as u8;
             let mut io1: *mut TValue = &mut (*key.offset(1i32 as isize)).val;
-            let mut io2: *const TValue = &mut *((*t).array).offset(i as isize)
-                as *mut TValue;
+            let mut io2: *const TValue = &mut *((*t).array).offset(i as isize) as *mut TValue;
             (*io1).value_ = (*io2).value_;
             (*io1).tt_ = (*io2).tt_;
             return 1i32;
@@ -831,16 +755,13 @@ pub unsafe extern "C" fn luaH_next(
     }
     i = i.wrapping_sub(asize);
     while (i as i32) < (1i32) << (*t).lsizenode as i32 {
-        if !((*((*t).node).offset(i as isize)).i_val.tt_ as i32
-            & 0xf as i32 == 0i32)
-        {
+        if !((*((*t).node).offset(i as isize)).i_val.tt_ as i32 & 0xf as i32 == 0i32) {
             let mut n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             let mut io_: *mut TValue = &mut (*key).val;
             let mut n_: *const Node = n;
             (*io_).value_ = (*n_).u.key_val;
             (*io_).tt_ = (*n_).u.key_tt;
-            let mut io1_0: *mut TValue = &mut (*key.offset(1i32 as isize))
-                .val;
+            let mut io1_0: *mut TValue = &mut (*key.offset(1i32 as isize)).val;
             let mut io2_0: *const TValue = &mut (*n).i_val;
             (*io1_0).value_ = (*io2_0).value_;
             (*io1_0).tt_ = (*io2_0).tt_;
@@ -871,9 +792,7 @@ unsafe extern "C" fn computesizes(
     let mut optimal: libc::c_uint = 0i32 as libc::c_uint;
     i = 0i32;
     twotoi = 1i32 as libc::c_uint;
-    while twotoi > 0i32 as libc::c_uint
-        && *pna > twotoi.wrapping_div(2i32 as libc::c_uint)
-    {
+    while twotoi > 0i32 as libc::c_uint && *pna > twotoi.wrapping_div(2i32 as libc::c_uint) {
         a = a.wrapping_add(*nums.offset(i as isize));
         if a > twotoi.wrapping_div(2i32 as libc::c_uint) {
             optimal = twotoi;
@@ -885,10 +804,7 @@ unsafe extern "C" fn computesizes(
     *pna = na;
     return optimal;
 }
-unsafe extern "C" fn countint(
-    mut key: Integer,
-    mut nums: *mut libc::c_uint,
-) -> i32 {
+unsafe extern "C" fn countint(mut key: Integer, mut nums: *mut libc::c_uint) -> i32 {
     let mut k: libc::c_uint = arrayindex(key);
     if k != 0i32 as libc::c_uint {
         let ref mut fresh0 = *nums.offset(luaO_ceillog2(k) as isize);
@@ -896,13 +812,10 @@ unsafe extern "C" fn countint(
         *fresh0;
         return 1i32;
     } else {
-        return 0i32
+        return 0i32;
     };
 }
-unsafe extern "C" fn numusearray(
-    mut t: *const Table,
-    mut nums: *mut libc::c_uint,
-) -> libc::c_uint {
+unsafe extern "C" fn numusearray(mut t: *const Table, mut nums: *mut libc::c_uint) -> libc::c_uint {
     let mut lg: i32 = 0;
     let mut ttlg: libc::c_uint = 0;
     let mut ause: libc::c_uint = 0i32 as libc::c_uint;
@@ -924,12 +837,11 @@ unsafe extern "C" fn numusearray(
             }
         }
         while i <= lim {
-            if !((*((*t).array)
-                .offset(i.wrapping_sub(1i32 as libc::c_uint) as isize))
-                .tt_ as i32 & 0xf as i32 == 0i32)
+            if !((*((*t).array).offset(i.wrapping_sub(1i32 as libc::c_uint) as isize)).tt_ as i32
+                & 0xf as i32
+                == 0i32)
             {
                 lc = lc.wrapping_add(1);
-
             }
             i = i.wrapping_add(1);
         }
@@ -958,9 +870,7 @@ unsafe extern "C" fn numusehash(
         }
         let mut n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
         if !((*n).i_val.tt_ as i32 & 0xf as i32 == 0i32) {
-            if (*n).u.key_tt as i32
-                == 3i32 | (0i32) << 4i32
-            {
+            if (*n).u.key_tt as i32 == 3i32 | (0i32) << 4i32 {
                 ause += countint((*n).u.key_val.i, nums);
             }
             totaluse += 1;
@@ -998,8 +908,8 @@ unsafe extern "C" fn setnodevector(
                     (1 as libc::c_uint)
                         << (::core::mem::size_of::<i32>() as libc::c_ulong)
                             .wrapping_mul(8i32 as libc::c_ulong)
-                            .wrapping_sub(1i32 as libc::c_ulong)
-                            as i32 - 1i32
+                            .wrapping_sub(1i32 as libc::c_ulong) as i32
+                            - 1i32
                 } else {
                     (!(0i32 as size_t))
                         .wrapping_div(::core::mem::size_of::<Node>() as libc::c_ulong)
@@ -1009,11 +919,9 @@ unsafe extern "C" fn setnodevector(
             luaG_runerror(L, b"table overflow\0" as *const u8 as *const libc::c_char);
         }
         size = ((1i32) << lsize) as libc::c_uint;
-        (*t)
-            .node = luaM_malloc_(
+        (*t).node = luaM_malloc_(
             L,
-            (size as libc::c_ulong)
-                .wrapping_mul(::core::mem::size_of::<Node>() as libc::c_ulong),
+            (size as libc::c_ulong).wrapping_mul(::core::mem::size_of::<Node>() as libc::c_ulong),
             0i32,
         ) as *mut Node;
         i = 0i32;
@@ -1021,21 +929,14 @@ unsafe extern "C" fn setnodevector(
             let mut n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             (*n).u.next = 0i32;
             (*n).u.key_tt = 0i32 as u8;
-            (*n)
-                .i_val
-                .tt_ = (0i32 | (1i32) << 4i32)
-                as u8;
+            (*n).i_val.tt_ = (0i32 | (1i32) << 4i32) as u8;
             i += 1;
         }
         (*t).lsizenode = lsize as u8;
         (*t).lastfree = &mut *((*t).node).offset(size as isize) as *mut Node;
     };
 }
-unsafe extern "C" fn reinsert(
-    mut L: *mut lua_State,
-    mut ot: *mut Table,
-    mut t: *mut Table,
-) {
+unsafe extern "C" fn reinsert(mut L: *mut lua_State, mut ot: *mut Table, mut t: *mut Table) {
     let mut j: i32 = 0;
     let mut size: i32 = (1i32) << (*ot).lsizenode as i32;
     j = 0i32;
@@ -1043,7 +944,9 @@ unsafe extern "C" fn reinsert(
         let mut old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
         if !((*old).i_val.tt_ as i32 & 0xf as i32 == 0i32) {
             let mut k: TValue = TValue {
-                value_: Value { gc: 0 as *mut GCObject },
+                value_: Value {
+                    gc: 0 as *mut GCObject,
+                },
                 tt_: 0,
             };
             let mut io_: *mut TValue = &mut k;
@@ -1066,7 +969,7 @@ unsafe extern "C" fn exchangehashpart(mut t1: *mut Table, mut t2: *mut Table) {
     (*t2).node = node;
     (*t2).lastfree = lastfree;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_resize(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1095,9 +998,7 @@ pub unsafe extern "C" fn luaH_resize(
         exchangehashpart(t, &mut newt);
         i = newasize;
         while i < oldasize {
-            if !((*((*t).array).offset(i as isize)).tt_ as i32
-                & 0xf as i32 == 0i32)
-            {
+            if !((*((*t).array).offset(i as isize)).tt_ as i32 & 0xf as i32 == 0i32) {
                 luaH_setint(
                     L,
                     t,
@@ -1113,13 +1014,12 @@ pub unsafe extern "C" fn luaH_resize(
     newarray = luaM_realloc_(
         L,
         (*t).array as *mut libc::c_void,
-        (oldasize as size_t)
-            .wrapping_mul(::core::mem::size_of::<TValue>() as libc::c_ulong),
-        (newasize as size_t)
-            .wrapping_mul(::core::mem::size_of::<TValue>() as libc::c_ulong),
+        (oldasize as size_t).wrapping_mul(::core::mem::size_of::<TValue>() as libc::c_ulong),
+        (newasize as size_t).wrapping_mul(::core::mem::size_of::<TValue>() as libc::c_ulong),
     ) as *mut TValue;
-    if ((newarray.is_null() && newasize > 0i32 as libc::c_uint)
-        as i32 != 0i32) as i32 as libc::c_long != 0
+    if ((newarray.is_null() && newasize > 0i32 as libc::c_uint) as i32 != 0i32) as i32
+        as libc::c_long
+        != 0
     {
         freehash(L, &mut newt);
         luaD_throw(L, 4i32);
@@ -1129,15 +1029,13 @@ pub unsafe extern "C" fn luaH_resize(
     (*t).alimit = newasize;
     i = oldasize;
     while i < newasize {
-        (*((*t).array).offset(i as isize))
-            .tt_ = (0i32 | (1i32) << 4i32)
-            as u8;
+        (*((*t).array).offset(i as isize)).tt_ = (0i32 | (1i32) << 4i32) as u8;
         i = i.wrapping_add(1);
     }
     reinsert(L, &mut newt, t);
     freehash(L, &mut newt);
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_resizearray(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1150,11 +1048,7 @@ pub unsafe extern "C" fn luaH_resizearray(
     };
     luaH_resize(L, t, nasize, nsize as libc::c_uint);
 }
-unsafe extern "C" fn rehash(
-    mut L: *mut lua_State,
-    mut t: *mut Table,
-    mut ek: *const TValue,
-) {
+unsafe extern "C" fn rehash(mut L: *mut lua_State, mut t: *mut Table, mut ek: *const TValue) {
     let mut asize: libc::c_uint = 0;
     let mut na: libc::c_uint = 0;
     let mut nums: [libc::c_uint; 32] = [0; 32];
@@ -1173,17 +1067,14 @@ unsafe extern "C" fn rehash(
     na = numusearray(t, nums.as_mut_ptr());
     totaluse = na as i32;
     totaluse += numusehash(t, nums.as_mut_ptr(), &mut na);
-    if (*ek).tt_ as i32
-        == 3i32 | (0i32) << 4i32
-    {
-        na = na
-            .wrapping_add(countint((*ek).value_.i, nums.as_mut_ptr()) as libc::c_uint);
+    if (*ek).tt_ as i32 == 3i32 | (0i32) << 4i32 {
+        na = na.wrapping_add(countint((*ek).value_.i, nums.as_mut_ptr()) as libc::c_uint);
     }
     totaluse += 1;
     asize = computesizes(nums.as_mut_ptr(), &mut na);
     luaH_resize(L, t, asize, (totaluse as libc::c_uint).wrapping_sub(na));
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
     let mut o: *mut GCObject = luaC_newobj(
         L,
@@ -1192,15 +1083,13 @@ pub unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
     );
     let mut t: *mut Table = &mut (*(o as *mut GCUnion)).h;
     (*t).metatable = 0 as *mut Table;
-    (*t)
-        .flags = !(!(0 as libc::c_uint) << TM_EQ as i32 + 1i32)
-        as u8;
+    (*t).flags = !(!(0 as libc::c_uint) << TM_EQ as i32 + 1i32) as u8;
     (*t).array = 0 as *mut TValue;
     (*t).alimit = 0i32 as libc::c_uint;
     setnodevector(L, t, 0i32 as libc::c_uint);
     return t;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_free(mut L: *mut lua_State, mut t: *mut Table) {
     freehash(L, t);
     luaM_free_(
@@ -1235,28 +1124,25 @@ unsafe extern "C" fn luaH_newkey(
 ) {
     let mut mp: *mut Node = 0 as *mut Node;
     let mut aux: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value {
+            gc: 0 as *mut GCObject,
+        },
         tt_: 0,
     };
-    if (((*key).tt_ as i32 & 0xf as i32 == 0i32)
-        as i32 != 0i32) as i32 as libc::c_long != 0
-    {
-        luaG_runerror(L, b"table index is nil\0" as *const u8 as *const libc::c_char);
-    } else if (*key).tt_ as i32
-        == 3i32 | (1i32) << 4i32
-    {
+    if (((*key).tt_ as i32 & 0xf as i32 == 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+        luaG_runerror(
+            L,
+            b"table index is nil\0" as *const u8 as *const libc::c_char,
+        );
+    } else if (*key).tt_ as i32 == 3i32 | (1i32) << 4i32 {
         let mut f: Number = (*key).value_.n;
         let mut k: Integer = 0;
         if luaV_flttointeger(f, &mut k, F2Ieq) != 0 {
             let mut io: *mut TValue = &mut aux;
             (*io).value_.i = k;
-            (*io)
-                .tt_ = (3i32 | (0i32) << 4i32)
-                as u8;
+            (*io).tt_ = (3i32 | (0i32) << 4i32) as u8;
             key = &mut aux;
-        } else if (!(f == f) as i32 != 0i32) as i32
-            as libc::c_long != 0
-        {
+        } else if (!(f == f) as i32 != 0i32) as i32 as libc::c_long != 0 {
             luaG_runerror(
                 L,
                 b"table index is NaN\0" as *const u8 as *const libc::c_char,
@@ -1267,9 +1153,7 @@ unsafe extern "C" fn luaH_newkey(
         return;
     }
     mp = mainpositionTV(t, key);
-    if !((*mp).i_val.tt_ as i32 & 0xf as i32 == 0i32)
-        || ((*t).lastfree).is_null()
-    {
+    if !((*mp).i_val.tt_ as i32 & 0xf as i32 == 0i32) || ((*t).lastfree).is_null() {
         let mut othern: *mut Node = 0 as *mut Node;
         let mut f_0: *mut Node = getfreepos(t);
         if f_0.is_null() {
@@ -1288,16 +1172,11 @@ unsafe extern "C" fn luaH_newkey(
                 (*f_0).u.next += mp.offset_from(f_0) as libc::c_long as i32;
                 (*mp).u.next = 0i32;
             }
-            (*mp)
-                .i_val
-                .tt_ = (0i32 | (1i32) << 4i32)
-                as u8;
+            (*mp).i_val.tt_ = (0i32 | (1i32) << 4i32) as u8;
         } else {
             if (*mp).u.next != 0i32 {
-                (*f_0)
-                    .u
-                    .next = mp.offset((*mp).u.next as isize).offset_from(f_0)
-                    as libc::c_long as i32;
+                (*f_0).u.next =
+                    mp.offset((*mp).u.next as isize).offset_from(f_0) as libc::c_long as i32;
             }
             (*mp).u.next = f_0.offset_from(mp) as libc::c_long as i32;
             mp = f_0;
@@ -1308,47 +1187,36 @@ unsafe extern "C" fn luaH_newkey(
     (*n_).u.key_val = (*io_).value_;
     (*n_).u.key_tt = (*io_).tt_;
     if (*key).tt_ as i32 & (1i32) << 6i32 != 0 {
-        if (*(t as *mut GCUnion)).gc.marked as i32
-            & (1i32) << 5i32 != 0
-            && (*(*key).value_.gc).marked as i32
-                & ((1i32) << 3i32
-                    | (1i32) << 4i32) != 0
+        if (*(t as *mut GCUnion)).gc.marked as i32 & (1i32) << 5i32 != 0
+            && (*(*key).value_.gc).marked as i32 & ((1i32) << 3i32 | (1i32) << 4i32) != 0
         {
             luaC_barrierback_(L, &mut (*(t as *mut GCUnion)).gc);
-        } else {};
-    } else {};
+        } else {
+        };
+    } else {
+    };
     let mut io1: *mut TValue = &mut (*mp).i_val;
     let mut io2: *const TValue = value;
     (*io1).value_ = (*io2).value_;
     (*io1).tt_ = (*io2).tt_;
 }
-#[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaH_getint(
-    mut t: *mut Table,
-    mut key: Integer,
-) -> *const TValue {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn luaH_getint(mut t: *mut Table, mut key: Integer) -> *const TValue {
     let mut alimit: lua_Unsigned = (*t).alimit as lua_Unsigned;
-    if (key as lua_Unsigned).wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-        < alimit
-    {
-        return &mut *((*t).array)
-            .offset((key - 1i32 as i64) as isize) as *mut TValue
+    if (key as lua_Unsigned).wrapping_sub(1 as libc::c_uint as libc::c_ulonglong) < alimit {
+        return &mut *((*t).array).offset((key - 1i32 as i64) as isize) as *mut TValue;
     } else if (*t).flags as i32 & (1i32) << 7i32 != 0
         && (key as lua_Unsigned).wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
-            & !alimit.wrapping_sub(1 as libc::c_uint as libc::c_ulonglong) < alimit
+            & !alimit.wrapping_sub(1 as libc::c_uint as libc::c_ulonglong)
+            < alimit
     {
         (*t).alimit = key as libc::c_uint;
-        return &mut *((*t).array)
-            .offset((key - 1i32 as i64) as isize)
-            as *mut TValue;
+        return &mut *((*t).array).offset((key - 1i32 as i64) as isize) as *mut TValue;
     } else {
         let mut n: *mut Node = hashint(t, key);
         loop {
-            if (*n).u.key_tt as i32
-                == 3i32 | (0i32) << 4i32
-                && (*n).u.key_val.i == key
-            {
-                return &mut (*n).i_val
+            if (*n).u.key_tt as i32 == 3i32 | (0i32) << 4i32 && (*n).u.key_val.i == key {
+                return &mut (*n).i_val;
             } else {
                 let mut nx: i32 = (*n).u.next;
                 if nx == 0i32 {
@@ -1360,24 +1228,19 @@ pub unsafe extern "C" fn luaH_getint(
         return &absentkey;
     };
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_getshortstr(
     mut t: *mut Table,
     mut key: *mut TString,
 ) -> *const TValue {
-    let mut n: *mut Node = &mut *((*t).node)
-        .offset(
-            ((*key).hash
-                & (((1i32) << (*t).lsizenode as i32)
-                    - 1i32) as libc::c_uint) as i32 as isize,
-        ) as *mut Node;
+    let mut n: *mut Node = &mut *((*t).node).offset(
+        ((*key).hash & (((1i32) << (*t).lsizenode as i32) - 1i32) as libc::c_uint) as i32 as isize,
+    ) as *mut Node;
     loop {
-        if (*n).u.key_tt as i32
-            == 4i32 | (0i32) << 4i32
-                | (1i32) << 6i32
+        if (*n).u.key_tt as i32 == 4i32 | (0i32) << 4i32 | (1i32) << 6i32
             && &mut (*((*n).u.key_val.gc as *mut GCUnion)).ts as *mut TString == key
         {
-            return &mut (*n).i_val
+            return &mut (*n).i_val;
         } else {
             let mut nx: i32 = (*n).u.next;
             if nx == 0i32 {
@@ -1385,36 +1248,28 @@ pub unsafe extern "C" fn luaH_getshortstr(
             }
             n = n.offset(nx as isize);
         }
-    };
+    }
 }
-#[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaH_getstr(
-    mut t: *mut Table,
-    mut key: *mut TString,
-) -> *const TValue {
-    if (*key).tt as i32
-        == 4i32 | (0i32) << 4i32
-    {
-        return luaH_getshortstr(t, key)
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn luaH_getstr(mut t: *mut Table, mut key: *mut TString) -> *const TValue {
+    if (*key).tt as i32 == 4i32 | (0i32) << 4i32 {
+        return luaH_getshortstr(t, key);
     } else {
         let mut ko: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value {
+                gc: 0 as *mut GCObject,
+            },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut ko;
         let mut x_: *mut TString = key;
         (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io)
-            .tt_ = ((*x_).tt as i32 | (1i32) << 6i32)
-            as u8;
+        (*io).tt_ = ((*x_).tt as i32 | (1i32) << 6i32) as u8;
         return getgeneric(t, &mut ko, 0i32);
     };
 }
-#[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaH_get(
-    mut t: *mut Table,
-    mut key: *const TValue,
-) -> *const TValue {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn luaH_get(mut t: *mut Table, mut key: *const TValue) -> *const TValue {
     match (*key).tt_ as i32 & 0x3f as i32 {
         4 => return luaH_getshortstr(t, &mut (*((*key).value_.gc as *mut GCUnion)).ts),
         3 => return luaH_getint(t, (*key).value_.i),
@@ -1429,7 +1284,7 @@ pub unsafe extern "C" fn luaH_get(
     }
     return getgeneric(t, key, 0i32);
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_finishset(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1437,9 +1292,7 @@ pub unsafe extern "C" fn luaH_finishset(
     mut slot: *const TValue,
     mut value: *mut TValue,
 ) {
-    if (*slot).tt_ as i32
-        == 0i32 | (2i32) << 4i32
-    {
+    if (*slot).tt_ as i32 == 0i32 | (2i32) << 4i32 {
         luaH_newkey(L, t, key, value);
     } else {
         let mut io1: *mut TValue = slot as *mut TValue;
@@ -1448,7 +1301,7 @@ pub unsafe extern "C" fn luaH_finishset(
         (*io1).tt_ = (*io2).tt_;
     };
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_set(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1458,7 +1311,7 @@ pub unsafe extern "C" fn luaH_set(
     let mut slot: *const TValue = luaH_get(t, key);
     luaH_finishset(L, t, key, slot, value);
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_setint(
     mut L: *mut lua_State,
     mut t: *mut Table,
@@ -1466,18 +1319,16 @@ pub unsafe extern "C" fn luaH_setint(
     mut value: *mut TValue,
 ) {
     let mut p: *const TValue = luaH_getint(t, key);
-    if (*p).tt_ as i32
-        == 0i32 | (2i32) << 4i32
-    {
+    if (*p).tt_ as i32 == 0i32 | (2i32) << 4i32 {
         let mut k: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value {
+                gc: 0 as *mut GCObject,
+            },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut k;
         (*io).value_.i = key;
-        (*io)
-            .tt_ = (3i32 | (0i32) << 4i32)
-            as u8;
+        (*io).tt_ = (3i32 | (0i32) << 4i32) as u8;
         luaH_newkey(L, t, &mut k, value);
     } else {
         let mut io1: *mut TValue = p as *mut TValue;
@@ -1486,45 +1337,30 @@ pub unsafe extern "C" fn luaH_setint(
         (*io1).tt_ = (*io2).tt_;
     };
 }
-unsafe extern "C" fn hash_search(
-    mut t: *mut Table,
-    mut j: lua_Unsigned,
-) -> lua_Unsigned {
+unsafe extern "C" fn hash_search(mut t: *mut Table, mut j: lua_Unsigned) -> lua_Unsigned {
     let mut i: lua_Unsigned = 0;
     if j == 0i32 as libc::c_ulonglong {
         j = j.wrapping_add(1);
     }
     loop {
         i = j;
-        if j
-            <= (9223372036854775807i64 as lua_Unsigned)
-                .wrapping_div(2i32 as libc::c_ulonglong)
-        {
-            j = (j as libc::c_ulonglong)
-                .wrapping_mul(2i32 as libc::c_ulonglong) as lua_Unsigned
+        if j <= (9223372036854775807i64 as lua_Unsigned).wrapping_div(2i32 as libc::c_ulonglong) {
+            j = (j as libc::c_ulonglong).wrapping_mul(2i32 as libc::c_ulonglong) as lua_Unsigned
                 as lua_Unsigned;
-            if (*luaH_getint(t, j as Integer)).tt_ as i32
-                & 0xf as i32 == 0i32
-            {
+            if (*luaH_getint(t, j as Integer)).tt_ as i32 & 0xf as i32 == 0i32 {
                 break;
             }
         } else {
-            j =9223372036854775807i64 as lua_Unsigned;
-            if (*luaH_getint(t, j as Integer)).tt_ as i32
-                & 0xf as i32 == 0i32
-            {
+            j = 9223372036854775807i64 as lua_Unsigned;
+            if (*luaH_getint(t, j as Integer)).tt_ as i32 & 0xf as i32 == 0i32 {
                 break;
             }
             return j;
         }
     }
     while j.wrapping_sub(i) > 1 as libc::c_uint as libc::c_ulonglong {
-        let mut m: lua_Unsigned = i
-            .wrapping_add(j)
-            .wrapping_div(2i32 as libc::c_ulonglong);
-        if (*luaH_getint(t, m as Integer)).tt_ as i32 & 0xf as i32
-            == 0i32
-        {
+        let mut m: lua_Unsigned = i.wrapping_add(j).wrapping_div(2i32 as libc::c_ulonglong);
+        if (*luaH_getint(t, m as Integer)).tt_ as i32 & 0xf as i32 == 0i32 {
             j = m;
         } else {
             i = m;
@@ -1538,11 +1374,9 @@ unsafe extern "C" fn binsearch(
     mut j: libc::c_uint,
 ) -> libc::c_uint {
     while j.wrapping_sub(i) > 1 as libc::c_uint {
-        let mut m: libc::c_uint = i
-            .wrapping_add(j)
-            .wrapping_div(2i32 as libc::c_uint);
-        if (*array.offset(m.wrapping_sub(1i32 as libc::c_uint) as isize)).tt_
-            as i32 & 0xf as i32 == 0i32
+        let mut m: libc::c_uint = i.wrapping_add(j).wrapping_div(2i32 as libc::c_uint);
+        if (*array.offset(m.wrapping_sub(1i32 as libc::c_uint) as isize)).tt_ as i32 & 0xf as i32
+            == 0i32
         {
             j = m;
         } else {
@@ -1551,18 +1385,19 @@ unsafe extern "C" fn binsearch(
     }
     return i;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaH_getn(mut t: *mut Table) -> lua_Unsigned {
     let mut limit: libc::c_uint = (*t).alimit;
     if limit > 0i32 as libc::c_uint
-        && (*((*t).array)
-            .offset(limit.wrapping_sub(1i32 as libc::c_uint) as isize))
-            .tt_ as i32 & 0xf as i32 == 0i32
+        && (*((*t).array).offset(limit.wrapping_sub(1i32 as libc::c_uint) as isize)).tt_ as i32
+            & 0xf as i32
+            == 0i32
     {
         if limit >= 2i32 as libc::c_uint
-            && !((*((*t).array)
-                .offset(limit.wrapping_sub(2i32 as libc::c_uint) as isize))
-                .tt_ as i32 & 0xf as i32 == 0i32)
+            && !((*((*t).array).offset(limit.wrapping_sub(2i32 as libc::c_uint) as isize)).tt_
+                as i32
+                & 0xf as i32
+                == 0i32)
         {
             if ispow2realasize(t) != 0
                 && !(limit.wrapping_sub(1i32 as libc::c_uint)
@@ -1572,42 +1407,30 @@ pub unsafe extern "C" fn luaH_getn(mut t: *mut Table) -> lua_Unsigned {
                     == 0i32 as libc::c_uint)
             {
                 (*t).alimit = limit.wrapping_sub(1i32 as libc::c_uint);
-                (*t)
-                    .flags = ((*t).flags as i32
-                    | (1i32) << 7i32) as u8;
+                (*t).flags = ((*t).flags as i32 | (1i32) << 7i32) as u8;
             }
             return limit.wrapping_sub(1i32 as libc::c_uint) as lua_Unsigned;
         } else {
-            let mut boundary: libc::c_uint = binsearch(
-                (*t).array,
-                0i32 as libc::c_uint,
-                limit,
-            );
+            let mut boundary: libc::c_uint = binsearch((*t).array, 0i32 as libc::c_uint, limit);
             if ispow2realasize(t) != 0
-                && boundary
-                    > (luaH_realasize(t)).wrapping_div(2i32 as libc::c_uint)
+                && boundary > (luaH_realasize(t)).wrapping_div(2i32 as libc::c_uint)
             {
                 (*t).alimit = boundary;
-                (*t)
-                    .flags = ((*t).flags as i32
-                    | (1i32) << 7i32) as u8;
+                (*t).flags = ((*t).flags as i32 | (1i32) << 7i32) as u8;
             }
             return boundary as lua_Unsigned;
         }
     }
     if !((*t).flags as i32 & (1i32) << 7i32 == 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint)
-            == 0i32 as libc::c_uint)
+        || (*t).alimit & ((*t).alimit).wrapping_sub(1i32 as libc::c_uint) == 0i32 as libc::c_uint)
     {
-        if (*((*t).array).offset(limit as isize)).tt_ as i32 & 0xf as i32
-            == 0i32
-        {
+        if (*((*t).array).offset(limit as isize)).tt_ as i32 & 0xf as i32 == 0i32 {
             return limit as lua_Unsigned;
         }
         limit = luaH_realasize(t);
-        if (*((*t).array)
-            .offset(limit.wrapping_sub(1i32 as libc::c_uint) as isize))
-            .tt_ as i32 & 0xf as i32 == 0i32
+        if (*((*t).array).offset(limit.wrapping_sub(1i32 as libc::c_uint) as isize)).tt_ as i32
+            & 0xf as i32
+            == 0i32
         {
             let mut boundary_0: libc::c_uint = binsearch((*t).array, (*t).alimit, limit);
             (*t).alimit = boundary_0;
@@ -1615,14 +1438,12 @@ pub unsafe extern "C" fn luaH_getn(mut t: *mut Table) -> lua_Unsigned {
         }
     }
     if ((*t).lastfree).is_null()
-        || (*luaH_getint(
-            t,
-            limit.wrapping_add(1i32 as libc::c_uint) as Integer,
-        ))
-            .tt_ as i32 & 0xf as i32 == 0i32
+        || (*luaH_getint(t, limit.wrapping_add(1i32 as libc::c_uint) as Integer)).tt_ as i32
+            & 0xf as i32
+            == 0i32
     {
-        return limit as lua_Unsigned
+        return limit as lua_Unsigned;
     } else {
-        return hash_search(t, limit as lua_Unsigned)
+        return hash_search(t, limit as lua_Unsigned);
     };
 }

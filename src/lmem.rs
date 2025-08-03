@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer,Number};
+use crate::types::{Integer, Number};
 unsafe extern "C" {
     pub type lua_longjmp;
     fn luaG_runerror(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> !;
@@ -48,7 +48,7 @@ pub struct lua_State {
 }
 pub type sig_atomic_t = __sig_atomic_t;
 pub type l_uint32 = libc::c_uint;
-pub type lua_Hook = Option::<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
+pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_Debug {
@@ -110,9 +110,7 @@ pub struct C2RustUnnamed_2 {
     pub ctx: lua_KContext,
 }
 pub type lua_KContext = intptr_t;
-pub type lua_KFunction = Option::<
-    unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32,
->;
+pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_3 {
@@ -152,7 +150,7 @@ pub union Value {
     pub ub: u8,
 }
 
-pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
+pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -244,9 +242,8 @@ pub struct global_State {
     pub warnf: lua_WarnFunction,
     pub ud_warn: *mut libc::c_void,
 }
-pub type lua_WarnFunction = Option::<
-    unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> (),
->;
+pub type lua_WarnFunction =
+    Option<unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
@@ -304,15 +301,10 @@ pub struct stringtable {
 }
 pub type lu_mem = size_t;
 pub type l_mem = ptrdiff_t;
-pub type lua_Alloc = Option::<
-    unsafe extern "C" fn(
-        *mut libc::c_void,
-        *mut libc::c_void,
-        size_t,
-        size_t,
-    ) -> *mut libc::c_void,
+pub type lua_Alloc = Option<
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, size_t, size_t) -> *mut libc::c_void,
 >;
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_growaux_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -328,9 +320,7 @@ pub unsafe extern "C" fn luaM_growaux_(
         return block;
     }
     if size >= limit / 2i32 {
-        if ((size >= limit) as i32 != 0i32) as i32
-            as libc::c_long != 0
-        {
+        if ((size >= limit) as i32 != 0i32) as i32 as libc::c_long != 0 {
             luaG_runerror(
                 L,
                 b"too many %s (limit is %d)\0" as *const u8 as *const libc::c_char,
@@ -354,7 +344,7 @@ pub unsafe extern "C" fn luaM_growaux_(
     *psize = size;
     return newblock;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_shrinkvector_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -369,24 +359,26 @@ pub unsafe extern "C" fn luaM_shrinkvector_(
     *size = final_n;
     return newblock;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_toobig(mut L: *mut lua_State) -> ! {
     luaG_runerror(
         L,
         b"memory allocation error: block too big\0" as *const u8 as *const libc::c_char,
     );
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_free_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
     mut osize: size_t,
 ) {
     let mut g: *mut global_State = (*L).l_G;
-    (Some(((*g).frealloc).expect("non-null function pointer")))
-        .expect(
-            "non-null function pointer",
-        )((*g).ud, block, osize, 0i32 as size_t);
+    (Some(((*g).frealloc).expect("non-null function pointer"))).expect("non-null function pointer")(
+        (*g).ud,
+        block,
+        osize,
+        0i32 as size_t,
+    );
     (*g).GCdebt = ((*g).GCdebt as libc::c_ulong).wrapping_sub(osize) as l_mem as l_mem;
 }
 unsafe extern "C" fn tryagain(
@@ -396,17 +388,15 @@ unsafe extern "C" fn tryagain(
     mut nsize: size_t,
 ) -> *mut libc::c_void {
     let mut g: *mut global_State = (*L).l_G;
-    if (*g).nilvalue.tt_ as i32 & 0xf as i32 == 0i32
-        && (*g).gcstopem == 0
-    {
+    if (*g).nilvalue.tt_ as i32 & 0xf as i32 == 0i32 && (*g).gcstopem == 0 {
         luaC_fullgc(L, 1i32);
         return (Some(((*g).frealloc).expect("non-null function pointer")))
             .expect("non-null function pointer")((*g).ud, block, osize, nsize);
     } else {
-        return 0 as *mut libc::c_void
+        return 0 as *mut libc::c_void;
     };
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_realloc_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -417,20 +407,20 @@ pub unsafe extern "C" fn luaM_realloc_(
     let mut g: *mut global_State = (*L).l_G;
     newblock = (Some(((*g).frealloc).expect("non-null function pointer")))
         .expect("non-null function pointer")((*g).ud, block, osize, nsize);
-    if ((newblock.is_null() && nsize > 0i32 as libc::c_ulong) as i32
-        != 0i32) as i32 as libc::c_long != 0
+    if ((newblock.is_null() && nsize > 0i32 as libc::c_ulong) as i32 != 0i32) as i32 as libc::c_long
+        != 0
     {
         newblock = tryagain(L, block, osize, nsize);
         if newblock.is_null() {
             return 0 as *mut libc::c_void;
         }
     }
-    (*g)
-        .GCdebt = ((*g).GCdebt as libc::c_ulong).wrapping_add(nsize).wrapping_sub(osize)
-        as l_mem;
+    (*g).GCdebt = ((*g).GCdebt as libc::c_ulong)
+        .wrapping_add(nsize)
+        .wrapping_sub(osize) as l_mem;
     return newblock;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_saferealloc_(
     mut L: *mut lua_State,
     mut block: *mut libc::c_void,
@@ -438,40 +428,38 @@ pub unsafe extern "C" fn luaM_saferealloc_(
     mut nsize: size_t,
 ) -> *mut libc::c_void {
     let mut newblock: *mut libc::c_void = luaM_realloc_(L, block, osize, nsize);
-    if ((newblock.is_null() && nsize > 0i32 as libc::c_ulong) as i32
-        != 0i32) as i32 as libc::c_long != 0
+    if ((newblock.is_null() && nsize > 0i32 as libc::c_ulong) as i32 != 0i32) as i32 as libc::c_long
+        != 0
     {
         luaD_throw(L, 4i32);
     }
     return newblock;
 }
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaM_malloc_(
     mut L: *mut lua_State,
     mut size: size_t,
     mut tag: i32,
 ) -> *mut libc::c_void {
     if size == 0i32 as libc::c_ulong {
-        return 0 as *mut libc::c_void
+        return 0 as *mut libc::c_void;
     } else {
         let mut g: *mut global_State = (*L).l_G;
-        let mut newblock: *mut libc::c_void = (Some(
-            ((*g).frealloc).expect("non-null function pointer"),
-        ))
-            .expect(
-                "non-null function pointer",
-            )((*g).ud, 0 as *mut libc::c_void, tag as size_t, size);
-        if ((newblock == 0 as *mut libc::c_void) as i32 != 0i32)
-            as i32 as libc::c_long != 0
-        {
+        let mut newblock: *mut libc::c_void =
+            (Some(((*g).frealloc).expect("non-null function pointer")))
+                .expect("non-null function pointer")(
+                (*g).ud,
+                0 as *mut libc::c_void,
+                tag as size_t,
+                size,
+            );
+        if ((newblock == 0 as *mut libc::c_void) as i32 != 0i32) as i32 as libc::c_long != 0 {
             newblock = tryagain(L, 0 as *mut libc::c_void, tag as size_t, size);
             if newblock.is_null() {
                 luaD_throw(L, 4i32);
             }
         }
-        (*g)
-            .GCdebt = ((*g).GCdebt as libc::c_ulong).wrapping_add(size) as l_mem
-            as l_mem;
+        (*g).GCdebt = ((*g).GCdebt as libc::c_ulong).wrapping_add(size) as l_mem as l_mem;
         return newblock;
     };
 }

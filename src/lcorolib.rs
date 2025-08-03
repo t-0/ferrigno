@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::{Integer,Number};
+use crate::types::{Integer, Number};
 unsafe extern "C" {
     pub type lua_State;
     pub type CallInfo;
@@ -26,33 +26,15 @@ unsafe extern "C" {
     fn lua_pushboolean(L: *mut lua_State, b: i32);
     fn lua_pushthread(L: *mut lua_State) -> i32;
     fn lua_createtable(L: *mut lua_State, narr: i32, nrec: i32);
-    fn lua_yieldk(
-        L: *mut lua_State,
-        nresults: i32,
-        ctx: lua_KContext,
-        k: lua_KFunction,
-    ) -> i32;
-    fn lua_resume(
-        L: *mut lua_State,
-        from: *mut lua_State,
-        narg: i32,
-        nres: *mut i32,
-    ) -> i32;
+    fn lua_yieldk(L: *mut lua_State, nresults: i32, ctx: lua_KContext, k: lua_KFunction) -> i32;
+    fn lua_resume(L: *mut lua_State, from: *mut lua_State, narg: i32, nres: *mut i32) -> i32;
     fn lua_status(L: *mut lua_State) -> i32;
     fn lua_isyieldable(L: *mut lua_State) -> i32;
     fn lua_error(L: *mut lua_State) -> i32;
     fn lua_concat(L: *mut lua_State, n: i32);
-    fn lua_getstack(
-        L: *mut lua_State,
-        level: i32,
-        ar: *mut lua_Debug,
-    ) -> i32;
+    fn lua_getstack(L: *mut lua_State, level: i32, ar: *mut lua_Debug) -> i32;
     fn luaL_checkversion_(L: *mut lua_State, ver: Number, sz: size_t);
-    fn luaL_typeerror(
-        L: *mut lua_State,
-        arg: i32,
-        tname: *const libc::c_char,
-    ) -> i32;
+    fn luaL_typeerror(L: *mut lua_State, arg: i32, tname: *const libc::c_char) -> i32;
     fn luaL_checktype(L: *mut lua_State, arg: i32, t: i32);
     fn luaL_where(L: *mut lua_State, lvl: i32);
     fn luaL_error(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> i32;
@@ -62,10 +44,8 @@ pub type size_t = libc::c_ulong;
 pub type intptr_t = libc::c_long;
 
 pub type lua_KContext = intptr_t;
-pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
-pub type lua_KFunction = Option::<
-    unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32,
->;
+pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
+pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_Debug {
@@ -96,11 +76,8 @@ pub struct luaL_Reg {
 unsafe extern "C" fn getco(mut L: *mut lua_State) -> *mut lua_State {
     let mut co: *mut lua_State = lua_tothread(L, 1i32);
     ((co != 0 as *mut lua_State) as i32 as libc::c_long != 0
-        || luaL_typeerror(
-            L,
-            1i32,
-            b"thread\0" as *const u8 as *const libc::c_char,
-        ) != 0) as i32;
+        || luaL_typeerror(L, 1i32, b"thread\0" as *const u8 as *const libc::c_char) != 0)
+        as i32;
     return co;
 }
 unsafe extern "C" fn auxresume(
@@ -110,9 +87,7 @@ unsafe extern "C" fn auxresume(
 ) -> i32 {
     let mut status: i32 = 0;
     let mut nres: i32 = 0;
-    if ((lua_checkstack(co, narg) == 0) as i32 != 0i32)
-        as i32 as libc::c_long != 0
-    {
+    if ((lua_checkstack(co, narg) == 0) as i32 != 0i32) as i32 as libc::c_long != 0 {
         lua_pushstring(
             L,
             b"too many arguments to resume\0" as *const u8 as *const libc::c_char,
@@ -121,12 +96,8 @@ unsafe extern "C" fn auxresume(
     }
     lua_xmove(L, co, narg);
     status = lua_resume(co, L, narg, &mut nres);
-    if ((status == 0i32 || status == 1i32) as i32
-        != 0i32) as i32 as libc::c_long != 0
-    {
-        if ((lua_checkstack(L, nres + 1i32) == 0) as i32
-            != 0i32) as i32 as libc::c_long != 0
-        {
+    if ((status == 0i32 || status == 1i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
+        if ((lua_checkstack(L, nres + 1i32) == 0) as i32 != 0i32) as i32 as libc::c_long != 0 {
             lua_settop(co, -nres - 1i32);
             lua_pushstring(
                 L,
@@ -145,9 +116,7 @@ unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> i32 {
     let mut co: *mut lua_State = getco(L);
     let mut r: i32 = 0;
     r = auxresume(L, co, lua_gettop(L) - 1i32);
-    if ((r < 0i32) as i32 != 0i32) as i32
-        as libc::c_long != 0
-    {
+    if ((r < 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
         lua_pushboolean(L, 0i32);
         lua_rotate(L, -(2i32), 1i32);
         return 2i32;
@@ -158,22 +127,15 @@ unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> i32 {
     };
 }
 unsafe extern "C" fn luaB_auxwrap(mut L: *mut lua_State) -> i32 {
-    let mut co: *mut lua_State = lua_tothread(
-        L,
-        -(1000000i32) - 1000i32 - 1i32,
-    );
+    let mut co: *mut lua_State = lua_tothread(L, -(1000000i32) - 1000i32 - 1i32);
     let mut r: i32 = auxresume(L, co, lua_gettop(L));
-    if ((r < 0i32) as i32 != 0i32) as i32
-        as libc::c_long != 0
-    {
+    if ((r < 0i32) as i32 != 0i32) as i32 as libc::c_long != 0 {
         let mut stat: i32 = lua_status(co);
         if stat != 0i32 && stat != 1i32 {
             stat = lua_closethread(co, L);
             lua_xmove(co, L, 1i32);
         }
-        if stat != 4i32
-            && lua_type(L, -(1i32)) == 4i32
-        {
+        if stat != 4i32 && lua_type(L, -(1i32)) == 4i32 {
             luaL_where(L, 1i32);
             lua_rotate(L, -(2i32), 1i32);
             lua_concat(L, 2i32);
@@ -208,12 +170,9 @@ static mut statname: [*const libc::c_char; 4] = [
     b"suspended\0" as *const u8 as *const libc::c_char,
     b"normal\0" as *const u8 as *const libc::c_char,
 ];
-unsafe extern "C" fn auxstatus(
-    mut L: *mut lua_State,
-    mut co: *mut lua_State,
-) -> i32 {
+unsafe extern "C" fn auxstatus(mut L: *mut lua_State, mut co: *mut lua_State) -> i32 {
     if L == co {
-        return 0i32
+        return 0i32;
     } else {
         match lua_status(co) {
             1 => return 2i32,
@@ -238,11 +197,11 @@ unsafe extern "C" fn auxstatus(
                     i_ci: 0 as *mut CallInfo,
                 };
                 if lua_getstack(co, 0i32, &mut ar) != 0 {
-                    return 3i32
+                    return 3i32;
                 } else if lua_gettop(co) == 0i32 {
-                    return 1i32
+                    return 1i32;
                 } else {
-                    return 2i32
+                    return 2i32;
                 }
             }
             _ => return 1i32,
@@ -255,8 +214,7 @@ unsafe extern "C" fn luaB_costatus(mut L: *mut lua_State) -> i32 {
     return 1i32;
 }
 unsafe extern "C" fn luaB_yieldable(mut L: *mut lua_State) -> i32 {
-    let mut co: *mut lua_State = if lua_type(L, 1i32) == -(1i32)
-    {
+    let mut co: *mut lua_State = if lua_type(L, 1i32) == -(1i32) {
         L
     } else {
         getco(L)
@@ -298,72 +256,56 @@ static mut co_funcs: [luaL_Reg; 9] = {
         {
             let mut init = luaL_Reg {
                 name: b"create\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_cocreate as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_cocreate as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"resume\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_coresume as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_coresume as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"running\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_corunning as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_corunning as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"status\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_costatus as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_costatus as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"wrap\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_cowrap as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_cowrap as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"yield\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_yield as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_yield as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"isyieldable\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_yieldable as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_yieldable as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"close\0" as *const u8 as *const libc::c_char,
-                func: Some(
-                    luaB_close as unsafe extern "C" fn(*mut lua_State) -> i32,
-                ),
+                func: Some(luaB_close as unsafe extern "C" fn(*mut lua_State) -> i32),
             };
             init
         },
@@ -376,7 +318,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
         },
     ]
 };
-#[unsafe (no_mangle)]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> i32 {
     luaL_checkversion_(
         L,

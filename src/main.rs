@@ -12,7 +12,6 @@
     unused_mut
 )]
 #![feature(extern_types, c_variadic)]
-mod types;
 mod lapi;
 mod lauxlib;
 mod lbaselib;
@@ -47,8 +46,9 @@ mod lundump;
 mod lutf8lib;
 mod lvm;
 mod lzio;
+mod types;
 pub fn main() {
-    let mut args: Vec::<*mut libc::c_char> = Vec::new();
+    let mut args: Vec<*mut libc::c_char> = Vec::new();
     for arg in ::std::env::args() {
         args.push(
             (::std::ffi::CString::new(arg))
@@ -58,11 +58,9 @@ pub fn main() {
     }
     args.push(::core::ptr::null_mut());
     unsafe {
-        ::std::process::exit(
-            crate::lua::main_0(
-                (args.len() - 1) as i32,
-                args.as_mut_ptr() as *mut *mut libc::c_char,
-            ) as i32,
-        )
+        ::std::process::exit(crate::lua::main_0(
+            (args.len() - 1) as i32,
+            args.as_mut_ptr() as *mut *mut libc::c_char,
+        ) as i32)
     }
 }
