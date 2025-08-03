@@ -15,6 +15,7 @@ unsafe extern "C" {
         _: libc::c_ulong,
     ) -> *mut libc::c_void;
 }
+use crate::types::{Integer,Number};
 pub type size_t = libc::c_ulong;
 pub type ptrdiff_t = libc::c_long;
 pub type __sig_atomic_t = i32;
@@ -152,8 +153,7 @@ pub union Value {
     pub n: Number,
     pub ub: u8,
 }
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]

@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 unsafe extern "C" {
     pub type lua_State;
     fn __ctype_b_loc() -> *mut *const libc::c_ushort;
@@ -200,8 +201,7 @@ pub struct lconv {
 pub type ptrdiff_t = libc::c_long;
 pub type size_t = libc::c_ulong;
 pub type intptr_t = libc::c_long;
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type lua_KContext = intptr_t;
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;

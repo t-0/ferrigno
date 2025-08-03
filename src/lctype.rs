@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 #[unsafe (no_mangle)]
 pub static mut luai_ctype_: [u8; 257] = [
     0i32 as u8,

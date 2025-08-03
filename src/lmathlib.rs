@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 unsafe extern "C" {
     pub type lua_State;
     fn atan2(_: f64, _: f64) -> f64;
@@ -70,8 +71,7 @@ unsafe extern "C" {
 pub type __time_t = libc::c_long;
 pub type size_t = libc::c_ulong;
 pub type time_t = __time_t;
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]

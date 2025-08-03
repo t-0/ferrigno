@@ -12,6 +12,7 @@
     unused_mut
 )]
 #![feature(extern_types, c_variadic)]
+mod types;
 mod lapi;
 mod lauxlib;
 mod lbaselib;

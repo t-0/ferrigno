@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 unsafe extern "C" {
     pub type lua_State;
     fn lua_gettop(L: *mut lua_State) -> i32;
@@ -57,8 +58,7 @@ unsafe extern "C" {
     fn luaL_pushresult(B: *mut luaL_Buffer);
 }
 pub type size_t = libc::c_ulong;
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]

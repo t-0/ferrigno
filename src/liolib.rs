@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -243,8 +244,7 @@ pub struct _IO_FILE {
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
 pub type off_t = __off64_t;
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type lua_Unsigned = libc::c_ulonglong;
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]

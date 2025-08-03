@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::{Integer,Number};
 unsafe extern "C" {
     pub type lua_longjmp;
     fn strchr(_: *const libc::c_char, _: i32) -> *mut libc::c_char;
@@ -175,8 +176,7 @@ pub union Value {
     pub n: Number,
     pub ub: u8,
 }
-pub type Number = f64;
-pub type Integer = i64;
+
 pub type CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
