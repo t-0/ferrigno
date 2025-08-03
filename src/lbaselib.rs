@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;

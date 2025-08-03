@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn strchr(_: *const libc::c_char, _: i32) -> *mut libc::c_char;

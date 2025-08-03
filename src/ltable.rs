@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn frexp(_: f64, _: *mut i32) -> f64;

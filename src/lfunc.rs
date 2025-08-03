@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn luaT_gettmbyobj(L: *mut lua_State, o: *const TValue, event: TMS) -> *const TValue;

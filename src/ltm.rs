@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn luaG_concaterror(L: *mut lua_State, p1: *const TValue, p2: *const TValue) -> !;

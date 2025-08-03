@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(extern_types)]
 unsafe extern "C" {
     pub type lua_longjmp;
     fn luaG_runerror(L: *mut lua_State, fmt: *const libc::c_char, _: ...) -> !;
