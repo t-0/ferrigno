@@ -826,7 +826,7 @@ pub unsafe extern "C" fn luaS_newudata(
 9223372036854775807i64 as size_t
         })
             .wrapping_sub(
-                (if nuvalue == 0i32 {
+                if nuvalue == 0i32 {
                     32 as libc::c_ulong
                 } else {
                     (40 as libc::c_ulong)
@@ -834,7 +834,7 @@ pub unsafe extern "C" fn luaS_newudata(
                             (::core::mem::size_of::<UValue>() as libc::c_ulong)
                                 .wrapping_mul(nuvalue as libc::c_ulong),
                         )
-                }),
+                },
             )) as i32 != 0i32) as i32 as libc::c_long != 0
     {
         luaM_toobig(L);

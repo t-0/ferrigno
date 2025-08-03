@@ -858,11 +858,11 @@ unsafe extern "C" fn numarith(
         2 => return v1 * v2,
         5 => return v1 / v2,
         4 => {
-            return (if v2 == 2i32 as f64 {
+            return if v2 == 2i32 as f64 {
                 v1 * v1
             } else {
                 pow(v1, v2)
-            });
+            };
         }
         6 => return (v1 / v2).floor(),
         12 => return -v1,
@@ -921,14 +921,14 @@ pub unsafe extern "C" fn luaO_rawarith(
                 n1 = (*p1).value_.n;
                 1i32
             } else {
-                (if (*p1).tt_ as i32
+                if (*p1).tt_ as i32
                     == 3i32 | (0i32) << 4i32
                 {
                     n1 = (*p1).value_.i as Number;
                     1i32
                 } else {
                     0i32
-                })
+                }
             }) != 0
                 && (if (*p2).tt_ as i32
                     == 3i32 | (1i32) << 4i32
@@ -936,14 +936,14 @@ pub unsafe extern "C" fn luaO_rawarith(
                     n2 = (*p2).value_.n;
                     1i32
                 } else {
-                    (if (*p2).tt_ as i32
+                    if (*p2).tt_ as i32
                         == 3i32 | (0i32) << 4i32
                     {
                         n2 = (*p2).value_.i as Number;
                         1i32
                     } else {
                         0i32
-                    })
+                    }
                 }) != 0
             {
                 let mut io_0: *mut TValue = res;
@@ -976,14 +976,14 @@ pub unsafe extern "C" fn luaO_rawarith(
                 n1_0 = (*p1).value_.n;
                 1i32
             } else {
-                (if (*p1).tt_ as i32
+                if (*p1).tt_ as i32
                     == 3i32 | (0i32) << 4i32
                 {
                     n1_0 = (*p1).value_.i as Number;
                     1i32
                 } else {
                     0i32
-                })
+                }
             }) != 0
                 && (if (*p2).tt_ as i32
                     == 3i32 | (1i32) << 4i32
@@ -991,14 +991,14 @@ pub unsafe extern "C" fn luaO_rawarith(
                     n2_0 = (*p2).value_.n;
                     1i32
                 } else {
-                    (if (*p2).tt_ as i32
+                    if (*p2).tt_ as i32
                         == 3i32 | (0i32) << 4i32
                     {
                         n2_0 = (*p2).value_.i as Number;
                         1i32
                     } else {
                         0i32
-                    })
+                    }
                 }) != 0
             {
                 let mut io_2: *mut TValue = res;
