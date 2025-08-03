@@ -1369,9 +1369,9 @@ unsafe extern "C" fn luad_reallocstack(
     raiseerror: i32,
 ) -> i32 {
     unsafe {
-        let oldsize: i32 =
+        let oldsize =
             ((*state).stack_last.p).offset_from((*state).stack.p) as libc::c_long as i32;
-        let oldgcstop: i32 = (*(*state).l_g).gcstopem as i32;
+        let oldgcstop = (*(*state).l_g).gcstopem as i32;
         relstack(state);
         (*(*state).l_g).gcstopem = 1 as u8;
         let newstack: StackID = luam_realloc_(
@@ -1397,7 +1397,7 @@ unsafe extern "C" fn luad_reallocstack(
         (*state).stack.p = newstack;
         correctstack(state);
         (*state).stack_last.p = ((*state).stack.p).offset(newsize as isize);
-        let mut i: i32 = oldsize + 5 as i32;
+        let mut i = oldsize + 5;
         while i < newsize + 5 as i32 {
             (*newstack.offset(i as isize)).value.tt_ =
                 (0 as i32 | ((0 as i32) << 4 as i32)) as u8;
@@ -1412,7 +1412,7 @@ unsafe extern "C" fn luad_growstack(
     raiseerror: i32,
 ) -> i32 {
     unsafe {
-        let size: i32 =
+        let size =
             ((*state).stack_last.p).offset_from((*state).stack.p) as libc::c_long as i32;
         if size > 1000000 {
             if raiseerror != 0 {
@@ -1420,8 +1420,8 @@ unsafe extern "C" fn luad_growstack(
             }
             return 0 as i32;
         } else if n < 1000000 as i32 {
-            let mut newsize: i32 = 2 as i32 * size;
-            let needed: i32 =
+            let mut newsize = 2 * size;
+            let needed =
                 ((*state).top.p).offset_from((*state).stack.p) as libc::c_long as i32 + n;
             if newsize > 1000000 as i32 {
                 newsize = 1000000 as i32;
@@ -1453,7 +1453,7 @@ unsafe extern "C" fn stackinuse(state: *mut State) -> i32 {
             }
             ci = (*ci).previous;
         }
-        let mut res: i32 = lim.offset_from((*state).stack.p) as libc::c_long as i32 + 1 as i32;
+        let mut res = lim.offset_from((*state).stack.p) as libc::c_long as i32 + 1 as i32;
         if res < 20 as i32 {
             res = 20 as i32;
         }
@@ -1462,8 +1462,8 @@ unsafe extern "C" fn stackinuse(state: *mut State) -> i32 {
 }
 unsafe extern "C" fn luad_shrinkstack(state: *mut State) {
     unsafe {
-        let inuse: i32 = stackinuse(state);
-        let max: i32 = if inuse > 1000000 as i32 / 3 as i32 {
+        let inuse = stackinuse(state);
+        let max = if inuse > 1000000 as i32 / 3 as i32 {
             1000000 as i32
         } else {
             inuse * 3 as i32
@@ -1471,7 +1471,7 @@ unsafe extern "C" fn luad_shrinkstack(state: *mut State) {
         if inuse <= 1000000 as i32
             && ((*state).stack_last.p).offset_from((*state).stack.p) as libc::c_long as i32 > max
         {
-            let nsize: i32 = if inuse > 1000000 as i32 / 2 as i32 {
+            let nsize = if inuse > 1000000 as i32 / 2 as i32 {
                 1000000 as i32
             } else {
                 inuse * 2 as i32
@@ -1504,7 +1504,7 @@ unsafe extern "C" fn luad_hook(
     unsafe {
         let hook: lua_Hook = (*state).hook;
         if hook.is_some() && (*state).allowhook as i32 != 0 {
-            let mut mask: i32 = (1 as i32) << 3 as i32;
+            let mut mask = (1 as i32) << 3 as i32;
             let ci: *mut CallInfo = (*state).ci;
             let top: i64 = ((*state).top.p as *mut libc::c_char)
                 .offset_from((*state).stack.p as *mut libc::c_char)
@@ -1570,7 +1570,7 @@ unsafe extern "C" fn luad_hookcall(state: *mut State, ci: *mut CallInfo) {
     unsafe {
         (*state).oldpc = 0 as i32;
         if (*state).hookmask & (1 as i32) << 0 as i32 != 0 {
-            let event: i32 =
+            let event =
                 if (*ci).callstatus as i32 & (1 as i32) << 5 as i32 != 0 {
                     4 as i32
                 } else {
@@ -1595,7 +1595,7 @@ unsafe extern "C" fn rethook(state: *mut State, mut ci: *mut CallInfo, nres: i32
     unsafe {
         if (*state).hookmask & (1 as i32) << 1 as i32 != 0 {
             let firstres: StackID = ((*state).top.p).offset(-(nres as isize));
-            let mut delta: i32 = 0 as i32;
+            let mut delta = 0 as i32;
             if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
                 let p: *mut Prototype = (*((*(*ci).func.p).value.value_.gc as *mut GCUnion)).cl.l.p;
                 if (*p).isvararg {
@@ -1603,7 +1603,7 @@ unsafe extern "C" fn rethook(state: *mut State, mut ci: *mut CallInfo, nres: i32
                 }
             }
             (*ci).func.p = ((*ci).func.p).offset(delta as isize);
-            let ftransfer: i32 = firstres.offset_from((*ci).func.p) as libc::c_long as u16 as i32;
+            let ftransfer = firstres.offset_from((*ci).func.p) as libc::c_long as u16 as i32;
             luad_hook(state, 1 as i32, -(1 as i32), ftransfer, nres);
             (*ci).func.p = ((*ci).func.p).offset(-(delta as isize));
         }
@@ -28450,8 +28450,8 @@ unsafe extern "C" fn luab_collectgarbage(state: *mut State) -> i32 {
         ) as usize];
         match o {
             3 => {
-                let k: i32 = lua_gc(state, o);
-                let b: i32 = lua_gc(state, 4 as i32);
+                let k = lua_gc(state, o);
+                let b = lua_gc(state, 4 as i32);
                 if !(k == -(1 as i32)) {
                     lua_pushnumber(
                         state,
@@ -28461,10 +28461,10 @@ unsafe extern "C" fn luab_collectgarbage(state: *mut State) -> i32 {
                 }
             }
             5 => {
-                let step: i32 =
+                let step =
                     luaL_optinteger(state, 2 as i32, 0 as i32 as i64)
                         as i32;
-                let res: i32 = lua_gc(state, o, step);
+                let res = lua_gc(state, o, step);
                 if !(res == -(1 as i32)) {
                     lua_pushboolean(state, 0 != res);
                     return 1;
