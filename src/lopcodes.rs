@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
 pub type OpMode = u32;
 pub const isJ: OpMode = 4;
 pub const iAx: OpMode = 3;

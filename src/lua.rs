@@ -8,6 +8,7 @@
     unused_mut
 )]
 use crate::types::*;
+use libc::{clock_t};
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -91,12 +92,7 @@ unsafe extern "C" {
     fn luaL_openlibs(L: *mut lua_State);
     fn isatty(__fd: i32) -> i32;
 }
-pub type __uint32_t = u32;
-pub type __uid_t = u32;
-pub type __off_t = i64;
-pub type __off64_t = i64;
-pub type __pid_t = i32;
-pub type __clock_t = i64;
+use libc::{pid_t, off_t, off64_t, uid_t};
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _IO_FILE {
@@ -116,12 +112,12 @@ pub struct _IO_FILE {
     pub _chain: *mut _IO_FILE,
     pub _fileno: i32,
     pub _flags2: i32,
-    pub _old_offset: __off_t,
+    pub _old_offset: off_t,
     pub _cur_column: libc::c_ushort,
     pub _vtable_offset: libc::c_schar,
     pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
+    pub _offset: off64_t,
     pub _codecvt: *mut _IO_codecvt,
     pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,
@@ -185,7 +181,7 @@ pub struct C2RustUnnamed_2 {
 #[repr(C)]
 pub union C2RustUnnamed_3 {
     pub _addr_bnd: C2RustUnnamed_4,
-    pub _pkey: __uint32_t,
+    pub _pkey: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -196,17 +192,17 @@ pub struct C2RustUnnamed_4 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_5 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: pid_t,
+    pub si_uid: uid_t,
     pub si_status: i32,
-    pub si_utime: __clock_t,
-    pub si_stime: __clock_t,
+    pub si_utime: clock_t,
+    pub si_stime: clock_t,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_6 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: pid_t,
+    pub si_uid: uid_t,
     pub si_sigval: __sigval_t,
 }
 #[derive(Copy, Clone)]
@@ -219,8 +215,8 @@ pub struct C2RustUnnamed_7 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_8 {
-    pub si_pid: __pid_t,
-    pub si_uid: __uid_t,
+    pub si_pid: pid_t,
+    pub si_uid: uid_t,
 }
 pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
@@ -724,7 +720,6 @@ unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> i32 {
     if status == 0i32 {
         lua_rotate(L, -(2i32), -(1i32));
         lua_settop(L, -(1i32) - 1i32);
-        *line.offset(0i32 as isize) as i32 != '\0' as i32;
     } else {
         lua_settop(L, -(2i32) - 1i32);
     }

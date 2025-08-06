@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     pub type CallInfo;

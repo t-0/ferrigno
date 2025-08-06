@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     fn atan2(_: f64, _: f64) -> f64;

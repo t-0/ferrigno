@@ -742,11 +742,9 @@ pub unsafe extern "C" fn luaO_hexavalue(mut c: i32) -> i32 {
 unsafe extern "C" fn isneg(mut s: *mut *const libc::c_char) -> i32 {
     if **s as i32 == '-' as i32 {
         *s = (*s).offset(1);
-        *s;
         return 1i32;
     } else if **s as i32 == '+' as i32 {
         *s = (*s).offset(1);
-        *s;
     }
     return 0i32;
 }

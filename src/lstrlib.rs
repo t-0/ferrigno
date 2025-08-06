@@ -7,7 +7,6 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     fn __ctype_b_loc() -> *mut *const libc::c_ushort;

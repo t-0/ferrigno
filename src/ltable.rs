@@ -790,7 +790,6 @@ unsafe extern "C" fn countint(mut key: i64, mut nums: *mut u32) -> i32 {
     if k != 0i32 as u32 {
         let ref mut fresh0 = *nums.offset(luaO_ceillog2(k) as isize);
         *fresh0 = (*fresh0).wrapping_add(1);
-        *fresh0;
         return 1i32;
     } else {
         return 0i32;

@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
+use libc::{tm, clock_t, time_t};
 unsafe extern "C" {
     pub type lua_State;
     fn __errno_location() -> *mut i32;
@@ -74,26 +74,6 @@ unsafe extern "C" {
     fn luaL_pushresult(B: *mut luaL_Buffer);
     fn close(__fd: i32) -> i32;
 }
-pub type __clock_t = i64;
-pub type __time_t = i64;
-pub type clock_t = __clock_t;
-pub type time_t = __time_t;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct tm {
-    pub tm_sec: i32,
-    pub tm_min: i32,
-    pub tm_hour: i32,
-    pub tm_mday: i32,
-    pub tm_mon: i32,
-    pub tm_year: i32,
-    pub tm_wday: i32,
-    pub tm_yday: i32,
-    pub tm_isdst: i32,
-    pub __tm_gmtoff: i64,
-    pub __tm_zone: *const libc::c_char,
-}
-
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -174,7 +154,7 @@ unsafe extern "C" fn os_getenv(mut L: *mut lua_State) -> i32 {
     return 1i32;
 }
 unsafe extern "C" fn os_clock(mut L: *mut lua_State) -> i32 {
-    lua_pushnumber(L, clock() as f64 / 1000000i32 as __clock_t as f64);
+    lua_pushnumber(L, clock() as f64 / 1000000i32 as clock_t as f64);
     return 1i32;
 }
 unsafe extern "C" fn setfield(
@@ -378,8 +358,8 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
         tm_wday: 0,
         tm_yday: 0,
         tm_isdst: 0,
-        __tm_gmtoff: 0,
-        __tm_zone: 0 as *const libc::c_char,
+        tm_gmtoff: 0,
+        tm_zone: 0 as *const libc::c_char,
     };
     let mut stm: *mut tm = 0 as *mut tm;
     if *s as i32 == '!' as i32 {
@@ -450,8 +430,8 @@ unsafe extern "C" fn os_time(mut L: *mut lua_State) -> i32 {
             tm_wday: 0,
             tm_yday: 0,
             tm_isdst: 0,
-            __tm_gmtoff: 0,
-            __tm_zone: 0 as *const libc::c_char,
+            tm_gmtoff: 0,
+            tm_zone: 0 as *const libc::c_char,
         };
         luaL_checktype(L, 1i32, 5i32);
         lua_settop(L, 1i32);

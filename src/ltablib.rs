@@ -7,7 +7,7 @@
     unused_assignments,
     unused_mut
 )]
-use crate::types::*;
+use libc::{tm, clock_t, time_t};
 unsafe extern "C" {
     pub type lua_State;
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
@@ -52,9 +52,6 @@ unsafe extern "C" {
     fn clock() -> clock_t;
     fn time(__timer: *mut time_t) -> time_t;
 }
-pub type __clock_t = i64;
-pub type __time_t = i64;
-
 pub type lua_KContext = i64;
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
@@ -84,8 +81,6 @@ pub struct luaL_Reg {
     pub func: CFunction,
 }
 pub type IdxT = u32;
-pub type time_t = __time_t;
-pub type clock_t = __clock_t;
 unsafe extern "C" fn checkfield(
     mut L: *mut lua_State,
     mut key: *const libc::c_char,
