@@ -320,8 +320,6 @@ pub struct global_State {
     pub warnf: lua_WarnFunction,
     pub ud_warn: *mut libc::c_void,
 }
-pub type lua_WarnFunction =
-    Option<unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
@@ -499,7 +497,7 @@ pub union UValue {
     pub i: i64,
     pub l: i64,
 }
-pub const TM_EQ: LAPIC2RustUnnamed_9 = 5;
+pub const TM_EQ: TM = 5;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallS {
@@ -516,32 +514,32 @@ pub struct ZIO {
     pub data: *mut libc::c_void,
     pub L: *mut lua_State,
 }
-pub type LAPIC2RustUnnamed_9 = u32;
-pub const TM_N: LAPIC2RustUnnamed_9 = 25;
-pub const TM_CLOSE: LAPIC2RustUnnamed_9 = 24;
-pub const TM_CALL: LAPIC2RustUnnamed_9 = 23;
-pub const TM_CONCAT: LAPIC2RustUnnamed_9 = 22;
-pub const TM_LE: LAPIC2RustUnnamed_9 = 21;
-pub const TM_LT: LAPIC2RustUnnamed_9 = 20;
-pub const TM_BNOT: LAPIC2RustUnnamed_9 = 19;
-pub const TM_UNM: LAPIC2RustUnnamed_9 = 18;
-pub const TM_SHR: LAPIC2RustUnnamed_9 = 17;
-pub const TM_SHL: LAPIC2RustUnnamed_9 = 16;
-pub const TM_BXOR: LAPIC2RustUnnamed_9 = 15;
-pub const TM_BOR: LAPIC2RustUnnamed_9 = 14;
-pub const TM_BAND: LAPIC2RustUnnamed_9 = 13;
-pub const TM_IDIV: LAPIC2RustUnnamed_9 = 12;
-pub const TM_DIV: LAPIC2RustUnnamed_9 = 11;
-pub const TM_POW: LAPIC2RustUnnamed_9 = 10;
-pub const TM_MOD: LAPIC2RustUnnamed_9 = 9;
-pub const TM_MUL: LAPIC2RustUnnamed_9 = 8;
-pub const TM_SUB: LAPIC2RustUnnamed_9 = 7;
-pub const TM_ADD: LAPIC2RustUnnamed_9 = 6;
-pub const TM_LEN: LAPIC2RustUnnamed_9 = 4;
-pub const TM_MODE: LAPIC2RustUnnamed_9 = 3;
-pub const TM_GC: LAPIC2RustUnnamed_9 = 2;
-pub const TM_NEWINDEX: LAPIC2RustUnnamed_9 = 1;
-pub const TM_INDEX: LAPIC2RustUnnamed_9 = 0;
+pub type TM = u32;
+pub const TM_N: TM = 25;
+pub const TM_CLOSE: TM = 24;
+pub const TM_CALL: TM = 23;
+pub const TM_CONCAT: TM = 22;
+pub const TM_LE: TM = 21;
+pub const TM_LT: TM = 20;
+pub const TM_BNOT: TM = 19;
+pub const TM_UNM: TM = 18;
+pub const TM_SHR: TM = 17;
+pub const TM_SHL: TM = 16;
+pub const TM_BXOR: TM = 15;
+pub const TM_BOR: TM = 14;
+pub const TM_BAND: TM = 13;
+pub const TM_IDIV: TM = 12;
+pub const TM_DIV: TM = 11;
+pub const TM_POW: TM = 10;
+pub const TM_MOD: TM = 9;
+pub const TM_MUL: TM = 8;
+pub const TM_SUB: TM = 7;
+pub const TM_ADD: TM = 6;
+pub const TM_LEN: TM = 4;
+pub const TM_MODE: TM = 3;
+pub const TM_GC: TM = 2;
+pub const TM_NEWINDEX: TM = 1;
+pub const TM_INDEX: TM = 0;
 #[unsafe(no_mangle)]
 pub static mut lua_ident: [libc::c_char; 129] = unsafe {
     *::core::mem::transmute::<

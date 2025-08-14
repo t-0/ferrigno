@@ -851,9 +851,9 @@ do
   a = {__gc = function () end}
   for i=1,1000 do debug.setmetatable(T.newuserdata(0), a) end
   assert(collectgarbage("count") >= x+10)
-  collectgarbage()  -- this collection only calls TM, without freeing memory
+  collectgarbage()
   assert(collectgarbage("count") >= x+10)
-  collectgarbage()  -- now frees memory
+  collectgarbage()
   assert(collectgarbage("count") <= x+1)
   collectgarbage("restart")
 end
@@ -1544,4 +1544,3 @@ do
 end
 
 print'OK'
-
