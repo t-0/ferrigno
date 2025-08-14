@@ -433,14 +433,13 @@ pub union Closure {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Zio {
+pub struct ZIO {
     pub n: u64,
     pub p: *const libc::c_char,
     pub reader: lua_Reader,
     pub data: *mut libc::c_void,
     pub L: *mut lua_State,
 }
-pub type ZIO = Zio;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Mbuffer {

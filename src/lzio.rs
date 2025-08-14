@@ -298,14 +298,13 @@ pub type lua_Reader = Option<
 >;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Zio {
+pub struct ZIO {
     pub n: u64,
     pub p: *const libc::c_char,
     pub reader: lua_Reader,
     pub data: *mut libc::c_void,
     pub L: *mut lua_State,
 }
-pub type ZIO = Zio;
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> i32 {
     let mut size: u64 = 0;
