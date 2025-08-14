@@ -7,7 +7,8 @@
     unused_assignments,
     unused_mut
 )]
-use libc::{tm, clock_t, time_t};
+use crate::types::*;
+use libc::{clock_t, time_t};
 unsafe extern "C" {
     pub type lua_State;
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
@@ -52,7 +53,6 @@ unsafe extern "C" {
     fn clock() -> clock_t;
     fn time(__timer: *mut time_t) -> time_t;
 }
-pub type lua_KContext = i64;
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]

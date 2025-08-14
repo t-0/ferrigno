@@ -133,7 +133,6 @@ pub struct C2RustUnnamed_2 {
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
 }
-pub type lua_KContext = i64;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]

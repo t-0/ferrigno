@@ -1,3 +1,4 @@
+pub type lua_KContext = i64;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct __sigset_t {

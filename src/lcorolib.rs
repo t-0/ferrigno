@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     pub type CallInfo;
@@ -40,7 +41,6 @@ unsafe extern "C" {
     fn luaL_setfuncs(L: *mut lua_State, l: *const luaL_Reg, nup: i32);
 }
 
-pub type lua_KContext = i64;
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]

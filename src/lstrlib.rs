@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::*;
 unsafe extern "C" {
     pub type lua_State;
     fn __ctype_b_loc() -> *mut *const libc::c_ushort;
@@ -127,7 +128,6 @@ pub struct lconv {
     pub int_n_sign_posn: libc::c_char,
 }
 
-pub type lua_KContext = i64;
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 pub type lua_Writer = Option<
