@@ -493,7 +493,6 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type TMS = u32;
 pub const TM_N: TMS = 25;
 pub const TM_CLOSE: TMS = 24;
 pub const TM_CALL: TMS = 23;

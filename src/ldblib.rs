@@ -97,8 +97,6 @@ unsafe extern "C" {
     fn luaL_getsubtable(L: *mut lua_State, index: i32, fname: *const libc::c_char) -> i32;
     fn luaL_traceback(L: *mut lua_State, L1: *mut lua_State, msg: *const libc::c_char, level: i32);
 }
-pub type __off_t = i64;
-pub type __off64_t = i64;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _IO_FILE {
@@ -118,12 +116,12 @@ pub struct _IO_FILE {
     pub _chain: *mut _IO_FILE,
     pub _fileno: i32,
     pub _flags2: i32,
-    pub _old_offset: __off_t,
+    pub _old_offset: Offset,
     pub _cur_column: libc::c_ushort,
     pub _vtable_offset: libc::c_schar,
     pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
+    pub _offset: Offset,
     pub _codecvt: *mut _IO_codecvt,
     pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,

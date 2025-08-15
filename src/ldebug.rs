@@ -433,7 +433,6 @@ pub union UValue {
     pub i: i64,
     pub l: i64,
 }
-pub type TMS = u32;
 pub const TM_N: TMS = 25;
 pub const TM_CLOSE: TMS = 24;
 pub const TM_CALL: TMS = 23;

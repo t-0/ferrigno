@@ -28,3 +28,5 @@ pub struct LongJump {
     pub b: [__jmp_buf_tag; 1],
     pub status: i32,
 }
+pub type TMS = u32;
+pub type Offset = i64;

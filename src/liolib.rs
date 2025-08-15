@@ -7,6 +7,7 @@
     unused_assignments,
     unused_mut
 )]
+use crate::types::*;
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -38,8 +39,8 @@ unsafe extern "C" {
         _: libc::c_ulong,
         _: *mut FILE,
     ) -> libc::c_ulong;
-    fn fseeko(__stream: *mut FILE, __off: __off64_t, __whence: i32) -> i32;
-    fn ftello(__stream: *mut FILE) -> __off64_t;
+    fn fseeko(__stream: *mut FILE, __off: Offset, __whence: i32) -> i32;
+    fn ftello(__stream: *mut FILE) -> Offset;
     fn clearerr(__stream: *mut FILE);
     fn ferror(__stream: *mut FILE) -> i32;
     fn pclose(__stream: *mut FILE) -> i32;
@@ -107,8 +108,6 @@ unsafe extern "C" {
     fn luaL_prepbuffsize(B: *mut luaL_Buffer, sz: u64) -> *mut libc::c_char;
     fn luaL_pushresult(B: *mut luaL_Buffer);
 }
-pub type __off_t = i64;
-pub type __off64_t = i64;
 pub type C2RustUnnamed = u32;
 pub const _ISalnum: C2RustUnnamed = 8;
 pub const _ISpunct: C2RustUnnamed = 4;
@@ -169,12 +168,12 @@ pub struct _IO_FILE {
     pub _chain: *mut _IO_FILE,
     pub _fileno: i32,
     pub _flags2: i32,
-    pub _old_offset: __off_t,
+    pub _old_offset: Offset,
     pub _cur_column: libc::c_ushort,
     pub _vtable_offset: libc::c_schar,
     pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
-    pub _offset: __off64_t,
+    pub _offset: Offset,
     pub _codecvt: *mut _IO_codecvt,
     pub _wide_data: *mut _IO_wide_data,
     pub _freeres_list: *mut _IO_FILE,
@@ -185,7 +184,7 @@ pub struct _IO_FILE {
 }
 pub type _IO_lock_t = ();
 pub type FILE = _IO_FILE;
-pub type off_t = __off64_t;
+pub type off_t = Offset;
 
 pub type CFunction = Option<unsafe extern "C" fn(*mut lua_State) -> i32>;
 #[derive(Copy, Clone)]
