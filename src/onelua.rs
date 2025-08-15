@@ -11,7 +11,6 @@
     unused_assignments,
     unused_mut
 )]
-#![feature(c_variadic, extern_types)]
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -1640,7 +1639,6 @@ unsafe extern "C" fn luaD_reallocstack(
             .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
             as lu_byte;
         i += 1;
-        i;
     }
     return 1 as libc::c_int;
 }
@@ -1887,7 +1885,6 @@ unsafe extern "C" fn tryfuncTM(mut L: *mut lua_State, mut func: StkId) -> StkId 
         (*io1).value_ = (*io2).value_;
         (*io1).tt_ = (*io2).tt_;
         p = p.offset(-1);
-        p;
     }
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
@@ -1966,7 +1963,6 @@ unsafe extern "C" fn moveresults(
         (*io1_0).value_ = (*io2_0).value_;
         (*io1_0).tt_ = (*io2_0).tt_;
         i += 1;
-        i;
     }
     while i < wanted {
         (*res.offset(i as isize))
@@ -1974,7 +1970,6 @@ unsafe extern "C" fn moveresults(
             .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
             as lu_byte;
         i += 1;
-        i;
     }
     (*L).top.p = res.offset(wanted as isize);
 }
@@ -2102,7 +2097,6 @@ unsafe extern "C" fn luaD_pretailcall(
                     (*io1).value_ = (*io2).value_;
                     (*io1).tt_ = (*io2).tt_;
                     i += 1;
-                    i;
                 }
                 func = (*ci).func.p;
                 while narg1 <= nfixparams {
@@ -2111,7 +2105,6 @@ unsafe extern "C" fn luaD_pretailcall(
                         .tt_ = (0 as libc::c_int
                         | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
                     narg1 += 1;
-                    narg1;
                 }
                 (*ci)
                     .top
@@ -2126,7 +2119,6 @@ unsafe extern "C" fn luaD_pretailcall(
             _ => {
                 func = tryfuncTM(L, func);
                 narg1 += 1;
-                narg1;
             }
         }
     };
@@ -2191,7 +2183,6 @@ unsafe extern "C" fn luaD_precall(
                         .tt_ = (0 as libc::c_int
                         | (0 as libc::c_int) << 4 as libc::c_int) as lu_byte;
                     narg += 1;
-                    narg;
                 }
                 return ci;
             }
@@ -2298,7 +2289,7 @@ unsafe extern "C" fn finishCcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
     }
     luaD_poscall(L, ci, n);
 }
-unsafe extern "C" fn unroll(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn unroll(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     loop {
         ci = (*L).ci;
@@ -2807,7 +2798,6 @@ pub unsafe extern "C" fn lua_xmove(
         (*to).top.p = ((*to).top.p).offset(1);
         (*to).top.p;
         i += 1;
-        i;
     }
 }
 #[unsafe (no_mangle)]
@@ -2821,7 +2811,7 @@ pub unsafe extern "C" fn lua_atpanic(
     return old;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_version(mut L: *mut lua_State) -> lua_Number {
+pub unsafe extern "C" fn lua_version(mut _L: *mut lua_State) -> lua_Number {
     return 504 as libc::c_int as lua_Number;
 }
 #[unsafe (no_mangle)]
