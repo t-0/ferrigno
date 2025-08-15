@@ -630,7 +630,6 @@ pub struct BlockCnt {
     pub isloop: u8,
     pub insidetbc: u8,
 }
-pub type OpCode = u32;
 pub const OP_EXTRAARG: OpCode = 82;
 pub const OP_VARARGPREP: OpCode = 81;
 pub const OP_VARARG: OpCode = 80;

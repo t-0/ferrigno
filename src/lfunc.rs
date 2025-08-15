@@ -83,7 +83,7 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed_1,
+    pub u: LFuncC2RustUnnamed_1,
     pub u2: C2RustUnnamed,
     pub nresults: libc::c_short,
     pub callstatus: libc::c_ushort,
@@ -104,13 +104,13 @@ pub struct C2RustUnnamed_0 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub l: C2RustUnnamed_3,
-    pub c: C2RustUnnamed_2,
+pub union LFuncC2RustUnnamed_1 {
+    pub l: LFuncC2RustUnnamed_3,
+    pub c: LFuncC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LFuncC2RustUnnamed_2 {
     pub k: lua_KFunction,
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
@@ -118,7 +118,7 @@ pub struct C2RustUnnamed_2 {
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LFuncC2RustUnnamed_3 {
     pub savedpc: *const Instruction,
     pub trap: sig_atomic_t,
     pub nextraargs: i32,

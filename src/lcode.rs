@@ -104,34 +104,34 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed_1,
-    pub u2: C2RustUnnamed,
+    pub u: LCodeC2RustUnnamed_1,
+    pub u2: LCodeC2RustUnnamed,
     pub nresults: libc::c_short,
     pub callstatus: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LCodeC2RustUnnamed {
     pub funcidx: i32,
     pub nyield: i32,
     pub nres: i32,
-    pub transferinfo: C2RustUnnamed_0,
+    pub transferinfo: LCodeC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
+pub struct LCodeC2RustUnnamed_0 {
     pub ftransfer: libc::c_ushort,
     pub ntransfer: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub l: C2RustUnnamed_3,
-    pub c: C2RustUnnamed_2,
+pub union LCodeC2RustUnnamed_1 {
+    pub l: LCodeC2RustUnnamed_3,
+    pub c: LCodeC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LCodeC2RustUnnamed_2 {
     pub k: lua_KFunction,
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
@@ -139,7 +139,7 @@ pub struct C2RustUnnamed_2 {
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LCodeC2RustUnnamed_3 {
     pub savedpc: *const Instruction,
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
@@ -155,11 +155,11 @@ pub type StkId = *mut StackValue;
 #[repr(C)]
 pub union StackValue {
     pub val: TValue,
-    pub tbclist: C2RustUnnamed_4,
+    pub tbclist: LCodeC2RustUnnamed_4,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
+pub struct LCodeC2RustUnnamed_4 {
     pub value_: Value,
     pub tt_: u8,
     pub delta: libc::c_ushort,
@@ -195,24 +195,24 @@ pub struct UpVal {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
-    pub v: C2RustUnnamed_7,
-    pub u: C2RustUnnamed_5,
+    pub v: LCodeC2RustUnnamed_7,
+    pub u: LCodeC2RustUnnamed_5,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_5 {
-    pub open: C2RustUnnamed_6,
+pub union LCodeC2RustUnnamed_5 {
+    pub open: LCodeC2RustUnnamed_6,
     pub value: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct LCodeC2RustUnnamed_6 {
     pub next: *mut UpVal,
     pub previous: *mut *mut UpVal,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union LCodeC2RustUnnamed_7 {
     pub p: *mut TValue,
     pub offset: i64,
 }
@@ -276,12 +276,12 @@ pub struct TString {
     pub extra: u8,
     pub shrlen: u8,
     pub hash: u32,
-    pub u: C2RustUnnamed_8,
+    pub u: LCodeC2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_8 {
+pub union LCodeC2RustUnnamed_8 {
     pub lnglen: u64,
     pub hnext: *mut TString,
 }
@@ -478,7 +478,7 @@ pub struct LexState {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Dyndata {
-    pub actvar: C2RustUnnamed_9,
+    pub actvar: LCodeC2RustUnnamed_9,
     pub gt: Labellist,
     pub label: Labellist,
 }
@@ -500,7 +500,7 @@ pub struct Labeldesc {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_9 {
+pub struct LCodeC2RustUnnamed_9 {
     pub arr: *mut Vardesc,
     pub n: i32,
     pub size: i32,
@@ -508,12 +508,12 @@ pub struct C2RustUnnamed_9 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Vardesc {
-    pub vd: C2RustUnnamed_10,
+    pub vd: LCodeC2RustUnnamed_10,
     pub k: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_10 {
+pub struct LCodeC2RustUnnamed_10 {
     pub value_: Value,
     pub tt_: u8,
     pub kind: u8,
@@ -543,7 +543,6 @@ pub struct FuncState {
     pub iwthabs: u8,
     pub needclose: u8,
 }
-pub type OpCode = u32;
 pub const OP_EXTRAARG: OpCode = 82;
 pub const OP_VARARGPREP: OpCode = 81;
 pub const OP_VARARG: OpCode = 80;
@@ -652,29 +651,29 @@ pub const VVOID: expkind = 0;
 #[repr(C)]
 pub struct expdesc {
     pub k: expkind,
-    pub u: C2RustUnnamed_11,
+    pub u: LCodeC2RustUnnamed_11,
     pub t: i32,
     pub f: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_11 {
+pub union LCodeC2RustUnnamed_11 {
     pub ival: i64,
     pub nval: f64,
     pub strval: *mut TString,
     pub info: i32,
-    pub ind: C2RustUnnamed_13,
-    pub var: C2RustUnnamed_12,
+    pub ind: LCodeC2RustUnnamed_13,
+    pub var: LCodeC2RustUnnamed_12,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_12 {
+pub struct LCodeC2RustUnnamed_12 {
     pub ridx: u8,
     pub vidx: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_13 {
+pub struct LCodeC2RustUnnamed_13 {
     pub index: libc::c_short,
     pub t: u8,
 }
@@ -2306,7 +2305,7 @@ pub unsafe extern "C" fn luaK_prefix(
     static mut ef: expdesc = {
         let mut init = expdesc {
             k: VKINT,
-            u: C2RustUnnamed_11 { ival: 0i32 as i64 },
+            u: LCodeC2RustUnnamed_11 { ival: 0i32 as i64 },
             t: -(1i32),
             f: -(1i32),
         };

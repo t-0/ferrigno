@@ -11,7 +11,7 @@ unsafe extern "C" {
     fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: libc::c_ulong) -> *mut libc::c_void;
 }
 use crate::types::*;
-
+pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_State {
@@ -41,7 +41,6 @@ pub struct lua_State {
     pub hookmask: sig_atomic_t,
 }
 
-pub type lua_Hook = Option<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_Debug {

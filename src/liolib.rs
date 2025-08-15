@@ -108,19 +108,19 @@ unsafe extern "C" {
     fn luaL_prepbuffsize(B: *mut luaL_Buffer, sz: u64) -> *mut libc::c_char;
     fn luaL_pushresult(B: *mut luaL_Buffer);
 }
-pub type C2RustUnnamed = u32;
-pub const _ISalnum: C2RustUnnamed = 8;
-pub const _ISpunct: C2RustUnnamed = 4;
-pub const _IScntrl: C2RustUnnamed = 2;
-pub const _ISblank: C2RustUnnamed = 1;
-pub const _ISgraph: C2RustUnnamed = 32768;
-pub const _ISprint: C2RustUnnamed = 16384;
-pub const _ISspace: C2RustUnnamed = 8192;
-pub const _ISxdigit: C2RustUnnamed = 4096;
-pub const _ISdigit: C2RustUnnamed = 2048;
-pub const _ISalpha: C2RustUnnamed = 1024;
-pub const _ISlower: C2RustUnnamed = 512;
-pub const _ISupper: C2RustUnnamed = 256;
+pub type LIOLibC2RustUnnamed = u32;
+pub const _ISalnum: LIOLibC2RustUnnamed = 8;
+pub const _ISpunct: LIOLibC2RustUnnamed = 4;
+pub const _IScntrl: LIOLibC2RustUnnamed = 2;
+pub const _ISblank: LIOLibC2RustUnnamed = 1;
+pub const _ISgraph: LIOLibC2RustUnnamed = 32768;
+pub const _ISprint: LIOLibC2RustUnnamed = 16384;
+pub const _ISspace: LIOLibC2RustUnnamed = 8192;
+pub const _ISxdigit: LIOLibC2RustUnnamed = 4096;
+pub const _ISdigit: LIOLibC2RustUnnamed = 2048;
+pub const _ISalpha: LIOLibC2RustUnnamed = 1024;
+pub const _ISlower: LIOLibC2RustUnnamed = 512;
+pub const _ISupper: LIOLibC2RustUnnamed = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lconv {
@@ -194,11 +194,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed_0,
+    pub init: LIOLibC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_0 {
+pub union LIOLibC2RustUnnamed_0 {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -636,7 +636,7 @@ unsafe extern "C" fn read_line(mut L: *mut lua_State, mut f: *mut FILE, mut chop
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LIOLibC2RustUnnamed_0 { n: 0. },
     };
     let mut c: i32 = 0;
     luaL_buffinit(L, &mut b);
@@ -686,7 +686,7 @@ unsafe extern "C" fn read_all(mut L: *mut lua_State, mut f: *mut FILE) {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LIOLibC2RustUnnamed_0 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     loop {
@@ -726,7 +726,7 @@ unsafe extern "C" fn read_chars(mut L: *mut lua_State, mut f: *mut FILE, mut n: 
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LIOLibC2RustUnnamed_0 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     p = luaL_prepbuffsize(&mut b, n);
