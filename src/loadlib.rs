@@ -127,11 +127,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed,
+    pub init: LoadLibC3RustUnnamed,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LoadLibC3RustUnnamed {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -215,7 +215,7 @@ unsafe extern "C" fn setpath(
                 size: 0,
                 n: 0,
                 L: 0 as *mut lua_State,
-                init: C2RustUnnamed { n: 0. },
+                init: LoadLibC3RustUnnamed { n: 0. },
             };
             luaL_buffinit(L, &mut b);
             if path < dftmark {
@@ -357,7 +357,7 @@ unsafe extern "C" fn pusherrornotfound(mut L: *mut lua_State, mut path: *const l
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LoadLibC3RustUnnamed { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addstring(&mut b, b"no file '\0" as *const u8 as *const libc::c_char);
@@ -382,7 +382,7 @@ unsafe extern "C" fn searchpath(
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LoadLibC3RustUnnamed { n: 0. },
     };
     let mut pathname: *mut libc::c_char = 0 as *mut libc::c_char;
     let mut endpathname: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -615,7 +615,7 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LoadLibC3RustUnnamed { n: 0. },
     };
     if ((lua_getfield(
         L,

@@ -111,19 +111,19 @@ unsafe extern "C" {
     fn luaL_setfuncs(L: *mut lua_State, l: *const luaL_Reg, nup: i32);
 }
 pub type __int32_t = i32;
-pub type C2RustUnnamed = u32;
-pub const _ISalnum: C2RustUnnamed = 8;
-pub const _ISpunct: C2RustUnnamed = 4;
-pub const _IScntrl: C2RustUnnamed = 2;
-pub const _ISblank: C2RustUnnamed = 1;
-pub const _ISgraph: C2RustUnnamed = 32768;
-pub const _ISprint: C2RustUnnamed = 16384;
-pub const _ISspace: C2RustUnnamed = 8192;
-pub const _ISxdigit: C2RustUnnamed = 4096;
-pub const _ISdigit: C2RustUnnamed = 2048;
-pub const _ISalpha: C2RustUnnamed = 1024;
-pub const _ISlower: C2RustUnnamed = 512;
-pub const _ISupper: C2RustUnnamed = 256;
+pub type LBaseLibC3RustUnnamed = u32;
+pub const _ISalnum: LBaseLibC3RustUnnamed = 8;
+pub const _ISpunct: LBaseLibC3RustUnnamed = 4;
+pub const _IScntrl: LBaseLibC3RustUnnamed = 2;
+pub const _ISblank: LBaseLibC3RustUnnamed = 1;
+pub const _ISgraph: LBaseLibC3RustUnnamed = 32768;
+pub const _ISprint: LBaseLibC3RustUnnamed = 16384;
+pub const _ISspace: LBaseLibC3RustUnnamed = 8192;
+pub const _ISxdigit: LBaseLibC3RustUnnamed = 4096;
+pub const _ISdigit: LBaseLibC3RustUnnamed = 2048;
+pub const _ISalpha: LBaseLibC3RustUnnamed = 1024;
+pub const _ISlower: LBaseLibC3RustUnnamed = 512;
+pub const _ISupper: LBaseLibC3RustUnnamed = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct _IO_FILE {

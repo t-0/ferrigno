@@ -62,11 +62,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed,
+    pub init: LTabLibC3RustUnnamed,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LTabLibC3RustUnnamed {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -236,7 +236,7 @@ unsafe extern "C" fn tconcat(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LTabLibC3RustUnnamed { n: 0. },
     };
     checktab(L, 1i32, 1i32 | 4i32);
     let mut last: i64 = luaL_len(L, 1i32);

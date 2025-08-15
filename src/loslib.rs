@@ -82,11 +82,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed,
+    pub init: LOSLibC3RustUnnamed,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LOSLibC3RustUnnamed {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -385,7 +385,7 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut lua_State,
-            init: C2RustUnnamed { n: 0. },
+            init: LOSLibC3RustUnnamed { n: 0. },
         };
         cc[0i32 as usize] = '%' as i32 as libc::c_char;
         luaL_buffinit(L, &mut b);

@@ -190,11 +190,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed,
+    pub init: LAuxLibC3RustUnnamed,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LAuxLibC3RustUnnamed {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -359,7 +359,7 @@ pub unsafe extern "C" fn luaL_traceback(
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LAuxLibC3RustUnnamed { n: 0. },
     };
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
@@ -1469,7 +1469,7 @@ pub unsafe extern "C" fn luaL_gsub(
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed { n: 0. },
+        init: LAuxLibC3RustUnnamed { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addgsub(&mut b, s, p, r);
