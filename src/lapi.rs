@@ -497,7 +497,7 @@ pub union UValue {
     pub i: i64,
     pub l: i64,
 }
-pub const TM_EQ: TM = 5;
+pub const TM_EQ: TMS = 5;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallS {
@@ -514,32 +514,6 @@ pub struct ZIO {
     pub data: *mut libc::c_void,
     pub L: *mut lua_State,
 }
-pub type TM = u32;
-pub const TM_N: TM = 25;
-pub const TM_CLOSE: TM = 24;
-pub const TM_CALL: TM = 23;
-pub const TM_CONCAT: TM = 22;
-pub const TM_LE: TM = 21;
-pub const TM_LT: TM = 20;
-pub const TM_BNOT: TM = 19;
-pub const TM_UNM: TM = 18;
-pub const TM_SHR: TM = 17;
-pub const TM_SHL: TM = 16;
-pub const TM_BXOR: TM = 15;
-pub const TM_BOR: TM = 14;
-pub const TM_BAND: TM = 13;
-pub const TM_IDIV: TM = 12;
-pub const TM_DIV: TM = 11;
-pub const TM_POW: TM = 10;
-pub const TM_MOD: TM = 9;
-pub const TM_MUL: TM = 8;
-pub const TM_SUB: TM = 7;
-pub const TM_ADD: TM = 6;
-pub const TM_LEN: TM = 4;
-pub const TM_MODE: TM = 3;
-pub const TM_GC: TM = 2;
-pub const TM_NEWINDEX: TM = 1;
-pub const TM_INDEX: TM = 0;
 #[unsafe(no_mangle)]
 pub static mut lua_ident: [libc::c_char; 129] = unsafe {
     *::core::mem::transmute::<

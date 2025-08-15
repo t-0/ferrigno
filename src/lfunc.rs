@@ -404,33 +404,6 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type TMS = u32;
-pub const TM_N: TMS = 25;
-pub const TM_CLOSE: TMS = 24;
-pub const TM_CALL: TMS = 23;
-pub const TM_CONCAT: TMS = 22;
-pub const TM_LE: TMS = 21;
-pub const TM_LT: TMS = 20;
-pub const TM_BNOT: TMS = 19;
-pub const TM_UNM: TMS = 18;
-pub const TM_SHR: TMS = 17;
-pub const TM_SHL: TMS = 16;
-pub const TM_BXOR: TMS = 15;
-pub const TM_BOR: TMS = 14;
-pub const TM_BAND: TMS = 13;
-pub const TM_IDIV: TMS = 12;
-pub const TM_DIV: TMS = 11;
-pub const TM_POW: TMS = 10;
-pub const TM_MOD: TMS = 9;
-pub const TM_MUL: TMS = 8;
-pub const TM_SUB: TMS = 7;
-pub const TM_ADD: TMS = 6;
-pub const TM_EQ: TMS = 5;
-pub const TM_LEN: TMS = 4;
-pub const TM_MODE: TMS = 3;
-pub const TM_GC: TMS = 2;
-pub const TM_NEWINDEX: TMS = 1;
-pub const TM_INDEX: TMS = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {
