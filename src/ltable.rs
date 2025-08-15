@@ -86,34 +86,34 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed_1,
-    pub u2: C2RustUnnamed,
+    pub u: LTableC2RustUnnamed_1,
+    pub u2: LTableC2RustUnnamed,
     pub nresults: libc::c_short,
     pub callstatus: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LTableC2RustUnnamed {
     pub funcidx: i32,
     pub nyield: i32,
     pub nres: i32,
-    pub transferinfo: C2RustUnnamed_0,
+    pub transferinfo: LTableC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
+pub struct LTableC2RustUnnamed_0 {
     pub ftransfer: libc::c_ushort,
     pub ntransfer: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub l: C2RustUnnamed_3,
-    pub c: C2RustUnnamed_2,
+pub union LTableC2RustUnnamed_1 {
+    pub l: LTableC2RustUnnamed_3,
+    pub c: LTableC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LTableC2RustUnnamed_2 {
     pub k: lua_KFunction,
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
@@ -121,7 +121,7 @@ pub struct C2RustUnnamed_2 {
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LTableC2RustUnnamed_3 {
     pub savedpc: *const Instruction,
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
@@ -137,11 +137,11 @@ pub type StkId = *mut StackValue;
 #[repr(C)]
 pub union StackValue {
     pub val: TValue,
-    pub tbclist: C2RustUnnamed_4,
+    pub tbclist: LTableC2RustUnnamed_4,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
+pub struct LTableC2RustUnnamed_4 {
     pub value_: Value,
     pub tt_: u8,
     pub delta: libc::c_ushort,
@@ -177,24 +177,24 @@ pub struct UpVal {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
-    pub v: C2RustUnnamed_7,
-    pub u: C2RustUnnamed_5,
+    pub v: LTableC2RustUnnamed_7,
+    pub u: LTableC2RustUnnamed_5,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_5 {
-    pub open: C2RustUnnamed_6,
+pub union LTableC2RustUnnamed_5 {
+    pub open: LTableC2RustUnnamed_6,
     pub value: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct LTableC2RustUnnamed_6 {
     pub next: *mut UpVal,
     pub previous: *mut *mut UpVal,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union LTableC2RustUnnamed_7 {
     pub p: *mut TValue,
     pub offset: i64,
 }
@@ -258,12 +258,12 @@ pub struct TString {
     pub extra: u8,
     pub shrlen: u8,
     pub hash: u32,
-    pub u: C2RustUnnamed_8,
+    pub u: LTableC2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_8 {
+pub union LTableC2RustUnnamed_8 {
     pub lnglen: u64,
     pub hnext: *mut TString,
 }
@@ -408,33 +408,33 @@ pub union Closure {
     pub c: CClosure,
     pub l: LClosure,
 }
-pub type C2RustUnnamed_9 = u32;
-pub const TM_N: C2RustUnnamed_9 = 25;
-pub const TM_CLOSE: C2RustUnnamed_9 = 24;
-pub const TM_CALL: C2RustUnnamed_9 = 23;
-pub const TM_CONCAT: C2RustUnnamed_9 = 22;
-pub const TM_LE: C2RustUnnamed_9 = 21;
-pub const TM_LT: C2RustUnnamed_9 = 20;
-pub const TM_BNOT: C2RustUnnamed_9 = 19;
-pub const TM_UNM: C2RustUnnamed_9 = 18;
-pub const TM_SHR: C2RustUnnamed_9 = 17;
-pub const TM_SHL: C2RustUnnamed_9 = 16;
-pub const TM_BXOR: C2RustUnnamed_9 = 15;
-pub const TM_BOR: C2RustUnnamed_9 = 14;
-pub const TM_BAND: C2RustUnnamed_9 = 13;
-pub const TM_IDIV: C2RustUnnamed_9 = 12;
-pub const TM_DIV: C2RustUnnamed_9 = 11;
-pub const TM_POW: C2RustUnnamed_9 = 10;
-pub const TM_MOD: C2RustUnnamed_9 = 9;
-pub const TM_MUL: C2RustUnnamed_9 = 8;
-pub const TM_SUB: C2RustUnnamed_9 = 7;
-pub const TM_ADD: C2RustUnnamed_9 = 6;
-pub const TM_EQ: C2RustUnnamed_9 = 5;
-pub const TM_LEN: C2RustUnnamed_9 = 4;
-pub const TM_MODE: C2RustUnnamed_9 = 3;
-pub const TM_GC: C2RustUnnamed_9 = 2;
-pub const TM_NEWINDEX: C2RustUnnamed_9 = 1;
-pub const TM_INDEX: C2RustUnnamed_9 = 0;
+pub type LTableC2RustUnnamed_9 = u32;
+pub const TM_N: LTableC2RustUnnamed_9 = 25;
+pub const TM_CLOSE: LTableC2RustUnnamed_9 = 24;
+pub const TM_CALL: LTableC2RustUnnamed_9 = 23;
+pub const TM_CONCAT: LTableC2RustUnnamed_9 = 22;
+pub const TM_LE: LTableC2RustUnnamed_9 = 21;
+pub const TM_LT: LTableC2RustUnnamed_9 = 20;
+pub const TM_BNOT: LTableC2RustUnnamed_9 = 19;
+pub const TM_UNM: LTableC2RustUnnamed_9 = 18;
+pub const TM_SHR: LTableC2RustUnnamed_9 = 17;
+pub const TM_SHL: LTableC2RustUnnamed_9 = 16;
+pub const TM_BXOR: LTableC2RustUnnamed_9 = 15;
+pub const TM_BOR: LTableC2RustUnnamed_9 = 14;
+pub const TM_BAND: LTableC2RustUnnamed_9 = 13;
+pub const TM_IDIV: LTableC2RustUnnamed_9 = 12;
+pub const TM_DIV: LTableC2RustUnnamed_9 = 11;
+pub const TM_POW: LTableC2RustUnnamed_9 = 10;
+pub const TM_MOD: LTableC2RustUnnamed_9 = 9;
+pub const TM_MUL: LTableC2RustUnnamed_9 = 8;
+pub const TM_SUB: LTableC2RustUnnamed_9 = 7;
+pub const TM_ADD: LTableC2RustUnnamed_9 = 6;
+pub const TM_EQ: LTableC2RustUnnamed_9 = 5;
+pub const TM_LEN: LTableC2RustUnnamed_9 = 4;
+pub const TM_MODE: LTableC2RustUnnamed_9 = 3;
+pub const TM_GC: LTableC2RustUnnamed_9 = 2;
+pub const TM_NEWINDEX: LTableC2RustUnnamed_9 = 1;
+pub const TM_INDEX: LTableC2RustUnnamed_9 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {

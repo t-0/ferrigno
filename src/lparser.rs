@@ -143,34 +143,34 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed_1,
-    pub u2: C2RustUnnamed,
+    pub u: LParserC2RustUnnamed_1,
+    pub u2: LParserC2RustUnnamed,
     pub nresults: libc::c_short,
     pub callstatus: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LParserC2RustUnnamed {
     pub funcidx: i32,
     pub nyield: i32,
     pub nres: i32,
-    pub transferinfo: C2RustUnnamed_0,
+    pub transferinfo: LParserC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
+pub struct LParserC2RustUnnamed_0 {
     pub ftransfer: libc::c_ushort,
     pub ntransfer: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub l: C2RustUnnamed_3,
-    pub c: C2RustUnnamed_2,
+pub union LParserC2RustUnnamed_1 {
+    pub l: LParserC2RustUnnamed_3,
+    pub c: LParserC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LParserC2RustUnnamed_2 {
     pub k: lua_KFunction,
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
@@ -178,7 +178,7 @@ pub struct C2RustUnnamed_2 {
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LParserC2RustUnnamed_3 {
     pub savedpc: *const Instruction,
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
@@ -194,11 +194,11 @@ pub type StkId = *mut StackValue;
 #[repr(C)]
 pub union StackValue {
     pub val: TValue,
-    pub tbclist: C2RustUnnamed_4,
+    pub tbclist: LParserC2RustUnnamed_4,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
+pub struct LParserC2RustUnnamed_4 {
     pub value_: Value,
     pub tt_: u8,
     pub delta: libc::c_ushort,
@@ -234,24 +234,24 @@ pub struct UpVal {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
-    pub v: C2RustUnnamed_7,
-    pub u: C2RustUnnamed_5,
+    pub v: LParserC2RustUnnamed_7,
+    pub u: LParserC2RustUnnamed_5,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_5 {
-    pub open: C2RustUnnamed_6,
+pub union LParserC2RustUnnamed_5 {
+    pub open: LParserC2RustUnnamed_6,
     pub value: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct LParserC2RustUnnamed_6 {
     pub next: *mut UpVal,
     pub previous: *mut *mut UpVal,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union LParserC2RustUnnamed_7 {
     pub p: *mut TValue,
     pub offset: i64,
 }
@@ -315,12 +315,12 @@ pub struct TString {
     pub extra: u8,
     pub shrlen: u8,
     pub hash: u32,
-    pub u: C2RustUnnamed_8,
+    pub u: LParserC2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_8 {
+pub union LParserC2RustUnnamed_8 {
     pub lnglen: u64,
     pub hnext: *mut TString,
 }
@@ -554,7 +554,7 @@ pub struct LexState {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Dyndata {
-    pub actvar: C2RustUnnamed_9,
+    pub actvar: LParserC2RustUnnamed_9,
     pub gt: Labellist,
     pub label: Labellist,
 }
@@ -576,7 +576,7 @@ pub struct Labeldesc {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_9 {
+pub struct LParserC2RustUnnamed_9 {
     pub arr: *mut Vardesc,
     pub n: i32,
     pub size: i32,
@@ -584,12 +584,12 @@ pub struct C2RustUnnamed_9 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Vardesc {
-    pub vd: C2RustUnnamed_10,
+    pub vd: LParserC2RustUnnamed_10,
     pub k: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_10 {
+pub struct LParserC2RustUnnamed_10 {
     pub value_: Value,
     pub tt_: u8,
     pub kind: u8,
@@ -738,29 +738,29 @@ pub const VVOID: expkind = 0;
 #[repr(C)]
 pub struct expdesc {
     pub k: expkind,
-    pub u: C2RustUnnamed_11,
+    pub u: LParserC2RustUnnamed_11,
     pub t: i32,
     pub f: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_11 {
+pub union LParserC2RustUnnamed_11 {
     pub ival: i64,
     pub nval: f64,
     pub strval: *mut TString,
     pub info: i32,
-    pub ind: C2RustUnnamed_13,
-    pub var: C2RustUnnamed_12,
+    pub ind: LParserC2RustUnnamed_13,
+    pub var: LParserC2RustUnnamed_12,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_12 {
+pub struct LParserC2RustUnnamed_12 {
     pub ridx: u8,
     pub vidx: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_13 {
+pub struct LParserC2RustUnnamed_13 {
     pub index: libc::c_short,
     pub t: u8,
 }
@@ -795,7 +795,7 @@ pub const OPR_SUB: BinOpr = 1;
 pub const OPR_ADD: BinOpr = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_14 {
+pub struct LParserC2RustUnnamed_14 {
     pub left: u8,
     pub right: u8,
 }
@@ -1258,7 +1258,7 @@ unsafe extern "C" fn singlevar(mut ls: *mut LexState, mut var: *mut expdesc) {
     if (*var).k as u32 == VVOID as i32 as u32 {
         let mut key: expdesc = expdesc {
             k: VVOID,
-            u: C2RustUnnamed_11 { ival: 0 },
+            u: LParserC2RustUnnamed_11 { ival: 0 },
             t: 0,
             f: 0,
         };
@@ -1670,7 +1670,7 @@ unsafe extern "C" fn fieldsel(mut ls: *mut LexState, mut v: *mut expdesc) {
     let mut fs: *mut FuncState = (*ls).fs;
     let mut key: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -1690,19 +1690,19 @@ unsafe extern "C" fn recfield(mut ls: *mut LexState, mut cc: *mut ConsControl) {
     let mut reg: i32 = (*(*ls).fs).freereg as i32;
     let mut tab: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut key: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut val: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -1784,7 +1784,7 @@ unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut expdesc) {
     let mut cc: ConsControl = ConsControl {
         v: expdesc {
             k: VVOID,
-            u: C2RustUnnamed_11 { ival: 0 },
+            u: LParserC2RustUnnamed_11 { ival: 0 },
             t: 0,
             f: 0,
         },
@@ -1926,7 +1926,7 @@ unsafe extern "C" fn funcargs(mut ls: *mut LexState, mut f: *mut expdesc) {
     let mut fs: *mut FuncState = (*ls).fs;
     let mut args: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2010,7 +2010,7 @@ unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc) {
             91 => {
                 let mut key: expdesc = expdesc {
                     k: VVOID,
-                    u: C2RustUnnamed_11 { ival: 0 },
+                    u: LParserC2RustUnnamed_11 { ival: 0 },
                     t: 0,
                     f: 0,
                 };
@@ -2021,7 +2021,7 @@ unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc) {
             58 => {
                 let mut key_0: expdesc = expdesc {
                     k: VVOID,
-                    u: C2RustUnnamed_11 { ival: 0 },
+                    u: LParserC2RustUnnamed_11 { ival: 0 },
                     t: 0,
                     f: 0,
                 };
@@ -2126,149 +2126,149 @@ unsafe extern "C" fn getbinopr(mut op: i32) -> BinOpr {
         _ => return OPR_NOBINOPR,
     };
 }
-static mut priority: [C2RustUnnamed_14; 21] = [
+static mut priority: [LParserC2RustUnnamed_14; 21] = [
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 10i32 as u8,
             right: 10i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 10i32 as u8,
             right: 10i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 11i32 as u8,
             right: 11i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 11i32 as u8,
             right: 11i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 14i32 as u8,
             right: 13i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 11i32 as u8,
             right: 11i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 11i32 as u8,
             right: 11i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 6i32 as u8,
             right: 6i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 4i32 as u8,
             right: 4i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 5i32 as u8,
             right: 5i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 7i32 as u8,
             right: 7i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 7i32 as u8,
             right: 7i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 9i32 as u8,
             right: 8i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 3i32 as u8,
             right: 3i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 2i32 as u8,
             right: 2i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_14 {
+        let mut init = LParserC2RustUnnamed_14 {
             left: 1i32 as u8,
             right: 1i32 as u8,
         };
@@ -2292,7 +2292,7 @@ unsafe extern "C" fn subexpr(mut ls: *mut LexState, mut v: *mut expdesc, mut lim
     while op as u32 != OPR_NOBINOPR as i32 as u32 && priority[op as usize].left as i32 > limit {
         let mut v2: expdesc = expdesc {
             k: VVOID,
-            u: C2RustUnnamed_11 { ival: 0 },
+            u: LParserC2RustUnnamed_11 { ival: 0 },
             t: 0,
             f: 0,
         };
@@ -2373,7 +2373,7 @@ unsafe extern "C" fn check_conflict(
 unsafe extern "C" fn restassign(mut ls: *mut LexState, mut lh: *mut LHS_assign, mut nvars: i32) {
     let mut e: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2386,7 +2386,7 @@ unsafe extern "C" fn restassign(mut ls: *mut LexState, mut lh: *mut LHS_assign, 
             prev: 0 as *mut LHS_assign,
             v: expdesc {
                 k: VVOID,
-                u: C2RustUnnamed_11 { ival: 0 },
+                u: LParserC2RustUnnamed_11 { ival: 0 },
                 t: 0,
                 f: 0,
             },
@@ -2418,7 +2418,7 @@ unsafe extern "C" fn restassign(mut ls: *mut LexState, mut lh: *mut LHS_assign, 
 unsafe extern "C" fn cond(mut ls: *mut LexState) -> i32 {
     let mut v: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2550,7 +2550,7 @@ unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
 unsafe extern "C" fn exp1(mut ls: *mut LexState) {
     let mut e: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2661,7 +2661,7 @@ unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TString)
     let mut fs: *mut FuncState = (*ls).fs;
     let mut e: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2766,7 +2766,7 @@ unsafe extern "C" fn test_then_block(mut ls: *mut LexState, mut escapelist: *mut
     let mut fs: *mut FuncState = (*ls).fs;
     let mut v: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2826,7 +2826,7 @@ unsafe extern "C" fn ifstat(mut ls: *mut LexState, mut line: i32) {
 unsafe extern "C" fn localfunc(mut ls: *mut LexState) {
     let mut b: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2874,7 +2874,7 @@ unsafe extern "C" fn localstat(mut ls: *mut LexState) {
     let mut nexps: i32 = 0;
     let mut e: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2934,13 +2934,13 @@ unsafe extern "C" fn funcstat(mut ls: *mut LexState, mut line: i32) {
     let mut ismethod: i32 = 0;
     let mut v: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut b: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -2957,7 +2957,7 @@ unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
         prev: 0 as *mut LHS_assign,
         v: expdesc {
             k: VVOID,
-            u: C2RustUnnamed_11 { ival: 0 },
+            u: LParserC2RustUnnamed_11 { ival: 0 },
             t: 0,
             f: 0,
         },
@@ -2981,7 +2981,7 @@ unsafe extern "C" fn retstat(mut ls: *mut LexState) {
     let mut fs: *mut FuncState = (*ls).fs;
     let mut e: expdesc = expdesc {
         k: VVOID,
-        u: C2RustUnnamed_11 { ival: 0 },
+        u: LParserC2RustUnnamed_11 { ival: 0 },
         t: 0,
         f: 0,
     };

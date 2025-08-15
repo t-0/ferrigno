@@ -86,19 +86,19 @@ unsafe extern "C" {
     fn luaL_buffinitsize(L: *mut lua_State, B: *mut luaL_Buffer, sz: u64) -> *mut libc::c_char;
 }
 pub type __int32_t = i32;
-pub type C2RustUnnamed = u32;
-pub const _ISalnum: C2RustUnnamed = 8;
-pub const _ISpunct: C2RustUnnamed = 4;
-pub const _IScntrl: C2RustUnnamed = 2;
-pub const _ISblank: C2RustUnnamed = 1;
-pub const _ISgraph: C2RustUnnamed = 32768;
-pub const _ISprint: C2RustUnnamed = 16384;
-pub const _ISspace: C2RustUnnamed = 8192;
-pub const _ISxdigit: C2RustUnnamed = 4096;
-pub const _ISdigit: C2RustUnnamed = 2048;
-pub const _ISalpha: C2RustUnnamed = 1024;
-pub const _ISlower: C2RustUnnamed = 512;
-pub const _ISupper: C2RustUnnamed = 256;
+pub type LStrLibC2RustUnnamed = u32;
+pub const _ISalnum: LStrLibC2RustUnnamed = 8;
+pub const _ISpunct: LStrLibC2RustUnnamed = 4;
+pub const _IScntrl: LStrLibC2RustUnnamed = 2;
+pub const _ISblank: LStrLibC2RustUnnamed = 1;
+pub const _ISgraph: LStrLibC2RustUnnamed = 32768;
+pub const _ISprint: LStrLibC2RustUnnamed = 16384;
+pub const _ISspace: LStrLibC2RustUnnamed = 8192;
+pub const _ISxdigit: LStrLibC2RustUnnamed = 4096;
+pub const _ISdigit: LStrLibC2RustUnnamed = 2048;
+pub const _ISalpha: LStrLibC2RustUnnamed = 1024;
+pub const _ISlower: LStrLibC2RustUnnamed = 512;
+pub const _ISupper: LStrLibC2RustUnnamed = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lconv {
@@ -140,11 +140,11 @@ pub struct luaL_Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut lua_State,
-    pub init: C2RustUnnamed_0,
+    pub init: LStrLibC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_0 {
+pub union LStrLibC2RustUnnamed_0 {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -173,7 +173,7 @@ pub const Kstring: KOption = 6;
 pub const Kchar: KOption = 5;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
+pub union LStrLibC2RustUnnamed_1 {
     pub dummy: i32,
     pub little: libc::c_char,
 }
@@ -187,11 +187,11 @@ pub const Kuint: KOption = 1;
 #[repr(C)]
 pub struct cD {
     pub c: libc::c_char,
-    pub u: C2RustUnnamed_2,
+    pub u: LStrLibC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_2 {
+pub union LStrLibC2RustUnnamed_2 {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
@@ -207,11 +207,11 @@ pub struct MatchState {
     pub L: *mut lua_State,
     pub matchdepth: i32,
     pub level: u8,
-    pub capture: [C2RustUnnamed_3; 32],
+    pub capture: [LStrLibC2RustUnnamed_3; 32],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LStrLibC2RustUnnamed_3 {
     pub init: *const libc::c_char,
     pub len: i64,
 }
@@ -307,7 +307,7 @@ unsafe extern "C" fn str_reverse(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1i32, &mut l);
     let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, l);
@@ -328,7 +328,7 @@ unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1i32, &mut l);
     let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, l);
@@ -366,7 +366,7 @@ unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1i32, &mut l);
     let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, l);
@@ -435,7 +435,7 @@ unsafe extern "C" fn str_rep(mut L: *mut lua_State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut lua_State,
-            init: C2RustUnnamed_0 { n: 0. },
+            init: LStrLibC2RustUnnamed_0 { n: 0. },
         };
         let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, totallen);
         loop {
@@ -512,7 +512,7 @@ unsafe extern "C" fn str_char(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, n as u64);
     i = 1i32;
@@ -552,7 +552,7 @@ unsafe extern "C" fn str_dump(mut L: *mut lua_State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut lua_State,
-            init: C2RustUnnamed_0 { n: 0. },
+            init: LStrLibC2RustUnnamed_0 { n: 0. },
         },
     };
     let mut strip: i32 = lua_toboolean(L, 2i32);
@@ -1507,7 +1507,7 @@ unsafe extern "C" fn str_find_aux(mut L: *mut lua_State, mut find: i32) -> i32 {
             L: 0 as *mut lua_State,
             matchdepth: 0,
             level: 0,
-            capture: [C2RustUnnamed_3 {
+            capture: [LStrLibC2RustUnnamed_3 {
                 init: 0 as *const libc::c_char,
                 len: 0,
             }; 32],
@@ -1705,7 +1705,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> i32 {
         L: 0 as *mut lua_State,
         matchdepth: 0,
         level: 0,
-        capture: [C2RustUnnamed_3 {
+        capture: [LStrLibC2RustUnnamed_3 {
             init: 0 as *const libc::c_char,
             len: 0,
         }; 32],
@@ -1715,7 +1715,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     (((tr == 3i32 || tr == 4i32 || tr == 6i32 || tr == 5i32) as i32 != 0i32) as i32 as i64 != 0
         || luaL_typeerror(
@@ -1987,7 +1987,7 @@ unsafe extern "C" fn str_format(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     while strfrmt < strfrmt_end {
@@ -2171,7 +2171,7 @@ unsafe extern "C" fn str_format(mut L: *mut lua_State) -> i32 {
     luaL_pushresult(&mut b);
     return 1i32;
 }
-static mut nativeendian: C2RustUnnamed_1 = C2RustUnnamed_1 { dummy: 1i32 };
+static mut nativeendian: LStrLibC2RustUnnamed_1 = LStrLibC2RustUnnamed_1 { dummy: 1i32 };
 unsafe extern "C" fn digit(mut c: i32) -> i32 {
     return ('0' as i32 <= c && c <= '9' as i32) as i32;
 }
@@ -2444,7 +2444,7 @@ unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut lua_State,
-        init: C2RustUnnamed_0 { n: 0. },
+        init: LStrLibC2RustUnnamed_0 { n: 0. },
     };
     let mut h: Header = Header {
         L: 0 as *mut lua_State,

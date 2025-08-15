@@ -143,55 +143,55 @@ pub struct siginfo_t {
     pub si_errno: i32,
     pub si_code: i32,
     pub __pad0: i32,
-    pub _sifields: C2RustUnnamed,
+    pub _sifields: LuaC2RustUnnamed,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LuaC2RustUnnamed {
     pub _pad: [i32; 28],
-    pub _kill: C2RustUnnamed_8,
-    pub _timer: C2RustUnnamed_7,
-    pub _rt: C2RustUnnamed_6,
-    pub _sigchld: C2RustUnnamed_5,
-    pub _sigfault: C2RustUnnamed_2,
-    pub _sigpoll: C2RustUnnamed_1,
-    pub _sigsys: C2RustUnnamed_0,
+    pub _kill: LuaC2RustUnnamed_8,
+    pub _timer: LuaC2RustUnnamed_7,
+    pub _rt: LuaC2RustUnnamed_6,
+    pub _sigchld: LuaC2RustUnnamed_5,
+    pub _sigfault: LuaC2RustUnnamed_2,
+    pub _sigpoll: LuaC2RustUnnamed_1,
+    pub _sigsys: LuaC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
+pub struct LuaC2RustUnnamed_0 {
     pub _call_addr: *mut libc::c_void,
     pub _syscall: i32,
     pub _arch: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_1 {
+pub struct LuaC2RustUnnamed_1 {
     pub si_band: i64,
     pub si_fd: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LuaC2RustUnnamed_2 {
     pub si_addr: *mut libc::c_void,
     pub si_addr_lsb: libc::c_short,
-    pub _bounds: C2RustUnnamed_3,
+    pub _bounds: LuaC2RustUnnamed_3,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_3 {
-    pub _addr_bnd: C2RustUnnamed_4,
+pub union LuaC2RustUnnamed_3 {
+    pub _addr_bnd: LuaC2RustUnnamed_4,
     pub _pkey: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
+pub struct LuaC2RustUnnamed_4 {
     pub _lower: *mut libc::c_void,
     pub _upper: *mut libc::c_void,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_5 {
+pub struct LuaC2RustUnnamed_5 {
     pub si_pid: pid_t,
     pub si_uid: uid_t,
     pub si_status: i32,
@@ -200,21 +200,21 @@ pub struct C2RustUnnamed_5 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct LuaC2RustUnnamed_6 {
     pub si_pid: pid_t,
     pub si_uid: uid_t,
     pub si_sigval: __sigval_t,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_7 {
+pub struct LuaC2RustUnnamed_7 {
     pub si_tid: i32,
     pub si_overrun: i32,
     pub si_sigval: __sigval_t,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_8 {
+pub struct LuaC2RustUnnamed_8 {
     pub si_pid: pid_t,
     pub si_uid: uid_t,
 }
@@ -222,14 +222,14 @@ pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct sigaction {
-    pub __sigaction_handler: C2RustUnnamed_9,
+    pub __sigaction_handler: LuaC2RustUnnamed_9,
     pub sa_mask: __sigset_t,
     pub sa_flags: i32,
     pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_9 {
+pub union LuaC2RustUnnamed_9 {
     pub sa_handler: __sighandler_t,
     pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut siginfo_t, *mut libc::c_void) -> ()>,
 }
@@ -262,7 +262,7 @@ static mut globalL: *mut lua_State = 0 as *const lua_State as *mut lua_State;
 static mut progname: *const libc::c_char = b"lua\0" as *const u8 as *const libc::c_char;
 unsafe extern "C" fn setsignal(mut sig: i32, mut handler: Option<unsafe extern "C" fn(i32) -> ()>) {
     let mut sa: sigaction = sigaction {
-        __sigaction_handler: C2RustUnnamed_9 { sa_handler: None },
+        __sigaction_handler: LuaC2RustUnnamed_9 { sa_handler: None },
         sa_mask: __sigset_t { __val: [0; 16] },
         sa_flags: 0,
         sa_restorer: None,

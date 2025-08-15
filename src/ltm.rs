@@ -85,34 +85,34 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed_1,
-    pub u2: C2RustUnnamed,
+    pub u: LTMC2RustUnnamed_1,
+    pub u2: LTMC2RustUnnamed,
     pub nresults: libc::c_short,
     pub callstatus: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed {
+pub union LTMC2RustUnnamed {
     pub funcidx: i32,
     pub nyield: i32,
     pub nres: i32,
-    pub transferinfo: C2RustUnnamed_0,
+    pub transferinfo: LTMC2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_0 {
+pub struct LTMC2RustUnnamed_0 {
     pub ftransfer: libc::c_ushort,
     pub ntransfer: libc::c_ushort,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_1 {
-    pub l: C2RustUnnamed_3,
-    pub c: C2RustUnnamed_2,
+pub union LTMC2RustUnnamed_1 {
+    pub l: LTMC2RustUnnamed_3,
+    pub c: LTMC2RustUnnamed_2,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct LTMC2RustUnnamed_2 {
     pub k: lua_KFunction,
     pub old_errfunc: i64,
     pub ctx: lua_KContext,
@@ -120,7 +120,7 @@ pub struct C2RustUnnamed_2 {
 pub type lua_KFunction = Option<unsafe extern "C" fn(*mut lua_State, i32, lua_KContext) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct LTMC2RustUnnamed_3 {
     pub savedpc: *const Instruction,
     pub trap: sig_atomic_t,
     pub nextraargs: i32,
@@ -136,11 +136,11 @@ pub type StkId = *mut StackValue;
 #[repr(C)]
 pub union StackValue {
     pub val: TValue,
-    pub tbclist: C2RustUnnamed_4,
+    pub tbclist: LTMC2RustUnnamed_4,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_4 {
+pub struct LTMC2RustUnnamed_4 {
     pub value_: Value,
     pub tt_: u8,
     pub delta: libc::c_ushort,
@@ -176,24 +176,24 @@ pub struct UpVal {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
-    pub v: C2RustUnnamed_7,
-    pub u: C2RustUnnamed_5,
+    pub v: LTMC2RustUnnamed_7,
+    pub u: LTMC2RustUnnamed_5,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_5 {
-    pub open: C2RustUnnamed_6,
+pub union LTMC2RustUnnamed_5 {
+    pub open: LTMC2RustUnnamed_6,
     pub value: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct LTMC2RustUnnamed_6 {
     pub next: *mut UpVal,
     pub previous: *mut *mut UpVal,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_7 {
+pub union LTMC2RustUnnamed_7 {
     pub p: *mut TValue,
     pub offset: i64,
 }
@@ -257,12 +257,12 @@ pub struct TString {
     pub extra: u8,
     pub shrlen: u8,
     pub hash: u32,
-    pub u: C2RustUnnamed_8,
+    pub u: LTMC2RustUnnamed_8,
     pub contents: [libc::c_char; 1],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_8 {
+pub union LTMC2RustUnnamed_8 {
     pub lnglen: u64,
     pub hnext: *mut TString,
 }
