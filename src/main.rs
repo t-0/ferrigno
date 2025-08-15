@@ -12,41 +12,7 @@
     unused_mut
 )]
 #![feature(extern_types, c_variadic)]
-mod c;
-mod lapi;
-mod lauxlib;
-mod lbaselib;
-mod lcode;
-mod lcorolib;
-mod lctype;
-mod ldblib;
-mod ldebug;
-mod ldo;
-mod ldump;
-mod lfunc;
-mod lgc;
-mod linit;
-mod liolib;
-mod llex;
-mod lmathlib;
-mod lmem;
-mod loadlib;
-mod lobject;
-mod lopcodes;
-mod loslib;
-mod lparser;
-mod lstate;
-mod lstring;
-mod lstrlib;
-mod ltable;
-mod ltablib;
-mod ltm;
-mod lua;
-mod lundump;
-mod lutf8lib;
-mod lvm;
-mod lzio;
-mod types;
+mod onelua;
 pub fn main() {
     let mut args: Vec<*mut libc::c_char> = Vec::new();
     for arg in ::std::env::args() {
@@ -58,7 +24,7 @@ pub fn main() {
     }
     args.push(::core::ptr::null_mut());
     unsafe {
-        ::std::process::exit(crate::lua::main_0(
+        ::std::process::exit(crate::onelua::main_0(
             (args.len() - 1) as i32,
             args.as_mut_ptr() as *mut *mut libc::c_char,
         ) as i32)
