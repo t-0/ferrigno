@@ -12,7 +12,6 @@
     unused_mut
 )]
 use libc::{tolower, toupper, remove, rename, setlocale};
-pub type __builtin_va_list = [__va_list_tag; 1];
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -218,19 +217,15 @@ pub struct __sigset_t {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct __jmp_buf_tag {
-    pub __jmpbuf: __jmp_buf,
     pub __mask_was_saved: libc::c_int,
     pub __saved_mask: __sigset_t,
 }
-pub type jmp_buf = [__jmp_buf_tag; 1];
-pub type sig_atomic_t = i32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union sigval {
     pub sival_int: libc::c_int,
     pub sival_ptr: *mut libc::c_void,
 }
-pub type __sigval_t = sigval;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct siginfo_t {
@@ -298,14 +293,14 @@ pub struct C2RustUnnamed_6 {
 pub struct C2RustUnnamed_7 {
     pub si_pid: libc::c_int,
     pub si_uid: libc::c_uint,
-    pub si_sigval: __sigval_t,
+    pub si_sigval: sigval,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_8 {
     pub si_tid: libc::c_int,
     pub si_overrun: libc::c_int,
-    pub si_sigval: __sigval_t,
+    pub si_sigval: sigval,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -330,10 +325,9 @@ pub union C2RustUnnamed_10 {
         unsafe extern "C" fn(libc::c_int, *mut siginfo_t, *mut libc::c_void) -> (),
     >,
 }
-pub type va_list = __builtin_va_list;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct _IO_FILE {
+pub struct FILE {
     pub _flags: libc::c_int,
     pub _IO_read_ptr: *mut libc::c_char,
     pub _IO_read_end: *mut libc::c_char,
@@ -347,7 +341,7 @@ pub struct _IO_FILE {
     pub _IO_backup_base: *mut libc::c_char,
     pub _IO_save_end: *mut libc::c_char,
     pub _markers: *mut _IO_marker,
-    pub _chain: *mut _IO_FILE,
+    pub _chain: *mut FILE,
     pub _fileno: libc::c_int,
     pub _flags2: libc::c_int,
     pub _old_offset: libc::c_long,
@@ -358,14 +352,12 @@ pub struct _IO_FILE {
     pub _offset: libc::c_long,
     pub _codecvt: *mut _IO_codecvt,
     pub _wide_data: *mut _IO_wide_data,
-    pub _freeres_list: *mut _IO_FILE,
+    pub _freeres_list: *mut FILE,
     pub _freeres_buf: *mut libc::c_void,
     pub __pad5: u64,
     pub _mode: libc::c_int,
     pub _unused2: [libc::c_char; 20],
 }
-pub type _IO_lock_t = ();
-pub type FILE = _IO_FILE;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct tm {
@@ -383,7 +375,7 @@ pub struct tm {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct lua_State {
+pub struct State {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
@@ -398,7 +390,7 @@ pub struct lua_State {
     pub openupval: *mut UpVal,
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
-    pub twups: *mut lua_State,
+    pub twups: *mut State,
     pub errorJmp: *mut lua_longjmp,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
@@ -407,9 +399,9 @@ pub struct lua_State {
     pub oldpc: libc::c_int,
     pub basehookcount: libc::c_int,
     pub hookcount: libc::c_int,
-    pub hookmask: sig_atomic_t,
+    pub hookmask: i32,
 }
-pub type lua_Hook = Option::<unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()>;
+pub type lua_Hook = Option::<unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct lua_Debug {
@@ -471,16 +463,15 @@ pub struct C2RustUnnamed_14 {
     pub ctx: i64,
 }
 pub type lua_KFunction = Option::<
-    unsafe extern "C" fn(*mut lua_State, libc::c_int, i64) -> libc::c_int,
+    unsafe extern "C" fn(*mut State, libc::c_int, i64) -> libc::c_int,
 >;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_15 {
-    pub savedpc: *const Instruction,
-    pub trap: sig_atomic_t,
+    pub savedpc: *const u32,
+    pub trap: i32,
     pub nextraargs: libc::c_int,
 }
-pub type Instruction = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StkIdRel {
@@ -511,7 +502,7 @@ pub union Value {
     pub n: f64,
     pub ub: u8,
 }
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut lua_State) -> libc::c_int>;
+pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut State) -> libc::c_int>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GCObject {
@@ -529,7 +520,7 @@ pub struct TValue {
 #[repr(C)]
 pub struct lua_longjmp {
     pub previous: *mut lua_longjmp,
-    pub b: jmp_buf,
+    pub b: [__jmp_buf_tag; 1],
     pub status: libc::c_int,
 }
 #[derive(Copy, Clone)]
@@ -600,9 +591,9 @@ pub struct global_State {
     pub finobjsur: *mut GCObject,
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
-    pub twups: *mut lua_State,
+    pub twups: *mut State,
     pub panic: lua_CFunction,
-    pub mainthread: *mut lua_State,
+    pub mainthread: *mut State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
     pub mt: [*mut Table; 9],
@@ -678,14 +669,14 @@ pub type lua_Alloc = Option::<
 >;
 pub type lua_Reader = Option::<
     unsafe extern "C" fn(
-        *mut lua_State,
+        *mut State,
         *mut libc::c_void,
         *mut u64,
     ) -> *const libc::c_char,
 >;
 pub type lua_Writer = Option::<
     unsafe extern "C" fn(
-        *mut lua_State,
+        *mut State,
         *const libc::c_void,
         u64,
         *mut libc::c_void,
@@ -701,7 +692,7 @@ pub struct LG {
 #[repr(C)]
 pub struct LX {
     pub extra_: [u8; 8],
-    pub l: lua_State,
+    pub l: State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -712,7 +703,7 @@ pub union GCUnion {
     pub cl: Closure,
     pub h: Table,
     pub p: Proto,
-    pub th: lua_State,
+    pub th: State,
     pub upv: UpVal,
 }
 #[derive(Copy, Clone)]
@@ -734,7 +725,7 @@ pub struct Proto {
     pub linedefined: libc::c_int,
     pub lastlinedefined: libc::c_int,
     pub k: *mut TValue,
-    pub code: *mut Instruction,
+    pub code: *mut u32,
     pub p: *mut *mut Proto,
     pub upvalues: *mut Upvaldesc,
     pub lineinfo: *mut i8,
@@ -814,142 +805,139 @@ pub union UValue {
     pub i: i64,
     pub l: libc::c_long,
 }
-pub const OP_EXTRAARG: OpCode = 82;
-pub const TM_MODE: TMS = 3;
-pub type TMS = u32;
-pub const TM_N: TMS = 25;
-pub const TM_CLOSE: TMS = 24;
-pub const TM_CALL: TMS = 23;
-pub const TM_CONCAT: TMS = 22;
-pub const TM_LE: TMS = 21;
-pub const TM_LT: TMS = 20;
-pub const TM_BNOT: TMS = 19;
-pub const TM_UNM: TMS = 18;
-pub const TM_SHR: TMS = 17;
-pub const TM_SHL: TMS = 16;
-pub const TM_BXOR: TMS = 15;
-pub const TM_BOR: TMS = 14;
-pub const TM_BAND: TMS = 13;
-pub const TM_IDIV: TMS = 12;
-pub const TM_DIV: TMS = 11;
-pub const TM_POW: TMS = 10;
-pub const TM_MOD: TMS = 9;
-pub const TM_MUL: TMS = 8;
-pub const TM_SUB: TMS = 7;
-pub const TM_ADD: TMS = 6;
-pub const TM_EQ: TMS = 5;
-pub const TM_LEN: TMS = 4;
-pub const TM_GC: TMS = 2;
-pub const TM_NEWINDEX: TMS = 1;
-pub const TM_INDEX: TMS = 0;
+pub const OP_EXTRAARG: u32 = 82;
+pub const TM_MODE: u32 = 3;
+pub const TM_N: u32 = 25;
+pub const TM_CLOSE: u32 = 24;
+pub const TM_CALL: u32 = 23;
+pub const TM_CONCAT: u32 = 22;
+pub const TM_LE: u32 = 21;
+pub const TM_LT: u32 = 20;
+pub const TM_BNOT: u32 = 19;
+pub const TM_UNM: u32 = 18;
+pub const TM_SHR: u32 = 17;
+pub const TM_SHL: u32 = 16;
+pub const TM_BXOR: u32 = 15;
+pub const TM_BOR: u32 = 14;
+pub const TM_BAND: u32 = 13;
+pub const TM_IDIV: u32 = 12;
+pub const TM_DIV: u32 = 11;
+pub const TM_POW: u32 = 10;
+pub const TM_MOD: u32 = 9;
+pub const TM_MUL: u32 = 8;
+pub const TM_SUB: u32 = 7;
+pub const TM_ADD: u32 = 6;
+pub const TM_EQ: u32 = 5;
+pub const TM_LEN: u32 = 4;
+pub const TM_GC: u32 = 2;
+pub const TM_NEWINDEX: u32 = 1;
+pub const TM_INDEX: u32 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CloseP {
     pub level: StkId,
     pub status: libc::c_int,
 }
-pub type Pfunc = Option::<unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> ()>;
+pub type Pfunc = Option::<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct BuffFS {
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub pushed: libc::c_int,
     pub blen: libc::c_int,
     pub space: [libc::c_char; 199],
 }
-pub const OP_LOADKX: OpCode = 4;
-pub const OP_LOADK: OpCode = 3;
-pub const OP_GETUPVAL: OpCode = 9;
-pub const OP_MOVE: OpCode = 0;
-pub type OpCode = u32;
-pub const OP_VARARGPREP: OpCode = 81;
-pub const OP_VARARG: OpCode = 80;
-pub const OP_CLOSURE: OpCode = 79;
-pub const OP_SETLIST: OpCode = 78;
-pub const OP_TFORLOOP: OpCode = 77;
-pub const OP_TFORCALL: OpCode = 76;
-pub const OP_TFORPREP: OpCode = 75;
-pub const OP_FORPREP: OpCode = 74;
-pub const OP_FORLOOP: OpCode = 73;
-pub const OP_RETURN1: OpCode = 72;
-pub const OP_RETURN0: OpCode = 71;
-pub const OP_RETURN: OpCode = 70;
-pub const OP_TAILCALL: OpCode = 69;
-pub const OP_CALL: OpCode = 68;
-pub const OP_TESTSET: OpCode = 67;
-pub const OP_TEST: OpCode = 66;
-pub const OP_GEI: OpCode = 65;
-pub const OP_GTI: OpCode = 64;
-pub const OP_LEI: OpCode = 63;
-pub const OP_LTI: OpCode = 62;
-pub const OP_EQI: OpCode = 61;
-pub const OP_EQK: OpCode = 60;
-pub const OP_LE: OpCode = 59;
-pub const OP_LT: OpCode = 58;
-pub const OP_EQ: OpCode = 57;
-pub const OP_JMP: OpCode = 56;
-pub const OP_TBC: OpCode = 55;
-pub const OP_CLOSE: OpCode = 54;
-pub const OP_CONCAT: OpCode = 53;
-pub const OP_LEN: OpCode = 52;
-pub const OP_NOT: OpCode = 51;
-pub const OP_BNOT: OpCode = 50;
-pub const OP_UNM: OpCode = 49;
-pub const OP_MMBINK: OpCode = 48;
-pub const OP_MMBINI: OpCode = 47;
-pub const OP_MMBIN: OpCode = 46;
-pub const OP_SHR: OpCode = 45;
-pub const OP_SHL: OpCode = 44;
-pub const OP_BXOR: OpCode = 43;
-pub const OP_BOR: OpCode = 42;
-pub const OP_BAND: OpCode = 41;
-pub const OP_IDIV: OpCode = 40;
-pub const OP_DIV: OpCode = 39;
-pub const OP_POW: OpCode = 38;
-pub const OP_MOD: OpCode = 37;
-pub const OP_MUL: OpCode = 36;
-pub const OP_SUB: OpCode = 35;
-pub const OP_ADD: OpCode = 34;
-pub const OP_SHLI: OpCode = 33;
-pub const OP_SHRI: OpCode = 32;
-pub const OP_BXORK: OpCode = 31;
-pub const OP_BORK: OpCode = 30;
-pub const OP_BANDK: OpCode = 29;
-pub const OP_IDIVK: OpCode = 28;
-pub const OP_DIVK: OpCode = 27;
-pub const OP_POWK: OpCode = 26;
-pub const OP_MODK: OpCode = 25;
-pub const OP_MULK: OpCode = 24;
-pub const OP_SUBK: OpCode = 23;
-pub const OP_ADDK: OpCode = 22;
-pub const OP_ADDI: OpCode = 21;
-pub const OP_SELF: OpCode = 20;
-pub const OP_NEWTABLE: OpCode = 19;
-pub const OP_SETFIELD: OpCode = 18;
-pub const OP_SETI: OpCode = 17;
-pub const OP_SETTABLE: OpCode = 16;
-pub const OP_SETTABUP: OpCode = 15;
-pub const OP_GETFIELD: OpCode = 14;
-pub const OP_GETI: OpCode = 13;
-pub const OP_GETTABLE: OpCode = 12;
-pub const OP_GETTABUP: OpCode = 11;
-pub const OP_SETUPVAL: OpCode = 10;
-pub const OP_LOADNIL: OpCode = 8;
-pub const OP_LOADTRUE: OpCode = 7;
-pub const OP_LFALSESKIP: OpCode = 6;
-pub const OP_LOADFALSE: OpCode = 5;
-pub const OP_LOADF: OpCode = 2;
-pub const OP_LOADI: OpCode = 1;
-pub const iAx: OpMode = 3;
-pub const iABC: OpMode = 0;
-pub const iABx: OpMode = 1;
-pub const isJ: OpMode = 4;
-pub const iAsBx: OpMode = 2;
-pub type F2Imod = u32;
-pub const F2Iceil: F2Imod = 2;
-pub const F2Ifloor: F2Imod = 1;
-pub const F2Ieq: F2Imod = 0;
-pub const TK_WHILE: RESERVED = 277;
+pub const OP_LOADKX: u32 = 4;
+pub const OP_LOADK: u32 = 3;
+pub const OP_GETUPVAL: u32 = 9;
+pub const OP_MOVE: u32 = 0;
+pub const OP_VARARGPREP: u32 = 81;
+pub const OP_VARARG: u32 = 80;
+pub const OP_CLOSURE: u32 = 79;
+pub const OP_SETLIST: u32 = 78;
+pub const OP_TFORLOOP: u32 = 77;
+pub const OP_TFORCALL: u32 = 76;
+pub const OP_TFORPREP: u32 = 75;
+pub const OP_FORPREP: u32 = 74;
+pub const OP_FORLOOP: u32 = 73;
+pub const OP_RETURN1: u32 = 72;
+pub const OP_RETURN0: u32 = 71;
+pub const OP_RETURN: u32 = 70;
+pub const OP_TAILCALL: u32 = 69;
+pub const OP_CALL: u32 = 68;
+pub const OP_TESTSET: u32 = 67;
+pub const OP_TEST: u32 = 66;
+pub const OP_GEI: u32 = 65;
+pub const OP_GTI: u32 = 64;
+pub const OP_LEI: u32 = 63;
+pub const OP_LTI: u32 = 62;
+pub const OP_EQI: u32 = 61;
+pub const OP_EQK: u32 = 60;
+pub const OP_LE: u32 = 59;
+pub const OP_LT: u32 = 58;
+pub const OP_EQ: u32 = 57;
+pub const OP_JMP: u32 = 56;
+pub const OP_TBC: u32 = 55;
+pub const OP_CLOSE: u32 = 54;
+pub const OP_CONCAT: u32 = 53;
+pub const OP_LEN: u32 = 52;
+pub const OP_NOT: u32 = 51;
+pub const OP_BNOT: u32 = 50;
+pub const OP_UNM: u32 = 49;
+pub const OP_MMBINK: u32 = 48;
+pub const OP_MMBINI: u32 = 47;
+pub const OP_MMBIN: u32 = 46;
+pub const OP_SHR: u32 = 45;
+pub const OP_SHL: u32 = 44;
+pub const OP_BXOR: u32 = 43;
+pub const OP_BOR: u32 = 42;
+pub const OP_BAND: u32 = 41;
+pub const OP_IDIV: u32 = 40;
+pub const OP_DIV: u32 = 39;
+pub const OP_POW: u32 = 38;
+pub const OP_MOD: u32 = 37;
+pub const OP_MUL: u32 = 36;
+pub const OP_SUB: u32 = 35;
+pub const OP_ADD: u32 = 34;
+pub const OP_SHLI: u32 = 33;
+pub const OP_SHRI: u32 = 32;
+pub const OP_BXORK: u32 = 31;
+pub const OP_BORK: u32 = 30;
+pub const OP_BANDK: u32 = 29;
+pub const OP_IDIVK: u32 = 28;
+pub const OP_DIVK: u32 = 27;
+pub const OP_POWK: u32 = 26;
+pub const OP_MODK: u32 = 25;
+pub const OP_MULK: u32 = 24;
+pub const OP_SUBK: u32 = 23;
+pub const OP_ADDK: u32 = 22;
+pub const OP_ADDI: u32 = 21;
+pub const OP_SELF: u32 = 20;
+pub const OP_NEWTABLE: u32 = 19;
+pub const OP_SETFIELD: u32 = 18;
+pub const OP_SETI: u32 = 17;
+pub const OP_SETTABLE: u32 = 16;
+pub const OP_SETTABUP: u32 = 15;
+pub const OP_GETFIELD: u32 = 14;
+pub const OP_GETI: u32 = 13;
+pub const OP_GETTABLE: u32 = 12;
+pub const OP_GETTABUP: u32 = 11;
+pub const OP_SETUPVAL: u32 = 10;
+pub const OP_LOADNIL: u32 = 8;
+pub const OP_LOADTRUE: u32 = 7;
+pub const OP_LFALSESKIP: u32 = 6;
+pub const OP_LOADFALSE: u32 = 5;
+pub const OP_LOADF: u32 = 2;
+pub const OP_LOADI: u32 = 1;
+pub const iAx: u32 = 3;
+pub const iABC: u32 = 0;
+pub const iABx: u32 = 1;
+pub const isJ: u32 = 4;
+pub const iAsBx: u32 = 2;
+pub const F2Iceil: u32 = 2;
+pub const F2Ifloor: u32 = 1;
+pub const F2Ieq: u32 = 0;
+pub const TK_WHILE: u32 = 277;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallS {
@@ -963,7 +951,7 @@ pub struct ZIO {
     pub p: *const libc::c_char,
     pub reader: lua_Reader,
     pub data: *mut libc::c_void,
-    pub L: *mut lua_State,
+    pub L: *mut State,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -1069,7 +1057,7 @@ pub struct LexState {
     pub t: Token,
     pub lookahead: Token,
     pub fs: *mut FuncState,
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub z: *mut ZIO,
     pub buff: *mut Mbuffer,
     pub h: *mut Table,
@@ -1090,11 +1078,11 @@ pub union SemInfo {
     pub i: i64,
     pub ts: *mut TString,
 }
-pub const TK_EOS: RESERVED = 288;
-pub const TK_INT: RESERVED = 290;
-pub const TK_FLT: RESERVED = 289;
-pub const TK_STRING: RESERVED = 292;
-pub const TK_NAME: RESERVED = 291;
+pub const TK_EOS: u32 = 288;
+pub const TK_INT: u32 = 290;
+pub const TK_FLT: u32 = 289;
+pub const TK_STRING: u32 = 292;
+pub const TK_NAME: u32 = 291;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_23 {
@@ -1120,79 +1108,77 @@ pub struct C2RustUnnamed_25 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct expdesc {
-    pub k: expkind,
+    pub k: u32,
     pub u: C2RustUnnamed_23,
     pub t: libc::c_int,
     pub f: libc::c_int,
 }
-pub type expkind = u32;
-pub const VVARARG: expkind = 19;
-pub const VCALL: expkind = 18;
-pub const VRELOC: expkind = 17;
-pub const VJMP: expkind = 16;
-pub const VINDEXSTR: expkind = 15;
-pub const VINDEXI: expkind = 14;
-pub const VINDEXUP: expkind = 13;
-pub const VINDEXED: expkind = 12;
-pub const VCONST: expkind = 11;
-pub const VUPVAL: expkind = 10;
-pub const VLOCAL: expkind = 9;
-pub const VNONRELOC: expkind = 8;
-pub const VKSTR: expkind = 7;
-pub const VKINT: expkind = 6;
-pub const VKFLT: expkind = 5;
-pub const VK: expkind = 4;
-pub const VFALSE: expkind = 3;
-pub const VTRUE: expkind = 2;
-pub const VNIL: expkind = 1;
-pub const VVOID: expkind = 0;
+pub const VVARARG: u32 = 19;
+pub const VCALL: u32 = 18;
+pub const VRELOC: u32 = 17;
+pub const VJMP: u32 = 16;
+pub const VINDEXSTR: u32 = 15;
+pub const VINDEXI: u32 = 14;
+pub const VINDEXUP: u32 = 13;
+pub const VINDEXED: u32 = 12;
+pub const VCONST: u32 = 11;
+pub const VUPVAL: u32 = 10;
+pub const VLOCAL: u32 = 9;
+pub const VNONRELOC: u32 = 8;
+pub const VKSTR: u32 = 7;
+pub const VKINT: u32 = 6;
+pub const VKFLT: u32 = 5;
+pub const VK: u32 = 4;
+pub const VFALSE: u32 = 3;
+pub const VTRUE: u32 = 2;
+pub const VNIL: u32 = 1;
+pub const VVOID: u32 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LHS_assign {
     pub prev: *mut LHS_assign,
     pub v: expdesc,
 }
-pub type BinOpr = u32;
-pub const OPR_NOBINOPR: BinOpr = 21;
-pub const OPR_OR: BinOpr = 20;
-pub const OPR_AND: BinOpr = 19;
-pub const OPR_GE: BinOpr = 18;
-pub const OPR_GT: BinOpr = 17;
-pub const OPR_NE: BinOpr = 16;
-pub const OPR_LE: BinOpr = 15;
-pub const OPR_LT: BinOpr = 14;
-pub const OPR_EQ: BinOpr = 13;
-pub const OPR_CONCAT: BinOpr = 12;
-pub const OPR_SHR: BinOpr = 11;
-pub const OPR_SHL: BinOpr = 10;
-pub const OPR_BXOR: BinOpr = 9;
-pub const OPR_BOR: BinOpr = 8;
-pub const OPR_BAND: BinOpr = 7;
-pub const OPR_IDIV: BinOpr = 6;
-pub const OPR_DIV: BinOpr = 5;
-pub const OPR_POW: BinOpr = 4;
-pub const OPR_MOD: BinOpr = 3;
-pub const OPR_MUL: BinOpr = 2;
-pub const OPR_SUB: BinOpr = 1;
-pub const OPR_ADD: BinOpr = 0;
+pub const OPR_NOBINOPR: u32 = 21;
+pub const OPR_OR: u32 = 20;
+pub const OPR_AND: u32 = 19;
+pub const OPR_GE: u32 = 18;
+pub const OPR_GT: u32 = 17;
+pub const OPR_NE: u32 = 16;
+pub const OPR_LE: u32 = 15;
+pub const OPR_LT: u32 = 14;
+pub const OPR_EQ: u32 = 13;
+pub const OPR_CONCAT: u32 = 12;
+pub const OPR_SHR: u32 = 11;
+pub const OPR_SHL: u32 = 10;
+pub const OPR_BXOR: u32 = 9;
+pub const OPR_BOR: u32 = 8;
+pub const OPR_BAND: u32 = 7;
+pub const OPR_IDIV: u32 = 6;
+pub const OPR_DIV: u32 = 5;
+pub const OPR_POW: u32 = 4;
+pub const OPR_MOD: u32 = 3;
+pub const OPR_MUL: u32 = 2;
+pub const OPR_SUB: u32 = 1;
+pub const OPR_ADD: u32 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_26 {
     pub left: u8,
     pub right: u8,
 }
-pub const TK_CONCAT: RESERVED = 279;
-pub const TK_DOTS: RESERVED = 280;
-pub const TK_DBCOLON: RESERVED = 287;
-pub const TK_NE: RESERVED = 284;
-pub const TK_IDIV: RESERVED = 278;
-pub const TK_SHR: RESERVED = 286;
-pub const TK_GE: RESERVED = 282;
-pub const TK_SHL: RESERVED = 285;
-pub const TK_LE: RESERVED = 283;
-pub const TK_EQ: RESERVED = 281;
-pub const TK_OR: RESERVED = 271;
-pub const TK_AND: RESERVED = 256;
+pub const TK_CONCAT: u32 = 279;
+pub const TK_DOTS: u32 = 280;
+pub const TK_DBCOLON: u32 = 287;
+pub const TK_NE: u32 = 284;
+pub const TK_IDIV: u32 = 278;
+pub const TK_SHR: u32 = 286;
+pub const TK_GE: u32 = 282;
+pub const TK_SHL: u32 = 285;
+pub const TK_LE: u32 = 283;
+pub const TK_EQ: u32 = 281;
+pub const TK_OR: u32 = 271;
+pub const TK_AND: u32 = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ConsControl {
@@ -1202,56 +1188,53 @@ pub struct ConsControl {
     pub na: libc::c_int,
     pub tostore: libc::c_int,
 }
-pub const TK_FUNCTION: RESERVED = 264;
-pub const TK_END: RESERVED = 261;
-pub const TK_FALSE: RESERVED = 262;
-pub const TK_TRUE: RESERVED = 275;
-pub const TK_NIL: RESERVED = 269;
-pub type UnOpr = u32;
-pub const OPR_NOUNOPR: UnOpr = 4;
-pub const OPR_LEN: UnOpr = 3;
-pub const OPR_NOT: UnOpr = 2;
-pub const OPR_BNOT: UnOpr = 1;
-pub const OPR_MINUS: UnOpr = 0;
-pub const TK_NOT: RESERVED = 270;
-pub const TK_GOTO: RESERVED = 265;
-pub const TK_BREAK: RESERVED = 257;
-pub const TK_UNTIL: RESERVED = 276;
-pub const TK_ELSEIF: RESERVED = 260;
-pub const TK_ELSE: RESERVED = 259;
-pub const TK_RETURN: RESERVED = 273;
-pub const TK_LOCAL: RESERVED = 268;
-pub const TK_REPEAT: RESERVED = 272;
-pub const TK_FOR: RESERVED = 263;
-pub const TK_DO: RESERVED = 258;
-pub const TK_IN: RESERVED = 267;
-pub const TK_IF: RESERVED = 266;
-pub const TK_THEN: RESERVED = 274;
+pub const TK_FUNCTION: u32 = 264;
+pub const TK_END: u32 = 261;
+pub const TK_FALSE: u32 = 262;
+pub const TK_TRUE: u32 = 275;
+pub const TK_NIL: u32 = 269;
+pub const OPR_NOUNOPR: u32 = 4;
+pub const OPR_LEN: u32 = 3;
+pub const OPR_NOT: u32 = 2;
+pub const OPR_BNOT: u32 = 1;
+pub const OPR_MINUS: u32 = 0;
+pub const TK_NOT: u32 = 270;
+pub const TK_GOTO: u32 = 265;
+pub const TK_BREAK: u32 = 257;
+pub const TK_UNTIL: u32 = 276;
+pub const TK_ELSEIF: u32 = 260;
+pub const TK_ELSE: u32 = 259;
+pub const TK_RETURN: u32 = 273;
+pub const TK_LOCAL: u32 = 268;
+pub const TK_REPEAT: u32 = 272;
+pub const TK_FOR: u32 = 263;
+pub const TK_DO: u32 = 258;
+pub const TK_IN: u32 = 267;
+pub const TK_IF: u32 = 266;
+pub const TK_THEN: u32 = 274;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LoadState {
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub Z: *mut ZIO,
     pub name: *const libc::c_char,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DumpState {
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub writer: lua_Writer,
     pub data: *mut libc::c_void,
     pub strip: libc::c_int,
     pub status: libc::c_int,
 }
-pub type OpMode = u32;
-pub type RESERVED = u32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct luaL_Buffer {
     pub b: *mut libc::c_char,
     pub size: u64,
     pub n: u64,
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub init: C2RustUnnamed_27,
 }
 #[derive(Copy, Clone)]
@@ -1303,38 +1286,37 @@ pub struct RN {
     pub n: libc::c_int,
     pub buff: [libc::c_char; 201],
 }
-pub const Knop: KOption = 10;
-pub const Kpadding: KOption = 8;
-pub const Kpaddalign: KOption = 9;
-pub const Kzstr: KOption = 7;
+pub const Knop: u32 = 10;
+pub const Kpadding: u32 = 8;
+pub const Kpaddalign: u32 = 9;
+pub const Kzstr: u32 = 7;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Header {
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub islittle: libc::c_int,
     pub maxalign: libc::c_int,
 }
-pub const Kstring: KOption = 6;
-pub const Kchar: KOption = 5;
+pub const Kstring: u32 = 6;
+pub const Kchar: u32 = 5;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_28 {
     pub dummy: libc::c_int,
     pub little: libc::c_char,
 }
-pub const Kdouble: KOption = 4;
-pub const Knumber: KOption = 3;
-pub const Kfloat: KOption = 2;
-pub const Kint: KOption = 0;
-pub type KOption = u32;
-pub const Kuint: KOption = 1;
+pub const Kdouble: u32 = 4;
+pub const Knumber: u32 = 3;
+pub const Kfloat: u32 = 2;
+pub const Kint: u32 = 0;
+pub const Kuint: u32 = 1;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchState {
     pub src_init: *const libc::c_char,
     pub src_end: *const libc::c_char,
     pub p_end: *const libc::c_char,
-    pub L: *mut lua_State,
+    pub L: *mut State,
     pub matchdepth: libc::c_int,
     pub level: libc::c_uchar,
     pub capture: [C2RustUnnamed_30; 32],
@@ -1365,7 +1347,7 @@ pub struct RanState {
     pub s: [libc::c_ulong; 4],
 }
 unsafe extern "C" fn luaD_seterrorobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut errcode: libc::c_int,
     mut oldtop: StkId,
 ) {
@@ -1395,7 +1377,7 @@ unsafe extern "C" fn luaD_seterrorobj(
     }
     (*L).top.p = oldtop.offset(1 as libc::c_int as isize);
 }
-unsafe extern "C" fn luaD_throw(mut L: *mut lua_State, mut errcode: libc::c_int) -> ! {
+unsafe extern "C" fn luaD_throw(mut L: *mut State, mut errcode: libc::c_int) -> ! {
     if !((*L).errorJmp).is_null() {
         ::core::ptr::write_volatile(
             &mut (*(*L).errorJmp).status as *mut libc::c_int,
@@ -1425,7 +1407,7 @@ unsafe extern "C" fn luaD_throw(mut L: *mut lua_State, mut errcode: libc::c_int)
     };
 }
 unsafe extern "C" fn luaD_rawrunprotected(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: Pfunc,
     mut ud: *mut libc::c_void,
 ) -> libc::c_int {
@@ -1433,7 +1415,6 @@ unsafe extern "C" fn luaD_rawrunprotected(
     let mut lj: lua_longjmp = lua_longjmp {
         previous: 0 as *mut lua_longjmp,
         b: [__jmp_buf_tag {
-            __jmpbuf: [0; 8],
             __mask_was_saved: 0,
             __saved_mask: __sigset_t { __val: [0; 16] },
         }; 1],
@@ -1450,7 +1431,7 @@ unsafe extern "C" fn luaD_rawrunprotected(
     (*L).nCcalls = oldnCcalls;
     return lj.status;
 }
-unsafe extern "C" fn relstack(mut L: *mut lua_State) {
+unsafe extern "C" fn relstack(mut L: *mut State) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     let mut up: *mut UpVal = 0 as *mut UpVal;
     (*L)
@@ -1482,7 +1463,7 @@ unsafe extern "C" fn relstack(mut L: *mut lua_State) {
         ci = (*ci).previous;
     }
 }
-unsafe extern "C" fn correctstack(mut L: *mut lua_State) {
+unsafe extern "C" fn correctstack(mut L: *mut State) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     let mut up: *mut UpVal = 0 as *mut UpVal;
     (*L)
@@ -1515,14 +1496,14 @@ unsafe extern "C" fn correctstack(mut L: *mut lua_State) {
         if (*ci).callstatus as libc::c_int & (1 as libc::c_int) << 1 as libc::c_int == 0
         {
             ::core::ptr::write_volatile(
-                &mut (*ci).u.l.trap as *mut sig_atomic_t,
+                &mut (*ci).u.l.trap as *mut i32,
                 1 as libc::c_int,
             );
         }
         ci = (*ci).previous;
     }
 }
-unsafe extern "C" fn luaD_errerr(mut L: *mut lua_State) -> ! {
+unsafe extern "C" fn luaD_errerr(mut L: *mut State) -> ! {
     let mut msg: *mut TString = luaS_newlstr(
         L,
         b"error in error handling\0" as *const u8 as *const libc::c_char,
@@ -1541,7 +1522,7 @@ unsafe extern "C" fn luaD_errerr(mut L: *mut lua_State) -> ! {
     luaD_throw(L, 5 as libc::c_int);
 }
 unsafe extern "C" fn luaD_reallocstack(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut newsize: libc::c_int,
     mut raiseerror: libc::c_int,
 ) -> libc::c_int {
@@ -1585,7 +1566,7 @@ unsafe extern "C" fn luaD_reallocstack(
     return 1;
 }
 unsafe extern "C" fn luaD_growstack(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut n: libc::c_int,
     mut raiseerror: libc::c_int,
 ) -> libc::c_int {
@@ -1620,7 +1601,7 @@ unsafe extern "C" fn luaD_growstack(
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn stackinuse(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn stackinuse(mut L: *mut State) -> libc::c_int {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     let mut res: libc::c_int = 0;
     let mut lim: StkId = (*L).top.p;
@@ -1638,7 +1619,7 @@ unsafe extern "C" fn stackinuse(mut L: *mut lua_State) -> libc::c_int {
     }
     return res;
 }
-unsafe extern "C" fn luaD_shrinkstack(mut L: *mut lua_State) {
+unsafe extern "C" fn luaD_shrinkstack(mut L: *mut State) {
     let mut inuse: libc::c_int = stackinuse(L);
     let mut max: libc::c_int = if inuse > 1000000 as libc::c_int / 3 as libc::c_int {
         1000000 as libc::c_int
@@ -1659,7 +1640,7 @@ unsafe extern "C" fn luaD_shrinkstack(mut L: *mut lua_State) {
     }
     luaE_shrinkCI(L);
 }
-unsafe extern "C" fn luaD_inctop(mut L: *mut lua_State) {
+unsafe extern "C" fn luaD_inctop(mut L: *mut State) {
     if ((((*L).stack_last.p).offset_from((*L).top.p) as libc::c_long
         <= 1 as libc::c_int as libc::c_long) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
@@ -1670,7 +1651,7 @@ unsafe extern "C" fn luaD_inctop(mut L: *mut lua_State) {
     (*L).top.p;
 }
 unsafe extern "C" fn luaD_hook(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut event: libc::c_int,
     mut line: libc::c_int,
     mut ftransfer: libc::c_int,
@@ -1737,7 +1718,7 @@ unsafe extern "C" fn luaD_hook(
         (*ci).callstatus = ((*ci).callstatus as libc::c_int & !mask) as libc::c_ushort;
     }
 }
-unsafe extern "C" fn luaD_hookcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
+unsafe extern "C" fn luaD_hookcall(mut L: *mut State, mut ci: *mut CallInfo) {
     (*L).oldpc = 0 as libc::c_int;
     if (*L).hookmask & (1 as libc::c_int) << 0 as libc::c_int != 0 {
         let mut event: libc::c_int = if (*ci).callstatus as libc::c_int
@@ -1765,7 +1746,7 @@ unsafe extern "C" fn luaD_hookcall(mut L: *mut lua_State, mut ci: *mut CallInfo)
     }
 }
 unsafe extern "C" fn rethook(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut nres: libc::c_int,
 ) {
@@ -1799,7 +1780,7 @@ unsafe extern "C" fn rethook(
             ) as libc::c_long as libc::c_int - 1 as libc::c_int;
     }
 }
-unsafe extern "C" fn tryfuncTM(mut L: *mut lua_State, mut func: StkId) -> StkId {
+unsafe extern "C" fn tryfuncTM(mut L: *mut State, mut func: StkId) -> StkId {
     let mut tm: *const TValue = 0 as *const TValue;
     let mut p: StkId = 0 as *mut StackValue;
     if ((((*L).stack_last.p).offset_from((*L).top.p) as libc::c_long
@@ -1838,7 +1819,7 @@ unsafe extern "C" fn tryfuncTM(mut L: *mut lua_State, mut func: StkId) -> StkId 
 }
 #[inline]
 unsafe extern "C" fn moveresults(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut res: StkId,
     mut nres: libc::c_int,
     mut wanted: libc::c_int,
@@ -1916,7 +1897,7 @@ unsafe extern "C" fn moveresults(
     (*L).top.p = res.offset(wanted as isize);
 }
 unsafe extern "C" fn luaD_poscall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut nres: libc::c_int,
 ) {
@@ -1931,7 +1912,7 @@ unsafe extern "C" fn luaD_poscall(
 }
 #[inline]
 unsafe extern "C" fn prepCallInfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nret: libc::c_int,
     mut mask: libc::c_int,
@@ -1952,7 +1933,7 @@ unsafe extern "C" fn prepCallInfo(
 }
 #[inline]
 unsafe extern "C" fn precallC(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nresults: libc::c_int,
     mut f: lua_CFunction,
@@ -1992,7 +1973,7 @@ unsafe extern "C" fn precallC(
     return n;
 }
 unsafe extern "C" fn luaD_pretailcall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut func: StkId,
     mut narg1: libc::c_int,
@@ -2066,7 +2047,7 @@ unsafe extern "C" fn luaD_pretailcall(
     };
 }
 unsafe extern "C" fn luaD_precall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nresults: libc::c_int,
 ) -> *mut CallInfo {
@@ -2136,7 +2117,7 @@ unsafe extern "C" fn luaD_precall(
 }
 #[inline]
 unsafe extern "C" fn ccall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nResults: libc::c_int,
     mut inc: u32,
@@ -2170,21 +2151,21 @@ unsafe extern "C" fn ccall(
         as u32;
 }
 unsafe extern "C" fn luaD_call(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nResults: libc::c_int,
 ) {
     ccall(L, func, nResults, 1 as u32);
 }
 unsafe extern "C" fn luaD_callnoyield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: StkId,
     mut nResults: libc::c_int,
 ) {
     ccall(L, func, nResults, (0x10000 as libc::c_int | 1 as libc::c_int) as u32);
 }
 unsafe extern "C" fn finishpcallk(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
 ) -> libc::c_int {
     let mut status: libc::c_int = (*ci).callstatus as libc::c_int >> 10 as libc::c_int
@@ -2213,7 +2194,7 @@ unsafe extern "C" fn finishpcallk(
     (*L).errfunc = (*ci).u.c.old_errfunc;
     return status;
 }
-unsafe extern "C" fn finishCcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
+unsafe extern "C" fn finishCcall(mut L: *mut State, mut ci: *mut CallInfo) {
     let mut n: libc::c_int = 0;
     if (*ci).callstatus as libc::c_int & (1 as libc::c_int) << 9 as libc::c_int != 0 {
         n = (*ci).u2.nres;
@@ -2231,7 +2212,7 @@ unsafe extern "C" fn finishCcall(mut L: *mut lua_State, mut ci: *mut CallInfo) {
     }
     luaD_poscall(L, ci, n);
 }
-unsafe extern "C" fn unroll(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
+unsafe extern "C" fn unroll(mut L: *mut State, mut _ud: *mut libc::c_void) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     loop {
         ci = (*L).ci;
@@ -2247,7 +2228,7 @@ unsafe extern "C" fn unroll(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
         }
     };
 }
-unsafe extern "C" fn findpcall(mut L: *mut lua_State) -> *mut CallInfo {
+unsafe extern "C" fn findpcall(mut L: *mut State) -> *mut CallInfo {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     ci = (*L).ci;
     while !ci.is_null() {
@@ -2260,7 +2241,7 @@ unsafe extern "C" fn findpcall(mut L: *mut lua_State) -> *mut CallInfo {
     return 0 as *mut CallInfo;
 }
 unsafe extern "C" fn resume_error(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut msg: *const libc::c_char,
     mut narg: libc::c_int,
 ) -> libc::c_int {
@@ -2275,7 +2256,7 @@ unsafe extern "C" fn resume_error(
     (*L).top.p;
     return 2 as libc::c_int;
 }
-unsafe extern "C" fn resume(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn resume(mut L: *mut State, mut ud: *mut libc::c_void) {
     let mut n: libc::c_int = *(ud as *mut libc::c_int);
     let mut firstArg: StkId = ((*L).top.p).offset(-(n as isize));
     let mut ci: *mut CallInfo = (*L).ci;
@@ -2307,7 +2288,7 @@ unsafe extern "C" fn resume(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
     };
 }
 unsafe extern "C" fn precover(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
 ) -> libc::c_int {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
@@ -2325,7 +2306,7 @@ unsafe extern "C" fn precover(
         status = luaD_rawrunprotected(
             L,
             Some(
-                unroll as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> (),
+                unroll as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> (),
             ),
             0 as *mut libc::c_void,
         );
@@ -2334,8 +2315,8 @@ unsafe extern "C" fn precover(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_resume(
-    mut L: *mut lua_State,
-    mut from: *mut lua_State,
+    mut L: *mut State,
+    mut from: *mut State,
     mut nargs: libc::c_int,
     mut nresults: *mut libc::c_int,
 ) -> libc::c_int {
@@ -2384,7 +2365,7 @@ pub unsafe extern "C" fn lua_resume(
     (*L).nCcalls;
     status = luaD_rawrunprotected(
         L,
-        Some(resume as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> ()),
+        Some(resume as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
         &mut nargs as *mut libc::c_int as *mut libc::c_void,
     );
     status = precover(L, status);
@@ -2404,13 +2385,13 @@ pub unsafe extern "C" fn lua_resume(
     return status;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_isyieldable(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_isyieldable(mut L: *mut State) -> libc::c_int {
     return ((*L).nCcalls & 0xffff0000 as libc::c_uint
         == 0 as libc::c_int as libc::c_uint) as libc::c_int;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_yieldk(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nresults: libc::c_int,
     mut ctx: i64,
     mut k: lua_KFunction,
@@ -2446,12 +2427,12 @@ pub unsafe extern "C" fn lua_yieldk(
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn closepaux(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn closepaux(mut L: *mut State, mut ud: *mut libc::c_void) {
     let mut pcl: *mut CloseP = ud as *mut CloseP;
     luaF_close(L, (*pcl).level, (*pcl).status, 0 as libc::c_int);
 }
 unsafe extern "C" fn luaD_closeprotected(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: i64,
     mut status: libc::c_int,
 ) -> libc::c_int {
@@ -2468,7 +2449,7 @@ unsafe extern "C" fn luaD_closeprotected(
             L,
             Some(
                 closepaux
-                    as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> (),
+                    as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> (),
             ),
             &mut pcl as *mut CloseP as *mut libc::c_void,
         );
@@ -2483,7 +2464,7 @@ unsafe extern "C" fn luaD_closeprotected(
     };
 }
 unsafe extern "C" fn luaD_pcall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: Pfunc,
     mut u: *mut libc::c_void,
     mut old_top: i64,
@@ -2512,7 +2493,7 @@ unsafe extern "C" fn luaD_pcall(
     return status;
 }
 unsafe extern "C" fn checkmode(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut mode: *const libc::c_char,
     mut x: *const libc::c_char,
 ) {
@@ -2529,7 +2510,7 @@ unsafe extern "C" fn checkmode(
         luaD_throw(L, 3 as libc::c_int);
     }
 }
-unsafe extern "C" fn f_parser(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn f_parser(mut L: *mut State, mut ud: *mut libc::c_void) {
     let mut cl: *mut LClosure = 0 as *mut LClosure;
     let mut p: *mut SParser = ud as *mut SParser;
     let fresh2 = (*(*p).z).n;
@@ -2556,7 +2537,7 @@ unsafe extern "C" fn f_parser(mut L: *mut lua_State, mut ud: *mut libc::c_void) 
     luaF_initupvals(L, cl);
 }
 unsafe extern "C" fn luaD_protectedparser(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut z: *mut ZIO,
     mut name: *const libc::c_char,
     mut mode: *const libc::c_char,
@@ -2605,7 +2586,7 @@ unsafe extern "C" fn luaD_protectedparser(
     p.buff.buffsize = 0 as libc::c_int as u64;
     status = luaD_pcall(
         L,
-        Some(f_parser as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> ()),
+        Some(f_parser as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
         &mut p as *mut SParser as *mut libc::c_void,
         ((*L).top.p as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char)
             as libc::c_long,
@@ -2655,7 +2636,7 @@ pub static mut lua_ident: [libc::c_char; 129] = unsafe {
     )
 };
 unsafe extern "C" fn index2value(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> *mut TValue {
     let mut ci: *mut CallInfo = (*L).ci;
@@ -2693,7 +2674,7 @@ unsafe extern "C" fn index2value(
     };
 }
 #[inline]
-unsafe extern "C" fn index2stack(mut L: *mut lua_State, mut idx: libc::c_int) -> StkId {
+unsafe extern "C" fn index2stack(mut L: *mut State, mut idx: libc::c_int) -> StkId {
     let mut ci: *mut CallInfo = (*L).ci;
     if idx > 0 as libc::c_int {
         let mut o: StkId = ((*ci).func.p).offset(idx as isize);
@@ -2704,7 +2685,7 @@ unsafe extern "C" fn index2stack(mut L: *mut lua_State, mut idx: libc::c_int) ->
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_checkstack(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut n: libc::c_int,
 ) -> libc::c_int {
     let mut res: libc::c_int = 0;
@@ -2722,8 +2703,8 @@ pub unsafe extern "C" fn lua_checkstack(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_xmove(
-    mut from: *mut lua_State,
-    mut to: *mut lua_State,
+    mut from: *mut State,
+    mut to: *mut State,
     mut n: libc::c_int,
 ) {
     let mut i: libc::c_int = 0;
@@ -2744,7 +2725,7 @@ pub unsafe extern "C" fn lua_xmove(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_atpanic(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut panicf: lua_CFunction,
 ) -> lua_CFunction {
     let mut old: lua_CFunction = None;
@@ -2753,12 +2734,12 @@ pub unsafe extern "C" fn lua_atpanic(
     return old;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_version(mut _L: *mut lua_State) -> f64 {
+pub unsafe extern "C" fn lua_version(mut _L: *mut State) -> f64 {
     return 504 as libc::c_int as f64;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_absindex(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     return if idx > 0 as libc::c_int
@@ -2770,13 +2751,13 @@ pub unsafe extern "C" fn lua_absindex(
     };
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_gettop(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_gettop(mut L: *mut State) -> libc::c_int {
     return ((*L).top.p)
         .offset_from(((*(*L).ci).func.p).offset(1 as libc::c_int as isize))
         as libc::c_long as libc::c_int;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_settop(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_settop(mut L: *mut State, mut idx: libc::c_int) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     let mut func: StkId = 0 as *mut StackValue;
     let mut newtop: StkId = 0 as *mut StackValue;
@@ -2807,7 +2788,7 @@ pub unsafe extern "C" fn lua_settop(mut L: *mut lua_State, mut idx: libc::c_int)
     (*L).top.p = newtop;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_closeslot(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_closeslot(mut L: *mut State, mut idx: libc::c_int) {
     let mut level: StkId = 0 as *mut StackValue;
     level = index2stack(L, idx);
     level = luaF_close(L, level, -(1 as libc::c_int), 0 as libc::c_int);
@@ -2816,7 +2797,7 @@ pub unsafe extern "C" fn lua_closeslot(mut L: *mut lua_State, mut idx: libc::c_i
         .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
 }
 #[inline]
-unsafe extern "C" fn reverse(mut _L: *mut lua_State, mut from: StkId, mut to: StkId) {
+unsafe extern "C" fn reverse(mut _L: *mut State, mut from: StkId, mut to: StkId) {
     while from < to {
         let mut temp: TValue = TValue {
             value_: Value { gc: 0 as *mut GCObject },
@@ -2840,7 +2821,7 @@ unsafe extern "C" fn reverse(mut _L: *mut lua_State, mut from: StkId, mut to: St
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rotate(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: libc::c_int,
 ) {
@@ -2860,7 +2841,7 @@ pub unsafe extern "C" fn lua_rotate(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_copy(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fromidx: libc::c_int,
     mut toidx: libc::c_int,
 ) {
@@ -2893,7 +2874,7 @@ pub unsafe extern "C" fn lua_copy(
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushvalue(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_pushvalue(mut L: *mut State, mut idx: libc::c_int) {
     let mut io1: *mut TValue = &mut (*(*L).top.p).val;
     let mut io2: *const TValue = index2value(L, idx);
     (*io1).value_ = (*io2).value_;
@@ -2903,7 +2884,7 @@ pub unsafe extern "C" fn lua_pushvalue(mut L: *mut lua_State, mut idx: libc::c_i
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_type(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -2917,14 +2898,14 @@ pub unsafe extern "C" fn lua_type(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_typename(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut t: libc::c_int,
 ) -> *const libc::c_char {
     return luaT_typenames_[(t + 1 as libc::c_int) as usize];
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_iscfunction(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -2936,7 +2917,7 @@ pub unsafe extern "C" fn lua_iscfunction(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isinteger(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -2945,7 +2926,7 @@ pub unsafe extern "C" fn lua_isinteger(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isnumber(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut n: f64 = 0.;
@@ -2961,7 +2942,7 @@ pub unsafe extern "C" fn lua_isnumber(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -2971,7 +2952,7 @@ pub unsafe extern "C" fn lua_isstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isuserdata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -2983,7 +2964,7 @@ pub unsafe extern "C" fn lua_isuserdata(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawequal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut index1: libc::c_int,
     mut index2: libc::c_int,
 ) -> libc::c_int {
@@ -2994,13 +2975,13 @@ pub unsafe extern "C" fn lua_rawequal(
         && (!((*o2).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int)
             || o2 != &mut (*(*L).l_G).nilvalue as *mut TValue as *const TValue)
     {
-        luaV_equalobj(0 as *mut lua_State, o1, o2)
+        luaV_equalobj(0 as *mut State, o1, o2)
     } else {
         0 as libc::c_int
     };
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_arith(mut L: *mut lua_State, mut op: libc::c_int) {
+pub unsafe extern "C" fn lua_arith(mut L: *mut State, mut op: libc::c_int) {
     if !(op != 12 as libc::c_int && op != 13 as libc::c_int) {
         let mut io1: *mut TValue = &mut (*(*L).top.p).val;
         let mut io2: *const TValue = &mut (*((*L).top.p)
@@ -3023,7 +3004,7 @@ pub unsafe extern "C" fn lua_arith(mut L: *mut lua_State, mut op: libc::c_int) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_compare(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut index1: libc::c_int,
     mut index2: libc::c_int,
     mut op: libc::c_int,
@@ -3055,7 +3036,7 @@ pub unsafe extern "C" fn lua_compare(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_stringtonumber(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
 ) -> u64 {
     let mut sz: u64 = luaO_str2num(s, &mut (*(*L).top.p).val);
@@ -3067,7 +3048,7 @@ pub unsafe extern "C" fn lua_stringtonumber(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_tonumberx(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut pisnum: *mut libc::c_int,
 ) -> f64 {
@@ -3088,7 +3069,7 @@ pub unsafe extern "C" fn lua_tonumberx(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_tointegerx(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut pisnum: *mut libc::c_int,
 ) -> i64 {
@@ -3110,7 +3091,7 @@ pub unsafe extern "C" fn lua_tointegerx(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_toboolean(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut o: *const TValue = index2value(L, idx);
@@ -3121,7 +3102,7 @@ pub unsafe extern "C" fn lua_toboolean(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_tolstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut len: *mut u64,
 ) -> *const libc::c_char {
@@ -3153,7 +3134,7 @@ pub unsafe extern "C" fn lua_tolstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawlen(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> u64 {
     let mut o: *const TValue = index2value(L, idx);
@@ -3167,7 +3148,7 @@ pub unsafe extern "C" fn lua_rawlen(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_tocfunction(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> lua_CFunction {
     let mut o: *const TValue = index2value(L, idx);
@@ -3213,7 +3194,7 @@ unsafe extern "C" fn touserdata(mut o: *const TValue) -> *mut libc::c_void {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_touserdata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> *mut libc::c_void {
     let mut o: *const TValue = index2value(L, idx);
@@ -3221,22 +3202,22 @@ pub unsafe extern "C" fn lua_touserdata(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_tothread(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
-) -> *mut lua_State {
+) -> *mut State {
     let mut o: *const TValue = index2value(L, idx);
     return if !((*o).tt_ as libc::c_int
         == 8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
             | (1 as libc::c_int) << 6 as libc::c_int)
     {
-        0 as *mut lua_State
+        0 as *mut State
     } else {
         &mut (*((*o).value_.gc as *mut GCUnion)).th
     };
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_topointer(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> *const libc::c_void {
     let mut o: *const TValue = index2value(L, idx);
@@ -3256,7 +3237,7 @@ pub unsafe extern "C" fn lua_topointer(
     };
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushnil(mut L: *mut lua_State) {
+pub unsafe extern "C" fn lua_pushnil(mut L: *mut State) {
     (*(*L).top.p)
         .val
         .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
@@ -3264,7 +3245,7 @@ pub unsafe extern "C" fn lua_pushnil(mut L: *mut lua_State) {
     (*L).top.p;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushnumber(mut L: *mut lua_State, mut n: f64) {
+pub unsafe extern "C" fn lua_pushnumber(mut L: *mut State, mut n: f64) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     (*io).value_.n = n;
     (*io).tt_ = (3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int) as u8;
@@ -3272,7 +3253,7 @@ pub unsafe extern "C" fn lua_pushnumber(mut L: *mut lua_State, mut n: f64) {
     (*L).top.p;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushinteger(mut L: *mut lua_State, mut n: i64) {
+pub unsafe extern "C" fn lua_pushinteger(mut L: *mut State, mut n: i64) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     (*io).value_.i = n;
     (*io).tt_ = (3 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
@@ -3281,7 +3262,7 @@ pub unsafe extern "C" fn lua_pushinteger(mut L: *mut lua_State, mut n: i64) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushlstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
     mut len: u64,
 ) -> *const libc::c_char {
@@ -3306,7 +3287,7 @@ pub unsafe extern "C" fn lua_pushlstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
 ) -> *const libc::c_char {
     if s.is_null() {
@@ -3334,7 +3315,7 @@ pub unsafe extern "C" fn lua_pushstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushvfstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut argp: ::core::ffi::VaList,
 ) -> *const libc::c_char {
@@ -3347,7 +3328,7 @@ pub unsafe extern "C" fn lua_pushvfstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushfstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut args: ...
 ) -> *const libc::c_char {
@@ -3362,7 +3343,7 @@ pub unsafe extern "C" fn lua_pushfstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushcclosure(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fn_0: lua_CFunction,
     mut n: libc::c_int,
 ) {
@@ -3406,7 +3387,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
     };
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushboolean(mut L: *mut lua_State, mut b: libc::c_int) {
+pub unsafe extern "C" fn lua_pushboolean(mut L: *mut State, mut b: libc::c_int) {
     if b != 0 {
         (*(*L).top.p)
             .val
@@ -3423,7 +3404,7 @@ pub unsafe extern "C" fn lua_pushboolean(mut L: *mut lua_State, mut b: libc::c_i
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushlightuserdata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *mut libc::c_void,
 ) {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
@@ -3433,9 +3414,9 @@ pub unsafe extern "C" fn lua_pushlightuserdata(
     (*L).top.p;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_pushthread(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_pushthread(mut L: *mut State) -> libc::c_int {
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
-    let mut x_: *mut lua_State = L;
+    let mut x_: *mut State = L;
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = (8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
@@ -3446,7 +3427,7 @@ pub unsafe extern "C" fn lua_pushthread(mut L: *mut lua_State) -> libc::c_int {
 }
 #[inline]
 unsafe extern "C" fn auxgetstr(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *const TValue,
     mut k: *const libc::c_char,
 ) -> libc::c_int {
@@ -3492,7 +3473,7 @@ unsafe extern "C" fn auxgetstr(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getglobal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut name: *const libc::c_char,
 ) -> libc::c_int {
     let mut G: *const TValue = 0 as *const TValue;
@@ -3502,7 +3483,7 @@ pub unsafe extern "C" fn lua_getglobal(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_gettable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut slot: *const TValue = 0 as *const TValue;
@@ -3543,7 +3524,7 @@ pub unsafe extern "C" fn lua_gettable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut k: *const libc::c_char,
 ) -> libc::c_int {
@@ -3551,7 +3532,7 @@ pub unsafe extern "C" fn lua_getfield(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_geti(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: i64,
 ) -> libc::c_int {
@@ -3602,7 +3583,7 @@ pub unsafe extern "C" fn lua_geti(
 }
 #[inline]
 unsafe extern "C" fn finishrawget(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut val: *const TValue,
 ) -> libc::c_int {
     if (*val).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int {
@@ -3622,7 +3603,7 @@ unsafe extern "C" fn finishrawget(
         & 0xf as libc::c_int;
 }
 unsafe extern "C" fn gettable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> *mut Table {
     let mut t: *mut TValue = index2value(L, idx);
@@ -3630,7 +3611,7 @@ unsafe extern "C" fn gettable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawget(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut t: *mut Table = 0 as *mut Table;
@@ -3643,7 +3624,7 @@ pub unsafe extern "C" fn lua_rawget(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawgeti(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: i64,
 ) -> libc::c_int {
@@ -3653,7 +3634,7 @@ pub unsafe extern "C" fn lua_rawgeti(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawgetp(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut p: *const libc::c_void,
 ) -> libc::c_int {
@@ -3670,7 +3651,7 @@ pub unsafe extern "C" fn lua_rawgetp(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_createtable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut narray: libc::c_int,
     mut nrec: libc::c_int,
 ) {
@@ -3693,7 +3674,7 @@ pub unsafe extern "C" fn lua_createtable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getmetatable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut objindex: libc::c_int,
 ) -> libc::c_int {
     let mut obj: *const TValue = 0 as *const TValue;
@@ -3727,7 +3708,7 @@ pub unsafe extern "C" fn lua_getmetatable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getiuservalue(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: libc::c_int,
 ) -> libc::c_int {
@@ -3757,7 +3738,7 @@ pub unsafe extern "C" fn lua_getiuservalue(
     return t;
 }
 unsafe extern "C" fn auxsetstr(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *const TValue,
     mut k: *const libc::c_char,
 ) {
@@ -3817,7 +3798,7 @@ unsafe extern "C" fn auxsetstr(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setglobal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut name: *const libc::c_char,
 ) {
     let mut G: *const TValue = 0 as *const TValue;
@@ -3826,7 +3807,7 @@ pub unsafe extern "C" fn lua_setglobal(
     auxsetstr(L, G, name);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_settable(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_settable(mut L: *mut State, mut idx: libc::c_int) {
     let mut t: *mut TValue = 0 as *mut TValue;
     let mut slot: *const TValue = 0 as *const TValue;
     t = index2value(L, idx);
@@ -3877,7 +3858,7 @@ pub unsafe extern "C" fn lua_settable(mut L: *mut lua_State, mut idx: libc::c_in
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut k: *const libc::c_char,
 ) {
@@ -3885,7 +3866,7 @@ pub unsafe extern "C" fn lua_setfield(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_seti(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: i64,
 ) {
@@ -3954,7 +3935,7 @@ pub unsafe extern "C" fn lua_seti(
     (*L).top.p;
 }
 unsafe extern "C" fn aux_rawset(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut key: *mut TValue,
     mut n: libc::c_int,
@@ -3982,7 +3963,7 @@ unsafe extern "C" fn aux_rawset(
     (*L).top.p = ((*L).top.p).offset(-(n as isize));
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_rawset(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_rawset(mut L: *mut State, mut idx: libc::c_int) {
     aux_rawset(
         L,
         idx,
@@ -3992,7 +3973,7 @@ pub unsafe extern "C" fn lua_rawset(mut L: *mut lua_State, mut idx: libc::c_int)
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawsetp(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut p: *const libc::c_void,
 ) {
@@ -4007,7 +3988,7 @@ pub unsafe extern "C" fn lua_rawsetp(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_rawseti(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: i64,
 ) {
@@ -4032,7 +4013,7 @@ pub unsafe extern "C" fn lua_rawseti(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setmetatable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut objindex: libc::c_int,
 ) -> libc::c_int {
     let mut obj: *mut TValue = 0 as *mut TValue;
@@ -4099,7 +4080,7 @@ pub unsafe extern "C" fn lua_setmetatable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setiuservalue(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut n: libc::c_int,
 ) -> libc::c_int {
@@ -4141,7 +4122,7 @@ pub unsafe extern "C" fn lua_setiuservalue(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_callk(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nargs: libc::c_int,
     mut nresults: libc::c_int,
     mut ctx: i64,
@@ -4162,13 +4143,13 @@ pub unsafe extern "C" fn lua_callk(
         (*(*L).ci).top.p = (*L).top.p;
     }
 }
-unsafe extern "C" fn f_call(mut L: *mut lua_State, mut ud: *mut libc::c_void) {
+unsafe extern "C" fn f_call(mut L: *mut State, mut ud: *mut libc::c_void) {
     let mut c: *mut CallS = ud as *mut CallS;
     luaD_callnoyield(L, (*c).func, (*c).nresults);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pcallk(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nargs: libc::c_int,
     mut nresults: libc::c_int,
     mut errfunc: libc::c_int,
@@ -4197,7 +4178,7 @@ pub unsafe extern "C" fn lua_pcallk(
         status = luaD_pcall(
             L,
             Some(
-                f_call as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> (),
+                f_call as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> (),
             ),
             &mut c as *mut CallS as *mut libc::c_void,
             (c.func as *mut libc::c_char).offset_from((*L).stack.p as *mut libc::c_char)
@@ -4236,7 +4217,7 @@ pub unsafe extern "C" fn lua_pcallk(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_load(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut reader: lua_Reader,
     mut data: *mut libc::c_void,
     mut chunkname: *const libc::c_char,
@@ -4247,7 +4228,7 @@ pub unsafe extern "C" fn lua_load(
         p: 0 as *const libc::c_char,
         reader: None,
         data: 0 as *mut libc::c_void,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
     };
     let mut status: libc::c_int = 0;
     if chunkname.is_null() {
@@ -4300,7 +4281,7 @@ pub unsafe extern "C" fn lua_load(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_dump(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut writer_0: lua_Writer,
     mut data: *mut libc::c_void,
     mut strip: libc::c_int,
@@ -4325,12 +4306,12 @@ pub unsafe extern "C" fn lua_dump(
     return status;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_status(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_status(mut L: *mut State) -> libc::c_int {
     return (*L).status as libc::c_int;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_gc(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut what: libc::c_int,
     mut args: ...
 ) -> libc::c_int {
@@ -4442,7 +4423,7 @@ pub unsafe extern "C" fn lua_gc(
     return res;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_error(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_error(mut L: *mut State) -> libc::c_int {
     let mut errobj: *mut TValue = 0 as *mut TValue;
     errobj = &mut (*((*L).top.p).offset(-(1 as libc::c_int as isize))).val;
     if (*errobj).tt_ as libc::c_int
@@ -4458,7 +4439,7 @@ pub unsafe extern "C" fn lua_error(mut L: *mut lua_State) -> libc::c_int {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_next(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> libc::c_int {
     let mut t: *mut Table = 0 as *mut Table;
@@ -4474,7 +4455,7 @@ pub unsafe extern "C" fn lua_next(
     return more;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_toclose(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_toclose(mut L: *mut State, mut idx: libc::c_int) {
     let mut nresults: libc::c_int = 0;
     let mut o: StkId = 0 as *mut StackValue;
     o = index2stack(L, idx);
@@ -4485,7 +4466,7 @@ pub unsafe extern "C" fn lua_toclose(mut L: *mut lua_State, mut idx: libc::c_int
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_concat(mut L: *mut lua_State, mut n: libc::c_int) {
+pub unsafe extern "C" fn lua_concat(mut L: *mut State, mut n: libc::c_int) {
     if n > 0 as libc::c_int {
         luaV_concat(L, n);
     } else {
@@ -4507,7 +4488,7 @@ pub unsafe extern "C" fn lua_concat(mut L: *mut lua_State, mut n: libc::c_int) {
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_len(mut L: *mut lua_State, mut idx: libc::c_int) {
+pub unsafe extern "C" fn lua_len(mut L: *mut State, mut idx: libc::c_int) {
     let mut t: *mut TValue = 0 as *mut TValue;
     t = index2value(L, idx);
     luaV_objlen(L, (*L).top.p, t);
@@ -4516,7 +4497,7 @@ pub unsafe extern "C" fn lua_len(mut L: *mut lua_State, mut idx: libc::c_int) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getallocf(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ud: *mut *mut libc::c_void,
 ) -> lua_Alloc {
     let mut f: lua_Alloc = None;
@@ -4528,7 +4509,7 @@ pub unsafe extern "C" fn lua_getallocf(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setallocf(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: lua_Alloc,
     mut ud: *mut libc::c_void,
 ) {
@@ -4537,7 +4518,7 @@ pub unsafe extern "C" fn lua_setallocf(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setwarnf(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: lua_WarnFunction,
     mut ud: *mut libc::c_void,
 ) {
@@ -4546,7 +4527,7 @@ pub unsafe extern "C" fn lua_setwarnf(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_warning(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut msg: *const libc::c_char,
     mut tocont: libc::c_int,
 ) {
@@ -4554,7 +4535,7 @@ pub unsafe extern "C" fn lua_warning(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newuserdatauv(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut size: u64,
     mut nuvalue: libc::c_int,
 ) -> *mut libc::c_void {
@@ -4638,7 +4619,7 @@ unsafe extern "C" fn aux_upvalue(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getupvalue(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut funcindex: libc::c_int,
     mut n: libc::c_int,
 ) -> *const libc::c_char {
@@ -4657,7 +4638,7 @@ pub unsafe extern "C" fn lua_getupvalue(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setupvalue(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut funcindex: libc::c_int,
     mut n: libc::c_int,
 ) -> *const libc::c_char {
@@ -4692,7 +4673,7 @@ pub unsafe extern "C" fn lua_setupvalue(
     return name;
 }
 unsafe extern "C" fn getupvalref(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fidx: libc::c_int,
     mut n: libc::c_int,
     mut pf: *mut *mut LClosure,
@@ -4713,7 +4694,7 @@ unsafe extern "C" fn getupvalref(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_upvalueid(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fidx: libc::c_int,
     mut n: libc::c_int,
 ) -> *mut libc::c_void {
@@ -4738,7 +4719,7 @@ pub unsafe extern "C" fn lua_upvalueid(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_upvaluejoin(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fidx1: libc::c_int,
     mut n1: libc::c_int,
     mut fidx2: libc::c_int,
@@ -4760,7 +4741,7 @@ pub unsafe extern "C" fn lua_upvaluejoin(
         );
     } else {};
 }
-unsafe extern "C" fn luai_makeseed(mut L: *mut lua_State) -> libc::c_uint {
+unsafe extern "C" fn luai_makeseed(mut L: *mut State) -> libc::c_uint {
     let mut buff: [libc::c_char; 24] = [0; 24];
     let mut h: libc::c_uint = time(0 as *mut i64) as libc::c_uint;
     let mut p: libc::c_int = 0 as libc::c_int;
@@ -4783,12 +4764,12 @@ unsafe extern "C" fn luai_makeseed(mut L: *mut lua_State) -> libc::c_uint {
         .wrapping_add(::core::mem::size_of::<u64>() as libc::c_ulong) as libc::c_int
         as libc::c_int;
     let mut t_1: u64 = ::core::mem::transmute::<
-        Option::<unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut lua_State>,
+        Option::<unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut State>,
         u64,
     >(
         Some(
             lua_newstate
-                as unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut lua_State,
+                as unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut State,
         ),
     );
     memcpy(
@@ -4811,12 +4792,12 @@ unsafe extern "C" fn luaE_setdebt(mut g: *mut global_State, mut debt: i64) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut _limit: libc::c_uint,
 ) -> libc::c_int {
     return 200 as libc::c_int;
 }
-unsafe extern "C" fn luaE_extendCI(mut L: *mut lua_State) -> *mut CallInfo {
+unsafe extern "C" fn luaE_extendCI(mut L: *mut State) -> *mut CallInfo {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     ci = luaM_malloc_(
         L,
@@ -4827,14 +4808,14 @@ unsafe extern "C" fn luaE_extendCI(mut L: *mut lua_State) -> *mut CallInfo {
     (*ci).previous = (*L).ci;
     (*ci).next = 0 as *mut CallInfo;
     ::core::ptr::write_volatile(
-        &mut (*ci).u.l.trap as *mut sig_atomic_t,
+        &mut (*ci).u.l.trap as *mut i32,
         0,
     );
     (*L).nci = ((*L).nci).wrapping_add(1);
     (*L).nci;
     return ci;
 }
-unsafe extern "C" fn freeCI(mut L: *mut lua_State) {
+unsafe extern "C" fn freeCI(mut L: *mut State) {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut next: *mut CallInfo = (*ci).next;
     (*ci).next = 0 as *mut CallInfo;
@@ -4853,7 +4834,7 @@ unsafe extern "C" fn freeCI(mut L: *mut lua_State) {
         (*L).nci;
     };
 }
-unsafe extern "C" fn luaE_shrinkCI(mut L: *mut lua_State) {
+unsafe extern "C" fn luaE_shrinkCI(mut L: *mut State) {
     let mut ci: *mut CallInfo = (*(*L).ci).next;
     let mut next: *mut CallInfo = 0 as *mut CallInfo;
     if ci.is_null() {
@@ -4880,7 +4861,7 @@ unsafe extern "C" fn luaE_shrinkCI(mut L: *mut lua_State) {
         ci = next2;
     };
 }
-unsafe extern "C" fn luaE_checkcstack(mut L: *mut lua_State) {
+unsafe extern "C" fn luaE_checkcstack(mut L: *mut State) {
     if (*L).nCcalls & 0xffff as libc::c_int as libc::c_uint
         == 200 as libc::c_int as libc::c_uint
     {
@@ -4891,7 +4872,7 @@ unsafe extern "C" fn luaE_checkcstack(mut L: *mut lua_State) {
         luaD_errerr(L);
     }
 }
-unsafe extern "C" fn luaE_incCstack(mut L: *mut lua_State) {
+unsafe extern "C" fn luaE_incCstack(mut L: *mut State) {
     (*L).nCcalls = ((*L).nCcalls).wrapping_add(1);
     (*L).nCcalls;
     if (((*L).nCcalls & 0xffff as libc::c_int as libc::c_uint
@@ -4901,7 +4882,7 @@ unsafe extern "C" fn luaE_incCstack(mut L: *mut lua_State) {
         luaE_checkcstack(L);
     }
 }
-unsafe extern "C" fn stack_init(mut L1: *mut lua_State, mut L: *mut lua_State) {
+unsafe extern "C" fn stack_init(mut L1: *mut State, mut L: *mut State) {
     let mut i: libc::c_int = 0;
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     (*L1)
@@ -4940,7 +4921,7 @@ unsafe extern "C" fn stack_init(mut L1: *mut lua_State, mut L: *mut lua_State) {
     (*ci).top.p = ((*L1).top.p).offset(20 as libc::c_int as isize);
     (*L1).ci = ci;
 }
-unsafe extern "C" fn freestack(mut L: *mut lua_State) {
+unsafe extern "C" fn freestack(mut L: *mut State) {
     if ((*L).stack.p).is_null() {
         return;
     }
@@ -4954,7 +4935,7 @@ unsafe extern "C" fn freestack(mut L: *mut lua_State) {
             .wrapping_mul(::core::mem::size_of::<StackValue>() as libc::c_ulong),
     );
 }
-unsafe extern "C" fn init_registry(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn init_registry(mut L: *mut State, mut g: *mut global_State) {
     let mut registry: *mut Table = luaH_new(L);
     let mut io: *mut TValue = &mut (*g).l_registry;
     let mut x_: *mut Table = registry;
@@ -4970,7 +4951,7 @@ unsafe extern "C" fn init_registry(mut L: *mut lua_State, mut g: *mut global_Sta
     );
     let mut io_0: *mut TValue = &mut *((*registry).array)
         .offset((1 as libc::c_int - 1 as libc::c_int) as isize) as *mut TValue;
-    let mut x__0: *mut lua_State = L;
+    let mut x__0: *mut State = L;
     (*io_0).value_.gc = &mut (*(x__0 as *mut GCUnion)).gc;
     (*io_0)
         .tt_ = (8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
@@ -4983,7 +4964,7 @@ unsafe extern "C" fn init_registry(mut L: *mut lua_State, mut g: *mut global_Sta
         .tt_ = (5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
         | (1 as libc::c_int) << 6 as libc::c_int) as u8;
 }
-unsafe extern "C" fn f_luaopen(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
+unsafe extern "C" fn f_luaopen(mut L: *mut State, mut _ud: *mut libc::c_void) {
     let mut g: *mut global_State = (*L).l_G;
     stack_init(L, L);
     init_registry(L, g);
@@ -4995,7 +4976,7 @@ unsafe extern "C" fn f_luaopen(mut L: *mut lua_State, mut _ud: *mut libc::c_void
         .nilvalue
         .tt_ = (0 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int) as u8;
 }
-unsafe extern "C" fn preinit_thread(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn preinit_thread(mut L: *mut State, mut g: *mut global_State) {
     (*L).l_G = g;
     (*L).stack.p = 0 as StkId;
     (*L).ci = 0 as *mut CallInfo;
@@ -5005,7 +4986,7 @@ unsafe extern "C" fn preinit_thread(mut L: *mut lua_State, mut g: *mut global_St
     (*L).errorJmp = 0 as *mut lua_longjmp;
     ::core::ptr::write_volatile(&mut (*L).hook as *mut lua_Hook, None);
     ::core::ptr::write_volatile(
-        &mut (*L).hookmask as *mut sig_atomic_t,
+        &mut (*L).hookmask as *mut i32,
         0,
     );
     (*L).basehookcount = 0 as libc::c_int;
@@ -5016,7 +4997,7 @@ unsafe extern "C" fn preinit_thread(mut L: *mut lua_State, mut g: *mut global_St
     (*L).errfunc = 0 as libc::c_int as i64;
     (*L).oldpc = 0 as libc::c_int;
 }
-unsafe extern "C" fn close_state(mut L: *mut lua_State) {
+unsafe extern "C" fn close_state(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     if !((*g).nilvalue.tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int) {
         luaC_freeallobjects(L);
@@ -5046,10 +5027,10 @@ unsafe extern "C" fn close_state(mut L: *mut lua_State) {
     );
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State {
+pub unsafe extern "C" fn lua_newthread(mut L: *mut State) -> *mut State {
     let mut g: *mut global_State = (*L).l_G;
     let mut o: *mut GCObject = 0 as *mut GCObject;
-    let mut L1: *mut lua_State = 0 as *mut lua_State;
+    let mut L1: *mut State = 0 as *mut State;
     if (*(*L).l_G).GCdebt > 0 as libc::c_int as libc::c_long {
         luaC_step(L);
     }
@@ -5061,7 +5042,7 @@ pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State 
     );
     L1 = &mut (*(o as *mut GCUnion)).th;
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
-    let mut x_: *mut lua_State = L1;
+    let mut x_: *mut State = L1;
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io)
         .tt_ = (8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
@@ -5069,7 +5050,7 @@ pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State 
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
     preinit_thread(L1, g);
-    ::core::ptr::write_volatile(&mut (*L1).hookmask as *mut sig_atomic_t, (*L).hookmask);
+    ::core::ptr::write_volatile(&mut (*L1).hookmask as *mut i32, (*L).hookmask);
     (*L1).basehookcount = (*L).basehookcount;
     ::core::ptr::write_volatile(&mut (*L1).hook as *mut lua_Hook, (*L).hook);
     (*L1).hookcount = (*L1).basehookcount;
@@ -5087,7 +5068,7 @@ pub unsafe extern "C" fn lua_newthread(mut L: *mut lua_State) -> *mut lua_State 
     stack_init(L1, L);
     return L1;
 }
-unsafe extern "C" fn luaE_freethread(mut L: *mut lua_State, mut L1: *mut lua_State) {
+unsafe extern "C" fn luaE_freethread(mut L: *mut State, mut L1: *mut State) {
     let mut l: *mut LX = (L1 as *mut u8).offset(-(8 as libc::c_ulong as isize))
         as *mut LX;
     luaF_closeupval(L1, (*L1).stack.p);
@@ -5095,7 +5076,7 @@ unsafe extern "C" fn luaE_freethread(mut L: *mut lua_State, mut L1: *mut lua_Sta
     luaM_free_(L, l as *mut libc::c_void, ::core::mem::size_of::<LX>() as libc::c_ulong);
 }
 unsafe extern "C" fn luaE_resetthread(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
 ) -> libc::c_int {
     (*L).ci = &mut (*L).base_ci;
@@ -5126,8 +5107,8 @@ unsafe extern "C" fn luaE_resetthread(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_closethread(
-    mut L: *mut lua_State,
-    mut from: *mut lua_State,
+    mut L: *mut State,
+    mut from: *mut State,
 ) -> libc::c_int {
     let mut status: libc::c_int = 0;
     (*L)
@@ -5140,16 +5121,16 @@ pub unsafe extern "C" fn lua_closethread(
     return status;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_resetthread(mut L: *mut lua_State) -> libc::c_int {
-    return lua_closethread(L, 0 as *mut lua_State);
+pub unsafe extern "C" fn lua_resetthread(mut L: *mut State) -> libc::c_int {
+    return lua_closethread(L, 0 as *mut State);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newstate(
     mut f: lua_Alloc,
     mut ud: *mut libc::c_void,
-) -> *mut lua_State {
+) -> *mut State {
     let mut i: libc::c_int = 0;
-    let mut L: *mut lua_State = 0 as *mut lua_State;
+    let mut L: *mut State = 0 as *mut State;
     let mut g: *mut global_State = 0 as *mut global_State;
     let mut l: *mut LG = (Some(f.expect("non-null function pointer")))
         .expect(
@@ -5161,7 +5142,7 @@ pub unsafe extern "C" fn lua_newstate(
         ::core::mem::size_of::<LG>() as libc::c_ulong,
     ) as *mut LG;
     if l.is_null() {
-        return 0 as *mut lua_State;
+        return 0 as *mut State;
     }
     L = &mut (*l).l.l;
     g = &mut (*l).g;
@@ -5211,7 +5192,7 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).allweak = 0 as *mut GCObject;
     (*g).ephemeron = (*g).allweak;
     (*g).weak = (*g).ephemeron;
-    (*g).twups = 0 as *mut lua_State;
+    (*g).twups = 0 as *mut State;
     (*g).totalbytes = ::core::mem::size_of::<LG>() as libc::c_ulong as i64;
     (*g).GCdebt = 0 as libc::c_int as i64;
     (*g).lastatomic = 0 as libc::c_int as u64;
@@ -5230,22 +5211,22 @@ pub unsafe extern "C" fn lua_newstate(
     }
     if luaD_rawrunprotected(
         L,
-        Some(f_luaopen as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> ()),
+        Some(f_luaopen as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
         0 as *mut libc::c_void,
     ) != 0 as libc::c_int
     {
         close_state(L);
-        L = 0 as *mut lua_State;
+        L = 0 as *mut State;
     }
     return L;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_close(mut L: *mut lua_State) {
+pub unsafe extern "C" fn lua_close(mut L: *mut State) {
     L = (*(*L).l_G).mainthread;
     close_state(L);
 }
 unsafe extern "C" fn luaE_warning(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut msg: *const libc::c_char,
     mut tocont: libc::c_int,
 ) {
@@ -5255,7 +5236,7 @@ unsafe extern "C" fn luaE_warning(
     }
 }
 unsafe extern "C" fn luaE_warnerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut where_0: *const libc::c_char,
 ) {
     let mut errobj: *mut TValue = &mut (*((*L).top.p)
@@ -5344,7 +5325,7 @@ unsafe extern "C" fn settraps(mut ci: *mut CallInfo) {
         if (*ci).callstatus as libc::c_int & (1 as libc::c_int) << 1 as libc::c_int == 0
         {
             ::core::ptr::write_volatile(
-                &mut (*ci).u.l.trap as *mut sig_atomic_t,
+                &mut (*ci).u.l.trap as *mut i32,
                 1 as libc::c_int,
             );
         }
@@ -5353,7 +5334,7 @@ unsafe extern "C" fn settraps(mut ci: *mut CallInfo) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_sethook(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut func: lua_Hook,
     mut mask: libc::c_int,
     mut count: libc::c_int,
@@ -5366,28 +5347,28 @@ pub unsafe extern "C" fn lua_sethook(
     (*L).basehookcount = count;
     (*L).hookcount = (*L).basehookcount;
     ::core::ptr::write_volatile(
-        &mut (*L).hookmask as *mut sig_atomic_t,
-        mask as u8 as sig_atomic_t,
+        &mut (*L).hookmask as *mut i32,
+        mask as u8 as i32,
     );
     if mask != 0 {
         settraps((*L).ci);
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_gethook(mut L: *mut lua_State) -> lua_Hook {
+pub unsafe extern "C" fn lua_gethook(mut L: *mut State) -> lua_Hook {
     return (*L).hook;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_gethookmask(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_gethookmask(mut L: *mut State) -> libc::c_int {
     return (*L).hookmask;
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_gethookcount(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn lua_gethookcount(mut L: *mut State) -> libc::c_int {
     return (*L).basehookcount;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getstack(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: libc::c_int,
     mut ar: *mut lua_Debug,
 ) -> libc::c_int {
@@ -5437,7 +5418,7 @@ unsafe extern "C" fn findvararg(
     return 0 as *const libc::c_char;
 }
 unsafe extern "C" fn luaG_findlocal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut n: libc::c_int,
     mut pos: *mut StkId,
@@ -5482,7 +5463,7 @@ unsafe extern "C" fn luaG_findlocal(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getlocal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ar: *const lua_Debug,
     mut n: libc::c_int,
 ) -> *const libc::c_char {
@@ -5520,7 +5501,7 @@ pub unsafe extern "C" fn lua_getlocal(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setlocal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ar: *const lua_Debug,
     mut n: libc::c_int,
 ) -> *const libc::c_char {
@@ -5592,7 +5573,7 @@ unsafe extern "C" fn nextline(
         return luaG_getfuncline(p, pc)
     };
 }
-unsafe extern "C" fn collectvalidlines(mut L: *mut lua_State, mut f: *mut Closure) {
+unsafe extern "C" fn collectvalidlines(mut L: *mut State, mut f: *mut Closure) {
     if !(!f.is_null()
         && (*f).c.tt as libc::c_int
             == 6 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int)
@@ -5639,7 +5620,7 @@ unsafe extern "C" fn collectvalidlines(mut L: *mut lua_State, mut f: *mut Closur
     };
 }
 unsafe extern "C" fn getfuncname(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut name: *mut *const libc::c_char,
 ) -> *const libc::c_char {
@@ -5652,7 +5633,7 @@ unsafe extern "C" fn getfuncname(
     };
 }
 unsafe extern "C" fn auxgetinfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut what: *const libc::c_char,
     mut ar: *mut lua_Debug,
     mut f: *mut Closure,
@@ -5732,7 +5713,7 @@ unsafe extern "C" fn auxgetinfo(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getinfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut what: *const libc::c_char,
     mut ar: *mut lua_Debug,
 ) -> libc::c_int {
@@ -5790,19 +5771,19 @@ unsafe extern "C" fn findsetreg(
     let mut setreg: libc::c_int = -(1 as libc::c_int);
     let mut jmptarget: libc::c_int = 0 as libc::c_int;
     if luaP_opmodes[(*((*p).code).offset(lastpc as isize) >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as usize] as libc::c_int & (1 as libc::c_int) << 7 as libc::c_int != 0
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as usize] as libc::c_int & (1 as libc::c_int) << 7 as libc::c_int != 0
     {
         lastpc -= 1;
     }
     pc = 0 as libc::c_int;
     while pc < lastpc {
-        let mut i: Instruction = *((*p).code).offset(pc as isize);
-        let mut op: OpCode = (i >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode;
+        let mut i: u32 = *((*p).code).offset(pc as isize);
+        let mut op: u32 = (i >> 0 as libc::c_int
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32;
         let mut a: libc::c_int = (i >> 0 as libc::c_int + 7 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int) as libc::c_int;
         let mut change: libc::c_int = 0;
         match op as libc::c_uint {
@@ -5810,7 +5791,7 @@ unsafe extern "C" fn findsetreg(
                 let mut b: libc::c_int = (i
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int;
                 change = (a <= reg && reg <= a + b) as libc::c_int;
             }
@@ -5822,7 +5803,7 @@ unsafe extern "C" fn findsetreg(
             }
             56 => {
                 let mut b_0: libc::c_int = (i >> 0 as libc::c_int + 7 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction)
+                    & !(!(0 as libc::c_int as u32)
                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                             + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                     - (((1 as libc::c_int)
@@ -5875,20 +5856,20 @@ unsafe extern "C" fn basicgetobjname(
     pc = findsetreg(p, pc, reg);
     *ppc = pc;
     if pc != -(1 as libc::c_int) {
-        let mut i: Instruction = *((*p).code).offset(pc as isize);
-        let mut op: OpCode = (i >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode;
+        let mut i: u32 = *((*p).code).offset(pc as isize);
+        let mut op: u32 = (i >> 0 as libc::c_int
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32;
         match op as libc::c_uint {
             0 => {
                 let mut b: libc::c_int = (i
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int;
                 if b
                     < (i >> 0 as libc::c_int + 7 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int
                 {
                     return basicgetobjname(p, ppc, b, name);
@@ -5900,7 +5881,7 @@ unsafe extern "C" fn basicgetobjname(
                     (i
                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                             + 1 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int,
                 );
                 return strupval.as_ptr();
@@ -5909,7 +5890,7 @@ unsafe extern "C" fn basicgetobjname(
                 return kname(
                     p,
                     (i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction)
+                        & !(!(0 as libc::c_int as u32)
                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int,
                     name,
@@ -5920,7 +5901,7 @@ unsafe extern "C" fn basicgetobjname(
                     p,
                     (*((*p).code).offset((pc + 1 as libc::c_int) as isize)
                         >> 0 as libc::c_int + 7 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction)
+                        & !(!(0 as libc::c_int as u32)
                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int,
                     name,
@@ -5945,16 +5926,16 @@ unsafe extern "C" fn rname(
 unsafe extern "C" fn rkname(
     mut p: *const Proto,
     mut pc: libc::c_int,
-    mut i: Instruction,
+    mut i: u32,
     mut name: *mut *const libc::c_char,
 ) {
     let mut c: libc::c_int = (i
         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
             + 8 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int) << 0 as libc::c_int)
+        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int) << 0 as libc::c_int)
         as libc::c_int;
     if (i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int) << 0 as libc::c_int)
+        & !(!(0 as libc::c_int as u32) << 1 as libc::c_int) << 0 as libc::c_int)
         as libc::c_int != 0
     {
         kname(p, c, name);
@@ -5965,12 +5946,12 @@ unsafe extern "C" fn rkname(
 unsafe extern "C" fn isEnv(
     mut p: *const Proto,
     mut pc: libc::c_int,
-    mut i: Instruction,
+    mut i: u32,
     mut isup: libc::c_int,
 ) -> *const libc::c_char {
     let mut t: libc::c_int = (i
         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int) << 0 as libc::c_int)
+        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int) << 0 as libc::c_int)
         as libc::c_int;
     let mut name: *const libc::c_char = 0 as *const libc::c_char;
     if isup != 0 {
@@ -6000,16 +5981,16 @@ unsafe extern "C" fn getobjname(
     if !kind.is_null() {
         return kind
     } else if lastpc != -(1 as libc::c_int) {
-        let mut i: Instruction = *((*p).code).offset(lastpc as isize);
-        let mut op: OpCode = (i >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode;
+        let mut i: u32 = *((*p).code).offset(lastpc as isize);
+        let mut op: u32 = (i >> 0 as libc::c_int
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32;
         match op as libc::c_uint {
             11 => {
                 let mut k: libc::c_int = (i
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int;
                 kname(p, k, name);
                 return isEnv(p, lastpc, i, 1);
@@ -6018,7 +5999,7 @@ unsafe extern "C" fn getobjname(
                 let mut k_0: libc::c_int = (i
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int;
                 rname(p, lastpc, k_0, name);
                 return isEnv(p, lastpc, i, 0 as libc::c_int);
@@ -6031,7 +6012,7 @@ unsafe extern "C" fn getobjname(
                 let mut k_1: libc::c_int = (i
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int;
                 kname(p, k_1, name);
                 return isEnv(p, lastpc, i, 0 as libc::c_int);
@@ -6046,23 +6027,23 @@ unsafe extern "C" fn getobjname(
     return 0 as *const libc::c_char;
 }
 unsafe extern "C" fn funcnamefromcode(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *const Proto,
     mut pc: libc::c_int,
     mut name: *mut *const libc::c_char,
 ) -> *const libc::c_char {
-    let mut tm: TMS = TM_INDEX;
-    let mut i: Instruction = *((*p).code).offset(pc as isize);
+    let mut tm: u32 = TM_INDEX;
+    let mut i: u32 = *((*p).code).offset(pc as isize);
     match (i >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as libc::c_uint
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as libc::c_uint
     {
         68 | 69 => {
             return getobjname(
                 p,
                 pc,
                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int,
                 name,
             );
@@ -6081,8 +6062,8 @@ unsafe extern "C" fn funcnamefromcode(
             tm = (i
                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
-                    << 0 as libc::c_int) as libc::c_int as TMS;
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
+                    << 0 as libc::c_int) as libc::c_int as u32;
         }
         49 => {
             tm = TM_UNM;
@@ -6116,7 +6097,7 @@ unsafe extern "C" fn funcnamefromcode(
     return b"metamethod\0" as *const u8 as *const libc::c_char;
 }
 unsafe extern "C" fn funcnamefromcall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut name: *mut *const libc::c_char,
 ) -> *const libc::c_char {
@@ -6176,7 +6157,7 @@ unsafe extern "C" fn getupvalname(
     return 0 as *const libc::c_char;
 }
 unsafe extern "C" fn formatvarinfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut kind: *const libc::c_char,
     mut name: *const libc::c_char,
 ) -> *const libc::c_char {
@@ -6192,7 +6173,7 @@ unsafe extern "C" fn formatvarinfo(
     };
 }
 unsafe extern "C" fn varinfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
 ) -> *const libc::c_char {
     let mut ci: *mut CallInfo = (*L).ci;
@@ -6215,7 +6196,7 @@ unsafe extern "C" fn varinfo(
     return formatvarinfo(L, kind, name);
 }
 unsafe extern "C" fn typeerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
     mut op: *const libc::c_char,
     mut extra: *const libc::c_char,
@@ -6230,13 +6211,13 @@ unsafe extern "C" fn typeerror(
     );
 }
 unsafe extern "C" fn luaG_typeerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
     mut op: *const libc::c_char,
 ) -> ! {
     typeerror(L, o, op, varinfo(L, o));
 }
-unsafe extern "C" fn luaG_callerror(mut L: *mut lua_State, mut o: *const TValue) -> ! {
+unsafe extern "C" fn luaG_callerror(mut L: *mut State, mut o: *const TValue) -> ! {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut name: *const libc::c_char = 0 as *const libc::c_char;
     let mut kind: *const libc::c_char = funcnamefromcall(L, ci, &mut name);
@@ -6248,7 +6229,7 @@ unsafe extern "C" fn luaG_callerror(mut L: *mut lua_State, mut o: *const TValue)
     typeerror(L, o, b"call\0" as *const u8 as *const libc::c_char, extra);
 }
 unsafe extern "C" fn luaG_forerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
     mut what: *const libc::c_char,
 ) -> ! {
@@ -6260,7 +6241,7 @@ unsafe extern "C" fn luaG_forerror(
     );
 }
 unsafe extern "C" fn luaG_concaterror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
 ) -> ! {
@@ -6272,7 +6253,7 @@ unsafe extern "C" fn luaG_concaterror(
     luaG_typeerror(L, p1, b"concatenate\0" as *const u8 as *const libc::c_char);
 }
 unsafe extern "C" fn luaG_opinterror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
     mut msg: *const libc::c_char,
@@ -6283,7 +6264,7 @@ unsafe extern "C" fn luaG_opinterror(
     luaG_typeerror(L, p2, msg);
 }
 unsafe extern "C" fn luaG_tointerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
 ) -> ! {
@@ -6298,7 +6279,7 @@ unsafe extern "C" fn luaG_tointerror(
     );
 }
 unsafe extern "C" fn luaG_ordererror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
 ) -> ! {
@@ -6320,7 +6301,7 @@ unsafe extern "C" fn luaG_ordererror(
     };
 }
 unsafe extern "C" fn luaG_addinfo(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut msg: *const libc::c_char,
     mut src: *mut TString,
     mut line: libc::c_int,
@@ -6348,7 +6329,7 @@ unsafe extern "C" fn luaG_addinfo(
         msg,
     );
 }
-unsafe extern "C" fn luaG_errormsg(mut L: *mut lua_State) -> ! {
+unsafe extern "C" fn luaG_errormsg(mut L: *mut State) -> ! {
     if (*L).errfunc != 0 as libc::c_int as libc::c_long {
         let mut errfunc: StkId = ((*L).stack.p as *mut libc::c_char)
             .offset((*L).errfunc as isize) as StkId;
@@ -6375,7 +6356,7 @@ unsafe extern "C" fn luaG_errormsg(mut L: *mut lua_State) -> ! {
     luaD_throw(L, 2 as libc::c_int);
 }
 unsafe extern "C" fn luaG_runerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut args: ...
 ) -> ! {
@@ -6433,14 +6414,14 @@ unsafe extern "C" fn changedline(
     }
     return (luaG_getfuncline(p, oldpc) != luaG_getfuncline(p, newpc)) as libc::c_int;
 }
-unsafe extern "C" fn luaG_tracecall(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaG_tracecall(mut L: *mut State) -> libc::c_int {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut p: *mut Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
     ::core::ptr::write_volatile(
-        &mut (*ci).u.l.trap as *mut sig_atomic_t,
+        &mut (*ci).u.l.trap as *mut i32,
         1 as libc::c_int,
     );
-    if (*ci).u.l.savedpc == (*p).code as *const Instruction {
+    if (*ci).u.l.savedpc == (*p).code as *const u32 {
         if (*p).is_vararg != 0 {
             return 0 as libc::c_int
         } else if (*ci).callstatus as libc::c_int
@@ -6452,8 +6433,8 @@ unsafe extern "C" fn luaG_tracecall(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn luaG_traceexec(
-    mut L: *mut lua_State,
-    mut pc: *const Instruction,
+    mut L: *mut State,
+    mut pc: *const u32,
 ) -> libc::c_int {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut mask: u8 = (*L).hookmask as u8;
@@ -6464,7 +6445,7 @@ unsafe extern "C" fn luaG_traceexec(
             | (1 as libc::c_int) << 3 as libc::c_int) == 0
     {
         ::core::ptr::write_volatile(
-            &mut (*ci).u.l.trap as *mut sig_atomic_t,
+            &mut (*ci).u.l.trap as *mut i32,
             0,
         );
         return 0 as libc::c_int;
@@ -6489,11 +6470,11 @@ unsafe extern "C" fn luaG_traceexec(
     }
     if !(luaP_opmodes[(*((*ci).u.l.savedpc).offset(-(1 as libc::c_int as isize))
         >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as usize] as libc::c_int & (1 as libc::c_int) << 5 as libc::c_int != 0
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as usize] as libc::c_int & (1 as libc::c_int) << 5 as libc::c_int != 0
         && (*((*ci).u.l.savedpc).offset(-(1 as libc::c_int as isize))
             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int) as libc::c_int == 0 as libc::c_int)
     {
         (*L).top.p = (*ci).top.p;
@@ -6533,7 +6514,7 @@ unsafe extern "C" fn luaG_traceexec(
     return 1;
 }
 unsafe extern "C" fn luaM_growaux_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut nelems: libc::c_int,
     mut psize: *mut libc::c_int,
@@ -6574,7 +6555,7 @@ unsafe extern "C" fn luaM_growaux_(
     return newblock;
 }
 unsafe extern "C" fn luaM_shrinkvector_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut size: *mut libc::c_int,
     mut final_n: libc::c_int,
@@ -6587,14 +6568,14 @@ unsafe extern "C" fn luaM_shrinkvector_(
     *size = final_n;
     return newblock;
 }
-unsafe extern "C" fn luaM_toobig(mut L: *mut lua_State) -> ! {
+unsafe extern "C" fn luaM_toobig(mut L: *mut State) -> ! {
     luaG_runerror(
         L,
         b"memory allocation error: block too big\0" as *const u8 as *const libc::c_char,
     );
 }
 unsafe extern "C" fn luaM_free_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut osize: u64,
 ) {
@@ -6606,7 +6587,7 @@ unsafe extern "C" fn luaM_free_(
     (*g).GCdebt = ((*g).GCdebt as libc::c_ulong).wrapping_sub(osize) as i64 as i64;
 }
 unsafe extern "C" fn tryagain(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut osize: u64,
     mut nsize: u64,
@@ -6623,7 +6604,7 @@ unsafe extern "C" fn tryagain(
     };
 }
 unsafe extern "C" fn luaM_realloc_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut osize: u64,
     mut nsize: u64,
@@ -6646,7 +6627,7 @@ unsafe extern "C" fn luaM_realloc_(
     return newblock;
 }
 unsafe extern "C" fn luaM_saferealloc_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut block_0: *mut libc::c_void,
     mut osize: u64,
     mut nsize: u64,
@@ -6660,7 +6641,7 @@ unsafe extern "C" fn luaM_saferealloc_(
     return newblock;
 }
 unsafe extern "C" fn luaM_malloc_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut size: u64,
     mut tag: libc::c_int,
 ) -> *mut libc::c_void {
@@ -6956,7 +6937,7 @@ unsafe extern "C" fn luaO_ceillog2(mut x: libc::c_uint) -> libc::c_int {
     return l + log_2[x as usize] as libc::c_int;
 }
 unsafe extern "C" fn intarith(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut op: libc::c_int,
     mut v1: i64,
     mut v2: i64,
@@ -6990,7 +6971,7 @@ unsafe extern "C" fn intarith(
     };
 }
 unsafe extern "C" fn numarith(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut op: libc::c_int,
     mut v1: f64,
     mut v2: f64,
@@ -7014,7 +6995,7 @@ unsafe extern "C" fn numarith(
     };
 }
 unsafe extern "C" fn luaO_rawarith(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut op: libc::c_int,
     mut p1: *const TValue,
     mut p2: *const TValue,
@@ -7156,7 +7137,7 @@ unsafe extern "C" fn luaO_rawarith(
     };
 }
 unsafe extern "C" fn luaO_arith(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut op: libc::c_int,
     mut p1: *const TValue,
     mut p2: *const TValue,
@@ -7168,7 +7149,7 @@ unsafe extern "C" fn luaO_arith(
             p1,
             p2,
             res,
-            (op - 0 as libc::c_int + TM_ADD as libc::c_int) as TMS,
+            (op - 0 as libc::c_int + TM_ADD as libc::c_int) as u32,
         );
     }
 }
@@ -7418,7 +7399,7 @@ unsafe extern "C" fn tostringbuff(
     }
     return len;
 }
-unsafe extern "C" fn luaO_tostring(mut L: *mut lua_State, mut obj: *mut TValue) {
+unsafe extern "C" fn luaO_tostring(mut L: *mut State, mut obj: *mut TValue) {
     let mut buff: [libc::c_char; 44] = [0; 44];
     let mut len: libc::c_int = tostringbuff(obj, buff.as_mut_ptr());
     let mut io: *mut TValue = obj;
@@ -7433,7 +7414,7 @@ unsafe extern "C" fn pushstr(
     mut str: *const libc::c_char,
     mut lstr: u64,
 ) {
-    let mut L: *mut lua_State = (*buff).L;
+    let mut L: *mut State = (*buff).L;
     let mut io: *mut TValue = &mut (*(*L).top.p).val;
     let mut x_: *mut TString = luaS_newlstr(L, str, lstr);
     (*io).value_.gc = &mut (*(x_ as *mut GCUnion)).gc;
@@ -7483,12 +7464,12 @@ unsafe extern "C" fn addnum2buff(mut buff: *mut BuffFS, mut num: *mut TValue) {
     (*buff).blen += len;
 }
 unsafe extern "C" fn luaO_pushvfstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut argp: ::core::ffi::VaList,
 ) -> *const libc::c_char {
     let mut buff: BuffFS = BuffFS {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         pushed: 0,
         blen: 0,
         space: [0; 199],
@@ -7614,7 +7595,7 @@ unsafe extern "C" fn luaO_pushvfstring(
         .as_mut_ptr();
 }
 unsafe extern "C" fn luaO_pushfstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut args: ...
 ) -> *const libc::c_char {
@@ -7811,7 +7792,7 @@ static mut luaT_typenames_: [*const libc::c_char; 12] = unsafe {
         b"proto\0" as *const u8 as *const libc::c_char,
     ]
 };
-unsafe extern "C" fn luaT_init(mut L: *mut lua_State) {
+unsafe extern "C" fn luaT_init(mut L: *mut State) {
     static mut luaT_eventname: [*const libc::c_char; 25] = [
         b"__index\0" as *const u8 as *const libc::c_char,
         b"__newindex\0" as *const u8 as *const libc::c_char,
@@ -7854,7 +7835,7 @@ unsafe extern "C" fn luaT_init(mut L: *mut lua_State) {
 }
 unsafe extern "C" fn luaT_gettm(
     mut events: *mut Table,
-    mut event: TMS,
+    mut event: u32,
     mut ename: *mut TString,
 ) -> *const TValue {
     let mut tm: *const TValue = luaH_getshortstr(events, ename);
@@ -7869,9 +7850,9 @@ unsafe extern "C" fn luaT_gettm(
     };
 }
 unsafe extern "C" fn luaT_gettmbyobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
-    mut event: TMS,
+    mut event: u32,
 ) -> *const TValue {
     let mut mt: *mut Table = 0 as *mut Table;
     match (*o).tt_ as libc::c_int & 0xf as libc::c_int {
@@ -7892,7 +7873,7 @@ unsafe extern "C" fn luaT_gettmbyobj(
     };
 }
 unsafe extern "C" fn luaT_objtypename(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *const TValue,
 ) -> *const libc::c_char {
     let mut mt: *mut Table = 0 as *mut Table;
@@ -7923,7 +7904,7 @@ unsafe extern "C" fn luaT_objtypename(
         + 1 as libc::c_int) as usize];
 }
 unsafe extern "C" fn luaT_callTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *const TValue,
     mut p1: *const TValue,
     mut p2: *const TValue,
@@ -7957,7 +7938,7 @@ unsafe extern "C" fn luaT_callTM(
     };
 }
 unsafe extern "C" fn luaT_callTMres(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *const TValue,
     mut p1: *const TValue,
     mut p2: *const TValue,
@@ -7995,11 +7976,11 @@ unsafe extern "C" fn luaT_callTMres(
     (*io1_2).tt_ = (*io2_2).tt_;
 }
 unsafe extern "C" fn callbinTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
     mut res: StkId,
-    mut event: TMS,
+    mut event: u32,
 ) -> libc::c_int {
     let mut tm: *const TValue = luaT_gettmbyobj(L, p1, event);
     if (*tm).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int {
@@ -8012,11 +7993,11 @@ unsafe extern "C" fn callbinTM(
     return 1;
 }
 unsafe extern "C" fn luaT_trybinTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
     mut res: StkId,
-    mut event: TMS,
+    mut event: u32,
 ) {
     if ((callbinTM(L, p1, p2, res, event) == 0) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
@@ -8048,7 +8029,7 @@ unsafe extern "C" fn luaT_trybinTM(
         }
     }
 }
-unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut lua_State) {
+unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut State) {
     let mut top: StkId = (*L).top.p;
     if ((callbinTM(
         L,
@@ -8066,12 +8047,12 @@ unsafe extern "C" fn luaT_tryconcatTM(mut L: *mut lua_State) {
     }
 }
 unsafe extern "C" fn luaT_trybinassocTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
     mut flip: libc::c_int,
     mut res: StkId,
-    mut event: TMS,
+    mut event: u32,
 ) {
     if flip != 0 {
         luaT_trybinTM(L, p2, p1, res, event);
@@ -8080,12 +8061,12 @@ unsafe extern "C" fn luaT_trybinassocTM(
     };
 }
 unsafe extern "C" fn luaT_trybiniTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut i2: i64,
     mut flip: libc::c_int,
     mut res: StkId,
-    mut event: TMS,
+    mut event: u32,
 ) {
     let mut aux: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
@@ -8097,10 +8078,10 @@ unsafe extern "C" fn luaT_trybiniTM(
     luaT_trybinassocTM(L, p1, &mut aux, flip, res, event);
 }
 unsafe extern "C" fn luaT_callorderTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut p2: *const TValue,
-    mut event: TMS,
+    mut event: u32,
 ) -> libc::c_int {
     if callbinTM(L, p1, p2, (*L).top.p, event) != 0 {
         return !((*(*L).top.p).val.tt_ as libc::c_int
@@ -8111,12 +8092,12 @@ unsafe extern "C" fn luaT_callorderTM(
     luaG_ordererror(L, p1, p2);
 }
 unsafe extern "C" fn luaT_callorderiTM(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p1: *const TValue,
     mut v2: libc::c_int,
     mut flip: libc::c_int,
     mut isfloat: libc::c_int,
-    mut event: TMS,
+    mut event: u32,
 ) -> libc::c_int {
     let mut aux: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
@@ -8145,7 +8126,7 @@ unsafe extern "C" fn luaT_callorderiTM(
     return luaT_callorderTM(L, p1, p2, event);
 }
 unsafe extern "C" fn luaT_adjustvarargs(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nfixparams: libc::c_int,
     mut ci: *mut CallInfo,
     mut p: *const Proto,
@@ -8189,7 +8170,7 @@ unsafe extern "C" fn luaT_adjustvarargs(
     (*ci).top.p = ((*ci).top.p).offset((actual + 1 as libc::c_int) as isize);
 }
 unsafe extern "C" fn luaT_getvarargs(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ci: *mut CallInfo,
     mut where_0: StkId,
     mut wanted: libc::c_int,
@@ -8233,7 +8214,7 @@ unsafe extern "C" fn luaT_getvarargs(
 }
 unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> libc::c_int {
     let mut size: u64 = 0;
-    let mut L: *mut lua_State = (*z).L;
+    let mut L: *mut State = (*z).L;
     let mut buff: *const libc::c_char = 0 as *const libc::c_char;
     buff = ((*z).reader).expect("non-null function pointer")(L, (*z).data, &mut size);
     if buff.is_null() || size == 0 as libc::c_int as libc::c_ulong {
@@ -8246,7 +8227,7 @@ unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> libc::c_int {
     return *fresh14 as libc::c_uchar as libc::c_int;
 }
 unsafe extern "C" fn luaZ_init(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut z: *mut ZIO,
     mut reader: lua_Reader,
     mut data: *mut libc::c_void,
@@ -8847,7 +8828,7 @@ unsafe extern "C" fn iscleared(
     };
 }
 unsafe extern "C" fn luaC_barrier_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *mut GCObject,
     mut v: *mut GCObject,
 ) {
@@ -8871,7 +8852,7 @@ unsafe extern "C" fn luaC_barrier_(
             as u8;
     }
 }
-unsafe extern "C" fn luaC_barrierback_(mut L: *mut lua_State, mut o: *mut GCObject) {
+unsafe extern "C" fn luaC_barrierback_(mut L: *mut State, mut o: *mut GCObject) {
     let mut g: *mut global_State = (*L).l_G;
     if (*o).marked as libc::c_int & 7 as libc::c_int == 6 as libc::c_int {
         (*o)
@@ -8889,7 +8870,7 @@ unsafe extern "C" fn luaC_barrierback_(mut L: *mut lua_State, mut o: *mut GCObje
             | 5 as libc::c_int) as u8;
     }
 }
-unsafe extern "C" fn luaC_fix(mut L: *mut lua_State, mut o: *mut GCObject) {
+unsafe extern "C" fn luaC_fix(mut L: *mut State, mut o: *mut GCObject) {
     let mut g: *mut global_State = (*L).l_G;
     (*o)
         .marked = ((*o).marked as libc::c_int
@@ -8905,7 +8886,7 @@ unsafe extern "C" fn luaC_fix(mut L: *mut lua_State, mut o: *mut GCObject) {
     (*g).fixedgc = o;
 }
 unsafe extern "C" fn luaC_newobjdt(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut tt: libc::c_int,
     mut sz: u64,
     mut offset: u64,
@@ -8924,7 +8905,7 @@ unsafe extern "C" fn luaC_newobjdt(
     return o;
 }
 unsafe extern "C" fn luaC_newobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut tt: libc::c_int,
     mut sz: u64,
 ) -> *mut GCObject {
@@ -9038,8 +9019,8 @@ unsafe extern "C" fn markbeingfnz(mut g: *mut global_State) -> u64 {
     return count;
 }
 unsafe extern "C" fn remarkupvals(mut g: *mut global_State) -> libc::c_int {
-    let mut thread: *mut lua_State = 0 as *mut lua_State;
-    let mut p: *mut *mut lua_State = &mut (*g).twups;
+    let mut thread: *mut State = 0 as *mut State;
+    let mut p: *mut *mut State = &mut (*g).twups;
     let mut work: libc::c_int = 0 as libc::c_int;
     loop {
         thread = *p;
@@ -9511,7 +9492,7 @@ unsafe extern "C" fn traverseLclosure(
 }
 unsafe extern "C" fn traversethread(
     mut g: *mut global_State,
-    mut th: *mut lua_State,
+    mut th: *mut State,
 ) -> libc::c_int {
     let mut uv: *mut UpVal = 0 as *mut UpVal;
     let mut o: StkId = (*th).stack.p;
@@ -9713,7 +9694,7 @@ unsafe extern "C" fn clearbyvalues(
         l = (*(l as *mut GCUnion)).h.gclist;
     }
 }
-unsafe extern "C" fn freeupval(mut L: *mut lua_State, mut uv: *mut UpVal) {
+unsafe extern "C" fn freeupval(mut L: *mut State, mut uv: *mut UpVal) {
     if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
         luaF_unlinkupval(uv);
     }
@@ -9723,7 +9704,7 @@ unsafe extern "C" fn freeupval(mut L: *mut lua_State, mut uv: *mut UpVal) {
         ::core::mem::size_of::<UpVal>() as libc::c_ulong,
     );
 }
-unsafe extern "C" fn freeobj(mut L: *mut lua_State, mut o: *mut GCObject) {
+unsafe extern "C" fn freeobj(mut L: *mut State, mut o: *mut GCObject) {
     match (*o).tt as libc::c_int {
         10 => {
             luaF_freeproto(L, &mut (*(o as *mut GCUnion)).p);
@@ -9809,7 +9790,7 @@ unsafe extern "C" fn freeobj(mut L: *mut lua_State, mut o: *mut GCObject) {
     };
 }
 unsafe extern "C" fn sweeplist(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *mut *mut GCObject,
     mut countin: libc::c_int,
     mut countout: *mut libc::c_int,
@@ -9846,7 +9827,7 @@ unsafe extern "C" fn sweeplist(
     return if (*p).is_null() { 0 as *mut *mut GCObject } else { p };
 }
 unsafe extern "C" fn sweeptolive(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *mut *mut GCObject,
 ) -> *mut *mut GCObject {
     let mut old: *mut *mut GCObject = p;
@@ -9858,7 +9839,7 @@ unsafe extern "C" fn sweeptolive(
     }
     return p;
 }
-unsafe extern "C" fn checkSizes(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn checkSizes(mut L: *mut State, mut g: *mut global_State) {
     if (*g).gcemergency == 0 {
         if (*g).strt.nuse < (*g).strt.size / 4 as libc::c_int {
             let mut olddebt: i64 = (*g).GCdebt;
@@ -9896,14 +9877,14 @@ unsafe extern "C" fn udata2finalize(mut g: *mut global_State) -> *mut GCObject {
     }
     return o;
 }
-unsafe extern "C" fn dothecall(mut L: *mut lua_State, mut _ud: *mut libc::c_void) {
+unsafe extern "C" fn dothecall(mut L: *mut State, mut _ud: *mut libc::c_void) {
     luaD_callnoyield(
         L,
         ((*L).top.p).offset(-(2 as libc::c_int as isize)),
         0,
     );
 }
-unsafe extern "C" fn GCTM(mut L: *mut lua_State) {
+unsafe extern "C" fn GCTM(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     let mut tm: *const TValue = 0 as *const TValue;
     let mut v: TValue = TValue {
@@ -9942,7 +9923,7 @@ unsafe extern "C" fn GCTM(mut L: *mut lua_State) {
             L,
             Some(
                 dothecall
-                    as unsafe extern "C" fn(*mut lua_State, *mut libc::c_void) -> (),
+                    as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> (),
             ),
             0 as *mut libc::c_void,
             (((*L).top.p).offset(-(2 as libc::c_int as isize)) as *mut libc::c_char)
@@ -9964,7 +9945,7 @@ unsafe extern "C" fn GCTM(mut L: *mut lua_State) {
     }
 }
 unsafe extern "C" fn runafewfinalizers(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut n: libc::c_int,
 ) -> libc::c_int {
     let mut g: *mut global_State = (*L).l_G;
@@ -9976,7 +9957,7 @@ unsafe extern "C" fn runafewfinalizers(
     }
     return i;
 }
-unsafe extern "C" fn callallpendingfinalizers(mut L: *mut lua_State) {
+unsafe extern "C" fn callallpendingfinalizers(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     while !((*g).tobefnz).is_null() {
         GCTM(L);
@@ -10025,7 +10006,7 @@ unsafe extern "C" fn correctpointers(mut g: *mut global_State, mut o: *mut GCObj
     checkpointer(&mut (*g).firstold1, o);
 }
 unsafe extern "C" fn luaC_checkfinalizer(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut o: *mut GCObject,
     mut mt: *mut Table,
 ) {
@@ -10097,7 +10078,7 @@ unsafe extern "C" fn setpause(mut g: *mut global_State) {
     }
     luaE_setdebt(g, debt);
 }
-unsafe extern "C" fn sweep2old(mut L: *mut lua_State, mut p: *mut *mut GCObject) {
+unsafe extern "C" fn sweep2old(mut L: *mut State, mut p: *mut *mut GCObject) {
     let mut curr: *mut GCObject = 0 as *mut GCObject;
     let mut g: *mut global_State = (*L).l_G;
     loop {
@@ -10118,7 +10099,7 @@ unsafe extern "C" fn sweep2old(mut L: *mut lua_State, mut p: *mut *mut GCObject)
             if (*curr).tt as libc::c_int
                 == 8 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
             {
-                let mut th: *mut lua_State = &mut (*(curr as *mut GCUnion)).th;
+                let mut th: *mut State = &mut (*(curr as *mut GCUnion)).th;
                 linkgclist_(
                     &mut (*(th as *mut GCUnion)).gc,
                     &mut (*th).gclist,
@@ -10145,7 +10126,7 @@ unsafe extern "C" fn sweep2old(mut L: *mut lua_State, mut p: *mut *mut GCObject)
     };
 }
 unsafe extern "C" fn sweepgen(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut g: *mut global_State,
     mut p: *mut *mut GCObject,
     mut limit: *mut GCObject,
@@ -10292,7 +10273,7 @@ unsafe extern "C" fn markold(
         p = (*p).next;
     }
 }
-unsafe extern "C" fn finishgencycle(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn finishgencycle(mut L: *mut State, mut g: *mut global_State) {
     correctgraylists(g);
     checkSizes(L, g);
     (*g).gcstate = 0 as libc::c_int as u8;
@@ -10300,7 +10281,7 @@ unsafe extern "C" fn finishgencycle(mut L: *mut lua_State, mut g: *mut global_St
         callallpendingfinalizers(L);
     }
 }
-unsafe extern "C" fn youngcollection(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn youngcollection(mut L: *mut State, mut g: *mut global_State) {
     let mut psurvival: *mut *mut GCObject = 0 as *mut *mut GCObject;
     let mut dummy: *mut GCObject = 0 as *mut GCObject;
     if !((*g).firstold1).is_null() {
@@ -10325,7 +10306,7 @@ unsafe extern "C" fn youngcollection(mut L: *mut lua_State, mut g: *mut global_S
     sweepgen(L, g, &mut (*g).tobefnz, 0 as *mut GCObject, &mut dummy);
     finishgencycle(L, g);
 }
-unsafe extern "C" fn atomic2gen(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn atomic2gen(mut L: *mut State, mut g: *mut global_State) {
     cleargraylists(g);
     (*g).gcstate = 3 as libc::c_int as u8;
     sweep2old(L, &mut (*g).allgc);
@@ -10352,7 +10333,7 @@ unsafe extern "C" fn setminordebt(mut g: *mut global_State) {
     );
 }
 unsafe extern "C" fn entergen(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut g: *mut global_State,
 ) -> u64 {
     let mut numobjs: u64 = 0;
@@ -10377,7 +10358,7 @@ unsafe extern "C" fn enterinc(mut g: *mut global_State) {
     (*g).gckind = 0 as libc::c_int as u8;
     (*g).lastatomic = 0 as libc::c_int as u64;
 }
-unsafe extern "C" fn luaC_changemode(mut L: *mut lua_State, mut newmode: libc::c_int) {
+unsafe extern "C" fn luaC_changemode(mut L: *mut State, mut newmode: libc::c_int) {
     let mut g: *mut global_State = (*L).l_G;
     if newmode != (*g).gckind as libc::c_int {
         if newmode == 1 as libc::c_int {
@@ -10388,11 +10369,11 @@ unsafe extern "C" fn luaC_changemode(mut L: *mut lua_State, mut newmode: libc::c
     }
     (*g).lastatomic = 0 as libc::c_int as u64;
 }
-unsafe extern "C" fn fullgen(mut L: *mut lua_State, mut g: *mut global_State) -> u64 {
+unsafe extern "C" fn fullgen(mut L: *mut State, mut g: *mut global_State) -> u64 {
     enterinc(g);
     return entergen(L, g);
 }
-unsafe extern "C" fn stepgenfull(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn stepgenfull(mut L: *mut State, mut g: *mut global_State) {
     let mut newatomic: u64 = 0;
     let mut lastatomic: u64 = (*g).lastatomic;
     if (*g).gckind as libc::c_int == 1 as libc::c_int {
@@ -10411,7 +10392,7 @@ unsafe extern "C" fn stepgenfull(mut L: *mut lua_State, mut g: *mut global_State
         (*g).lastatomic = newatomic;
     };
 }
-unsafe extern "C" fn genstep(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn genstep(mut L: *mut State, mut g: *mut global_State) {
     if (*g).lastatomic != 0 as libc::c_int as libc::c_ulong {
         stepgenfull(L, g);
     } else {
@@ -10442,13 +10423,13 @@ unsafe extern "C" fn genstep(mut L: *mut lua_State, mut g: *mut global_State) {
         }
     };
 }
-unsafe extern "C" fn entersweep(mut L: *mut lua_State) {
+unsafe extern "C" fn entersweep(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     (*g).gcstate = 3 as libc::c_int as u8;
     (*g).sweepgc = sweeptolive(L, &mut (*g).allgc);
 }
 unsafe extern "C" fn deletelist(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *mut GCObject,
     mut limit: *mut GCObject,
 ) {
@@ -10458,7 +10439,7 @@ unsafe extern "C" fn deletelist(
         p = next;
     }
 }
-unsafe extern "C" fn luaC_freeallobjects(mut L: *mut lua_State) {
+unsafe extern "C" fn luaC_freeallobjects(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     (*g).gcstp = 4 as libc::c_int as u8;
     luaC_changemode(L, 0 as libc::c_int);
@@ -10467,7 +10448,7 @@ unsafe extern "C" fn luaC_freeallobjects(mut L: *mut lua_State) {
     deletelist(L, (*g).allgc, &mut (*((*g).mainthread as *mut GCUnion)).gc);
     deletelist(L, (*g).fixedgc, 0 as *mut GCObject);
 }
-unsafe extern "C" fn atomic(mut L: *mut lua_State) -> u64 {
+unsafe extern "C" fn atomic(mut L: *mut State) -> u64 {
     let mut g: *mut global_State = (*L).l_G;
     let mut work: u64 = 0 as libc::c_int as u64;
     let mut origweak: *mut GCObject = 0 as *mut GCObject;
@@ -10516,7 +10497,7 @@ unsafe extern "C" fn atomic(mut L: *mut lua_State) -> u64 {
     return work;
 }
 unsafe extern "C" fn sweepstep(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut g: *mut global_State,
     mut nextstate: libc::c_int,
     mut nextlist: *mut *mut GCObject,
@@ -10535,7 +10516,7 @@ unsafe extern "C" fn sweepstep(
         return 0 as libc::c_int;
     };
 }
-unsafe extern "C" fn singlestep(mut L: *mut lua_State) -> u64 {
+unsafe extern "C" fn singlestep(mut L: *mut State) -> u64 {
     let mut g: *mut global_State = (*L).l_G;
     let mut work: u64 = 0;
     (*g).gcstopem = 1 as libc::c_int as u8;
@@ -10588,7 +10569,7 @@ unsafe extern "C" fn singlestep(mut L: *mut lua_State) -> u64 {
     return work;
 }
 unsafe extern "C" fn luaC_runtilstate(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut statesmask: libc::c_int,
 ) {
     let mut g: *mut global_State = (*L).l_G;
@@ -10596,7 +10577,7 @@ unsafe extern "C" fn luaC_runtilstate(
         singlestep(L);
     }
 }
-unsafe extern "C" fn incstep(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn incstep(mut L: *mut State, mut g: *mut global_State) {
     let mut stepmul: libc::c_int = (*g).gcstepmul as libc::c_int * 4 as libc::c_int
         | 1 as libc::c_int;
     let mut debt: i64 = ((*g).GCdebt as libc::c_ulong)
@@ -10629,7 +10610,7 @@ unsafe extern "C" fn incstep(mut L: *mut lua_State, mut g: *mut global_State) {
         luaE_setdebt(g, debt);
     };
 }
-unsafe extern "C" fn luaC_step(mut L: *mut lua_State) {
+unsafe extern "C" fn luaC_step(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     if !((*g).gcstp as libc::c_int == 0 as libc::c_int) {
         luaE_setdebt(g, -(2000 as libc::c_int) as i64);
@@ -10641,7 +10622,7 @@ unsafe extern "C" fn luaC_step(mut L: *mut lua_State) {
         incstep(L, g);
     };
 }
-unsafe extern "C" fn fullinc(mut L: *mut lua_State, mut g: *mut global_State) {
+unsafe extern "C" fn fullinc(mut L: *mut State, mut g: *mut global_State) {
     if (*g).gcstate as libc::c_int <= 2 as libc::c_int {
         entersweep(L);
     }
@@ -10652,7 +10633,7 @@ unsafe extern "C" fn fullinc(mut L: *mut lua_State, mut g: *mut global_State) {
     luaC_runtilstate(L, (1 as libc::c_int) << 8 as libc::c_int);
     setpause(g);
 }
-unsafe extern "C" fn luaC_fullgc(mut L: *mut lua_State, mut isemergency: libc::c_int) {
+unsafe extern "C" fn luaC_fullgc(mut L: *mut State, mut isemergency: libc::c_int) {
     let mut g: *mut global_State = (*L).l_G;
     (*g).gcemergency = isemergency as u8;
     if (*g).gckind as libc::c_int == 0 as libc::c_int {
@@ -10663,7 +10644,7 @@ unsafe extern "C" fn luaC_fullgc(mut L: *mut lua_State, mut isemergency: libc::c
     (*g).gcemergency = 0 as libc::c_int as u8;
 }
 unsafe extern "C" fn luaF_newCclosure(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nupvals: libc::c_int,
 ) -> *mut CClosure {
     let mut o: *mut GCObject = luaC_newobj(
@@ -10678,7 +10659,7 @@ unsafe extern "C" fn luaF_newCclosure(
     return c;
 }
 unsafe extern "C" fn luaF_newLclosure(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut nupvals: libc::c_int,
 ) -> *mut LClosure {
     let mut o: *mut GCObject = luaC_newobj(
@@ -10702,7 +10683,7 @@ unsafe extern "C" fn luaF_newLclosure(
     }
     return c;
 }
-unsafe extern "C" fn luaF_initupvals(mut L: *mut lua_State, mut cl: *mut LClosure) {
+unsafe extern "C" fn luaF_initupvals(mut L: *mut State, mut cl: *mut LClosure) {
     let mut i: libc::c_int = 0;
     i = 0 as libc::c_int;
     while i < (*cl).nupvalues as libc::c_int {
@@ -10733,7 +10714,7 @@ unsafe extern "C" fn luaF_initupvals(mut L: *mut lua_State, mut cl: *mut LClosur
     }
 }
 unsafe extern "C" fn newupval(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: StkId,
     mut prev: *mut *mut UpVal,
 ) -> *mut UpVal {
@@ -10758,7 +10739,7 @@ unsafe extern "C" fn newupval(
     return uv;
 }
 unsafe extern "C" fn luaF_findupval(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: StkId,
 ) -> *mut UpVal {
     let mut pp: *mut *mut UpVal = &mut (*L).openupval;
@@ -10776,7 +10757,7 @@ unsafe extern "C" fn luaF_findupval(
     return newupval(L, level, pp);
 }
 unsafe extern "C" fn callclosemethod(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut obj: *mut TValue,
     mut err: *mut TValue,
     mut yy: libc::c_int,
@@ -10802,7 +10783,7 @@ unsafe extern "C" fn callclosemethod(
         luaD_callnoyield(L, top, 0 as libc::c_int);
     };
 }
-unsafe extern "C" fn checkclosemth(mut L: *mut lua_State, mut level: StkId) {
+unsafe extern "C" fn checkclosemth(mut L: *mut State, mut level: StkId) {
     let mut tm: *const TValue = luaT_gettmbyobj(L, &mut (*level).val, TM_CLOSE);
     if (*tm).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int {
         let mut idx: libc::c_int = level.offset_from((*(*L).ci).func.p) as libc::c_long
@@ -10825,7 +10806,7 @@ unsafe extern "C" fn checkclosemth(mut L: *mut lua_State, mut level: StkId) {
     }
 }
 unsafe extern "C" fn prepcallclosemth(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: StkId,
     mut status: libc::c_int,
     mut yy: libc::c_int,
@@ -10840,7 +10821,7 @@ unsafe extern "C" fn prepcallclosemth(
     }
     callclosemethod(L, uv, errobj, yy);
 }
-unsafe extern "C" fn luaF_newtbcupval(mut L: *mut lua_State, mut level: StkId) {
+unsafe extern "C" fn luaF_newtbcupval(mut L: *mut State, mut level: StkId) {
     if (*level).val.tt_ as libc::c_int
         == 1 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
         || (*level).val.tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int
@@ -10879,7 +10860,7 @@ unsafe extern "C" fn luaF_unlinkupval(mut uv: *mut UpVal) {
         (*(*uv).u.open.next).u.open.previous = (*uv).u.open.previous;
     }
 }
-unsafe extern "C" fn luaF_closeupval(mut L: *mut lua_State, mut level: StkId) {
+unsafe extern "C" fn luaF_closeupval(mut L: *mut State, mut level: StkId) {
     let mut uv: *mut UpVal = 0 as *mut UpVal;
     let mut upl: StkId = 0 as *mut StackValue;
     loop {
@@ -10923,7 +10904,7 @@ unsafe extern "C" fn luaF_closeupval(mut L: *mut lua_State, mut level: StkId) {
         }
     };
 }
-unsafe extern "C" fn poptbclist(mut L: *mut lua_State) {
+unsafe extern "C" fn poptbclist(mut L: *mut State) {
     let mut tbc: StkId = (*L).tbclist.p;
     tbc = tbc.offset(-((*tbc).tbclist.delta as libc::c_int as isize));
     while tbc > (*L).stack.p && (*tbc).tbclist.delta as libc::c_int == 0 as libc::c_int {
@@ -10939,7 +10920,7 @@ unsafe extern "C" fn poptbclist(mut L: *mut lua_State) {
     (*L).tbclist.p = tbc;
 }
 unsafe extern "C" fn luaF_close(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut level: StkId,
     mut status: libc::c_int,
     mut yy: libc::c_int,
@@ -10955,7 +10936,7 @@ unsafe extern "C" fn luaF_close(
     }
     return level;
 }
-unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
+unsafe extern "C" fn luaF_newproto(mut L: *mut State) -> *mut Proto {
     let mut o: *mut GCObject = luaC_newobj(
         L,
         9 as libc::c_int + 1 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int,
@@ -10966,7 +10947,7 @@ unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
     (*f).sizek = 0 as libc::c_int;
     (*f).p = 0 as *mut *mut Proto;
     (*f).sizep = 0 as libc::c_int;
-    (*f).code = 0 as *mut Instruction;
+    (*f).code = 0 as *mut u32;
     (*f).sizecode = 0 as libc::c_int;
     (*f).lineinfo = 0 as *mut i8;
     (*f).sizelineinfo = 0 as libc::c_int;
@@ -10984,12 +10965,12 @@ unsafe extern "C" fn luaF_newproto(mut L: *mut lua_State) -> *mut Proto {
     (*f).source = 0 as *mut TString;
     return f;
 }
-unsafe extern "C" fn luaF_freeproto(mut L: *mut lua_State, mut f: *mut Proto) {
+unsafe extern "C" fn luaF_freeproto(mut L: *mut State, mut f: *mut Proto) {
     luaM_free_(
         L,
         (*f).code as *mut libc::c_void,
         ((*f).sizecode as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<u32>() as libc::c_ulong),
     );
     luaM_free_(
         L,
@@ -11123,7 +11104,7 @@ unsafe extern "C" fn tablerehash(
         i += 1;
     }
 }
-unsafe extern "C" fn luaS_resize(mut L: *mut lua_State, mut nsize: libc::c_int) {
+unsafe extern "C" fn luaS_resize(mut L: *mut State, mut nsize: libc::c_int) {
     let mut tb: *mut stringtable = &mut (*(*L).l_G).strt;
     let mut osize: libc::c_int = (*tb).size;
     let mut newvect: *mut *mut TString = 0 as *mut *mut TString;
@@ -11170,7 +11151,7 @@ unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
         i += 1;
     }
 }
-unsafe extern "C" fn luaS_init(mut L: *mut lua_State) {
+unsafe extern "C" fn luaS_init(mut L: *mut State) {
     let mut g: *mut global_State = (*L).l_G;
     let mut i: libc::c_int = 0;
     let mut j: libc::c_int = 0;
@@ -11204,7 +11185,7 @@ unsafe extern "C" fn luaS_init(mut L: *mut lua_State) {
     }
 }
 unsafe extern "C" fn createstrobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: u64,
     mut tag: libc::c_int,
     mut h: libc::c_uint,
@@ -11226,7 +11207,7 @@ unsafe extern "C" fn createstrobj(
     return ts;
 }
 unsafe extern "C" fn luaS_createlngstrobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: u64,
 ) -> *mut TString {
     let mut ts: *mut TString = createstrobj(
@@ -11239,7 +11220,7 @@ unsafe extern "C" fn luaS_createlngstrobj(
     (*ts).shrlen = 0xff as libc::c_int as u8;
     return ts;
 }
-unsafe extern "C" fn luaS_remove(mut L: *mut lua_State, mut ts: *mut TString) {
+unsafe extern "C" fn luaS_remove(mut L: *mut State, mut ts: *mut TString) {
     let mut tb: *mut stringtable = &mut (*(*L).l_G).strt;
     let mut p: *mut *mut TString = &mut *((*tb).hash)
         .offset(
@@ -11253,7 +11234,7 @@ unsafe extern "C" fn luaS_remove(mut L: *mut lua_State, mut ts: *mut TString) {
     (*tb).nuse -= 1;
     (*tb).nuse;
 }
-unsafe extern "C" fn growstrtab(mut L: *mut lua_State, mut tb: *mut stringtable) {
+unsafe extern "C" fn growstrtab(mut L: *mut State, mut tb: *mut stringtable) {
     if (((*tb).nuse == 2147483647 as libc::c_int) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
     {
@@ -11278,7 +11259,7 @@ unsafe extern "C" fn growstrtab(mut L: *mut lua_State, mut tb: *mut stringtable)
     }
 }
 unsafe extern "C" fn internshrstr(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut str: *const libc::c_char,
     mut l: u64,
 ) -> *mut TString {
@@ -11340,7 +11321,7 @@ unsafe extern "C" fn internshrstr(
     return ts;
 }
 unsafe extern "C" fn luaS_newlstr(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut str: *const libc::c_char,
     mut l: u64,
 ) -> *mut TString {
@@ -11371,7 +11352,7 @@ unsafe extern "C" fn luaS_newlstr(
     };
 }
 unsafe extern "C" fn luaS_new(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut str: *const libc::c_char,
 ) -> *mut TString {
     let mut i: libc::c_uint = ((str as u64
@@ -11401,7 +11382,7 @@ unsafe extern "C" fn luaS_new(
     return *p.offset(0 as libc::c_int as isize);
 }
 unsafe extern "C" fn luaS_newudata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: u64,
     mut nuvalue: libc::c_int,
 ) -> *mut Udata {
@@ -11537,7 +11518,7 @@ unsafe extern "C" fn loadStringN(
     mut S: *mut LoadState,
     mut p: *mut Proto,
 ) -> *mut TString {
-    let mut L: *mut lua_State = (*S).L;
+    let mut L: *mut State = (*S).L;
     let mut ts: *mut TString = 0 as *mut TString;
     let mut size: u64 = loadSize(S);
     if size == 0 as libc::c_int as libc::c_ulong {
@@ -11608,7 +11589,7 @@ unsafe extern "C" fn loadCode(mut S: *mut LoadState, mut f: *mut Proto) {
         >= ::core::mem::size_of::<u64>() as libc::c_ulong
         && (n as u64).wrapping_add(1 as libc::c_int as libc::c_ulong)
             > (!(0 as libc::c_int as u64))
-                .wrapping_div(::core::mem::size_of::<Instruction>() as libc::c_ulong)
+                .wrapping_div(::core::mem::size_of::<u32>() as libc::c_ulong)
     {
         luaM_toobig((*S).L);
     } else {};
@@ -11616,15 +11597,15 @@ unsafe extern "C" fn loadCode(mut S: *mut LoadState, mut f: *mut Proto) {
         .code = luaM_malloc_(
         (*S).L,
         (n as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<u32>() as libc::c_ulong),
         0,
-    ) as *mut Instruction;
+    ) as *mut u32;
     (*f).sizecode = n;
     loadBlock(
         S,
         (*f).code as *mut libc::c_void,
         (n as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<u32>() as libc::c_ulong),
     );
 }
 unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Proto) {
@@ -11946,8 +11927,8 @@ unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
     );
     fchecksize(
         S,
-        ::core::mem::size_of::<Instruction>() as libc::c_ulong,
-        b"Instruction\0" as *const u8 as *const libc::c_char,
+        ::core::mem::size_of::<u32>() as libc::c_ulong,
+        b"u32\0" as *const u8 as *const libc::c_char,
     );
     fchecksize(
         S,
@@ -11967,12 +11948,12 @@ unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
     }
 }
 unsafe extern "C" fn luaU_undump(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut Z: *mut ZIO,
     mut name: *const libc::c_char,
 ) -> *mut LClosure {
     let mut S: LoadState = LoadState {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         Z: 0 as *mut ZIO,
         name: 0 as *const libc::c_char,
     };
@@ -12120,7 +12101,7 @@ unsafe extern "C" fn dumpCode(mut D: *mut DumpState, mut f: *const Proto) {
         D,
         (*f).code as *const libc::c_void,
         ((*f).sizecode as libc::c_ulong)
-            .wrapping_mul(::core::mem::size_of::<Instruction>() as libc::c_ulong),
+            .wrapping_mul(::core::mem::size_of::<u32>() as libc::c_ulong),
     );
 }
 unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Proto) {
@@ -12246,21 +12227,21 @@ unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
         (::core::mem::size_of::<[libc::c_char; 7]>() as libc::c_ulong)
             .wrapping_sub(::core::mem::size_of::<libc::c_char>() as libc::c_ulong),
     );
-    dumpByte(D, ::core::mem::size_of::<Instruction>() as libc::c_ulong as libc::c_int);
+    dumpByte(D, ::core::mem::size_of::<u32>() as libc::c_ulong as libc::c_int);
     dumpByte(D, ::core::mem::size_of::<i64>() as libc::c_ulong as libc::c_int);
     dumpByte(D, ::core::mem::size_of::<f64>() as libc::c_ulong as libc::c_int);
     dumpInteger(D, 0x5678 as libc::c_int as i64);
     dumpNumber(D, 370.5f64);
 }
 unsafe extern "C" fn luaU_dump(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *const Proto,
     mut w: lua_Writer,
     mut data: *mut libc::c_void,
     mut strip: libc::c_int,
 ) -> libc::c_int {
     let mut D: DumpState = DumpState {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         writer: None,
         data: 0 as *mut libc::c_void,
         strip: 0,
@@ -12291,7 +12272,7 @@ unsafe extern "C" fn errorlimit(
     mut limit: libc::c_int,
     mut what: *const libc::c_char,
 ) -> ! {
-    let mut L: *mut lua_State = (*(*fs).ls).L;
+    let mut L: *mut State = (*(*fs).ls).L;
     let mut msg: *const libc::c_char = 0 as *const libc::c_char;
     let mut line: libc::c_int = (*(*fs).f).linedefined;
     let mut where_0: *const libc::c_char = if line == 0 as libc::c_int {
@@ -12372,7 +12353,7 @@ unsafe extern "C" fn str_checkname(mut ls: *mut LexState) -> *mut TString {
     luaX_next(ls);
     return ts;
 }
-unsafe extern "C" fn init_exp(mut e: *mut expdesc, mut k: expkind, mut i: libc::c_int) {
+unsafe extern "C" fn init_exp(mut e: *mut expdesc, mut k: u32, mut i: libc::c_int) {
     (*e).t = -(1 as libc::c_int);
     (*e).f = (*e).t;
     (*e).k = k;
@@ -12441,7 +12422,7 @@ unsafe extern "C" fn new_localvar(
     mut ls: *mut LexState,
     mut name: *mut TString,
 ) -> libc::c_int {
-    let mut L: *mut lua_State = (*ls).L;
+    let mut L: *mut State = (*ls).L;
     let mut fs: *mut FuncState = (*ls).fs;
     let mut dyd: *mut Dyndata = (*ls).dyd;
     let mut var: *mut Vardesc = 0 as *mut Vardesc;
@@ -13033,7 +13014,7 @@ unsafe extern "C" fn leaveblock(mut fs: *mut FuncState) {
 }
 unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
     let mut clp: *mut Proto = 0 as *mut Proto;
-    let mut L: *mut lua_State = (*ls).L;
+    let mut L: *mut State = (*ls).L;
     let mut fs: *mut FuncState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     if (*fs).np >= (*f).sizep {
@@ -13140,7 +13121,7 @@ unsafe extern "C" fn open_func(
     enterblock(fs, bl, 0 as libc::c_int as u8);
 }
 unsafe extern "C" fn close_func(mut ls: *mut LexState) {
-    let mut L: *mut lua_State = (*ls).L;
+    let mut L: *mut State = (*ls).L;
     let mut fs: *mut FuncState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     luaK_ret(fs, luaY_nvarstack(fs), 0 as libc::c_int);
@@ -13152,8 +13133,8 @@ unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         (*f).code as *mut libc::c_void,
         &mut (*f).sizecode,
         (*fs).pc,
-        ::core::mem::size_of::<Instruction>() as libc::c_ulong as libc::c_int,
-    ) as *mut Instruction;
+        ::core::mem::size_of::<u32>() as libc::c_ulong as libc::c_int,
+    ) as *mut u32;
     (*f)
         .lineinfo = luaM_shrinkvector_(
         L,
@@ -13362,7 +13343,7 @@ unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut expdesc) {
         na: 0,
         tostore: 0,
     };
-    luaK_code(fs, 0 as libc::c_int as Instruction);
+    luaK_code(fs, 0 as libc::c_int as u32);
     cc.tostore = 0 as libc::c_int;
     cc.nh = cc.tostore;
     cc.na = cc.nh;
@@ -13687,7 +13668,7 @@ unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut expdesc) {
     }
     luaX_next(ls);
 }
-unsafe extern "C" fn getunopr(mut op: libc::c_int) -> UnOpr {
+unsafe extern "C" fn getunopr(mut op: libc::c_int) -> u32 {
     match op {
         270 => return OPR_NOT,
         45 => return OPR_MINUS,
@@ -13696,7 +13677,7 @@ unsafe extern "C" fn getunopr(mut op: libc::c_int) -> UnOpr {
         _ => return OPR_NOUNOPR,
     };
 }
-unsafe extern "C" fn getbinopr(mut op: libc::c_int) -> BinOpr {
+unsafe extern "C" fn getbinopr(mut op: libc::c_int) -> u32 {
     match op {
         43 => return OPR_ADD,
         45 => return OPR_SUB,
@@ -13875,9 +13856,9 @@ unsafe extern "C" fn subexpr(
     mut ls: *mut LexState,
     mut v: *mut expdesc,
     mut limit: libc::c_int,
-) -> BinOpr {
-    let mut op: BinOpr = OPR_ADD;
-    let mut uop: UnOpr = OPR_MINUS;
+) -> u32 {
+    let mut op: u32 = OPR_ADD;
+    let mut uop: u32 = OPR_MINUS;
     luaE_incCstack((*ls).L);
     uop = getunopr((*ls).t.token);
     if uop as libc::c_uint != OPR_NOUNOPR as libc::c_int as libc::c_uint {
@@ -13898,7 +13879,7 @@ unsafe extern "C" fn subexpr(
             t: 0,
             f: 0,
         };
-        let mut nextop: BinOpr = OPR_ADD;
+        let mut nextop: u32 = OPR_ADD;
         let mut line_0: libc::c_int = (*ls).linenumber;
         luaX_next(ls);
         luaK_infix((*ls).fs, op, v);
@@ -14208,8 +14189,8 @@ unsafe extern "C" fn fixforjump(
     mut dest: libc::c_int,
     mut back: libc::c_int,
 ) {
-    let mut jmp: *mut Instruction = &mut *((*(*fs).f).code).offset(pc as isize)
-        as *mut Instruction;
+    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+        as *mut u32;
     let mut offset: libc::c_int = dest - (pc + 1 as libc::c_int);
     if back != 0 {
         offset = -offset;
@@ -14225,12 +14206,12 @@ unsafe extern "C" fn fixforjump(
         );
     }
     *jmp = *jmp
-        & !(!(!(0 as libc::c_int as Instruction)
+        & !(!(!(0 as libc::c_int as u32)
             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int)
-        | (offset as Instruction)
+        | (offset as u32)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction)
+            & !(!(0 as libc::c_int as u32)
                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
 }
@@ -14241,8 +14222,8 @@ unsafe extern "C" fn forbody(
     mut nvars: libc::c_int,
     mut isgen: libc::c_int,
 ) {
-    static mut forprep_0: [OpCode; 2] = [OP_FORPREP, OP_TFORPREP];
-    static mut forloop: [OpCode; 2] = [OP_FORLOOP, OP_TFORLOOP];
+    static mut forprep_0: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
+    static mut forloop: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
     let mut bl: BlockCnt = BlockCnt {
         previous: 0 as *mut BlockCnt,
         firstlabel: 0,
@@ -14662,19 +14643,19 @@ unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
         v.prev = 0 as *mut LHS_assign;
         restassign(ls, &mut v, 1);
     } else {
-        let mut inst: *mut Instruction = 0 as *mut Instruction;
+        let mut inst: *mut u32 = 0 as *mut u32;
         if !(v.v.k as libc::c_uint == VCALL as libc::c_int as libc::c_uint) {
             luaX_syntaxerror(ls, b"syntax error\0" as *const u8 as *const libc::c_char);
         }
-        inst = &mut *((*(*fs).f).code).offset(v.v.u.info as isize) as *mut Instruction;
+        inst = &mut *((*(*fs).f).code).offset(v.v.u.info as isize) as *mut u32;
         *inst = *inst
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int)
-            | (1 as libc::c_int as Instruction)
+            | (1 as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int;
     };
@@ -14704,10 +14685,10 @@ unsafe extern "C" fn retstat(mut ls: *mut LexState) {
                     .offset(
                         e.u.info as isize,
                     ) = *((*(*fs).f).code).offset(e.u.info as isize)
-                    & !(!(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
+                    & !(!(!(0 as libc::c_int as u32) << 7 as libc::c_int)
                         << 0 as libc::c_int)
-                    | (OP_TAILCALL as libc::c_int as Instruction) << 0 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
+                    | (OP_TAILCALL as libc::c_int as u32) << 0 as libc::c_int
+                        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
                             << 0 as libc::c_int;
             }
             nret = -(1 as libc::c_int);
@@ -14813,7 +14794,7 @@ unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FuncState) {
     close_func(ls);
 }
 unsafe extern "C" fn luaY_parser(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut z: *mut ZIO,
     mut buff: *mut Mbuffer,
     mut dyd: *mut Dyndata,
@@ -14833,7 +14814,7 @@ unsafe extern "C" fn luaY_parser(
             seminfo: SemInfo { r: 0. },
         },
         fs: 0 as *mut FuncState,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         z: 0 as *mut ZIO,
         buff: 0 as *mut Mbuffer,
         h: 0 as *mut Table,
@@ -14987,7 +14968,7 @@ unsafe extern "C" fn save(mut ls: *mut LexState, mut c: libc::c_int) {
     (*b).n = ((*b).n).wrapping_add(1);
     *((*b).buffer).offset(fresh49 as isize) = c as libc::c_char;
 }
-unsafe extern "C" fn luaX_init(mut L: *mut lua_State) {
+unsafe extern "C" fn luaX_init(mut L: *mut State) {
     let mut i: libc::c_int = 0;
     let mut e: *mut TString = luaS_newlstr(
         L,
@@ -15089,7 +15070,7 @@ unsafe extern "C" fn luaX_newstring(
     mut str: *const libc::c_char,
     mut l: u64,
 ) -> *mut TString {
-    let mut L: *mut lua_State = (*ls).L;
+    let mut L: *mut State = (*ls).L;
     let mut ts: *mut TString = luaS_newlstr(L, str, l);
     let mut o: *const TValue = luaH_getstr((*ls).h, ts);
     if !((*o).tt_ as libc::c_int & 0xf as libc::c_int == 0 as libc::c_int) {
@@ -15149,7 +15130,7 @@ unsafe extern "C" fn inclinenumber(mut ls: *mut LexState) {
     }
 }
 unsafe extern "C" fn luaX_setinput(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ls: *mut LexState,
     mut z: *mut ZIO,
     mut source: *mut TString,
@@ -16389,7 +16370,7 @@ unsafe extern "C" fn arrayindex(mut k: i64) -> libc::c_uint {
     };
 }
 unsafe extern "C" fn findindex(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: *mut TValue,
     mut asize: libc::c_uint,
@@ -16426,7 +16407,7 @@ unsafe extern "C" fn findindex(
     };
 }
 unsafe extern "C" fn luaH_next(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: StkId,
 ) -> libc::c_int {
@@ -16473,7 +16454,7 @@ unsafe extern "C" fn luaH_next(
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn freehash(mut L: *mut lua_State, mut t: *mut Table) {
+unsafe extern "C" fn freehash(mut L: *mut State, mut t: *mut Table) {
     if !((*t).lastfree).is_null() {
         luaM_free_(
             L,
@@ -16590,7 +16571,7 @@ unsafe extern "C" fn numusehash(
     return totaluse;
 }
 unsafe extern "C" fn setnodevector(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut size: libc::c_uint,
 ) {
@@ -16652,7 +16633,7 @@ unsafe extern "C" fn setnodevector(
     };
 }
 unsafe extern "C" fn reinsert(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ot: *mut Table,
     mut t: *mut Table,
 ) {
@@ -16687,7 +16668,7 @@ unsafe extern "C" fn exchangehashpart(mut t1: *mut Table, mut t2: *mut Table) {
     (*t2).lastfree = lastfree;
 }
 unsafe extern "C" fn luaH_resize(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut newasize: libc::c_uint,
     mut nhsize: libc::c_uint,
@@ -16757,7 +16738,7 @@ unsafe extern "C" fn luaH_resize(
     freehash(L, &mut newt);
 }
 unsafe extern "C" fn luaH_resizearray(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut nasize: libc::c_uint,
 ) {
@@ -16769,7 +16750,7 @@ unsafe extern "C" fn luaH_resizearray(
     luaH_resize(L, t, nasize, nsize as libc::c_uint);
 }
 unsafe extern "C" fn rehash(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut ek: *const TValue,
 ) {
@@ -16801,7 +16782,7 @@ unsafe extern "C" fn rehash(
     asize = computesizes(nums.as_mut_ptr(), &mut na);
     luaH_resize(L, t, asize, (totaluse as libc::c_uint).wrapping_sub(na));
 }
-unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
+unsafe extern "C" fn luaH_new(mut L: *mut State) -> *mut Table {
     let mut o: *mut GCObject = luaC_newobj(
         L,
         5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int,
@@ -16817,7 +16798,7 @@ unsafe extern "C" fn luaH_new(mut L: *mut lua_State) -> *mut Table {
     setnodevector(L, t, 0 as libc::c_int as libc::c_uint);
     return t;
 }
-unsafe extern "C" fn luaH_free(mut L: *mut lua_State, mut t: *mut Table) {
+unsafe extern "C" fn luaH_free(mut L: *mut State, mut t: *mut Table) {
     freehash(L, t);
     luaM_free_(
         L,
@@ -16844,7 +16825,7 @@ unsafe extern "C" fn getfreepos(mut t: *mut Table) -> *mut Node {
     return 0 as *mut Node;
 }
 unsafe extern "C" fn luaH_newkey(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: *const TValue,
     mut value: *mut TValue,
@@ -17042,7 +17023,7 @@ unsafe extern "C" fn luaH_get(
     return getgeneric(t, key, 0 as libc::c_int);
 }
 unsafe extern "C" fn luaH_finishset(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: *const TValue,
     mut slot: *const TValue,
@@ -17060,7 +17041,7 @@ unsafe extern "C" fn luaH_finishset(
     };
 }
 unsafe extern "C" fn luaH_set(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: *const TValue,
     mut value: *mut TValue,
@@ -17069,7 +17050,7 @@ unsafe extern "C" fn luaH_set(
     luaH_finishset(L, t, key, slot, value);
 }
 unsafe extern "C" fn luaH_setint(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *mut Table,
     mut key: i64,
     mut value: *mut TValue,
@@ -17324,13 +17305,13 @@ unsafe extern "C" fn luaK_exp2const(
         _ => return tonumeral(e, v),
     };
 }
-unsafe extern "C" fn previousinstruction(mut fs: *mut FuncState) -> *mut Instruction {
-    static mut invalidinstruction: Instruction = !(0 as libc::c_int as Instruction);
+unsafe extern "C" fn previousinstruction(mut fs: *mut FuncState) -> *mut u32 {
+    static mut invalidinstruction: u32 = !(0 as libc::c_int as u32);
     if (*fs).pc > (*fs).lasttarget {
         return &mut *((*(*fs).f).code).offset(((*fs).pc - 1 as libc::c_int) as isize)
-            as *mut Instruction
+            as *mut u32
     } else {
-        return &invalidinstruction as *const Instruction as *mut Instruction
+        return &invalidinstruction as *const u32 as *mut u32
     };
 }
 unsafe extern "C" fn luaK_nil(
@@ -17339,19 +17320,19 @@ unsafe extern "C" fn luaK_nil(
     mut n: libc::c_int,
 ) {
     let mut l: libc::c_int = from + n - 1 as libc::c_int;
-    let mut previous: *mut Instruction = previousinstruction(fs);
+    let mut previous: *mut u32 = previousinstruction(fs);
     if (*previous >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as libc::c_uint == OP_LOADNIL as libc::c_int as libc::c_uint
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as libc::c_uint == OP_LOADNIL as libc::c_int as libc::c_uint
     {
         let mut pfrom: libc::c_int = (*previous >> 0 as libc::c_int + 7 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int) as libc::c_int;
         let mut pl: libc::c_int = pfrom
             + (*previous
                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int) as libc::c_int;
         if pfrom <= from && from <= pl + 1 as libc::c_int
             || from <= pfrom && pfrom <= l + 1 as libc::c_int
@@ -17363,19 +17344,19 @@ unsafe extern "C" fn luaK_nil(
                 l = pl;
             }
             *previous = *previous
-                & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int)
-                | (from as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                | (from as u32) << 0 as libc::c_int + 7 as libc::c_int
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int + 7 as libc::c_int;
             *previous = *previous
-                & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int)
-                | ((l - from) as Instruction)
+                | ((l - from) as u32)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                             + 1 as libc::c_int;
             return;
@@ -17396,7 +17377,7 @@ unsafe extern "C" fn getjump(
 ) -> libc::c_int {
     let mut offset: libc::c_int = (*((*(*fs).f).code).offset(pc as isize)
         >> 0 as libc::c_int + 7 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction)
+        & !(!(0 as libc::c_int as u32)
             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int + 8 as libc::c_int)
             << 0 as libc::c_int) as libc::c_int
         - (((1 as libc::c_int)
@@ -17413,8 +17394,8 @@ unsafe extern "C" fn fixjump(
     mut pc: libc::c_int,
     mut dest: libc::c_int,
 ) {
-    let mut jmp: *mut Instruction = &mut *((*(*fs).f).code).offset(pc as isize)
-        as *mut Instruction;
+    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+        as *mut u32;
     let mut offset: libc::c_int = dest - (pc + 1 as libc::c_int);
     if !(-(((1 as libc::c_int)
         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int + 8 as libc::c_int)
@@ -17433,7 +17414,7 @@ unsafe extern "C" fn fixjump(
         );
     }
     *jmp = *jmp
-        & !(!(!(0 as libc::c_int as Instruction)
+        & !(!(!(0 as libc::c_int as u32)
             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int + 8 as libc::c_int)
             << 0 as libc::c_int + 7 as libc::c_int)
         | ((offset
@@ -17441,7 +17422,7 @@ unsafe extern "C" fn fixjump(
                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                     + 8 as libc::c_int) - 1 as libc::c_int >> 1 as libc::c_int))
             as libc::c_uint) << 0 as libc::c_int + 7 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction)
+            & !(!(0 as libc::c_int as u32)
                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                     + 8 as libc::c_int) << 0 as libc::c_int + 7 as libc::c_int;
 }
@@ -17475,7 +17456,7 @@ unsafe extern "C" fn luaK_ret(
     mut first: libc::c_int,
     mut nret: libc::c_int,
 ) {
-    let mut op: OpCode = OP_MOVE;
+    let mut op: u32 = OP_MOVE;
     match nret {
         0 => {
             op = OP_RETURN0;
@@ -17498,7 +17479,7 @@ unsafe extern "C" fn luaK_ret(
 }
 unsafe extern "C" fn condjump(
     mut fs: *mut FuncState,
-    mut op: OpCode,
+    mut op: u32,
     mut A: libc::c_int,
     mut B: libc::c_int,
     mut C: libc::c_int,
@@ -17514,13 +17495,13 @@ unsafe extern "C" fn luaK_getlabel(mut fs: *mut FuncState) -> libc::c_int {
 unsafe extern "C" fn getjumpcontrol(
     mut fs: *mut FuncState,
     mut pc: libc::c_int,
-) -> *mut Instruction {
-    let mut pi: *mut Instruction = &mut *((*(*fs).f).code).offset(pc as isize)
-        as *mut Instruction;
+) -> *mut u32 {
+    let mut pi: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+        as *mut u32;
     if pc >= 1 as libc::c_int
         && luaP_opmodes[(*pi.offset(-(1 as libc::c_int as isize)) >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode as usize] as libc::c_int
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32 as usize] as libc::c_int
             & (1 as libc::c_int) << 4 as libc::c_int != 0
     {
         return pi.offset(-(1 as libc::c_int as isize))
@@ -17533,10 +17514,10 @@ unsafe extern "C" fn patchtestreg(
     mut node: libc::c_int,
     mut reg: libc::c_int,
 ) -> libc::c_int {
-    let mut i: *mut Instruction = getjumpcontrol(fs, node);
+    let mut i: *mut u32 = getjumpcontrol(fs, node);
     if (*i >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as libc::c_uint != OP_TESTSET as libc::c_int as libc::c_uint
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as libc::c_uint != OP_TESTSET as libc::c_int as libc::c_uint
     {
         return 0 as libc::c_int;
     }
@@ -17545,32 +17526,32 @@ unsafe extern "C" fn patchtestreg(
             != (*i
                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int) as libc::c_int
     {
         *i = *i
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int)
-            | (reg as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            | (reg as u32) << 0 as libc::c_int + 7 as libc::c_int
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int;
     } else {
-        *i = (OP_TEST as libc::c_int as Instruction) << 0 as libc::c_int
+        *i = (OP_TEST as libc::c_int as u32) << 0 as libc::c_int
             | ((*i
                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
-                    << 0 as libc::c_int) as libc::c_int as Instruction)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
+                    << 0 as libc::c_int) as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int
-            | (0 as libc::c_int as Instruction)
+            | (0 as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-            | (0 as libc::c_int as Instruction)
+            | (0 as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
             | ((*i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
-                    << 0 as libc::c_int) as libc::c_int as Instruction)
+                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
+                    << 0 as libc::c_int) as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
     }
     return 1;
@@ -17701,7 +17682,7 @@ unsafe extern "C" fn removelastinstruction(mut fs: *mut FuncState) {
 }
 unsafe extern "C" fn luaK_code(
     mut fs: *mut FuncState,
-    mut i: Instruction,
+    mut i: u32,
 ) -> libc::c_int {
     let mut f: *mut Proto = (*fs).f;
     (*f)
@@ -17710,19 +17691,19 @@ unsafe extern "C" fn luaK_code(
         (*f).code as *mut libc::c_void,
         (*fs).pc,
         &mut (*f).sizecode,
-        ::core::mem::size_of::<Instruction>() as libc::c_ulong as libc::c_int,
+        ::core::mem::size_of::<u32>() as libc::c_ulong as libc::c_int,
         (if 2147483647 as libc::c_int as u64
             <= (!(0 as libc::c_int as u64))
-                .wrapping_div(::core::mem::size_of::<Instruction>() as libc::c_ulong)
+                .wrapping_div(::core::mem::size_of::<u32>() as libc::c_ulong)
         {
             2147483647 as libc::c_int as libc::c_uint
         } else {
             (!(0 as libc::c_int as u64))
-                .wrapping_div(::core::mem::size_of::<Instruction>() as libc::c_ulong)
+                .wrapping_div(::core::mem::size_of::<u32>() as libc::c_ulong)
                 as libc::c_uint
         }) as libc::c_int,
         b"opcodes\0" as *const u8 as *const libc::c_char,
-    ) as *mut Instruction;
+    ) as *mut u32;
     let fresh134 = (*fs).pc;
     (*fs).pc = (*fs).pc + 1;
     *((*f).code).offset(fresh134 as isize) = i;
@@ -17731,7 +17712,7 @@ unsafe extern "C" fn luaK_code(
 }
 unsafe extern "C" fn luaK_codeABCk(
     mut fs: *mut FuncState,
-    mut o: OpCode,
+    mut o: u32,
     mut a: libc::c_int,
     mut b: libc::c_int,
     mut c: libc::c_int,
@@ -17739,34 +17720,34 @@ unsafe extern "C" fn luaK_codeABCk(
 ) -> libc::c_int {
     return luaK_code(
         fs,
-        (o as Instruction) << 0 as libc::c_int
-            | (a as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-            | (b as Instruction)
+        (o as u32) << 0 as libc::c_int
+            | (a as u32) << 0 as libc::c_int + 7 as libc::c_int
+            | (b as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-            | (c as Instruction)
+            | (c as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-            | (k as Instruction)
+            | (k as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int,
     );
 }
 unsafe extern "C" fn luaK_codeABx(
     mut fs: *mut FuncState,
-    mut o: OpCode,
+    mut o: u32,
     mut a: libc::c_int,
     mut bc: libc::c_uint,
 ) -> libc::c_int {
     return luaK_code(
         fs,
-        (o as Instruction) << 0 as libc::c_int
-            | (a as Instruction) << 0 as libc::c_int + 7 as libc::c_int
+        (o as u32) << 0 as libc::c_int
+            | (a as u32) << 0 as libc::c_int + 7 as libc::c_int
             | bc << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int,
     );
 }
 unsafe extern "C" fn codeAsBx(
     mut fs: *mut FuncState,
-    mut o: OpCode,
+    mut o: u32,
     mut a: libc::c_int,
     mut bc: libc::c_int,
 ) -> libc::c_int {
@@ -17775,14 +17756,14 @@ unsafe extern "C" fn codeAsBx(
             - 1 as libc::c_int >> 1 as libc::c_int)) as libc::c_uint;
     return luaK_code(
         fs,
-        (o as Instruction) << 0 as libc::c_int
-            | (a as Instruction) << 0 as libc::c_int + 7 as libc::c_int
+        (o as u32) << 0 as libc::c_int
+            | (a as u32) << 0 as libc::c_int + 7 as libc::c_int
             | b << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int,
     );
 }
 unsafe extern "C" fn codesJ(
     mut fs: *mut FuncState,
-    mut o: OpCode,
+    mut o: u32,
     mut sj: libc::c_int,
     mut k: libc::c_int,
 ) -> libc::c_int {
@@ -17792,8 +17773,8 @@ unsafe extern "C" fn codesJ(
             - 1 as libc::c_int >> 1 as libc::c_int)) as libc::c_uint;
     return luaK_code(
         fs,
-        (o as Instruction) << 0 as libc::c_int | j << 0 as libc::c_int + 7 as libc::c_int
-            | (k as Instruction)
+        (o as u32) << 0 as libc::c_int | j << 0 as libc::c_int + 7 as libc::c_int
+            | (k as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int,
     );
 }
@@ -17803,8 +17784,8 @@ unsafe extern "C" fn codeextraarg(
 ) -> libc::c_int {
     return luaK_code(
         fs,
-        (OP_EXTRAARG as libc::c_int as Instruction) << 0 as libc::c_int
-            | (a as Instruction) << 0 as libc::c_int + 7 as libc::c_int,
+        (OP_EXTRAARG as libc::c_int as u32) << 0 as libc::c_int
+            | (a as u32) << 0 as libc::c_int + 7 as libc::c_int,
     );
 }
 unsafe extern "C" fn luaK_codek(
@@ -17899,7 +17880,7 @@ unsafe extern "C" fn addk(
         value_: Value { gc: 0 as *mut GCObject },
         tt_: 0,
     };
-    let mut L: *mut lua_State = (*(*fs).ls).L;
+    let mut L: *mut State = (*(*fs).ls).L;
     let mut f: *mut Proto = (*fs).f;
     let mut idx: *const TValue = luaH_get((*(*fs).ls).h, key);
     let mut k: libc::c_int = 0;
@@ -17911,7 +17892,7 @@ unsafe extern "C" fn addk(
         if k < (*fs).nk
             && (*((*f).k).offset(k as isize)).tt_ as libc::c_int & 0x3f as libc::c_int
                 == (*v).tt_ as libc::c_int & 0x3f as libc::c_int
-            && luaV_equalobj(0 as *mut lua_State, &mut *((*f).k).offset(k as isize), v)
+            && luaV_equalobj(0 as *mut State, &mut *((*f).k).offset(k as isize), v)
                 != 0
         {
             return k;
@@ -18147,35 +18128,35 @@ unsafe extern "C" fn luaK_setreturns(
     mut e: *mut expdesc,
     mut nresults: libc::c_int,
 ) {
-    let mut pc: *mut Instruction = &mut *((*(*fs).f).code).offset((*e).u.info as isize)
-        as *mut Instruction;
+    let mut pc: *mut u32 = &mut *((*(*fs).f).code).offset((*e).u.info as isize)
+        as *mut u32;
     if (*e).k as libc::c_uint == VCALL as libc::c_int as libc::c_uint {
         *pc = *pc
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int)
-            | ((nresults + 1 as libc::c_int) as Instruction)
+            | ((nresults + 1 as libc::c_int) as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int;
     } else {
         *pc = *pc
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int)
-            | ((nresults + 1 as libc::c_int) as Instruction)
+            | ((nresults + 1 as libc::c_int) as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int;
         *pc = *pc
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int)
-            | ((*fs).freereg as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            | ((*fs).freereg as u32) << 0 as libc::c_int + 7 as libc::c_int
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int;
         luaK_reserveregs(fs, 1);
     };
@@ -18191,20 +18172,20 @@ unsafe extern "C" fn luaK_setoneret(mut fs: *mut FuncState, mut e: *mut expdesc)
             .u
             .info = (*((*(*fs).f).code).offset((*e).u.info as isize)
             >> 0 as libc::c_int + 7 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int) as libc::c_int;
     } else if (*e).k as libc::c_uint == VVARARG as libc::c_int as libc::c_uint {
         *((*(*fs).f).code)
             .offset(
                 (*e).u.info as isize,
             ) = *((*(*fs).f).code).offset((*e).u.info as isize)
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int)
-            | (2 as libc::c_int as Instruction)
+            | (2 as libc::c_int as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int + 8 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int + 8 as libc::c_int;
         (*e).k = VRELOC;
@@ -18344,13 +18325,13 @@ unsafe extern "C" fn discharge2reg(
             current_block_14 = 13242334135786603907;
         }
         17 => {
-            let mut pc: *mut Instruction = &mut *((*(*fs).f).code)
-                .offset((*e).u.info as isize) as *mut Instruction;
+            let mut pc: *mut u32 = &mut *((*(*fs).f).code)
+                .offset((*e).u.info as isize) as *mut u32;
             *pc = *pc
-                & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int)
-                | (reg as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                | (reg as u32) << 0 as libc::c_int + 7 as libc::c_int
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int + 7 as libc::c_int;
             current_block_14 = 13242334135786603907;
         }
@@ -18387,7 +18368,7 @@ unsafe extern "C" fn discharge2anyreg(mut fs: *mut FuncState, mut e: *mut expdes
 unsafe extern "C" fn code_loadbool(
     mut fs: *mut FuncState,
     mut A: libc::c_int,
-    mut op: OpCode,
+    mut op: u32,
 ) -> libc::c_int {
     luaK_getlabel(fs);
     return luaK_codeABCk(
@@ -18404,10 +18385,10 @@ unsafe extern "C" fn need_value(
     mut list: libc::c_int,
 ) -> libc::c_int {
     while list != -(1 as libc::c_int) {
-        let mut i: Instruction = *getjumpcontrol(fs, list);
+        let mut i: u32 = *getjumpcontrol(fs, list);
         if (i >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode as libc::c_uint
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32 as libc::c_uint
             != OP_TESTSET as libc::c_int as libc::c_uint
         {
             return 1;
@@ -18536,7 +18517,7 @@ unsafe extern "C" fn exp2RK(mut fs: *mut FuncState, mut e: *mut expdesc) -> libc
 }
 unsafe extern "C" fn codeABRK(
     mut fs: *mut FuncState,
-    mut o: OpCode,
+    mut o: u32,
     mut a: libc::c_int,
     mut b: libc::c_int,
     mut ec: *mut expdesc,
@@ -18622,15 +18603,15 @@ unsafe extern "C" fn luaK_self(
     freeexp(fs, key);
 }
 unsafe extern "C" fn negatecondition(mut fs: *mut FuncState, mut e: *mut expdesc) {
-    let mut pc: *mut Instruction = getjumpcontrol(fs, (*e).u.info);
+    let mut pc: *mut u32 = getjumpcontrol(fs, (*e).u.info);
     *pc = *pc
-        & !(!(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+        & !(!(!(0 as libc::c_int as u32) << 1 as libc::c_int)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int)
         | (((*pc >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
-                << 0 as libc::c_int) as libc::c_int ^ 1 as libc::c_int) as Instruction)
+            & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
+                << 0 as libc::c_int) as libc::c_int ^ 1 as libc::c_int) as u32)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
 }
 unsafe extern "C" fn jumponcond(
@@ -18639,10 +18620,10 @@ unsafe extern "C" fn jumponcond(
     mut cond_0: libc::c_int,
 ) -> libc::c_int {
     if (*e).k as libc::c_uint == VRELOC as libc::c_int as libc::c_uint {
-        let mut ie: Instruction = *((*(*fs).f).code).offset((*e).u.info as isize);
+        let mut ie: u32 = *((*(*fs).f).code).offset((*e).u.info as isize);
         if (ie >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode as libc::c_uint
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32 as libc::c_uint
             == OP_NOT as libc::c_int as libc::c_uint
         {
             removelastinstruction(fs);
@@ -18652,7 +18633,7 @@ unsafe extern "C" fn jumponcond(
                 (ie
                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int,
                 0,
                 0,
@@ -18890,24 +18871,24 @@ unsafe extern "C" fn constfolding(
 }
 #[inline]
 unsafe extern "C" fn binopr2op(
-    mut opr: BinOpr,
-    mut baser: BinOpr,
-    mut base: OpCode,
-) -> OpCode {
-    return (opr as libc::c_int - baser as libc::c_int + base as libc::c_int) as OpCode;
+    mut opr: u32,
+    mut baser: u32,
+    mut base: u32,
+) -> u32 {
+    return (opr as libc::c_int - baser as libc::c_int + base as libc::c_int) as u32;
 }
 #[inline]
-unsafe extern "C" fn unopr2op(mut opr: UnOpr) -> OpCode {
+unsafe extern "C" fn unopr2op(mut opr: u32) -> u32 {
     return (opr as libc::c_int - OPR_MINUS as libc::c_int + OP_UNM as libc::c_int)
-        as OpCode;
+        as u32;
 }
 #[inline]
-unsafe extern "C" fn binopr2TM(mut opr: BinOpr) -> TMS {
-    return (opr as libc::c_int - OPR_ADD as libc::c_int + TM_ADD as libc::c_int) as TMS;
+unsafe extern "C" fn binopr2TM(mut opr: u32) -> u32 {
+    return (opr as libc::c_int - OPR_ADD as libc::c_int + TM_ADD as libc::c_int) as u32;
 }
 unsafe extern "C" fn codeunexpval(
     mut fs: *mut FuncState,
-    mut op: OpCode,
+    mut op: u32,
     mut e: *mut expdesc,
     mut line: libc::c_int,
 ) {
@@ -18930,12 +18911,12 @@ unsafe extern "C" fn finishbinexpval(
     mut fs: *mut FuncState,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
-    mut op: OpCode,
+    mut op: u32,
     mut v2: libc::c_int,
     mut flip: libc::c_int,
     mut line: libc::c_int,
-    mut mmop: OpCode,
-    mut event: TMS,
+    mut mmop: u32,
+    mut event: u32,
 ) {
     let mut v1: libc::c_int = luaK_exp2anyreg(fs, e1);
     let mut pc: libc::c_int = luaK_codeABCk(
@@ -18955,12 +18936,12 @@ unsafe extern "C" fn finishbinexpval(
 }
 unsafe extern "C" fn codebinexpval(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut line: libc::c_int,
 ) {
-    let mut op: OpCode = binopr2op(opr, OPR_ADD, OP_ADD);
+    let mut op: u32 = binopr2op(opr, OPR_ADD, OP_ADD);
     let mut v2: libc::c_int = luaK_exp2anyreg(fs, e2);
     finishbinexpval(
         fs,
@@ -18976,12 +18957,12 @@ unsafe extern "C" fn codebinexpval(
 }
 unsafe extern "C" fn codebini(
     mut fs: *mut FuncState,
-    mut op: OpCode,
+    mut op: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut flip: libc::c_int,
     mut line: libc::c_int,
-    mut event: TMS,
+    mut event: u32,
 ) {
     let mut v2: libc::c_int = (*e2).u.ival as libc::c_int
         + (((1 as libc::c_int) << 8 as libc::c_int) - 1 as libc::c_int
@@ -18990,24 +18971,24 @@ unsafe extern "C" fn codebini(
 }
 unsafe extern "C" fn codebinK(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut flip: libc::c_int,
     mut line: libc::c_int,
 ) {
-    let mut event: TMS = binopr2TM(opr);
+    let mut event: u32 = binopr2TM(opr);
     let mut v2: libc::c_int = (*e2).u.info;
-    let mut op: OpCode = binopr2op(opr, OPR_ADD, OP_ADDK);
+    let mut op: u32 = binopr2op(opr, OPR_ADD, OP_ADDK);
     finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
 }
 unsafe extern "C" fn finishbinexpneg(
     mut fs: *mut FuncState,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
-    mut op: OpCode,
+    mut op: u32,
     mut line: libc::c_int,
-    mut event: TMS,
+    mut event: u32,
 ) -> libc::c_int {
     if isKint(e2) == 0 {
         return 0 as libc::c_int
@@ -19034,15 +19015,15 @@ unsafe extern "C" fn finishbinexpneg(
                 .offset(
                     ((*fs).pc - 1 as libc::c_int) as isize,
                 ) = *((*(*fs).f).code).offset(((*fs).pc - 1 as libc::c_int) as isize)
-                & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int)
                 | ((v2
                     + (((1 as libc::c_int) << 8 as libc::c_int) - 1 as libc::c_int
-                        >> 1 as libc::c_int)) as Instruction)
+                        >> 1 as libc::c_int)) as u32)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                         << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                             + 1 as libc::c_int;
             return 1;
@@ -19056,7 +19037,7 @@ unsafe extern "C" fn swapexps(mut e1: *mut expdesc, mut e2: *mut expdesc) {
 }
 unsafe extern "C" fn codebinNoK(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut flip: libc::c_int,
@@ -19069,7 +19050,7 @@ unsafe extern "C" fn codebinNoK(
 }
 unsafe extern "C" fn codearith(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut flip: libc::c_int,
@@ -19083,7 +19064,7 @@ unsafe extern "C" fn codearith(
 }
 unsafe extern "C" fn codecommutative(
     mut fs: *mut FuncState,
-    mut op: BinOpr,
+    mut op: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut line: libc::c_int,
@@ -19101,7 +19082,7 @@ unsafe extern "C" fn codecommutative(
 }
 unsafe extern "C" fn codebitwise(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut line: libc::c_int,
@@ -19121,7 +19102,7 @@ unsafe extern "C" fn codebitwise(
 }
 unsafe extern "C" fn codeorder(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
 ) {
@@ -19129,7 +19110,7 @@ unsafe extern "C" fn codeorder(
     let mut r2: libc::c_int = 0;
     let mut im: libc::c_int = 0;
     let mut isfloat: libc::c_int = 0 as libc::c_int;
-    let mut op: OpCode = OP_MOVE;
+    let mut op: u32 = OP_MOVE;
     if isSCnumber(e2, &mut im, &mut isfloat) != 0 {
         r1 = luaK_exp2anyreg(fs, e1);
         r2 = im;
@@ -19149,7 +19130,7 @@ unsafe extern "C" fn codeorder(
 }
 unsafe extern "C" fn codeeq(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
 ) {
@@ -19157,7 +19138,7 @@ unsafe extern "C" fn codeeq(
     let mut r2: libc::c_int = 0;
     let mut im: libc::c_int = 0;
     let mut isfloat: libc::c_int = 0 as libc::c_int;
-    let mut op: OpCode = OP_MOVE;
+    let mut op: u32 = OP_MOVE;
     if (*e1).k as libc::c_uint != VNONRELOC as libc::c_int as libc::c_uint {
         swapexps(e1, e2);
     }
@@ -19187,7 +19168,7 @@ unsafe extern "C" fn codeeq(
 }
 unsafe extern "C" fn luaK_prefix(
     mut fs: *mut FuncState,
-    mut opr: UnOpr,
+    mut opr: u32,
     mut e: *mut expdesc,
     mut line: libc::c_int,
 ) {
@@ -19239,7 +19220,7 @@ unsafe extern "C" fn luaK_prefix(
 }
 unsafe extern "C" fn luaK_infix(
     mut fs: *mut FuncState,
-    mut op: BinOpr,
+    mut op: u32,
     mut v: *mut expdesc,
 ) {
     luaK_dischargevars(fs, v);
@@ -19279,30 +19260,30 @@ unsafe extern "C" fn codeconcat(
     mut e2: *mut expdesc,
     mut line: libc::c_int,
 ) {
-    let mut ie2: *mut Instruction = previousinstruction(fs);
+    let mut ie2: *mut u32 = previousinstruction(fs);
     if (*ie2 >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode as libc::c_uint == OP_CONCAT as libc::c_int as libc::c_uint
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32 as libc::c_uint == OP_CONCAT as libc::c_int as libc::c_uint
     {
         let mut n: libc::c_int = (*ie2
             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int) as libc::c_int;
         freeexp(fs, e2);
         *ie2 = *ie2
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int)
-            | ((*e1).u.info as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            | ((*e1).u.info as u32) << 0 as libc::c_int + 7 as libc::c_int
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int;
         *ie2 = *ie2
-            & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+            & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int)
-            | ((n + 1 as libc::c_int) as Instruction)
+            | ((n + 1 as libc::c_int) as u32)
                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                     + 1 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                         + 1 as libc::c_int;
     } else {
@@ -19320,7 +19301,7 @@ unsafe extern "C" fn codeconcat(
 }
 unsafe extern "C" fn luaK_posfix(
     mut fs: *mut FuncState,
-    mut opr: BinOpr,
+    mut opr: u32,
     mut e1: *mut expdesc,
     mut e2: *mut expdesc,
     mut line: libc::c_int,
@@ -19397,7 +19378,7 @@ unsafe extern "C" fn luaK_posfix(
             swapexps(e1, e2);
             opr = (opr as libc::c_uint)
                 .wrapping_sub(OPR_GT as libc::c_int as libc::c_uint)
-                .wrapping_add(OPR_LT as libc::c_int as libc::c_uint) as BinOpr;
+                .wrapping_add(OPR_LT as libc::c_int as libc::c_uint) as u32;
             current_block_30 = 1118134448028020070;
         }
         14 | 15 => {
@@ -19428,8 +19409,8 @@ unsafe extern "C" fn luaK_settablesize(
     mut asize: libc::c_int,
     mut hsize: libc::c_int,
 ) {
-    let mut inst: *mut Instruction = &mut *((*(*fs).f).code).offset(pc as isize)
-        as *mut Instruction;
+    let mut inst: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+        as *mut u32;
     let mut rb: libc::c_int = if hsize != 0 as libc::c_int {
         luaO_ceillog2(hsize as libc::c_uint) + 1 as libc::c_int
     } else {
@@ -19442,19 +19423,19 @@ unsafe extern "C" fn luaK_settablesize(
         % (((1 as libc::c_int) << 8 as libc::c_int) - 1 as libc::c_int
             + 1 as libc::c_int);
     let mut k: libc::c_int = (extra > 0 as libc::c_int) as libc::c_int;
-    *inst = (OP_NEWTABLE as libc::c_int as Instruction) << 0 as libc::c_int
-        | (ra as Instruction) << 0 as libc::c_int + 7 as libc::c_int
-        | (rb as Instruction)
+    *inst = (OP_NEWTABLE as libc::c_int as u32) << 0 as libc::c_int
+        | (ra as u32) << 0 as libc::c_int + 7 as libc::c_int
+        | (rb as u32)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
-        | (rc as Instruction)
+        | (rc as u32)
             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                 + 8 as libc::c_int
-        | (k as Instruction) << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
+        | (k as u32) << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
     *inst
         .offset(
             1 as libc::c_int as isize,
-        ) = (OP_EXTRAARG as libc::c_int as Instruction) << 0 as libc::c_int
-        | (extra as Instruction) << 0 as libc::c_int + 7 as libc::c_int;
+        ) = (OP_EXTRAARG as libc::c_int as u32) << 0 as libc::c_int
+        | (extra as u32) << 0 as libc::c_int + 7 as libc::c_int;
 }
 unsafe extern "C" fn luaK_setlist(
     mut fs: *mut FuncState,
@@ -19480,23 +19461,23 @@ unsafe extern "C" fn luaK_setlist(
     (*fs).freereg = (base + 1 as libc::c_int) as u8;
 }
 unsafe extern "C" fn finaltarget(
-    mut code: *mut Instruction,
+    mut code: *mut u32,
     mut i: libc::c_int,
 ) -> libc::c_int {
     let mut count: libc::c_int = 0;
     count = 0 as libc::c_int;
     while count < 100 as libc::c_int {
-        let mut pc: Instruction = *code.offset(i as isize);
+        let mut pc: u32 = *code.offset(i as isize);
         if (pc >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode as libc::c_uint
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32 as libc::c_uint
             != OP_JMP as libc::c_int as libc::c_uint
         {
             break;
         }
         i
             += (pc >> 0 as libc::c_int + 7 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction)
+                & !(!(0 as libc::c_int as u32)
                     << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                         + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                 - (((1 as libc::c_int)
@@ -19512,12 +19493,12 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
     let mut p: *mut Proto = (*fs).f;
     i = 0 as libc::c_int;
     while i < (*fs).pc {
-        let mut pc: *mut Instruction = &mut *((*p).code).offset(i as isize)
-            as *mut Instruction;
+        let mut pc: *mut u32 = &mut *((*p).code).offset(i as isize)
+            as *mut u32;
         let mut current_block_7: u64;
         match (*pc >> 0 as libc::c_int
-            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                << 0 as libc::c_int) as OpCode as libc::c_uint
+            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                << 0 as libc::c_int) as u32 as libc::c_uint
         {
             71 | 72 => {
                 if !((*fs).needclose as libc::c_int != 0
@@ -19526,10 +19507,10 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
                     current_block_7 = 12599329904712511516;
                 } else {
                     *pc = *pc
-                        & !(!(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
+                        & !(!(!(0 as libc::c_int as u32) << 7 as libc::c_int)
                             << 0 as libc::c_int)
-                        | (OP_RETURN as libc::c_int as Instruction) << 0 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
+                        | (OP_RETURN as libc::c_int as u32) << 0 as libc::c_int
+                            & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
                                 << 0 as libc::c_int;
                     current_block_7 = 11006700562992250127;
                 }
@@ -19550,23 +19531,23 @@ unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
             11006700562992250127 => {
                 if (*fs).needclose != 0 {
                     *pc = *pc
-                        & !(!(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                        & !(!(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int)
-                        | (1 as libc::c_int as Instruction)
+                        | (1 as libc::c_int as u32)
                             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int;
                 }
                 if (*p).is_vararg != 0 {
                     *pc = *pc
-                        & !(!(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int)
                         | (((*p).numparams as libc::c_int + 1 as libc::c_int)
-                            as Instruction)
+                            as u32)
                             << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int;
                 }
@@ -19622,7 +19603,7 @@ unsafe extern "C" fn luaV_tonumber_(
 unsafe extern "C" fn luaV_flttointeger(
     mut n: f64,
     mut p: *mut i64,
-    mut mode: F2Imod,
+    mut mode: u32,
 ) -> libc::c_int {
     let mut f: f64 = floor(n);
     if n != f {
@@ -19646,7 +19627,7 @@ unsafe extern "C" fn luaV_flttointeger(
 unsafe extern "C" fn luaV_tointegerns(
     mut obj: *const TValue,
     mut p: *mut i64,
-    mut mode: F2Imod,
+    mut mode: u32,
 ) -> libc::c_int {
     if (*obj).tt_ as libc::c_int
         == 3 as libc::c_int | (1 as libc::c_int) << 4 as libc::c_int
@@ -19664,7 +19645,7 @@ unsafe extern "C" fn luaV_tointegerns(
 unsafe extern "C" fn luaV_tointeger(
     mut obj: *const TValue,
     mut p: *mut i64,
-    mut mode: F2Imod,
+    mut mode: u32,
 ) -> libc::c_int {
     let mut v: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
@@ -19676,7 +19657,7 @@ unsafe extern "C" fn luaV_tointeger(
     return luaV_tointegerns(obj, p, mode);
 }
 unsafe extern "C" fn forlimit(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut init: i64,
     mut lim: *const TValue,
     mut p: *mut i64,
@@ -19689,7 +19670,7 @@ unsafe extern "C" fn forlimit(
             F2Iceil as libc::c_int
         } else {
             F2Ifloor as libc::c_int
-        }) as F2Imod,
+        }) as u32,
     ) == 0
     {
         let mut flim: f64 = 0.;
@@ -19722,7 +19703,7 @@ unsafe extern "C" fn forlimit(
         (init < *p) as libc::c_int
     };
 }
-unsafe extern "C" fn forprep(mut L: *mut lua_State, mut ra: StkId) -> libc::c_int {
+unsafe extern "C" fn forprep(mut L: *mut State, mut ra: StkId) -> libc::c_int {
     let mut pinit: *mut TValue = &mut (*ra).val;
     let mut plimit: *mut TValue = &mut (*ra.offset(1 as libc::c_int as isize)).val;
     let mut pstep: *mut TValue = &mut (*ra.offset(2 as libc::c_int as isize)).val;
@@ -19873,7 +19854,7 @@ unsafe extern "C" fn floatforloop(mut ra: StkId) -> libc::c_int {
     };
 }
 unsafe extern "C" fn luaV_finishget(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *const TValue,
     mut key: *mut TValue,
     mut val: StkId,
@@ -19943,7 +19924,7 @@ unsafe extern "C" fn luaV_finishget(
     );
 }
 unsafe extern "C" fn luaV_finishset(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: *const TValue,
     mut key: *mut TValue,
     mut val: *mut TValue,
@@ -20201,7 +20182,7 @@ unsafe extern "C" fn LEnum(mut l: *const TValue, mut r: *const TValue) -> libc::
     };
 }
 unsafe extern "C" fn lessthanothers(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: *const TValue,
     mut r: *const TValue,
 ) -> libc::c_int {
@@ -20217,7 +20198,7 @@ unsafe extern "C" fn lessthanothers(
     };
 }
 unsafe extern "C" fn luaV_lessthan(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: *const TValue,
     mut r: *const TValue,
 ) -> libc::c_int {
@@ -20230,7 +20211,7 @@ unsafe extern "C" fn luaV_lessthan(
     };
 }
 unsafe extern "C" fn lessequalothers(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: *const TValue,
     mut r: *const TValue,
 ) -> libc::c_int {
@@ -20246,7 +20227,7 @@ unsafe extern "C" fn lessequalothers(
     };
 }
 unsafe extern "C" fn luaV_lessequal(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: *const TValue,
     mut r: *const TValue,
 ) -> libc::c_int {
@@ -20259,7 +20240,7 @@ unsafe extern "C" fn luaV_lessequal(
     };
 }
 unsafe extern "C" fn luaV_equalobj(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t1: *const TValue,
     mut t2: *const TValue,
 ) -> libc::c_int {
@@ -20409,7 +20390,7 @@ unsafe extern "C" fn copy2buff(
         }
     };
 }
-unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: libc::c_int) {
+unsafe extern "C" fn luaV_concat(mut L: *mut State, mut total: libc::c_int) {
     if total == 1 as libc::c_int {
         return;
     }
@@ -20573,7 +20554,7 @@ unsafe extern "C" fn luaV_concat(mut L: *mut lua_State, mut total: libc::c_int) 
     };
 }
 unsafe extern "C" fn luaV_objlen(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ra: StkId,
     mut rb: *const TValue,
 ) {
@@ -20639,7 +20620,7 @@ unsafe extern "C" fn luaV_objlen(
     luaT_callTMres(L, tm, rb, rb, ra);
 }
 unsafe extern "C" fn luaV_idiv(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut m: i64,
     mut n: i64,
 ) -> i64 {
@@ -20666,7 +20647,7 @@ unsafe extern "C" fn luaV_idiv(
     };
 }
 unsafe extern "C" fn luaV_mod(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut m: i64,
     mut n: i64,
 ) -> i64 {
@@ -20692,7 +20673,7 @@ unsafe extern "C" fn luaV_mod(
     };
 }
 unsafe extern "C" fn luaV_modf(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut m: f64,
     mut n: f64,
 ) -> f64 {
@@ -20731,7 +20712,7 @@ unsafe extern "C" fn luaV_shiftl(mut x: i64, mut y: i64) -> i64 {
     };
 }
 unsafe extern "C" fn pushclosure(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut p: *mut Proto,
     mut encup: *mut *mut UpVal,
     mut base: StkId,
@@ -20776,21 +20757,21 @@ unsafe extern "C" fn pushclosure(
         i += 1;
     }
 }
-unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
+unsafe extern "C" fn luaV_finishOp(mut L: *mut State) {
     let mut ci: *mut CallInfo = (*L).ci;
     let mut base: StkId = ((*ci).func.p).offset(1 as libc::c_int as isize);
-    let mut inst: Instruction = *((*ci).u.l.savedpc)
+    let mut inst: u32 = *((*ci).u.l.savedpc)
         .offset(-(1 as libc::c_int as isize));
-    let mut op: OpCode = (inst >> 0 as libc::c_int
-        & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int) << 0 as libc::c_int)
-        as OpCode;
+    let mut op: u32 = (inst >> 0 as libc::c_int
+        & !(!(0 as libc::c_int as u32) << 7 as libc::c_int) << 0 as libc::c_int)
+        as u32;
     match op as libc::c_uint {
         46 | 47 | 48 => {
             let mut io1: *mut TValue = &mut (*base
                 .offset(
                     (*((*ci).u.l.savedpc).offset(-(2 as libc::c_int as isize))
                         >> 0 as libc::c_int + 7 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int as isize,
                 ))
                 .val;
@@ -20803,7 +20784,7 @@ unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
             let mut io1_0: *mut TValue = &mut (*base
                 .offset(
                     (inst >> 0 as libc::c_int + 7 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int as isize,
                 ))
                 .val;
@@ -20825,7 +20806,7 @@ unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
             (*L).top.p;
             if res
                 != (inst >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                    & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                         << 0 as libc::c_int) as libc::c_int
             {
                 (*ci).u.l.savedpc = ((*ci).u.l.savedpc).offset(1);
@@ -20835,7 +20816,7 @@ unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
         53 => {
             let mut top: StkId = ((*L).top.p).offset(-(1 as libc::c_int as isize));
             let mut a: libc::c_int = (inst >> 0 as libc::c_int + 7 as libc::c_int
-                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                     << 0 as libc::c_int) as libc::c_int;
             let mut total: libc::c_int = top
                 .offset(-(1 as libc::c_int as isize))
@@ -20856,7 +20837,7 @@ unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
             let mut ra: StkId = base
                 .offset(
                     (inst >> 0 as libc::c_int + 7 as libc::c_int
-                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                             << 0 as libc::c_int) as libc::c_int as isize,
                 );
             (*L).top.p = ra.offset((*ci).u2.nres as isize);
@@ -20866,8 +20847,8 @@ unsafe extern "C" fn luaV_finishOp(mut L: *mut lua_State) {
         _ => {}
     };
 }
-unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) {
-    let mut i: Instruction = 0;
+unsafe extern "C" fn luaV_execute(mut L: *mut State, mut ci: *mut CallInfo) {
+    let mut i: u32 = 0;
     let mut ra_65: StkId = 0 as *mut StackValue;
     let mut newci: *mut CallInfo = 0 as *mut CallInfo;
     let mut b_4: libc::c_int = 0;
@@ -20876,7 +20857,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
     let mut cl: *mut LClosure = 0 as *mut LClosure;
     let mut k: *mut TValue = 0 as *mut TValue;
     let mut base: StkId = 0 as *mut StackValue;
-    let mut pc: *const Instruction = 0 as *const Instruction;
+    let mut pc: *const u32 = 0 as *const u32;
     let mut trap: libc::c_int = 0;
     '_startfunc: loop {
         trap = (*L).hookmask;
@@ -20898,14 +20879,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                 pc = pc.offset(1);
                 i = *fresh138;
                 match (i >> 0 as libc::c_int
-                    & !(!(0 as libc::c_int as Instruction) << 7 as libc::c_int)
-                        << 0 as libc::c_int) as OpCode as libc::c_uint
+                    & !(!(0 as libc::c_int as u32) << 7 as libc::c_int)
+                        << 0 as libc::c_int) as u32 as libc::c_uint
                 {
                     0 => {
                         let mut ra: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut io1: *mut TValue = &mut (*ra).val;
@@ -20914,7 +20895,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -20926,12 +20907,12 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_0: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b: i64 = ((i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction)
+                            & !(!(0 as libc::c_int as u32)
                                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int)
@@ -20948,12 +20929,12 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_1: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction)
+                            & !(!(0 as libc::c_int as u32)
                                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int)
@@ -20970,13 +20951,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_2: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb: *mut TValue = k
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
@@ -20990,14 +20971,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_3: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_0: *mut TValue = 0 as *mut TValue;
                         rb_0 = k
                             .offset(
                                 (*pc >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                             + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                     as isize,
@@ -21013,7 +20994,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_4: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ra_4)
@@ -21026,7 +21007,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_5: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ra_5)
@@ -21040,7 +21021,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_6: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ra_6)
@@ -21053,13 +21034,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_7: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b_1: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         loop {
                             let fresh139 = ra_7;
@@ -21080,13 +21061,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_8: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b_2: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut io1_2: *mut TValue = &mut (*ra_8).val;
                         let mut io2_2: *const TValue = (**((*cl).upvals)
@@ -21102,7 +21083,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_9: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut uv: *mut UpVal = *((*cl).upvals)
@@ -21111,7 +21092,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut io1_3: *mut TValue = (*uv).v.p;
@@ -21140,7 +21121,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_10: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot: *const TValue = 0 as *const TValue;
@@ -21150,7 +21131,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .v
@@ -21160,7 +21141,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut key: *mut TString = &mut (*((*rc).value_.gc
@@ -21197,7 +21178,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_11: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_0: *const TValue = 0 as *const TValue;
@@ -21206,7 +21187,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21215,7 +21196,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21281,7 +21262,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_12: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_1: *const TValue = 0 as *const TValue;
@@ -21290,14 +21271,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut c: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         if if !((*rb_2).tt_ as libc::c_int
                             == 5 as libc::c_int | (0 as libc::c_int) << 4 as libc::c_int
@@ -21349,7 +21330,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_13: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_2: *const TValue = 0 as *const TValue;
@@ -21358,7 +21339,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21367,7 +21348,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut key_1: *mut TString = &mut (*((*rc_1).value_.gc
@@ -21406,7 +21387,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             .as_mut_ptr()
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .v
@@ -21416,7 +21397,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rc_2: *mut TValue = if (i
@@ -21428,7 +21409,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             )
                         } else {
@@ -21437,7 +21418,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val
@@ -21488,7 +21469,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_14: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_4: *const TValue = 0 as *const TValue;
@@ -21497,7 +21478,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21510,7 +21491,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             )
                         } else {
@@ -21519,7 +21500,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val
@@ -21598,14 +21579,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_15: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_5: *const TValue = 0 as *const TValue;
                         let mut c_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut rc_4: *mut TValue = if (i
                             & (1 as libc::c_uint)
@@ -21616,7 +21597,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             )
                         } else {
@@ -21625,7 +21606,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val
@@ -21698,7 +21679,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_16: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_6: *const TValue = 0 as *const TValue;
@@ -21707,7 +21688,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rc_5: *mut TValue = if (i
@@ -21719,7 +21700,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             )
                         } else {
@@ -21728,7 +21709,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val
@@ -21779,18 +21760,18 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_17: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b_3: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut c_1: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut t: *mut Table = 0 as *mut Table;
                         if b_3 > 0 as libc::c_int {
@@ -21803,7 +21784,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         {
                             c_1
                                 += (*pc >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                             + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                     * (((1 as libc::c_int) << 8 as libc::c_int)
@@ -21834,7 +21815,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_18: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut slot_7: *const TValue = 0 as *const TValue;
@@ -21843,7 +21824,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21856,7 +21837,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             )
                         } else {
@@ -21865,7 +21846,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val
@@ -21910,7 +21891,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_19: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1: *mut TValue = &mut (*base
@@ -21918,14 +21899,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut imm: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -21962,7 +21943,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -21971,13 +21952,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut ra_20: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_0).tt_ as libc::c_int
@@ -22046,7 +22027,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22055,13 +22036,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut ra_21: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_1).tt_ as libc::c_int
@@ -22130,7 +22111,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22139,13 +22120,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut ra_22: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_2).tt_ as libc::c_int
@@ -22216,7 +22197,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22225,13 +22206,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut ra_23: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_3).tt_ as libc::c_int
@@ -22295,7 +22276,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_24: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_4: *mut TValue = &mut (*base
@@ -22303,7 +22284,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22312,7 +22293,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n1_3: f64 = 0.;
@@ -22367,7 +22348,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_25: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_5: *mut TValue = &mut (*base
@@ -22375,7 +22356,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22384,7 +22365,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n1_4: f64 = 0.;
@@ -22437,7 +22418,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22446,13 +22427,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut ra_26: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_6).tt_ as libc::c_int
@@ -22516,7 +22497,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_27: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_7: *mut TValue = &mut (*base
@@ -22524,7 +22505,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22533,7 +22514,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut i1_4: i64 = 0;
@@ -22565,7 +22546,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_28: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_8: *mut TValue = &mut (*base
@@ -22573,7 +22554,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22582,7 +22563,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut i1_5: i64 = 0;
@@ -22614,7 +22595,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_29: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_9: *mut TValue = &mut (*base
@@ -22622,7 +22603,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22631,7 +22612,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut i1_6: i64 = 0;
@@ -22663,7 +22644,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_30: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_8: *mut TValue = &mut (*base
@@ -22671,14 +22652,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ic: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -22707,7 +22688,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_31: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_9: *mut TValue = &mut (*base
@@ -22715,14 +22696,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ic_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -22753,7 +22734,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22762,14 +22743,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ra_32: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_10).tt_ as libc::c_int
@@ -22838,7 +22819,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22847,14 +22828,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ra_33: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_11).tt_ as libc::c_int
@@ -22923,7 +22904,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -22932,14 +22913,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ra_34: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_12).tt_ as libc::c_int
@@ -23010,7 +22991,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23019,14 +23000,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ra_35: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_13).tt_ as libc::c_int
@@ -23090,7 +23071,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_36: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_14: *mut TValue = &mut (*base
@@ -23098,7 +23079,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23107,7 +23088,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23163,7 +23144,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_37: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_15: *mut TValue = &mut (*base
@@ -23171,7 +23152,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23180,7 +23161,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23234,7 +23215,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23243,14 +23224,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
                         let mut ra_38: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*v1_16).tt_ as libc::c_int
@@ -23314,7 +23295,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_39: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_17: *mut TValue = &mut (*base
@@ -23322,7 +23303,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23331,7 +23312,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23374,7 +23355,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_40: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_18: *mut TValue = &mut (*base
@@ -23382,7 +23363,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23391,7 +23372,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23434,7 +23415,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_41: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_19: *mut TValue = &mut (*base
@@ -23442,7 +23423,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23451,7 +23432,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23494,7 +23475,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_42: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_20: *mut TValue = &mut (*base
@@ -23502,7 +23483,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23511,7 +23492,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23557,7 +23538,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_43: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut v1_21: *mut TValue = &mut (*base
@@ -23565,7 +23546,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23574,7 +23555,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23614,29 +23595,29 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_44: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
-                        let mut pi: Instruction = *pc
+                        let mut pi: u32 = *pc
                             .offset(-(2 as libc::c_int as isize));
                         let mut rb_10: *mut TValue = &mut (*base
                             .offset(
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
-                        let mut tm: TMS = (i
+                        let mut tm: u32 = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
-                                << 0 as libc::c_int) as libc::c_int as TMS;
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
+                                << 0 as libc::c_int) as libc::c_int as u32;
                         let mut result: StkId = base
                             .offset(
                                 (pi >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23649,31 +23630,31 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_45: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
-                        let mut pi_0: Instruction = *pc
+                        let mut pi_0: u32 = *pc
                             .offset(-(2 as libc::c_int as isize));
                         let mut imm_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
-                        let mut tm_0: TMS = (i
+                        let mut tm_0: u32 = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
-                                << 0 as libc::c_int) as libc::c_int as TMS;
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
+                                << 0 as libc::c_int) as libc::c_int as u32;
                         let mut flip: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut result_0: StkId = base
                             .offset(
                                 (pi_0 >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23693,32 +23674,32 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_46: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
-                        let mut pi_1: Instruction = *pc
+                        let mut pi_1: u32 = *pc
                             .offset(-(2 as libc::c_int as isize));
                         let mut imm_1: *mut TValue = k
                             .offset(
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
-                        let mut tm_1: TMS = (i
+                        let mut tm_1: u32 = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
-                                << 0 as libc::c_int) as libc::c_int as TMS;
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
+                                << 0 as libc::c_int) as libc::c_int as u32;
                         let mut flip_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut result_1: StkId = base
                             .offset(
                                 (pi_1 >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23738,7 +23719,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_47: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_11: *mut TValue = &mut (*base
@@ -23746,7 +23727,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23794,7 +23775,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_48: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_12: *mut TValue = &mut (*base
@@ -23802,7 +23783,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23838,7 +23819,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_49: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_13: *mut TValue = &mut (*base
@@ -23846,7 +23827,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23871,7 +23852,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_50: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23884,7 +23865,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     (i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                             + 1 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 ))
                                 .val,
@@ -23896,13 +23877,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_51: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n_1: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         (*L).top.p = ra_51.offset(n_1 as isize);
                         (*ci).u.l.savedpc = pc;
@@ -23920,7 +23901,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_52: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23933,7 +23914,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_53: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -23945,7 +23926,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         pc = pc
                             .offset(
                                 ((i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                             + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                     - (((1 as libc::c_int)
@@ -23960,7 +23941,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_54: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_0: libc::c_int = 0;
@@ -23969,7 +23950,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -23980,16 +23961,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_0
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni: Instruction = *pc;
+                            let mut ni: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24005,7 +23986,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_55: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_1: libc::c_int = 0;
@@ -24014,7 +23995,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -24041,16 +24022,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_1
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_0: Instruction = *pc;
+                            let mut ni_0: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_0 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24066,7 +24047,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_56: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_2: libc::c_int = 0;
@@ -24075,7 +24056,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -24102,16 +24083,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_2
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_1: Instruction = *pc;
+                            let mut ni_1: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_1 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24127,7 +24108,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_57: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_17: *mut TValue = k
@@ -24135,27 +24116,27 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_3: libc::c_int = luaV_equalobj(
-                            0 as *mut lua_State,
+                            0 as *mut State,
                             &mut (*ra_57).val,
                             rb_17,
                         );
                         if cond_3
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_2: Instruction = *pc;
+                            let mut ni_2: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_2 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24171,14 +24152,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_58: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_4: libc::c_int = 0;
                         let mut im: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -24198,16 +24179,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_4
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_3: Instruction = *pc;
+                            let mut ni_3: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_3 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24223,14 +24204,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_59: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_5: libc::c_int = 0;
                         let mut im_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -24249,7 +24230,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut isf: libc::c_int = (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -24266,16 +24247,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_5
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_4: Instruction = *pc;
+                            let mut ni_4: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_4 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24291,14 +24272,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_60: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_6: libc::c_int = 0;
                         let mut im_1: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -24317,7 +24298,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut isf_0: libc::c_int = (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -24334,16 +24315,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_6
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_5: Instruction = *pc;
+                            let mut ni_5: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_5 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24359,14 +24340,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_61: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_7: libc::c_int = 0;
                         let mut im_2: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -24385,7 +24366,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut isf_1: libc::c_int = (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -24402,16 +24383,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_7
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_6: Instruction = *pc;
+                            let mut ni_6: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_6 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24427,14 +24408,14 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_62: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_8: libc::c_int = 0;
                         let mut im_3: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int
                             - (((1 as libc::c_int) << 8 as libc::c_int)
                                 - 1 as libc::c_int >> 1 as libc::c_int);
@@ -24453,7 +24434,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut isf_2: libc::c_int = (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int;
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*ci).top.p;
@@ -24470,16 +24451,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_8
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_7: Instruction = *pc;
+                            let mut ni_7: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_7 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24495,7 +24476,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_63: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut cond_9: libc::c_int = !((*ra_63).val.tt_ as libc::c_int
@@ -24505,16 +24486,16 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         if cond_9
                             != (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
                         } else {
-                            let mut ni_8: Instruction = *pc;
+                            let mut ni_8: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_8 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24530,7 +24511,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_64: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut rb_18: *mut TValue = &mut (*base
@@ -24538,7 +24519,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 (i
                                     >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                         + 1 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             ))
                             .val;
@@ -24548,7 +24529,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 == 0 as libc::c_int) as libc::c_int
                             == (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 1 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int
                         {
                             pc = pc.offset(1);
@@ -24557,11 +24538,11 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut io2_14: *const TValue = rb_18;
                             (*io1_14).value_ = (*io2_14).value_;
                             (*io1_14).tt_ = (*io2_14).tt_;
-                            let mut ni_9: Instruction = *pc;
+                            let mut ni_9: u32 = *pc;
                             pc = pc
                                 .offset(
                                     ((ni_9 >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         - (((1 as libc::c_int)
@@ -24577,19 +24558,19 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         ra_65 = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         newci = 0 as *mut CallInfo;
                         b_4 = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         nresults = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int - 1 as libc::c_int;
                         if b_4 != 0 as libc::c_int {
                             (*L).top.p = ra_65.offset(b_4 as isize);
@@ -24606,19 +24587,19 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_66: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut b_5: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut n_2: libc::c_int = 0;
                         let mut nparams1: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut delta: libc::c_int = if nparams1 != 0 {
                             (*ci).u.l.nextraargs + nparams1
@@ -24652,18 +24633,18 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_67: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n_3: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int - 1 as libc::c_int;
                         let mut nparams1_0: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         if n_3 < 0 as libc::c_int {
                             n_3 = ((*L).top.p).offset_from(ra_67) as libc::c_long
@@ -24688,7 +24669,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 ra_67 = base
                                     .offset(
                                         (i >> 0 as libc::c_int + 7 as libc::c_int
-                                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                                 << 0 as libc::c_int) as libc::c_int as isize,
                                     );
                             }
@@ -24711,7 +24692,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut ra_68: StkId = base
                                 .offset(
                                     (i >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 );
                             (*L).top.p = ra_68;
@@ -24744,7 +24725,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             let mut ra_69: StkId = base
                                 .offset(
                                     (i >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 );
                             (*L).top.p = ra_69.offset(1 as libc::c_int as isize);
@@ -24760,7 +24741,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 let mut ra_70: StkId = base
                                     .offset(
                                         (i >> 0 as libc::c_int + 7 as libc::c_int
-                                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                                 << 0 as libc::c_int) as libc::c_int as isize,
                                     );
                                 let mut io1_15: *mut TValue = &mut (*base
@@ -24789,7 +24770,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_71: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         if (*ra_71.offset(2 as libc::c_int as isize)).val.tt_
@@ -24831,7 +24812,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                     .offset(
                                         -((i
                                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                            & !(!(0 as libc::c_int as Instruction)
+                                            & !(!(0 as libc::c_int as u32)
                                                 << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                                 << 0 as libc::c_int) as libc::c_int as isize),
                                     );
@@ -24841,7 +24822,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 .offset(
                                     -((i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize),
                                 );
@@ -24853,7 +24834,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_72: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -24863,7 +24844,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                                 .offset(
                                     ((i
                                         >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int + 1 as libc::c_int)
                                         as isize,
@@ -24875,7 +24856,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_73: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         (*ci).u.l.savedpc = pc;
@@ -24884,7 +24865,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         pc = pc
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
@@ -24903,18 +24884,18 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_76: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n_4: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int;
                         let mut last: libc::c_uint = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int as libc::c_uint;
                         let mut h: *mut Table = &mut (*((*ra_76).val.value_.gc
                             as *mut GCUnion))
@@ -24934,7 +24915,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             last = last
                                 .wrapping_add(
                                     ((*pc >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction)
+                                        & !(!(0 as libc::c_int as u32)
                                             << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int
                                                 + 8 as libc::c_int) << 0 as libc::c_int) as libc::c_int
                                         * (((1 as libc::c_int) << 8 as libc::c_int)
@@ -24976,13 +24957,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_77: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut p: *mut Proto = *((*(*cl).p).p)
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction)
+                                    & !(!(0 as libc::c_int as u32)
                                         << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
@@ -25001,13 +24982,13 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_78: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         let mut n_5: libc::c_int = (i
                             >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                 + 1 as libc::c_int + 8 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int - 1 as libc::c_int;
                         (*ci).u.l.savedpc = pc;
                         (*L).top.p = (*ci).top.p;
@@ -25020,7 +25001,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         luaT_adjustvarargs(
                             L,
                             (i >> 0 as libc::c_int + 7 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int,
                             ci,
                             (*cl).p,
@@ -25043,7 +25024,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         let mut ra_74: StkId = base
                             .offset(
                                 (i >> 0 as libc::c_int + 7 as libc::c_int
-                                    & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                    & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                         << 0 as libc::c_int) as libc::c_int as isize,
                             );
                         memcpy(
@@ -25066,7 +25047,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             (i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
                                     + 1 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int,
                         );
                         trap = (*ci).u.l.trap;
@@ -25076,7 +25057,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                             ra_74 = base
                                 .offset(
                                     (i >> 0 as libc::c_int + 7 as libc::c_int
-                                        & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                                        & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                             << 0 as libc::c_int) as libc::c_int as isize,
                                 );
                         }
@@ -25089,7 +25070,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                 let mut ra_75: StkId = base
                     .offset(
                         (i >> 0 as libc::c_int + 7 as libc::c_int
-                            & !(!(0 as libc::c_int as Instruction) << 8 as libc::c_int)
+                            & !(!(0 as libc::c_int as u32) << 8 as libc::c_int)
                                 << 0 as libc::c_int) as libc::c_int as isize,
                     );
                 if !((*ra_75.offset(4 as libc::c_int as isize)).val.tt_ as libc::c_int
@@ -25107,7 +25088,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
                         .offset(
                             -((i
                                 >> 0 as libc::c_int + 7 as libc::c_int + 8 as libc::c_int
-                                & !(!(0 as libc::c_int as Instruction)
+                                & !(!(0 as libc::c_int as u32)
                                     << 8 as libc::c_int + 8 as libc::c_int + 1 as libc::c_int)
                                     << 0 as libc::c_int) as libc::c_int as isize),
                         );
@@ -25124,7 +25105,7 @@ unsafe extern "C" fn luaV_execute(mut L: *mut lua_State, mut ci: *mut CallInfo) 
     };
 }
 unsafe extern "C" fn findfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut objidx: libc::c_int,
     mut level: libc::c_int,
 ) -> libc::c_int {
@@ -25152,7 +25133,7 @@ unsafe extern "C" fn findfield(
     return 0 as libc::c_int;
 }
 unsafe extern "C" fn pushglobalfuncname(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ar: *mut lua_Debug,
 ) -> libc::c_int {
     let mut top: libc::c_int = lua_gettop(L);
@@ -25191,7 +25172,7 @@ unsafe extern "C" fn pushglobalfuncname(
         return 0 as libc::c_int;
     };
 }
-unsafe extern "C" fn pushfuncname(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
+unsafe extern "C" fn pushfuncname(mut L: *mut State, mut ar: *mut lua_Debug) {
     if pushglobalfuncname(L, ar) != 0 {
         lua_pushfstring(
             L,
@@ -25220,7 +25201,7 @@ unsafe extern "C" fn pushfuncname(mut L: *mut lua_State, mut ar: *mut lua_Debug)
         lua_pushstring(L, b"?\0" as *const u8 as *const libc::c_char);
     };
 }
-unsafe extern "C" fn lastlevel(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn lastlevel(mut L: *mut State) -> libc::c_int {
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
         name: 0 as *const libc::c_char,
@@ -25258,8 +25239,8 @@ unsafe extern "C" fn lastlevel(mut L: *mut lua_State) -> libc::c_int {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_traceback(
-    mut L: *mut lua_State,
-    mut L1: *mut lua_State,
+    mut L: *mut State,
+    mut L1: *mut State,
     mut msg: *const libc::c_char,
     mut level: libc::c_int,
 ) {
@@ -25267,7 +25248,7 @@ pub unsafe extern "C" fn luaL_traceback(
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut ar: lua_Debug = lua_Debug {
@@ -25356,7 +25337,7 @@ pub unsafe extern "C" fn luaL_traceback(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_argerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut extramsg: *const libc::c_char,
 ) -> libc::c_int {
@@ -25419,7 +25400,7 @@ pub unsafe extern "C" fn luaL_argerror(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_typeerror(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut tname: *const libc::c_char,
 ) -> libc::c_int {
@@ -25443,14 +25424,14 @@ pub unsafe extern "C" fn luaL_typeerror(
     return luaL_argerror(L, arg, msg);
 }
 unsafe extern "C" fn tag_error(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut tag: libc::c_int,
 ) {
     luaL_typeerror(L, arg, lua_typename(L, tag));
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_where(mut L: *mut lua_State, mut level: libc::c_int) {
+pub unsafe extern "C" fn luaL_where(mut L: *mut State, mut level: libc::c_int) {
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
         name: 0 as *const libc::c_char,
@@ -25486,7 +25467,7 @@ pub unsafe extern "C" fn luaL_where(mut L: *mut lua_State, mut level: libc::c_in
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_error(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fmt: *const libc::c_char,
     mut args: ...
 ) -> libc::c_int {
@@ -25499,7 +25480,7 @@ pub unsafe extern "C" fn luaL_error(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_fileresult(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut stat: libc::c_int,
     mut fname: *const libc::c_char,
 ) -> libc::c_int {
@@ -25531,7 +25512,7 @@ pub unsafe extern "C" fn luaL_fileresult(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_execresult(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut stat: libc::c_int,
 ) -> libc::c_int {
     if stat != 0 as libc::c_int && *__errno_location() != 0 as libc::c_int {
@@ -25559,7 +25540,7 @@ pub unsafe extern "C" fn luaL_execresult(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_newmetatable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut tname: *const libc::c_char,
 ) -> libc::c_int {
     if lua_getfield(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, tname)
@@ -25581,7 +25562,7 @@ pub unsafe extern "C" fn luaL_newmetatable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_setmetatable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut tname: *const libc::c_char,
 ) {
     lua_getfield(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, tname);
@@ -25589,7 +25570,7 @@ pub unsafe extern "C" fn luaL_setmetatable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_testudata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ud: libc::c_int,
     mut tname: *const libc::c_char,
 ) -> *mut libc::c_void {
@@ -25608,7 +25589,7 @@ pub unsafe extern "C" fn luaL_testudata(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkudata(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ud: libc::c_int,
     mut tname: *const libc::c_char,
 ) -> *mut libc::c_void {
@@ -25619,7 +25600,7 @@ pub unsafe extern "C" fn luaL_checkudata(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkoption(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut def: *const libc::c_char,
     mut lst: *const *const libc::c_char,
@@ -25649,7 +25630,7 @@ pub unsafe extern "C" fn luaL_checkoption(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkstack(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut space: libc::c_int,
     mut msg: *const libc::c_char,
 ) {
@@ -25669,7 +25650,7 @@ pub unsafe extern "C" fn luaL_checkstack(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checktype(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut t: libc::c_int,
 ) {
@@ -25680,7 +25661,7 @@ pub unsafe extern "C" fn luaL_checktype(
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_checkany(mut L: *mut lua_State, mut arg: libc::c_int) {
+pub unsafe extern "C" fn luaL_checkany(mut L: *mut State, mut arg: libc::c_int) {
     if ((lua_type(L, arg) == -(1 as libc::c_int)) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
     {
@@ -25689,7 +25670,7 @@ pub unsafe extern "C" fn luaL_checkany(mut L: *mut lua_State, mut arg: libc::c_i
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checklstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut len: *mut u64,
 ) -> *const libc::c_char {
@@ -25703,7 +25684,7 @@ pub unsafe extern "C" fn luaL_checklstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optlstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut def: *const libc::c_char,
     mut len: *mut u64,
@@ -25723,7 +25704,7 @@ pub unsafe extern "C" fn luaL_optlstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checknumber(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
 ) -> f64 {
     let mut isnum: libc::c_int = 0;
@@ -25737,7 +25718,7 @@ pub unsafe extern "C" fn luaL_checknumber(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optnumber(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut def: f64,
 ) -> f64 {
@@ -25747,7 +25728,7 @@ pub unsafe extern "C" fn luaL_optnumber(
         luaL_checknumber(L, arg)
     };
 }
-unsafe extern "C" fn interror(mut L: *mut lua_State, mut arg: libc::c_int) {
+unsafe extern "C" fn interror(mut L: *mut State, mut arg: libc::c_int) {
     if lua_isnumber(L, arg) != 0 {
         luaL_argerror(
             L,
@@ -25760,7 +25741,7 @@ unsafe extern "C" fn interror(mut L: *mut lua_State, mut arg: libc::c_int) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkinteger(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
 ) -> i64 {
     let mut isnum: libc::c_int = 0;
@@ -25774,7 +25755,7 @@ pub unsafe extern "C" fn luaL_checkinteger(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_optinteger(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut def: i64,
 ) -> i64 {
@@ -25785,7 +25766,7 @@ pub unsafe extern "C" fn luaL_optinteger(
     };
 }
 unsafe extern "C" fn resizebox(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut newsize: u64,
 ) -> *mut libc::c_void {
@@ -25806,7 +25787,7 @@ unsafe extern "C" fn resizebox(
     (*box_0).bsize = newsize;
     return temp;
 }
-unsafe extern "C" fn boxgc(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn boxgc(mut L: *mut State) -> libc::c_int {
     resizebox(L, 1, 0 as libc::c_int as u64);
     return 0 as libc::c_int;
 }
@@ -25815,14 +25796,14 @@ static mut boxmt: [luaL_Reg; 3] = {
         {
             let mut init = luaL_Reg {
                 name: b"__gc\0" as *const u8 as *const libc::c_char,
-                func: Some(boxgc as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(boxgc as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"__close\0" as *const u8 as *const libc::c_char,
-                func: Some(boxgc as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(boxgc as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -25835,7 +25816,7 @@ static mut boxmt: [luaL_Reg; 3] = {
         },
     ]
 };
-unsafe extern "C" fn newbox(mut L: *mut lua_State) {
+unsafe extern "C" fn newbox(mut L: *mut State) {
     let mut box_0: *mut UBox = lua_newuserdatauv(
         L,
         ::core::mem::size_of::<UBox>() as libc::c_ulong,
@@ -25873,7 +25854,7 @@ unsafe extern "C" fn prepbuffsize(
     if ((*B).size).wrapping_sub((*B).n) >= sz {
         return ((*B).b).offset((*B).n as isize)
     } else {
-        let mut L: *mut lua_State = (*B).L;
+        let mut L: *mut State = (*B).L;
         let mut newbuff: *mut libc::c_char = 0 as *mut libc::c_char;
         let mut newsize: u64 = newbuffsize(B, sz);
         if (*B).b != ((*B).init.b).as_mut_ptr() {
@@ -25931,7 +25912,7 @@ pub unsafe extern "C" fn luaL_addstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_pushresult(mut B: *mut luaL_Buffer) {
-    let mut L: *mut lua_State = (*B).L;
+    let mut L: *mut State = (*B).L;
     lua_pushlstring(L, (*B).b, (*B).n);
     if (*B).b != ((*B).init.b).as_mut_ptr() {
         lua_closeslot(L, -(2 as libc::c_int));
@@ -25946,7 +25927,7 @@ pub unsafe extern "C" fn luaL_pushresultsize(mut B: *mut luaL_Buffer, mut sz: u6
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
-    let mut L: *mut lua_State = (*B).L;
+    let mut L: *mut State = (*B).L;
     let mut len: u64 = 0;
     let mut s: *const libc::c_char = lua_tolstring(L, -(1 as libc::c_int), &mut len);
     let mut b: *mut libc::c_char = prepbuffsize(B, len, -(2 as libc::c_int));
@@ -25959,7 +25940,7 @@ pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_buffinit(mut L: *mut lua_State, mut B: *mut luaL_Buffer) {
+pub unsafe extern "C" fn luaL_buffinit(mut L: *mut State, mut B: *mut luaL_Buffer) {
     (*B).L = L;
     (*B).b = ((*B).init.b).as_mut_ptr();
     (*B).n = 0 as libc::c_int as u64;
@@ -25972,7 +25953,7 @@ pub unsafe extern "C" fn luaL_buffinit(mut L: *mut lua_State, mut B: *mut luaL_B
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_buffinitsize(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut B: *mut luaL_Buffer,
     mut sz: u64,
 ) -> *mut libc::c_char {
@@ -25981,7 +25962,7 @@ pub unsafe extern "C" fn luaL_buffinitsize(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_ref(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: libc::c_int,
 ) -> libc::c_int {
     let mut ref_0: libc::c_int = 0;
@@ -26012,7 +25993,7 @@ pub unsafe extern "C" fn luaL_ref(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_unref(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut t: libc::c_int,
     mut ref_0: libc::c_int,
 ) {
@@ -26025,7 +26006,7 @@ pub unsafe extern "C" fn luaL_unref(
     }
 }
 unsafe extern "C" fn getF(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut ud: *mut libc::c_void,
     mut size: *mut u64,
 ) -> *const libc::c_char {
@@ -26047,7 +26028,7 @@ unsafe extern "C" fn getF(
     return ((*lf).buff).as_mut_ptr();
 }
 unsafe extern "C" fn errfile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut what: *const libc::c_char,
     mut fnameindex: libc::c_int,
 ) -> libc::c_int {
@@ -26109,7 +26090,7 @@ unsafe extern "C" fn skipcomment(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadfilex(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut filename: *const libc::c_char,
     mut mode: *const libc::c_char,
 ) -> libc::c_int {
@@ -26170,7 +26151,7 @@ pub unsafe extern "C" fn luaL_loadfilex(
         Some(
             getF
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     *mut libc::c_void,
                     *mut u64,
                 ) -> *const libc::c_char,
@@ -26192,7 +26173,7 @@ pub unsafe extern "C" fn luaL_loadfilex(
     return status;
 }
 unsafe extern "C" fn getS(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut ud: *mut libc::c_void,
     mut size: *mut u64,
 ) -> *const libc::c_char {
@@ -26206,7 +26187,7 @@ unsafe extern "C" fn getS(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadbufferx(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut buff: *const libc::c_char,
     mut size: u64,
     mut name: *const libc::c_char,
@@ -26223,7 +26204,7 @@ pub unsafe extern "C" fn luaL_loadbufferx(
         Some(
             getS
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     *mut libc::c_void,
                     *mut u64,
                 ) -> *const libc::c_char,
@@ -26235,14 +26216,14 @@ pub unsafe extern "C" fn luaL_loadbufferx(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_loadstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
 ) -> libc::c_int {
     return luaL_loadbufferx(L, s, strlen(s), s, 0 as *const libc::c_char);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_getmetafield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut obj: libc::c_int,
     mut event: *const libc::c_char,
 ) -> libc::c_int {
@@ -26263,7 +26244,7 @@ pub unsafe extern "C" fn luaL_getmetafield(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_callmeta(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut obj: libc::c_int,
     mut event: *const libc::c_char,
 ) -> libc::c_int {
@@ -26283,7 +26264,7 @@ pub unsafe extern "C" fn luaL_callmeta(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_len(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
 ) -> i64 {
     let mut l: i64 = 0;
@@ -26303,7 +26284,7 @@ pub unsafe extern "C" fn luaL_len(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_tolstring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut len: *mut u64,
 ) -> *const libc::c_char {
@@ -26377,7 +26358,7 @@ pub unsafe extern "C" fn luaL_tolstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_setfuncs(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut l: *const luaL_Reg,
     mut nup: libc::c_int,
 ) {
@@ -26401,7 +26382,7 @@ pub unsafe extern "C" fn luaL_setfuncs(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_getsubtable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut idx: libc::c_int,
     mut fname: *const libc::c_char,
 ) -> libc::c_int {
@@ -26418,7 +26399,7 @@ pub unsafe extern "C" fn luaL_getsubtable(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_requiref(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut modname: *const libc::c_char,
     mut openf: lua_CFunction,
     mut glb: libc::c_int,
@@ -26472,7 +26453,7 @@ pub unsafe extern "C" fn luaL_addgsub(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_gsub(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
     mut p: *const libc::c_char,
     mut r: *const libc::c_char,
@@ -26481,7 +26462,7 @@ pub unsafe extern "C" fn luaL_gsub(
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
@@ -26502,7 +26483,7 @@ unsafe extern "C" fn l_alloc(
         return realloc(ptr, nsize)
     };
 }
-unsafe extern "C" fn panic(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn panic(mut L: *mut State) -> libc::c_int {
     let mut msg: *const libc::c_char = if lua_type(L, -(1 as libc::c_int))
         == 4 as libc::c_int
     {
@@ -26520,7 +26501,7 @@ unsafe extern "C" fn panic(mut L: *mut lua_State) -> libc::c_int {
     return 0 as libc::c_int;
 }
 unsafe extern "C" fn checkcontrol(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut message: *const libc::c_char,
     mut tocont: libc::c_int,
 ) -> libc::c_int {
@@ -26572,14 +26553,14 @@ unsafe extern "C" fn warnfoff(
     mut message: *const libc::c_char,
     mut tocont: libc::c_int,
 ) {
-    checkcontrol(ud as *mut lua_State, message, tocont);
+    checkcontrol(ud as *mut State, message, tocont);
 }
 unsafe extern "C" fn warnfcont(
     mut ud: *mut libc::c_void,
     mut message: *const libc::c_char,
     mut tocont: libc::c_int,
 ) {
-    let mut L: *mut lua_State = ud as *mut lua_State;
+    let mut L: *mut State = ud as *mut State;
     fprintf(stderr, b"%s\0" as *const u8 as *const libc::c_char, message);
     fflush(stderr);
     if tocont != 0 {
@@ -26621,7 +26602,7 @@ unsafe extern "C" fn warnfon(
     mut message: *const libc::c_char,
     mut tocont: libc::c_int,
 ) {
-    if checkcontrol(ud as *mut lua_State, message, tocont) != 0 {
+    if checkcontrol(ud as *mut State, message, tocont) != 0 {
         return;
     }
     fprintf(
@@ -26633,8 +26614,8 @@ unsafe extern "C" fn warnfon(
     warnfcont(ud, message, tocont);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
-    let mut L: *mut lua_State = lua_newstate(
+pub unsafe extern "C" fn luaL_newstate() -> *mut State {
+    let mut L: *mut State = lua_newstate(
         Some(
             l_alloc
                 as unsafe extern "C" fn(
@@ -26646,10 +26627,10 @@ pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
         ),
         0 as *mut libc::c_void,
     );
-    if (L != 0 as *mut lua_State) as libc::c_int as libc::c_long != 0 {
+    if (L != 0 as *mut State) as libc::c_int as libc::c_long != 0 {
         lua_atpanic(
             L,
-            Some(panic as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+            Some(panic as unsafe extern "C" fn(*mut State) -> libc::c_int),
         );
         lua_setwarnf(
             L,
@@ -26668,7 +26649,7 @@ pub unsafe extern "C" fn luaL_newstate() -> *mut lua_State {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_checkversion_(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut ver: f64,
     mut sz: u64,
 ) {
@@ -26693,7 +26674,7 @@ pub unsafe extern "C" fn luaL_checkversion_(
         );
     }
 }
-unsafe extern "C" fn luaB_print(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_print(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     let mut i: libc::c_int = 0;
     i = 1 as libc::c_int;
@@ -26726,7 +26707,7 @@ unsafe extern "C" fn luaB_print(mut L: *mut lua_State) -> libc::c_int {
     fflush(stdout);
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn luaB_warn(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_warn(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     let mut i: libc::c_int = 0;
     luaL_checklstring(L, 1, 0 as *mut u64);
@@ -26799,7 +26780,7 @@ unsafe extern "C" fn b_str2int(
     }) as i64;
     return s;
 }
-unsafe extern "C" fn luaB_tonumber(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_tonumber(mut L: *mut State) -> libc::c_int {
     if lua_type(L, 2 as libc::c_int) <= 0 as libc::c_int {
         if lua_type(L, 1) == 3 as libc::c_int {
             lua_settop(L, 1);
@@ -26838,7 +26819,7 @@ unsafe extern "C" fn luaB_tonumber(mut L: *mut lua_State) -> libc::c_int {
     lua_pushnil(L);
     return 1;
 }
-unsafe extern "C" fn luaB_error(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_error(mut L: *mut State) -> libc::c_int {
     let mut level: libc::c_int = luaL_optinteger(
         L,
         2 as libc::c_int,
@@ -26852,7 +26833,7 @@ unsafe extern "C" fn luaB_error(mut L: *mut lua_State) -> libc::c_int {
     }
     return lua_error(L);
 }
-unsafe extern "C" fn luaB_getmetatable(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_getmetatable(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     if lua_getmetatable(L, 1) == 0 {
         lua_pushnil(L);
@@ -26865,7 +26846,7 @@ unsafe extern "C" fn luaB_getmetatable(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn luaB_setmetatable(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_setmetatable(mut L: *mut State) -> libc::c_int {
     let mut t: libc::c_int = lua_type(L, 2 as libc::c_int);
     luaL_checktype(L, 1, 5 as libc::c_int);
     (((t == 0 as libc::c_int || t == 5 as libc::c_int) as libc::c_int
@@ -26891,13 +26872,13 @@ unsafe extern "C" fn luaB_setmetatable(mut L: *mut lua_State) -> libc::c_int {
     lua_setmetatable(L, 1);
     return 1;
 }
-unsafe extern "C" fn luaB_rawequal(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_rawequal(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     luaL_checkany(L, 2 as libc::c_int);
     lua_pushboolean(L, lua_rawequal(L, 1, 2 as libc::c_int));
     return 1;
 }
-unsafe extern "C" fn luaB_rawlen(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_rawlen(mut L: *mut State) -> libc::c_int {
     let mut t: libc::c_int = lua_type(L, 1);
     (((t == 5 as libc::c_int || t == 4 as libc::c_int) as libc::c_int
         != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
@@ -26909,14 +26890,14 @@ unsafe extern "C" fn luaB_rawlen(mut L: *mut lua_State) -> libc::c_int {
     lua_pushinteger(L, lua_rawlen(L, 1) as i64);
     return 1;
 }
-unsafe extern "C" fn luaB_rawget(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_rawget(mut L: *mut State) -> libc::c_int {
     luaL_checktype(L, 1, 5 as libc::c_int);
     luaL_checkany(L, 2 as libc::c_int);
     lua_settop(L, 2 as libc::c_int);
     lua_rawget(L, 1);
     return 1;
 }
-unsafe extern "C" fn luaB_rawset(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_rawset(mut L: *mut State) -> libc::c_int {
     luaL_checktype(L, 1, 5 as libc::c_int);
     luaL_checkany(L, 2 as libc::c_int);
     luaL_checkany(L, 3 as libc::c_int);
@@ -26925,7 +26906,7 @@ unsafe extern "C" fn luaB_rawset(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn pushmode(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut oldmode: libc::c_int,
 ) -> libc::c_int {
     if oldmode == -(1 as libc::c_int) {
@@ -26942,7 +26923,7 @@ unsafe extern "C" fn pushmode(
     }
     return 1;
 }
-unsafe extern "C" fn luaB_collectgarbage(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_collectgarbage(mut L: *mut State) -> libc::c_int {
     static mut opts: [*const libc::c_char; 11] = [
         b"stop\0" as *const u8 as *const libc::c_char,
         b"restart\0" as *const u8 as *const libc::c_char,
@@ -27060,7 +27041,7 @@ unsafe extern "C" fn luaB_collectgarbage(mut L: *mut lua_State) -> libc::c_int {
     lua_pushnil(L);
     return 1;
 }
-unsafe extern "C" fn luaB_type(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_type(mut L: *mut State) -> libc::c_int {
     let mut t: libc::c_int = lua_type(L, 1);
     (((t != -(1 as libc::c_int)) as libc::c_int != 0 as libc::c_int) as libc::c_int
         as libc::c_long != 0
@@ -27072,7 +27053,7 @@ unsafe extern "C" fn luaB_type(mut L: *mut lua_State) -> libc::c_int {
     lua_pushstring(L, lua_typename(L, t));
     return 1;
 }
-unsafe extern "C" fn luaB_next(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_next(mut L: *mut State) -> libc::c_int {
     luaL_checktype(L, 1, 5 as libc::c_int);
     lua_settop(L, 2 as libc::c_int);
     if lua_next(L, 1) != 0 {
@@ -27083,13 +27064,13 @@ unsafe extern "C" fn luaB_next(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn pairscont(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut _status: libc::c_int,
     mut _k: i64,
 ) -> libc::c_int {
     return 3;
 }
-unsafe extern "C" fn luaB_pairs(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_pairs(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     if luaL_getmetafield(
         L,
@@ -27099,7 +27080,7 @@ unsafe extern "C" fn luaB_pairs(mut L: *mut lua_State) -> libc::c_int {
     {
         lua_pushcclosure(
             L,
-            Some(luaB_next as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+            Some(luaB_next as unsafe extern "C" fn(*mut State) -> libc::c_int),
             0,
         );
         lua_pushvalue(L, 1);
@@ -27114,7 +27095,7 @@ unsafe extern "C" fn luaB_pairs(mut L: *mut lua_State) -> libc::c_int {
             Some(
                 pairscont
                     as unsafe extern "C" fn(
-                        *mut lua_State,
+                        *mut State,
                         libc::c_int,
                         i64,
                     ) -> libc::c_int,
@@ -27123,7 +27104,7 @@ unsafe extern "C" fn luaB_pairs(mut L: *mut lua_State) -> libc::c_int {
     }
     return 3;
 }
-unsafe extern "C" fn ipairsaux(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn ipairsaux(mut L: *mut State) -> libc::c_int {
     let mut i: i64 = luaL_checkinteger(L, 2 as libc::c_int);
     i = (i as u64).wrapping_add(1 as libc::c_int as u64)
         as i64;
@@ -27134,11 +27115,11 @@ unsafe extern "C" fn ipairsaux(mut L: *mut lua_State) -> libc::c_int {
         2 as libc::c_int
     };
 }
-unsafe extern "C" fn luaB_ipairs(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_ipairs(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     lua_pushcclosure(
         L,
-        Some(ipairsaux as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(ipairsaux as unsafe extern "C" fn(*mut State) -> libc::c_int),
         0,
     );
     lua_pushvalue(L, 1);
@@ -27146,7 +27127,7 @@ unsafe extern "C" fn luaB_ipairs(mut L: *mut lua_State) -> libc::c_int {
     return 3;
 }
 unsafe extern "C" fn load_aux(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
     mut envidx: libc::c_int,
 ) -> libc::c_int {
@@ -27166,7 +27147,7 @@ unsafe extern "C" fn load_aux(
         return 2 as libc::c_int;
     };
 }
-unsafe extern "C" fn luaB_loadfile(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_loadfile(mut L: *mut State) -> libc::c_int {
     let mut fname: *const libc::c_char = luaL_optlstring(
         L,
         1 as libc::c_int,
@@ -27189,7 +27170,7 @@ unsafe extern "C" fn luaB_loadfile(mut L: *mut lua_State) -> libc::c_int {
     return load_aux(L, status, env);
 }
 unsafe extern "C" fn generic_reader(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut _ud: *mut libc::c_void,
     mut size: *mut u64,
 ) -> *const libc::c_char {
@@ -27222,7 +27203,7 @@ unsafe extern "C" fn generic_reader(
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     return lua_tolstring(L, 5 as libc::c_int, size);
 }
-unsafe extern "C" fn luaB_load(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_load(mut L: *mut State) -> libc::c_int {
     let mut status: libc::c_int = 0;
     let mut l: u64 = 0;
     let mut s: *const libc::c_char = lua_tolstring(L, 1, &mut l);
@@ -27260,7 +27241,7 @@ unsafe extern "C" fn luaB_load(mut L: *mut lua_State) -> libc::c_int {
             Some(
                 generic_reader
                     as unsafe extern "C" fn(
-                        *mut lua_State,
+                        *mut State,
                         *mut libc::c_void,
                         *mut u64,
                     ) -> *const libc::c_char,
@@ -27273,13 +27254,13 @@ unsafe extern "C" fn luaB_load(mut L: *mut lua_State) -> libc::c_int {
     return load_aux(L, status, env);
 }
 unsafe extern "C" fn dofilecont(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut _d1: libc::c_int,
     mut _d2: i64,
 ) -> libc::c_int {
     return lua_gettop(L) - 1 as libc::c_int;
 }
-unsafe extern "C" fn luaB_dofile(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_dofile(mut L: *mut State) -> libc::c_int {
     let mut fname: *const libc::c_char = luaL_optlstring(
         L,
         1 as libc::c_int,
@@ -27300,7 +27281,7 @@ unsafe extern "C" fn luaB_dofile(mut L: *mut lua_State) -> libc::c_int {
         Some(
             dofilecont
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     libc::c_int,
                     i64,
                 ) -> libc::c_int,
@@ -27308,7 +27289,7 @@ unsafe extern "C" fn luaB_dofile(mut L: *mut lua_State) -> libc::c_int {
     );
     return dofilecont(L, 0, 0 as libc::c_int as i64);
 }
-unsafe extern "C" fn luaB_assert(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_assert(mut L: *mut State) -> libc::c_int {
     if (lua_toboolean(L, 1) != 0 as libc::c_int) as libc::c_int
         as libc::c_long != 0
     {
@@ -27322,7 +27303,7 @@ unsafe extern "C" fn luaB_assert(mut L: *mut lua_State) -> libc::c_int {
         return luaB_error(L);
     };
 }
-unsafe extern "C" fn luaB_select(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_select(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     if lua_type(L, 1) == 4 as libc::c_int
         && *lua_tolstring(L, 1, 0 as *mut u64) as libc::c_int
@@ -27348,7 +27329,7 @@ unsafe extern "C" fn luaB_select(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn finishpcall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
     mut extra: i64,
 ) -> libc::c_int {
@@ -27362,7 +27343,7 @@ unsafe extern "C" fn finishpcall(
         return lua_gettop(L) - extra as libc::c_int
     };
 }
-unsafe extern "C" fn luaB_pcall(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_pcall(mut L: *mut State) -> libc::c_int {
     let mut status: libc::c_int = 0;
     luaL_checkany(L, 1);
     lua_pushboolean(L, 1);
@@ -27376,7 +27357,7 @@ unsafe extern "C" fn luaB_pcall(mut L: *mut lua_State) -> libc::c_int {
         Some(
             finishpcall
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     libc::c_int,
                     i64,
                 ) -> libc::c_int,
@@ -27384,7 +27365,7 @@ unsafe extern "C" fn luaB_pcall(mut L: *mut lua_State) -> libc::c_int {
     );
     return finishpcall(L, status, 0 as libc::c_int as i64);
 }
-unsafe extern "C" fn luaB_xpcall(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_xpcall(mut L: *mut State) -> libc::c_int {
     let mut status: libc::c_int = 0;
     let mut n: libc::c_int = lua_gettop(L);
     luaL_checktype(L, 2 as libc::c_int, 6 as libc::c_int);
@@ -27400,7 +27381,7 @@ unsafe extern "C" fn luaB_xpcall(mut L: *mut lua_State) -> libc::c_int {
         Some(
             finishpcall
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     libc::c_int,
                     i64,
                 ) -> libc::c_int,
@@ -27408,7 +27389,7 @@ unsafe extern "C" fn luaB_xpcall(mut L: *mut lua_State) -> libc::c_int {
     );
     return finishpcall(L, status, 2 as libc::c_int as i64);
 }
-unsafe extern "C" fn luaB_tostring(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_tostring(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     luaL_tolstring(L, 1, 0 as *mut u64);
     return 1;
@@ -27419,7 +27400,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"assert\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_assert as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_assert as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27429,7 +27410,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
                 name: b"collectgarbage\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     luaB_collectgarbage
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27438,7 +27419,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"dofile\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_dofile as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_dofile as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27447,7 +27428,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"error\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_error as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_error as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27457,7 +27438,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
                 name: b"getmetatable\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     luaB_getmetatable
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27466,7 +27447,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"ipairs\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_ipairs as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_ipairs as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27475,7 +27456,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"loadfile\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_loadfile as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_loadfile as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27484,7 +27465,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"load\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_load as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_load as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27493,7 +27474,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"next\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_next as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_next as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27502,7 +27483,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"pairs\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_pairs as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_pairs as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27511,7 +27492,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"pcall\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_pcall as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_pcall as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27520,7 +27501,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"print\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_print as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_print as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27529,7 +27510,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"warn\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_warn as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_warn as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27538,7 +27519,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"rawequal\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_rawequal as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_rawequal as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27547,7 +27528,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"rawlen\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_rawlen as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_rawlen as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27556,7 +27537,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"rawget\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_rawget as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_rawget as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27565,7 +27546,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"rawset\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_rawset as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_rawset as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27574,7 +27555,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"select\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_select as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_select as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27584,7 +27565,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
                 name: b"setmetatable\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     luaB_setmetatable
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27593,7 +27574,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"tonumber\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_tonumber as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_tonumber as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27602,7 +27583,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"tostring\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_tostring as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_tostring as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27611,7 +27592,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"type\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_type as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_type as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27620,7 +27601,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             let mut init = luaL_Reg {
                 name: b"xpcall\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_xpcall as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_xpcall as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27649,7 +27630,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_base(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_base(mut L: *mut State) -> libc::c_int {
     lua_rawgeti(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int,
@@ -27666,9 +27647,9 @@ pub unsafe extern "C" fn luaopen_base(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn getco(mut L: *mut lua_State) -> *mut lua_State {
-    let mut co: *mut lua_State = lua_tothread(L, 1);
-    ((co != 0 as *mut lua_State) as libc::c_int as libc::c_long != 0
+unsafe extern "C" fn getco(mut L: *mut State) -> *mut State {
+    let mut co: *mut State = lua_tothread(L, 1);
+    ((co != 0 as *mut State) as libc::c_int as libc::c_long != 0
         || luaL_typeerror(
             L,
             1 as libc::c_int,
@@ -27677,8 +27658,8 @@ unsafe extern "C" fn getco(mut L: *mut lua_State) -> *mut lua_State {
     return co;
 }
 unsafe extern "C" fn auxresume(
-    mut L: *mut lua_State,
-    mut co: *mut lua_State,
+    mut L: *mut State,
+    mut co: *mut State,
     mut narg: libc::c_int,
 ) -> libc::c_int {
     let mut status: libc::c_int = 0;
@@ -27714,8 +27695,8 @@ unsafe extern "C" fn auxresume(
         return -(1 as libc::c_int);
     };
 }
-unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> libc::c_int {
-    let mut co: *mut lua_State = getco(L);
+unsafe extern "C" fn luaB_coresume(mut L: *mut State) -> libc::c_int {
+    let mut co: *mut State = getco(L);
     let mut r: libc::c_int = 0;
     r = auxresume(L, co, lua_gettop(L) - 1 as libc::c_int);
     if ((r < 0 as libc::c_int) as libc::c_int != 0 as libc::c_int) as libc::c_int
@@ -27730,8 +27711,8 @@ unsafe extern "C" fn luaB_coresume(mut L: *mut lua_State) -> libc::c_int {
         return r + 1 as libc::c_int;
     };
 }
-unsafe extern "C" fn luaB_auxwrap(mut L: *mut lua_State) -> libc::c_int {
-    let mut co: *mut lua_State = lua_tothread(
+unsafe extern "C" fn luaB_auxwrap(mut L: *mut State) -> libc::c_int {
+    let mut co: *mut State = lua_tothread(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int - 1 as libc::c_int,
     );
@@ -27755,24 +27736,24 @@ unsafe extern "C" fn luaB_auxwrap(mut L: *mut lua_State) -> libc::c_int {
     }
     return r;
 }
-unsafe extern "C" fn luaB_cocreate(mut L: *mut lua_State) -> libc::c_int {
-    let mut NL: *mut lua_State = 0 as *mut lua_State;
+unsafe extern "C" fn luaB_cocreate(mut L: *mut State) -> libc::c_int {
+    let mut NL: *mut State = 0 as *mut State;
     luaL_checktype(L, 1, 6 as libc::c_int);
     NL = lua_newthread(L);
     lua_pushvalue(L, 1);
     lua_xmove(L, NL, 1);
     return 1;
 }
-unsafe extern "C" fn luaB_cowrap(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_cowrap(mut L: *mut State) -> libc::c_int {
     luaB_cocreate(L);
     lua_pushcclosure(
         L,
-        Some(luaB_auxwrap as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(luaB_auxwrap as unsafe extern "C" fn(*mut State) -> libc::c_int),
         1 as libc::c_int,
     );
     return 1;
 }
-unsafe extern "C" fn luaB_yield(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_yield(mut L: *mut State) -> libc::c_int {
     return lua_yieldk(L, lua_gettop(L), 0 as libc::c_int as i64, None);
 }
 static mut statname: [*const libc::c_char; 4] = [
@@ -27782,8 +27763,8 @@ static mut statname: [*const libc::c_char; 4] = [
     b"normal\0" as *const u8 as *const libc::c_char,
 ];
 unsafe extern "C" fn auxstatus(
-    mut L: *mut lua_State,
-    mut co: *mut lua_State,
+    mut L: *mut State,
+    mut co: *mut State,
 ) -> libc::c_int {
     if L == co {
         return 0 as libc::c_int
@@ -27822,13 +27803,13 @@ unsafe extern "C" fn auxstatus(
         }
     };
 }
-unsafe extern "C" fn luaB_costatus(mut L: *mut lua_State) -> libc::c_int {
-    let mut co: *mut lua_State = getco(L);
+unsafe extern "C" fn luaB_costatus(mut L: *mut State) -> libc::c_int {
+    let mut co: *mut State = getco(L);
     lua_pushstring(L, statname[auxstatus(L, co) as usize]);
     return 1;
 }
-unsafe extern "C" fn luaB_yieldable(mut L: *mut lua_State) -> libc::c_int {
-    let mut co: *mut lua_State = if lua_type(L, 1) == -(1 as libc::c_int)
+unsafe extern "C" fn luaB_yieldable(mut L: *mut State) -> libc::c_int {
+    let mut co: *mut State = if lua_type(L, 1) == -(1 as libc::c_int)
     {
         L
     } else {
@@ -27837,13 +27818,13 @@ unsafe extern "C" fn luaB_yieldable(mut L: *mut lua_State) -> libc::c_int {
     lua_pushboolean(L, lua_isyieldable(co));
     return 1;
 }
-unsafe extern "C" fn luaB_corunning(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn luaB_corunning(mut L: *mut State) -> libc::c_int {
     let mut ismain: libc::c_int = lua_pushthread(L);
     lua_pushboolean(L, ismain);
     return 2 as libc::c_int;
 }
-unsafe extern "C" fn luaB_close(mut L: *mut lua_State) -> libc::c_int {
-    let mut co: *mut lua_State = getco(L);
+unsafe extern "C" fn luaB_close(mut L: *mut State) -> libc::c_int {
+    let mut co: *mut State = getco(L);
     let mut status: libc::c_int = auxstatus(L, co);
     match status {
         1 | 2 => {
@@ -27872,7 +27853,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"create\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_cocreate as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_cocreate as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27881,7 +27862,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"resume\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_coresume as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_coresume as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27890,7 +27871,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"running\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_corunning as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_corunning as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27899,7 +27880,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"status\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_costatus as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_costatus as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27908,7 +27889,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"wrap\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_cowrap as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_cowrap as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27917,7 +27898,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"yield\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_yield as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_yield as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27926,7 +27907,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"isyieldable\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_yieldable as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_yieldable as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27935,7 +27916,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             let mut init = luaL_Reg {
                 name: b"close\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaB_close as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaB_close as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -27950,7 +27931,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -27969,7 +27950,7 @@ pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut lua_State) -> libc::c_int
     return 1;
 }
 unsafe extern "C" fn checkfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut key: *const libc::c_char,
     mut n: libc::c_int,
 ) -> libc::c_int {
@@ -27977,7 +27958,7 @@ unsafe extern "C" fn checkfield(
     return (lua_rawget(L, -n) != 0 as libc::c_int) as libc::c_int;
 }
 unsafe extern "C" fn checktab(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut what: libc::c_int,
 ) {
@@ -28008,7 +27989,7 @@ unsafe extern "C" fn checktab(
         }
     }
 }
-unsafe extern "C" fn tinsert(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tinsert(mut L: *mut State) -> libc::c_int {
     let mut pos: i64 = 0;
     checktab(
         L,
@@ -28051,7 +28032,7 @@ unsafe extern "C" fn tinsert(mut L: *mut lua_State) -> libc::c_int {
     lua_seti(L, 1, pos);
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn tremove(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tremove(mut L: *mut State) -> libc::c_int {
     checktab(
         L,
         1 as libc::c_int,
@@ -28079,7 +28060,7 @@ unsafe extern "C" fn tremove(mut L: *mut lua_State) -> libc::c_int {
     lua_seti(L, 1, pos);
     return 1;
 }
-unsafe extern "C" fn tmove(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tmove(mut L: *mut State) -> libc::c_int {
     let mut f: i64 = luaL_checkinteger(L, 2 as libc::c_int);
     let mut e: i64 = luaL_checkinteger(L, 3 as libc::c_int);
     let mut t: i64 = luaL_checkinteger(L, 4 as libc::c_int);
@@ -28134,7 +28115,7 @@ unsafe extern "C" fn tmove(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn addfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut b: *mut luaL_Buffer,
     mut i: i64,
 ) {
@@ -28152,12 +28133,12 @@ unsafe extern "C" fn addfield(
     }
     luaL_addvalue(b);
 }
-unsafe extern "C" fn tconcat(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tconcat(mut L: *mut State) -> libc::c_int {
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     checktab(L, 1, 1 | 4 as libc::c_int);
@@ -28187,7 +28168,7 @@ unsafe extern "C" fn tconcat(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresult(&mut b);
     return 1;
 }
-unsafe extern "C" fn tpack(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tpack(mut L: *mut State) -> libc::c_int {
     let mut i: libc::c_int = 0;
     let mut n: libc::c_int = lua_gettop(L);
     lua_createtable(L, n, 1);
@@ -28201,7 +28182,7 @@ unsafe extern "C" fn tpack(mut L: *mut lua_State) -> libc::c_int {
     lua_setfield(L, 1, b"n\0" as *const u8 as *const libc::c_char);
     return 1;
 }
-unsafe extern "C" fn tunpack(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn tunpack(mut L: *mut State) -> libc::c_int {
     let mut n: u64 = 0;
     let mut i: i64 = luaL_optinteger(
         L,
@@ -28272,12 +28253,12 @@ unsafe extern "C" fn l_randomizePivot() -> libc::c_uint {
     }
     return rnd;
 }
-unsafe extern "C" fn set2(mut L: *mut lua_State, mut i: libc::c_uint, mut j: libc::c_uint) {
+unsafe extern "C" fn set2(mut L: *mut State, mut i: libc::c_uint, mut j: libc::c_uint) {
     lua_seti(L, 1, i as i64);
     lua_seti(L, 1, j as i64);
 }
 unsafe extern "C" fn sort_comp(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut a: libc::c_int,
     mut b: libc::c_int,
 ) -> libc::c_int {
@@ -28301,7 +28282,7 @@ unsafe extern "C" fn sort_comp(
     };
 }
 unsafe extern "C" fn partition(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut lo: libc::c_uint,
     mut up: libc::c_uint,
 ) -> libc::c_uint {
@@ -28364,7 +28345,7 @@ unsafe extern "C" fn choosePivot(
     return p;
 }
 unsafe extern "C" fn auxsort(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut lo: libc::c_uint,
     mut up: libc::c_uint,
     mut rnd: libc::c_uint,
@@ -28428,7 +28409,7 @@ unsafe extern "C" fn auxsort(
         }
     }
 }
-unsafe extern "C" fn sort(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn sort(mut L: *mut State) -> libc::c_int {
     checktab(
         L,
         1 as libc::c_int,
@@ -28462,7 +28443,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"concat\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    tconcat as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    tconcat as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -28471,7 +28452,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"insert\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    tinsert as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    tinsert as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -28479,7 +28460,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
         {
             let mut init = luaL_Reg {
                 name: b"pack\0" as *const u8 as *const libc::c_char,
-                func: Some(tpack as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(tpack as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -28487,7 +28468,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"unpack\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    tunpack as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    tunpack as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -28496,7 +28477,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"remove\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    tremove as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    tremove as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -28504,14 +28485,14 @@ static mut tab_funcs: [luaL_Reg; 8] = {
         {
             let mut init = luaL_Reg {
                 name: b"move\0" as *const u8 as *const libc::c_char,
-                func: Some(tmove as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(tmove as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"sort\0" as *const u8 as *const libc::c_char,
-                func: Some(sort as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(sort as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -28525,7 +28506,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_table(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_table(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -28562,7 +28543,7 @@ unsafe extern "C" fn l_checkmode(mut mode: *const libc::c_char) -> libc::c_int {
         && strspn(mode, b"b\0" as *const u8 as *const libc::c_char) == strlen(mode))
         as libc::c_int;
 }
-unsafe extern "C" fn io_type(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_type(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = 0 as *mut luaL_Stream;
     luaL_checkany(L, 1);
     p = luaL_testudata(
@@ -28579,7 +28560,7 @@ unsafe extern "C" fn io_type(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn f_tostring(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_tostring(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28592,7 +28573,7 @@ unsafe extern "C" fn f_tostring(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn tofile(mut L: *mut lua_State) -> *mut FILE {
+unsafe extern "C" fn tofile(mut L: *mut State) -> *mut FILE {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28608,7 +28589,7 @@ unsafe extern "C" fn tofile(mut L: *mut lua_State) -> *mut FILE {
     }
     return (*p).f;
 }
-unsafe extern "C" fn newprefile(mut L: *mut lua_State) -> *mut luaL_Stream {
+unsafe extern "C" fn newprefile(mut L: *mut State) -> *mut luaL_Stream {
     let mut p: *mut luaL_Stream = lua_newuserdatauv(
         L,
         ::core::mem::size_of::<luaL_Stream>() as libc::c_ulong,
@@ -28618,7 +28599,7 @@ unsafe extern "C" fn newprefile(mut L: *mut lua_State) -> *mut luaL_Stream {
     luaL_setmetatable(L, b"FILE*\0" as *const u8 as *const libc::c_char);
     return p;
 }
-unsafe extern "C" fn aux_close(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn aux_close(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28629,11 +28610,11 @@ unsafe extern "C" fn aux_close(mut L: *mut lua_State) -> libc::c_int {
     return (Some(cf.expect("non-null function pointer")))
         .expect("non-null function pointer")(L);
 }
-unsafe extern "C" fn f_close(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_close(mut L: *mut State) -> libc::c_int {
     tofile(L);
     return aux_close(L);
 }
-unsafe extern "C" fn io_close(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_close(mut L: *mut State) -> libc::c_int {
     if lua_type(L, 1) == -(1 as libc::c_int) {
         lua_getfield(
             L,
@@ -28643,7 +28624,7 @@ unsafe extern "C" fn io_close(mut L: *mut lua_State) -> libc::c_int {
     }
     return f_close(L);
 }
-unsafe extern "C" fn f_gc(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_gc(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28654,7 +28635,7 @@ unsafe extern "C" fn f_gc(mut L: *mut lua_State) -> libc::c_int {
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn io_fclose(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_fclose(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28667,14 +28648,14 @@ unsafe extern "C" fn io_fclose(mut L: *mut lua_State) -> libc::c_int {
         0 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn newfile(mut L: *mut lua_State) -> *mut luaL_Stream {
+unsafe extern "C" fn newfile(mut L: *mut State) -> *mut luaL_Stream {
     let mut p: *mut luaL_Stream = newprefile(L);
     (*p).f = 0 as *mut FILE;
-    (*p).closef = Some(io_fclose as unsafe extern "C" fn(*mut lua_State) -> libc::c_int);
+    (*p).closef = Some(io_fclose as unsafe extern "C" fn(*mut State) -> libc::c_int);
     return p;
 }
 unsafe extern "C" fn opencheck(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fname: *const libc::c_char,
     mut mode: *const libc::c_char,
 ) {
@@ -28691,7 +28672,7 @@ unsafe extern "C" fn opencheck(
         );
     }
 }
-unsafe extern "C" fn io_open(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_open(mut L: *mut State) -> libc::c_int {
     let mut filename: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -28719,7 +28700,7 @@ unsafe extern "C" fn io_open(mut L: *mut lua_State) -> libc::c_int {
         1 as libc::c_int
     };
 }
-unsafe extern "C" fn io_pclose(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_pclose(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -28728,7 +28709,7 @@ unsafe extern "C" fn io_pclose(mut L: *mut lua_State) -> libc::c_int {
     *__errno_location() = 0 as libc::c_int;
     return luaL_execresult(L, pclose((*p).f));
 }
-unsafe extern "C" fn io_popen(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_popen(mut L: *mut State) -> libc::c_int {
     let mut filename: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -28753,14 +28734,14 @@ unsafe extern "C" fn io_popen(mut L: *mut lua_State) -> libc::c_int {
     *__errno_location() = 0 as libc::c_int;
     fflush(0 as *mut FILE);
     (*p).f = popen(filename, mode);
-    (*p).closef = Some(io_pclose as unsafe extern "C" fn(*mut lua_State) -> libc::c_int);
+    (*p).closef = Some(io_pclose as unsafe extern "C" fn(*mut State) -> libc::c_int);
     return if ((*p).f).is_null() {
         luaL_fileresult(L, 0, filename)
     } else {
         1 as libc::c_int
     };
 }
-unsafe extern "C" fn io_tmpfile(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_tmpfile(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = newfile(L);
     *__errno_location() = 0 as libc::c_int;
     (*p).f = tmpfile();
@@ -28771,7 +28752,7 @@ unsafe extern "C" fn io_tmpfile(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn getiofile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut findex: *const libc::c_char,
 ) -> *mut FILE {
     let mut p: *mut luaL_Stream = 0 as *mut luaL_Stream;
@@ -28796,7 +28777,7 @@ unsafe extern "C" fn getiofile(
     return (*p).f;
 }
 unsafe extern "C" fn g_iofile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *const libc::c_char,
     mut mode: *const libc::c_char,
 ) -> libc::c_int {
@@ -28817,21 +28798,21 @@ unsafe extern "C" fn g_iofile(
     lua_getfield(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, f);
     return 1;
 }
-unsafe extern "C" fn io_input(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_input(mut L: *mut State) -> libc::c_int {
     return g_iofile(
         L,
         b"_IO_input\0" as *const u8 as *const libc::c_char,
         b"r\0" as *const u8 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn io_output(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_output(mut L: *mut State) -> libc::c_int {
     return g_iofile(
         L,
         b"_IO_output\0" as *const u8 as *const libc::c_char,
         b"w\0" as *const u8 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn aux_lines(mut L: *mut lua_State, mut toclose: libc::c_int) {
+unsafe extern "C" fn aux_lines(mut L: *mut State, mut toclose: libc::c_int) {
     let mut n: libc::c_int = lua_gettop(L) - 1 as libc::c_int;
     (((n <= 250 as libc::c_int) as libc::c_int != 0 as libc::c_int) as libc::c_int
         as libc::c_long != 0
@@ -28846,16 +28827,16 @@ unsafe extern "C" fn aux_lines(mut L: *mut lua_State, mut toclose: libc::c_int) 
     lua_rotate(L, 2 as libc::c_int, 3 as libc::c_int);
     lua_pushcclosure(
         L,
-        Some(io_readline as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(io_readline as unsafe extern "C" fn(*mut State) -> libc::c_int),
         3 as libc::c_int + n,
     );
 }
-unsafe extern "C" fn f_lines(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_lines(mut L: *mut State) -> libc::c_int {
     tofile(L);
     aux_lines(L, 0 as libc::c_int);
     return 1;
 }
-unsafe extern "C" fn io_lines(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_lines(mut L: *mut State) -> libc::c_int {
     let mut toclose: libc::c_int = 0;
     if lua_type(L, 1) == -(1 as libc::c_int) {
         lua_pushnil(L);
@@ -28932,7 +28913,7 @@ unsafe extern "C" fn readdigits(mut rn: *mut RN, mut hex: libc::c_int) -> libc::
     return count;
 }
 unsafe extern "C" fn read_number(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
 ) -> libc::c_int {
     let mut rn: RN = RN {
@@ -28995,14 +28976,14 @@ unsafe extern "C" fn read_number(
         return 0 as libc::c_int;
     };
 }
-unsafe extern "C" fn test_eof(mut L: *mut lua_State, mut f: *mut FILE) -> libc::c_int {
+unsafe extern "C" fn test_eof(mut L: *mut State, mut f: *mut FILE) -> libc::c_int {
     let mut c: libc::c_int = getc(f);
     ungetc(c, f);
     lua_pushstring(L, b"\0" as *const u8 as *const libc::c_char);
     return (c != -(1 as libc::c_int)) as libc::c_int;
 }
 unsafe extern "C" fn read_line(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
     mut chop: libc::c_int,
 ) -> libc::c_int {
@@ -29010,7 +28991,7 @@ unsafe extern "C" fn read_line(
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut c: libc::c_int = 0;
@@ -29064,13 +29045,13 @@ unsafe extern "C" fn read_line(
         || lua_rawlen(L, -(1 as libc::c_int)) > 0 as libc::c_int as libc::c_ulonglong)
         as libc::c_int;
 }
-unsafe extern "C" fn read_all(mut L: *mut lua_State, mut f: *mut FILE) {
+unsafe extern "C" fn read_all(mut L: *mut State, mut f: *mut FILE) {
     let mut nr: u64 = 0;
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
@@ -29110,7 +29091,7 @@ unsafe extern "C" fn read_all(mut L: *mut lua_State, mut f: *mut FILE) {
     luaL_pushresult(&mut b);
 }
 unsafe extern "C" fn read_chars(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
     mut n: u64,
 ) -> libc::c_int {
@@ -29120,7 +29101,7 @@ unsafe extern "C" fn read_chars(
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
@@ -29136,7 +29117,7 @@ unsafe extern "C" fn read_chars(
     return (nr > 0 as libc::c_int as libc::c_ulong) as libc::c_int;
 }
 unsafe extern "C" fn g_read(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
     mut first: libc::c_int,
 ) -> libc::c_int {
@@ -29213,17 +29194,17 @@ unsafe extern "C" fn g_read(
     }
     return n - first;
 }
-unsafe extern "C" fn io_read(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_read(mut L: *mut State) -> libc::c_int {
     return g_read(
         L,
         getiofile(L, b"_IO_input\0" as *const u8 as *const libc::c_char),
         1 as libc::c_int,
     );
 }
-unsafe extern "C" fn f_read(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_read(mut L: *mut State) -> libc::c_int {
     return g_read(L, tofile(L), 2 as libc::c_int);
 }
-unsafe extern "C" fn io_readline(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_readline(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = lua_touserdata(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int - 1 as libc::c_int,
@@ -29277,7 +29258,7 @@ unsafe extern "C" fn io_readline(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn g_write(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
     mut arg: libc::c_int,
 ) -> libc::c_int {
@@ -29324,19 +29305,19 @@ unsafe extern "C" fn g_write(
         return luaL_fileresult(L, status, 0 as *const libc::c_char)
     };
 }
-unsafe extern "C" fn io_write(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_write(mut L: *mut State) -> libc::c_int {
     return g_write(
         L,
         getiofile(L, b"_IO_output\0" as *const u8 as *const libc::c_char),
         1 as libc::c_int,
     );
 }
-unsafe extern "C" fn f_write(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_write(mut L: *mut State) -> libc::c_int {
     let mut f: *mut FILE = tofile(L);
     lua_pushvalue(L, 1);
     return g_write(L, f, 2 as libc::c_int);
 }
-unsafe extern "C" fn f_seek(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_seek(mut L: *mut State) -> libc::c_int {
     static mut mode: [libc::c_int; 3] = [
         0,
         1 as libc::c_int,
@@ -29377,7 +29358,7 @@ unsafe extern "C" fn f_seek(mut L: *mut lua_State) -> libc::c_int {
         return 1;
     };
 }
-unsafe extern "C" fn f_setvbuf(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_setvbuf(mut L: *mut State) -> libc::c_int {
     static mut mode: [libc::c_int; 3] = [
         2 as libc::c_int,
         0,
@@ -29413,7 +29394,7 @@ unsafe extern "C" fn f_setvbuf(mut L: *mut lua_State) -> libc::c_int {
         0 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn io_flush(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_flush(mut L: *mut State) -> libc::c_int {
     let mut f: *mut FILE = getiofile(
         L,
         b"_IO_output\0" as *const u8 as *const libc::c_char,
@@ -29425,7 +29406,7 @@ unsafe extern "C" fn io_flush(mut L: *mut lua_State) -> libc::c_int {
         0 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn f_flush(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn f_flush(mut L: *mut State) -> libc::c_int {
     let mut f: *mut FILE = tofile(L);
     *__errno_location() = 0 as libc::c_int;
     return luaL_fileresult(
@@ -29440,7 +29421,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"close\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_close as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_close as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29449,7 +29430,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"flush\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_flush as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_flush as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29458,7 +29439,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"input\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_input as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_input as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29467,7 +29448,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"lines\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_lines as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_lines as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29476,7 +29457,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"open\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_open as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_open as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29485,7 +29466,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"output\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_output as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_output as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29494,7 +29475,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"popen\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_popen as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_popen as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29503,7 +29484,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"read\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_read as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_read as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29512,7 +29493,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"tmpfile\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_tmpfile as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_tmpfile as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29521,7 +29502,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"type\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_type as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_type as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29530,7 +29511,7 @@ static mut iolib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"write\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    io_write as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    io_write as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29549,7 +29530,7 @@ static mut meth: [luaL_Reg; 8] = {
         {
             let mut init = luaL_Reg {
                 name: b"read\0" as *const u8 as *const libc::c_char,
-                func: Some(f_read as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(f_read as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -29557,7 +29538,7 @@ static mut meth: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"write\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_write as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_write as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29566,7 +29547,7 @@ static mut meth: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"lines\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_lines as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_lines as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29575,7 +29556,7 @@ static mut meth: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"flush\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_flush as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_flush as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29583,7 +29564,7 @@ static mut meth: [luaL_Reg; 8] = {
         {
             let mut init = luaL_Reg {
                 name: b"seek\0" as *const u8 as *const libc::c_char,
-                func: Some(f_seek as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(f_seek as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -29591,7 +29572,7 @@ static mut meth: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"close\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_close as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_close as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29600,7 +29581,7 @@ static mut meth: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"setvbuf\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_setvbuf as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_setvbuf as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29626,14 +29607,14 @@ static mut metameth: [luaL_Reg; 5] = {
         {
             let mut init = luaL_Reg {
                 name: b"__gc\0" as *const u8 as *const libc::c_char,
-                func: Some(f_gc as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(f_gc as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
         {
             let mut init = luaL_Reg {
                 name: b"__close\0" as *const u8 as *const libc::c_char,
-                func: Some(f_gc as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(f_gc as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -29641,7 +29622,7 @@ static mut metameth: [luaL_Reg; 5] = {
             let mut init = luaL_Reg {
                 name: b"__tostring\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    f_tostring as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    f_tostring as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -29655,7 +29636,7 @@ static mut metameth: [luaL_Reg; 5] = {
         },
     ]
 };
-unsafe extern "C" fn createmeta(mut L: *mut lua_State) {
+unsafe extern "C" fn createmeta(mut L: *mut State) {
     luaL_newmetatable(L, b"FILE*\0" as *const u8 as *const libc::c_char);
     luaL_setfuncs(L, metameth.as_ptr(), 0 as libc::c_int);
     lua_createtable(
@@ -29673,7 +29654,7 @@ unsafe extern "C" fn createmeta(mut L: *mut lua_State) {
     );
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
-unsafe extern "C" fn io_noclose(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn io_noclose(mut L: *mut State) -> libc::c_int {
     let mut p: *mut luaL_Stream = luaL_checkudata(
         L,
         1 as libc::c_int,
@@ -29681,7 +29662,7 @@ unsafe extern "C" fn io_noclose(mut L: *mut lua_State) -> libc::c_int {
     ) as *mut luaL_Stream;
     (*p)
         .closef = Some(
-        io_noclose as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+        io_noclose as unsafe extern "C" fn(*mut State) -> libc::c_int,
     );
     lua_pushnil(L);
     lua_pushstring(
@@ -29691,7 +29672,7 @@ unsafe extern "C" fn io_noclose(mut L: *mut lua_State) -> libc::c_int {
     return 2 as libc::c_int;
 }
 unsafe extern "C" fn createstdfile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut f: *mut FILE,
     mut k: *const libc::c_char,
     mut fname: *const libc::c_char,
@@ -29700,7 +29681,7 @@ unsafe extern "C" fn createstdfile(
     (*p).f = f;
     (*p)
         .closef = Some(
-        io_noclose as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+        io_noclose as unsafe extern "C" fn(*mut State) -> libc::c_int,
     );
     if !k.is_null() {
         lua_pushvalue(L, -(1 as libc::c_int));
@@ -29709,7 +29690,7 @@ unsafe extern "C" fn createstdfile(
     lua_setfield(L, -(2 as libc::c_int), fname);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_io(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_io(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -29746,7 +29727,7 @@ pub unsafe extern "C" fn luaopen_io(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn os_execute(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_execute(mut L: *mut State) -> libc::c_int {
     let mut cmd: *const libc::c_char = luaL_optlstring(
         L,
         1 as libc::c_int,
@@ -29763,7 +29744,7 @@ unsafe extern "C" fn os_execute(mut L: *mut lua_State) -> libc::c_int {
         return 1;
     };
 }
-unsafe extern "C" fn os_remove(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_remove(mut L: *mut State) -> libc::c_int {
     let mut filename: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -29776,7 +29757,7 @@ unsafe extern "C" fn os_remove(mut L: *mut lua_State) -> libc::c_int {
         filename,
     );
 }
-unsafe extern "C" fn os_rename(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_rename(mut L: *mut State) -> libc::c_int {
     let mut fromname: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -29794,7 +29775,7 @@ unsafe extern "C" fn os_rename(mut L: *mut lua_State) -> libc::c_int {
         0 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn os_tmpname(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_tmpname(mut L: *mut State) -> libc::c_int {
     let mut buff: [libc::c_char; 32] = [0; 32];
     let mut err: libc::c_int = 0;
     strcpy(buff.as_mut_ptr(), b"/tmp/lua_XXXXXX\0" as *const u8 as *const libc::c_char);
@@ -29812,11 +29793,11 @@ unsafe extern "C" fn os_tmpname(mut L: *mut lua_State) -> libc::c_int {
     lua_pushstring(L, buff.as_mut_ptr());
     return 1;
 }
-unsafe extern "C" fn os_getenv(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_getenv(mut L: *mut State) -> libc::c_int {
     lua_pushstring(L, getenv(luaL_checklstring(L, 1, 0 as *mut u64)));
     return 1;
 }
-unsafe extern "C" fn os_clock(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_clock(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(
         L,
         clock() as f64 / 1000000 as libc::c_int as libc::c_long as f64,
@@ -29824,7 +29805,7 @@ unsafe extern "C" fn os_clock(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn setfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut key: *const libc::c_char,
     mut value: libc::c_int,
     mut delta: libc::c_int,
@@ -29833,7 +29814,7 @@ unsafe extern "C" fn setfield(
     lua_setfield(L, -(2 as libc::c_int), key);
 }
 unsafe extern "C" fn setboolfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut key: *const libc::c_char,
     mut value: libc::c_int,
 ) {
@@ -29843,7 +29824,7 @@ unsafe extern "C" fn setboolfield(
     lua_pushboolean(L, value);
     lua_setfield(L, -(2 as libc::c_int), key);
 }
-unsafe extern "C" fn setallfields(mut L: *mut lua_State, mut stm: *mut tm) {
+unsafe extern "C" fn setallfields(mut L: *mut State, mut stm: *mut tm) {
     setfield(
         L,
         b"year\0" as *const u8 as *const libc::c_char,
@@ -29895,7 +29876,7 @@ unsafe extern "C" fn setallfields(mut L: *mut lua_State, mut stm: *mut tm) {
     setboolfield(L, b"isdst\0" as *const u8 as *const libc::c_char, (*stm).tm_isdst);
 }
 unsafe extern "C" fn getboolfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut key: *const libc::c_char,
 ) -> libc::c_int {
     let mut res: libc::c_int = 0;
@@ -29908,7 +29889,7 @@ unsafe extern "C" fn getboolfield(
     return res;
 }
 unsafe extern "C" fn getfield(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut key: *const libc::c_char,
     mut d: libc::c_int,
     mut delta: libc::c_int,
@@ -29957,7 +29938,7 @@ unsafe extern "C" fn getfield(
     return res as libc::c_int;
 }
 unsafe extern "C" fn checkoption(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut conv: *const libc::c_char,
     mut convlen: i64,
     mut buff: *mut libc::c_char,
@@ -29995,7 +29976,7 @@ unsafe extern "C" fn checkoption(
     );
     return conv;
 }
-unsafe extern "C" fn l_checktime(mut L: *mut lua_State, mut arg: libc::c_int) -> i64 {
+unsafe extern "C" fn l_checktime(mut L: *mut State, mut arg: libc::c_int) -> i64 {
     let mut t: i64 = luaL_checkinteger(L, arg);
     (((t as i64 as i64 == t) as libc::c_int != 0 as libc::c_int)
         as libc::c_int as libc::c_long != 0
@@ -30006,7 +29987,7 @@ unsafe extern "C" fn l_checktime(mut L: *mut lua_State, mut arg: libc::c_int) ->
         ) != 0) as libc::c_int;
     return t as i64;
 }
-unsafe extern "C" fn os_date(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_date(mut L: *mut State) -> libc::c_int {
     let mut slen: u64 = 0;
     let mut s: *const libc::c_char = luaL_optlstring(
         L,
@@ -30056,7 +30037,7 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> libc::c_int {
             b: 0 as *mut libc::c_char,
             size: 0,
             n: 0,
-            L: 0 as *mut lua_State,
+            L: 0 as *mut State,
             init: C2RustUnnamed_27 { n: 0. },
         };
         cc[0 as libc::c_int as usize] = '%' as i32 as libc::c_char;
@@ -30097,7 +30078,7 @@ unsafe extern "C" fn os_date(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn os_time(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_time(mut L: *mut State) -> libc::c_int {
     let mut t: i64 = 0;
     if lua_type(L, 1) <= 0 as libc::c_int {
         t = time(0 as *mut i64);
@@ -30173,13 +30154,13 @@ unsafe extern "C" fn os_time(mut L: *mut lua_State) -> libc::c_int {
     lua_pushinteger(L, t as i64);
     return 1;
 }
-unsafe extern "C" fn os_difftime(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_difftime(mut L: *mut State) -> libc::c_int {
     let mut t1: i64 = l_checktime(L, 1);
     let mut t2: i64 = l_checktime(L, 2 as libc::c_int);
     lua_pushnumber(L, difftime(t1, t2));
     return 1;
 }
-unsafe extern "C" fn os_setlocale(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_setlocale(mut L: *mut State) -> libc::c_int {
     static mut cat: [libc::c_int; 6] = [
         6 as libc::c_int,
         3 as libc::c_int,
@@ -30212,7 +30193,7 @@ unsafe extern "C" fn os_setlocale(mut L: *mut lua_State) -> libc::c_int {
     lua_pushstring(L, setlocale(cat[op as usize], l));
     return 1;
 }
-unsafe extern "C" fn os_exit(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn os_exit(mut L: *mut State) -> libc::c_int {
     let mut status: libc::c_int = 0;
     if lua_type(L, 1) == 1 as libc::c_int {
         status = if lua_toboolean(L, 1) != 0 {
@@ -30238,7 +30219,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"clock\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_clock as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_clock as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30247,7 +30228,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"date\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_date as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_date as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30256,7 +30237,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"difftime\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_difftime as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_difftime as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30265,7 +30246,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"execute\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_execute as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_execute as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30274,7 +30255,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"exit\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_exit as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_exit as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30283,7 +30264,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"getenv\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_getenv as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_getenv as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30292,7 +30273,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"remove\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_remove as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_remove as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30301,7 +30282,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"rename\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_rename as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_rename as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30310,7 +30291,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"setlocale\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_setlocale as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_setlocale as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30319,7 +30300,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"time\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_time as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_time as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30328,7 +30309,7 @@ static mut syslib: [luaL_Reg; 12] = {
             let mut init = luaL_Reg {
                 name: b"tmpname\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    os_tmpname as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    os_tmpname as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30343,7 +30324,7 @@ static mut syslib: [luaL_Reg; 12] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_os(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_os(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -30361,7 +30342,7 @@ pub unsafe extern "C" fn luaopen_os(mut L: *mut lua_State) -> libc::c_int {
     luaL_setfuncs(L, syslib.as_ptr(), 0 as libc::c_int);
     return 1;
 }
-unsafe extern "C" fn str_len(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_len(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     luaL_checklstring(L, 1, &mut l);
     lua_pushinteger(L, l as i64);
@@ -30381,7 +30362,7 @@ unsafe extern "C" fn posrelatI(mut pos: i64, mut len: u64) -> u64 {
     };
 }
 unsafe extern "C" fn getendpos(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: libc::c_int,
     mut def: i64,
     mut len: u64,
@@ -30399,7 +30380,7 @@ unsafe extern "C" fn getendpos(
             .wrapping_add(1 as libc::c_int as libc::c_ulong)
     };
 }
-unsafe extern "C" fn str_sub(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_sub(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
     let mut start: u64 = posrelatI(luaL_checkinteger(L, 2 as libc::c_int), l);
@@ -30420,14 +30401,14 @@ unsafe extern "C" fn str_sub(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn str_reverse(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_reverse(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
@@ -30447,14 +30428,14 @@ unsafe extern "C" fn str_reverse(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresultsize(&mut b, l);
     return 1;
 }
-unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_lower(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
@@ -30471,14 +30452,14 @@ unsafe extern "C" fn str_lower(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresultsize(&mut b, l);
     return 1;
 }
-unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_upper(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
@@ -30495,7 +30476,7 @@ unsafe extern "C" fn str_upper(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresultsize(&mut b, l);
     return 1;
 }
-unsafe extern "C" fn str_rep(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_rep(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut lsep: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
@@ -30534,7 +30515,7 @@ unsafe extern "C" fn str_rep(mut L: *mut lua_State) -> libc::c_int {
             b: 0 as *mut libc::c_char,
             size: 0,
             n: 0,
-            L: 0 as *mut lua_State,
+            L: 0 as *mut State,
             init: C2RustUnnamed_27 { n: 0. },
         };
         let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, totallen);
@@ -30571,7 +30552,7 @@ unsafe extern "C" fn str_rep(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn str_byte(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_byte(mut L: *mut State) -> libc::c_int {
     let mut l: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut l);
     let mut pi: i64 = luaL_optinteger(
@@ -30615,14 +30596,14 @@ unsafe extern "C" fn str_byte(mut L: *mut lua_State) -> libc::c_int {
     }
     return n;
 }
-unsafe extern "C" fn str_char(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_char(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     let mut i: libc::c_int = 0;
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut p: *mut libc::c_char = luaL_buffinitsize(L, &mut b, n as u64);
@@ -30645,7 +30626,7 @@ unsafe extern "C" fn str_char(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn writer(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut b: *const libc::c_void,
     mut size: u64,
     mut ud: *mut libc::c_void,
@@ -30658,14 +30639,14 @@ unsafe extern "C" fn writer(
     luaL_addlstring(&mut (*state).B, b as *const libc::c_char, size);
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn str_dump(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_dump(mut L: *mut State) -> libc::c_int {
     let mut state: str_Writer = str_Writer {
         init: 0,
         B: luaL_Buffer {
             b: 0 as *mut libc::c_char,
             size: 0,
             n: 0,
-            L: 0 as *mut lua_State,
+            L: 0 as *mut State,
             init: C2RustUnnamed_27 { n: 0. },
         },
     };
@@ -30678,7 +30659,7 @@ unsafe extern "C" fn str_dump(mut L: *mut lua_State) -> libc::c_int {
         Some(
             writer
                 as unsafe extern "C" fn(
-                    *mut lua_State,
+                    *mut State,
                     *const libc::c_void,
                     u64,
                     *mut libc::c_void,
@@ -30697,7 +30678,7 @@ unsafe extern "C" fn str_dump(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresult(&mut state.B);
     return 1;
 }
-unsafe extern "C" fn tonum(mut L: *mut lua_State, mut arg: libc::c_int) -> libc::c_int {
+unsafe extern "C" fn tonum(mut L: *mut State, mut arg: libc::c_int) -> libc::c_int {
     if lua_type(L, arg) == 3 as libc::c_int {
         lua_pushvalue(L, arg);
         return 1;
@@ -30709,7 +30690,7 @@ unsafe extern "C" fn tonum(mut L: *mut lua_State, mut arg: libc::c_int) -> libc:
                 == len.wrapping_add(1 as libc::c_int as libc::c_ulong)) as libc::c_int;
     };
 }
-unsafe extern "C" fn trymt(mut L: *mut lua_State, mut mtname: *const libc::c_char) {
+unsafe extern "C" fn trymt(mut L: *mut State, mut mtname: *const libc::c_char) {
     lua_settop(L, 2 as libc::c_int);
     if ((lua_type(L, 2 as libc::c_int) == 4 as libc::c_int
         || luaL_getmetafield(L, 2 as libc::c_int, mtname) == 0) as libc::c_int
@@ -30733,7 +30714,7 @@ unsafe extern "C" fn trymt(mut L: *mut lua_State, mut mtname: *const libc::c_cha
     );
 }
 unsafe extern "C" fn arith(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut op: libc::c_int,
     mut mtname: *const libc::c_char,
 ) -> libc::c_int {
@@ -30744,28 +30725,28 @@ unsafe extern "C" fn arith(
     }
     return 1;
 }
-unsafe extern "C" fn arith_add(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_add(mut L: *mut State) -> libc::c_int {
     return arith(L, 0, b"__add\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_sub(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_sub(mut L: *mut State) -> libc::c_int {
     return arith(L, 1, b"__sub\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_mul(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_mul(mut L: *mut State) -> libc::c_int {
     return arith(L, 2 as libc::c_int, b"__mul\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_mod(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_mod(mut L: *mut State) -> libc::c_int {
     return arith(L, 3 as libc::c_int, b"__mod\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_pow(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_pow(mut L: *mut State) -> libc::c_int {
     return arith(L, 4 as libc::c_int, b"__pow\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_div(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_div(mut L: *mut State) -> libc::c_int {
     return arith(L, 5 as libc::c_int, b"__div\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_idiv(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_idiv(mut L: *mut State) -> libc::c_int {
     return arith(L, 6 as libc::c_int, b"__idiv\0" as *const u8 as *const libc::c_char);
 }
-unsafe extern "C" fn arith_unm(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn arith_unm(mut L: *mut State) -> libc::c_int {
     return arith(L, 12 as libc::c_int, b"__unm\0" as *const u8 as *const libc::c_char);
 }
 static mut stringmetamethods: [luaL_Reg; 10] = {
@@ -30774,7 +30755,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__add\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_add as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_add as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30783,7 +30764,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__sub\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_sub as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_sub as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30792,7 +30773,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__mul\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_mul as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_mul as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30801,7 +30782,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__mod\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_mod as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_mod as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30810,7 +30791,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__pow\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_pow as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_pow as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30819,7 +30800,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__div\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_div as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_div as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30828,7 +30809,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__idiv\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_idiv as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_idiv as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -30837,7 +30818,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             let mut init = luaL_Reg {
                 name: b"__unm\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    arith_unm as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    arith_unm as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -31663,7 +31644,7 @@ unsafe extern "C" fn nospecials(
 }
 unsafe extern "C" fn prepstate(
     mut ms: *mut MatchState,
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
     mut ls: u64,
     mut p: *const libc::c_char,
@@ -31679,7 +31660,7 @@ unsafe extern "C" fn reprepstate(mut ms: *mut MatchState) {
     (*ms).level = 0 as libc::c_int as libc::c_uchar;
 }
 unsafe extern "C" fn str_find_aux(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut find: libc::c_int,
 ) -> libc::c_int {
     let mut ls: u64 = 0;
@@ -31720,7 +31701,7 @@ unsafe extern "C" fn str_find_aux(
             src_init: 0 as *const libc::c_char,
             src_end: 0 as *const libc::c_char,
             p_end: 0 as *const libc::c_char,
-            L: 0 as *mut lua_State,
+            L: 0 as *mut State,
             matchdepth: 0,
             level: 0,
             capture: [C2RustUnnamed_30 {
@@ -31769,13 +31750,13 @@ unsafe extern "C" fn str_find_aux(
     lua_pushnil(L);
     return 1;
 }
-unsafe extern "C" fn str_find(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_find(mut L: *mut State) -> libc::c_int {
     return str_find_aux(L, 1);
 }
-unsafe extern "C" fn str_match(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_match(mut L: *mut State) -> libc::c_int {
     return str_find_aux(L, 0 as libc::c_int);
 }
-unsafe extern "C" fn gmatch_aux(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn gmatch_aux(mut L: *mut State) -> libc::c_int {
     let mut gm: *mut GMatchState = lua_touserdata(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int - 3 as libc::c_int,
@@ -31796,7 +31777,7 @@ unsafe extern "C" fn gmatch_aux(mut L: *mut lua_State) -> libc::c_int {
     }
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn gmatch(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn gmatch(mut L: *mut State) -> libc::c_int {
     let mut ls: u64 = 0;
     let mut lp: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut ls);
@@ -31822,7 +31803,7 @@ unsafe extern "C" fn gmatch(mut L: *mut lua_State) -> libc::c_int {
     (*gm).lastmatch = 0 as *const libc::c_char;
     lua_pushcclosure(
         L,
-        Some(gmatch_aux as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(gmatch_aux as unsafe extern "C" fn(*mut State) -> libc::c_int),
         3 as libc::c_int,
     );
     return 1;
@@ -31834,7 +31815,7 @@ unsafe extern "C" fn add_s(
     mut e: *const libc::c_char,
 ) {
     let mut l: u64 = 0;
-    let mut L: *mut lua_State = (*ms).L;
+    let mut L: *mut State = (*ms).L;
     let mut news: *const libc::c_char = lua_tolstring(L, 3 as libc::c_int, &mut l);
     let mut p: *const libc::c_char = 0 as *const libc::c_char;
     loop {
@@ -31894,7 +31875,7 @@ unsafe extern "C" fn add_value(
     mut e: *const libc::c_char,
     mut tr: libc::c_int,
 ) -> libc::c_int {
-    let mut L: *mut lua_State = (*ms).L;
+    let mut L: *mut State = (*ms).L;
     match tr {
         6 => {
             let mut n: libc::c_int = 0;
@@ -31928,7 +31909,7 @@ unsafe extern "C" fn add_value(
         return 1;
     };
 }
-unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_gsub(mut L: *mut State) -> libc::c_int {
     let mut srcl: u64 = 0;
     let mut lp: u64 = 0;
     let mut src: *const libc::c_char = luaL_checklstring(L, 1, &mut srcl);
@@ -31947,7 +31928,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> libc::c_int {
         src_init: 0 as *const libc::c_char,
         src_end: 0 as *const libc::c_char,
         p_end: 0 as *const libc::c_char,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         matchdepth: 0,
         level: 0,
         capture: [C2RustUnnamed_30 {
@@ -31959,7 +31940,7 @@ unsafe extern "C" fn str_gsub(mut L: *mut lua_State) -> libc::c_int {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     (((tr == 3 as libc::c_int || tr == 4 as libc::c_int || tr == 6 as libc::c_int
@@ -32090,7 +32071,7 @@ unsafe extern "C" fn addquoted(
     *((*b).b).offset(fresh172 as isize) = '"' as i32 as libc::c_char;
 }
 unsafe extern "C" fn quotefloat(
-    mut _L: *mut lua_State,
+    mut _L: *mut State,
     mut buff: *mut libc::c_char,
     mut n: f64,
 ) -> libc::c_int {
@@ -32132,7 +32113,7 @@ unsafe extern "C" fn quotefloat(
     );
 }
 unsafe extern "C" fn addliteral(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut b: *mut luaL_Buffer,
     mut arg: libc::c_int,
 ) {
@@ -32193,7 +32174,7 @@ unsafe extern "C" fn get2digits(mut s: *const libc::c_char) -> *const libc::c_ch
     return s;
 }
 unsafe extern "C" fn checkformat(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut form: *const libc::c_char,
     mut flags: *const libc::c_char,
     mut precision: libc::c_int,
@@ -32219,7 +32200,7 @@ unsafe extern "C" fn checkformat(
     }
 }
 unsafe extern "C" fn getformat(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut strfrmt: *const libc::c_char,
     mut form: *mut libc::c_char,
 ) -> *const libc::c_char {
@@ -32260,7 +32241,7 @@ unsafe extern "C" fn addlenmod(
         ) = spec;
     *form.offset(l.wrapping_add(lm) as isize) = '\0' as i32 as libc::c_char;
 }
-unsafe extern "C" fn str_format(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_format(mut L: *mut State) -> libc::c_int {
     let mut current_block: u64;
     let mut top: libc::c_int = lua_gettop(L);
     let mut arg: libc::c_int = 1 as libc::c_int;
@@ -32272,7 +32253,7 @@ unsafe extern "C" fn str_format(mut L: *mut lua_State) -> libc::c_int {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
@@ -32550,7 +32531,7 @@ unsafe extern "C" fn getnumlimit(
     }
     return sz;
 }
-unsafe extern "C" fn initheader(mut L: *mut lua_State, mut h: *mut Header) {
+unsafe extern "C" fn initheader(mut L: *mut State, mut h: *mut Header) {
     (*h).L = L;
     (*h).islittle = nativeendian.little as libc::c_int;
     (*h).maxalign = 1 as libc::c_int;
@@ -32559,7 +32540,7 @@ unsafe extern "C" fn getoption(
     mut h: *mut Header,
     mut fmt: *mut *const libc::c_char,
     mut size: *mut libc::c_int,
-) -> KOption {
+) -> u32 {
     let fresh180 = *fmt;
     *fmt = (*fmt).offset(1);
     let mut opt: libc::c_int = *fresh180 as libc::c_int;
@@ -32696,8 +32677,8 @@ unsafe extern "C" fn getdetails(
     mut fmt: *mut *const libc::c_char,
     mut psize: *mut libc::c_int,
     mut ntoalign: *mut libc::c_int,
-) -> KOption {
-    let mut opt: KOption = getoption(h, fmt, psize);
+) -> u32 {
+    let mut opt: u32 = getoption(h, fmt, psize);
     let mut align: libc::c_int = *psize;
     if opt as libc::c_uint == Kpaddalign as libc::c_int as libc::c_uint {
         if **fmt as libc::c_int == '\0' as i32
@@ -32809,16 +32790,16 @@ unsafe extern "C" fn copywithendian(
         }
     };
 }
-unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_pack(mut L: *mut State) -> libc::c_int {
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut h: Header = Header {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         islittle: 0,
         maxalign: 0,
     };
@@ -32835,7 +32816,7 @@ unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> libc::c_int {
     while *fmt as libc::c_int != '\0' as i32 {
         let mut size: libc::c_int = 0;
         let mut ntoalign: libc::c_int = 0;
-        let mut opt: KOption = getdetails(
+        let mut opt: u32 = getdetails(
             &mut h,
             totalsize,
             &mut fmt,
@@ -33058,9 +33039,9 @@ unsafe extern "C" fn str_pack(mut L: *mut lua_State) -> libc::c_int {
     luaL_pushresult(&mut b);
     return 1;
 }
-unsafe extern "C" fn str_packsize(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_packsize(mut L: *mut State) -> libc::c_int {
     let mut h: Header = Header {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         islittle: 0,
         maxalign: 0,
     };
@@ -33074,7 +33055,7 @@ unsafe extern "C" fn str_packsize(mut L: *mut lua_State) -> libc::c_int {
     while *fmt as libc::c_int != '\0' as i32 {
         let mut size: libc::c_int = 0;
         let mut ntoalign: libc::c_int = 0;
-        let mut opt: KOption = getdetails(
+        let mut opt: u32 = getdetails(
             &mut h,
             totalsize,
             &mut fmt,
@@ -33112,7 +33093,7 @@ unsafe extern "C" fn str_packsize(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn unpackint(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut str: *const libc::c_char,
     mut islittle: libc::c_int,
     mut size: libc::c_int,
@@ -33175,9 +33156,9 @@ unsafe extern "C" fn unpackint(
     }
     return res as i64;
 }
-unsafe extern "C" fn str_unpack(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn str_unpack(mut L: *mut State) -> libc::c_int {
     let mut h: Header = Header {
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         islittle: 0,
         maxalign: 0,
     };
@@ -33204,7 +33185,7 @@ unsafe extern "C" fn str_unpack(mut L: *mut lua_State) -> libc::c_int {
     while *fmt as libc::c_int != '\0' as i32 {
         let mut size: libc::c_int = 0;
         let mut ntoalign: libc::c_int = 0;
-        let mut opt: KOption = getdetails(
+        let mut opt: u32 = getdetails(
             &mut h,
             pos,
             &mut fmt,
@@ -33328,7 +33309,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"byte\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_byte as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_byte as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33337,7 +33318,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"char\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_char as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_char as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33346,7 +33327,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"dump\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_dump as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_dump as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33355,7 +33336,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"find\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_find as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_find as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33364,7 +33345,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"format\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_format as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_format as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33372,7 +33353,7 @@ static mut strlib: [luaL_Reg; 18] = {
         {
             let mut init = luaL_Reg {
                 name: b"gmatch\0" as *const u8 as *const libc::c_char,
-                func: Some(gmatch as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(gmatch as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -33380,7 +33361,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"gsub\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_gsub as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_gsub as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33389,7 +33370,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"len\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_len as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_len as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33398,7 +33379,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"lower\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_lower as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_lower as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33407,7 +33388,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"match\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_match as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_match as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33416,7 +33397,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"rep\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_rep as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_rep as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33425,7 +33406,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"reverse\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_reverse as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_reverse as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33434,7 +33415,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"sub\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_sub as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_sub as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33443,7 +33424,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"upper\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_upper as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_upper as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33452,7 +33433,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"pack\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_pack as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_pack as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33461,7 +33442,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"packsize\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_packsize as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_packsize as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33470,7 +33451,7 @@ static mut strlib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"unpack\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    str_unpack as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    str_unpack as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33484,7 +33465,7 @@ static mut strlib: [luaL_Reg; 18] = {
         },
     ]
 };
-unsafe extern "C" fn createmetatable(mut L: *mut lua_State) {
+unsafe extern "C" fn createmetatable(mut L: *mut State) {
     lua_createtable(
         L,
         0,
@@ -33506,7 +33487,7 @@ unsafe extern "C" fn createmetatable(mut L: *mut lua_State) {
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_string(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_string(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -33586,7 +33567,7 @@ unsafe extern "C" fn utf8_decode(
     }
     return s.offset(1 as libc::c_int as isize);
 }
-unsafe extern "C" fn utflen(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn utflen(mut L: *mut State) -> libc::c_int {
     let mut n: i64 = 0 as libc::c_int as i64;
     let mut len: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut len);
@@ -33634,7 +33615,7 @@ unsafe extern "C" fn utflen(mut L: *mut lua_State) -> libc::c_int {
     lua_pushinteger(L, n);
     return 1;
 }
-unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn codepoint(mut L: *mut State) -> libc::c_int {
     let mut len: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut len);
     let mut posi: i64 = u_posrelat(
@@ -33694,7 +33675,7 @@ unsafe extern "C" fn codepoint(mut L: *mut lua_State) -> libc::c_int {
     }
     return n;
 }
-unsafe extern "C" fn pushutfchar(mut L: *mut lua_State, mut arg: libc::c_int) {
+unsafe extern "C" fn pushutfchar(mut L: *mut State, mut arg: libc::c_int) {
     let mut code: u64 = luaL_checkinteger(L, arg) as u64;
     (((code <= 0x7fffffff as libc::c_uint as libc::c_ulonglong) as libc::c_int
         != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
@@ -33709,7 +33690,7 @@ unsafe extern "C" fn pushutfchar(mut L: *mut lua_State, mut arg: libc::c_int) {
         code as libc::c_long,
     );
 }
-unsafe extern "C" fn utfchar(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn utfchar(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     if n == 1 as libc::c_int {
         pushutfchar(L, 1);
@@ -33719,7 +33700,7 @@ unsafe extern "C" fn utfchar(mut L: *mut lua_State) -> libc::c_int {
             b: 0 as *mut libc::c_char,
             size: 0,
             n: 0,
-            L: 0 as *mut lua_State,
+            L: 0 as *mut State,
             init: C2RustUnnamed_27 { n: 0. },
         };
         luaL_buffinit(L, &mut b);
@@ -33733,7 +33714,7 @@ unsafe extern "C" fn utfchar(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn byteoffset(mut L: *mut State) -> libc::c_int {
     let mut len: u64 = 0;
     let mut s: *const libc::c_char = luaL_checklstring(L, 1, &mut len);
     let mut n: i64 = luaL_checkinteger(L, 2 as libc::c_int);
@@ -33808,7 +33789,7 @@ unsafe extern "C" fn byteoffset(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn iter_aux(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut strict: libc::c_int,
 ) -> libc::c_int {
     let mut len: u64 = 0;
@@ -33847,13 +33828,13 @@ unsafe extern "C" fn iter_aux(
         return 2 as libc::c_int;
     };
 }
-unsafe extern "C" fn iter_auxstrict(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn iter_auxstrict(mut L: *mut State) -> libc::c_int {
     return iter_aux(L, 1);
 }
-unsafe extern "C" fn iter_auxlax(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn iter_auxlax(mut L: *mut State) -> libc::c_int {
     return iter_aux(L, 0 as libc::c_int);
 }
-unsafe extern "C" fn iter_codes(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn iter_codes(mut L: *mut State) -> libc::c_int {
     let mut lax: libc::c_int = lua_toboolean(L, 2 as libc::c_int);
     let mut s: *const libc::c_char = luaL_checklstring(
         L,
@@ -33870,9 +33851,9 @@ unsafe extern "C" fn iter_codes(mut L: *mut lua_State) -> libc::c_int {
     lua_pushcclosure(
         L,
         if lax != 0 {
-            Some(iter_auxlax as unsafe extern "C" fn(*mut lua_State) -> libc::c_int)
+            Some(iter_auxlax as unsafe extern "C" fn(*mut State) -> libc::c_int)
         } else {
-            Some(iter_auxstrict as unsafe extern "C" fn(*mut lua_State) -> libc::c_int)
+            Some(iter_auxstrict as unsafe extern "C" fn(*mut State) -> libc::c_int)
         },
         0,
     );
@@ -33886,7 +33867,7 @@ static mut funcs: [luaL_Reg; 7] = {
             let mut init = luaL_Reg {
                 name: b"offset\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    byteoffset as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    byteoffset as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33895,7 +33876,7 @@ static mut funcs: [luaL_Reg; 7] = {
             let mut init = luaL_Reg {
                 name: b"codepoint\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    codepoint as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    codepoint as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33904,7 +33885,7 @@ static mut funcs: [luaL_Reg; 7] = {
             let mut init = luaL_Reg {
                 name: b"char\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    utfchar as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    utfchar as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33912,7 +33893,7 @@ static mut funcs: [luaL_Reg; 7] = {
         {
             let mut init = luaL_Reg {
                 name: b"len\0" as *const u8 as *const libc::c_char,
-                func: Some(utflen as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+                func: Some(utflen as unsafe extern "C" fn(*mut State) -> libc::c_int),
             };
             init
         },
@@ -33920,7 +33901,7 @@ static mut funcs: [luaL_Reg; 7] = {
             let mut init = luaL_Reg {
                 name: b"codes\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    iter_codes as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    iter_codes as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -33942,7 +33923,7 @@ static mut funcs: [luaL_Reg; 7] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_utf8(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_utf8(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -33972,7 +33953,7 @@ pub unsafe extern "C" fn luaopen_utf8(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn math_abs(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_abs(mut L: *mut State) -> libc::c_int {
     if lua_isinteger(L, 1) != 0 {
         let mut n: i64 = lua_tointegerx(
             L,
@@ -33989,27 +33970,27 @@ unsafe extern "C" fn math_abs(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn math_sin(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_sin(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, luaL_checknumber(L, 1).sin());
     return 1;
 }
-unsafe extern "C" fn math_cos(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_cos(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, luaL_checknumber(L, 1).cos());
     return 1;
 }
-unsafe extern "C" fn math_tan(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_tan(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, luaL_checknumber(L, 1).tan());
     return 1;
 }
-unsafe extern "C" fn math_asin(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_asin(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, asin(luaL_checknumber(L, 1)));
     return 1;
 }
-unsafe extern "C" fn math_acos(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_acos(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, acos(luaL_checknumber(L, 1)));
     return 1;
 }
-unsafe extern "C" fn math_atan(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_atan(mut L: *mut State) -> libc::c_int {
     let mut y: f64 = luaL_checknumber(L, 1);
     let mut x: f64 = luaL_optnumber(
         L,
@@ -34019,7 +34000,7 @@ unsafe extern "C" fn math_atan(mut L: *mut lua_State) -> libc::c_int {
     lua_pushnumber(L, atan2(y, x));
     return 1;
 }
-unsafe extern "C" fn math_toint(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_toint(mut L: *mut State) -> libc::c_int {
     let mut valid: libc::c_int = 0;
     let mut n: i64 = lua_tointegerx(L, 1, &mut valid);
     if (valid != 0 as libc::c_int) as libc::c_int as libc::c_long != 0 {
@@ -34030,7 +34011,7 @@ unsafe extern "C" fn math_toint(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn pushnumint(mut L: *mut lua_State, mut d: f64) {
+unsafe extern "C" fn pushnumint(mut L: *mut State, mut d: f64) {
     let mut n: i64 = 0;
     if d
         >= (-(9223372036854775807 as i64) - 1 as i64)
@@ -34048,7 +34029,7 @@ unsafe extern "C" fn pushnumint(mut L: *mut lua_State, mut d: f64) {
         lua_pushnumber(L, d);
     };
 }
-unsafe extern "C" fn math_floor(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_floor(mut L: *mut State) -> libc::c_int {
     if lua_isinteger(L, 1) != 0 {
         lua_settop(L, 1);
     } else {
@@ -34057,7 +34038,7 @@ unsafe extern "C" fn math_floor(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn math_ceil(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_ceil(mut L: *mut State) -> libc::c_int {
     if lua_isinteger(L, 1) != 0 {
         lua_settop(L, 1);
     } else {
@@ -34066,7 +34047,7 @@ unsafe extern "C" fn math_ceil(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn math_fmod(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_fmod(mut L: *mut State) -> libc::c_int {
     if lua_isinteger(L, 1) != 0 && lua_isinteger(L, 2 as libc::c_int) != 0
     {
         let mut d: i64 = lua_tointegerx(
@@ -34102,7 +34083,7 @@ unsafe extern "C" fn math_fmod(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn math_modf(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_modf(mut L: *mut State) -> libc::c_int {
     if lua_isinteger(L, 1) != 0 {
         lua_settop(L, 1);
         lua_pushnumber(L, 0 as libc::c_int as f64);
@@ -34118,17 +34099,17 @@ unsafe extern "C" fn math_modf(mut L: *mut lua_State) -> libc::c_int {
     }
     return 2 as libc::c_int;
 }
-unsafe extern "C" fn math_sqrt(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_sqrt(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, sqrt(luaL_checknumber(L, 1)));
     return 1;
 }
-unsafe extern "C" fn math_ult(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_ult(mut L: *mut State) -> libc::c_int {
     let mut a: i64 = luaL_checkinteger(L, 1);
     let mut b: i64 = luaL_checkinteger(L, 2 as libc::c_int);
     lua_pushboolean(L, ((a as u64) < b as u64) as libc::c_int);
     return 1;
 }
-unsafe extern "C" fn math_log(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_log(mut L: *mut State) -> libc::c_int {
     let mut x: f64 = luaL_checknumber(L, 1);
     let mut res: f64 = 0.;
     if lua_type(L, 2 as libc::c_int) <= 0 as libc::c_int {
@@ -34146,11 +34127,11 @@ unsafe extern "C" fn math_log(mut L: *mut lua_State) -> libc::c_int {
     lua_pushnumber(L, res);
     return 1;
 }
-unsafe extern "C" fn math_exp(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_exp(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(L, exp(luaL_checknumber(L, 1)));
     return 1;
 }
-unsafe extern "C" fn math_deg(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_deg(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(
         L,
         luaL_checknumber(L, 1)
@@ -34158,7 +34139,7 @@ unsafe extern "C" fn math_deg(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn math_rad(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_rad(mut L: *mut State) -> libc::c_int {
     lua_pushnumber(
         L,
         luaL_checknumber(L, 1)
@@ -34166,7 +34147,7 @@ unsafe extern "C" fn math_rad(mut L: *mut lua_State) -> libc::c_int {
     );
     return 1;
 }
-unsafe extern "C" fn math_min(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_min(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     let mut imin: libc::c_int = 1 as libc::c_int;
     let mut i: libc::c_int = 0;
@@ -34187,7 +34168,7 @@ unsafe extern "C" fn math_min(mut L: *mut lua_State) -> libc::c_int {
     lua_pushvalue(L, imin);
     return 1;
 }
-unsafe extern "C" fn math_max(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_max(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = lua_gettop(L);
     let mut imax: libc::c_int = 1 as libc::c_int;
     let mut i: libc::c_int = 0;
@@ -34208,7 +34189,7 @@ unsafe extern "C" fn math_max(mut L: *mut lua_State) -> libc::c_int {
     lua_pushvalue(L, imax);
     return 1;
 }
-unsafe extern "C" fn math_type(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_type(mut L: *mut State) -> libc::c_int {
     if lua_type(L, 1) == 3 as libc::c_int {
         lua_pushstring(
             L,
@@ -34283,7 +34264,7 @@ unsafe extern "C" fn project(
         return ran;
     };
 }
-unsafe extern "C" fn math_random(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_random(mut L: *mut State) -> libc::c_int {
     let mut low: i64 = 0;
     let mut up: i64 = 0;
     let mut p: u64 = 0;
@@ -34335,7 +34316,7 @@ unsafe extern "C" fn math_random(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn setseed(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut state: *mut libc::c_ulong,
     mut n1: u64,
     mut n2: u64,
@@ -34353,12 +34334,12 @@ unsafe extern "C" fn setseed(
     lua_pushinteger(L, n1 as i64);
     lua_pushinteger(L, n2 as i64);
 }
-unsafe extern "C" fn randseed(mut L: *mut lua_State, mut state: *mut RanState) {
+unsafe extern "C" fn randseed(mut L: *mut State, mut state: *mut RanState) {
     let mut seed1: u64 = time(0 as *mut i64) as u64;
     let mut seed2: u64 = L as u64 as u64;
     setseed(L, ((*state).s).as_mut_ptr(), seed1, seed2);
 }
-unsafe extern "C" fn math_randomseed(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn math_randomseed(mut L: *mut State) -> libc::c_int {
     let mut state: *mut RanState = lua_touserdata(
         L,
         -(1000000 as libc::c_int) - 1000 as libc::c_int - 1 as libc::c_int,
@@ -34382,7 +34363,7 @@ static mut randfuncs: [luaL_Reg; 3] = {
             let mut init = luaL_Reg {
                 name: b"random\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_random as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_random as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34392,7 +34373,7 @@ static mut randfuncs: [luaL_Reg; 3] = {
                 name: b"randomseed\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     math_randomseed
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34406,7 +34387,7 @@ static mut randfuncs: [luaL_Reg; 3] = {
         },
     ]
 };
-unsafe extern "C" fn setrandfunc(mut L: *mut lua_State) {
+unsafe extern "C" fn setrandfunc(mut L: *mut State) {
     let mut state: *mut RanState = lua_newuserdatauv(
         L,
         ::core::mem::size_of::<RanState>() as libc::c_ulong,
@@ -34422,7 +34403,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"abs\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_abs as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_abs as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34431,7 +34412,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"acos\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_acos as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_acos as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34440,7 +34421,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"asin\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_asin as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_asin as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34449,7 +34430,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"atan\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_atan as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_atan as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34458,7 +34439,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"ceil\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_ceil as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_ceil as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34467,7 +34448,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"cos\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_cos as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_cos as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34476,7 +34457,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"deg\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_deg as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_deg as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34485,7 +34466,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"exp\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_exp as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_exp as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34494,7 +34475,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"tointeger\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_toint as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_toint as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34503,7 +34484,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"floor\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_floor as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_floor as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34512,7 +34493,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"fmod\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_fmod as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_fmod as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34521,7 +34502,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"ult\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_ult as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_ult as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34530,7 +34511,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"log\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_log as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_log as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34539,7 +34520,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"max\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_max as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_max as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34548,7 +34529,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"min\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_min as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_min as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34557,7 +34538,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"modf\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_modf as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_modf as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34566,7 +34547,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"rad\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_rad as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_rad as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34575,7 +34556,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"sin\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_sin as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_sin as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34584,7 +34565,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"sqrt\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_sqrt as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_sqrt as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34593,7 +34574,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"tan\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_tan as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_tan as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34602,7 +34583,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             let mut init = luaL_Reg {
                 name: b"type\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    math_type as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    math_type as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -34659,7 +34640,7 @@ static mut mathlib: [luaL_Reg; 28] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_math(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_math(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -34700,8 +34681,8 @@ pub unsafe extern "C" fn luaopen_math(mut L: *mut lua_State) -> libc::c_int {
 static mut HOOKKEY: *const libc::c_char = b"_HOOKKEY\0" as *const u8
     as *const libc::c_char;
 unsafe extern "C" fn checkstack(
-    mut L: *mut lua_State,
-    mut L1: *mut lua_State,
+    mut L: *mut State,
+    mut L1: *mut State,
     mut n: libc::c_int,
 ) {
     if ((L != L1 && lua_checkstack(L1, n) == 0) as libc::c_int != 0 as libc::c_int)
@@ -34710,18 +34691,18 @@ unsafe extern "C" fn checkstack(
         luaL_error(L, b"stack overflow\0" as *const u8 as *const libc::c_char);
     }
 }
-unsafe extern "C" fn db_getregistry(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getregistry(mut L: *mut State) -> libc::c_int {
     lua_pushvalue(L, -(1000000 as libc::c_int) - 1000 as libc::c_int);
     return 1;
 }
-unsafe extern "C" fn db_getmetatable(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getmetatable(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 1);
     if lua_getmetatable(L, 1) == 0 {
         lua_pushnil(L);
     }
     return 1;
 }
-unsafe extern "C" fn db_setmetatable(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_setmetatable(mut L: *mut State) -> libc::c_int {
     let mut t: libc::c_int = lua_type(L, 2 as libc::c_int);
     (((t == 0 as libc::c_int || t == 5 as libc::c_int) as libc::c_int
         != 0 as libc::c_int) as libc::c_int as libc::c_long != 0
@@ -34734,7 +34715,7 @@ unsafe extern "C" fn db_setmetatable(mut L: *mut lua_State) -> libc::c_int {
     lua_setmetatable(L, 1);
     return 1;
 }
-unsafe extern "C" fn db_getuservalue(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getuservalue(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = luaL_optinteger(
         L,
         2 as libc::c_int,
@@ -34748,7 +34729,7 @@ unsafe extern "C" fn db_getuservalue(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn db_setuservalue(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_setuservalue(mut L: *mut State) -> libc::c_int {
     let mut n: libc::c_int = luaL_optinteger(
         L,
         3 as libc::c_int,
@@ -34763,9 +34744,9 @@ unsafe extern "C" fn db_setuservalue(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn getthread(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut arg: *mut libc::c_int,
-) -> *mut lua_State {
+) -> *mut State {
     if lua_type(L, 1) == 8 as libc::c_int {
         *arg = 1 as libc::c_int;
         return lua_tothread(L, 1);
@@ -34775,7 +34756,7 @@ unsafe extern "C" fn getthread(
     };
 }
 unsafe extern "C" fn settabss(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut k: *const libc::c_char,
     mut v: *const libc::c_char,
 ) {
@@ -34783,7 +34764,7 @@ unsafe extern "C" fn settabss(
     lua_setfield(L, -(2 as libc::c_int), k);
 }
 unsafe extern "C" fn settabsi(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut k: *const libc::c_char,
     mut v: libc::c_int,
 ) {
@@ -34791,7 +34772,7 @@ unsafe extern "C" fn settabsi(
     lua_setfield(L, -(2 as libc::c_int), k);
 }
 unsafe extern "C" fn settabsb(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut k: *const libc::c_char,
     mut v: libc::c_int,
 ) {
@@ -34799,8 +34780,8 @@ unsafe extern "C" fn settabsb(
     lua_setfield(L, -(2 as libc::c_int), k);
 }
 unsafe extern "C" fn treatstackoption(
-    mut L: *mut lua_State,
-    mut L1: *mut lua_State,
+    mut L: *mut State,
+    mut L1: *mut State,
     mut fname: *const libc::c_char,
 ) {
     if L == L1 {
@@ -34810,7 +34791,7 @@ unsafe extern "C" fn treatstackoption(
     }
     lua_setfield(L, -(2 as libc::c_int), fname);
 }
-unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getinfo(mut L: *mut State) -> libc::c_int {
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
         name: 0 as *const libc::c_char,
@@ -34831,7 +34812,7 @@ unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> libc::c_int {
         i_ci: 0 as *mut CallInfo,
     };
     let mut arg: libc::c_int = 0;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     let mut options: *const libc::c_char = luaL_optlstring(
         L,
         arg + 2 as libc::c_int,
@@ -34950,9 +34931,9 @@ unsafe extern "C" fn db_getinfo(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn db_getlocal(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getlocal(mut L: *mut State) -> libc::c_int {
     let mut arg: libc::c_int = 0;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     let mut nvar: libc::c_int = luaL_checkinteger(L, arg + 2 as libc::c_int)
         as libc::c_int;
     if lua_type(L, arg + 1 as libc::c_int) == 6 as libc::c_int {
@@ -35004,10 +34985,10 @@ unsafe extern "C" fn db_getlocal(mut L: *mut lua_State) -> libc::c_int {
         }
     };
 }
-unsafe extern "C" fn db_setlocal(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_setlocal(mut L: *mut State) -> libc::c_int {
     let mut arg: libc::c_int = 0;
     let mut name: *const libc::c_char = 0 as *const libc::c_char;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     let mut ar: lua_Debug = lua_Debug {
         event: 0,
         name: 0 as *const libc::c_char,
@@ -35052,7 +35033,7 @@ unsafe extern "C" fn db_setlocal(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn auxupvalue(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut get: libc::c_int,
 ) -> libc::c_int {
     let mut name: *const libc::c_char = 0 as *const libc::c_char;
@@ -35070,15 +35051,15 @@ unsafe extern "C" fn auxupvalue(
     lua_rotate(L, -(get + 1 as libc::c_int), 1);
     return get + 1 as libc::c_int;
 }
-unsafe extern "C" fn db_getupvalue(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_getupvalue(mut L: *mut State) -> libc::c_int {
     return auxupvalue(L, 1);
 }
-unsafe extern "C" fn db_setupvalue(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_setupvalue(mut L: *mut State) -> libc::c_int {
     luaL_checkany(L, 3 as libc::c_int);
     return auxupvalue(L, 0 as libc::c_int);
 }
 unsafe extern "C" fn checkupval(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut argf: libc::c_int,
     mut argnup: libc::c_int,
     mut pnup: *mut libc::c_int,
@@ -35099,7 +35080,7 @@ unsafe extern "C" fn checkupval(
     }
     return id;
 }
-unsafe extern "C" fn db_upvalueid(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_upvalueid(mut L: *mut State) -> libc::c_int {
     let mut id: *mut libc::c_void = checkupval(
         L,
         1 as libc::c_int,
@@ -35113,7 +35094,7 @@ unsafe extern "C" fn db_upvalueid(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn db_upvaluejoin(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_upvaluejoin(mut L: *mut State) -> libc::c_int {
     let mut n1: libc::c_int = 0;
     let mut n2: libc::c_int = 0;
     checkupval(L, 1, 2 as libc::c_int, &mut n1);
@@ -35135,7 +35116,7 @@ unsafe extern "C" fn db_upvaluejoin(mut L: *mut lua_State) -> libc::c_int {
     lua_upvaluejoin(L, 1, n1, 3 as libc::c_int, n2);
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn hookf(mut L: *mut lua_State, mut ar: *mut lua_Debug) {
+unsafe extern "C" fn hookf(mut L: *mut State, mut ar: *mut lua_Debug) {
     static mut hooknames: [*const libc::c_char; 5] = [
         b"call\0" as *const u8 as *const libc::c_char,
         b"return\0" as *const u8 as *const libc::c_char,
@@ -35203,12 +35184,12 @@ unsafe extern "C" fn unmakemask(
     *smask.offset(i as isize) = '\0' as i32 as libc::c_char;
     return smask;
 }
-unsafe extern "C" fn db_sethook(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_sethook(mut L: *mut State) -> libc::c_int {
     let mut arg: libc::c_int = 0;
     let mut mask: libc::c_int = 0;
     let mut count: libc::c_int = 0;
     let mut func: lua_Hook = None;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     if lua_type(L, arg + 1 as libc::c_int) <= 0 as libc::c_int {
         lua_settop(L, arg + 1 as libc::c_int);
         func = None;
@@ -35226,7 +35207,7 @@ unsafe extern "C" fn db_sethook(mut L: *mut lua_State) -> libc::c_int {
             arg + 3 as libc::c_int,
             0 as libc::c_int as i64,
         ) as libc::c_int;
-        func = Some(hookf as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ());
+        func = Some(hookf as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ());
         mask = makemask(smask, count);
     }
     if luaL_getsubtable(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, HOOKKEY) == 0
@@ -35248,9 +35229,9 @@ unsafe extern "C" fn db_sethook(mut L: *mut lua_State) -> libc::c_int {
     lua_sethook(L1, func, mask, count);
     return 0 as libc::c_int;
 }
-unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_gethook(mut L: *mut State) -> libc::c_int {
     let mut arg: libc::c_int = 0;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     let mut buff: [libc::c_char; 5] = [0; 5];
     let mut mask: libc::c_int = lua_gethookmask(L1);
     let mut hook: lua_Hook = lua_gethook(L1);
@@ -35258,7 +35239,7 @@ unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> libc::c_int {
         lua_pushnil(L);
         return 1;
     } else if hook
-        != Some(hookf as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ())
+        != Some(hookf as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ())
     {
         lua_pushstring(L, b"external hook\0" as *const u8 as *const libc::c_char);
     } else {
@@ -35274,7 +35255,7 @@ unsafe extern "C" fn db_gethook(mut L: *mut lua_State) -> libc::c_int {
     lua_pushinteger(L, lua_gethookcount(L1) as i64);
     return 3;
 }
-unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_debug(mut L: *mut State) -> libc::c_int {
     loop {
         let mut buffer: [libc::c_char; 250] = [0; 250];
         fprintf(
@@ -35323,9 +35304,9 @@ unsafe extern "C" fn db_debug(mut L: *mut lua_State) -> libc::c_int {
         lua_settop(L, 0 as libc::c_int);
     };
 }
-unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_traceback(mut L: *mut State) -> libc::c_int {
     let mut arg: libc::c_int = 0;
-    let mut L1: *mut lua_State = getthread(L, &mut arg);
+    let mut L1: *mut State = getthread(L, &mut arg);
     let mut msg: *const libc::c_char = lua_tolstring(
         L,
         arg + 1 as libc::c_int,
@@ -35343,7 +35324,7 @@ unsafe extern "C" fn db_traceback(mut L: *mut lua_State) -> libc::c_int {
     }
     return 1;
 }
-unsafe extern "C" fn db_setcstacklimit(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn db_setcstacklimit(mut L: *mut State) -> libc::c_int {
     let mut limit: libc::c_int = luaL_checkinteger(L, 1) as libc::c_int;
     let mut res: libc::c_int = lua_setcstacklimit(L, limit as libc::c_uint);
     lua_pushinteger(L, res as i64);
@@ -35355,7 +35336,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"debug\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_debug as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_debug as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35365,7 +35346,7 @@ static mut dblib: [luaL_Reg; 18] = {
                 name: b"getuservalue\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     db_getuservalue
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35374,7 +35355,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"gethook\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_gethook as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_gethook as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35383,7 +35364,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"getinfo\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_getinfo as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_getinfo as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35392,7 +35373,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"getlocal\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_getlocal as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_getlocal as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35401,7 +35382,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"getregistry\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_getregistry as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_getregistry as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35411,7 +35392,7 @@ static mut dblib: [luaL_Reg; 18] = {
                 name: b"getmetatable\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     db_getmetatable
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35420,7 +35401,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"getupvalue\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_getupvalue as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_getupvalue as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35429,7 +35410,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"upvaluejoin\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_upvaluejoin as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_upvaluejoin as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35438,7 +35419,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"upvalueid\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_upvalueid as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_upvalueid as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35448,7 +35429,7 @@ static mut dblib: [luaL_Reg; 18] = {
                 name: b"setuservalue\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     db_setuservalue
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35457,7 +35438,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"sethook\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_sethook as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_sethook as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35466,7 +35447,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"setlocal\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_setlocal as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_setlocal as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35476,7 +35457,7 @@ static mut dblib: [luaL_Reg; 18] = {
                 name: b"setmetatable\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     db_setmetatable
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35485,7 +35466,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"setupvalue\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_setupvalue as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_setupvalue as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35494,7 +35475,7 @@ static mut dblib: [luaL_Reg; 18] = {
             let mut init = luaL_Reg {
                 name: b"traceback\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    db_traceback as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    db_traceback as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35504,7 +35485,7 @@ static mut dblib: [luaL_Reg; 18] = {
                 name: b"setcstacklimit\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     db_setcstacklimit
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -35519,7 +35500,7 @@ static mut dblib: [luaL_Reg; 18] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_debug(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_debug(mut L: *mut State) -> libc::c_int {
     luaL_checkversion_(
         L,
         504 as libc::c_int as f64,
@@ -35542,7 +35523,7 @@ unsafe extern "C" fn lsys_unloadlib(mut lib: *mut libc::c_void) {
     dlclose(lib);
 }
 unsafe extern "C" fn lsys_load(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut path: *const libc::c_char,
     mut seeglb: libc::c_int,
 ) -> *mut libc::c_void {
@@ -35559,7 +35540,7 @@ unsafe extern "C" fn lsys_load(
     return lib;
 }
 unsafe extern "C" fn lsys_sym(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut lib: *mut libc::c_void,
     mut sym: *const libc::c_char,
 ) -> lua_CFunction {
@@ -35574,7 +35555,7 @@ unsafe extern "C" fn lsys_sym(
     }
     return f;
 }
-unsafe extern "C" fn noenv(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn noenv(mut L: *mut State) -> libc::c_int {
     let mut b: libc::c_int = 0;
     lua_getfield(
         L,
@@ -35586,7 +35567,7 @@ unsafe extern "C" fn noenv(mut L: *mut lua_State) -> libc::c_int {
     return b;
 }
 unsafe extern "C" fn setpath(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut fieldname: *const libc::c_char,
     mut envname: *const libc::c_char,
     mut dft: *const libc::c_char,
@@ -35614,7 +35595,7 @@ unsafe extern "C" fn setpath(
                 b: 0 as *mut libc::c_char,
                 size: 0,
                 n: 0,
-                L: 0 as *mut lua_State,
+                L: 0 as *mut State,
                 init: C2RustUnnamed_27 { n: 0. },
             };
             luaL_buffinit(L, &mut b);
@@ -35661,7 +35642,7 @@ unsafe extern "C" fn setpath(
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
 unsafe extern "C" fn checkclib(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut path: *const libc::c_char,
 ) -> *mut libc::c_void {
     let mut plib: *mut libc::c_void = 0 as *mut libc::c_void;
@@ -35672,7 +35653,7 @@ unsafe extern "C" fn checkclib(
     return plib;
 }
 unsafe extern "C" fn addtoclib(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut path: *const libc::c_char,
     mut plib: *mut libc::c_void,
 ) {
@@ -35687,7 +35668,7 @@ unsafe extern "C" fn addtoclib(
     );
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
 }
-unsafe extern "C" fn gctm(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn gctm(mut L: *mut State) -> libc::c_int {
     let mut n: i64 = luaL_len(L, 1);
     while n >= 1 as libc::c_int as i64 {
         lua_rawgeti(L, 1, n);
@@ -35698,7 +35679,7 @@ unsafe extern "C" fn gctm(mut L: *mut lua_State) -> libc::c_int {
     return 0 as libc::c_int;
 }
 unsafe extern "C" fn lookforfunc(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut path: *const libc::c_char,
     mut sym: *const libc::c_char,
 ) -> libc::c_int {
@@ -35722,7 +35703,7 @@ unsafe extern "C" fn lookforfunc(
         return 0 as libc::c_int;
     };
 }
-unsafe extern "C" fn ll_loadlib(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn ll_loadlib(mut L: *mut State) -> libc::c_int {
     let mut path: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -35781,14 +35762,14 @@ unsafe extern "C" fn getnextfilename(
     return name;
 }
 unsafe extern "C" fn pusherrornotfound(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut path: *const libc::c_char,
 ) {
     let mut b: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
@@ -35803,7 +35784,7 @@ unsafe extern "C" fn pusherrornotfound(
     luaL_pushresult(&mut b);
 }
 unsafe extern "C" fn searchpath(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut name: *const libc::c_char,
     mut path: *const libc::c_char,
     mut sep: *const libc::c_char,
@@ -35813,7 +35794,7 @@ unsafe extern "C" fn searchpath(
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     let mut pathname: *mut libc::c_char = 0 as *mut libc::c_char;
@@ -35847,7 +35828,7 @@ unsafe extern "C" fn searchpath(
     pusherrornotfound(L, lua_tolstring(L, -(1 as libc::c_int), 0 as *mut u64));
     return 0 as *const libc::c_char;
 }
-unsafe extern "C" fn ll_searchpath(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn ll_searchpath(mut L: *mut State) -> libc::c_int {
     let mut f: *const libc::c_char = searchpath(
         L,
         luaL_checklstring(L, 1, 0 as *mut u64),
@@ -35874,7 +35855,7 @@ unsafe extern "C" fn ll_searchpath(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn findfile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut name: *const libc::c_char,
     mut pname: *const libc::c_char,
     mut dirsep: *const libc::c_char,
@@ -35898,7 +35879,7 @@ unsafe extern "C" fn findfile(
     return searchpath(L, name, path, b".\0" as *const u8 as *const libc::c_char, dirsep);
 }
 unsafe extern "C" fn checkload(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut stat: libc::c_int,
     mut filename: *const libc::c_char,
 ) -> libc::c_int {
@@ -35916,7 +35897,7 @@ unsafe extern "C" fn checkload(
         )
     };
 }
-unsafe extern "C" fn searcher_Lua(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn searcher_Lua(mut L: *mut State) -> libc::c_int {
     let mut filename: *const libc::c_char = 0 as *const libc::c_char;
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
@@ -35940,7 +35921,7 @@ unsafe extern "C" fn searcher_Lua(mut L: *mut lua_State) -> libc::c_int {
     );
 }
 unsafe extern "C" fn loadfunc(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut filename: *const libc::c_char,
     mut modname: *const libc::c_char,
 ) -> libc::c_int {
@@ -35978,7 +35959,7 @@ unsafe extern "C" fn loadfunc(
     );
     return lookforfunc(L, filename, openfunc);
 }
-unsafe extern "C" fn searcher_C(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn searcher_C(mut L: *mut State) -> libc::c_int {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -35999,7 +35980,7 @@ unsafe extern "C" fn searcher_C(mut L: *mut lua_State) -> libc::c_int {
         filename,
     );
 }
-unsafe extern "C" fn searcher_Croot(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn searcher_Croot(mut L: *mut State) -> libc::c_int {
     let mut filename: *const libc::c_char = 0 as *const libc::c_char;
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
@@ -36038,7 +36019,7 @@ unsafe extern "C" fn searcher_Croot(mut L: *mut lua_State) -> libc::c_int {
     lua_pushstring(L, filename);
     return 2 as libc::c_int;
 }
-unsafe extern "C" fn searcher_preload(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn searcher_preload(mut L: *mut State) -> libc::c_int {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -36061,13 +36042,13 @@ unsafe extern "C" fn searcher_preload(mut L: *mut lua_State) -> libc::c_int {
         return 2 as libc::c_int;
     };
 }
-unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_char) {
+unsafe extern "C" fn findloader(mut L: *mut State, mut name: *const libc::c_char) {
     let mut i: libc::c_int = 0;
     let mut msg: luaL_Buffer = luaL_Buffer {
         b: 0 as *mut libc::c_char,
         size: 0,
         n: 0,
-        L: 0 as *mut lua_State,
+        L: 0 as *mut State,
         init: C2RustUnnamed_27 { n: 0. },
     };
     if ((lua_getfield(
@@ -36123,7 +36104,7 @@ unsafe extern "C" fn findloader(mut L: *mut lua_State, mut name: *const libc::c_
         i += 1;
     };
 }
-unsafe extern "C" fn ll_require(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn ll_require(mut L: *mut State) -> libc::c_int {
     let mut name: *const libc::c_char = luaL_checklstring(
         L,
         1 as libc::c_int,
@@ -36170,7 +36151,7 @@ static mut pk_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"loadlib\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    ll_loadlib as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    ll_loadlib as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36179,7 +36160,7 @@ static mut pk_funcs: [luaL_Reg; 8] = {
             let mut init = luaL_Reg {
                 name: b"searchpath\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    ll_searchpath as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    ll_searchpath as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36234,7 +36215,7 @@ static mut ll_funcs: [luaL_Reg; 2] = {
             let mut init = luaL_Reg {
                 name: b"require\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    ll_require as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    ll_require as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36248,15 +36229,15 @@ static mut ll_funcs: [luaL_Reg; 2] = {
         },
     ]
 };
-unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
+unsafe extern "C" fn createsearcherstable(mut L: *mut State) {
     static mut searchers: [lua_CFunction; 5] = {
         [
             Some(
-                searcher_preload as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                searcher_preload as unsafe extern "C" fn(*mut State) -> libc::c_int,
             ),
-            Some(searcher_Lua as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
-            Some(searcher_C as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
-            Some(searcher_Croot as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+            Some(searcher_Lua as unsafe extern "C" fn(*mut State) -> libc::c_int),
+            Some(searcher_C as unsafe extern "C" fn(*mut State) -> libc::c_int),
+            Some(searcher_Croot as unsafe extern "C" fn(*mut State) -> libc::c_int),
             None,
         ]
     };
@@ -36281,19 +36262,19 @@ unsafe extern "C" fn createsearcherstable(mut L: *mut lua_State) {
         b"searchers\0" as *const u8 as *const libc::c_char,
     );
 }
-unsafe extern "C" fn createclibstable(mut L: *mut lua_State) {
+unsafe extern "C" fn createclibstable(mut L: *mut State) {
     luaL_getsubtable(L, -(1000000 as libc::c_int) - 1000 as libc::c_int, CLIBS);
     lua_createtable(L, 0, 1);
     lua_pushcclosure(
         L,
-        Some(gctm as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(gctm as unsafe extern "C" fn(*mut State) -> libc::c_int),
         0,
     );
     lua_setfield(L, -(2 as libc::c_int), b"__gc\0" as *const u8 as *const libc::c_char);
     lua_setmetatable(L, -(2 as libc::c_int));
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaopen_package(mut L: *mut lua_State) -> libc::c_int {
+pub unsafe extern "C" fn luaopen_package(mut L: *mut State) -> libc::c_int {
     createclibstable(L);
     luaL_checkversion_(
         L,
@@ -36367,7 +36348,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"_G\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_base as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_base as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36377,7 +36358,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
                 name: b"package\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     luaopen_package
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36387,7 +36368,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
                 name: b"coroutine\0" as *const u8 as *const libc::c_char,
                 func: Some(
                     luaopen_coroutine
-                        as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                        as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36396,7 +36377,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"table\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_table as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_table as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36405,7 +36386,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"io\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_io as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_io as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36414,7 +36395,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"os\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_os as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_os as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36423,7 +36404,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"string\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_string as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_string as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36432,7 +36413,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"math\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_math as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_math as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36441,7 +36422,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"utf8\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_utf8 as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_utf8 as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36450,7 +36431,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             let mut init = luaL_Reg {
                 name: b"debug\0" as *const u8 as *const libc::c_char,
                 func: Some(
-                    luaopen_debug as unsafe extern "C" fn(*mut lua_State) -> libc::c_int,
+                    luaopen_debug as unsafe extern "C" fn(*mut State) -> libc::c_int,
                 ),
             };
             init
@@ -36465,7 +36446,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
     ]
 };
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_openlibs(mut L: *mut lua_State) {
+pub unsafe extern "C" fn luaL_openlibs(mut L: *mut State) {
     let mut lib: *const luaL_Reg = 0 as *const luaL_Reg;
     lib = loadedlibs.as_ptr();
     while ((*lib).func).is_some() {
@@ -36474,7 +36455,7 @@ pub unsafe extern "C" fn luaL_openlibs(mut L: *mut lua_State) {
         lib = lib.offset(1);
     }
 }
-static mut globalL: *mut lua_State = 0 as *const lua_State as *mut lua_State;
+static mut globalL: *mut State = 0 as *const State as *mut State;
 static mut progname: *const libc::c_char = b"lua\0" as *const u8 as *const libc::c_char;
 unsafe extern "C" fn setsignal(
     mut sig: libc::c_int,
@@ -36493,7 +36474,7 @@ unsafe extern "C" fn setsignal(
     sigemptyset(&mut sa.sa_mask);
     sigaction(sig, &mut sa, 0 as *mut sigaction);
 }
-unsafe extern "C" fn lstop(mut L: *mut lua_State, mut _ar: *mut lua_Debug) {
+unsafe extern "C" fn lstop(mut L: *mut State, mut _ar: *mut lua_Debug) {
     lua_sethook(L, None, 0, 0 as libc::c_int);
     luaL_error(L, b"interrupted!\0" as *const u8 as *const libc::c_char);
 }
@@ -36504,7 +36485,7 @@ unsafe extern "C" fn laction(mut i: libc::c_int) {
     setsignal(i, None);
     lua_sethook(
         globalL,
-        Some(lstop as unsafe extern "C" fn(*mut lua_State, *mut lua_Debug) -> ()),
+        Some(lstop as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ()),
         flag,
         1 as libc::c_int,
     );
@@ -36549,7 +36530,7 @@ unsafe extern "C" fn l_message(
     fflush(stderr);
 }
 unsafe extern "C" fn report(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
 ) -> libc::c_int {
     if status != 0 as libc::c_int {
@@ -36566,7 +36547,7 @@ unsafe extern "C" fn report(
     }
     return status;
 }
-unsafe extern "C" fn msghandler(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn msghandler(mut L: *mut State) -> libc::c_int {
     let mut msg: *const libc::c_char = lua_tolstring(
         L,
         1 as libc::c_int,
@@ -36592,7 +36573,7 @@ unsafe extern "C" fn msghandler(mut L: *mut lua_State) -> libc::c_int {
     return 1;
 }
 unsafe extern "C" fn docall(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut narg: libc::c_int,
     mut nres: libc::c_int,
 ) -> libc::c_int {
@@ -36600,7 +36581,7 @@ unsafe extern "C" fn docall(
     let mut base: libc::c_int = lua_gettop(L) - narg;
     lua_pushcclosure(
         L,
-        Some(msghandler as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(msghandler as unsafe extern "C" fn(*mut State) -> libc::c_int),
         0,
     );
     lua_rotate(L, base, 1);
@@ -36635,7 +36616,7 @@ unsafe extern "C" fn print_version() {
     fflush(stdout);
 }
 unsafe extern "C" fn createargtable(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut argv: *mut *mut libc::c_char,
     mut argc: libc::c_int,
     mut script: libc::c_int,
@@ -36653,7 +36634,7 @@ unsafe extern "C" fn createargtable(
     lua_setglobal(L, b"arg\0" as *const u8 as *const libc::c_char);
 }
 unsafe extern "C" fn dochunk(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
 ) -> libc::c_int {
     if status == 0 as libc::c_int {
@@ -36662,20 +36643,20 @@ unsafe extern "C" fn dochunk(
     return report(L, status);
 }
 unsafe extern "C" fn dofile(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut name: *const libc::c_char,
 ) -> libc::c_int {
     return dochunk(L, luaL_loadfilex(L, name, 0 as *const libc::c_char));
 }
 unsafe extern "C" fn dostring(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut s: *const libc::c_char,
     mut name: *const libc::c_char,
 ) -> libc::c_int {
     return dochunk(L, luaL_loadbufferx(L, s, strlen(s), name, 0 as *const libc::c_char));
 }
 unsafe extern "C" fn dolibrary(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut globname: *mut libc::c_char,
 ) -> libc::c_int {
     let mut status: libc::c_int = 0;
@@ -36702,7 +36683,7 @@ unsafe extern "C" fn dolibrary(
     }
     return report(L, status);
 }
-unsafe extern "C" fn pushargs(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn pushargs(mut L: *mut State) -> libc::c_int {
     let mut i: libc::c_int = 0;
     let mut n: libc::c_int = 0;
     if lua_getglobal(L, b"arg\0" as *const u8 as *const libc::c_char) != 5 as libc::c_int
@@ -36725,7 +36706,7 @@ unsafe extern "C" fn pushargs(mut L: *mut lua_State) -> libc::c_int {
     return n;
 }
 unsafe extern "C" fn handle_script(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut argv: *mut *mut libc::c_char,
 ) -> libc::c_int {
     let mut status: libc::c_int = 0;
@@ -36846,7 +36827,7 @@ unsafe extern "C" fn collectargs(
     return args;
 }
 unsafe extern "C" fn runargs(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut argv: *mut *mut libc::c_char,
     mut n: libc::c_int,
 ) -> libc::c_int {
@@ -36890,7 +36871,7 @@ unsafe extern "C" fn runargs(
     }
     return 1;
 }
-unsafe extern "C" fn handle_luainit(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn handle_luainit(mut L: *mut State) -> libc::c_int {
     let mut name: *const libc::c_char = b"=LUA_INIT_5_4\0" as *const u8
         as *const libc::c_char;
     let mut init: *const libc::c_char = getenv(name.offset(1 as libc::c_int as isize));
@@ -36907,7 +36888,7 @@ unsafe extern "C" fn handle_luainit(mut L: *mut lua_State) -> libc::c_int {
     };
 }
 unsafe extern "C" fn get_prompt(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut firstline: libc::c_int,
 ) -> *const libc::c_char {
     if lua_getglobal(
@@ -36936,7 +36917,7 @@ unsafe extern "C" fn get_prompt(
     };
 }
 unsafe extern "C" fn incomplete(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut status: libc::c_int,
 ) -> libc::c_int {
     if status == 3 as libc::c_int {
@@ -36969,7 +36950,7 @@ unsafe extern "C" fn incomplete(
     return 0 as libc::c_int;
 }
 unsafe extern "C" fn pushline(
-    mut L: *mut lua_State,
+    mut L: *mut State,
     mut firstline: libc::c_int,
 ) -> libc::c_int {
     let mut buffer: [libc::c_char; 512] = [0; 512];
@@ -37005,7 +36986,7 @@ unsafe extern "C" fn pushline(
     }
     return 1;
 }
-unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn addreturn(mut L: *mut State) -> libc::c_int {
     let mut line: *const libc::c_char = lua_tolstring(
         L,
         -(1 as libc::c_int),
@@ -37031,7 +37012,7 @@ unsafe extern "C" fn addreturn(mut L: *mut lua_State) -> libc::c_int {
     }
     return status;
 }
-unsafe extern "C" fn multiline(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn multiline(mut L: *mut State) -> libc::c_int {
     loop {
         let mut len: u64 = 0;
         let mut line: *const libc::c_char = lua_tolstring(L, 1, &mut len);
@@ -37052,7 +37033,7 @@ unsafe extern "C" fn multiline(mut L: *mut lua_State) -> libc::c_int {
         lua_concat(L, 3 as libc::c_int);
     };
 }
-unsafe extern "C" fn loadline(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn loadline(mut L: *mut State) -> libc::c_int {
     let mut status: libc::c_int = 0;
     lua_settop(L, 0 as libc::c_int);
     if pushline(L, 1) == 0 {
@@ -37066,7 +37047,7 @@ unsafe extern "C" fn loadline(mut L: *mut lua_State) -> libc::c_int {
     lua_settop(L, -(1 as libc::c_int) - 1 as libc::c_int);
     return status;
 }
-unsafe extern "C" fn l_print(mut L: *mut lua_State) {
+unsafe extern "C" fn l_print(mut L: *mut State) {
     let mut n: libc::c_int = lua_gettop(L);
     if n > 0 as libc::c_int {
         luaL_checkstack(
@@ -37096,7 +37077,7 @@ unsafe extern "C" fn l_print(mut L: *mut lua_State) {
         }
     }
 }
-unsafe extern "C" fn doREPL(mut L: *mut lua_State) {
+unsafe extern "C" fn doREPL(mut L: *mut State) {
     let mut status: libc::c_int = 0;
     let mut oldprogname: *const libc::c_char = progname;
     progname = 0 as *const libc::c_char;
@@ -37124,7 +37105,7 @@ unsafe extern "C" fn doREPL(mut L: *mut lua_State) {
     fflush(stdout);
     progname = oldprogname;
 }
-unsafe extern "C" fn pmain(mut L: *mut lua_State) -> libc::c_int {
+unsafe extern "C" fn pmain(mut L: *mut State) -> libc::c_int {
     let mut argc: libc::c_int = lua_tointegerx(
         L,
         1 as libc::c_int,
@@ -37195,7 +37176,7 @@ pub unsafe fn main_0(
 ) -> libc::c_int {
     let mut status: libc::c_int = 0;
     let mut result: libc::c_int = 0;
-    let mut L: *mut lua_State = luaL_newstate();
+    let mut L: *mut State = luaL_newstate();
     if L.is_null() {
         l_message(
             *argv.offset(0 as libc::c_int as isize),
@@ -37207,7 +37188,7 @@ pub unsafe fn main_0(
     lua_gc(L, 0 as libc::c_int);
     lua_pushcclosure(
         L,
-        Some(pmain as unsafe extern "C" fn(*mut lua_State) -> libc::c_int),
+        Some(pmain as unsafe extern "C" fn(*mut State) -> libc::c_int),
         0,
     );
     lua_pushinteger(L, argc as i64);
