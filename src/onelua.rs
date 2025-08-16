@@ -28,7 +28,6 @@ unsafe extern "C" {
     fn asin(_: libc::c_double) -> libc::c_double;
     fn atan2(_: libc::c_double, _: libc::c_double) -> libc::c_double;
     fn cos(_: libc::c_double) -> libc::c_double;
-    fn sin(_: libc::c_double) -> libc::c_double;
     fn tan(_: libc::c_double) -> libc::c_double;
     fn exp(_: libc::c_double) -> libc::c_double;
     fn frexp(_: libc::c_double, _: *mut libc::c_int) -> libc::c_double;
@@ -34064,8 +34063,8 @@ unsafe extern "C" fn math_abs(mut L: *mut lua_State) -> libc::c_int {
     return 1 as libc::c_int;
 }
 unsafe extern "C" fn math_sin(mut L: *mut lua_State) -> libc::c_int {
-    lua_pushnumber(L, sin(luaL_checknumber(L, 1 as libc::c_int)));
-    return 1 as libc::c_int;
+    lua_pushnumber(L, luaL_checknumber(L, 1 as libc::c_int).sin());
+    return 1;
 }
 unsafe extern "C" fn math_cos(mut L: *mut lua_State) -> libc::c_int {
     lua_pushnumber(L, cos(luaL_checknumber(L, 1 as libc::c_int)));
