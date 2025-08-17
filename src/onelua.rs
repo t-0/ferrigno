@@ -33,22 +33,8 @@ use crate::closure::*;
 use crate::locvar::*;
 use crate::abslineinfo::*;
 use crate::upvaldesc::*;
-pub type lua_Reader = Option::<
-    unsafe extern "C" fn(
-        *mut State,
-        *mut libc::c_void,
-        *mut u64,
-    ) -> *const i8,
->;
-pub type lua_Writer = Option::<
-    unsafe extern "C" fn(
-        *mut State,
-        *const libc::c_void,
-        u64,
-        *mut libc::c_void,
-    ) -> i32,
->;
-pub const OP_EXTRAARG: u32 = 82;
+use crate::lua_reader::*;
+use crate::lua_writer::*;
 pub const TM_MODE: u32 = 3;
 pub const TM_N: u32 = 25;
 pub const TM_CLOSE: u32 = 24;
@@ -90,6 +76,7 @@ pub struct BuffFS {
     pub blen: i32,
     pub space: [i8; 199],
 }
+pub const OP_EXTRAARG: u32 = 82;
 pub const OP_LOADKX: u32 = 4;
 pub const OP_LOADK: u32 = 3;
 pub const OP_GETUPVAL: u32 = 9;

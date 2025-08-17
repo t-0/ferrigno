@@ -8,6 +8,8 @@ mod gcunion;
 mod lg;
 mod locvar;
 mod lua_debug;
+mod lua_reader;
+mod lua_writer;
 mod lx;
 mod node;
 mod onelua;
