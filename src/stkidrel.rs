@@ -19,6 +19,7 @@ use crate::state::*;
 use crate::gcobject::*;
 use crate::lua_debug::*;
 use crate::callinfo::*;
+use crate::uvalue::*;
 pub type lua_KFunction = Option::<
     unsafe extern "C" fn(*mut State, i32, i64) -> i32,
 >;

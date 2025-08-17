@@ -14,6 +14,7 @@
     unused_imports,
 )]
 use libc::{tolower, toupper, remove, rename, setlocale};
+use crate::uvalue::*;
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
