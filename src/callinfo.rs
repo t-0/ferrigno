@@ -37,7 +37,7 @@ pub struct C2RustUnnamed_15 {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct C2RustUnnamed_14 {
-    pub k: lua_KFunction,
+    pub k: ContextFunction,
     pub old_errfunc: i64,
     pub ctx: i64,
 }

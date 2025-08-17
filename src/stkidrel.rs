@@ -1,26 +1,6 @@
-#![allow(
-    static_mut_refs,
-    unsafe_code,
-    unsafe_attr_outside_unsafe,
-    unsafe_op_in_unsafe_fn,
-    dead_code,
-    mutable_transmutes,
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
-    unused_assignments,
-    unused_mut,
-    unpredictable_function_pointer_comparisons,
-    unused_imports,
-)]
-use libc::{tolower, toupper, remove, rename, setlocale};
-use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
-use crate::callinfo::*;
-use crate::uvalue::*;
-pub type lua_KFunction = Option::<
+pub type ContextFunction = Option::<
     unsafe extern "C" fn(*mut State, i32, i64) -> i32,
 >;
 #[derive(Copy, Clone)]
@@ -34,11 +14,11 @@ pub type StkId = *mut StackValue;
 #[repr(C)]
 pub union StackValue {
     pub val: TValue,
-    pub tbclist: C2RustUnnamed_16,
+    pub tbclist: StackValueExtension,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_16 {
+pub struct StackValueExtension {
     pub value_: Value,
     pub tt_: u8,
     pub delta: u16,

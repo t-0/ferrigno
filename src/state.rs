@@ -1,19 +1,3 @@
-#![allow(
-    static_mut_refs,
-    unsafe_code,
-    unsafe_attr_outside_unsafe,
-    unsafe_op_in_unsafe_fn,
-    dead_code,
-    mutable_transmutes,
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
-    unused_assignments,
-    unused_mut,
-    unused_imports,
-    unpredictable_function_pointer_comparisons,
-    unused_imports,
-)]
 use crate::c::*;
 use crate::callinfo::*;
 use crate::lua_debug::*;
@@ -21,11 +5,11 @@ use crate::gcobject::*;
 use crate::stkidrel::*;
 use crate::tstring::*;
 use crate::table::*;
-use libc::{tolower, toupper, remove, rename, setlocale};
+use crate::stringtable::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct lua_longjmp {
-    pub previous: *mut lua_longjmp,
+pub struct LongJump {
+    pub previous: *mut LongJump,
     pub b: [__jmp_buf_tag; 1],
     pub status: i32,
 }
@@ -39,7 +23,7 @@ pub struct State {
     pub allowhook: u8,
     pub nci: u16,
     pub top: StkIdRel,
-    pub l_G: *mut global_State,
+    pub myglobal: *mut global_State,
     pub ci: *mut CallInfo,
     pub stack_last: StkIdRel,
     pub stack: StkIdRel,
@@ -47,7 +31,7 @@ pub struct State {
     pub tbclist: StkIdRel,
     pub gclist: *mut GCObject,
     pub twups: *mut State,
-    pub errorJmp: *mut lua_longjmp,
+    pub error_jump: *mut LongJump,
     pub base_ci: CallInfo,
     pub hook: lua_Hook,
     pub errfunc: i64,
@@ -67,7 +51,7 @@ pub struct global_State {
     pub GCdebt: i64,
     pub GCestimate: u64,
     pub lastatomic: u64,
-    pub strt: stringtable,
+    pub strt: StringTable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: u32,
