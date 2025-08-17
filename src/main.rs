@@ -1,4 +1,5 @@
 #![feature(extern_types, c_variadic)]
+mod c;
 mod onelua;
 pub fn main() {
     let mut args: Vec<*mut libc::c_char> = Vec::new();
