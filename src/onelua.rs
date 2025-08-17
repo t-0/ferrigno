@@ -20,6 +20,12 @@ use crate::gcobject::*;
 use crate::lua_debug::*;
 use crate::tm::*;
 use crate::tstring::*;
+use crate::lexstate::*;
+use crate::sparser::*;
+use crate::mbuffer::*;
+use crate::sparser::*;
+use crate::blockcnt::*;
+use crate::token::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
 use crate::node::*;
@@ -44,95 +50,14 @@ use crate::instruction::*;
 use crate::dyndata::*;
 use crate::labellist::*;
 use crate::labeldesc::*;
+use crate::funcstate::*;
+use crate::lexstate::*;
+use crate::mbuffer::*;
 pub type Pfunc = Option::<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
 pub const F2Iceil: u32 = 2;
 pub const F2Ifloor: u32 = 1;
 pub const F2Ieq: u32 = 0;
 pub const TK_WHILE: u32 = 277;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct SParser {
-    pub z: *mut ZIO,
-    pub buff: Mbuffer,
-    pub dyd: Dyndata,
-    pub mode: *const i8,
-    pub name: *const i8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Mbuffer {
-    pub buffer: *mut i8,
-    pub n: u64,
-    pub buffsize: u64,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct FuncState {
-    pub f: *mut Proto,
-    pub prev: *mut FuncState,
-    pub ls: *mut LexState,
-    pub bl: *mut BlockCnt,
-    pub pc: i32,
-    pub lasttarget: i32,
-    pub previousline: i32,
-    pub nk: i32,
-    pub np: i32,
-    pub nabslineinfo: i32,
-    pub firstlocal: i32,
-    pub firstlabel: i32,
-    pub ndebugvars: i16,
-    pub nactvar: u8,
-    pub nups: u8,
-    pub freereg: u8,
-    pub iwthabs: u8,
-    pub needclose: u8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct BlockCnt {
-    pub previous: *mut BlockCnt,
-    pub firstlabel: i32,
-    pub firstgoto: i32,
-    pub nactvar: u8,
-    pub upval: u8,
-    pub isloop: u8,
-    pub insidetbc: u8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LexState {
-    pub current: i32,
-    pub linenumber: i32,
-    pub lastline: i32,
-    pub t: Token,
-    pub lookahead: Token,
-    pub fs: *mut FuncState,
-    pub L: *mut State,
-    pub z: *mut ZIO,
-    pub buff: *mut Mbuffer,
-    pub h: *mut Table,
-    pub dyd: *mut Dyndata,
-    pub source: *mut TString,
-    pub envn: *mut TString,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Token {
-    pub token: i32,
-    pub seminfo: SemInfo,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union SemInfo {
-    pub r: f64,
-    pub i: i64,
-    pub ts: *mut TString,
-}
-pub const TK_EOS: u32 = 288;
-pub const TK_INT: u32 = 290;
-pub const TK_FLT: u32 = 289;
-pub const TK_STRING: u32 = 292;
-pub const TK_NAME: u32 = 291;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_23 {
@@ -213,24 +138,6 @@ pub const OPR_SUB: u32 = 1;
 pub const OPR_ADD: u32 = 0;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_26 {
-    pub left: u8,
-    pub right: u8,
-}
-pub const TK_CONCAT: u32 = 279;
-pub const TK_DOTS: u32 = 280;
-pub const TK_DBCOLON: u32 = 287;
-pub const TK_NE: u32 = 284;
-pub const TK_IDIV: u32 = 278;
-pub const TK_SHR: u32 = 286;
-pub const TK_GE: u32 = 282;
-pub const TK_SHL: u32 = 285;
-pub const TK_LE: u32 = 283;
-pub const TK_EQ: u32 = 281;
-pub const TK_OR: u32 = 271;
-pub const TK_AND: u32 = 256;
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct ConsControl {
     pub v: expdesc,
     pub t: *mut expdesc,
@@ -238,30 +145,11 @@ pub struct ConsControl {
     pub na: i32,
     pub tostore: i32,
 }
-pub const TK_FUNCTION: u32 = 264;
-pub const TK_END: u32 = 261;
-pub const TK_FALSE: u32 = 262;
-pub const TK_TRUE: u32 = 275;
-pub const TK_NIL: u32 = 269;
 pub const OPR_NOUNOPR: u32 = 4;
 pub const OPR_LEN: u32 = 3;
 pub const OPR_NOT: u32 = 2;
 pub const OPR_BNOT: u32 = 1;
 pub const OPR_MINUS: u32 = 0;
-pub const TK_NOT: u32 = 270;
-pub const TK_GOTO: u32 = 265;
-pub const TK_BREAK: u32 = 257;
-pub const TK_UNTIL: u32 = 276;
-pub const TK_ELSEIF: u32 = 260;
-pub const TK_ELSE: u32 = 259;
-pub const TK_RETURN: u32 = 273;
-pub const TK_LOCAL: u32 = 268;
-pub const TK_REPEAT: u32 = 272;
-pub const TK_FOR: u32 = 263;
-pub const TK_DO: u32 = 258;
-pub const TK_IN: u32 = 267;
-pub const TK_IF: u32 = 266;
-pub const TK_THEN: u32 = 274;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LoadState {
