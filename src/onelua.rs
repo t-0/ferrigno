@@ -11,6 +11,7 @@
     unused_assignments,
     unused_mut,
     unpredictable_function_pointer_comparisons,
+    unused_imports,
 )]
 use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
