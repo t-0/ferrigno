@@ -24,6 +24,15 @@ use crate::stkidrel::*;
 use crate::node::*;
 use crate::table::*;
 use crate::tstring::*;
+use crate::lg::*;
+use crate::lx::*;
+use crate::proto::*;
+use crate::gcunion::*;
+use crate::udata::*;
+use crate::closure::*;
+use crate::locvar::*;
+use crate::abslineinfo::*;
+use crate::upvaldesc::*;
 pub type lua_Reader = Option::<
     unsafe extern "C" fn(
         *mut State,
@@ -39,129 +48,6 @@ pub type lua_Writer = Option::<
         *mut libc::c_void,
     ) -> i32,
 >;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LG {
-    pub l: LX,
-    pub g: global_State,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LX {
-    pub extra_: [u8; 8],
-    pub l: State,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union GCUnion {
-    pub gc: GCObject,
-    pub ts: TString,
-    pub u: Udata,
-    pub cl: Closure,
-    pub h: Table,
-    pub p: Proto,
-    pub th: State,
-    pub upv: UpVal,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Proto {
-    pub next: *mut GCObject,
-    pub tt: u8,
-    pub marked: u8,
-    pub numparams: u8,
-    pub is_vararg: u8,
-    pub maxstacksize: u8,
-    pub sizeupvalues: i32,
-    pub sizek: i32,
-    pub sizecode: i32,
-    pub sizelineinfo: i32,
-    pub sizep: i32,
-    pub sizelocvars: i32,
-    pub sizeabslineinfo: i32,
-    pub linedefined: i32,
-    pub lastlinedefined: i32,
-    pub k: *mut TValue,
-    pub code: *mut u32,
-    pub p: *mut *mut Proto,
-    pub upvalues: *mut Upvaldesc,
-    pub lineinfo: *mut i8,
-    pub abslineinfo: *mut AbsLineInfo,
-    pub locvars: *mut LocVar,
-    pub source: *mut TString,
-    pub gclist: *mut GCObject,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LocVar {
-    pub varname: *mut TString,
-    pub startpc: i32,
-    pub endpc: i32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct AbsLineInfo {
-    pub pc: i32,
-    pub line: i32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Upvaldesc {
-    pub name: *mut TString,
-    pub instack: u8,
-    pub idx: u8,
-    pub kind: u8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union Closure {
-    pub c: CClosure,
-    pub l: LClosure,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LClosure {
-    pub next: *mut GCObject,
-    pub tt: u8,
-    pub marked: u8,
-    pub nupvalues: u8,
-    pub gclist: *mut GCObject,
-    pub p: *mut Proto,
-    pub upvals: [*mut UpVal; 1],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct CClosure {
-    pub next: *mut GCObject,
-    pub tt: u8,
-    pub marked: u8,
-    pub nupvalues: u8,
-    pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
-    pub upvalue: [TValue; 1],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Udata {
-    pub next: *mut GCObject,
-    pub tt: u8,
-    pub marked: u8,
-    pub nuvalue: u16,
-    pub len: u64,
-    pub metatable: *mut Table,
-    pub gclist: *mut GCObject,
-    pub uv: [UValue; 1],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union UValue {
-    pub uv: TValue,
-    pub n: f64,
-    pub u: f64,
-    pub s: *mut libc::c_void,
-    pub i: i64,
-    pub l: i64,
-}
 pub const OP_EXTRAARG: u32 = 82;
 pub const TM_MODE: u32 = 3;
 pub const TM_N: u32 = 25;

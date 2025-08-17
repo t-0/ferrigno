@@ -17,22 +17,17 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
+use crate::lx::*;
 use crate::lua_debug::*;
 use crate::tstring::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
+use crate::node::*;
+use crate::table::*;
+use crate::tstring::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union Node {
-    pub u: NodeKey,
-    pub i_val: TValue,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct NodeKey {
-    pub value_: Value,
-    pub tt_: u8,
-    pub key_tt: u8,
-    pub next: i32,
-    pub key_val: Value,
+pub struct LG {
+    pub l: LX,
+    pub g: global_State,
 }

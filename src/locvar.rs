@@ -21,18 +21,19 @@ use crate::lua_debug::*;
 use crate::tstring::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
+use crate::node::*;
+use crate::table::*;
+use crate::tstring::*;
+use crate::lg::*;
+use crate::lx::*;
+use crate::proto::*;
+use crate::gcunion::*;
+use crate::udata::*;
+use crate::closure::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union Node {
-    pub u: NodeKey,
-    pub i_val: TValue,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct NodeKey {
-    pub value_: Value,
-    pub tt_: u8,
-    pub key_tt: u8,
-    pub next: i32,
-    pub key_val: Value,
+pub struct LocVar {
+    pub varname: *mut TString,
+    pub startpc: i32,
+    pub endpc: i32,
 }
