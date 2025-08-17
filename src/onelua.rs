@@ -41,57 +41,14 @@ use crate::lua_writer::*;
 use crate::bufffs::*;
 use crate::closep::*;
 use crate::instruction::*;
+use crate::dyndata::*;
+use crate::labellist::*;
+use crate::labeldesc::*;
 pub type Pfunc = Option::<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
 pub const F2Iceil: u32 = 2;
 pub const F2Ifloor: u32 = 1;
 pub const F2Ieq: u32 = 0;
 pub const TK_WHILE: u32 = 277;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Labeldesc {
-    pub name: *mut TString,
-    pub pc: i32,
-    pub line: i32,
-    pub nactvar: u8,
-    pub close: u8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Labellist {
-    pub arr: *mut Labeldesc,
-    pub n: i32,
-    pub size: i32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Dyndata {
-    pub actvar: C2RustUnnamed_21,
-    pub gt: Labellist,
-    pub label: Labellist,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_21 {
-    pub arr: *mut Vardesc,
-    pub n: i32,
-    pub size: i32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union Vardesc {
-    pub vd: C2RustUnnamed_22,
-    pub k: TValue,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_22 {
-    pub value_: Value,
-    pub tt_: u8,
-    pub kind: u8,
-    pub ridx: u8,
-    pub pidx: i16,
-    pub name: *mut TString,
-}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SParser {
@@ -1643,7 +1600,7 @@ pub unsafe extern "C" fn luaD_protectedparser(
             buffsize: 0,
         },
         dyd: Dyndata {
-            actvar: C2RustUnnamed_21 {
+            actvar: C2RustUnnamed21 {
                 arr: 0 as *mut Vardesc,
                 n: 0,
                 size: 0,
