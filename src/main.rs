@@ -1,6 +1,14 @@
 #![feature(extern_types, c_variadic)]
 mod c;
+mod callinfo;
 mod onelua;
+mod gcobject;
+mod state;
+mod lua_debug;
+mod stkidrel;
+mod table;
+mod tstring;
+mod node;
 pub fn main() {
     let mut args: Vec<*mut libc::c_char> = Vec::new();
     for arg in ::std::env::args() {
