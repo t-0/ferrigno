@@ -41,9 +41,11 @@ use crate::locvar::*;
 use crate::abslineinfo::*;
 use crate::calls::*;
 use crate::zio::*;
+use crate::ranstate::*;
 use crate::upvaldesc::*;
 use crate::lua_reader::*;
 use crate::lua_writer::*;
+use crate::header::*;
 use crate::bufffs::*;
 use crate::closep::*;
 use crate::instruction::*;
@@ -52,42 +54,30 @@ use crate::labellist::*;
 use crate::labeldesc::*;
 use crate::funcstate::*;
 use crate::lexstate::*;
+use crate::expdesc::*;
+use crate::lual_reg::*;
+use crate::lual_buffer::*;
+use crate::rn::*;
+use crate::loads::*;
+use crate::ubox::*;
+use crate::loadf::*;
+use crate::lual_stream::*;
+use crate::gmatchstate::*;
+use crate::matchstate::*;
+use crate::dumpstate::*;
+use crate::loadstate::*;
+use crate::str_writer::*;
+use crate::conscontrol::*;
+use crate::stkidrel::*;
+use crate::lhs_assign::*;
+use crate::c2rustunnamed_23::*;
+use crate::c2rustunnamed_27::*;
+use crate::c2rustunnamed_30::*;
 use crate::mbuffer::*;
 pub type Pfunc = Option::<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
 pub const F2Iceil: u32 = 2;
 pub const F2Ifloor: u32 = 1;
 pub const F2Ieq: u32 = 0;
-pub const TK_WHILE: u32 = 277;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_23 {
-    pub ival: i64,
-    pub nval: f64,
-    pub strval: *mut TString,
-    pub info: i32,
-    pub ind: C2RustUnnamed_25,
-    pub var: C2RustUnnamed_24,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_24 {
-    pub ridx: u8,
-    pub vidx: u16,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_25 {
-    pub idx: i16,
-    pub t: u8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct expdesc {
-    pub k: u32,
-    pub u: C2RustUnnamed_23,
-    pub t: i32,
-    pub f: i32,
-}
 pub const VVARARG: u32 = 19;
 pub const VCALL: u32 = 18;
 pub const VRELOC: u32 = 17;
@@ -108,12 +98,6 @@ pub const VFALSE: u32 = 3;
 pub const VTRUE: u32 = 2;
 pub const VNIL: u32 = 1;
 pub const VVOID: u32 = 0;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LHS_assign {
-    pub prev: *mut LHS_assign,
-    pub v: expdesc,
-}
 pub const OPR_NOBINOPR: u32 = 21;
 pub const OPR_OR: u32 = 20;
 pub const OPR_AND: u32 = 19;
@@ -136,105 +120,15 @@ pub const OPR_MOD: u32 = 3;
 pub const OPR_MUL: u32 = 2;
 pub const OPR_SUB: u32 = 1;
 pub const OPR_ADD: u32 = 0;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct ConsControl {
-    pub v: expdesc,
-    pub t: *mut expdesc,
-    pub nh: i32,
-    pub na: i32,
-    pub tostore: i32,
-}
 pub const OPR_NOUNOPR: u32 = 4;
 pub const OPR_LEN: u32 = 3;
 pub const OPR_NOT: u32 = 2;
 pub const OPR_BNOT: u32 = 1;
 pub const OPR_MINUS: u32 = 0;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LoadState {
-    pub L: *mut State,
-    pub Z: *mut ZIO,
-    pub name: *const i8,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct DumpState {
-    pub L: *mut State,
-    pub writer: lua_Writer,
-    pub data: *mut libc::c_void,
-    pub strip: i32,
-    pub status: i32,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct luaL_Buffer {
-    pub b: *mut i8,
-    pub size: u64,
-    pub n: u64,
-    pub L: *mut State,
-    pub init: C2RustUnnamed_27,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_27 {
-    pub n: f64,
-    pub u: f64,
-    pub s: *mut libc::c_void,
-    pub i: i64,
-    pub l: i64,
-    pub b: [i8; 1024],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct luaL_Reg {
-    pub name: *const i8,
-    pub func: lua_CFunction,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LoadF {
-    pub n: i32,
-    pub f: *mut FILE,
-    pub buff: [i8; 8192],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct LoadS {
-    pub s: *const i8,
-    pub size: u64,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct UBox {
-    pub box_0: *mut libc::c_void,
-    pub bsize: u64,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct luaL_Stream {
-    pub f: *mut FILE,
-    pub closef: lua_CFunction,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct RN {
-    pub f: *mut FILE,
-    pub c: i32,
-    pub n: i32,
-    pub buff: [i8; 201],
-}
 pub const Knop: u32 = 10;
 pub const Kpadding: u32 = 8;
 pub const Kpaddalign: u32 = 9;
 pub const Kzstr: u32 = 7;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Header {
-    pub L: *mut State,
-    pub islittle: i32,
-    pub maxalign: i32,
-}
 pub const Kstring: u32 = 6;
 pub const Kchar: u32 = 5;
 #[derive(Copy, Clone)]
@@ -248,42 +142,6 @@ pub const Knumber: u32 = 3;
 pub const Kfloat: u32 = 2;
 pub const Kint: u32 = 0;
 pub const Kuint: u32 = 1;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct MatchState {
-    pub src_init: *const i8,
-    pub src_end: *const i8,
-    pub p_end: *const i8,
-    pub L: *mut State,
-    pub matchdepth: i32,
-    pub level: u8,
-    pub capture: [C2RustUnnamed_30; 32],
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct C2RustUnnamed_30 {
-    pub init: *const i8,
-    pub len: i64,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct GMatchState {
-    pub src: *const i8,
-    pub p: *const i8,
-    pub lastmatch: *const i8,
-    pub ms: MatchState,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct str_Writer {
-    pub init: i32,
-    pub B: luaL_Buffer,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct RanState {
-    pub s: [u64; 4],
-}
 pub unsafe extern "C" fn luaD_seterrorobj(
     mut L: *mut State,
     mut errcode: i32,
