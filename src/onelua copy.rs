@@ -33,8 +33,6 @@ use crate::udata::*;
 use crate::closure::*;
 use crate::locvar::*;
 use crate::abslineinfo::*;
-use crate::calls::*;
-use crate::zio::*;
 use crate::upvaldesc::*;
 use crate::lua_reader::*;
 use crate::lua_writer::*;
@@ -46,6 +44,21 @@ pub const F2Iceil: u32 = 2;
 pub const F2Ifloor: u32 = 1;
 pub const F2Ieq: u32 = 0;
 pub const TK_WHILE: u32 = 277;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct CallS {
+    pub func: StkId,
+    pub nresults: i32,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ZIO {
+    pub n: u64,
+    pub p: *const i8,
+    pub reader: lua_Reader,
+    pub data: *mut libc::c_void,
+    pub L: *mut State,
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Labeldesc {

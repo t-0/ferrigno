@@ -13,11 +13,17 @@ mod lua_writer;
 mod lx;
 mod node;
 mod onelua;
+mod tm;
 mod proto;
+mod closep;
+mod instruction;
+mod bufffs;
 mod state;
 mod stkidrel;
 mod table;
 mod tstring;
+mod zio;
+mod calls;
 mod udata;
 mod upvaldesc;
 pub fn main() {
