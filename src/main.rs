@@ -1,4 +1,5 @@
 #![feature(extern_types, c_variadic)]
+mod c2rustunnamed_28;
 mod abslineinfo;
 mod blockcnt;
 mod bufffs;
