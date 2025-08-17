@@ -16,27 +16,27 @@ unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
     pub type _IO_marker;
-    fn __ctype_b_loc() -> *mut *const u16;
-    fn __errno_location() -> *mut i32;
-    fn localeconv() -> *mut lconv;
-    fn acos(_: f64) -> f64;
-    fn asin(_: f64) -> f64;
-    fn atan2(_: f64, _: f64) -> f64;
-    fn exp(_: f64) -> f64;
-    fn frexp(_: f64, _: *mut i32) -> f64;
-    fn ldexp(_: f64, _: i32) -> f64;
-    fn log(_: f64) -> f64;
-    fn log10(_: f64) -> f64;
-    fn log2(_: f64) -> f64;
-    fn pow(_: f64, _: f64) -> f64;
-    fn sqrt(_: f64) -> f64;
-    fn ceil(_: f64) -> f64;
-    fn floor(_: f64) -> f64;
-    fn fmod(_: f64, _: f64) -> f64;
-    fn _setjmp(_: *mut __jmp_buf_tag) -> i32;
-    fn _longjmp(_: *mut __jmp_buf_tag, _: i32) -> !;
-    fn sigemptyset(__set: *mut __sigset_t) -> i32;
-    fn sigaction(
+    unsafe fn __ctype_b_loc() -> *mut *const u16;
+    unsafe fn __errno_location() -> *mut i32;
+    unsafe fn localeconv() -> *mut lconv;
+    unsafe fn acos(_: f64) -> f64;
+    unsafe fn asin(_: f64) -> f64;
+    unsafe fn atan2(_: f64, _: f64) -> f64;
+    unsafe fn exp(_: f64) -> f64;
+    unsafe fn frexp(_: f64, _: *mut i32) -> f64;
+    unsafe fn ldexp(_: f64, _: i32) -> f64;
+    unsafe fn log(_: f64) -> f64;
+    unsafe fn log10(_: f64) -> f64;
+    unsafe fn log2(_: f64) -> f64;
+    unsafe fn pow(_: f64, _: f64) -> f64;
+    unsafe fn sqrt(_: f64) -> f64;
+    unsafe fn ceil(_: f64) -> f64;
+    unsafe fn floor(_: f64) -> f64;
+    unsafe fn fmod(_: f64, _: f64) -> f64;
+    unsafe fn _setjmp(_: *mut __jmp_buf_tag) -> i32;
+    unsafe fn _longjmp(_: *mut __jmp_buf_tag, _: i32) -> !;
+    unsafe fn sigemptyset(__set: *mut __sigset_t) -> i32;
+    unsafe fn sigaction(
         __sig: i32,
         __act: *const sigaction,
         __oact: *mut sigaction,
