@@ -25,7 +25,7 @@ use crate::lexstate::*;
 use crate::sparser::*;
 use crate::mbuffer::*;
 use crate::sparser::*;
-use crate::blockcnt::*;
+use crate::blockcontrol::*;
 use crate::token::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
@@ -50,12 +50,12 @@ use crate::header::*;
 use crate::bufffs::*;
 use crate::closep::*;
 use crate::instruction::*;
-use crate::dyndata::*;
+use crate::dynamicdata::*;
 use crate::labellist::*;
 use crate::labeldesc::*;
-use crate::funcstate::*;
+use crate::functionstate::*;
 use crate::lexstate::*;
-use crate::expdesc::*;
+use crate::expressiondescription::*;
 use crate::registeredfunction::*;
 use crate::buffer::*;
 use crate::rn::*;
@@ -68,7 +68,7 @@ use crate::matchstate::*;
 use crate::dumpstate::*;
 use crate::loadstate::*;
 use crate::streamwriter::*;
-use crate::conscontrol::*;
+use crate::constructorcontrol::*;
 use crate::stkidrel::*;
 use crate::lhsassign::*;
 use crate::c2rustunnamed_23::*;
@@ -1342,7 +1342,7 @@ pub unsafe extern "C" fn luaD_protectedparser(
             n: 0,
             buffsize: 0,
         },
-        dyd: Dyndata {
+        dyd: DynamicData {
             actvar: C2RustUnnamed21 {
                 arr: 0 as *mut Vardesc,
                 n: 0,
@@ -11061,7 +11061,7 @@ pub unsafe extern "C" fn error_expected(mut ls: *mut LexState, mut token: i32) -
     );
 }
 pub unsafe extern "C" fn errorlimit(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut limit: i32,
     mut what: *const i8,
 ) -> ! {
@@ -11087,7 +11087,7 @@ pub unsafe extern "C" fn errorlimit(
     luaX_syntaxerror((*fs).ls, msg);
 }
 pub unsafe extern "C" fn checklimit(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut v: i32,
     mut l: i32,
     mut what: *const i8,
@@ -11146,24 +11146,24 @@ pub unsafe extern "C" fn str_checkname(mut ls: *mut LexState) -> *mut TString {
     luaX_next(ls);
     return ts;
 }
-pub unsafe extern "C" fn init_exp(mut e: *mut expdesc, mut k: u32, mut i: i32) {
+pub unsafe extern "C" fn init_exp(mut e: *mut ExpressionDescription, mut k: u32, mut i: i32) {
     (*e).t = -1;
     (*e).f = (*e).t;
     (*e).k = k;
     (*e).u.info = i;
 }
-pub unsafe extern "C" fn codestring(mut e: *mut expdesc, mut s: *mut TString) {
+pub unsafe extern "C" fn codestring(mut e: *mut ExpressionDescription, mut s: *mut TString) {
     (*e).t = -1;
     (*e).f = (*e).t;
     (*e).k = VKSTR;
     (*e).u.strval = s;
 }
-pub unsafe extern "C" fn codename(mut ls: *mut LexState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn codename(mut ls: *mut LexState, mut e: *mut ExpressionDescription) {
     codestring(e, str_checkname(ls));
 }
 pub unsafe extern "C" fn registerlocalvar(
     mut ls: *mut LexState,
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut varname: *mut TString,
 ) -> i32 {
     let mut f: *mut Proto = (*fs).f;
@@ -11216,8 +11216,8 @@ pub unsafe extern "C" fn new_localvar(
     mut name: *mut TString,
 ) -> i32 {
     let mut L: *mut State = (*ls).L;
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut dyd: *mut Dyndata = (*ls).dyd;
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut dyd: *mut DynamicData = (*ls).dyd;
     let mut var: *mut Vardesc = 0 as *mut Vardesc;
     checklimit(
         fs,
@@ -11253,14 +11253,14 @@ pub unsafe extern "C" fn new_localvar(
     return (*dyd).actvar.n - 1 as i32 - (*fs).firstlocal;
 }
 pub unsafe extern "C" fn getlocalvardesc(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut vidx: i32,
 ) -> *mut Vardesc {
     return &mut *((*(*(*fs).ls).dyd).actvar.arr)
         .offset(((*fs).firstlocal + vidx) as isize) as *mut Vardesc;
 }
 pub unsafe extern "C" fn reglevel(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut nvar: i32,
 ) -> i32 {
     loop {
@@ -11276,11 +11276,11 @@ pub unsafe extern "C" fn reglevel(
     }
     return 0;
 }
-pub unsafe extern "C" fn luaY_nvarstack(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn luaY_nvarstack(mut fs: *mut FunctionState) -> i32 {
     return reglevel(fs, (*fs).nactvar as i32);
 }
 pub unsafe extern "C" fn localdebuginfo(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut vidx: i32,
 ) -> *mut LocalVariable {
     let mut vd: *mut Vardesc = getlocalvardesc(fs, vidx);
@@ -11292,8 +11292,8 @@ pub unsafe extern "C" fn localdebuginfo(
     };
 }
 pub unsafe extern "C" fn init_var(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
     mut vidx: i32,
 ) {
     (*e).t = -1;
@@ -11302,8 +11302,8 @@ pub unsafe extern "C" fn init_var(
     (*e).u.var.vidx = vidx as u16;
     (*e).u.var.ridx = (*getlocalvardesc(fs, vidx)).vd.ridx;
 }
-pub unsafe extern "C" fn check_readonly(mut ls: *mut LexState, mut e: *mut expdesc) {
-    let mut fs: *mut FuncState = (*ls).fs;
+pub unsafe extern "C" fn check_readonly(mut ls: *mut LexState, mut e: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut varname: *mut TString = 0 as *mut TString;
     match (*e).k as u32 {
         11 => {
@@ -11338,7 +11338,7 @@ pub unsafe extern "C" fn check_readonly(mut ls: *mut LexState, mut e: *mut expde
     }
 }
 pub unsafe extern "C" fn adjustlocalvars(mut ls: *mut LexState, mut nvars: i32) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut reglevel_0: i32 = luaY_nvarstack(fs);
     let mut i: i32 = 0;
     i = 0 as i32;
@@ -11354,7 +11354,7 @@ pub unsafe extern "C" fn adjustlocalvars(mut ls: *mut LexState, mut nvars: i32) 
         i += 1;
     }
 }
-pub unsafe extern "C" fn removevars(mut fs: *mut FuncState, mut tolevel: i32) {
+pub unsafe extern "C" fn removevars(mut fs: *mut FunctionState, mut tolevel: i32) {
     (*(*(*fs).ls).dyd).actvar.n -= (*fs).nactvar as i32 - tolevel;
     while (*fs).nactvar as i32 > tolevel {
         (*fs).nactvar = ((*fs).nactvar).wrapping_sub(1);
@@ -11365,7 +11365,7 @@ pub unsafe extern "C" fn removevars(mut fs: *mut FuncState, mut tolevel: i32) {
     }
 }
 pub unsafe extern "C" fn searchupvalue(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut name: *mut TString,
 ) -> i32 {
     let mut i: i32 = 0;
@@ -11379,7 +11379,7 @@ pub unsafe extern "C" fn searchupvalue(
     }
     return -1;
 }
-pub unsafe extern "C" fn allocupvalue(mut fs: *mut FuncState) -> *mut Upvaldesc {
+pub unsafe extern "C" fn allocupvalue(mut fs: *mut FunctionState) -> *mut Upvaldesc {
     let mut f: *mut Proto = (*fs).f;
     let mut oldsize: i32 = (*f).sizeupvalues;
     checklimit(
@@ -11418,12 +11418,12 @@ pub unsafe extern "C" fn allocupvalue(mut fs: *mut FuncState) -> *mut Upvaldesc 
     return &mut *((*f).upvalues).offset(fresh43 as isize) as *mut Upvaldesc;
 }
 pub unsafe extern "C" fn newupvalue(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut name: *mut TString,
-    mut v: *mut expdesc,
+    mut v: *mut ExpressionDescription,
 ) -> i32 {
     let mut up: *mut Upvaldesc = allocupvalue(fs);
-    let mut prev: *mut FuncState = (*fs).prev;
+    let mut prev: *mut FunctionState = (*fs).prev;
     if (*v).k as u32 == VLOCAL as i32 as u32 {
         (*up).instack = 1 as i32 as u8;
         (*up).idx = (*v).u.var.ridx;
@@ -11448,9 +11448,9 @@ pub unsafe extern "C" fn newupvalue(
     return (*fs).nups as i32 - 1 as i32;
 }
 pub unsafe extern "C" fn searchvar(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut n: *mut TString,
-    mut var: *mut expdesc,
+    mut var: *mut ExpressionDescription,
 ) -> i32 {
     let mut i: i32 = 0;
     i = (*fs).nactvar as i32 - 1 as i32;
@@ -11468,24 +11468,24 @@ pub unsafe extern "C" fn searchvar(
     }
     return -1;
 }
-pub unsafe extern "C" fn markupval(mut fs: *mut FuncState, mut level: i32) {
-    let mut bl: *mut BlockCnt = (*fs).bl;
+pub unsafe extern "C" fn markupval(mut fs: *mut FunctionState, mut level: i32) {
+    let mut bl: *mut BlockControl = (*fs).bl;
     while (*bl).nactvar as i32 > level {
         bl = (*bl).previous;
     }
     (*bl).upval = 1 as i32 as u8;
     (*fs).needclose = 1 as i32 as u8;
 }
-pub unsafe extern "C" fn marktobeclosed(mut fs: *mut FuncState) {
-    let mut bl: *mut BlockCnt = (*fs).bl;
+pub unsafe extern "C" fn marktobeclosed(mut fs: *mut FunctionState) {
+    let mut bl: *mut BlockControl = (*fs).bl;
     (*bl).upval = 1 as i32 as u8;
     (*bl).insidetbc = 1 as i32 as u8;
     (*fs).needclose = 1 as i32 as u8;
 }
 pub unsafe extern "C" fn singlevaraux(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut n: *mut TString,
-    mut var: *mut expdesc,
+    mut var: *mut ExpressionDescription,
     mut base: i32,
 ) {
     if fs.is_null() {
@@ -11512,12 +11512,12 @@ pub unsafe extern "C" fn singlevaraux(
         }
     };
 }
-pub unsafe extern "C" fn singlevar(mut ls: *mut LexState, mut var: *mut expdesc) {
+pub unsafe extern "C" fn singlevar(mut ls: *mut LexState, mut var: *mut ExpressionDescription) {
     let mut varname: *mut TString = str_checkname(ls);
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     singlevaraux(fs, varname, var, 1);
     if (*var).k as u32 == VVOID as i32 as u32 {
-        let mut key: expdesc = expdesc {
+        let mut key: ExpressionDescription = ExpressionDescription {
             k: VVOID,
             u: C2RustUnnamed_23 { ival: 0 },
             t: 0,
@@ -11533,9 +11533,9 @@ pub unsafe extern "C" fn adjust_assign(
     mut ls: *mut LexState,
     mut nvars: i32,
     mut nexps: i32,
-    mut e: *mut expdesc,
+    mut e: *mut ExpressionDescription,
 ) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut needed: i32 = nvars - nexps;
     if (*e).k as u32 == VCALL as i32 as u32
         || (*e).k as u32 == VVARARG as i32 as u32
@@ -11607,7 +11607,7 @@ pub unsafe extern "C" fn findlabel(
     mut name: *mut TString,
 ) -> *mut Labeldesc {
     let mut i: i32 = 0;
-    let mut dyd: *mut Dyndata = (*ls).dyd;
+    let mut dyd: *mut DynamicData = (*ls).dyd;
     i = (*(*ls).fs).firstlabel;
     while i < (*dyd).label.n {
         let mut lb: *mut Labeldesc = &mut *((*dyd).label.arr).offset(i as isize)
@@ -11686,7 +11686,7 @@ pub unsafe extern "C" fn createlabel(
     mut line: i32,
     mut last: i32,
 ) -> i32 {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut ll: *mut Labellist = &mut (*(*ls).dyd).label;
     let mut l: i32 = newlabelentry(ls, ll, name, line, luaK_getlabel(fs));
     if last != 0 {
@@ -11705,7 +11705,7 @@ pub unsafe extern "C" fn createlabel(
     }
     return 0;
 }
-pub unsafe extern "C" fn movegotosout(mut fs: *mut FuncState, mut bl: *mut BlockCnt) {
+pub unsafe extern "C" fn movegotosout(mut fs: *mut FunctionState, mut bl: *mut BlockControl) {
     let mut i: i32 = 0;
     let mut gl: *mut Labellist = &mut (*(*(*fs).ls).dyd).gt;
     i = (*bl).firstgoto;
@@ -11724,8 +11724,8 @@ pub unsafe extern "C" fn movegotosout(mut fs: *mut FuncState, mut bl: *mut Block
     }
 }
 pub unsafe extern "C" fn enterblock(
-    mut fs: *mut FuncState,
-    mut bl: *mut BlockCnt,
+    mut fs: *mut FunctionState,
+    mut bl: *mut BlockControl,
     mut isloop: u8,
 ) {
     (*bl).isloop = isloop;
@@ -11764,8 +11764,8 @@ pub unsafe extern "C" fn undefgoto(mut ls: *mut LexState, mut gt: *mut Labeldesc
     }
     luaK_semerror(ls, msg);
 }
-pub unsafe extern "C" fn leaveblock(mut fs: *mut FuncState) {
-    let mut bl: *mut BlockCnt = (*fs).bl;
+pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
+    let mut bl: *mut BlockControl = (*fs).bl;
     let mut ls: *mut LexState = (*fs).ls;
     let mut hasclose: i32 = 0 as i32;
     let mut stklevel: i32 = reglevel(fs, (*bl).nactvar as i32);
@@ -11808,7 +11808,7 @@ pub unsafe extern "C" fn leaveblock(mut fs: *mut FuncState) {
 pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
     let mut clp: *mut Proto = 0 as *mut Proto;
     let mut L: *mut State = (*ls).L;
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     if (*fs).np >= (*f).sizep {
         let mut oldsize: i32 = (*f).sizep;
@@ -11860,8 +11860,8 @@ pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
     } else {};
     return clp;
 }
-pub unsafe extern "C" fn codeclosure(mut ls: *mut LexState, mut v: *mut expdesc) {
-    let mut fs: *mut FuncState = (*(*ls).fs).prev;
+pub unsafe extern "C" fn codeclosure(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*(*ls).fs).prev;
     init_exp(
         v,
         VRELOC,
@@ -11876,8 +11876,8 @@ pub unsafe extern "C" fn codeclosure(mut ls: *mut LexState, mut v: *mut expdesc)
 }
 pub unsafe extern "C" fn open_func(
     mut ls: *mut LexState,
-    mut fs: *mut FuncState,
-    mut bl: *mut BlockCnt,
+    mut fs: *mut FunctionState,
+    mut bl: *mut BlockControl,
 ) {
     let mut f: *mut Proto = (*fs).f;
     (*fs).prev = (*ls).fs;
@@ -11897,7 +11897,7 @@ pub unsafe extern "C" fn open_func(
     (*fs).needclose = 0 as i32 as u8;
     (*fs).firstlocal = (*(*ls).dyd).actvar.n;
     (*fs).firstlabel = (*(*ls).dyd).label.n;
-    (*fs).bl = 0 as *mut BlockCnt;
+    (*fs).bl = 0 as *mut BlockControl;
     (*f).source = (*ls).source;
     if (*f).marked as i32 & (1 as i32) << 5 as i32 != 0
         && (*(*f).source).marked as i32
@@ -11915,7 +11915,7 @@ pub unsafe extern "C" fn open_func(
 }
 pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
     let mut L: *mut State = (*ls).L;
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     luaK_ret(fs, luaY_nvarstack(fs), 0 as i32);
     leaveblock(fs);
@@ -12000,9 +12000,9 @@ pub unsafe extern "C" fn statlist(mut ls: *mut LexState) {
         statement(ls);
     }
 }
-pub unsafe extern "C" fn fieldsel(mut ls: *mut LexState, mut v: *mut expdesc) {
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut key: expdesc = expdesc {
+pub unsafe extern "C" fn fieldsel(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut key: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12013,28 +12013,28 @@ pub unsafe extern "C" fn fieldsel(mut ls: *mut LexState, mut v: *mut expdesc) {
     codename(ls, &mut key);
     luaK_indexed(fs, v, &mut key);
 }
-pub unsafe extern "C" fn yindex(mut ls: *mut LexState, mut v: *mut expdesc) {
+pub unsafe extern "C" fn yindex(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
     luaX_next(ls);
     expr(ls, v);
     luaK_exp2val((*ls).fs, v);
     checknext(ls, ']' as i32);
 }
-pub unsafe extern "C" fn recfield(mut ls: *mut LexState, mut cc: *mut ConsControl) {
-    let mut fs: *mut FuncState = (*ls).fs;
+pub unsafe extern "C" fn recfield(mut ls: *mut LexState, mut cc: *mut ConstructorControl) {
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut reg: i32 = (*(*ls).fs).freereg as i32;
-    let mut tab: expdesc = expdesc {
+    let mut tab: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
         f: 0,
     };
-    let mut key: expdesc = expdesc {
+    let mut key: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
         f: 0,
     };
-    let mut val: expdesc = expdesc {
+    let mut val: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12060,7 +12060,7 @@ pub unsafe extern "C" fn recfield(mut ls: *mut LexState, mut cc: *mut ConsContro
     luaK_storevar(fs, &mut tab, &mut val);
     (*fs).freereg = reg as u8;
 }
-pub unsafe extern "C" fn closelistfield(mut fs: *mut FuncState, mut cc: *mut ConsControl) {
+pub unsafe extern "C" fn closelistfield(mut fs: *mut FunctionState, mut cc: *mut ConstructorControl) {
     if (*cc).v.k as u32 == VVOID as i32 as u32 {
         return;
     }
@@ -12072,7 +12072,7 @@ pub unsafe extern "C" fn closelistfield(mut fs: *mut FuncState, mut cc: *mut Con
         (*cc).tostore = 0 as i32;
     }
 }
-pub unsafe extern "C" fn lastlistfield(mut fs: *mut FuncState, mut cc: *mut ConsControl) {
+pub unsafe extern "C" fn lastlistfield(mut fs: *mut FunctionState, mut cc: *mut ConstructorControl) {
     if (*cc).tostore == 0 as i32 {
         return;
     }
@@ -12091,12 +12091,12 @@ pub unsafe extern "C" fn lastlistfield(mut fs: *mut FuncState, mut cc: *mut Cons
     }
     (*cc).na += (*cc).tostore;
 }
-pub unsafe extern "C" fn listfield(mut ls: *mut LexState, mut cc: *mut ConsControl) {
+pub unsafe extern "C" fn listfield(mut ls: *mut LexState, mut cc: *mut ConstructorControl) {
     expr(ls, &mut (*cc).v);
     (*cc).tostore += 1;
     (*cc).tostore;
 }
-pub unsafe extern "C" fn field(mut ls: *mut LexState, mut cc: *mut ConsControl) {
+pub unsafe extern "C" fn field(mut ls: *mut LexState, mut cc: *mut ConstructorControl) {
     match (*ls).t.token {
         291 => {
             if luaX_lookahead(ls) != '=' as i32 {
@@ -12113,8 +12113,8 @@ pub unsafe extern "C" fn field(mut ls: *mut LexState, mut cc: *mut ConsControl) 
         }
     };
 }
-pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut expdesc) {
-    let mut fs: *mut FuncState = (*ls).fs;
+pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut line: i32 = (*ls).linenumber;
     let mut pc: i32 = luaK_codeABCk(
         fs,
@@ -12124,14 +12124,14 @@ pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut expdesc)
         0,
         0,
     );
-    let mut cc: ConsControl = ConsControl {
-        v: expdesc {
+    let mut cc: ConstructorControl = ConstructorControl {
+        v: ExpressionDescription {
             k: VVOID,
             u: C2RustUnnamed_23 { ival: 0 },
             t: 0,
             f: 0,
         },
-        t: 0 as *mut expdesc,
+        t: 0 as *mut ExpressionDescription,
         nh: 0,
         na: 0,
         tostore: 0,
@@ -12156,7 +12156,7 @@ pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut expdesc)
     lastlistfield(fs, &mut cc);
     luaK_settablesize(fs, pc, (*t).u.info, cc.na, cc.nh);
 }
-pub unsafe extern "C" fn setvararg(mut fs: *mut FuncState, mut nparams: i32) {
+pub unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32) {
     (*(*fs).f).is_vararg = 1 as i32 as u8;
     luaK_codeABCk(
         fs,
@@ -12168,7 +12168,7 @@ pub unsafe extern "C" fn setvararg(mut fs: *mut FuncState, mut nparams: i32) {
     );
 }
 pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     let mut nparams: i32 = 0 as i32;
     let mut isvararg: i32 = 0 as i32;
@@ -12204,15 +12204,15 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
 }
 pub unsafe extern "C" fn body(
     mut ls: *mut LexState,
-    mut e: *mut expdesc,
+    mut e: *mut ExpressionDescription,
     mut ismethod: i32,
     mut line: i32,
 ) {
-    let mut new_fs: FuncState = FuncState {
+    let mut new_fs: FunctionState = FunctionState {
         f: 0 as *mut Proto,
-        prev: 0 as *mut FuncState,
+        prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
-        bl: 0 as *mut BlockCnt,
+        bl: 0 as *mut BlockControl,
         pc: 0,
         lasttarget: 0,
         previousline: 0,
@@ -12228,8 +12228,8 @@ pub unsafe extern "C" fn body(
         iwthabs: 0,
         needclose: 0,
     };
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -12264,7 +12264,7 @@ pub unsafe extern "C" fn body(
     codeclosure(ls, e);
     close_func(ls);
 }
-pub unsafe extern "C" fn explist(mut ls: *mut LexState, mut v: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn explist(mut ls: *mut LexState, mut v: *mut ExpressionDescription) -> i32 {
     let mut n: i32 = 1 as i32;
     expr(ls, v);
     while testnext(ls, ',' as i32) != 0 {
@@ -12274,9 +12274,9 @@ pub unsafe extern "C" fn explist(mut ls: *mut LexState, mut v: *mut expdesc) -> 
     }
     return n;
 }
-pub unsafe extern "C" fn funcargs(mut ls: *mut LexState, mut f: *mut expdesc) {
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut args: expdesc = expdesc {
+pub unsafe extern "C" fn funcargs(mut ls: *mut LexState, mut f: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut args: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12340,7 +12340,7 @@ pub unsafe extern "C" fn funcargs(mut ls: *mut LexState, mut f: *mut expdesc) {
     luaK_fixline(fs, line);
     (*fs).freereg = (base + 1 as i32) as u8;
 }
-pub unsafe extern "C" fn primaryexp(mut ls: *mut LexState, mut v: *mut expdesc) {
+pub unsafe extern "C" fn primaryexp(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
     match (*ls).t.token {
         40 => {
             let mut line: i32 = (*ls).linenumber;
@@ -12362,8 +12362,8 @@ pub unsafe extern "C" fn primaryexp(mut ls: *mut LexState, mut v: *mut expdesc) 
         }
     };
 }
-pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc) {
-    let mut fs: *mut FuncState = (*ls).fs;
+pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
+    let mut fs: *mut FunctionState = (*ls).fs;
     primaryexp(ls, v);
     loop {
         match (*ls).t.token {
@@ -12371,7 +12371,7 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc)
                 fieldsel(ls, v);
             }
             91 => {
-                let mut key: expdesc = expdesc {
+                let mut key: ExpressionDescription = ExpressionDescription {
                     k: VVOID,
                     u: C2RustUnnamed_23 { ival: 0 },
                     t: 0,
@@ -12382,7 +12382,7 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc)
                 luaK_indexed(fs, v, &mut key);
             }
             58 => {
-                let mut key_0: expdesc = expdesc {
+                let mut key_0: ExpressionDescription = ExpressionDescription {
                     k: VVOID,
                     u: C2RustUnnamed_23 { ival: 0 },
                     t: 0,
@@ -12401,7 +12401,7 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut expdesc)
         }
     };
 }
-pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut expdesc) {
+pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
     match (*ls).t.token {
         289 => {
             init_exp(v, VKFLT, 0 as i32);
@@ -12424,7 +12424,7 @@ pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut expdesc) {
             init_exp(v, VFALSE, 0 as i32);
         }
         280 => {
-            let mut fs: *mut FuncState = (*ls).fs;
+            let mut fs: *mut FunctionState = (*ls).fs;
             if (*(*fs).f).is_vararg == 0 {
                 luaX_syntaxerror(
                     ls,
@@ -12647,7 +12647,7 @@ static mut priority: [C2RustUnnamed26; 21] = [
 ];
 pub unsafe extern "C" fn subexpr(
     mut ls: *mut LexState,
-    mut v: *mut expdesc,
+    mut v: *mut ExpressionDescription,
     mut limit: i32,
 ) -> u32 {
     let mut op: u32 = OPR_ADD;
@@ -12666,7 +12666,7 @@ pub unsafe extern "C" fn subexpr(
     while op as u32 != OPR_NOBINOPR as i32 as u32
         && priority[op as usize].left as i32 > limit
     {
-        let mut v2: expdesc = expdesc {
+        let mut v2: ExpressionDescription = ExpressionDescription {
             k: VVOID,
             u: C2RustUnnamed_23 { ival: 0 },
             t: 0,
@@ -12684,13 +12684,13 @@ pub unsafe extern "C" fn subexpr(
     (*(*ls).L).count_c_calls;
     return op;
 }
-pub unsafe extern "C" fn expr(mut ls: *mut LexState, mut v: *mut expdesc) {
+pub unsafe extern "C" fn expr(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
     subexpr(ls, v, 0 as i32);
 }
 pub unsafe extern "C" fn block(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -12705,9 +12705,9 @@ pub unsafe extern "C" fn block(mut ls: *mut LexState) {
 pub unsafe extern "C" fn check_conflict(
     mut ls: *mut LexState,
     mut lh: *mut LHSAssign,
-    mut v: *mut expdesc,
+    mut v: *mut ExpressionDescription,
 ) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut extra: i32 = (*fs).freereg as i32;
     let mut conflict: i32 = 0 as i32;
     while !lh.is_null() {
@@ -12768,7 +12768,7 @@ pub unsafe extern "C" fn restassign(
     mut lh: *mut LHSAssign,
     mut nvars: i32,
 ) {
-    let mut e: expdesc = expdesc {
+    let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12783,7 +12783,7 @@ pub unsafe extern "C" fn restassign(
     if testnext(ls, ',' as i32) != 0 {
         let mut nv: LHSAssign = LHSAssign {
             prev: 0 as *mut LHSAssign,
-            v: expdesc {
+            v: ExpressionDescription {
                 k: VVOID,
                 u: C2RustUnnamed_23 { ival: 0 },
                 t: 0,
@@ -12817,7 +12817,7 @@ pub unsafe extern "C" fn restassign(
     luaK_storevar((*ls).fs, &mut (*lh).v, &mut e);
 }
 pub unsafe extern "C" fn cond(mut ls: *mut LexState) -> i32 {
-    let mut v: expdesc = expdesc {
+    let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12831,7 +12831,7 @@ pub unsafe extern "C" fn cond(mut ls: *mut LexState) -> i32 {
     return v.f;
 }
 pub unsafe extern "C" fn gotostat(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut line: i32 = (*ls).linenumber;
     let mut name: *mut TString = str_checkname(ls);
     let mut lb: *mut Labeldesc = findlabel(ls, name);
@@ -12897,11 +12897,11 @@ pub unsafe extern "C" fn labelstat(
     createlabel(ls, name, line, block_follow(ls, 0 as i32));
 }
 pub unsafe extern "C" fn whilestat(mut ls: *mut LexState, mut line: i32) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut whileinit: i32 = 0;
     let mut condexit: i32 = 0;
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -12922,10 +12922,10 @@ pub unsafe extern "C" fn whilestat(mut ls: *mut LexState, mut line: i32) {
 }
 pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
     let mut condexit: i32 = 0;
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut repeat_init: i32 = luaK_getlabel(fs);
-    let mut bl1: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl1: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -12933,8 +12933,8 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
         isloop: 0,
         insidetbc: 0,
     };
-    let mut bl2: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl2: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -12967,7 +12967,7 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
     leaveblock(fs);
 }
 pub unsafe extern "C" fn exp1(mut ls: *mut LexState) {
-    let mut e: expdesc = expdesc {
+    let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -12977,7 +12977,7 @@ pub unsafe extern "C" fn exp1(mut ls: *mut LexState) {
     luaK_exp2nextreg((*ls).fs, &mut e);
 }
 pub unsafe extern "C" fn fixforjump(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut pc: i32,
     mut dest: i32,
     mut back: i32,
@@ -13017,8 +13017,8 @@ pub unsafe extern "C" fn forbody(
 ) {
     static mut forprep_0: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
     static mut forloop: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -13026,7 +13026,7 @@ pub unsafe extern "C" fn forbody(
         isloop: 0,
         insidetbc: 0,
     };
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut prep: i32 = 0;
     let mut endfor: i32 = 0;
     checknext(ls, TK_DO as i32);
@@ -13060,7 +13060,7 @@ pub unsafe extern "C" fn fornum(
     mut varname: *mut TString,
     mut line: i32,
 ) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut base: i32 = (*fs).freereg as i32;
     new_localvar(
         ls,
@@ -13107,8 +13107,8 @@ pub unsafe extern "C" fn fornum(
     forbody(ls, base, line, 1, 0 as i32);
 }
 pub unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TString) {
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut e: expdesc = expdesc {
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -13171,10 +13171,10 @@ pub unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TStr
     forbody(ls, base, line, nvars - 4 as i32, 1);
 }
 pub unsafe extern "C" fn forstat(mut ls: *mut LexState, mut line: i32) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut varname: *mut TString = 0 as *mut TString;
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -13206,8 +13206,8 @@ pub unsafe extern "C" fn test_then_block(
     mut ls: *mut LexState,
     mut escapelist: *mut i32,
 ) {
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -13215,8 +13215,8 @@ pub unsafe extern "C" fn test_then_block(
         isloop: 0,
         insidetbc: 0,
     };
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut v: expdesc = expdesc {
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -13267,7 +13267,7 @@ pub unsafe extern "C" fn test_then_block(
     luaK_patchtohere(fs, jf);
 }
 pub unsafe extern "C" fn ifstat(mut ls: *mut LexState, mut line: i32) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut escapelist: i32 = -1;
     test_then_block(ls, &mut escapelist);
     while (*ls).t.token == TK_ELSEIF as i32 {
@@ -13280,13 +13280,13 @@ pub unsafe extern "C" fn ifstat(mut ls: *mut LexState, mut line: i32) {
     luaK_patchtohere(fs, escapelist);
 }
 pub unsafe extern "C" fn localfunc(mut ls: *mut LexState) {
-    let mut b: expdesc = expdesc {
+    let mut b: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
         f: 0,
     };
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut fvar: i32 = (*fs).nactvar as i32;
     new_localvar(ls, str_checkname(ls));
     adjustlocalvars(ls, 1);
@@ -13318,7 +13318,7 @@ pub unsafe extern "C" fn getlocalattribute(mut ls: *mut LexState) -> i32 {
     }
     return 0;
 }
-pub unsafe extern "C" fn checktoclose(mut fs: *mut FuncState, mut level: i32) {
+pub unsafe extern "C" fn checktoclose(mut fs: *mut FunctionState, mut level: i32) {
     if level != -1 {
         marktobeclosed(fs);
         luaK_codeABCk(
@@ -13332,14 +13332,14 @@ pub unsafe extern "C" fn checktoclose(mut fs: *mut FuncState, mut level: i32) {
     }
 }
 pub unsafe extern "C" fn localstat(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut toclose: i32 = -1;
     let mut var: *mut Vardesc = 0 as *mut Vardesc;
     let mut vidx: i32 = 0;
     let mut kind: i32 = 0;
     let mut nvars: i32 = 0 as i32;
     let mut nexps: i32 = 0;
-    let mut e: expdesc = expdesc {
+    let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -13386,7 +13386,7 @@ pub unsafe extern "C" fn localstat(mut ls: *mut LexState) {
 }
 pub unsafe extern "C" fn funcname(
     mut ls: *mut LexState,
-    mut v: *mut expdesc,
+    mut v: *mut ExpressionDescription,
 ) -> i32 {
     let mut ismethod: i32 = 0 as i32;
     singlevar(ls, v);
@@ -13401,13 +13401,13 @@ pub unsafe extern "C" fn funcname(
 }
 pub unsafe extern "C" fn funcstat(mut ls: *mut LexState, mut line: i32) {
     let mut ismethod: i32 = 0;
-    let mut v: expdesc = expdesc {
+    let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
         f: 0,
     };
-    let mut b: expdesc = expdesc {
+    let mut b: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -13421,10 +13421,10 @@ pub unsafe extern "C" fn funcstat(mut ls: *mut LexState, mut line: i32) {
     luaK_fixline((*ls).fs, line);
 }
 pub unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
+    let mut fs: *mut FunctionState = (*ls).fs;
     let mut v: LHSAssign = LHSAssign {
         prev: 0 as *mut LHSAssign,
-        v: expdesc {
+        v: ExpressionDescription {
             k: VVOID,
             u: C2RustUnnamed_23 { ival: 0 },
             t: 0,
@@ -13454,8 +13454,8 @@ pub unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
     };
 }
 pub unsafe extern "C" fn retstat(mut ls: *mut LexState) {
-    let mut fs: *mut FuncState = (*ls).fs;
-    let mut e: expdesc = expdesc {
+    let mut fs: *mut FunctionState = (*ls).fs;
+    let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
         u: C2RustUnnamed_23 { ival: 0 },
         t: 0,
@@ -13552,9 +13552,9 @@ pub unsafe extern "C" fn statement(mut ls: *mut LexState) {
     (*(*ls).L).count_c_calls = ((*(*ls).L).count_c_calls).wrapping_sub(1);
     (*(*ls).L).count_c_calls;
 }
-pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FuncState) {
-    let mut bl: BlockCnt = BlockCnt {
-        previous: 0 as *mut BlockCnt,
+pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FunctionState) {
+    let mut bl: BlockControl = BlockControl {
+        previous: 0 as *mut BlockControl,
         firstlabel: 0,
         firstgoto: 0,
         nactvar: 0,
@@ -13590,7 +13590,7 @@ pub unsafe extern "C" fn luaY_parser(
     mut L: *mut State,
     mut z: *mut ZIO,
     mut buff: *mut Mbuffer,
-    mut dyd: *mut Dyndata,
+    mut dyd: *mut DynamicData,
     mut name: *const i8,
     mut firstchar: i32,
 ) -> *mut LClosure {
@@ -13606,20 +13606,20 @@ pub unsafe extern "C" fn luaY_parser(
             token: 0,
             seminfo: SemInfo { r: 0. },
         },
-        fs: 0 as *mut FuncState,
+        fs: 0 as *mut FunctionState,
         L: 0 as *mut State,
         z: 0 as *mut ZIO,
         buff: 0 as *mut Mbuffer,
         h: 0 as *mut Table,
-        dyd: 0 as *mut Dyndata,
+        dyd: 0 as *mut DynamicData,
         source: 0 as *mut TString,
         envn: 0 as *mut TString,
     };
-    let mut funcstate: FuncState = FuncState {
+    let mut funcstate: FunctionState = FunctionState {
         f: 0 as *mut Proto,
-        prev: 0 as *mut FuncState,
+        prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
-        bl: 0 as *mut BlockCnt,
+        bl: 0 as *mut BlockControl,
         pc: 0,
         lasttarget: 0,
         previousline: 0,
@@ -13934,7 +13934,7 @@ pub unsafe extern "C" fn luaX_setinput(
     (*ls).current = firstchar;
     (*ls).lookahead.token = TK_EOS as i32;
     (*ls).z = z;
-    (*ls).fs = 0 as *mut FuncState;
+    (*ls).fs = 0 as *mut FunctionState;
     (*ls).linenumber = 1 as i32;
     (*ls).lastline = 1 as i32;
     (*ls).source = source;
@@ -16016,7 +16016,7 @@ pub unsafe extern "C" fn luaK_semerror(
     luaX_syntaxerror(ls, msg);
 }
 pub unsafe extern "C" fn tonumeral(
-    mut e: *const expdesc,
+    mut e: *const ExpressionDescription,
     mut v: *mut TValue,
 ) -> i32 {
     if (*e).t != (*e).f {
@@ -16047,14 +16047,14 @@ pub unsafe extern "C" fn tonumeral(
     };
 }
 pub unsafe extern "C" fn const2val(
-    mut fs: *mut FuncState,
-    mut e: *const expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *const ExpressionDescription,
 ) -> *mut TValue {
     return &mut (*((*(*(*fs).ls).dyd).actvar.arr).offset((*e).u.info as isize)).k;
 }
 pub unsafe extern "C" fn luaK_exp2const(
-    mut fs: *mut FuncState,
-    mut e: *const expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *const ExpressionDescription,
     mut v: *mut TValue,
 ) -> i32 {
     if (*e).t != (*e).f {
@@ -16098,7 +16098,7 @@ pub unsafe extern "C" fn luaK_exp2const(
         _ => return tonumeral(e, v),
     };
 }
-pub unsafe extern "C" fn previousinstruction(mut fs: *mut FuncState) -> *mut u32 {
+pub unsafe extern "C" fn previousinstruction(mut fs: *mut FunctionState) -> *mut u32 {
     static mut invalidinstruction: u32 = !(0 as i32 as u32);
     if (*fs).pc > (*fs).lasttarget {
         return &mut *((*(*fs).f).code).offset(((*fs).pc - 1 as i32) as isize)
@@ -16108,7 +16108,7 @@ pub unsafe extern "C" fn previousinstruction(mut fs: *mut FuncState) -> *mut u32
     };
 }
 pub unsafe extern "C" fn luaK_nil(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut from: i32,
     mut n: i32,
 ) {
@@ -16165,7 +16165,7 @@ pub unsafe extern "C" fn luaK_nil(
     );
 }
 pub unsafe extern "C" fn getjump(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut pc: i32,
 ) -> i32 {
     let mut offset: i32 = (*((*(*fs).f).code).offset(pc as isize)
@@ -16183,7 +16183,7 @@ pub unsafe extern "C" fn getjump(
     };
 }
 pub unsafe extern "C" fn fixjump(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut pc: i32,
     mut dest: i32,
 ) {
@@ -16220,7 +16220,7 @@ pub unsafe extern "C" fn fixjump(
                     + 8 as i32) << 0 as i32 + 7 as i32;
 }
 pub unsafe extern "C" fn luaK_concat(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut l1: *mut i32,
     mut l2: i32,
 ) {
@@ -16241,11 +16241,11 @@ pub unsafe extern "C" fn luaK_concat(
         fixjump(fs, list, l2);
     };
 }
-pub unsafe extern "C" fn luaK_jump(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn luaK_jump(mut fs: *mut FunctionState) -> i32 {
     return codesJ(fs, OP_JMP, -1, 0 as i32);
 }
 pub unsafe extern "C" fn luaK_ret(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut first: i32,
     mut nret: i32,
 ) {
@@ -16271,7 +16271,7 @@ pub unsafe extern "C" fn luaK_ret(
     );
 }
 pub unsafe extern "C" fn condjump(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: u32,
     mut A: i32,
     mut B: i32,
@@ -16281,12 +16281,12 @@ pub unsafe extern "C" fn condjump(
     luaK_codeABCk(fs, op, A, B, C, k);
     return luaK_jump(fs);
 }
-pub unsafe extern "C" fn luaK_getlabel(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn luaK_getlabel(mut fs: *mut FunctionState) -> i32 {
     (*fs).lasttarget = (*fs).pc;
     return (*fs).pc;
 }
 pub unsafe extern "C" fn getjumpcontrol(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut pc: i32,
 ) -> *mut u32 {
     let mut pi: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
@@ -16303,7 +16303,7 @@ pub unsafe extern "C" fn getjumpcontrol(
     };
 }
 pub unsafe extern "C" fn patchtestreg(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut node: i32,
     mut reg: i32,
 ) -> i32 {
@@ -16349,7 +16349,7 @@ pub unsafe extern "C" fn patchtestreg(
     }
     return 1;
 }
-pub unsafe extern "C" fn removevalues(mut fs: *mut FuncState, mut list: i32) {
+pub unsafe extern "C" fn removevalues(mut fs: *mut FunctionState, mut list: i32) {
     while list != -1 {
         patchtestreg(
             fs,
@@ -16360,7 +16360,7 @@ pub unsafe extern "C" fn removevalues(mut fs: *mut FuncState, mut list: i32) {
     }
 }
 pub unsafe extern "C" fn patchlistaux(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut list: i32,
     mut vtarget: i32,
     mut reg: i32,
@@ -16377,7 +16377,7 @@ pub unsafe extern "C" fn patchlistaux(
     }
 }
 pub unsafe extern "C" fn luaK_patchlist(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut list: i32,
     mut target: i32,
 ) {
@@ -16389,12 +16389,12 @@ pub unsafe extern "C" fn luaK_patchlist(
         target,
     );
 }
-pub unsafe extern "C" fn luaK_patchtohere(mut fs: *mut FuncState, mut list: i32) {
+pub unsafe extern "C" fn luaK_patchtohere(mut fs: *mut FunctionState, mut list: i32) {
     let mut hr: i32 = luaK_getlabel(fs);
     luaK_patchlist(fs, list, hr);
 }
 pub unsafe extern "C" fn savelineinfo(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut f: *mut Proto,
     mut line: i32,
 ) {
@@ -16455,7 +16455,7 @@ pub unsafe extern "C" fn savelineinfo(
     *((*f).lineinfo).offset(pc as isize) = linedif as i8;
     (*fs).previousline = line;
 }
-pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FuncState) {
+pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FunctionState) {
     let mut f: *mut Proto = (*fs).f;
     let mut pc: i32 = (*fs).pc - 1 as i32;
     if *((*f).lineinfo).offset(pc as isize) as i32 != -(0x80 as i32) {
@@ -16468,13 +16468,13 @@ pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FuncState) {
         (*fs).iwthabs = (128 as i32 + 1 as i32) as u8;
     };
 }
-pub unsafe extern "C" fn removelastinstruction(mut fs: *mut FuncState) {
+pub unsafe extern "C" fn removelastinstruction(mut fs: *mut FunctionState) {
     removelastlineinfo(fs);
     (*fs).pc -= 1;
     (*fs).pc;
 }
 pub unsafe extern "C" fn luaK_code(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut i: u32,
 ) -> i32 {
     let mut f: *mut Proto = (*fs).f;
@@ -16504,7 +16504,7 @@ pub unsafe extern "C" fn luaK_code(
     return (*fs).pc - 1 as i32;
 }
 pub unsafe extern "C" fn luaK_codeABCk(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut o: u32,
     mut a: i32,
     mut b: i32,
@@ -16526,7 +16526,7 @@ pub unsafe extern "C" fn luaK_codeABCk(
     );
 }
 pub unsafe extern "C" fn luaK_codeABx(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut o: u32,
     mut a: i32,
     mut bc: u32,
@@ -16539,7 +16539,7 @@ pub unsafe extern "C" fn luaK_codeABx(
     );
 }
 pub unsafe extern "C" fn codeAsBx(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut o: u32,
     mut a: i32,
     mut bc: i32,
@@ -16555,7 +16555,7 @@ pub unsafe extern "C" fn codeAsBx(
     );
 }
 pub unsafe extern "C" fn codesJ(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut o: u32,
     mut sj: i32,
     mut k: i32,
@@ -16572,7 +16572,7 @@ pub unsafe extern "C" fn codesJ(
     );
 }
 pub unsafe extern "C" fn codeextraarg(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut a: i32,
 ) -> i32 {
     return luaK_code(
@@ -16582,7 +16582,7 @@ pub unsafe extern "C" fn codeextraarg(
     );
 }
 pub unsafe extern "C" fn luaK_codek(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut reg: i32,
     mut k: i32,
 ) -> i32 {
@@ -16602,7 +16602,7 @@ pub unsafe extern "C" fn luaK_codek(
         return p;
     };
 }
-pub unsafe extern "C" fn luaK_checkstack(mut fs: *mut FuncState, mut n: i32) {
+pub unsafe extern "C" fn luaK_checkstack(mut fs: *mut FunctionState, mut n: i32) {
     let mut newstack: i32 = (*fs).freereg as i32 + n;
     if newstack > (*(*fs).f).maxstacksize as i32 {
         if newstack >= 255 as i32 {
@@ -16615,18 +16615,18 @@ pub unsafe extern "C" fn luaK_checkstack(mut fs: *mut FuncState, mut n: i32) {
         (*(*fs).f).maxstacksize = newstack as u8;
     }
 }
-pub unsafe extern "C" fn luaK_reserveregs(mut fs: *mut FuncState, mut n: i32) {
+pub unsafe extern "C" fn luaK_reserveregs(mut fs: *mut FunctionState, mut n: i32) {
     luaK_checkstack(fs, n);
     (*fs).freereg = ((*fs).freereg as i32 + n) as u8;
 }
-pub unsafe extern "C" fn freereg(mut fs: *mut FuncState, mut reg: i32) {
+pub unsafe extern "C" fn freereg(mut fs: *mut FunctionState, mut reg: i32) {
     if reg >= luaY_nvarstack(fs) {
         (*fs).freereg = ((*fs).freereg).wrapping_sub(1);
         (*fs).freereg;
     }
 }
 pub unsafe extern "C" fn freeregs(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut r1: i32,
     mut r2: i32,
 ) {
@@ -16638,15 +16638,15 @@ pub unsafe extern "C" fn freeregs(
         freereg(fs, r1);
     };
 }
-pub unsafe extern "C" fn freeexp(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn freeexp(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     if (*e).k as u32 == VNONRELOC as i32 as u32 {
         freereg(fs, (*e).u.info);
     }
 }
 pub unsafe extern "C" fn freeexps(
-    mut fs: *mut FuncState,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
 ) {
     let mut r1: i32 = if (*e1).k as u32
         == VNONRELOC as i32 as u32
@@ -16665,7 +16665,7 @@ pub unsafe extern "C" fn freeexps(
     freeregs(fs, r1, r2);
 }
 pub unsafe extern "C" fn addk(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut key: *mut TValue,
     mut v: *mut TValue,
 ) -> i32 {
@@ -16749,7 +16749,7 @@ pub unsafe extern "C" fn addk(
     return k;
 }
 pub unsafe extern "C" fn stringK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut s: *mut TString,
 ) -> i32 {
     let mut o: TValue = TValue {
@@ -16765,7 +16765,7 @@ pub unsafe extern "C" fn stringK(
     return addk(fs, &mut o, &mut o);
 }
 pub unsafe extern "C" fn luaK_intK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut n: i64,
 ) -> i32 {
     let mut o: TValue = TValue {
@@ -16778,7 +16778,7 @@ pub unsafe extern "C" fn luaK_intK(
     return addk(fs, &mut o, &mut o);
 }
 pub unsafe extern "C" fn luaK_numberK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut r: f64,
 ) -> i32 {
     let mut o: TValue = TValue {
@@ -16811,7 +16811,7 @@ pub unsafe extern "C" fn luaK_numberK(
         return addk(fs, &mut kv, &mut o);
     };
 }
-pub unsafe extern "C" fn boolF(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn boolF(mut fs: *mut FunctionState) -> i32 {
     let mut o: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
         tt_: 0,
@@ -16819,7 +16819,7 @@ pub unsafe extern "C" fn boolF(mut fs: *mut FuncState) -> i32 {
     o.tt_ = (1 as i32 | (0 as i32) << 4 as i32) as u8;
     return addk(fs, &mut o, &mut o);
 }
-pub unsafe extern "C" fn boolT(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn boolT(mut fs: *mut FunctionState) -> i32 {
     let mut o: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
         tt_: 0,
@@ -16827,7 +16827,7 @@ pub unsafe extern "C" fn boolT(mut fs: *mut FuncState) -> i32 {
     o.tt_ = (1 as i32 | (1 as i32) << 4 as i32) as u8;
     return addk(fs, &mut o, &mut o);
 }
-pub unsafe extern "C" fn nilK(mut fs: *mut FuncState) -> i32 {
+pub unsafe extern "C" fn nilK(mut fs: *mut FunctionState) -> i32 {
     let mut k: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
         tt_: 0,
@@ -16868,7 +16868,7 @@ pub unsafe extern "C" fn fitsBx(mut i: i64) -> i32 {
         as i32;
 }
 pub unsafe extern "C" fn luaK_int(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut reg: i32,
     mut i: i64,
 ) {
@@ -16879,7 +16879,7 @@ pub unsafe extern "C" fn luaK_int(
     };
 }
 pub unsafe extern "C" fn luaK_float(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut reg: i32,
     mut f: f64,
 ) {
@@ -16890,7 +16890,7 @@ pub unsafe extern "C" fn luaK_float(
         luaK_codek(fs, reg, luaK_numberK(fs, f));
     };
 }
-pub unsafe extern "C" fn const2exp(mut v: *mut TValue, mut e: *mut expdesc) {
+pub unsafe extern "C" fn const2exp(mut v: *mut TValue, mut e: *mut ExpressionDescription) {
     match (*v).tt_ as i32 & 0x3f as i32 {
         3 => {
             (*e).k = VKINT;
@@ -16917,8 +16917,8 @@ pub unsafe extern "C" fn const2exp(mut v: *mut TValue, mut e: *mut expdesc) {
     };
 }
 pub unsafe extern "C" fn luaK_setreturns(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
     mut nresults: i32,
 ) {
     let mut pc: *mut u32 = &mut *((*(*fs).f).code).offset((*e).u.info as isize)
@@ -16954,11 +16954,11 @@ pub unsafe extern "C" fn luaK_setreturns(
         luaK_reserveregs(fs, 1);
     };
 }
-pub unsafe extern "C" fn str2K(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn str2K(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     (*e).u.info = stringK(fs, (*e).u.strval);
     (*e).k = VK;
 }
-pub unsafe extern "C" fn luaK_setoneret(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_setoneret(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     if (*e).k as u32 == VCALL as i32 as u32 {
         (*e).k = VNONRELOC;
         (*e)
@@ -16984,7 +16984,7 @@ pub unsafe extern "C" fn luaK_setoneret(mut fs: *mut FuncState, mut e: *mut expd
         (*e).k = VRELOC;
     }
 }
-pub unsafe extern "C" fn luaK_dischargevars(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_dischargevars(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     match (*e).k as u32 {
         11 => {
             const2exp(const2val(fs, e), e);
@@ -17069,8 +17069,8 @@ pub unsafe extern "C" fn luaK_dischargevars(mut fs: *mut FuncState, mut e: *mut 
     };
 }
 pub unsafe extern "C" fn discharge2reg(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
     mut reg: i32,
 ) {
     luaK_dischargevars(fs, e);
@@ -17152,14 +17152,14 @@ pub unsafe extern "C" fn discharge2reg(
     (*e).u.info = reg;
     (*e).k = VNONRELOC;
 }
-pub unsafe extern "C" fn discharge2anyreg(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn discharge2anyreg(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     if (*e).k as u32 != VNONRELOC as i32 as u32 {
         luaK_reserveregs(fs, 1);
         discharge2reg(fs, e, (*fs).freereg as i32 - 1 as i32);
     }
 }
 pub unsafe extern "C" fn code_loadbool(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut A: i32,
     mut op: u32,
 ) -> i32 {
@@ -17174,7 +17174,7 @@ pub unsafe extern "C" fn code_loadbool(
     );
 }
 pub unsafe extern "C" fn need_value(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut list: i32,
 ) -> i32 {
     while list != -1 {
@@ -17191,8 +17191,8 @@ pub unsafe extern "C" fn need_value(
     return 0;
 }
 pub unsafe extern "C" fn exp2reg(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
     mut reg: i32,
 ) {
     discharge2reg(fs, e, reg);
@@ -17224,15 +17224,15 @@ pub unsafe extern "C" fn exp2reg(
     (*e).u.info = reg;
     (*e).k = VNONRELOC;
 }
-pub unsafe extern "C" fn luaK_exp2nextreg(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_exp2nextreg(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     luaK_dischargevars(fs, e);
     freeexp(fs, e);
     luaK_reserveregs(fs, 1);
     exp2reg(fs, e, (*fs).freereg as i32 - 1 as i32);
 }
 pub unsafe extern "C" fn luaK_exp2anyreg(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
 ) -> i32 {
     luaK_dischargevars(fs, e);
     if (*e).k as u32 == VNONRELOC as i32 as u32 {
@@ -17247,14 +17247,14 @@ pub unsafe extern "C" fn luaK_exp2anyreg(
     luaK_exp2nextreg(fs, e);
     return (*e).u.info;
 }
-pub unsafe extern "C" fn luaK_exp2anyregup(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_exp2anyregup(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     if (*e).k as u32 != VUPVAL as i32 as u32
         || (*e).t != (*e).f
     {
         luaK_exp2anyreg(fs, e);
     }
 }
-pub unsafe extern "C" fn luaK_exp2val(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_exp2val(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     if (*e).k as u32 == VJMP as i32 as u32 || (*e).t != (*e).f
     {
         luaK_exp2anyreg(fs, e);
@@ -17263,8 +17263,8 @@ pub unsafe extern "C" fn luaK_exp2val(mut fs: *mut FuncState, mut e: *mut expdes
     };
 }
 pub unsafe extern "C" fn luaK_exp2K(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
 ) -> i32 {
     if !((*e).t != (*e).f) {
         let mut info: i32 = 0;
@@ -17300,7 +17300,7 @@ pub unsafe extern "C" fn luaK_exp2K(
     }
     return 0;
 }
-pub unsafe extern "C" fn exp2RK(mut fs: *mut FuncState, mut e: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn exp2RK(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) -> i32 {
     if luaK_exp2K(fs, e) != 0 {
         return 1 as i32
     } else {
@@ -17309,19 +17309,19 @@ pub unsafe extern "C" fn exp2RK(mut fs: *mut FuncState, mut e: *mut expdesc) -> 
     };
 }
 pub unsafe extern "C" fn codeABRK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut o: u32,
     mut a: i32,
     mut b: i32,
-    mut ec: *mut expdesc,
+    mut ec: *mut ExpressionDescription,
 ) {
     let mut k: i32 = exp2RK(fs, ec);
     luaK_codeABCk(fs, o, a, b, (*ec).u.info, k);
 }
 pub unsafe extern "C" fn luaK_storevar(
-    mut fs: *mut FuncState,
-    mut var: *mut expdesc,
-    mut ex: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut var: *mut ExpressionDescription,
+    mut ex: *mut ExpressionDescription,
 ) {
     match (*var).k as u32 {
         9 => {
@@ -17381,9 +17381,9 @@ pub unsafe extern "C" fn luaK_storevar(
     freeexp(fs, ex);
 }
 pub unsafe extern "C" fn luaK_self(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
-    mut key: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
+    mut key: *mut ExpressionDescription,
 ) {
     let mut ereg: i32 = 0;
     luaK_exp2anyreg(fs, e);
@@ -17395,7 +17395,7 @@ pub unsafe extern "C" fn luaK_self(
     codeABRK(fs, OP_SELF, (*e).u.info, ereg, key);
     freeexp(fs, key);
 }
-pub unsafe extern "C" fn negatecondition(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn negatecondition(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     let mut pc: *mut u32 = getjumpcontrol(fs, (*e).u.info);
     *pc = *pc
         & !(!(!(0 as i32 as u32) << 1 as i32)
@@ -17408,8 +17408,8 @@ pub unsafe extern "C" fn negatecondition(mut fs: *mut FuncState, mut e: *mut exp
                 << 0 as i32 + 7 as i32 + 8 as i32;
 }
 pub unsafe extern "C" fn jumponcond(
-    mut fs: *mut FuncState,
-    mut e: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e: *mut ExpressionDescription,
     mut cond_0: i32,
 ) -> i32 {
     if (*e).k as u32 == VRELOC as i32 as u32 {
@@ -17445,7 +17445,7 @@ pub unsafe extern "C" fn jumponcond(
         cond_0,
     );
 }
-pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     let mut pc: i32 = 0;
     luaK_dischargevars(fs, e);
     match (*e).k as u32 {
@@ -17464,7 +17464,7 @@ pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FuncState, mut e: *mut expde
     luaK_patchtohere(fs, (*e).t);
     (*e).t = -1;
 }
-pub unsafe extern "C" fn luaK_goiffalse(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn luaK_goiffalse(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     let mut pc: i32 = 0;
     luaK_dischargevars(fs, e);
     match (*e).k as u32 {
@@ -17482,7 +17482,7 @@ pub unsafe extern "C" fn luaK_goiffalse(mut fs: *mut FuncState, mut e: *mut expd
     luaK_patchtohere(fs, (*e).f);
     (*e).f = -1;
 }
-pub unsafe extern "C" fn codenot(mut fs: *mut FuncState, mut e: *mut expdesc) {
+pub unsafe extern "C" fn codenot(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
     match (*e).k as u32 {
         1 | 3 => {
             (*e).k = VTRUE;
@@ -17516,7 +17516,7 @@ pub unsafe extern "C" fn codenot(mut fs: *mut FuncState, mut e: *mut expdesc) {
     removevalues(fs, (*e).f);
     removevalues(fs, (*e).t);
 }
-pub unsafe extern "C" fn isKstr(mut fs: *mut FuncState, mut e: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn isKstr(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) -> i32 {
     return ((*e).k as u32 == VK as i32 as u32
         && !((*e).t != (*e).f)
         && (*e).u.info <= ((1 as i32) << 8 as i32) - 1 as i32
@@ -17524,21 +17524,21 @@ pub unsafe extern "C" fn isKstr(mut fs: *mut FuncState, mut e: *mut expdesc) -> 
             == 4 as i32 | (0 as i32) << 4 as i32
                 | (1 as i32) << 6 as i32) as i32;
 }
-pub unsafe extern "C" fn isKint(mut e: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn isKint(mut e: *mut ExpressionDescription) -> i32 {
     return ((*e).k as u32 == VKINT as i32 as u32
         && !((*e).t != (*e).f)) as i32;
 }
-pub unsafe extern "C" fn isCint(mut e: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn isCint(mut e: *mut ExpressionDescription) -> i32 {
     return (isKint(e) != 0
         && (*e).u.ival as u64
             <= (((1 as i32) << 8 as i32) - 1 as i32)
                 as u64) as i32;
 }
-pub unsafe extern "C" fn isSCint(mut e: *mut expdesc) -> i32 {
+pub unsafe extern "C" fn isSCint(mut e: *mut ExpressionDescription) -> i32 {
     return (isKint(e) != 0 && fitsC((*e).u.ival) != 0) as i32;
 }
 pub unsafe extern "C" fn isSCnumber(
-    mut e: *mut expdesc,
+    mut e: *mut ExpressionDescription,
     mut pi: *mut i32,
     mut isfloat: *mut i32,
 ) -> i32 {
@@ -17562,9 +17562,9 @@ pub unsafe extern "C" fn isSCnumber(
     };
 }
 pub unsafe extern "C" fn luaK_indexed(
-    mut fs: *mut FuncState,
-    mut t: *mut expdesc,
-    mut k: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut t: *mut ExpressionDescription,
+    mut k: *mut ExpressionDescription,
 ) {
     if (*k).k as u32 == VKSTR as i32 as u32 {
         str2K(fs, k);
@@ -17624,10 +17624,10 @@ pub unsafe extern "C" fn validop(
     };
 }
 pub unsafe extern "C" fn constfolding(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: i32,
-    mut e1: *mut expdesc,
-    mut e2: *const expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *const ExpressionDescription,
 ) -> i32 {
     let mut v1: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
@@ -17680,9 +17680,9 @@ pub unsafe extern "C" fn binopr2TM(mut opr: u32) -> u32 {
     return (opr as i32 - OPR_ADD as i32 + TM_ADD as i32) as u32;
 }
 pub unsafe extern "C" fn codeunexpval(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: u32,
-    mut e: *mut expdesc,
+    mut e: *mut ExpressionDescription,
     mut line: i32,
 ) {
     let mut r: i32 = luaK_exp2anyreg(fs, e);
@@ -17701,9 +17701,9 @@ pub unsafe extern "C" fn codeunexpval(
     luaK_fixline(fs, line);
 }
 pub unsafe extern "C" fn finishbinexpval(
-    mut fs: *mut FuncState,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut op: u32,
     mut v2: i32,
     mut flip: i32,
@@ -17728,10 +17728,10 @@ pub unsafe extern "C" fn finishbinexpval(
     luaK_fixline(fs, line);
 }
 pub unsafe extern "C" fn codebinexpval(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut line: i32,
 ) {
     let mut op: u32 = binopr2op(opr, OPR_ADD, OP_ADD);
@@ -17749,10 +17749,10 @@ pub unsafe extern "C" fn codebinexpval(
     );
 }
 pub unsafe extern "C" fn codebini(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut flip: i32,
     mut line: i32,
     mut event: u32,
@@ -17763,10 +17763,10 @@ pub unsafe extern "C" fn codebini(
     finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
 }
 pub unsafe extern "C" fn codebinK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut flip: i32,
     mut line: i32,
 ) {
@@ -17776,9 +17776,9 @@ pub unsafe extern "C" fn codebinK(
     finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
 }
 pub unsafe extern "C" fn finishbinexpneg(
-    mut fs: *mut FuncState,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut op: u32,
     mut line: i32,
     mut event: u32,
@@ -17823,16 +17823,16 @@ pub unsafe extern "C" fn finishbinexpneg(
         }
     };
 }
-pub unsafe extern "C" fn swapexps(mut e1: *mut expdesc, mut e2: *mut expdesc) {
-    let mut temp: expdesc = *e1;
+pub unsafe extern "C" fn swapexps(mut e1: *mut ExpressionDescription, mut e2: *mut ExpressionDescription) {
+    let mut temp: ExpressionDescription = *e1;
     *e1 = *e2;
     *e2 = temp;
 }
 pub unsafe extern "C" fn codebinNoK(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut flip: i32,
     mut line: i32,
 ) {
@@ -17842,10 +17842,10 @@ pub unsafe extern "C" fn codebinNoK(
     codebinexpval(fs, opr, e1, e2, line);
 }
 pub unsafe extern "C" fn codearith(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut flip: i32,
     mut line: i32,
 ) {
@@ -17856,10 +17856,10 @@ pub unsafe extern "C" fn codearith(
     };
 }
 pub unsafe extern "C" fn codecommutative(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut line: i32,
 ) {
     let mut flip: i32 = 0 as i32;
@@ -17874,10 +17874,10 @@ pub unsafe extern "C" fn codecommutative(
     };
 }
 pub unsafe extern "C" fn codebitwise(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut line: i32,
 ) {
     let mut flip: i32 = 0 as i32;
@@ -17894,10 +17894,10 @@ pub unsafe extern "C" fn codebitwise(
     };
 }
 pub unsafe extern "C" fn codeorder(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
 ) {
     let mut r1: i32 = 0;
     let mut r2: i32 = 0;
@@ -17922,10 +17922,10 @@ pub unsafe extern "C" fn codeorder(
     (*e1).k = VJMP;
 }
 pub unsafe extern "C" fn codeeq(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
 ) {
     let mut r1: i32 = 0;
     let mut r2: i32 = 0;
@@ -17960,13 +17960,13 @@ pub unsafe extern "C" fn codeeq(
     (*e1).k = VJMP;
 }
 pub unsafe extern "C" fn luaK_prefix(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e: *mut expdesc,
+    mut e: *mut ExpressionDescription,
     mut line: i32,
 ) {
-    static mut ef: expdesc = {
-        let mut init = expdesc {
+    static mut ef: ExpressionDescription = {
+        let mut init = ExpressionDescription {
             k: VKINT,
             u: C2RustUnnamed_23 {
                 ival: 0 as i32 as i64,
@@ -18012,9 +18012,9 @@ pub unsafe extern "C" fn luaK_prefix(
     };
 }
 pub unsafe extern "C" fn luaK_infix(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut op: u32,
-    mut v: *mut expdesc,
+    mut v: *mut ExpressionDescription,
 ) {
     luaK_dischargevars(fs, v);
     match op as u32 {
@@ -18048,9 +18048,9 @@ pub unsafe extern "C" fn luaK_infix(
     };
 }
 pub unsafe extern "C" fn codeconcat(
-    mut fs: *mut FuncState,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut fs: *mut FunctionState,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut line: i32,
 ) {
     let mut ie2: *mut u32 = previousinstruction(fs);
@@ -18093,10 +18093,10 @@ pub unsafe extern "C" fn codeconcat(
     };
 }
 pub unsafe extern "C" fn luaK_posfix(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut opr: u32,
-    mut e1: *mut expdesc,
-    mut e2: *mut expdesc,
+    mut e1: *mut ExpressionDescription,
+    mut e2: *mut ExpressionDescription,
     mut line: i32,
 ) {
     luaK_dischargevars(fs, e2);
@@ -18191,12 +18191,12 @@ pub unsafe extern "C" fn luaK_posfix(
         _ => {}
     };
 }
-pub unsafe extern "C" fn luaK_fixline(mut fs: *mut FuncState, mut line: i32) {
+pub unsafe extern "C" fn luaK_fixline(mut fs: *mut FunctionState, mut line: i32) {
     removelastlineinfo(fs);
     savelineinfo(fs, (*fs).f, line);
 }
 pub unsafe extern "C" fn luaK_settablesize(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut pc: i32,
     mut ra: i32,
     mut asize: i32,
@@ -18231,7 +18231,7 @@ pub unsafe extern "C" fn luaK_settablesize(
         | (extra as u32) << 0 as i32 + 7 as i32;
 }
 pub unsafe extern "C" fn luaK_setlist(
-    mut fs: *mut FuncState,
+    mut fs: *mut FunctionState,
     mut base: i32,
     mut nelems: i32,
     mut tostore: i32,
@@ -18281,7 +18281,7 @@ pub unsafe extern "C" fn finaltarget(
     }
     return i;
 }
-pub unsafe extern "C" fn luaK_finish(mut fs: *mut FuncState) {
+pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
     let mut i: i32 = 0;
     let mut p: *mut Proto = (*fs).f;
     i = 0 as i32;

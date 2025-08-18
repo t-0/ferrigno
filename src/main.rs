@@ -1,7 +1,7 @@
 #![feature(extern_types, c_variadic)]
 mod c2rustunnamed_28;
 mod abslineinfo;
-mod blockcnt;
+mod blockcontrol;
 mod bufffs;
 mod c;
 mod c2rustunnamed_23;
@@ -13,11 +13,11 @@ mod callinfo;
 mod calls;
 mod closep;
 mod closure;
-mod conscontrol;
+mod constructorcontrol;
 mod dumpstate;
-mod dyndata;
-mod expdesc;
-mod funcstate;
+mod dynamicdata;
+mod expressiondescription;
+mod functionstate;
 mod gcobject;
 mod gcunion;
 mod gmatchstate;

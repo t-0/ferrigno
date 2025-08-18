@@ -1,13 +1,13 @@
 use crate::proto::*;
 use crate::lexstate::*;
-use crate::blockcnt::*;
+use crate::blockcontrol::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct FuncState {
+pub struct FunctionState {
     pub f: *mut Proto,
-    pub prev: *mut FuncState,
+    pub prev: *mut FunctionState,
     pub ls: *mut LexState,
-    pub bl: *mut BlockCnt,
+    pub bl: *mut BlockControl,
     pub pc: i32,
     pub lasttarget: i32,
     pub previousline: i32,
