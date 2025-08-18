@@ -18,7 +18,7 @@ pub struct LexState {
     pub t: Token,
     pub lookahead: Token,
     pub fs: *mut FunctionState,
-    pub L: *mut State,
+    pub state: *mut State,
     pub z: *mut ZIO,
     pub buff: *mut Mbuffer,
     pub h: *mut Table,

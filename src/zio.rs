@@ -10,5 +10,5 @@ pub struct ZIO {
     pub p: *const i8,
     pub reader: ReadFunction,
     pub data: *mut libc::c_void,
-    pub L: *mut State,
+    pub state: *mut State,
 }

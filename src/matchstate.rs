@@ -8,7 +8,7 @@ pub struct MatchState {
     pub src_init: *const i8,
     pub src_end: *const i8,
     pub p_end: *const i8,
-    pub L: *mut State,
+    pub state: *mut State,
     pub matchdepth: i32,
     pub level: u8,
     pub capture: [MatchStateCapture; 32],

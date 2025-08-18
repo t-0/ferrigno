@@ -6,7 +6,7 @@ use crate::writefunction::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DumpState {
-    pub L: *mut State,
+    pub state: *mut State,
     pub writer: WriteFunction,
     pub data: *mut libc::c_void,
     pub strip: i32,

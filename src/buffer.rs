@@ -8,7 +8,7 @@ pub struct Buffer {
     pub b: *mut i8,
     pub size: u64,
     pub n: u64,
-    pub L: *mut State,
+    pub state: *mut State,
     pub init: BufferInit,
 }
 #[derive(Copy, Clone)]
