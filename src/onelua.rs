@@ -10244,19 +10244,19 @@ pub unsafe extern "C" fn loadBlock(
     mut b: *mut libc::c_void,
     mut size: u64,
 ) {
-    if luaZ_read((*S).Z, b, size) != 0 as i32 as u64 {
+    if luaZ_read((*S).zio, b, size) != 0 as i32 as u64 {
         error(S, b"truncated chunk\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn loadByte(mut S: *mut LoadState) -> u8 {
-    let fresh25 = (*(*S).Z).n;
-    (*(*S).Z).n = ((*(*S).Z).n).wrapping_sub(1);
+    let fresh25 = (*(*S).zio).n;
+    (*(*S).zio).n = ((*(*S).zio).n).wrapping_sub(1);
     let mut b: i32 = if fresh25 > 0 as i32 as u64 {
-        let fresh26 = (*(*S).Z).p;
-        (*(*S).Z).p = ((*(*S).Z).p).offset(1);
+        let fresh26 = (*(*S).zio).p;
+        (*(*S).zio).p = ((*(*S).zio).p).offset(1);
         *fresh26 as u8 as i32
     } else {
-        luaZ_fill((*S).Z)
+        luaZ_fill((*S).zio)
     };
     if b == -1 {
         error(S, b"truncated chunk\0" as *const u8 as *const i8);
@@ -10740,12 +10740,12 @@ pub unsafe extern "C" fn checkHeader(mut S: *mut LoadState) {
 }
 pub unsafe extern "C" fn luaU_undump(
     mut state: *mut State,
-    mut Z: *mut ZIO,
+    mut zio: *mut ZIO,
     mut name: *const i8,
 ) -> *mut LClosure {
     let mut S: LoadState = LoadState {
         state: 0 as *mut State,
-        Z: 0 as *mut ZIO,
+        zio: 0 as *mut ZIO,
         name: 0 as *const i8,
     };
     let mut cl: *mut LClosure = 0 as *mut LClosure;
@@ -10762,7 +10762,7 @@ pub unsafe extern "C" fn luaU_undump(
         S.name = name;
     }
     S.state = state;
-    S.Z = Z;
+    S.zio = zio;
     checkHeader(&mut S);
     cl = luaF_newLclosure(state, loadByte(&mut S) as i32);
     let mut io: *mut TValue = &mut (*(*state).top.p).val;
@@ -11275,7 +11275,7 @@ pub unsafe extern "C" fn reglevel(
     return 0;
 }
 pub unsafe extern "C" fn luaY_nvarstack(mut fs: *mut FunctionState) -> i32 {
-    return reglevel(fs, (*fs).nactvar as i32);
+    return reglevel(fs, (*fs).count_active_variables as i32);
 }
 pub unsafe extern "C" fn localdebuginfo(
     mut fs: *mut FunctionState,
@@ -11341,8 +11341,8 @@ pub unsafe extern "C" fn adjustlocalvars(mut ls: *mut LexState, mut nvars: i32) 
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < nvars {
-        let fresh39 = (*fs).nactvar;
-        (*fs).nactvar = ((*fs).nactvar).wrapping_add(1);
+        let fresh39 = (*fs).count_active_variables;
+        (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_add(1);
         let mut vidx: i32 = fresh39 as i32;
         let mut var: *mut Vardesc = getlocalvardesc(fs, vidx);
         let fresh40 = reglevel_0;
@@ -11353,10 +11353,10 @@ pub unsafe extern "C" fn adjustlocalvars(mut ls: *mut LexState, mut nvars: i32) 
     }
 }
 pub unsafe extern "C" fn removevars(mut fs: *mut FunctionState, mut tolevel: i32) {
-    (*(*(*fs).ls).dyd).actvar.n -= (*fs).nactvar as i32 - tolevel;
-    while (*fs).nactvar as i32 > tolevel {
-        (*fs).nactvar = ((*fs).nactvar).wrapping_sub(1);
-        let mut var: *mut LocalVariable = localdebuginfo(fs, (*fs).nactvar as i32);
+    (*(*(*fs).ls).dyd).actvar.n -= (*fs).count_active_variables as i32 - tolevel;
+    while (*fs).count_active_variables as i32 > tolevel {
+        (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_sub(1);
+        let mut var: *mut LocalVariable = localdebuginfo(fs, (*fs).count_active_variables as i32);
         if !var.is_null() {
             (*var).endpc = (*fs).pc;
         }
@@ -11451,7 +11451,7 @@ pub unsafe extern "C" fn searchvar(
     mut var: *mut ExpressionDescription,
 ) -> i32 {
     let mut i: i32 = 0;
-    i = (*fs).nactvar as i32 - 1 as i32;
+    i = (*fs).count_active_variables as i32 - 1 as i32;
     while i >= 0 as i32 {
         let mut vd: *mut Vardesc = getlocalvardesc(fs, i);
         if n == (*vd).vd.name {
@@ -11467,17 +11467,17 @@ pub unsafe extern "C" fn searchvar(
     return -1;
 }
 pub unsafe extern "C" fn markupval(mut fs: *mut FunctionState, mut level: i32) {
-    let mut bl: *mut BlockControl = (*fs).bl;
-    while (*bl).nactvar as i32 > level {
-        bl = (*bl).previous;
+    let mut blockcontrol: *mut BlockControl = (*fs).blockcontrol;
+    while (*blockcontrol).count_active_variables as i32 > level {
+        blockcontrol = (*blockcontrol).previous;
     }
-    (*bl).upval = 1 as i32 as u8;
+    (*blockcontrol).count_upvalues = 1 as i32 as u8;
     (*fs).needclose = 1 as i32 as u8;
 }
 pub unsafe extern "C" fn marktobeclosed(mut fs: *mut FunctionState) {
-    let mut bl: *mut BlockControl = (*fs).bl;
-    (*bl).upval = 1 as i32 as u8;
-    (*bl).insidetbc = 1 as i32 as u8;
+    let mut blockcontrol: *mut BlockControl = (*fs).blockcontrol;
+    (*blockcontrol).count_upvalues = 1 as i32 as u8;
+    (*blockcontrol).inside_tbc = 1 as i32 as u8;
     (*fs).needclose = 1 as i32 as u8;
 }
 pub unsafe extern "C" fn singlevaraux(
@@ -11560,7 +11560,7 @@ pub unsafe extern "C" fn adjust_assign(
 pub unsafe extern "C" fn jumpscopeerror(mut ls: *mut LexState, mut gt: *mut Labeldesc) -> ! {
     let mut varname: *const i8 = ((*(*getlocalvardesc(
         (*ls).fs,
-        (*gt).nactvar as i32,
+        (*gt).count_active_variables as i32,
     ))
         .vd
         .name)
@@ -11585,7 +11585,7 @@ pub unsafe extern "C" fn solvegoto(
     let mut i: i32 = 0;
     let mut gl: *mut Labellist = &mut (*(*ls).dyd).gt;
     let mut gt: *mut Labeldesc = &mut *((*gl).arr).offset(g as isize) as *mut Labeldesc;
-    if ((((*gt).nactvar as i32) < (*label).nactvar as i32) as i32
+    if ((((*gt).count_active_variables as i32) < (*label).count_active_variables as i32) as i32
         != 0 as i32) as i32 as i64 != 0
     {
         jumpscopeerror(ls, gt);
@@ -11606,7 +11606,7 @@ pub unsafe extern "C" fn findlabel(
 ) -> *mut Labeldesc {
     let mut i: i32 = 0;
     let mut dyd: *mut DynamicData = (*ls).dyd;
-    i = (*(*ls).fs).firstlabel;
+    i = (*(*ls).fs).first_label;
     while i < (*dyd).label.n {
         let mut lb: *mut Labeldesc = &mut *((*dyd).label.arr).offset(i as isize)
             as *mut Labeldesc;
@@ -11647,7 +11647,7 @@ pub unsafe extern "C" fn newlabelentry(
     let ref mut fresh44 = (*((*l).arr).offset(n as isize)).name;
     *fresh44 = name;
     (*((*l).arr).offset(n as isize)).line = line;
-    (*((*l).arr).offset(n as isize)).nactvar = (*(*ls).fs).nactvar;
+    (*((*l).arr).offset(n as isize)).count_active_variables = (*(*ls).fs).count_active_variables;
     (*((*l).arr).offset(n as isize)).close = 0 as i32 as u8;
     (*((*l).arr).offset(n as isize)).pc = pc;
     (*l).n = n + 1 as i32;
@@ -11666,7 +11666,7 @@ pub unsafe extern "C" fn solvegotos(
     mut lb: *mut Labeldesc,
 ) -> i32 {
     let mut gl: *mut Labellist = &mut (*(*ls).dyd).gt;
-    let mut i: i32 = (*(*(*ls).fs).bl).firstgoto;
+    let mut i: i32 = (*(*(*ls).fs).blockcontrol).first_goto;
     let mut needsclose: i32 = 0 as i32;
     while i < (*gl).n {
         if (*((*gl).arr).offset(i as isize)).name == (*lb).name {
@@ -11688,7 +11688,7 @@ pub unsafe extern "C" fn createlabel(
     let mut ll: *mut Labellist = &mut (*(*ls).dyd).label;
     let mut l: i32 = newlabelentry(ls, ll, name, line, luaK_getlabel(fs));
     if last != 0 {
-        (*((*ll).arr).offset(l as isize)).nactvar = (*(*fs).bl).nactvar;
+        (*((*ll).arr).offset(l as isize)).count_active_variables = (*(*fs).blockcontrol).count_active_variables;
     }
     if solvegotos(ls, &mut *((*ll).arr).offset(l as isize)) != 0 {
         luaK_codeABCk(
@@ -11703,39 +11703,39 @@ pub unsafe extern "C" fn createlabel(
     }
     return 0;
 }
-pub unsafe extern "C" fn movegotosout(mut fs: *mut FunctionState, mut bl: *mut BlockControl) {
+pub unsafe extern "C" fn movegotosout(mut fs: *mut FunctionState, mut blockcontrol: *mut BlockControl) {
     let mut i: i32 = 0;
     let mut gl: *mut Labellist = &mut (*(*(*fs).ls).dyd).gt;
-    i = (*bl).firstgoto;
+    i = (*blockcontrol).first_goto;
     while i < (*gl).n {
         let mut gt: *mut Labeldesc = &mut *((*gl).arr).offset(i as isize)
             as *mut Labeldesc;
-        if reglevel(fs, (*gt).nactvar as i32)
-            > reglevel(fs, (*bl).nactvar as i32)
+        if reglevel(fs, (*gt).count_active_variables as i32)
+            > reglevel(fs, (*blockcontrol).count_active_variables as i32)
         {
             (*gt)
-                .close = ((*gt).close as i32 | (*bl).upval as i32)
+                .close = ((*gt).close as i32 | (*blockcontrol).count_upvalues as i32)
                 as u8;
         }
-        (*gt).nactvar = (*bl).nactvar;
+        (*gt).count_active_variables = (*blockcontrol).count_active_variables;
         i += 1;
     }
 }
 pub unsafe extern "C" fn enterblock(
     mut fs: *mut FunctionState,
-    mut bl: *mut BlockControl,
-    mut isloop: u8,
+    mut blockcontrol: *mut BlockControl,
+    mut is_loop: u8,
 ) {
-    (*bl).isloop = isloop;
-    (*bl).nactvar = (*fs).nactvar;
-    (*bl).firstlabel = (*(*(*fs).ls).dyd).label.n;
-    (*bl).firstgoto = (*(*(*fs).ls).dyd).gt.n;
-    (*bl).upval = 0 as i32 as u8;
-    (*bl)
-        .insidetbc = (!((*fs).bl).is_null() && (*(*fs).bl).insidetbc as i32 != 0)
+    (*blockcontrol).is_loop = is_loop;
+    (*blockcontrol).count_active_variables = (*fs).count_active_variables;
+    (*blockcontrol).first_label = (*(*(*fs).ls).dyd).label.n;
+    (*blockcontrol).first_goto = (*(*(*fs).ls).dyd).gt.n;
+    (*blockcontrol).count_upvalues = 0 as i32 as u8;
+    (*blockcontrol)
+        .inside_tbc = (!((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).inside_tbc as i32 != 0)
         as i32 as u8;
-    (*bl).previous = (*fs).bl;
-    (*fs).bl = bl;
+    (*blockcontrol).previous = (*fs).blockcontrol;
+    (*fs).blockcontrol = blockcontrol;
 }
 pub unsafe extern "C" fn undefgoto(mut ls: *mut LexState, mut gt: *mut Labeldesc) -> ! {
     let mut msg: *const i8 = 0 as *const i8;
@@ -11763,12 +11763,12 @@ pub unsafe extern "C" fn undefgoto(mut ls: *mut LexState, mut gt: *mut Labeldesc
     luaK_semerror(ls, msg);
 }
 pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
-    let mut bl: *mut BlockControl = (*fs).bl;
+    let mut blockcontrol: *mut BlockControl = (*fs).blockcontrol;
     let mut ls: *mut LexState = (*fs).ls;
     let mut hasclose: i32 = 0 as i32;
-    let mut stklevel: i32 = reglevel(fs, (*bl).nactvar as i32);
-    removevars(fs, (*bl).nactvar as i32);
-    if (*bl).isloop != 0 {
+    let mut stklevel: i32 = reglevel(fs, (*blockcontrol).count_active_variables as i32);
+    removevars(fs, (*blockcontrol).count_active_variables as i32);
+    if (*blockcontrol).is_loop != 0 {
         hasclose = createlabel(
             ls,
             luaS_newlstr(
@@ -11784,7 +11784,7 @@ pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
             0,
         );
     }
-    if hasclose == 0 && !((*bl).previous).is_null() && (*bl).upval as i32 != 0 {
+    if hasclose == 0 && !((*blockcontrol).previous).is_null() && (*blockcontrol).count_upvalues as i32 != 0 {
         luaK_codeABCk(
             fs,
             OP_CLOSE,
@@ -11795,12 +11795,12 @@ pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
         );
     }
     (*fs).freereg = stklevel as u8;
-    (*(*ls).dyd).label.n = (*bl).firstlabel;
-    (*fs).bl = (*bl).previous;
-    if !((*bl).previous).is_null() {
-        movegotosout(fs, bl);
-    } else if (*bl).firstgoto < (*(*ls).dyd).gt.n {
-        undefgoto(ls, &mut *((*(*ls).dyd).gt.arr).offset((*bl).firstgoto as isize));
+    (*(*ls).dyd).label.n = (*blockcontrol).first_label;
+    (*fs).blockcontrol = (*blockcontrol).previous;
+    if !((*blockcontrol).previous).is_null() {
+        movegotosout(fs, blockcontrol);
+    } else if (*blockcontrol).first_goto < (*(*ls).dyd).gt.n {
+        undefgoto(ls, &mut *((*(*ls).dyd).gt.arr).offset((*blockcontrol).first_goto as isize));
     }
 }
 pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
@@ -11875,7 +11875,7 @@ pub unsafe extern "C" fn codeclosure(mut ls: *mut LexState, mut v: *mut Expressi
 pub unsafe extern "C" fn open_func(
     mut ls: *mut LexState,
     mut fs: *mut FunctionState,
-    mut bl: *mut BlockControl,
+    mut blockcontrol: *mut BlockControl,
 ) {
     let mut f: *mut Proto = (*fs).f;
     (*fs).prev = (*ls).fs;
@@ -11891,11 +11891,11 @@ pub unsafe extern "C" fn open_func(
     (*fs).np = 0 as i32;
     (*fs).nups = 0 as i32 as u8;
     (*fs).ndebugvars = 0 as i32 as i16;
-    (*fs).nactvar = 0 as i32 as u8;
+    (*fs).count_active_variables = 0 as i32 as u8;
     (*fs).needclose = 0 as i32 as u8;
     (*fs).firstlocal = (*(*ls).dyd).actvar.n;
-    (*fs).firstlabel = (*(*ls).dyd).label.n;
-    (*fs).bl = 0 as *mut BlockControl;
+    (*fs).first_label = (*(*ls).dyd).label.n;
+    (*fs).blockcontrol = 0 as *mut BlockControl;
     (*f).source = (*ls).source;
     if (*f).marked as i32 & (1 as i32) << 5 as i32 != 0
         && (*(*f).source).marked as i32
@@ -11909,7 +11909,7 @@ pub unsafe extern "C" fn open_func(
         );
     } else {};
     (*f).maxstacksize = 2 as i32 as u8;
-    enterblock(fs, bl, 0 as i32 as u8);
+    enterblock(fs, blockcontrol, 0 as i32 as u8);
 }
 pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
     let mut state: *mut State = (*ls).state;
@@ -12194,11 +12194,11 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
         }
     }
     adjustlocalvars(ls, nparams);
-    (*f).numparams = (*fs).nactvar;
+    (*f).numparams = (*fs).count_active_variables;
     if isvararg != 0 {
         setvararg(fs, (*f).numparams as i32);
     }
-    luaK_reserveregs(fs, (*fs).nactvar as i32);
+    luaK_reserveregs(fs, (*fs).count_active_variables as i32);
 }
 pub unsafe extern "C" fn body(
     mut ls: *mut LexState,
@@ -12210,7 +12210,7 @@ pub unsafe extern "C" fn body(
         f: 0 as *mut Proto,
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
-        bl: 0 as *mut BlockControl,
+        blockcontrol: 0 as *mut BlockControl,
         pc: 0,
         lasttarget: 0,
         previousline: 0,
@@ -12218,26 +12218,26 @@ pub unsafe extern "C" fn body(
         np: 0,
         nabslineinfo: 0,
         firstlocal: 0,
-        firstlabel: 0,
+        first_label: 0,
         ndebugvars: 0,
-        nactvar: 0,
+        count_active_variables: 0,
         nups: 0,
         freereg: 0,
         iwthabs: 0,
         needclose: 0,
     };
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     new_fs.f = addprototype(ls);
     (*new_fs.f).linedefined = line;
-    open_func(ls, &mut new_fs, &mut bl);
+    open_func(ls, &mut new_fs, &mut blockcontrol);
     checknext(ls, '(' as i32);
     if ismethod != 0 {
         new_localvar(
@@ -12687,16 +12687,16 @@ pub unsafe extern "C" fn expr(mut ls: *mut LexState, mut v: *mut ExpressionDescr
 }
 pub unsafe extern "C" fn block(mut ls: *mut LexState) {
     let mut fs: *mut FunctionState = (*ls).fs;
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
-    enterblock(fs, &mut bl, 0 as i32 as u8);
+    enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
     statlist(ls);
     leaveblock(fs);
 }
@@ -12836,7 +12836,7 @@ pub unsafe extern "C" fn gotostat(mut ls: *mut LexState) {
     if lb.is_null() {
         newgotoentry(ls, name, line, luaK_jump(fs));
     } else {
-        let mut lblevel: i32 = reglevel(fs, (*lb).nactvar as i32);
+        let mut lblevel: i32 = reglevel(fs, (*lb).count_active_variables as i32);
         if luaY_nvarstack(fs) > lblevel {
             luaK_codeABCk(
                 fs,
@@ -12898,19 +12898,19 @@ pub unsafe extern "C" fn whilestat(mut ls: *mut LexState, mut line: i32) {
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut whileinit: i32 = 0;
     let mut condexit: i32 = 0;
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     luaX_next(ls);
     whileinit = luaK_getlabel(fs);
     condexit = cond(ls);
-    enterblock(fs, &mut bl, 1 as u8);
+    enterblock(fs, &mut blockcontrol, 1 as u8);
     checknext(ls, TK_DO as i32);
     block(ls);
     luaK_patchlist(fs, luaK_jump(fs), whileinit);
@@ -12924,21 +12924,21 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
     let mut repeat_init: i32 = luaK_getlabel(fs);
     let mut bl1: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     let mut bl2: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     enterblock(fs, &mut bl1, 1 as u8);
     enterblock(fs, &mut bl2, 0 as i32 as u8);
@@ -12947,13 +12947,13 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
     check_match(ls, TK_UNTIL as i32, TK_REPEAT as i32, line);
     condexit = cond(ls);
     leaveblock(fs);
-    if bl2.upval != 0 {
+    if bl2.count_upvalues != 0 {
         let mut exit_0: i32 = luaK_jump(fs);
         luaK_patchtohere(fs, condexit);
         luaK_codeABCk(
             fs,
             OP_CLOSE,
-            reglevel(fs, bl2.nactvar as i32),
+            reglevel(fs, bl2.count_active_variables as i32),
             0,
             0,
             0,
@@ -13015,14 +13015,14 @@ pub unsafe extern "C" fn forbody(
 ) {
     static mut forprep_0: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
     static mut forloop: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut prep: i32 = 0;
@@ -13034,7 +13034,7 @@ pub unsafe extern "C" fn forbody(
         base,
         0 as i32 as u32,
     );
-    enterblock(fs, &mut bl, 0 as i32 as u8);
+    enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
     adjustlocalvars(ls, nvars);
     luaK_reserveregs(fs, nvars);
     block(ls);
@@ -13171,16 +13171,16 @@ pub unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TStr
 pub unsafe extern "C" fn forstat(mut ls: *mut LexState, mut line: i32) {
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut varname: *mut TString = 0 as *mut TString;
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
-    enterblock(fs, &mut bl, 1 as u8);
+    enterblock(fs, &mut blockcontrol, 1 as u8);
     luaX_next(ls);
     varname = str_checkname(ls);
     match (*ls).t.token {
@@ -13204,14 +13204,14 @@ pub unsafe extern "C" fn test_then_block(
     mut ls: *mut LexState,
     mut escapelist: *mut i32,
 ) {
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut v: ExpressionDescription = ExpressionDescription {
@@ -13228,7 +13228,7 @@ pub unsafe extern "C" fn test_then_block(
         let mut line: i32 = (*ls).linenumber;
         luaK_goiffalse((*ls).fs, &mut v);
         luaX_next(ls);
-        enterblock(fs, &mut bl, 0 as i32 as u8);
+        enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
         newgotoentry(
             ls,
             luaS_newlstr(
@@ -13252,7 +13252,7 @@ pub unsafe extern "C" fn test_then_block(
         }
     } else {
         luaK_goiftrue((*ls).fs, &mut v);
-        enterblock(fs, &mut bl, 0 as i32 as u8);
+        enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
         jf = v.f;
     }
     statlist(ls);
@@ -13285,7 +13285,7 @@ pub unsafe extern "C" fn localfunc(mut ls: *mut LexState) {
         f: 0,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
-    let mut fvar: i32 = (*fs).nactvar as i32;
+    let mut fvar: i32 = (*fs).count_active_variables as i32;
     new_localvar(ls, str_checkname(ls));
     adjustlocalvars(ls, 1);
     body(ls, &mut b, 0, (*ls).linenumber);
@@ -13355,7 +13355,7 @@ pub unsafe extern "C" fn localstat(mut ls: *mut LexState) {
                         as *const i8,
                 );
             }
-            toclose = (*fs).nactvar as i32 + nvars;
+            toclose = (*fs).count_active_variables as i32 + nvars;
         }
         nvars += 1;
         if !(testnext(ls, ',' as i32) != 0) {
@@ -13374,8 +13374,8 @@ pub unsafe extern "C" fn localstat(mut ls: *mut LexState) {
     {
         (*var).vd.kind = 3 as i32 as u8;
         adjustlocalvars(ls, nvars - 1 as i32);
-        (*fs).nactvar = ((*fs).nactvar).wrapping_add(1);
-        (*fs).nactvar;
+        (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_add(1);
+        (*fs).count_active_variables;
     } else {
         adjust_assign(ls, nvars, nexps, &mut e);
         adjustlocalvars(ls, nvars);
@@ -13470,7 +13470,7 @@ pub unsafe extern "C" fn retstat(mut ls: *mut LexState) {
         {
             luaK_setreturns(fs, &mut e, -1);
             if e.k as u32 == VCALL as i32 as u32
-                && nret == 1 as i32 && (*(*fs).bl).insidetbc == 0
+                && nret == 1 as i32 && (*(*fs).blockcontrol).inside_tbc == 0
             {
                 *((*(*fs).f).code)
                     .offset(
@@ -13551,17 +13551,17 @@ pub unsafe extern "C" fn statement(mut ls: *mut LexState) {
     (*(*ls).state).count_c_calls;
 }
 pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FunctionState) {
-    let mut bl: BlockControl = BlockControl {
+    let mut blockcontrol: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
-        firstlabel: 0,
-        firstgoto: 0,
-        nactvar: 0,
-        upval: 0,
-        isloop: 0,
-        insidetbc: 0,
+        first_label: 0,
+        first_goto: 0,
+        count_active_variables: 0,
+        count_upvalues: 0,
+        is_loop: 0,
+        inside_tbc: 0,
     };
     let mut env: *mut Upvaldesc = 0 as *mut Upvaldesc;
-    open_func(ls, fs, &mut bl);
+    open_func(ls, fs, &mut blockcontrol);
     setvararg(fs, 0 as i32);
     env = allocupvalue(fs);
     (*env).instack = 1 as i32 as u8;
@@ -13617,7 +13617,7 @@ pub unsafe extern "C" fn luaY_parser(
         f: 0 as *mut Proto,
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
-        bl: 0 as *mut BlockControl,
+        blockcontrol: 0 as *mut BlockControl,
         pc: 0,
         lasttarget: 0,
         previousline: 0,
@@ -13625,9 +13625,9 @@ pub unsafe extern "C" fn luaY_parser(
         np: 0,
         nabslineinfo: 0,
         firstlocal: 0,
-        firstlabel: 0,
+        first_label: 0,
         ndebugvars: 0,
-        nactvar: 0,
+        count_active_variables: 0,
         nups: 0,
         freereg: 0,
         iwthabs: 0,
@@ -19916,7 +19916,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                         << 0 as i32) as i32 as isize,
                             );
                         let mut slot: *const TValue = 0 as *const TValue;
-                        let mut upval: *mut TValue = (**((*cl).upvals)
+                        let mut count_upvalues: *mut TValue = (**((*cl).upvals)
                             .as_mut_ptr()
                             .offset(
                                 (i
@@ -19938,7 +19938,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         let mut key: *mut TString = &mut (*((*rc).value_.gc
                             as *mut GCUnion))
                             .ts;
-                        if if !((*upval).tt_ as i32
+                        if if !((*count_upvalues).tt_ as i32
                             == 5 as i32 | (0 as i32) << 4 as i32
                                 | (1 as i32) << 6 as i32)
                         {
@@ -19946,7 +19946,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             0 as i32
                         } else {
                             slot = luaH_getshortstr(
-                                &mut (*((*upval).value_.gc as *mut GCUnion)).h,
+                                &mut (*((*count_upvalues).value_.gc as *mut GCUnion)).h,
                                 key,
                             );
                             !((*slot).tt_ as i32 & 0xf as i32
@@ -19960,7 +19960,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         } else {
                             (*ci).u.l.savedpc = pc;
                             (*state).top.p = (*ci).top.p;
-                            luaV_finishget(state, upval, rc, ra_10, slot);
+                            luaV_finishget(state, count_upvalues, rc, ra_10, slot);
                             trap = (*ci).u.l.trap;
                         }
                         continue;

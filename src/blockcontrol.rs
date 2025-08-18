@@ -2,10 +2,10 @@
 #[repr(C)]
 pub struct BlockControl {
     pub previous: *mut BlockControl,
-    pub firstlabel: i32,
-    pub firstgoto: i32,
-    pub nactvar: u8,
-    pub upval: u8,
-    pub isloop: u8,
-    pub insidetbc: u8,
+    pub first_label: i32,
+    pub first_goto: i32,
+    pub count_active_variables: u8,
+    pub count_upvalues: u8,
+    pub is_loop: u8,
+    pub inside_tbc: u8,
 }

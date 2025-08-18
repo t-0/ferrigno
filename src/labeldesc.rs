@@ -6,7 +6,7 @@ pub struct Labeldesc {
     pub name: *mut TString,
     pub pc: i32,
     pub line: i32,
-    pub nactvar: u8,
+    pub count_active_variables: u8,
     pub close: u8,
 }
 #[derive(Copy, Clone)]
