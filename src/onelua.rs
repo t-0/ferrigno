@@ -38,7 +38,7 @@ use crate::proto::*;
 use crate::gcunion::*;
 use crate::udata::*;
 use crate::closure::*;
-use crate::locvar::*;
+use crate::localvariable::*;
 use crate::abslineinfo::*;
 use crate::calls::*;
 use crate::zio::*;
@@ -70,7 +70,7 @@ use crate::loadstate::*;
 use crate::streamwriter::*;
 use crate::conscontrol::*;
 use crate::stkidrel::*;
-use crate::lhs_assign::*;
+use crate::lhsassign::*;
 use crate::c2rustunnamed_23::*;
 use crate::c2rustunnamed_27::*;
 use crate::c2rustunnamed_28::*;
@@ -9751,7 +9751,7 @@ pub unsafe extern "C" fn luaF_newproto(mut L: *mut State) -> *mut Proto {
     (*f).numparams = 0 as i32 as u8;
     (*f).is_vararg = 0 as i32 as u8;
     (*f).maxstacksize = 0 as i32 as u8;
-    (*f).locvars = 0 as *mut LocVar;
+    (*f).locvars = 0 as *mut LocalVariable;
     (*f).sizelocvars = 0 as i32;
     (*f).linedefined = 0 as i32;
     (*f).lastlinedefined = 0 as i32;
@@ -9793,7 +9793,7 @@ pub unsafe extern "C" fn luaF_freeproto(mut L: *mut State, mut f: *mut Proto) {
         L,
         (*f).locvars as *mut libc::c_void,
         ((*f).sizelocvars as u64)
-            .wrapping_mul(::core::mem::size_of::<LocVar>() as u64),
+            .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
     );
     luaM_free_(
         L,
@@ -10606,7 +10606,7 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         >= ::core::mem::size_of::<u64>() as u64
         && (n as u64).wrapping_add(1 as i32 as u64)
             > (!(0 as i32 as u64))
-                .wrapping_div(::core::mem::size_of::<LocVar>() as u64)
+                .wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
     {
         luaM_toobig((*S).L);
     } else {};
@@ -10614,9 +10614,9 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         .locvars = luaM_malloc_(
         (*S).L,
         (n as u64)
-            .wrapping_mul(::core::mem::size_of::<LocVar>() as u64),
+            .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
         0,
-    ) as *mut LocVar;
+    ) as *mut LocalVariable;
     (*f).sizelocvars = n;
     i = 0 as i32;
     while i < n {
@@ -11174,19 +11174,19 @@ pub unsafe extern "C" fn registerlocalvar(
         (*f).locvars as *mut libc::c_void,
         (*fs).ndebugvars as i32,
         &mut (*f).sizelocvars,
-        ::core::mem::size_of::<LocVar>() as u64 as i32,
+        ::core::mem::size_of::<LocalVariable>() as u64 as i32,
         (if 32767 as i32 as u64
             <= (!(0 as i32 as u64))
-                .wrapping_div(::core::mem::size_of::<LocVar>() as u64)
+                .wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
         {
             32767 as i32 as u32
         } else {
             (!(0 as i32 as u64))
-                .wrapping_div(::core::mem::size_of::<LocVar>() as u64)
+                .wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
                 as u32
         }) as i32,
         b"local variables\0" as *const u8 as *const i8,
-    ) as *mut LocVar;
+    ) as *mut LocalVariable;
     while oldsize < (*f).sizelocvars {
         let fresh33 = oldsize;
         oldsize = oldsize + 1;
@@ -11282,13 +11282,13 @@ pub unsafe extern "C" fn luaY_nvarstack(mut fs: *mut FuncState) -> i32 {
 pub unsafe extern "C" fn localdebuginfo(
     mut fs: *mut FuncState,
     mut vidx: i32,
-) -> *mut LocVar {
+) -> *mut LocalVariable {
     let mut vd: *mut Vardesc = getlocalvardesc(fs, vidx);
     if (*vd).vd.kind as i32 == 3 as i32 {
-        return 0 as *mut LocVar
+        return 0 as *mut LocalVariable
     } else {
         let mut idx: i32 = (*vd).vd.pidx as i32;
-        return &mut *((*(*fs).f).locvars).offset(idx as isize) as *mut LocVar;
+        return &mut *((*(*fs).f).locvars).offset(idx as isize) as *mut LocalVariable;
     };
 }
 pub unsafe extern "C" fn init_var(
@@ -11358,7 +11358,7 @@ pub unsafe extern "C" fn removevars(mut fs: *mut FuncState, mut tolevel: i32) {
     (*(*(*fs).ls).dyd).actvar.n -= (*fs).nactvar as i32 - tolevel;
     while (*fs).nactvar as i32 > tolevel {
         (*fs).nactvar = ((*fs).nactvar).wrapping_sub(1);
-        let mut var: *mut LocVar = localdebuginfo(fs, (*fs).nactvar as i32);
+        let mut var: *mut LocalVariable = localdebuginfo(fs, (*fs).nactvar as i32);
         if !var.is_null() {
             (*var).endpc = (*fs).pc;
         }
@@ -11966,8 +11966,8 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         (*f).locvars as *mut libc::c_void,
         &mut (*f).sizelocvars,
         (*fs).ndebugvars as i32,
-        ::core::mem::size_of::<LocVar>() as u64 as i32,
-    ) as *mut LocVar;
+        ::core::mem::size_of::<LocalVariable>() as u64 as i32,
+    ) as *mut LocalVariable;
     (*f)
         .upvalues = luaM_shrinkvector_(
         L,
@@ -12704,7 +12704,7 @@ pub unsafe extern "C" fn block(mut ls: *mut LexState) {
 }
 pub unsafe extern "C" fn check_conflict(
     mut ls: *mut LexState,
-    mut lh: *mut LHS_assign,
+    mut lh: *mut LHSAssign,
     mut v: *mut expdesc,
 ) {
     let mut fs: *mut FuncState = (*ls).fs;
@@ -12765,7 +12765,7 @@ pub unsafe extern "C" fn check_conflict(
 }
 pub unsafe extern "C" fn restassign(
     mut ls: *mut LexState,
-    mut lh: *mut LHS_assign,
+    mut lh: *mut LHSAssign,
     mut nvars: i32,
 ) {
     let mut e: expdesc = expdesc {
@@ -12781,8 +12781,8 @@ pub unsafe extern "C" fn restassign(
     }
     check_readonly(ls, &mut (*lh).v);
     if testnext(ls, ',' as i32) != 0 {
-        let mut nv: LHS_assign = LHS_assign {
-            prev: 0 as *mut LHS_assign,
+        let mut nv: LHSAssign = LHSAssign {
+            prev: 0 as *mut LHSAssign,
             v: expdesc {
                 k: VVOID,
                 u: C2RustUnnamed_23 { ival: 0 },
@@ -13422,8 +13422,8 @@ pub unsafe extern "C" fn funcstat(mut ls: *mut LexState, mut line: i32) {
 }
 pub unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
     let mut fs: *mut FuncState = (*ls).fs;
-    let mut v: LHS_assign = LHS_assign {
-        prev: 0 as *mut LHS_assign,
+    let mut v: LHSAssign = LHSAssign {
+        prev: 0 as *mut LHSAssign,
         v: expdesc {
             k: VVOID,
             u: C2RustUnnamed_23 { ival: 0 },
@@ -13433,7 +13433,7 @@ pub unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
     };
     suffixedexp(ls, &mut v.v);
     if (*ls).t.token == '=' as i32 || (*ls).t.token == ',' as i32 {
-        v.prev = 0 as *mut LHS_assign;
+        v.prev = 0 as *mut LHSAssign;
         restassign(ls, &mut v, 1);
     } else {
         let mut inst: *mut u32 = 0 as *mut u32;

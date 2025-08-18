@@ -31,7 +31,7 @@ use crate::proto::*;
 use crate::gcunion::*;
 use crate::udata::*;
 use crate::closure::*;
-use crate::locvar::*;
+use crate::localvariable::*;
 use crate::abslineinfo::*;
 use crate::upvaldesc::*;
 use crate::readfunction::*;

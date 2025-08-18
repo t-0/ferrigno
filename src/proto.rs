@@ -1,7 +1,7 @@
 use crate::gcobject::*;
 use crate::tstring::*;
 use crate::stkidrel::*;
-use crate::locvar::*;
+use crate::localvariable::*;
 use crate::abslineinfo::*;
 use crate::upvaldesc::*;
 #[derive(Copy, Clone)]
@@ -28,7 +28,7 @@ pub struct Proto {
     pub upvalues: *mut Upvaldesc,
     pub lineinfo: *mut i8,
     pub abslineinfo: *mut AbsLineInfo,
-    pub locvars: *mut LocVar,
+    pub locvars: *mut LocalVariable,
     pub source: *mut TString,
     pub gclist: *mut GCObject,
 }
