@@ -1,14 +1,10 @@
 #![feature(extern_types, c_variadic)]
-mod c2rustunnamed_28;
-mod abslineinfo;
+mod nativeendian;
+mod absolutelineinfo;
 mod blockcontrol;
 mod bufffs;
 mod c;
-mod c2rustunnamed_23;
-mod c2rustunnamed_24;
-mod c2rustunnamed_25;
-mod c2rustunnamed_27;
-mod c2rustunnamed_30;
+mod rawvalue;
 mod callinfo;
 mod calls;
 mod closep;

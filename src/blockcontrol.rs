@@ -1,6 +1,3 @@
-#![allow(
-    non_snake_case,
-)]
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct BlockControl {

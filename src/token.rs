@@ -1,3 +1,6 @@
+#![allow(
+    unused,
+)]
 use crate::tstring::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

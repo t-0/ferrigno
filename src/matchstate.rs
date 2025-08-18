@@ -2,7 +2,6 @@
     non_snake_case,
 )]
 use crate::state::*;
-use crate::c2rustunnamed_30::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchState {
@@ -12,5 +11,11 @@ pub struct MatchState {
     pub L: *mut State,
     pub matchdepth: i32,
     pub level: u8,
-    pub capture: [C2RustUnnamed_30; 32],
+    pub capture: [MatchStateCapture; 32],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct MatchStateCapture {
+    pub init: *const i8,
+    pub len: i64,
 }

@@ -1,6 +1,6 @@
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_28 {
+pub union NativeEndian {
     pub dummy: i32,
     pub little: i8,
 }

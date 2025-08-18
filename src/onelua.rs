@@ -13,70 +13,68 @@
     unpredictable_function_pointer_comparisons,
     unused_imports,
 )]
-use libc::{tolower, toupper, remove, rename, setlocale};
-use crate::uvalue::*;
-use crate::c::*;
-use crate::state::*;
-use crate::gcobject::*;
-use crate::debug::*;
-use crate::tm::*;
-use crate::tstring::*;
-use crate::lexstate::*;
-use crate::sparser::*;
-use crate::mbuffer::*;
-use crate::sparser::*;
+use crate::absolutelineinfo::*;
 use crate::blockcontrol::*;
-use crate::token::*;
-use crate::callinfo::*;
-use crate::stkidrel::*;
-use crate::node::*;
-use crate::table::*;
-use crate::tstring::*;
-use crate::lg::*;
-use crate::lx::*;
-use crate::proto::*;
-use crate::gcunion::*;
-use crate::udata::*;
-use crate::closure::*;
-use crate::localvariable::*;
-use crate::abslineinfo::*;
-use crate::calls::*;
-use crate::zio::*;
-use crate::ranstate::*;
-use crate::upvaldesc::*;
-use crate::readfunction::*;
-use crate::writefunction::*;
-use crate::header::*;
-use crate::bufffs::*;
-use crate::closep::*;
-use crate::instruction::*;
-use crate::dynamicdata::*;
-use crate::labellist::*;
-use crate::labeldesc::*;
-use crate::functionstate::*;
-use crate::lexstate::*;
-use crate::expressiondescription::*;
-use crate::registeredfunction::*;
 use crate::buffer::*;
-use crate::rn::*;
-use crate::loads::*;
-use crate::ubox::*;
-use crate::loadf::*;
-use crate::stream::*;
-use crate::gmatchstate::*;
-use crate::matchstate::*;
-use crate::dumpstate::*;
-use crate::loadstate::*;
-use crate::streamwriter::*;
+use crate::bufffs::*;
+use crate::c::*;
+use crate::rawvalue::*;
+use crate::nativeendian::*;
+use crate::callinfo::*;
+use crate::calls::*;
+use crate::closep::*;
+use crate::closure::*;
 use crate::constructorcontrol::*;
-use crate::stkidrel::*;
+use crate::debug::*;
+use crate::dumpstate::*;
+use crate::dynamicdata::*;
+use crate::expressiondescription::*;
+use crate::functionstate::*;
+use crate::gcobject::*;
+use crate::gcunion::*;
+use crate::gmatchstate::*;
+use crate::header::*;
+use crate::instruction::*;
+use crate::labeldesc::*;
+use crate::labellist::*;
+use crate::lexstate::*;
+use crate::lexstate::*;
+use crate::lg::*;
 use crate::lhsassign::*;
-use crate::c2rustunnamed_23::*;
-use crate::c2rustunnamed_27::*;
-use crate::c2rustunnamed_28::*;
-use crate::c2rustunnamed_30::*;
-use crate::stringtable::*;
+use crate::loadf::*;
+use crate::loads::*;
+use crate::loadstate::*;
+use crate::localvariable::*;
+use crate::lx::*;
+use crate::matchstate::*;
 use crate::mbuffer::*;
+use crate::mbuffer::*;
+use crate::node::*;
+use crate::proto::*;
+use crate::ranstate::*;
+use crate::readfunction::*;
+use crate::registeredfunction::*;
+use crate::rn::*;
+use crate::sparser::*;
+use crate::sparser::*;
+use crate::state::*;
+use crate::stkidrel::*;
+use crate::stkidrel::*;
+use crate::stream::*;
+use crate::streamwriter::*;
+use crate::stringtable::*;
+use crate::table::*;
+use crate::tm::*;
+use crate::token::*;
+use crate::tstring::*;
+use crate::tstring::*;
+use crate::ubox::*;
+use crate::udata::*;
+use crate::upvaldesc::*;
+use crate::uvalue::*;
+use crate::writefunction::*;
+use crate::zio::*;
+use libc::{tolower, toupper, remove, rename, setlocale};
 pub type Pfunc = Option::<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
 pub const F2Iceil: u32 = 2;
 pub const F2Ifloor: u32 = 1;
@@ -9744,7 +9742,7 @@ pub unsafe extern "C" fn luaF_newproto(mut L: *mut State) -> *mut Proto {
     (*f).sizecode = 0 as i32;
     (*f).lineinfo = 0 as *mut i8;
     (*f).sizelineinfo = 0 as i32;
-    (*f).abslineinfo = 0 as *mut AbsLineInfo;
+    (*f).abslineinfo = 0 as *mut AbsoluteLineInfo;
     (*f).sizeabslineinfo = 0 as i32;
     (*f).upvalues = 0 as *mut Upvaldesc;
     (*f).sizeupvalues = 0 as i32;
@@ -9787,7 +9785,7 @@ pub unsafe extern "C" fn luaF_freeproto(mut L: *mut State, mut f: *mut Proto) {
         L,
         (*f).abslineinfo as *mut libc::c_void,
         ((*f).sizeabslineinfo as u64)
-            .wrapping_mul(::core::mem::size_of::<AbsLineInfo>() as u64),
+            .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
     );
     luaM_free_(
         L,
@@ -10583,7 +10581,7 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         >= ::core::mem::size_of::<u64>() as u64
         && (n as u64).wrapping_add(1 as i32 as u64)
             > (!(0 as i32 as u64))
-                .wrapping_div(::core::mem::size_of::<AbsLineInfo>() as u64)
+                .wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
     {
         luaM_toobig((*S).L);
     } else {};
@@ -10591,9 +10589,9 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
         .abslineinfo = luaM_malloc_(
         (*S).L,
         (n as u64)
-            .wrapping_mul(::core::mem::size_of::<AbsLineInfo>() as u64),
+            .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
         0,
-    ) as *mut AbsLineInfo;
+    ) as *mut AbsoluteLineInfo;
     (*f).sizeabslineinfo = n;
     i = 0 as i32;
     while i < n {
@@ -11519,7 +11517,7 @@ pub unsafe extern "C" fn singlevar(mut ls: *mut LexState, mut var: *mut Expressi
     if (*var).k as u32 == VVOID as i32 as u32 {
         let mut key: ExpressionDescription = ExpressionDescription {
             k: VVOID,
-            u: C2RustUnnamed_23 { ival: 0 },
+            u: RawValue { ival: 0 },
             t: 0,
             f: 0,
         };
@@ -11942,8 +11940,8 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         (*f).abslineinfo as *mut libc::c_void,
         &mut (*f).sizeabslineinfo,
         (*fs).nabslineinfo,
-        ::core::mem::size_of::<AbsLineInfo>() as u64 as i32,
-    ) as *mut AbsLineInfo;
+        ::core::mem::size_of::<AbsoluteLineInfo>() as u64 as i32,
+    ) as *mut AbsoluteLineInfo;
     (*f)
         .k = luaM_shrinkvector_(
         L,
@@ -12004,7 +12002,7 @@ pub unsafe extern "C" fn fieldsel(mut ls: *mut LexState, mut v: *mut ExpressionD
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut key: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -12024,19 +12022,19 @@ pub unsafe extern "C" fn recfield(mut ls: *mut LexState, mut cc: *mut Constructo
     let mut reg: i32 = (*(*ls).fs).freereg as i32;
     let mut tab: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut key: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut val: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -12127,7 +12125,7 @@ pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut Expressi
     let mut cc: ConstructorControl = ConstructorControl {
         v: ExpressionDescription {
             k: VVOID,
-            u: C2RustUnnamed_23 { ival: 0 },
+            u: RawValue { ival: 0 },
             t: 0,
             f: 0,
         },
@@ -12278,7 +12276,7 @@ pub unsafe extern "C" fn funcargs(mut ls: *mut LexState, mut f: *mut ExpressionD
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut args: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -12373,7 +12371,7 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut Expressi
             91 => {
                 let mut key: ExpressionDescription = ExpressionDescription {
                     k: VVOID,
-                    u: C2RustUnnamed_23 { ival: 0 },
+                    u: RawValue { ival: 0 },
                     t: 0,
                     f: 0,
                 };
@@ -12384,7 +12382,7 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut Expressi
             58 => {
                 let mut key_0: ExpressionDescription = ExpressionDescription {
                     k: VVOID,
-                    u: C2RustUnnamed_23 { ival: 0 },
+                    u: RawValue { ival: 0 },
                     t: 0,
                     f: 0,
                 };
@@ -12668,7 +12666,7 @@ pub unsafe extern "C" fn subexpr(
     {
         let mut v2: ExpressionDescription = ExpressionDescription {
             k: VVOID,
-            u: C2RustUnnamed_23 { ival: 0 },
+            u: RawValue { ival: 0 },
             t: 0,
             f: 0,
         };
@@ -12770,7 +12768,7 @@ pub unsafe extern "C" fn restassign(
 ) {
     let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -12785,7 +12783,7 @@ pub unsafe extern "C" fn restassign(
             prev: 0 as *mut LHSAssign,
             v: ExpressionDescription {
                 k: VVOID,
-                u: C2RustUnnamed_23 { ival: 0 },
+                u: RawValue { ival: 0 },
                 t: 0,
                 f: 0,
             },
@@ -12819,7 +12817,7 @@ pub unsafe extern "C" fn restassign(
 pub unsafe extern "C" fn cond(mut ls: *mut LexState) -> i32 {
     let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -12969,7 +12967,7 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
 pub unsafe extern "C" fn exp1(mut ls: *mut LexState) {
     let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13110,7 +13108,7 @@ pub unsafe extern "C" fn forlist(mut ls: *mut LexState, mut indexname: *mut TStr
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13218,7 +13216,7 @@ pub unsafe extern "C" fn test_then_block(
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13282,7 +13280,7 @@ pub unsafe extern "C" fn ifstat(mut ls: *mut LexState, mut line: i32) {
 pub unsafe extern "C" fn localfunc(mut ls: *mut LexState) {
     let mut b: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13341,7 +13339,7 @@ pub unsafe extern "C" fn localstat(mut ls: *mut LexState) {
     let mut nexps: i32 = 0;
     let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13403,13 +13401,13 @@ pub unsafe extern "C" fn funcstat(mut ls: *mut LexState, mut line: i32) {
     let mut ismethod: i32 = 0;
     let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
     let mut b: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -13426,7 +13424,7 @@ pub unsafe extern "C" fn exprstat(mut ls: *mut LexState) {
         prev: 0 as *mut LHSAssign,
         v: ExpressionDescription {
             k: VVOID,
-            u: C2RustUnnamed_23 { ival: 0 },
+            u: RawValue { ival: 0 },
             t: 0,
             f: 0,
         },
@@ -13457,7 +13455,7 @@ pub unsafe extern "C" fn retstat(mut ls: *mut LexState) {
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut e: ExpressionDescription = ExpressionDescription {
         k: VVOID,
-        u: C2RustUnnamed_23 { ival: 0 },
+        u: RawValue { ival: 0 },
         t: 0,
         f: 0,
     };
@@ -16413,19 +16411,19 @@ pub unsafe extern "C" fn savelineinfo(
             (*f).abslineinfo as *mut libc::c_void,
             (*fs).nabslineinfo,
             &mut (*f).sizeabslineinfo,
-            ::core::mem::size_of::<AbsLineInfo>() as u64 as i32,
+            ::core::mem::size_of::<AbsoluteLineInfo>() as u64 as i32,
             (if 2147483647 as i32 as u64
                 <= (!(0 as i32 as u64))
-                    .wrapping_div(::core::mem::size_of::<AbsLineInfo>() as u64)
+                    .wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
             {
                 2147483647 as i32 as u32
             } else {
                 (!(0 as i32 as u64))
-                    .wrapping_div(::core::mem::size_of::<AbsLineInfo>() as u64)
+                    .wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
                     as u32
             }) as i32,
             b"lines\0" as *const u8 as *const i8,
-        ) as *mut AbsLineInfo;
+        ) as *mut AbsoluteLineInfo;
         (*((*f).abslineinfo).offset((*fs).nabslineinfo as isize)).pc = pc;
         let fresh133 = (*fs).nabslineinfo;
         (*fs).nabslineinfo = (*fs).nabslineinfo + 1;
@@ -17968,7 +17966,7 @@ pub unsafe extern "C" fn luaK_prefix(
     static mut ef: ExpressionDescription = {
         let mut init = ExpressionDescription {
             k: VKINT,
-            u: C2RustUnnamed_23 {
+            u: RawValue {
                 ival: 0 as i32 as i64,
             },
             t: -1,
@@ -24042,7 +24040,7 @@ pub unsafe extern "C" fn luaL_traceback(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut ar: Debug = Debug {
         event: 0,
@@ -25256,7 +25254,7 @@ pub unsafe extern "C" fn luaL_gsub(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addgsub(&mut b, s, p, r);
@@ -26932,7 +26930,7 @@ pub unsafe extern "C" fn tconcat(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     checktab(L, 1, 1 | 4 as i32);
     let mut last: i64 = luaL_len(L, 1);
@@ -27785,7 +27783,7 @@ pub unsafe extern "C" fn read_line(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut c: i32 = 0;
     luaL_buffinit(L, &mut b);
@@ -27845,7 +27843,7 @@ pub unsafe extern "C" fn read_all(mut L: *mut State, mut f: *mut FILE) {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     loop {
@@ -27895,7 +27893,7 @@ pub unsafe extern "C" fn read_chars(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     p = luaL_prepbuffsize(&mut b, n);
@@ -28831,7 +28829,7 @@ pub unsafe extern "C" fn os_date(mut L: *mut State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed27 { n: 0. },
+            init: BufferInit { n: 0. },
         };
         cc[0 as i32 as usize] = '%' as i32 as i8;
         luaL_buffinit(L, &mut b);
@@ -29202,7 +29200,7 @@ pub unsafe extern "C" fn str_reverse(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29229,7 +29227,7 @@ pub unsafe extern "C" fn str_lower(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29253,7 +29251,7 @@ pub unsafe extern "C" fn str_upper(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29309,7 +29307,7 @@ pub unsafe extern "C" fn str_rep(mut L: *mut State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed27 { n: 0. },
+            init: BufferInit { n: 0. },
         };
         let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, totallen);
         loop {
@@ -29397,7 +29395,7 @@ pub unsafe extern "C" fn str_char(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, n as u64);
     i = 1 as i32;
@@ -29440,7 +29438,7 @@ pub unsafe extern "C" fn str_dump(mut L: *mut State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed27 { n: 0. },
+            init: BufferInit { n: 0. },
         },
     };
     let mut strip: i32 = lua_toboolean(L, 2 as i32);
@@ -30497,7 +30495,7 @@ pub unsafe extern "C" fn str_find_aux(
             L: 0 as *mut State,
             matchdepth: 0,
             level: 0,
-            capture: [C2RustUnnamed_30 {
+            capture: [MatchStateCapture {
                 init: 0 as *const i8,
                 len: 0,
             }; 32],
@@ -30724,7 +30722,7 @@ pub unsafe extern "C" fn str_gsub(mut L: *mut State) -> i32 {
         L: 0 as *mut State,
         matchdepth: 0,
         level: 0,
-        capture: [C2RustUnnamed_30 {
+        capture: [MatchStateCapture {
             init: 0 as *const i8,
             len: 0,
         }; 32],
@@ -30734,7 +30732,7 @@ pub unsafe extern "C" fn str_gsub(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     (((tr == 3 as i32 || tr == 4 as i32 || tr == 6 as i32
         || tr == 5 as i32) as i32 != 0 as i32) as i32
@@ -31047,7 +31045,7 @@ pub unsafe extern "C" fn str_format(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     while strfrmt < strfrmt_end {
@@ -31271,7 +31269,7 @@ pub unsafe extern "C" fn str_format(mut L: *mut State) -> i32 {
     luaL_pushresult(&mut b);
     return 1;
 }
-static mut nativeendian: C2RustUnnamed_28 = C2RustUnnamed_28 {
+static mut nativeendian: NativeEndian = NativeEndian {
     dummy: 1 as i32,
 };
 pub unsafe extern "C" fn digit(mut c: i32) -> i32 {
@@ -31589,7 +31587,7 @@ pub unsafe extern "C" fn str_pack(mut L: *mut State) -> i32 {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut h: Header = Header {
         L: 0 as *mut State,
@@ -32494,7 +32492,7 @@ pub unsafe extern "C" fn utfchar(mut L: *mut State) -> i32 {
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed27 { n: 0. },
+            init: BufferInit { n: 0. },
         };
         luaL_buffinit(L, &mut b);
         i = 1 as i32;
@@ -34389,7 +34387,7 @@ pub unsafe extern "C" fn setpath(
                 size: 0,
                 n: 0,
                 L: 0 as *mut State,
-                init: C2RustUnnamed27 { n: 0. },
+                init: BufferInit { n: 0. },
             };
             luaL_buffinit(L, &mut b);
             if path < dftmark {
@@ -34563,7 +34561,7 @@ pub unsafe extern "C" fn pusherrornotfound(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addstring(&mut b, b"no file '\0" as *const u8 as *const i8);
@@ -34588,7 +34586,7 @@ pub unsafe extern "C" fn searchpath(
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     let mut pathname: *mut i8 = 0 as *mut i8;
     let mut endpathname: *mut i8 = 0 as *mut i8;
@@ -34842,7 +34840,7 @@ pub unsafe extern "C" fn findloader(mut L: *mut State, mut name: *const i8) {
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed27 { n: 0. },
+        init: BufferInit { n: 0. },
     };
     if ((lua_getfield(
         L,

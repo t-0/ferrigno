@@ -2,7 +2,6 @@
     non_snake_case,
 )]
 use crate::state::*;
-use crate::c2rustunnamed_27::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Buffer {
@@ -10,5 +9,15 @@ pub struct Buffer {
     pub size: u64,
     pub n: u64,
     pub L: *mut State,
-    pub init: C2RustUnnamed27,
+    pub init: BufferInit,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union BufferInit {
+    pub n: f64,
+    pub u: f64,
+    pub s: *mut libc::c_void,
+    pub i: i64,
+    pub l: i64,
+    pub b: [i8; 1024],
 }
