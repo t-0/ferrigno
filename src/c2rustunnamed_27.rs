@@ -17,7 +17,7 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tm::*;
 use crate::tstring::*;
 use crate::lexstate::*;
@@ -42,8 +42,8 @@ use crate::abslineinfo::*;
 use crate::calls::*;
 use crate::zio::*;
 use crate::upvaldesc::*;
-use crate::lua_reader::*;
-use crate::lua_writer::*;
+use crate::readfunction::*;
+use crate::writefunction::*;
 use crate::bufffs::*;
 use crate::closep::*;
 use crate::instruction::*;
@@ -55,7 +55,7 @@ use crate::lexstate::*;
 use crate::mbuffer::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_27 {
+pub union C2RustUnnamed27 {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,

@@ -1,8 +1,3 @@
-#![allow(
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
-)]
 use crate::tstring::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -19,7 +14,7 @@ pub union SemInfo {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_26 {
+pub struct C2RustUnnamed26 {
     pub left: u8,
     pub right: u8,
 }

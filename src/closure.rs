@@ -17,7 +17,7 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tstring::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
@@ -53,6 +53,6 @@ pub struct CClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub upvalue: [TValue; 1],
 }

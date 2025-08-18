@@ -17,7 +17,7 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tstring::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;

@@ -17,7 +17,7 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tm::*;
 use crate::tstring::*;
 use crate::callinfo::*;
@@ -34,8 +34,8 @@ use crate::closure::*;
 use crate::locvar::*;
 use crate::abslineinfo::*;
 use crate::upvaldesc::*;
-use crate::lua_reader::*;
-use crate::lua_writer::*;
+use crate::readfunction::*;
+use crate::writefunction::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CloseP {

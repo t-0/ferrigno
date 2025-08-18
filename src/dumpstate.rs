@@ -17,7 +17,7 @@ use libc::{tolower, toupper, remove, rename, setlocale};
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tm::*;
 use crate::tstring::*;
 use crate::lexstate::*;
@@ -42,8 +42,8 @@ use crate::abslineinfo::*;
 use crate::calls::*;
 use crate::zio::*;
 use crate::upvaldesc::*;
-use crate::lua_reader::*;
-use crate::lua_writer::*;
+use crate::readfunction::*;
+use crate::writefunction::*;
 use crate::bufffs::*;
 use crate::closep::*;
 use crate::instruction::*;
@@ -57,7 +57,7 @@ use crate::mbuffer::*;
 #[repr(C)]
 pub struct DumpState {
     pub L: *mut State,
-    pub writer: lua_Writer,
+    pub writer: WriteFunction,
     pub data: *mut libc::c_void,
     pub strip: i32,
     pub status: i32,

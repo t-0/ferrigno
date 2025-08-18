@@ -1,9 +1,8 @@
 use crate::c::*;
+use crate::stkidrel::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct RN {
+pub struct Stream {
     pub f: *mut FILE,
-    pub c: i32,
-    pub n: i32,
-    pub buff: [i8; 201],
+    pub closef: CFunction,
 }

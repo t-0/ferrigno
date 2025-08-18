@@ -1,6 +1,6 @@
 use crate::c::*;
 use crate::callinfo::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::gcobject::*;
 use crate::stkidrel::*;
 use crate::tstring::*;
@@ -23,7 +23,7 @@ pub struct State {
     pub allowhook: u8,
     pub nci: u16,
     pub top: StkIdRel,
-    pub myglobal: *mut global_State,
+    pub myglobal: *mut Global,
     pub ci: *mut CallInfo,
     pub stack_last: StkIdRel,
     pub stack: StkIdRel,
@@ -33,23 +33,23 @@ pub struct State {
     pub twups: *mut State,
     pub error_jump: *mut LongJump,
     pub base_ci: CallInfo,
-    pub hook: lua_Hook,
+    pub hook: HookFunction,
     pub errfunc: i64,
-    pub nCcalls: u32,
+    pub count_c_calls: u32,
     pub oldpc: i32,
     pub basehookcount: i32,
     pub hookcount: i32,
     pub hookmask: i32,
 }
-pub type lua_Hook = Option::<unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ()>;
+pub type HookFunction = Option::<unsafe extern "C" fn(*mut State, *mut Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct global_State {
-    pub frealloc: lua_Alloc,
+pub struct Global {
+    pub frealloc: AllocationFunction,
     pub ud: *mut libc::c_void,
     pub totalbytes: i64,
-    pub GCdebt: i64,
-    pub GCestimate: u64,
+    pub gc_debt: i64,
+    pub gc_estimate: u64,
     pub lastatomic: u64,
     pub strt: StringTable,
     pub l_registry: TValue,
@@ -84,19 +84,19 @@ pub struct global_State {
     pub finobjold1: *mut GCObject,
     pub finobjrold: *mut GCObject,
     pub twups: *mut State,
-    pub panic: lua_CFunction,
+    pub panic: CFunction,
     pub mainthread: *mut State,
     pub memerrmsg: *mut TString,
     pub tmname: [*mut TString; 25],
     pub mt: [*mut Table; 9],
     pub strcache: [[*mut TString; 2]; 53],
-    pub warnf: lua_WarnFunction,
+    pub warnf: WarnFunction,
     pub ud_warn: *mut libc::c_void,
 }
-pub type lua_WarnFunction = Option::<
+pub type WarnFunction = Option::<
     unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> (),
 >;
-pub type lua_Alloc = Option::<
+pub type AllocationFunction = Option::<
     unsafe extern "C" fn(
         *mut libc::c_void,
         *mut libc::c_void,

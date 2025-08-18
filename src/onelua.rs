@@ -18,7 +18,7 @@ use crate::uvalue::*;
 use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tm::*;
 use crate::tstring::*;
 use crate::lexstate::*;
@@ -44,8 +44,8 @@ use crate::calls::*;
 use crate::zio::*;
 use crate::ranstate::*;
 use crate::upvaldesc::*;
-use crate::lua_reader::*;
-use crate::lua_writer::*;
+use crate::readfunction::*;
+use crate::writefunction::*;
 use crate::header::*;
 use crate::bufffs::*;
 use crate::closep::*;
@@ -56,13 +56,13 @@ use crate::labeldesc::*;
 use crate::funcstate::*;
 use crate::lexstate::*;
 use crate::expdesc::*;
-use crate::lual_reg::*;
-use crate::lual_buffer::*;
+use crate::registeredfunction::*;
+use crate::buffer::*;
 use crate::rn::*;
 use crate::loads::*;
 use crate::ubox::*;
 use crate::loadf::*;
-use crate::lual_stream::*;
+use crate::stream::*;
 use crate::gmatchstate::*;
 use crate::matchstate::*;
 use crate::dumpstate::*;
@@ -73,6 +73,7 @@ use crate::stkidrel::*;
 use crate::lhs_assign::*;
 use crate::c2rustunnamed_23::*;
 use crate::c2rustunnamed_27::*;
+use crate::c2rustunnamed_28::*;
 use crate::c2rustunnamed_30::*;
 use crate::stringtable::*;
 use crate::mbuffer::*;
@@ -133,12 +134,6 @@ pub const Kpaddalign: u32 = 9;
 pub const Kzstr: u32 = 7;
 pub const Kstring: u32 = 6;
 pub const Kchar: u32 = 5;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union C2RustUnnamed_28 {
-    pub dummy: i32,
-    pub little: i8,
-}
 pub const Kdouble: u32 = 4;
 pub const Knumber: u32 = 3;
 pub const Kfloat: u32 = 2;
@@ -183,7 +178,7 @@ pub unsafe extern "C" fn luaD_throw(mut L: *mut State, mut errcode: i32) -> ! {
         );
         _longjmp(((*(*L).error_jump).b).as_mut_ptr(), 1);
     } else {
-        let mut g: *mut global_State = (*L).myglobal;
+        let mut g: *mut Global = (*L).myglobal;
         errcode = luaE_resetthread(L, errcode);
         (*L).status = errcode as u8;
         if !((*(*g).mainthread).error_jump).is_null() {
@@ -209,7 +204,7 @@ pub unsafe extern "C" fn luaD_rawrunprotected(
     mut f: Pfunc,
     mut ud: *mut libc::c_void,
 ) -> i32 {
-    let mut oldnCcalls: u32 = (*L).nCcalls;
+    let mut oldnCcalls: u32 = (*L).count_c_calls;
     let mut lj: LongJump = LongJump {
         previous: 0 as *mut LongJump,
         b: [__jmp_buf_tag {
@@ -226,7 +221,7 @@ pub unsafe extern "C" fn luaD_rawrunprotected(
             .expect("non-null function pointer")(L, ud);
     }
     (*L).error_jump = lj.previous;
-    (*L).nCcalls = oldnCcalls;
+    (*L).count_c_calls = oldnCcalls;
     return lj.status;
 }
 pub unsafe extern "C" fn relstack(mut L: *mut State) {
@@ -455,7 +450,7 @@ pub unsafe extern "C" fn luaD_hook(
     mut ftransfer: i32,
     mut ntransfer: i32,
 ) {
-    let mut hook: lua_Hook = (*L).hook;
+    let mut hook: HookFunction = (*L).hook;
     if hook.is_some() && (*L).allowhook as i32 != 0 {
         let mut mask: i32 = (1 as i32) << 3 as i32;
         let mut ci: *mut CallInfo = (*L).ci;
@@ -463,7 +458,7 @@ pub unsafe extern "C" fn luaD_hook(
             .offset_from((*L).stack.p as *mut i8) as i64;
         let mut ci_top: i64 = ((*ci).top.p as *mut i8)
             .offset_from((*L).stack.p as *mut i8) as i64;
-        let mut ar: lua_Debug = lua_Debug {
+        let mut ar: Debug = Debug {
             event: 0,
             name: 0 as *const i8,
             namewhat: 0 as *const i8,
@@ -587,7 +582,7 @@ pub unsafe extern "C" fn tryfuncTM(mut L: *mut State, mut func: StkId) -> StkId 
     {
         let mut t__: i64 = (func as *mut i8)
             .offset_from((*L).stack.p as *mut i8) as i64;
-        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
             luaC_step(L);
         }
         luaD_growstack(L, 1, 1);
@@ -734,7 +729,7 @@ pub unsafe extern "C" fn precallC(
     mut L: *mut State,
     mut func: StkId,
     mut nresults: i32,
-    mut f: lua_CFunction,
+    mut f: CFunction,
 ) -> i32 {
     let mut n: i32 = 0;
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
@@ -744,7 +739,7 @@ pub unsafe extern "C" fn precallC(
     {
         let mut t__: i64 = (func as *mut i8)
             .offset_from((*L).stack.p as *mut i8) as i64;
-        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
             luaC_step(L);
         }
         luaD_growstack(L, 20 as i32, 1);
@@ -802,7 +797,7 @@ pub unsafe extern "C" fn luaD_pretailcall(
                 {
                     let mut t__: i64 = (func as *mut i8)
                         .offset_from((*L).stack.p as *mut i8) as i64;
-                    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                         luaC_step(L);
                     }
                     luaD_growstack(L, fsize - delta, 1);
@@ -880,7 +875,7 @@ pub unsafe extern "C" fn luaD_precall(
                 {
                     let mut t__: i64 = (func as *mut i8)
                         .offset_from((*L).stack.p as *mut i8) as i64;
-                    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                         luaC_step(L);
                     }
                     luaD_growstack(L, fsize, 1);
@@ -922,9 +917,9 @@ pub unsafe extern "C" fn ccall(
 ) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     (*L)
-        .nCcalls = ((*L).nCcalls as u32).wrapping_add(inc) as u32
+        .count_c_calls = ((*L).count_c_calls as u32).wrapping_add(inc) as u32
         as u32;
-    if (((*L).nCcalls & 0xffff as i32 as u32
+    if (((*L).count_c_calls & 0xffff as i32 as u32
         >= 200 as i32 as u32) as i32 != 0 as i32)
         as i32 as i64 != 0
     {
@@ -945,7 +940,7 @@ pub unsafe extern "C" fn ccall(
         luaV_execute(L, ci);
     }
     (*L)
-        .nCcalls = ((*L).nCcalls as u32).wrapping_sub(inc) as u32
+        .count_c_calls = ((*L).count_c_calls as u32).wrapping_sub(inc) as u32
         as u32;
 }
 pub unsafe extern "C" fn luaD_call(
@@ -1145,12 +1140,12 @@ pub unsafe extern "C" fn lua_resume(
         )
     }
     (*L)
-        .nCcalls = if !from.is_null() {
-        (*from).nCcalls & 0xffff as i32 as u32
+        .count_c_calls = if !from.is_null() {
+        (*from).count_c_calls & 0xffff as i32 as u32
     } else {
         0 as i32 as u32
     };
-    if (*L).nCcalls & 0xffff as i32 as u32
+    if (*L).count_c_calls & 0xffff as i32 as u32
         >= 200 as i32 as u32
     {
         return resume_error(
@@ -1159,8 +1154,8 @@ pub unsafe extern "C" fn lua_resume(
             nargs,
         );
     }
-    (*L).nCcalls = ((*L).nCcalls).wrapping_add(1);
-    (*L).nCcalls;
+    (*L).count_c_calls = ((*L).count_c_calls).wrapping_add(1);
+    (*L).count_c_calls;
     status = luaD_rawrunprotected(
         L,
         Some(resume as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
@@ -1184,7 +1179,7 @@ pub unsafe extern "C" fn lua_resume(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_isyieldable(mut L: *mut State) -> i32 {
-    return ((*L).nCcalls & 0xffff0000 as u32
+    return ((*L).count_c_calls & 0xffff0000 as u32
         == 0 as i32 as u32) as i32;
 }
 #[unsafe (no_mangle)]
@@ -1196,7 +1191,7 @@ pub unsafe extern "C" fn lua_yieldk(
 ) -> i32 {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
     ci = (*L).ci;
-    if (!((*L).nCcalls & 0xffff0000 as u32 == 0 as i32 as u32)
+    if (!((*L).count_c_calls & 0xffff0000 as u32 == 0 as i32 as u32)
         as i32 != 0 as i32) as i32 as i64 != 0
     {
         if L != (*(*L).myglobal).mainthread {
@@ -1369,7 +1364,7 @@ pub unsafe extern "C" fn luaD_protectedparser(
     };
     let mut status: i32 = 0;
     (*L)
-        .nCcalls = ((*L).nCcalls as u32)
+        .count_c_calls = ((*L).count_c_calls as u32)
         .wrapping_add(0x10000 as i32 as u32) as u32 as u32;
     p.z = z;
     p.name = name;
@@ -1420,7 +1415,7 @@ pub unsafe extern "C" fn luaD_protectedparser(
             .wrapping_mul(::core::mem::size_of::<Labeldesc>() as u64),
     );
     (*L)
-        .nCcalls = ((*L).nCcalls as u32)
+        .count_c_calls = ((*L).count_c_calls as u32)
         .wrapping_sub(0x10000 as i32 as u32) as u32 as u32;
     return status;
 }
@@ -1524,9 +1519,9 @@ pub unsafe extern "C" fn lua_xmove(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_atpanic(
     mut L: *mut State,
-    mut panicf: lua_CFunction,
-) -> lua_CFunction {
-    let mut old: lua_CFunction = None;
+    mut panicf: CFunction,
+) -> CFunction {
+    let mut old: CFunction = None;
     old = (*(*L).myglobal).panic;
     (*(*L).myglobal).panic = panicf;
     return old;
@@ -1914,7 +1909,7 @@ pub unsafe extern "C" fn lua_tolstring(
             return 0 as *const i8;
         }
         luaO_tostring(L, o);
-        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
             luaC_step(L);
         }
         o = index2value(L, idx);
@@ -1948,7 +1943,7 @@ pub unsafe extern "C" fn lua_rawlen(
 pub unsafe extern "C" fn lua_tocfunction(
     mut L: *mut State,
     mut idx: i32,
-) -> lua_CFunction {
+) -> CFunction {
     let mut o: *const TValue = index2value(L, idx);
     if (*o).tt_ as i32
         == 6 as i32 | (1 as i32) << 4 as i32
@@ -2021,7 +2016,7 @@ pub unsafe extern "C" fn lua_topointer(
     let mut o: *const TValue = index2value(L, idx);
     match (*o).tt_ as i32 & 0x3f as i32 {
         22 => {
-            return ::core::mem::transmute::<lua_CFunction, u64>((*o).value_.f)
+            return ::core::mem::transmute::<CFunction, u64>((*o).value_.f)
                 as *mut libc::c_void;
         }
         7 | 2 => return touserdata(o),
@@ -2078,7 +2073,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     return ((*ts).contents).as_mut_ptr();
@@ -2106,7 +2101,7 @@ pub unsafe extern "C" fn lua_pushstring(
     }
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     return s;
@@ -2119,7 +2114,7 @@ pub unsafe extern "C" fn lua_pushvfstring(
 ) -> *const i8 {
     let mut ret: *const i8 = 0 as *const i8;
     ret = luaO_pushvfstring(L, fmt, argp.as_va_list());
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     return ret;
@@ -2134,7 +2129,7 @@ pub unsafe extern "C" fn lua_pushfstring(
     let mut argp: ::core::ffi::VaListImpl;
     argp = args.clone();
     ret = luaO_pushvfstring(L, fmt, argp.as_va_list());
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     return ret;
@@ -2142,7 +2137,7 @@ pub unsafe extern "C" fn lua_pushfstring(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_pushcclosure(
     mut L: *mut State,
-    mut fn_0: lua_CFunction,
+    mut fn_0: CFunction,
     mut n: i32,
 ) {
     if n == 0 as i32 {
@@ -2179,7 +2174,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
             | (1 as i32) << 6 as i32) as u8;
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
-        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
             luaC_step(L);
         }
     };
@@ -2466,7 +2461,7 @@ pub unsafe extern "C" fn lua_createtable(
     if narray > 0 as i32 || nrec > 0 as i32 {
         luaH_resize(L, t, narray as u32, nrec as u32);
     }
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
 }
@@ -2929,7 +2924,7 @@ pub unsafe extern "C" fn lua_callk(
     let mut func: StkId = 0 as *mut StackValue;
     func = ((*L).top.p).offset(-((nargs + 1 as i32) as isize));
     if k.is_some()
-        && (*L).nCcalls & 0xffff0000 as u32 == 0 as i32 as u32
+        && (*L).count_c_calls & 0xffff0000 as u32 == 0 as i32 as u32
     {
         (*(*L).ci).u.c.k = k;
         (*(*L).ci).u.c.ctx = ctx;
@@ -2969,7 +2964,7 @@ pub unsafe extern "C" fn lua_pcallk(
     }
     c.func = ((*L).top.p).offset(-((nargs + 1 as i32) as isize));
     if k.is_none()
-        || !((*L).nCcalls & 0xffff0000 as u32
+        || !((*L).count_c_calls & 0xffff0000 as u32
             == 0 as i32 as u32)
     {
         c.nresults = nresults;
@@ -3016,7 +3011,7 @@ pub unsafe extern "C" fn lua_pcallk(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_load(
     mut L: *mut State,
-    mut reader: lua_Reader,
+    mut reader: ReadFunction,
     mut data: *mut libc::c_void,
     mut chunkname: *const i8,
     mut mode: *const i8,
@@ -3080,7 +3075,7 @@ pub unsafe extern "C" fn lua_load(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_dump(
     mut L: *mut State,
-    mut writer_0: lua_Writer,
+    mut writer_0: WriteFunction,
     mut data: *mut libc::c_void,
     mut strip: i32,
 ) -> i32 {
@@ -3115,7 +3110,7 @@ pub unsafe extern "C" fn lua_gc(
 ) -> i32 {
     let mut argp: ::core::ffi::VaListImpl;
     let mut res: i32 = 0 as i32;
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if (*g).gcstp as i32 & 2 as i32 != 0 {
         return -1;
     }
@@ -3132,11 +3127,11 @@ pub unsafe extern "C" fn lua_gc(
             luaC_fullgc(L, 0 as i32);
         }
         3 => {
-            res = (((*g).totalbytes + (*g).GCdebt) as u64 >> 10 as i32)
+            res = (((*g).totalbytes + (*g).gc_debt) as u64 >> 10 as i32)
                 as i32;
         }
         4 => {
-            res = (((*g).totalbytes + (*g).GCdebt) as u64
+            res = (((*g).totalbytes + (*g).gc_debt) as u64
                 & 0x3ff as i32 as u64) as i32;
         }
         5 => {
@@ -3148,9 +3143,9 @@ pub unsafe extern "C" fn lua_gc(
                 luaE_setdebt(g, 0 as i32 as i64);
                 luaC_step(L);
             } else {
-                debt = data as i64 * 1024 as i32 as i64 + (*g).GCdebt;
+                debt = data as i64 * 1024 as i32 as i64 + (*g).gc_debt;
                 luaE_setdebt(g, debt);
-                if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                     luaC_step(L);
                 }
             }
@@ -3281,7 +3276,7 @@ pub unsafe extern "C" fn lua_concat(mut L: *mut State, mut n: i32) {
         (*L).top.p = ((*L).top.p).offset(1);
         (*L).top.p;
     }
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
 }
@@ -3297,8 +3292,8 @@ pub unsafe extern "C" fn lua_len(mut L: *mut State, mut idx: i32) {
 pub unsafe extern "C" fn lua_getallocf(
     mut L: *mut State,
     mut ud: *mut *mut libc::c_void,
-) -> lua_Alloc {
-    let mut f: lua_Alloc = None;
+) -> AllocationFunction {
+    let mut f: AllocationFunction = None;
     if !ud.is_null() {
         *ud = (*(*L).myglobal).ud;
     }
@@ -3308,7 +3303,7 @@ pub unsafe extern "C" fn lua_getallocf(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setallocf(
     mut L: *mut State,
-    mut f: lua_Alloc,
+    mut f: AllocationFunction,
     mut ud: *mut libc::c_void,
 ) {
     (*(*L).myglobal).ud = ud;
@@ -3317,7 +3312,7 @@ pub unsafe extern "C" fn lua_setallocf(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setwarnf(
     mut L: *mut State,
-    mut f: lua_WarnFunction,
+    mut f: WarnFunction,
     mut ud: *mut libc::c_void,
 ) {
     (*(*L).myglobal).ud_warn = ud;
@@ -3347,7 +3342,7 @@ pub unsafe extern "C" fn lua_newuserdatauv(
         | (1 as i32) << 6 as i32) as u8;
     (*L).top.p = ((*L).top.p).offset(1);
     (*L).top.p;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     return (u as *mut i8)
@@ -3562,12 +3557,12 @@ pub unsafe extern "C" fn luai_makeseed(mut L: *mut State) -> u32 {
         .wrapping_add(::core::mem::size_of::<u64>() as u64) as i32
         as i32;
     let mut t_1: u64 = ::core::mem::transmute::<
-        Option::<unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut State>,
+        Option::<unsafe extern "C" fn(AllocationFunction, *mut libc::c_void) -> *mut State>,
         u64,
     >(
         Some(
             lua_newstate
-                as unsafe extern "C" fn(lua_Alloc, *mut libc::c_void) -> *mut State,
+                as unsafe extern "C" fn(AllocationFunction, *mut libc::c_void) -> *mut State,
         ),
     );
     memcpy(
@@ -3580,13 +3575,13 @@ pub unsafe extern "C" fn luai_makeseed(mut L: *mut State) -> u32 {
         as i32;
     return luaS_hash(buff.as_mut_ptr(), p as u64, h);
 }
-pub unsafe extern "C" fn luaE_setdebt(mut g: *mut global_State, mut debt: i64) {
-    let mut tb: i64 = ((*g).totalbytes + (*g).GCdebt) as u64 as i64;
+pub unsafe extern "C" fn luaE_setdebt(mut g: *mut Global, mut debt: i64) {
+    let mut tb: i64 = ((*g).totalbytes + (*g).gc_debt) as u64 as i64;
     if debt < tb - (!(0 as i32 as u64) >> 1 as i32) as i64 {
         debt = tb - (!(0 as i32 as u64) >> 1 as i32) as i64;
     }
     (*g).totalbytes = tb - debt;
-    (*g).GCdebt = debt;
+    (*g).gc_debt = debt;
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(
@@ -3660,20 +3655,20 @@ pub unsafe extern "C" fn luaE_shrinkCI(mut L: *mut State) {
     };
 }
 pub unsafe extern "C" fn luaE_checkcstack(mut L: *mut State) {
-    if (*L).nCcalls & 0xffff as i32 as u32
+    if (*L).count_c_calls & 0xffff as i32 as u32
         == 200 as i32 as u32
     {
         luaG_runerror(L, b"C stack overflow\0" as *const u8 as *const i8);
-    } else if (*L).nCcalls & 0xffff as i32 as u32
+    } else if (*L).count_c_calls & 0xffff as i32 as u32
         >= (200 as i32 / 10 as i32 * 11 as i32) as u32
     {
         luaD_errerr(L);
     }
 }
 pub unsafe extern "C" fn luaE_incCstack(mut L: *mut State) {
-    (*L).nCcalls = ((*L).nCcalls).wrapping_add(1);
-    (*L).nCcalls;
-    if (((*L).nCcalls & 0xffff as i32 as u32
+    (*L).count_c_calls = ((*L).count_c_calls).wrapping_add(1);
+    (*L).count_c_calls;
+    if (((*L).count_c_calls & 0xffff as i32 as u32
         >= 200 as i32 as u32) as i32 != 0 as i32)
         as i32 as i64 != 0
     {
@@ -3733,7 +3728,7 @@ pub unsafe extern "C" fn freestack(mut L: *mut State) {
             .wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
     );
 }
-pub unsafe extern "C" fn init_registry(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn init_registry(mut L: *mut State, mut g: *mut Global) {
     let mut registry: *mut Table = luaH_new(L);
     let mut io: *mut TValue = &mut (*g).l_registry;
     let mut x_: *mut Table = registry;
@@ -3763,7 +3758,7 @@ pub unsafe extern "C" fn init_registry(mut L: *mut State, mut g: *mut global_Sta
         | (1 as i32) << 6 as i32) as u8;
 }
 pub unsafe extern "C" fn f_luaopen(mut L: *mut State, mut _ud: *mut libc::c_void) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     stack_init(L, L);
     init_registry(L, g);
     luaS_init(L);
@@ -3774,15 +3769,15 @@ pub unsafe extern "C" fn f_luaopen(mut L: *mut State, mut _ud: *mut libc::c_void
         .nilvalue
         .tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
 }
-pub unsafe extern "C" fn preinit_thread(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn preinit_thread(mut L: *mut State, mut g: *mut Global) {
     (*L).myglobal = g;
     (*L).stack.p = 0 as StkId;
     (*L).ci = 0 as *mut CallInfo;
     (*L).nci = 0 as i32 as u16;
     (*L).twups = L;
-    (*L).nCcalls = 0 as i32 as u32;
+    (*L).count_c_calls = 0 as i32 as u32;
     (*L).error_jump = 0 as *mut LongJump;
-    ::core::ptr::write_volatile(&mut (*L).hook as *mut lua_Hook, None);
+    ::core::ptr::write_volatile(&mut (*L).hook as *mut HookFunction, None);
     ::core::ptr::write_volatile(
         &mut (*L).hookmask as *mut i32,
         0,
@@ -3796,7 +3791,7 @@ pub unsafe extern "C" fn preinit_thread(mut L: *mut State, mut g: *mut global_St
     (*L).oldpc = 0 as i32;
 }
 pub unsafe extern "C" fn close_state(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if !((*g).nilvalue.tt_ as i32 & 0xf as i32 == 0 as i32) {
         luaC_freeallobjects(L);
     } else {
@@ -3826,10 +3821,10 @@ pub unsafe extern "C" fn close_state(mut L: *mut State) {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newthread(mut L: *mut State) -> *mut State {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut o: *mut GCObject = 0 as *mut GCObject;
     let mut L1: *mut State = 0 as *mut State;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     o = luaC_newobjdt(
@@ -3850,7 +3845,7 @@ pub unsafe extern "C" fn lua_newthread(mut L: *mut State) -> *mut State {
     preinit_thread(L1, g);
     ::core::ptr::write_volatile(&mut (*L1).hookmask as *mut i32, (*L).hookmask);
     (*L1).basehookcount = (*L).basehookcount;
-    ::core::ptr::write_volatile(&mut (*L1).hook as *mut lua_Hook, (*L).hook);
+    ::core::ptr::write_volatile(&mut (*L1).hook as *mut HookFunction, (*L).hook);
     (*L1).hookcount = (*L1).basehookcount;
     memcpy(
         (L1 as *mut i8)
@@ -3910,8 +3905,8 @@ pub unsafe extern "C" fn lua_closethread(
 ) -> i32 {
     let mut status: i32 = 0;
     (*L)
-        .nCcalls = if !from.is_null() {
-        (*from).nCcalls & 0xffff as i32 as u32
+        .count_c_calls = if !from.is_null() {
+        (*from).count_c_calls & 0xffff as i32 as u32
     } else {
         0 as i32 as u32
     };
@@ -3924,12 +3919,12 @@ pub unsafe extern "C" fn lua_resetthread(mut L: *mut State) -> i32 {
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newstate(
-    mut f: lua_Alloc,
+    mut f: AllocationFunction,
     mut ud: *mut libc::c_void,
 ) -> *mut State {
     let mut i: i32 = 0;
     let mut L: *mut State = 0 as *mut State;
-    let mut g: *mut global_State = 0 as *mut global_State;
+    let mut g: *mut Global = 0 as *mut Global;
     let mut l: *mut LG = (Some(f.expect("non-null function pointer")))
         .expect(
             "non-null function pointer",
@@ -3954,7 +3949,7 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).allgc = &mut (*(L as *mut GCUnion)).gc;
     (*L).next = 0 as *mut GCObject;
     (*L)
-        .nCcalls = ((*L).nCcalls as u32)
+        .count_c_calls = ((*L).count_c_calls as u32)
         .wrapping_add(0x10000 as i32 as u32) as u32 as u32;
     (*g).frealloc = f;
     (*g).ud = ud;
@@ -3992,7 +3987,7 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).weak = (*g).ephemeron;
     (*g).twups = 0 as *mut State;
     (*g).totalbytes = ::core::mem::size_of::<LG>() as u64 as i64;
-    (*g).GCdebt = 0 as i32 as i64;
+    (*g).gc_debt = 0 as i32 as i64;
     (*g).lastatomic = 0 as i32 as u64;
     let mut io: *mut TValue = &mut (*g).nilvalue;
     (*io).value_.i = 0 as i32 as i64;
@@ -4028,7 +4023,7 @@ pub unsafe extern "C" fn luaE_warning(
     mut msg: *const i8,
     mut tocont: i32,
 ) {
-    let mut wf: lua_WarnFunction = (*(*L).myglobal).warnf;
+    let mut wf: WarnFunction = (*(*L).myglobal).warnf;
     if wf.is_some() {
         wf.expect("non-null function pointer")((*(*L).myglobal).ud_warn, msg, tocont);
     }
@@ -4133,7 +4128,7 @@ pub unsafe extern "C" fn settraps(mut ci: *mut CallInfo) {
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_sethook(
     mut L: *mut State,
-    mut func: lua_Hook,
+    mut func: HookFunction,
     mut mask: i32,
     mut count: i32,
 ) {
@@ -4141,7 +4136,7 @@ pub unsafe extern "C" fn lua_sethook(
         mask = 0 as i32;
         func = None;
     }
-    ::core::ptr::write_volatile(&mut (*L).hook as *mut lua_Hook, func);
+    ::core::ptr::write_volatile(&mut (*L).hook as *mut HookFunction, func);
     (*L).basehookcount = count;
     (*L).hookcount = (*L).basehookcount;
     ::core::ptr::write_volatile(
@@ -4153,7 +4148,7 @@ pub unsafe extern "C" fn lua_sethook(
     }
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn lua_gethook(mut L: *mut State) -> lua_Hook {
+pub unsafe extern "C" fn lua_gethook(mut L: *mut State) -> HookFunction {
     return (*L).hook;
 }
 #[unsafe (no_mangle)]
@@ -4168,7 +4163,7 @@ pub unsafe extern "C" fn lua_gethookcount(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn lua_getstack(
     mut L: *mut State,
     mut level: i32,
-    mut ar: *mut lua_Debug,
+    mut ar: *mut Debug,
 ) -> i32 {
     let mut status: i32 = 0;
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
@@ -4262,7 +4257,7 @@ pub unsafe extern "C" fn luaG_findlocal(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_getlocal(
     mut L: *mut State,
-    mut ar: *const lua_Debug,
+    mut ar: *const Debug,
     mut n: i32,
 ) -> *const i8 {
     let mut name: *const i8 = 0 as *const i8;
@@ -4300,7 +4295,7 @@ pub unsafe extern "C" fn lua_getlocal(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_setlocal(
     mut L: *mut State,
-    mut ar: *const lua_Debug,
+    mut ar: *const Debug,
     mut n: i32,
 ) -> *const i8 {
     let mut pos: StkId = 0 as StkId;
@@ -4318,7 +4313,7 @@ pub unsafe extern "C" fn lua_setlocal(
     }
     return name;
 }
-pub unsafe extern "C" fn funcinfo(mut ar: *mut lua_Debug, mut cl: *mut Closure) {
+pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
     if !(!cl.is_null()
         && (*cl).c.tt as i32
             == 6 as i32 | (0 as i32) << 4 as i32)
@@ -4433,7 +4428,7 @@ pub unsafe extern "C" fn getfuncname(
 pub unsafe extern "C" fn auxgetinfo(
     mut L: *mut State,
     mut what: *const i8,
-    mut ar: *mut lua_Debug,
+    mut ar: *mut Debug,
     mut f: *mut Closure,
     mut ci: *mut CallInfo,
 ) -> i32 {
@@ -4513,7 +4508,7 @@ pub unsafe extern "C" fn auxgetinfo(
 pub unsafe extern "C" fn lua_getinfo(
     mut L: *mut State,
     mut what: *const i8,
-    mut ar: *mut lua_Debug,
+    mut ar: *mut Debug,
 ) -> i32 {
     let mut status: i32 = 0;
     let mut cl: *mut Closure = 0 as *mut Closure;
@@ -5161,7 +5156,7 @@ pub unsafe extern "C" fn luaG_runerror(
     let mut ci: *mut CallInfo = (*L).ci;
     let mut msg: *const i8 = 0 as *const i8;
     let mut argp: ::core::ffi::VaListImpl;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
     argp = args.clone();
@@ -5377,12 +5372,12 @@ pub unsafe extern "C" fn luaM_free_(
     mut block_0: *mut libc::c_void,
     mut osize: u64,
 ) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     (Some(((*g).frealloc).expect("non-null function pointer")))
         .expect(
             "non-null function pointer",
         )((*g).ud, block_0, osize, 0 as i32 as u64);
-    (*g).GCdebt = ((*g).GCdebt as u64).wrapping_sub(osize) as i64 as i64;
+    (*g).gc_debt = ((*g).gc_debt as u64).wrapping_sub(osize) as i64 as i64;
 }
 pub unsafe extern "C" fn tryagain(
     mut L: *mut State,
@@ -5390,7 +5385,7 @@ pub unsafe extern "C" fn tryagain(
     mut osize: u64,
     mut nsize: u64,
 ) -> *mut libc::c_void {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if (*g).nilvalue.tt_ as i32 & 0xf as i32 == 0 as i32
         && (*g).gcstopem == 0
     {
@@ -5408,7 +5403,7 @@ pub unsafe extern "C" fn luaM_realloc_(
     mut nsize: u64,
 ) -> *mut libc::c_void {
     let mut newblock: *mut libc::c_void = 0 as *mut libc::c_void;
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     newblock = (Some(((*g).frealloc).expect("non-null function pointer")))
         .expect("non-null function pointer")((*g).ud, block_0, osize, nsize);
     if ((newblock.is_null() && nsize > 0 as i32 as u64) as i32
@@ -5420,7 +5415,7 @@ pub unsafe extern "C" fn luaM_realloc_(
         }
     }
     (*g)
-        .GCdebt = ((*g).GCdebt as u64).wrapping_add(nsize).wrapping_sub(osize)
+        .gc_debt = ((*g).gc_debt as u64).wrapping_add(nsize).wrapping_sub(osize)
         as i64;
     return newblock;
 }
@@ -5446,7 +5441,7 @@ pub unsafe extern "C" fn luaM_malloc_(
     if size == 0 as i32 as u64 {
         return 0 as *mut libc::c_void
     } else {
-        let mut g: *mut global_State = (*L).myglobal;
+        let mut g: *mut Global = (*L).myglobal;
         let mut newblock: *mut libc::c_void = (Some(
             ((*g).frealloc).expect("non-null function pointer"),
         ))
@@ -5462,7 +5457,7 @@ pub unsafe extern "C" fn luaM_malloc_(
             }
         }
         (*g)
-            .GCdebt = ((*g).GCdebt as u64).wrapping_add(size) as i64
+            .gc_debt = ((*g).gc_debt as u64).wrapping_add(size) as i64
             as i64;
         return newblock;
     };
@@ -6983,7 +6978,7 @@ pub unsafe extern "C" fn luaT_getvarargs(
         {
             let mut t__: i64 = (where_0 as *mut i8)
                 .offset_from((*L).stack.p as *mut i8) as i64;
-            if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+            if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                 luaC_step(L);
             }
             luaD_growstack(L, nextra, 1);
@@ -7027,7 +7022,7 @@ pub unsafe extern "C" fn luaZ_fill(mut z: *mut ZIO) -> i32 {
 pub unsafe extern "C" fn luaZ_init(
     mut L: *mut State,
     mut z: *mut ZIO,
-    mut reader: lua_Reader,
+    mut reader: ReadFunction,
     mut data: *mut libc::c_void,
 ) {
     (*z).L = L;
@@ -7606,7 +7601,7 @@ pub unsafe extern "C" fn clearkey(mut n: *mut Node) {
     }
 }
 pub unsafe extern "C" fn iscleared(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut o: *const GCObject,
 ) -> i32 {
     if o.is_null() {
@@ -7630,7 +7625,7 @@ pub unsafe extern "C" fn luaC_barrier_(
     mut o: *mut GCObject,
     mut v: *mut GCObject,
 ) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if (*g).gcstate as i32 <= 2 as i32 {
         reallymarkobject(g, v);
         if (*o).marked as i32 & 7 as i32 > 1 as i32 {
@@ -7651,7 +7646,7 @@ pub unsafe extern "C" fn luaC_barrier_(
     }
 }
 pub unsafe extern "C" fn luaC_barrierback_(mut L: *mut State, mut o: *mut GCObject) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if (*o).marked as i32 & 7 as i32 == 6 as i32 {
         (*o)
             .marked = ((*o).marked as i32
@@ -7669,7 +7664,7 @@ pub unsafe extern "C" fn luaC_barrierback_(mut L: *mut State, mut o: *mut GCObje
     }
 }
 pub unsafe extern "C" fn luaC_fix(mut L: *mut State, mut o: *mut GCObject) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     (*o)
         .marked = ((*o).marked as i32
         & !((1 as i32) << 5 as i32
@@ -7689,7 +7684,7 @@ pub unsafe extern "C" fn luaC_newobjdt(
     mut sz: u64,
     mut offset: u64,
 ) -> *mut GCObject {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut p: *mut i8 = luaM_malloc_(L, sz, tt & 0xf as i32)
         as *mut i8;
     let mut o: *mut GCObject = p.offset(offset as isize) as *mut GCObject;
@@ -7709,7 +7704,7 @@ pub unsafe extern "C" fn luaC_newobj(
 ) -> *mut GCObject {
     return luaC_newobjdt(L, tt, sz, 0 as i32 as u64);
 }
-pub unsafe extern "C" fn reallymarkobject(mut g: *mut global_State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn reallymarkobject(mut g: *mut Global, mut o: *mut GCObject) {
     let mut current_block_18: u64;
     match (*o).tt as i32 {
         4 | 20 => {
@@ -7781,7 +7776,7 @@ pub unsafe extern "C" fn reallymarkobject(mut g: *mut global_State, mut o: *mut 
         _ => {}
     };
 }
-pub unsafe extern "C" fn markmt(mut g: *mut global_State) {
+pub unsafe extern "C" fn markmt(mut g: *mut Global) {
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < 9 as i32 {
@@ -7800,7 +7795,7 @@ pub unsafe extern "C" fn markmt(mut g: *mut global_State) {
         i += 1;
     }
 }
-pub unsafe extern "C" fn markbeingfnz(mut g: *mut global_State) -> u64 {
+pub unsafe extern "C" fn markbeingfnz(mut g: *mut Global) -> u64 {
     let mut o: *mut GCObject = 0 as *mut GCObject;
     let mut count: u64 = 0 as i32 as u64;
     o = (*g).tobefnz;
@@ -7816,7 +7811,7 @@ pub unsafe extern "C" fn markbeingfnz(mut g: *mut global_State) -> u64 {
     }
     return count;
 }
-pub unsafe extern "C" fn remarkupvals(mut g: *mut global_State) -> i32 {
+pub unsafe extern "C" fn remarkupvals(mut g: *mut Global) -> i32 {
     let mut thread: *mut State = 0 as *mut State;
     let mut p: *mut *mut State = &mut (*g).twups;
     let mut work: i32 = 0 as i32;
@@ -7858,14 +7853,14 @@ pub unsafe extern "C" fn remarkupvals(mut g: *mut global_State) -> i32 {
     }
     return work;
 }
-pub unsafe extern "C" fn cleargraylists(mut g: *mut global_State) {
+pub unsafe extern "C" fn cleargraylists(mut g: *mut Global) {
     (*g).grayagain = 0 as *mut GCObject;
     (*g).gray = (*g).grayagain;
     (*g).ephemeron = 0 as *mut GCObject;
     (*g).allweak = (*g).ephemeron;
     (*g).weak = (*g).allweak;
 }
-pub unsafe extern "C" fn restartcollection(mut g: *mut global_State) {
+pub unsafe extern "C" fn restartcollection(mut g: *mut Global) {
     cleargraylists(g);
     if (*(*g).mainthread).marked as i32
         & ((1 as i32) << 3 as i32
@@ -7883,7 +7878,7 @@ pub unsafe extern "C" fn restartcollection(mut g: *mut global_State) {
     markmt(g);
     markbeingfnz(g);
 }
-pub unsafe extern "C" fn genlink(mut g: *mut global_State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn genlink(mut g: *mut Global, mut o: *mut GCObject) {
     if (*o).marked as i32 & 7 as i32 == 5 as i32 {
         linkgclist_(&mut (*(o as *mut GCUnion)).gc, getgclist(o), &mut (*g).grayagain);
     } else if (*o).marked as i32 & 7 as i32 == 6 as i32 {
@@ -7892,7 +7887,7 @@ pub unsafe extern "C" fn genlink(mut g: *mut global_State, mut o: *mut GCObject)
             ^ (6 as i32 ^ 4 as i32)) as u8;
     }
 }
-pub unsafe extern "C" fn traverseweakvalue(mut g: *mut global_State, mut h: *mut Table) {
+pub unsafe extern "C" fn traverseweakvalue(mut g: *mut Global, mut h: *mut Table) {
     let mut n: *mut Node = 0 as *mut Node;
     let mut limit: *mut Node = &mut *((*h).node)
         .offset(((1 as i32) << (*h).lsizenode as i32) as u64 as isize)
@@ -7939,7 +7934,7 @@ pub unsafe extern "C" fn traverseweakvalue(mut g: *mut global_State, mut h: *mut
     };
 }
 pub unsafe extern "C" fn traverseephemeron(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut h: *mut Table,
     mut inv: i32,
 ) -> i32 {
@@ -8025,7 +8020,7 @@ pub unsafe extern "C" fn traverseephemeron(
     }
     return marked;
 }
-pub unsafe extern "C" fn traversestrongtable(mut g: *mut global_State, mut h: *mut Table) {
+pub unsafe extern "C" fn traversestrongtable(mut g: *mut Global, mut h: *mut Table) {
     let mut n: *mut Node = 0 as *mut Node;
     let mut limit: *mut Node = &mut *((*h).node)
         .offset(((1 as i32) << (*h).lsizenode as i32) as u64 as isize)
@@ -8070,7 +8065,7 @@ pub unsafe extern "C" fn traversestrongtable(mut g: *mut global_State, mut h: *m
     genlink(g, &mut (*(h as *mut GCUnion)).gc);
 }
 pub unsafe extern "C" fn traversetable(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut h: *mut Table,
 ) -> u64 {
     let mut weakkey: *const i8 = 0 as *const i8;
@@ -8130,7 +8125,7 @@ pub unsafe extern "C" fn traversetable(
         ) as u64;
 }
 pub unsafe extern "C" fn traverseudata(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut u: *mut Udata,
 ) -> i32 {
     let mut i: i32 = 0;
@@ -8162,7 +8157,7 @@ pub unsafe extern "C" fn traverseudata(
     return 1 as i32 + (*u).nuvalue as i32;
 }
 pub unsafe extern "C" fn traverseproto(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut f: *mut Proto,
 ) -> i32 {
     let mut i: i32 = 0;
@@ -8238,7 +8233,7 @@ pub unsafe extern "C" fn traverseproto(
         + (*f).sizelocvars;
 }
 pub unsafe extern "C" fn traverseCclosure(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut cl: *mut CClosure,
 ) -> i32 {
     let mut i: i32 = 0;
@@ -8261,7 +8256,7 @@ pub unsafe extern "C" fn traverseCclosure(
     return 1 as i32 + (*cl).nupvalues as i32;
 }
 pub unsafe extern "C" fn traverseLclosure(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut cl: *mut LClosure,
 ) -> i32 {
     let mut i: i32 = 0;
@@ -8289,7 +8284,7 @@ pub unsafe extern "C" fn traverseLclosure(
     return 1 as i32 + (*cl).nupvalues as i32;
 }
 pub unsafe extern "C" fn traversethread(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut th: *mut State,
 ) -> i32 {
     let mut uv: *mut UpVal = 0 as *mut UpVal;
@@ -8346,7 +8341,7 @@ pub unsafe extern "C" fn traversethread(
     return 1 as i32
         + ((*th).stack_last.p).offset_from((*th).stack.p) as i64 as i32;
 }
-pub unsafe extern "C" fn propagatemark(mut g: *mut global_State) -> u64 {
+pub unsafe extern "C" fn propagatemark(mut g: *mut Global) -> u64 {
     let mut o: *mut GCObject = (*g).gray;
     (*o)
         .marked = ((*o).marked as i32 | (1 as i32) << 5 as i32)
@@ -8362,14 +8357,14 @@ pub unsafe extern "C" fn propagatemark(mut g: *mut global_State) -> u64 {
         _ => return 0 as i32 as u64,
     };
 }
-pub unsafe extern "C" fn propagateall(mut g: *mut global_State) -> u64 {
+pub unsafe extern "C" fn propagateall(mut g: *mut Global) -> u64 {
     let mut tot: u64 = 0 as i32 as u64;
     while !((*g).gray).is_null() {
         tot = (tot as u64).wrapping_add(propagatemark(g)) as u64 as u64;
     }
     return tot;
 }
-pub unsafe extern "C" fn convergeephemerons(mut g: *mut global_State) {
+pub unsafe extern "C" fn convergeephemerons(mut g: *mut Global) {
     let mut changed: i32 = 0;
     let mut dir: i32 = 0 as i32;
     loop {
@@ -8398,7 +8393,7 @@ pub unsafe extern "C" fn convergeephemerons(mut g: *mut global_State) {
         }
     };
 }
-pub unsafe extern "C" fn clearbykeys(mut g: *mut global_State, mut l: *mut GCObject) {
+pub unsafe extern "C" fn clearbykeys(mut g: *mut Global, mut l: *mut GCObject) {
     while !l.is_null() {
         let mut h: *mut Table = &mut (*(l as *mut GCUnion)).h;
         let mut limit: *mut Node = &mut *((*h).node)
@@ -8433,7 +8428,7 @@ pub unsafe extern "C" fn clearbykeys(mut g: *mut global_State, mut l: *mut GCObj
     }
 }
 pub unsafe extern "C" fn clearbyvalues(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut l: *mut GCObject,
     mut f: *mut GCObject,
 ) {
@@ -8593,7 +8588,7 @@ pub unsafe extern "C" fn sweeplist(
     mut countin: i32,
     mut countout: *mut i32,
 ) -> *mut *mut GCObject {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut ow: i32 = (*g).currentwhite as i32
         ^ ((1 as i32) << 3 as i32
             | (1 as i32) << 4 as i32);
@@ -8637,19 +8632,19 @@ pub unsafe extern "C" fn sweeptolive(
     }
     return p;
 }
-pub unsafe extern "C" fn checkSizes(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn checkSizes(mut L: *mut State, mut g: *mut Global) {
     if (*g).gcemergency == 0 {
         if (*g).strt.nuse < (*g).strt.size / 4 as i32 {
-            let mut olddebt: i64 = (*g).GCdebt;
+            let mut olddebt: i64 = (*g).gc_debt;
             luaS_resize(L, (*g).strt.size / 2 as i32);
             (*g)
-                .GCestimate = ((*g).GCestimate as u64)
-                .wrapping_add(((*g).GCdebt - olddebt) as u64) as u64
+                .gc_estimate = ((*g).gc_estimate as u64)
+                .wrapping_add(((*g).gc_debt - olddebt) as u64) as u64
                 as u64;
         }
     }
 }
-pub unsafe extern "C" fn udata2finalize(mut g: *mut global_State) -> *mut GCObject {
+pub unsafe extern "C" fn udata2finalize(mut g: *mut Global) -> *mut GCObject {
     let mut o: *mut GCObject = (*g).tobefnz;
     (*g).tobefnz = (*o).next;
     (*o).next = (*g).allgc;
@@ -8683,7 +8678,7 @@ pub unsafe extern "C" fn dothecall(mut L: *mut State, mut _ud: *mut libc::c_void
     );
 }
 pub unsafe extern "C" fn GCTM(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut tm: *const TValue = 0 as *const TValue;
     let mut v: TValue = TValue {
         value_: Value { gc: 0 as *mut GCObject },
@@ -8746,7 +8741,7 @@ pub unsafe extern "C" fn runafewfinalizers(
     mut L: *mut State,
     mut n: i32,
 ) -> i32 {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < n && !((*g).tobefnz).is_null() {
@@ -8756,7 +8751,7 @@ pub unsafe extern "C" fn runafewfinalizers(
     return i;
 }
 pub unsafe extern "C" fn callallpendingfinalizers(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     while !((*g).tobefnz).is_null() {
         GCTM(L);
     }
@@ -8767,7 +8762,7 @@ pub unsafe extern "C" fn findlast(mut p: *mut *mut GCObject) -> *mut *mut GCObje
     }
     return p;
 }
-pub unsafe extern "C" fn separatetobefnz(mut g: *mut global_State, mut all: i32) {
+pub unsafe extern "C" fn separatetobefnz(mut g: *mut Global, mut all: i32) {
     let mut curr: *mut GCObject = 0 as *mut GCObject;
     let mut p: *mut *mut GCObject = &mut (*g).finobj;
     let mut lastnext: *mut *mut GCObject = findlast(&mut (*g).tobefnz);
@@ -8797,7 +8792,7 @@ pub unsafe extern "C" fn checkpointer(mut p: *mut *mut GCObject, mut o: *mut GCO
         *p = (*o).next;
     }
 }
-pub unsafe extern "C" fn correctpointers(mut g: *mut global_State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn correctpointers(mut g: *mut Global, mut o: *mut GCObject) {
     checkpointer(&mut (*g).survival, o);
     checkpointer(&mut (*g).old1, o);
     checkpointer(&mut (*g).reallyold, o);
@@ -8808,7 +8803,7 @@ pub unsafe extern "C" fn luaC_checkfinalizer(
     mut o: *mut GCObject,
     mut mt: *mut Table,
 ) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if (*o).marked as i32 & (1 as i32) << 6 as i32 != 0
         || (if mt.is_null() {
             0 as *const TValue
@@ -8856,11 +8851,11 @@ pub unsafe extern "C" fn luaC_checkfinalizer(
             | (1 as i32) << 6 as i32) as u8;
     };
 }
-pub unsafe extern "C" fn setpause(mut g: *mut global_State) {
+pub unsafe extern "C" fn setpause(mut g: *mut Global) {
     let mut threshold: i64 = 0;
     let mut debt: i64 = 0;
     let mut pause: i32 = (*g).gcpause as i32 * 4 as i32;
-    let mut estimate: i64 = ((*g).GCestimate)
+    let mut estimate: i64 = ((*g).gc_estimate)
         .wrapping_div(100 as i32 as u64) as i64;
     threshold = if (pause as i64)
         < (!(0 as i32 as u64) >> 1 as i32) as i64 / estimate
@@ -8869,7 +8864,7 @@ pub unsafe extern "C" fn setpause(mut g: *mut global_State) {
     } else {
         (!(0 as i32 as u64) >> 1 as i32) as i64
     };
-    debt = (((*g).totalbytes + (*g).GCdebt) as u64)
+    debt = (((*g).totalbytes + (*g).gc_debt) as u64)
         .wrapping_sub(threshold as u64) as i64;
     if debt > 0 as i32 as i64 {
         debt = 0 as i32 as i64;
@@ -8878,7 +8873,7 @@ pub unsafe extern "C" fn setpause(mut g: *mut global_State) {
 }
 pub unsafe extern "C" fn sweep2old(mut L: *mut State, mut p: *mut *mut GCObject) {
     let mut curr: *mut GCObject = 0 as *mut GCObject;
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     loop {
         curr = *p;
         if curr.is_null() {
@@ -8925,7 +8920,7 @@ pub unsafe extern "C" fn sweep2old(mut L: *mut State, mut p: *mut *mut GCObject)
 }
 pub unsafe extern "C" fn sweepgen(
     mut L: *mut State,
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut p: *mut *mut GCObject,
     mut limit: *mut GCObject,
     mut pfirstold1: *mut *mut GCObject,
@@ -8978,7 +8973,7 @@ pub unsafe extern "C" fn sweepgen(
     }
     return p;
 }
-pub unsafe extern "C" fn whitelist(mut g: *mut global_State, mut p: *mut GCObject) {
+pub unsafe extern "C" fn whitelist(mut g: *mut Global, mut p: *mut GCObject) {
     let mut white: i32 = ((*g).currentwhite as i32
         & ((1 as i32) << 3 as i32
             | (1 as i32) << 4 as i32)) as u8 as i32;
@@ -9040,7 +9035,7 @@ pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut GCObject) -> *mut *mut
     }
     return p;
 }
-pub unsafe extern "C" fn correctgraylists(mut g: *mut global_State) {
+pub unsafe extern "C" fn correctgraylists(mut g: *mut Global) {
     let mut list: *mut *mut GCObject = correctgraylist(&mut (*g).grayagain);
     *list = (*g).weak;
     (*g).weak = 0 as *mut GCObject;
@@ -9053,7 +9048,7 @@ pub unsafe extern "C" fn correctgraylists(mut g: *mut global_State) {
     correctgraylist(list);
 }
 pub unsafe extern "C" fn markold(
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut from: *mut GCObject,
     mut to: *mut GCObject,
 ) {
@@ -9071,7 +9066,7 @@ pub unsafe extern "C" fn markold(
         p = (*p).next;
     }
 }
-pub unsafe extern "C" fn finishgencycle(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn finishgencycle(mut L: *mut State, mut g: *mut Global) {
     correctgraylists(g);
     checkSizes(L, g);
     (*g).gcstate = 0 as i32 as u8;
@@ -9079,7 +9074,7 @@ pub unsafe extern "C" fn finishgencycle(mut L: *mut State, mut g: *mut global_St
         callallpendingfinalizers(L);
     }
 }
-pub unsafe extern "C" fn youngcollection(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn youngcollection(mut L: *mut State, mut g: *mut Global) {
     let mut psurvival: *mut *mut GCObject = 0 as *mut *mut GCObject;
     let mut dummy: *mut GCObject = 0 as *mut GCObject;
     if !((*g).firstold1).is_null() {
@@ -9104,7 +9099,7 @@ pub unsafe extern "C" fn youngcollection(mut L: *mut State, mut g: *mut global_S
     sweepgen(L, g, &mut (*g).tobefnz, 0 as *mut GCObject, &mut dummy);
     finishgencycle(L, g);
 }
-pub unsafe extern "C" fn atomic2gen(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn atomic2gen(mut L: *mut State, mut g: *mut Global) {
     cleargraylists(g);
     (*g).gcstate = 3 as i32 as u8;
     sweep2old(L, &mut (*g).allgc);
@@ -9119,20 +9114,20 @@ pub unsafe extern "C" fn atomic2gen(mut L: *mut State, mut g: *mut global_State)
     sweep2old(L, &mut (*g).tobefnz);
     (*g).gckind = 1 as i32 as u8;
     (*g).lastatomic = 0 as i32 as u64;
-    (*g).GCestimate = ((*g).totalbytes + (*g).GCdebt) as u64;
+    (*g).gc_estimate = ((*g).totalbytes + (*g).gc_debt) as u64;
     finishgencycle(L, g);
 }
-pub unsafe extern "C" fn setminordebt(mut g: *mut global_State) {
+pub unsafe extern "C" fn setminordebt(mut g: *mut Global) {
     luaE_setdebt(
         g,
-        -((((*g).totalbytes + (*g).GCdebt) as u64)
+        -((((*g).totalbytes + (*g).gc_debt) as u64)
             .wrapping_div(100 as i32 as u64) as i64
             * (*g).genminormul as i64),
     );
 }
 pub unsafe extern "C" fn entergen(
     mut L: *mut State,
-    mut g: *mut global_State,
+    mut g: *mut Global,
 ) -> u64 {
     let mut numobjs: u64 = 0;
     luaC_runtilstate(L, (1 as i32) << 8 as i32);
@@ -9142,7 +9137,7 @@ pub unsafe extern "C" fn entergen(
     setminordebt(g);
     return numobjs;
 }
-pub unsafe extern "C" fn enterinc(mut g: *mut global_State) {
+pub unsafe extern "C" fn enterinc(mut g: *mut Global) {
     whitelist(g, (*g).allgc);
     (*g).survival = 0 as *mut GCObject;
     (*g).old1 = (*g).survival;
@@ -9157,7 +9152,7 @@ pub unsafe extern "C" fn enterinc(mut g: *mut global_State) {
     (*g).lastatomic = 0 as i32 as u64;
 }
 pub unsafe extern "C" fn luaC_changemode(mut L: *mut State, mut newmode: i32) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if newmode != (*g).gckind as i32 {
         if newmode == 1 as i32 {
             entergen(L, g);
@@ -9167,11 +9162,11 @@ pub unsafe extern "C" fn luaC_changemode(mut L: *mut State, mut newmode: i32) {
     }
     (*g).lastatomic = 0 as i32 as u64;
 }
-pub unsafe extern "C" fn fullgen(mut L: *mut State, mut g: *mut global_State) -> u64 {
+pub unsafe extern "C" fn fullgen(mut L: *mut State, mut g: *mut Global) -> u64 {
     enterinc(g);
     return entergen(L, g);
 }
-pub unsafe extern "C" fn stepgenfull(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn stepgenfull(mut L: *mut State, mut g: *mut Global) {
     let mut newatomic: u64 = 0;
     let mut lastatomic: u64 = (*g).lastatomic;
     if (*g).gckind as i32 == 1 as i32 {
@@ -9183,29 +9178,29 @@ pub unsafe extern "C" fn stepgenfull(mut L: *mut State, mut g: *mut global_State
         atomic2gen(L, g);
         setminordebt(g);
     } else {
-        (*g).GCestimate = ((*g).totalbytes + (*g).GCdebt) as u64;
+        (*g).gc_estimate = ((*g).totalbytes + (*g).gc_debt) as u64;
         entersweep(L);
         luaC_runtilstate(L, (1 as i32) << 8 as i32);
         setpause(g);
         (*g).lastatomic = newatomic;
     };
 }
-pub unsafe extern "C" fn genstep(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn genstep(mut L: *mut State, mut g: *mut Global) {
     if (*g).lastatomic != 0 as i32 as u64 {
         stepgenfull(L, g);
     } else {
-        let mut majorbase: u64 = (*g).GCestimate;
+        let mut majorbase: u64 = (*g).gc_estimate;
         let mut majorinc: u64 = majorbase
             .wrapping_div(100 as i32 as u64)
             .wrapping_mul(
                 ((*g).genmajormul as i32 * 4 as i32) as u64,
             );
-        if (*g).GCdebt > 0 as i32 as i64
-            && ((*g).totalbytes + (*g).GCdebt) as u64
+        if (*g).gc_debt > 0 as i32 as i64
+            && ((*g).totalbytes + (*g).gc_debt) as u64
                 > majorbase.wrapping_add(majorinc)
         {
             let mut numobjs: u64 = fullgen(L, g);
-            if !((((*g).totalbytes + (*g).GCdebt) as u64)
+            if !((((*g).totalbytes + (*g).gc_debt) as u64)
                 < majorbase
                     .wrapping_add(
                         majorinc.wrapping_div(2 as i32 as u64),
@@ -9217,12 +9212,12 @@ pub unsafe extern "C" fn genstep(mut L: *mut State, mut g: *mut global_State) {
         } else {
             youngcollection(L, g);
             setminordebt(g);
-            (*g).GCestimate = majorbase;
+            (*g).gc_estimate = majorbase;
         }
     };
 }
 pub unsafe extern "C" fn entersweep(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     (*g).gcstate = 3 as i32 as u8;
     (*g).sweepgc = sweeptolive(L, &mut (*g).allgc);
 }
@@ -9238,7 +9233,7 @@ pub unsafe extern "C" fn deletelist(
     }
 }
 pub unsafe extern "C" fn luaC_freeallobjects(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     (*g).gcstp = 4 as i32 as u8;
     luaC_changemode(L, 0 as i32);
     separatetobefnz(g, 1);
@@ -9247,7 +9242,7 @@ pub unsafe extern "C" fn luaC_freeallobjects(mut L: *mut State) {
     deletelist(L, (*g).fixedgc, 0 as *mut GCObject);
 }
 pub unsafe extern "C" fn atomic(mut L: *mut State) -> u64 {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut work: u64 = 0 as i32 as u64;
     let mut origweak: *mut GCObject = 0 as *mut GCObject;
     let mut origall: *mut GCObject = 0 as *mut GCObject;
@@ -9296,17 +9291,17 @@ pub unsafe extern "C" fn atomic(mut L: *mut State) -> u64 {
 }
 pub unsafe extern "C" fn sweepstep(
     mut L: *mut State,
-    mut g: *mut global_State,
+    mut g: *mut Global,
     mut nextstate: i32,
     mut nextlist: *mut *mut GCObject,
 ) -> i32 {
     if !((*g).sweepgc).is_null() {
-        let mut olddebt: i64 = (*g).GCdebt;
+        let mut olddebt: i64 = (*g).gc_debt;
         let mut count: i32 = 0;
         (*g).sweepgc = sweeplist(L, (*g).sweepgc, 100 as i32, &mut count);
         (*g)
-            .GCestimate = ((*g).GCestimate as u64)
-            .wrapping_add(((*g).GCdebt - olddebt) as u64) as u64 as u64;
+            .gc_estimate = ((*g).gc_estimate as u64)
+            .wrapping_add(((*g).gc_debt - olddebt) as u64) as u64 as u64;
         return count;
     } else {
         (*g).gcstate = nextstate as u8;
@@ -9315,7 +9310,7 @@ pub unsafe extern "C" fn sweepstep(
     };
 }
 pub unsafe extern "C" fn singlestep(mut L: *mut State) -> u64 {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut work: u64 = 0;
     (*g).gcstopem = 1 as i32 as u8;
     match (*g).gcstate as i32 {
@@ -9335,7 +9330,7 @@ pub unsafe extern "C" fn singlestep(mut L: *mut State) -> u64 {
         1 => {
             work = atomic(L);
             entersweep(L);
-            (*g).GCestimate = ((*g).totalbytes + (*g).GCdebt) as u64;
+            (*g).gc_estimate = ((*g).totalbytes + (*g).gc_debt) as u64;
         }
         3 => {
             work = sweepstep(L, g, 4 as i32, &mut (*g).finobj) as u64;
@@ -9370,15 +9365,15 @@ pub unsafe extern "C" fn luaC_runtilstate(
     mut L: *mut State,
     mut statesmask: i32,
 ) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     while statesmask & (1 as i32) << (*g).gcstate as i32 == 0 {
         singlestep(L);
     }
 }
-pub unsafe extern "C" fn incstep(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn incstep(mut L: *mut State, mut g: *mut Global) {
     let mut stepmul: i32 = (*g).gcstepmul as i32 * 4 as i32
         | 1 as i32;
-    let mut debt: i64 = ((*g).GCdebt as u64)
+    let mut debt: i64 = ((*g).gc_debt as u64)
         .wrapping_div(::core::mem::size_of::<TValue>() as u64)
         .wrapping_mul(stepmul as u64) as i64;
     let mut stepsize: i64 = (if (*g).gcstepsize as u64
@@ -9409,7 +9404,7 @@ pub unsafe extern "C" fn incstep(mut L: *mut State, mut g: *mut global_State) {
     };
 }
 pub unsafe extern "C" fn luaC_step(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     if !((*g).gcstp as i32 == 0 as i32) {
         luaE_setdebt(g, -(2000 as i32) as i64);
     } else if (*g).gckind as i32 == 1 as i32
@@ -9420,7 +9415,7 @@ pub unsafe extern "C" fn luaC_step(mut L: *mut State) {
         incstep(L, g);
     };
 }
-pub unsafe extern "C" fn fullinc(mut L: *mut State, mut g: *mut global_State) {
+pub unsafe extern "C" fn fullinc(mut L: *mut State, mut g: *mut Global) {
     if (*g).gcstate as i32 <= 2 as i32 {
         entersweep(L);
     }
@@ -9432,7 +9427,7 @@ pub unsafe extern "C" fn fullinc(mut L: *mut State, mut g: *mut global_State) {
     setpause(g);
 }
 pub unsafe extern "C" fn luaC_fullgc(mut L: *mut State, mut isemergency: i32) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     (*g).gcemergency = isemergency as u8;
     if (*g).gckind as i32 == 0 as i32 {
         fullinc(L, g);
@@ -9931,7 +9926,7 @@ pub unsafe extern "C" fn luaS_resize(mut L: *mut State, mut nsize: i32) {
         }
     };
 }
-pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
+pub unsafe extern "C" fn luaS_clearcache(mut g: *mut Global) {
     let mut i: i32 = 0;
     let mut j: i32 = 0;
     i = 0 as i32;
@@ -9950,7 +9945,7 @@ pub unsafe extern "C" fn luaS_clearcache(mut g: *mut global_State) {
     }
 }
 pub unsafe extern "C" fn luaS_init(mut L: *mut State) {
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut i: i32 = 0;
     let mut j: i32 = 0;
     let mut tb: *mut StringTable = &mut (*(*L).myglobal).strt;
@@ -10062,7 +10057,7 @@ pub unsafe extern "C" fn internshrstr(
     mut l: u64,
 ) -> *mut TString {
     let mut ts: *mut TString = 0 as *mut TString;
-    let mut g: *mut global_State = (*L).myglobal;
+    let mut g: *mut Global = (*L).myglobal;
     let mut tb: *mut StringTable = &mut (*g).strt;
     let mut h: u32 = luaS_hash(str, l, (*g).seed);
     let mut list: *mut *mut TString = &mut *((*tb).hash)
@@ -11034,7 +11029,7 @@ pub unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
 pub unsafe extern "C" fn luaU_dump(
     mut L: *mut State,
     mut f: *const Proto,
-    mut w: lua_Writer,
+    mut w: WriteFunction,
     mut data: *mut libc::c_void,
     mut strip: i32,
 ) -> i32 {
@@ -11982,7 +11977,7 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         ::core::mem::size_of::<Upvaldesc>() as u64 as i32,
     ) as *mut Upvaldesc;
     (*ls).fs = (*fs).prev;
-    if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+    if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(L);
     }
 }
@@ -12501,149 +12496,149 @@ pub unsafe extern "C" fn getbinopr(mut op: i32) -> u32 {
         _ => return OPR_NOBINOPR,
     };
 }
-static mut priority: [C2RustUnnamed_26; 21] = [
+static mut priority: [C2RustUnnamed26; 21] = [
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 10 as i32 as u8,
             right: 10 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 10 as i32 as u8,
             right: 10 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 11 as i32 as u8,
             right: 11 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 11 as i32 as u8,
             right: 11 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 14 as i32 as u8,
             right: 13 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 11 as i32 as u8,
             right: 11 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 11 as i32 as u8,
             right: 11 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 6 as i32 as u8,
             right: 6 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 4 as i32 as u8,
             right: 4 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 5 as i32 as u8,
             right: 5 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 7 as i32 as u8,
             right: 7 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 7 as i32 as u8,
             right: 7 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 9 as i32 as u8,
             right: 8 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 3 as i32 as u8,
             right: 3 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 2 as i32 as u8,
             right: 2 as i32 as u8,
         };
         init
     },
     {
-        let mut init = C2RustUnnamed_26 {
+        let mut init = C2RustUnnamed26 {
             left: 1 as i32 as u8,
             right: 1 as i32 as u8,
         };
@@ -12685,8 +12680,8 @@ pub unsafe extern "C" fn subexpr(
         luaK_posfix((*ls).fs, op, v, &mut v2, line_0);
         op = nextop;
     }
-    (*(*ls).L).nCcalls = ((*(*ls).L).nCcalls).wrapping_sub(1);
-    (*(*ls).L).nCcalls;
+    (*(*ls).L).count_c_calls = ((*(*ls).L).count_c_calls).wrapping_sub(1);
+    (*(*ls).L).count_c_calls;
     return op;
 }
 pub unsafe extern "C" fn expr(mut ls: *mut LexState, mut v: *mut expdesc) {
@@ -12804,8 +12799,8 @@ pub unsafe extern "C" fn restassign(
         }
         luaE_incCstack((*ls).L);
         restassign(ls, &mut nv, nvars + 1 as i32);
-        (*(*ls).L).nCcalls = ((*(*ls).L).nCcalls).wrapping_sub(1);
-        (*(*ls).L).nCcalls;
+        (*(*ls).L).count_c_calls = ((*(*ls).L).count_c_calls).wrapping_sub(1);
+        (*(*ls).L).count_c_calls;
     } else {
         let mut nexps: i32 = 0;
         checknext(ls, '=' as i32);
@@ -13554,8 +13549,8 @@ pub unsafe extern "C" fn statement(mut ls: *mut LexState) {
         }
     }
     (*(*ls).fs).freereg = luaY_nvarstack((*ls).fs) as u8;
-    (*(*ls).L).nCcalls = ((*(*ls).L).nCcalls).wrapping_sub(1);
-    (*(*ls).L).nCcalls;
+    (*(*ls).L).count_c_calls = ((*(*ls).L).count_c_calls).wrapping_sub(1);
+    (*(*ls).L).count_c_calls;
 }
 pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FuncState) {
     let mut bl: BlockCnt = BlockCnt {
@@ -13884,7 +13879,7 @@ pub unsafe extern "C" fn luaX_newstring(
             .tt_ = ((*x_).tt as i32 | (1 as i32) << 6 as i32)
             as u8;
         luaH_finishset(L, (*ls).h, stv, o, stv);
-        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
             luaC_step(L);
         }
         (*L).top.p = ((*L).top.p).offset(-1);
@@ -15021,10 +15016,10 @@ pub unsafe extern "C" fn mainpositionTV(
                 ) as *mut Node;
         }
         22 => {
-            let mut f: lua_CFunction = (*key).value_.f;
+            let mut f: CFunction = (*key).value_.f;
             return &mut *((*t).node)
                 .offset(
-                    ((::core::mem::transmute::<lua_CFunction, u64>(f)
+                    ((::core::mem::transmute::<CFunction, u64>(f)
                         & (2147483647 as i32 as u32)
                             .wrapping_mul(2 as u32)
                             .wrapping_add(1 as u32) as u64)
@@ -20601,7 +20596,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut State, mut ci: *mut CallInfo) 
                         if b_3 != 0 as i32 || c_1 != 0 as i32 {
                             luaH_resize(L, t, c_1 as u32, b_3 as u32);
                         }
-                        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = ra_17.offset(1 as i32 as isize);
                             luaC_step(L);
@@ -22687,7 +22682,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut State, mut ci: *mut CallInfo) 
                         (*ci).u.l.savedpc = pc;
                         luaV_concat(L, n_1);
                         trap = (*ci).u.l.trap;
-                        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = (*L).top.p;
                             luaC_step(L);
@@ -23768,7 +23763,7 @@ pub unsafe extern "C" fn luaV_execute(mut L: *mut State, mut ci: *mut CallInfo) 
                         (*ci).u.l.savedpc = pc;
                         (*L).top.p = (*ci).top.p;
                         pushclosure(L, p, ((*cl).upvals).as_mut_ptr(), base, ra_77);
-                        if (*(*L).myglobal).GCdebt > 0 as i32 as i64 {
+                        if (*(*L).myglobal).gc_debt > 0 as i32 as i64 {
                             (*ci).u.l.savedpc = pc;
                             (*L).top.p = ra_77.offset(1 as i32 as isize);
                             luaC_step(L);
@@ -23932,7 +23927,7 @@ pub unsafe extern "C" fn findfield(
 }
 pub unsafe extern "C" fn pushglobalfuncname(
     mut L: *mut State,
-    mut ar: *mut lua_Debug,
+    mut ar: *mut Debug,
 ) -> i32 {
     let mut top: i32 = lua_gettop(L);
     lua_getinfo(L, b"f\0" as *const u8 as *const i8, ar);
@@ -23970,7 +23965,7 @@ pub unsafe extern "C" fn pushglobalfuncname(
         return 0;
     };
 }
-pub unsafe extern "C" fn pushfuncname(mut L: *mut State, mut ar: *mut lua_Debug) {
+pub unsafe extern "C" fn pushfuncname(mut L: *mut State, mut ar: *mut Debug) {
     if pushglobalfuncname(L, ar) != 0 {
         lua_pushfstring(
             L,
@@ -24000,7 +23995,7 @@ pub unsafe extern "C" fn pushfuncname(mut L: *mut State, mut ar: *mut lua_Debug)
     };
 }
 pub unsafe extern "C" fn lastlevel(mut L: *mut State) -> i32 {
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -24042,14 +24037,14 @@ pub unsafe extern "C" fn luaL_traceback(
     mut msg: *const i8,
     mut level: i32,
 ) {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -24139,7 +24134,7 @@ pub unsafe extern "C" fn luaL_argerror(
     mut arg: i32,
     mut extramsg: *const i8,
 ) -> i32 {
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -24230,7 +24225,7 @@ pub unsafe extern "C" fn tag_error(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_where(mut L: *mut State, mut level: i32) {
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -24569,7 +24564,7 @@ pub unsafe extern "C" fn resizebox(
     mut newsize: u64,
 ) -> *mut libc::c_void {
     let mut ud: *mut libc::c_void = 0 as *mut libc::c_void;
-    let mut allocf: lua_Alloc = lua_getallocf(L, &mut ud);
+    let mut allocf: AllocationFunction = lua_getallocf(L, &mut ud);
     let mut box_0: *mut UBox = lua_touserdata(L, idx) as *mut UBox;
     let mut temp: *mut libc::c_void = allocf
         .expect(
@@ -24589,24 +24584,24 @@ pub unsafe extern "C" fn boxgc(mut L: *mut State) -> i32 {
     resizebox(L, 1, 0 as i32 as u64);
     return 0;
 }
-static mut boxmt: [luaL_Reg; 3] = {
+static mut boxmt: [RegisteredFunction; 3] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__gc\0" as *const u8 as *const i8,
                 func: Some(boxgc as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__close\0" as *const u8 as *const i8,
                 func: Some(boxgc as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -24627,7 +24622,7 @@ pub unsafe extern "C" fn newbox(mut L: *mut State) {
     }
     lua_setmetatable(L, -(2 as i32));
 }
-pub unsafe extern "C" fn newbuffsize(mut B: *mut luaL_Buffer, mut sz: u64) -> u64 {
+pub unsafe extern "C" fn newbuffsize(mut B: *mut Buffer, mut sz: u64) -> u64 {
     let mut newsize: u64 = ((*B).size)
         .wrapping_div(2 as i32 as u64)
         .wrapping_mul(3 as i32 as u64);
@@ -24645,7 +24640,7 @@ pub unsafe extern "C" fn newbuffsize(mut B: *mut luaL_Buffer, mut sz: u64) -> u6
     return newsize;
 }
 pub unsafe extern "C" fn prepbuffsize(
-    mut B: *mut luaL_Buffer,
+    mut B: *mut Buffer,
     mut sz: u64,
     mut boxidx: i32,
 ) -> *mut i8 {
@@ -24680,14 +24675,14 @@ pub unsafe extern "C" fn prepbuffsize(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_prepbuffsize(
-    mut B: *mut luaL_Buffer,
+    mut B: *mut Buffer,
     mut sz: u64,
 ) -> *mut i8 {
     return prepbuffsize(B, sz, -1);
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addlstring(
-    mut B: *mut luaL_Buffer,
+    mut B: *mut Buffer,
     mut s: *const i8,
     mut l: u64,
 ) {
@@ -24703,13 +24698,13 @@ pub unsafe extern "C" fn luaL_addlstring(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addstring(
-    mut B: *mut luaL_Buffer,
+    mut B: *mut Buffer,
     mut s: *const i8,
 ) {
     luaL_addlstring(B, s, strlen(s));
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_pushresult(mut B: *mut luaL_Buffer) {
+pub unsafe extern "C" fn luaL_pushresult(mut B: *mut Buffer) {
     let mut L: *mut State = (*B).L;
     lua_pushlstring(L, (*B).b, (*B).n);
     if (*B).b != ((*B).init.b).as_mut_ptr() {
@@ -24719,12 +24714,12 @@ pub unsafe extern "C" fn luaL_pushresult(mut B: *mut luaL_Buffer) {
     lua_settop(L, -1 - 1 as i32);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_pushresultsize(mut B: *mut luaL_Buffer, mut sz: u64) {
+pub unsafe extern "C" fn luaL_pushresultsize(mut B: *mut Buffer, mut sz: u64) {
     (*B).n = ((*B).n as u64).wrapping_add(sz) as u64 as u64;
     luaL_pushresult(B);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
+pub unsafe extern "C" fn luaL_addvalue(mut B: *mut Buffer) {
     let mut L: *mut State = (*B).L;
     let mut len: u64 = 0;
     let mut s: *const i8 = lua_tolstring(L, -1, &mut len);
@@ -24738,7 +24733,7 @@ pub unsafe extern "C" fn luaL_addvalue(mut B: *mut luaL_Buffer) {
     lua_settop(L, -1 - 1 as i32);
 }
 #[unsafe (no_mangle)]
-pub unsafe extern "C" fn luaL_buffinit(mut L: *mut State, mut B: *mut luaL_Buffer) {
+pub unsafe extern "C" fn luaL_buffinit(mut L: *mut State, mut B: *mut Buffer) {
     (*B).L = L;
     (*B).b = ((*B).init.b).as_mut_ptr();
     (*B).n = 0 as i32 as u64;
@@ -24752,7 +24747,7 @@ pub unsafe extern "C" fn luaL_buffinit(mut L: *mut State, mut B: *mut luaL_Buffe
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_buffinitsize(
     mut L: *mut State,
-    mut B: *mut luaL_Buffer,
+    mut B: *mut Buffer,
     mut sz: u64,
 ) -> *mut i8 {
     luaL_buffinit(L, B);
@@ -25157,7 +25152,7 @@ pub unsafe extern "C" fn luaL_tolstring(
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_setfuncs(
     mut L: *mut State,
-    mut l: *const luaL_Reg,
+    mut l: *const RegisteredFunction,
     mut nup: i32,
 ) {
     luaL_checkstack(L, nup, b"too many upvalues\0" as *const u8 as *const i8);
@@ -25199,7 +25194,7 @@ pub unsafe extern "C" fn luaL_getsubtable(
 pub unsafe extern "C" fn luaL_requiref(
     mut L: *mut State,
     mut modname: *const i8,
-    mut openf: lua_CFunction,
+    mut openf: CFunction,
     mut glb: i32,
 ) {
     luaL_getsubtable(
@@ -25231,7 +25226,7 @@ pub unsafe extern "C" fn luaL_requiref(
 }
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_addgsub(
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut s: *const i8,
     mut p: *const i8,
     mut r: *const i8,
@@ -25256,12 +25251,12 @@ pub unsafe extern "C" fn luaL_gsub(
     mut p: *const i8,
     mut r: *const i8,
 ) -> *const i8 {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addgsub(&mut b, s, p, r);
@@ -26192,10 +26187,10 @@ pub unsafe extern "C" fn luaB_tostring(mut L: *mut State) -> i32 {
     luaL_tolstring(L, 1, 0 as *mut u64);
     return 1;
 }
-static mut base_funcs: [luaL_Reg; 26] = {
+static mut base_funcs: [RegisteredFunction; 26] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"assert\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_assert as unsafe extern "C" fn(*mut State) -> i32,
@@ -26204,7 +26199,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"collectgarbage\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_collectgarbage
@@ -26214,7 +26209,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"dofile\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_dofile as unsafe extern "C" fn(*mut State) -> i32,
@@ -26223,7 +26218,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"error\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_error as unsafe extern "C" fn(*mut State) -> i32,
@@ -26232,7 +26227,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getmetatable\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_getmetatable
@@ -26242,7 +26237,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"ipairs\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_ipairs as unsafe extern "C" fn(*mut State) -> i32,
@@ -26251,7 +26246,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"loadfile\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_loadfile as unsafe extern "C" fn(*mut State) -> i32,
@@ -26260,7 +26255,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"load\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_load as unsafe extern "C" fn(*mut State) -> i32,
@@ -26269,7 +26264,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"next\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_next as unsafe extern "C" fn(*mut State) -> i32,
@@ -26278,7 +26273,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"pairs\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_pairs as unsafe extern "C" fn(*mut State) -> i32,
@@ -26287,7 +26282,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"pcall\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_pcall as unsafe extern "C" fn(*mut State) -> i32,
@@ -26296,7 +26291,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"print\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_print as unsafe extern "C" fn(*mut State) -> i32,
@@ -26305,7 +26300,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"warn\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_warn as unsafe extern "C" fn(*mut State) -> i32,
@@ -26314,7 +26309,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rawequal\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_rawequal as unsafe extern "C" fn(*mut State) -> i32,
@@ -26323,7 +26318,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rawlen\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_rawlen as unsafe extern "C" fn(*mut State) -> i32,
@@ -26332,7 +26327,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rawget\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_rawget as unsafe extern "C" fn(*mut State) -> i32,
@@ -26341,7 +26336,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rawset\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_rawset as unsafe extern "C" fn(*mut State) -> i32,
@@ -26350,7 +26345,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"select\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_select as unsafe extern "C" fn(*mut State) -> i32,
@@ -26359,7 +26354,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setmetatable\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_setmetatable
@@ -26369,7 +26364,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tonumber\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_tonumber as unsafe extern "C" fn(*mut State) -> i32,
@@ -26378,7 +26373,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tostring\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_tostring as unsafe extern "C" fn(*mut State) -> i32,
@@ -26387,7 +26382,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"type\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_type as unsafe extern "C" fn(*mut State) -> i32,
@@ -26396,7 +26391,7 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"xpcall\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_xpcall as unsafe extern "C" fn(*mut State) -> i32,
@@ -26405,21 +26400,21 @@ static mut base_funcs: [luaL_Reg; 26] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"_G\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"_VERSION\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -26570,7 +26565,7 @@ pub unsafe extern "C" fn auxstatus(
         match lua_status(co) {
             1 => return 2 as i32,
             0 => {
-                let mut ar: lua_Debug = lua_Debug {
+                let mut ar: Debug = Debug {
                     event: 0,
                     name: 0 as *const i8,
                     namewhat: 0 as *const i8,
@@ -26645,10 +26640,10 @@ pub unsafe extern "C" fn luaB_close(mut L: *mut State) -> i32 {
         }
     };
 }
-static mut co_funcs: [luaL_Reg; 9] = {
+static mut co_funcs: [RegisteredFunction; 9] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"create\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_cocreate as unsafe extern "C" fn(*mut State) -> i32,
@@ -26657,7 +26652,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"resume\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_coresume as unsafe extern "C" fn(*mut State) -> i32,
@@ -26666,7 +26661,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"running\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_corunning as unsafe extern "C" fn(*mut State) -> i32,
@@ -26675,7 +26670,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"status\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_costatus as unsafe extern "C" fn(*mut State) -> i32,
@@ -26684,7 +26679,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"wrap\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_cowrap as unsafe extern "C" fn(*mut State) -> i32,
@@ -26693,7 +26688,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"yield\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_yield as unsafe extern "C" fn(*mut State) -> i32,
@@ -26702,7 +26697,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"isyieldable\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_yieldable as unsafe extern "C" fn(*mut State) -> i32,
@@ -26711,7 +26706,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
                 func: Some(
                     luaB_close as unsafe extern "C" fn(*mut State) -> i32,
@@ -26720,7 +26715,7 @@ static mut co_funcs: [luaL_Reg; 9] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -26740,8 +26735,8 @@ pub unsafe extern "C" fn luaopen_coroutine(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 9]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 9]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, co_funcs.as_ptr(), 0 as i32);
@@ -26914,7 +26909,7 @@ pub unsafe extern "C" fn tmove(mut L: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn addfield(
     mut L: *mut State,
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut i: i64,
 ) {
     lua_geti(L, 1, i);
@@ -26932,12 +26927,12 @@ pub unsafe extern "C" fn addfield(
     luaL_addvalue(b);
 }
 pub unsafe extern "C" fn tconcat(mut L: *mut State) -> i32 {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     checktab(L, 1, 1 | 4 as i32);
     let mut last: i64 = luaL_len(L, 1);
@@ -27235,10 +27230,10 @@ pub unsafe extern "C" fn sort(mut L: *mut State) -> i32 {
     }
     return 0;
 }
-static mut tab_funcs: [luaL_Reg; 8] = {
+static mut tab_funcs: [RegisteredFunction; 8] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"concat\0" as *const u8 as *const i8,
                 func: Some(
                     tconcat as unsafe extern "C" fn(*mut State) -> i32,
@@ -27247,7 +27242,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"insert\0" as *const u8 as *const i8,
                 func: Some(
                     tinsert as unsafe extern "C" fn(*mut State) -> i32,
@@ -27256,14 +27251,14 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"pack\0" as *const u8 as *const i8,
                 func: Some(tpack as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"unpack\0" as *const u8 as *const i8,
                 func: Some(
                     tunpack as unsafe extern "C" fn(*mut State) -> i32,
@@ -27272,7 +27267,7 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
                 func: Some(
                     tremove as unsafe extern "C" fn(*mut State) -> i32,
@@ -27281,21 +27276,21 @@ static mut tab_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"move\0" as *const u8 as *const i8,
                 func: Some(tmove as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"sort\0" as *const u8 as *const i8,
                 func: Some(sort as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -27315,8 +27310,8 @@ pub unsafe extern "C" fn luaopen_table(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 8]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, tab_funcs.as_ptr(), 0 as i32);
@@ -27342,13 +27337,13 @@ pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 {
         as i32;
 }
 pub unsafe extern "C" fn io_type(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = 0 as *mut luaL_Stream;
+    let mut p: *mut Stream = 0 as *mut Stream;
     luaL_checkany(L, 1);
     p = luaL_testudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     if p.is_null() {
         lua_pushnil(L);
     } else if ((*p).closef).is_none() {
@@ -27359,11 +27354,11 @@ pub unsafe extern "C" fn io_type(mut L: *mut State) -> i32 {
     return 1;
 }
 pub unsafe extern "C" fn f_tostring(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     if ((*p).closef).is_none() {
         lua_pushstring(L, b"file (closed)\0" as *const u8 as *const i8);
     } else {
@@ -27372,11 +27367,11 @@ pub unsafe extern "C" fn f_tostring(mut L: *mut State) -> i32 {
     return 1;
 }
 pub unsafe extern "C" fn tofile(mut L: *mut State) -> *mut FILE {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     if (((*p).closef).is_none() as i32 != 0 as i32) as i32
         as i64 != 0
     {
@@ -27387,23 +27382,23 @@ pub unsafe extern "C" fn tofile(mut L: *mut State) -> *mut FILE {
     }
     return (*p).f;
 }
-pub unsafe extern "C" fn newprefile(mut L: *mut State) -> *mut luaL_Stream {
-    let mut p: *mut luaL_Stream = lua_newuserdatauv(
+pub unsafe extern "C" fn newprefile(mut L: *mut State) -> *mut Stream {
+    let mut p: *mut Stream = lua_newuserdatauv(
         L,
-        ::core::mem::size_of::<luaL_Stream>() as u64,
+        ::core::mem::size_of::<Stream>() as u64,
         0,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     (*p).closef = None;
     luaL_setmetatable(L, b"FILE*\0" as *const u8 as *const i8);
     return p;
 }
 pub unsafe extern "C" fn aux_close(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
-    let mut cf: lua_CFunction = (*p).closef;
+    ) as *mut Stream;
+    let mut cf: CFunction = (*p).closef;
     (*p).closef = None;
     return (Some(cf.expect("non-null function pointer")))
         .expect("non-null function pointer")(L);
@@ -27423,22 +27418,22 @@ pub unsafe extern "C" fn io_close(mut L: *mut State) -> i32 {
     return f_close(L);
 }
 pub unsafe extern "C" fn f_gc(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     if ((*p).closef).is_some() && !((*p).f).is_null() {
         aux_close(L);
     }
     return 0;
 }
 pub unsafe extern "C" fn io_fclose(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     *__errno_location() = 0 as i32;
     return luaL_fileresult(
         L,
@@ -27446,8 +27441,8 @@ pub unsafe extern "C" fn io_fclose(mut L: *mut State) -> i32 {
         0 as *const i8,
     );
 }
-pub unsafe extern "C" fn newfile(mut L: *mut State) -> *mut luaL_Stream {
-    let mut p: *mut luaL_Stream = newprefile(L);
+pub unsafe extern "C" fn newfile(mut L: *mut State) -> *mut Stream {
+    let mut p: *mut Stream = newprefile(L);
     (*p).f = 0 as *mut FILE;
     (*p).closef = Some(io_fclose as unsafe extern "C" fn(*mut State) -> i32);
     return p;
@@ -27457,7 +27452,7 @@ pub unsafe extern "C" fn opencheck(
     mut fname: *const i8,
     mut mode: *const i8,
 ) {
-    let mut p: *mut luaL_Stream = newfile(L);
+    let mut p: *mut Stream = newfile(L);
     (*p).f = fopen(fname, mode);
     if (((*p).f == 0 as *mut libc::c_void as *mut FILE) as i32
         != 0 as i32) as i32 as i64 != 0
@@ -27482,7 +27477,7 @@ pub unsafe extern "C" fn io_open(mut L: *mut State) -> i32 {
         b"r\0" as *const u8 as *const i8,
         0 as *mut u64,
     );
-    let mut p: *mut luaL_Stream = newfile(L);
+    let mut p: *mut Stream = newfile(L);
     let mut md: *const i8 = mode;
     ((l_checkmode(md) != 0 as i32) as i32 as i64 != 0
         || luaL_argerror(
@@ -27499,11 +27494,11 @@ pub unsafe extern "C" fn io_open(mut L: *mut State) -> i32 {
     };
 }
 pub unsafe extern "C" fn io_pclose(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     *__errno_location() = 0 as i32;
     return luaL_execresult(L, pclose((*p).f));
 }
@@ -27519,7 +27514,7 @@ pub unsafe extern "C" fn io_popen(mut L: *mut State) -> i32 {
         b"r\0" as *const u8 as *const i8,
         0 as *mut u64,
     );
-    let mut p: *mut luaL_Stream = newprefile(L);
+    let mut p: *mut Stream = newprefile(L);
     ((((*mode.offset(0 as i32 as isize) as i32 == 'r' as i32
         || *mode.offset(0 as i32 as isize) as i32 == 'w' as i32)
         && *mode.offset(1 as i32 as isize) as i32 == '\0' as i32)
@@ -27540,7 +27535,7 @@ pub unsafe extern "C" fn io_popen(mut L: *mut State) -> i32 {
     };
 }
 pub unsafe extern "C" fn io_tmpfile(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = newfile(L);
+    let mut p: *mut Stream = newfile(L);
     *__errno_location() = 0 as i32;
     (*p).f = tmpfile();
     return if ((*p).f).is_null() {
@@ -27553,9 +27548,9 @@ pub unsafe extern "C" fn getiofile(
     mut L: *mut State,
     mut findex: *const i8,
 ) -> *mut FILE {
-    let mut p: *mut luaL_Stream = 0 as *mut luaL_Stream;
+    let mut p: *mut Stream = 0 as *mut Stream;
     lua_getfield(L, -(1000000 as i32) - 1000 as i32, findex);
-    p = lua_touserdata(L, -1) as *mut luaL_Stream;
+    p = lua_touserdata(L, -1) as *mut Stream;
     if (((*p).closef).is_none() as i32 != 0 as i32) as i32
         as i64 != 0
     {
@@ -27785,12 +27780,12 @@ pub unsafe extern "C" fn read_line(
     mut f: *mut FILE,
     mut chop: i32,
 ) -> i32 {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut c: i32 = 0;
     luaL_buffinit(L, &mut b);
@@ -27845,12 +27840,12 @@ pub unsafe extern "C" fn read_line(
 }
 pub unsafe extern "C" fn read_all(mut L: *mut State, mut f: *mut FILE) {
     let mut nr: u64 = 0;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     loop {
@@ -27895,12 +27890,12 @@ pub unsafe extern "C" fn read_chars(
 ) -> i32 {
     let mut nr: u64 = 0;
     let mut p: *mut i8 = 0 as *mut i8;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     p = luaL_prepbuffsize(&mut b, n);
@@ -28003,10 +27998,10 @@ pub unsafe extern "C" fn f_read(mut L: *mut State) -> i32 {
     return g_read(L, tofile(L), 2 as i32);
 }
 pub unsafe extern "C" fn io_readline(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = lua_touserdata(
+    let mut p: *mut Stream = lua_touserdata(
         L,
         -(1000000 as i32) - 1000 as i32 - 1 as i32,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     let mut i: i32 = 0;
     let mut n: i32 = lua_tointegerx(
         L,
@@ -28213,10 +28208,10 @@ pub unsafe extern "C" fn f_flush(mut L: *mut State) -> i32 {
         0 as *const i8,
     );
 }
-static mut iolib: [luaL_Reg; 12] = {
+static mut iolib: [RegisteredFunction; 12] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
                 func: Some(
                     io_close as unsafe extern "C" fn(*mut State) -> i32,
@@ -28225,7 +28220,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
                 func: Some(
                     io_flush as unsafe extern "C" fn(*mut State) -> i32,
@@ -28234,7 +28229,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"input\0" as *const u8 as *const i8,
                 func: Some(
                     io_input as unsafe extern "C" fn(*mut State) -> i32,
@@ -28243,7 +28238,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
                 func: Some(
                     io_lines as unsafe extern "C" fn(*mut State) -> i32,
@@ -28252,7 +28247,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"open\0" as *const u8 as *const i8,
                 func: Some(
                     io_open as unsafe extern "C" fn(*mut State) -> i32,
@@ -28261,7 +28256,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"output\0" as *const u8 as *const i8,
                 func: Some(
                     io_output as unsafe extern "C" fn(*mut State) -> i32,
@@ -28270,7 +28265,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"popen\0" as *const u8 as *const i8,
                 func: Some(
                     io_popen as unsafe extern "C" fn(*mut State) -> i32,
@@ -28279,7 +28274,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
                 func: Some(
                     io_read as unsafe extern "C" fn(*mut State) -> i32,
@@ -28288,7 +28283,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tmpfile\0" as *const u8 as *const i8,
                 func: Some(
                     io_tmpfile as unsafe extern "C" fn(*mut State) -> i32,
@@ -28297,7 +28292,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"type\0" as *const u8 as *const i8,
                 func: Some(
                     io_type as unsafe extern "C" fn(*mut State) -> i32,
@@ -28306,7 +28301,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
                 func: Some(
                     io_write as unsafe extern "C" fn(*mut State) -> i32,
@@ -28315,7 +28310,7 @@ static mut iolib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -28323,17 +28318,17 @@ static mut iolib: [luaL_Reg; 12] = {
         },
     ]
 };
-static mut meth: [luaL_Reg; 8] = {
+static mut meth: [RegisteredFunction; 8] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
                 func: Some(f_read as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
                 func: Some(
                     f_write as unsafe extern "C" fn(*mut State) -> i32,
@@ -28342,7 +28337,7 @@ static mut meth: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
                 func: Some(
                     f_lines as unsafe extern "C" fn(*mut State) -> i32,
@@ -28351,7 +28346,7 @@ static mut meth: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
                 func: Some(
                     f_flush as unsafe extern "C" fn(*mut State) -> i32,
@@ -28360,14 +28355,14 @@ static mut meth: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"seek\0" as *const u8 as *const i8,
                 func: Some(f_seek as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
                 func: Some(
                     f_close as unsafe extern "C" fn(*mut State) -> i32,
@@ -28376,7 +28371,7 @@ static mut meth: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setvbuf\0" as *const u8 as *const i8,
                 func: Some(
                     f_setvbuf as unsafe extern "C" fn(*mut State) -> i32,
@@ -28385,7 +28380,7 @@ static mut meth: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -28393,31 +28388,31 @@ static mut meth: [luaL_Reg; 8] = {
         },
     ]
 };
-static mut metameth: [luaL_Reg; 5] = {
+static mut metameth: [RegisteredFunction; 5] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__index\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__gc\0" as *const u8 as *const i8,
                 func: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__close\0" as *const u8 as *const i8,
                 func: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__tostring\0" as *const u8 as *const i8,
                 func: Some(
                     f_tostring as unsafe extern "C" fn(*mut State) -> i32,
@@ -28426,7 +28421,7 @@ static mut metameth: [luaL_Reg; 5] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -28440,8 +28435,8 @@ pub unsafe extern "C" fn createmeta(mut L: *mut State) {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 8]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, meth.as_ptr(), 0 as i32);
@@ -28453,11 +28448,11 @@ pub unsafe extern "C" fn createmeta(mut L: *mut State) {
     lua_settop(L, -1 - 1 as i32);
 }
 pub unsafe extern "C" fn io_noclose(mut L: *mut State) -> i32 {
-    let mut p: *mut luaL_Stream = luaL_checkudata(
+    let mut p: *mut Stream = luaL_checkudata(
         L,
         1 as i32,
         b"FILE*\0" as *const u8 as *const i8,
-    ) as *mut luaL_Stream;
+    ) as *mut Stream;
     (*p)
         .closef = Some(
         io_noclose as unsafe extern "C" fn(*mut State) -> i32,
@@ -28475,7 +28470,7 @@ pub unsafe extern "C" fn createstdfile(
     mut k: *const i8,
     mut fname: *const i8,
 ) {
-    let mut p: *mut luaL_Stream = newprefile(L);
+    let mut p: *mut Stream = newprefile(L);
     (*p).f = f;
     (*p)
         .closef = Some(
@@ -28499,8 +28494,8 @@ pub unsafe extern "C" fn luaopen_io(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 12]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 12]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, iolib.as_ptr(), 0 as i32);
@@ -28831,12 +28826,12 @@ pub unsafe extern "C" fn os_date(mut L: *mut State) -> i32 {
         setallfields(L, stm);
     } else {
         let mut cc: [i8; 4] = [0; 4];
-        let mut b: luaL_Buffer = luaL_Buffer {
+        let mut b: Buffer = Buffer {
             b: 0 as *mut i8,
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed_27 { n: 0. },
+            init: C2RustUnnamed27 { n: 0. },
         };
         cc[0 as i32 as usize] = '%' as i32 as i8;
         luaL_buffinit(L, &mut b);
@@ -29011,10 +29006,10 @@ pub unsafe extern "C" fn os_exit(mut L: *mut State) -> i32 {
     }
     return 0;
 }
-static mut syslib: [luaL_Reg; 12] = {
+static mut syslib: [RegisteredFunction; 12] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"clock\0" as *const u8 as *const i8,
                 func: Some(
                     os_clock as unsafe extern "C" fn(*mut State) -> i32,
@@ -29023,7 +29018,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"date\0" as *const u8 as *const i8,
                 func: Some(
                     os_date as unsafe extern "C" fn(*mut State) -> i32,
@@ -29032,7 +29027,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"difftime\0" as *const u8 as *const i8,
                 func: Some(
                     os_difftime as unsafe extern "C" fn(*mut State) -> i32,
@@ -29041,7 +29036,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"execute\0" as *const u8 as *const i8,
                 func: Some(
                     os_execute as unsafe extern "C" fn(*mut State) -> i32,
@@ -29050,7 +29045,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"exit\0" as *const u8 as *const i8,
                 func: Some(
                     os_exit as unsafe extern "C" fn(*mut State) -> i32,
@@ -29059,7 +29054,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getenv\0" as *const u8 as *const i8,
                 func: Some(
                     os_getenv as unsafe extern "C" fn(*mut State) -> i32,
@@ -29068,7 +29063,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
                 func: Some(
                     os_remove as unsafe extern "C" fn(*mut State) -> i32,
@@ -29077,7 +29072,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rename\0" as *const u8 as *const i8,
                 func: Some(
                     os_rename as unsafe extern "C" fn(*mut State) -> i32,
@@ -29086,7 +29081,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setlocale\0" as *const u8 as *const i8,
                 func: Some(
                     os_setlocale as unsafe extern "C" fn(*mut State) -> i32,
@@ -29095,7 +29090,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"time\0" as *const u8 as *const i8,
                 func: Some(
                     os_time as unsafe extern "C" fn(*mut State) -> i32,
@@ -29104,7 +29099,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tmpname\0" as *const u8 as *const i8,
                 func: Some(
                     os_tmpname as unsafe extern "C" fn(*mut State) -> i32,
@@ -29113,7 +29108,7 @@ static mut syslib: [luaL_Reg; 12] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -29133,8 +29128,8 @@ pub unsafe extern "C" fn luaopen_os(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 12]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 12]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, syslib.as_ptr(), 0 as i32);
@@ -29202,12 +29197,12 @@ pub unsafe extern "C" fn str_sub(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn str_reverse(mut L: *mut State) -> i32 {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29229,12 +29224,12 @@ pub unsafe extern "C" fn str_reverse(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn str_lower(mut L: *mut State) -> i32 {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29253,12 +29248,12 @@ pub unsafe extern "C" fn str_lower(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn str_upper(mut L: *mut State) -> i32 {
     let mut l: u64 = 0;
     let mut i: u64 = 0;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut s: *const i8 = luaL_checklstring(L, 1, &mut l);
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, l);
@@ -29309,12 +29304,12 @@ pub unsafe extern "C" fn str_rep(mut L: *mut State) -> i32 {
             .wrapping_add(
                 ((n - 1 as i32 as i64) as u64).wrapping_mul(lsep),
             );
-        let mut b: luaL_Buffer = luaL_Buffer {
+        let mut b: Buffer = Buffer {
             b: 0 as *mut i8,
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed_27 { n: 0. },
+            init: C2RustUnnamed27 { n: 0. },
         };
         let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, totallen);
         loop {
@@ -29397,12 +29392,12 @@ pub unsafe extern "C" fn str_byte(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn str_char(mut L: *mut State) -> i32 {
     let mut n: i32 = lua_gettop(L);
     let mut i: i32 = 0;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut p: *mut i8 = luaL_buffinitsize(L, &mut b, n as u64);
     i = 1 as i32;
@@ -29440,12 +29435,12 @@ pub unsafe extern "C" fn writer(
 pub unsafe extern "C" fn str_dump(mut L: *mut State) -> i32 {
     let mut state: StreamWriter = StreamWriter {
         init: 0,
-        B: luaL_Buffer {
+        B: Buffer {
             b: 0 as *mut i8,
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed_27 { n: 0. },
+            init: C2RustUnnamed27 { n: 0. },
         },
     };
     let mut strip: i32 = lua_toboolean(L, 2 as i32);
@@ -29547,10 +29542,10 @@ pub unsafe extern "C" fn arith_idiv(mut L: *mut State) -> i32 {
 pub unsafe extern "C" fn arith_unm(mut L: *mut State) -> i32 {
     return arith(L, 12 as i32, b"__unm\0" as *const u8 as *const i8);
 }
-static mut stringmetamethods: [luaL_Reg; 10] = {
+static mut stringmetamethods: [RegisteredFunction; 10] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__add\0" as *const u8 as *const i8,
                 func: Some(
                     arith_add as unsafe extern "C" fn(*mut State) -> i32,
@@ -29559,7 +29554,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__sub\0" as *const u8 as *const i8,
                 func: Some(
                     arith_sub as unsafe extern "C" fn(*mut State) -> i32,
@@ -29568,7 +29563,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__mul\0" as *const u8 as *const i8,
                 func: Some(
                     arith_mul as unsafe extern "C" fn(*mut State) -> i32,
@@ -29577,7 +29572,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__mod\0" as *const u8 as *const i8,
                 func: Some(
                     arith_mod as unsafe extern "C" fn(*mut State) -> i32,
@@ -29586,7 +29581,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__pow\0" as *const u8 as *const i8,
                 func: Some(
                     arith_pow as unsafe extern "C" fn(*mut State) -> i32,
@@ -29595,7 +29590,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__div\0" as *const u8 as *const i8,
                 func: Some(
                     arith_div as unsafe extern "C" fn(*mut State) -> i32,
@@ -29604,7 +29599,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__idiv\0" as *const u8 as *const i8,
                 func: Some(
                     arith_idiv as unsafe extern "C" fn(*mut State) -> i32,
@@ -29613,7 +29608,7 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__unm\0" as *const u8 as *const i8,
                 func: Some(
                     arith_unm as unsafe extern "C" fn(*mut State) -> i32,
@@ -29622,14 +29617,14 @@ static mut stringmetamethods: [luaL_Reg; 10] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"__index\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -30608,7 +30603,7 @@ pub unsafe extern "C" fn gmatch(mut L: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn add_s(
     mut ms: *mut MatchState,
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut s: *const i8,
     mut e: *const i8,
 ) {
@@ -30668,7 +30663,7 @@ pub unsafe extern "C" fn add_s(
 }
 pub unsafe extern "C" fn add_value(
     mut ms: *mut MatchState,
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut s: *const i8,
     mut e: *const i8,
     mut tr: i32,
@@ -30734,12 +30729,12 @@ pub unsafe extern "C" fn str_gsub(mut L: *mut State) -> i32 {
             len: 0,
         }; 32],
     };
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     (((tr == 3 as i32 || tr == 4 as i32 || tr == 6 as i32
         || tr == 5 as i32) as i32 != 0 as i32) as i32
@@ -30795,7 +30790,7 @@ pub unsafe extern "C" fn str_gsub(mut L: *mut State) -> i32 {
     return 2 as i32;
 }
 pub unsafe extern "C" fn addquoted(
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut s: *const i8,
     mut len: u64,
 ) {
@@ -30912,7 +30907,7 @@ pub unsafe extern "C" fn quotefloat(
 }
 pub unsafe extern "C" fn addliteral(
     mut L: *mut State,
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut arg: i32,
 ) {
     match lua_type(L, arg) {
@@ -31047,12 +31042,12 @@ pub unsafe extern "C" fn str_format(mut L: *mut State) -> i32 {
     let mut strfrmt: *const i8 = luaL_checklstring(L, arg, &mut sfl);
     let mut strfrmt_end: *const i8 = strfrmt.offset(sfl as isize);
     let mut flags: *const i8 = 0 as *const i8;
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     while strfrmt < strfrmt_end {
@@ -31516,7 +31511,7 @@ pub unsafe extern "C" fn getdetails(
     return opt;
 }
 pub unsafe extern "C" fn packint(
-    mut b: *mut luaL_Buffer,
+    mut b: *mut Buffer,
     mut n: u64,
     mut islittle: i32,
     mut size: i32,
@@ -31589,12 +31584,12 @@ pub unsafe extern "C" fn copywithendian(
     };
 }
 pub unsafe extern "C" fn str_pack(mut L: *mut State) -> i32 {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut h: Header = Header {
         L: 0 as *mut State,
@@ -32101,10 +32096,10 @@ pub unsafe extern "C" fn str_unpack(mut L: *mut State) -> i32 {
     );
     return n + 1 as i32;
 }
-static mut strlib: [luaL_Reg; 18] = {
+static mut strlib: [RegisteredFunction; 18] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"byte\0" as *const u8 as *const i8,
                 func: Some(
                     str_byte as unsafe extern "C" fn(*mut State) -> i32,
@@ -32113,7 +32108,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"char\0" as *const u8 as *const i8,
                 func: Some(
                     str_char as unsafe extern "C" fn(*mut State) -> i32,
@@ -32122,7 +32117,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"dump\0" as *const u8 as *const i8,
                 func: Some(
                     str_dump as unsafe extern "C" fn(*mut State) -> i32,
@@ -32131,7 +32126,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"find\0" as *const u8 as *const i8,
                 func: Some(
                     str_find as unsafe extern "C" fn(*mut State) -> i32,
@@ -32140,7 +32135,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"format\0" as *const u8 as *const i8,
                 func: Some(
                     str_format as unsafe extern "C" fn(*mut State) -> i32,
@@ -32149,14 +32144,14 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"gmatch\0" as *const u8 as *const i8,
                 func: Some(gmatch as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"gsub\0" as *const u8 as *const i8,
                 func: Some(
                     str_gsub as unsafe extern "C" fn(*mut State) -> i32,
@@ -32165,7 +32160,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"len\0" as *const u8 as *const i8,
                 func: Some(
                     str_len as unsafe extern "C" fn(*mut State) -> i32,
@@ -32174,7 +32169,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"lower\0" as *const u8 as *const i8,
                 func: Some(
                     str_lower as unsafe extern "C" fn(*mut State) -> i32,
@@ -32183,7 +32178,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"match\0" as *const u8 as *const i8,
                 func: Some(
                     str_match as unsafe extern "C" fn(*mut State) -> i32,
@@ -32192,7 +32187,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rep\0" as *const u8 as *const i8,
                 func: Some(
                     str_rep as unsafe extern "C" fn(*mut State) -> i32,
@@ -32201,7 +32196,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"reverse\0" as *const u8 as *const i8,
                 func: Some(
                     str_reverse as unsafe extern "C" fn(*mut State) -> i32,
@@ -32210,7 +32205,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"sub\0" as *const u8 as *const i8,
                 func: Some(
                     str_sub as unsafe extern "C" fn(*mut State) -> i32,
@@ -32219,7 +32214,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"upper\0" as *const u8 as *const i8,
                 func: Some(
                     str_upper as unsafe extern "C" fn(*mut State) -> i32,
@@ -32228,7 +32223,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"pack\0" as *const u8 as *const i8,
                 func: Some(
                     str_pack as unsafe extern "C" fn(*mut State) -> i32,
@@ -32237,7 +32232,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"packsize\0" as *const u8 as *const i8,
                 func: Some(
                     str_packsize as unsafe extern "C" fn(*mut State) -> i32,
@@ -32246,7 +32241,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"unpack\0" as *const u8 as *const i8,
                 func: Some(
                     str_unpack as unsafe extern "C" fn(*mut State) -> i32,
@@ -32255,7 +32250,7 @@ static mut strlib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -32267,8 +32262,8 @@ pub unsafe extern "C" fn createmetatable(mut L: *mut State) {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 10]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 10]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, stringmetamethods.as_ptr(), 0 as i32);
@@ -32296,8 +32291,8 @@ pub unsafe extern "C" fn luaopen_string(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 18]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 18]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, strlib.as_ptr(), 0 as i32);
@@ -32494,12 +32489,12 @@ pub unsafe extern "C" fn utfchar(mut L: *mut State) -> i32 {
         pushutfchar(L, 1);
     } else {
         let mut i: i32 = 0;
-        let mut b: luaL_Buffer = luaL_Buffer {
+        let mut b: Buffer = Buffer {
             b: 0 as *mut i8,
             size: 0,
             n: 0,
             L: 0 as *mut State,
-            init: C2RustUnnamed_27 { n: 0. },
+            init: C2RustUnnamed27 { n: 0. },
         };
         luaL_buffinit(L, &mut b);
         i = 1 as i32;
@@ -32659,10 +32654,10 @@ pub unsafe extern "C" fn iter_codes(mut L: *mut State) -> i32 {
     lua_pushinteger(L, 0 as i32 as i64);
     return 3;
 }
-static mut funcs: [luaL_Reg; 7] = {
+static mut funcs: [RegisteredFunction; 7] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"offset\0" as *const u8 as *const i8,
                 func: Some(
                     byteoffset as unsafe extern "C" fn(*mut State) -> i32,
@@ -32671,7 +32666,7 @@ static mut funcs: [luaL_Reg; 7] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"codepoint\0" as *const u8 as *const i8,
                 func: Some(
                     codepoint as unsafe extern "C" fn(*mut State) -> i32,
@@ -32680,7 +32675,7 @@ static mut funcs: [luaL_Reg; 7] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"char\0" as *const u8 as *const i8,
                 func: Some(
                     utfchar as unsafe extern "C" fn(*mut State) -> i32,
@@ -32689,14 +32684,14 @@ static mut funcs: [luaL_Reg; 7] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"len\0" as *const u8 as *const i8,
                 func: Some(utflen as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"codes\0" as *const u8 as *const i8,
                 func: Some(
                     iter_codes as unsafe extern "C" fn(*mut State) -> i32,
@@ -32705,14 +32700,14 @@ static mut funcs: [luaL_Reg; 7] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"charpattern\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -32732,8 +32727,8 @@ pub unsafe extern "C" fn luaopen_utf8(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 7]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 7]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, funcs.as_ptr(), 0 as i32);
@@ -33155,10 +33150,10 @@ pub unsafe extern "C" fn math_randomseed(mut L: *mut State) -> i32 {
     }
     return 2 as i32;
 }
-static mut randfuncs: [luaL_Reg; 3] = {
+static mut randfuncs: [RegisteredFunction; 3] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"random\0" as *const u8 as *const i8,
                 func: Some(
                     math_random as unsafe extern "C" fn(*mut State) -> i32,
@@ -33167,7 +33162,7 @@ static mut randfuncs: [luaL_Reg; 3] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"randomseed\0" as *const u8 as *const i8,
                 func: Some(
                     math_randomseed
@@ -33177,7 +33172,7 @@ static mut randfuncs: [luaL_Reg; 3] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -33195,10 +33190,10 @@ pub unsafe extern "C" fn setrandfunc(mut L: *mut State) {
     lua_settop(L, -(2 as i32) - 1 as i32);
     luaL_setfuncs(L, randfuncs.as_ptr(), 1);
 }
-static mut mathlib: [luaL_Reg; 28] = {
+static mut mathlib: [RegisteredFunction; 28] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"abs\0" as *const u8 as *const i8,
                 func: Some(
                     math_abs as unsafe extern "C" fn(*mut State) -> i32,
@@ -33207,7 +33202,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"acos\0" as *const u8 as *const i8,
                 func: Some(
                     math_acos as unsafe extern "C" fn(*mut State) -> i32,
@@ -33216,7 +33211,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"asin\0" as *const u8 as *const i8,
                 func: Some(
                     math_asin as unsafe extern "C" fn(*mut State) -> i32,
@@ -33225,7 +33220,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"atan\0" as *const u8 as *const i8,
                 func: Some(
                     math_atan as unsafe extern "C" fn(*mut State) -> i32,
@@ -33234,7 +33229,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"ceil\0" as *const u8 as *const i8,
                 func: Some(
                     math_ceil as unsafe extern "C" fn(*mut State) -> i32,
@@ -33243,7 +33238,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"cos\0" as *const u8 as *const i8,
                 func: Some(
                     math_cos as unsafe extern "C" fn(*mut State) -> i32,
@@ -33252,7 +33247,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"deg\0" as *const u8 as *const i8,
                 func: Some(
                     math_deg as unsafe extern "C" fn(*mut State) -> i32,
@@ -33261,7 +33256,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"exp\0" as *const u8 as *const i8,
                 func: Some(
                     math_exp as unsafe extern "C" fn(*mut State) -> i32,
@@ -33270,7 +33265,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tointeger\0" as *const u8 as *const i8,
                 func: Some(
                     math_toint as unsafe extern "C" fn(*mut State) -> i32,
@@ -33279,7 +33274,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"floor\0" as *const u8 as *const i8,
                 func: Some(
                     math_floor as unsafe extern "C" fn(*mut State) -> i32,
@@ -33288,7 +33283,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"fmod\0" as *const u8 as *const i8,
                 func: Some(
                     math_fmod as unsafe extern "C" fn(*mut State) -> i32,
@@ -33297,7 +33292,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"ult\0" as *const u8 as *const i8,
                 func: Some(
                     math_ult as unsafe extern "C" fn(*mut State) -> i32,
@@ -33306,7 +33301,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"log\0" as *const u8 as *const i8,
                 func: Some(
                     math_log as unsafe extern "C" fn(*mut State) -> i32,
@@ -33315,7 +33310,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"max\0" as *const u8 as *const i8,
                 func: Some(
                     math_max as unsafe extern "C" fn(*mut State) -> i32,
@@ -33324,7 +33319,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"min\0" as *const u8 as *const i8,
                 func: Some(
                     math_min as unsafe extern "C" fn(*mut State) -> i32,
@@ -33333,7 +33328,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"modf\0" as *const u8 as *const i8,
                 func: Some(
                     math_modf as unsafe extern "C" fn(*mut State) -> i32,
@@ -33342,7 +33337,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"rad\0" as *const u8 as *const i8,
                 func: Some(
                     math_rad as unsafe extern "C" fn(*mut State) -> i32,
@@ -33351,7 +33346,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"sin\0" as *const u8 as *const i8,
                 func: Some(
                     math_sin as unsafe extern "C" fn(*mut State) -> i32,
@@ -33360,7 +33355,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"sqrt\0" as *const u8 as *const i8,
                 func: Some(
                     math_sqrt as unsafe extern "C" fn(*mut State) -> i32,
@@ -33369,7 +33364,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"tan\0" as *const u8 as *const i8,
                 func: Some(
                     math_tan as unsafe extern "C" fn(*mut State) -> i32,
@@ -33378,7 +33373,7 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"type\0" as *const u8 as *const i8,
                 func: Some(
                     math_type as unsafe extern "C" fn(*mut State) -> i32,
@@ -33387,49 +33382,49 @@ static mut mathlib: [luaL_Reg; 28] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"random\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"randomseed\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"pi\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"huge\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"maxinteger\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"mininteger\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -33449,8 +33444,8 @@ pub unsafe extern "C" fn luaopen_math(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 28]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 28]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, mathlib.as_ptr(), 0 as i32);
@@ -33590,7 +33585,7 @@ pub unsafe extern "C" fn treatstackoption(
     lua_setfield(L, -(2 as i32), fname);
 }
 pub unsafe extern "C" fn db_getinfo(mut L: *mut State) -> i32 {
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -33736,10 +33731,10 @@ pub unsafe extern "C" fn db_getlocal(mut L: *mut State) -> i32 {
         as i32;
     if lua_type(L, arg + 1 as i32) == 6 as i32 {
         lua_pushvalue(L, arg + 1 as i32);
-        lua_pushstring(L, lua_getlocal(L, 0 as *const lua_Debug, nvar));
+        lua_pushstring(L, lua_getlocal(L, 0 as *const Debug, nvar));
         return 1;
     } else {
-        let mut ar: lua_Debug = lua_Debug {
+        let mut ar: Debug = Debug {
             event: 0,
             name: 0 as *const i8,
             namewhat: 0 as *const i8,
@@ -33787,7 +33782,7 @@ pub unsafe extern "C" fn db_setlocal(mut L: *mut State) -> i32 {
     let mut arg: i32 = 0;
     let mut name: *const i8 = 0 as *const i8;
     let mut L1: *mut State = getthread(L, &mut arg);
-    let mut ar: lua_Debug = lua_Debug {
+    let mut ar: Debug = Debug {
         event: 0,
         name: 0 as *const i8,
         namewhat: 0 as *const i8,
@@ -33914,7 +33909,7 @@ pub unsafe extern "C" fn db_upvaluejoin(mut L: *mut State) -> i32 {
     lua_upvaluejoin(L, 1, n1, 3 as i32, n2);
     return 0;
 }
-pub unsafe extern "C" fn hookf(mut L: *mut State, mut ar: *mut lua_Debug) {
+pub unsafe extern "C" fn hookf(mut L: *mut State, mut ar: *mut Debug) {
     static mut hooknames: [*const i8; 5] = [
         b"call\0" as *const u8 as *const i8,
         b"return\0" as *const u8 as *const i8,
@@ -33986,7 +33981,7 @@ pub unsafe extern "C" fn db_sethook(mut L: *mut State) -> i32 {
     let mut arg: i32 = 0;
     let mut mask: i32 = 0;
     let mut count: i32 = 0;
-    let mut func: lua_Hook = None;
+    let mut func: HookFunction = None;
     let mut L1: *mut State = getthread(L, &mut arg);
     if lua_type(L, arg + 1 as i32) <= 0 as i32 {
         lua_settop(L, arg + 1 as i32);
@@ -34005,7 +34000,7 @@ pub unsafe extern "C" fn db_sethook(mut L: *mut State) -> i32 {
             arg + 3 as i32,
             0 as i32 as i64,
         ) as i32;
-        func = Some(hookf as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ());
+        func = Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ());
         mask = makemask(smask, count);
     }
     if luaL_getsubtable(L, -(1000000 as i32) - 1000 as i32, HOOKKEY) == 0
@@ -34032,12 +34027,12 @@ pub unsafe extern "C" fn db_gethook(mut L: *mut State) -> i32 {
     let mut L1: *mut State = getthread(L, &mut arg);
     let mut buff: [i8; 5] = [0; 5];
     let mut mask: i32 = lua_gethookmask(L1);
-    let mut hook: lua_Hook = lua_gethook(L1);
+    let mut hook: HookFunction = lua_gethook(L1);
     if hook.is_none() {
         lua_pushnil(L);
         return 1;
     } else if hook
-        != Some(hookf as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ())
+        != Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ())
     {
         lua_pushstring(L, b"external hook\0" as *const u8 as *const i8);
     } else {
@@ -34128,10 +34123,10 @@ pub unsafe extern "C" fn db_setcstacklimit(mut L: *mut State) -> i32 {
     lua_pushinteger(L, res as i64);
     return 1;
 }
-static mut dblib: [luaL_Reg; 18] = {
+static mut dblib: [RegisteredFunction; 18] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"debug\0" as *const u8 as *const i8,
                 func: Some(
                     db_debug as unsafe extern "C" fn(*mut State) -> i32,
@@ -34140,7 +34135,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getuservalue\0" as *const u8 as *const i8,
                 func: Some(
                     db_getuservalue
@@ -34150,7 +34145,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"gethook\0" as *const u8 as *const i8,
                 func: Some(
                     db_gethook as unsafe extern "C" fn(*mut State) -> i32,
@@ -34159,7 +34154,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getinfo\0" as *const u8 as *const i8,
                 func: Some(
                     db_getinfo as unsafe extern "C" fn(*mut State) -> i32,
@@ -34168,7 +34163,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getlocal\0" as *const u8 as *const i8,
                 func: Some(
                     db_getlocal as unsafe extern "C" fn(*mut State) -> i32,
@@ -34177,7 +34172,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getregistry\0" as *const u8 as *const i8,
                 func: Some(
                     db_getregistry as unsafe extern "C" fn(*mut State) -> i32,
@@ -34186,7 +34181,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getmetatable\0" as *const u8 as *const i8,
                 func: Some(
                     db_getmetatable
@@ -34196,7 +34191,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"getupvalue\0" as *const u8 as *const i8,
                 func: Some(
                     db_getupvalue as unsafe extern "C" fn(*mut State) -> i32,
@@ -34205,7 +34200,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"upvaluejoin\0" as *const u8 as *const i8,
                 func: Some(
                     db_upvaluejoin as unsafe extern "C" fn(*mut State) -> i32,
@@ -34214,7 +34209,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"upvalueid\0" as *const u8 as *const i8,
                 func: Some(
                     db_upvalueid as unsafe extern "C" fn(*mut State) -> i32,
@@ -34223,7 +34218,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setuservalue\0" as *const u8 as *const i8,
                 func: Some(
                     db_setuservalue
@@ -34233,7 +34228,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"sethook\0" as *const u8 as *const i8,
                 func: Some(
                     db_sethook as unsafe extern "C" fn(*mut State) -> i32,
@@ -34242,7 +34237,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setlocal\0" as *const u8 as *const i8,
                 func: Some(
                     db_setlocal as unsafe extern "C" fn(*mut State) -> i32,
@@ -34251,7 +34246,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setmetatable\0" as *const u8 as *const i8,
                 func: Some(
                     db_setmetatable
@@ -34261,7 +34256,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setupvalue\0" as *const u8 as *const i8,
                 func: Some(
                     db_setupvalue as unsafe extern "C" fn(*mut State) -> i32,
@@ -34270,7 +34265,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"traceback\0" as *const u8 as *const i8,
                 func: Some(
                     db_traceback as unsafe extern "C" fn(*mut State) -> i32,
@@ -34279,7 +34274,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"setcstacklimit\0" as *const u8 as *const i8,
                 func: Some(
                     db_setcstacklimit
@@ -34289,7 +34284,7 @@ static mut dblib: [luaL_Reg; 18] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -34309,8 +34304,8 @@ pub unsafe extern "C" fn luaopen_debug(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 18]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 18]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, dblib.as_ptr(), 0 as i32);
@@ -34341,10 +34336,10 @@ pub unsafe extern "C" fn lsys_sym(
     mut L: *mut State,
     mut lib: *mut libc::c_void,
     mut sym: *const i8,
-) -> lua_CFunction {
-    let mut f: lua_CFunction = ::core::mem::transmute::<
+) -> CFunction {
+    let mut f: CFunction = ::core::mem::transmute::<
         *mut libc::c_void,
-        lua_CFunction,
+        CFunction,
     >(dlsym(lib, sym));
     if (f.is_none() as i32 != 0 as i32) as i32 as i64
         != 0
@@ -34389,12 +34384,12 @@ pub unsafe extern "C" fn setpath(
             lua_pushstring(L, path);
         } else {
             let mut len: u64 = strlen(path);
-            let mut b: luaL_Buffer = luaL_Buffer {
+            let mut b: Buffer = Buffer {
                 b: 0 as *mut i8,
                 size: 0,
                 n: 0,
                 L: 0 as *mut State,
-                init: C2RustUnnamed_27 { n: 0. },
+                init: C2RustUnnamed27 { n: 0. },
             };
             luaL_buffinit(L, &mut b);
             if path < dftmark {
@@ -34493,7 +34488,7 @@ pub unsafe extern "C" fn lookforfunc(
         lua_pushboolean(L, 1);
         return 0;
     } else {
-        let mut f: lua_CFunction = lsys_sym(L, reg, sym);
+        let mut f: CFunction = lsys_sym(L, reg, sym);
         if f.is_none() {
             return 2 as i32;
         }
@@ -34563,12 +34558,12 @@ pub unsafe extern "C" fn pusherrornotfound(
     mut L: *mut State,
     mut path: *const i8,
 ) {
-    let mut b: luaL_Buffer = luaL_Buffer {
+    let mut b: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     luaL_buffinit(L, &mut b);
     luaL_addstring(&mut b, b"no file '\0" as *const u8 as *const i8);
@@ -34588,12 +34583,12 @@ pub unsafe extern "C" fn searchpath(
     mut sep: *const i8,
     mut dirsep: *const i8,
 ) -> *const i8 {
-    let mut buff: luaL_Buffer = luaL_Buffer {
+    let mut buff: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     let mut pathname: *mut i8 = 0 as *mut i8;
     let mut endpathname: *mut i8 = 0 as *mut i8;
@@ -34842,12 +34837,12 @@ pub unsafe extern "C" fn searcher_preload(mut L: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn findloader(mut L: *mut State, mut name: *const i8) {
     let mut i: i32 = 0;
-    let mut msg: luaL_Buffer = luaL_Buffer {
+    let mut msg: Buffer = Buffer {
         b: 0 as *mut i8,
         size: 0,
         n: 0,
         L: 0 as *mut State,
-        init: C2RustUnnamed_27 { n: 0. },
+        init: C2RustUnnamed27 { n: 0. },
     };
     if ((lua_getfield(
         L,
@@ -34943,10 +34938,10 @@ pub unsafe extern "C" fn ll_require(mut L: *mut State) -> i32 {
     lua_rotate(L, -(2 as i32), 1);
     return 2 as i32;
 }
-static mut pk_funcs: [luaL_Reg; 8] = {
+static mut pk_funcs: [RegisteredFunction; 8] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"loadlib\0" as *const u8 as *const i8,
                 func: Some(
                     ll_loadlib as unsafe extern "C" fn(*mut State) -> i32,
@@ -34955,7 +34950,7 @@ static mut pk_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"searchpath\0" as *const u8 as *const i8,
                 func: Some(
                     ll_searchpath as unsafe extern "C" fn(*mut State) -> i32,
@@ -34964,42 +34959,42 @@ static mut pk_funcs: [luaL_Reg; 8] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"preload\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"cpath\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"path\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"searchers\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"loaded\0" as *const u8 as *const i8,
                 func: None,
             };
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -35007,10 +35002,10 @@ static mut pk_funcs: [luaL_Reg; 8] = {
         },
     ]
 };
-static mut ll_funcs: [luaL_Reg; 2] = {
+static mut ll_funcs: [RegisteredFunction; 2] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"require\0" as *const u8 as *const i8,
                 func: Some(
                     ll_require as unsafe extern "C" fn(*mut State) -> i32,
@@ -35019,7 +35014,7 @@ static mut ll_funcs: [luaL_Reg; 2] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -35028,7 +35023,7 @@ static mut ll_funcs: [luaL_Reg; 2] = {
     ]
 };
 pub unsafe extern "C" fn createsearcherstable(mut L: *mut State) {
-    static mut searchers: [lua_CFunction; 5] = {
+    static mut searchers: [CFunction; 5] = {
         [
             Some(
                 searcher_preload as unsafe extern "C" fn(*mut State) -> i32,
@@ -35042,8 +35037,8 @@ pub unsafe extern "C" fn createsearcherstable(mut L: *mut State) {
     let mut i: i32 = 0;
     lua_createtable(
         L,
-        (::core::mem::size_of::<[lua_CFunction; 5]>() as u64)
-            .wrapping_div(::core::mem::size_of::<lua_CFunction>() as u64)
+        (::core::mem::size_of::<[CFunction; 5]>() as u64)
+            .wrapping_div(::core::mem::size_of::<CFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
         0,
     );
@@ -35084,8 +35079,8 @@ pub unsafe extern "C" fn luaopen_package(mut L: *mut State) -> i32 {
     lua_createtable(
         L,
         0,
-        (::core::mem::size_of::<[luaL_Reg; 8]>() as u64)
-            .wrapping_div(::core::mem::size_of::<luaL_Reg>() as u64)
+        (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
+            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
             .wrapping_sub(1 as i32 as u64) as i32,
     );
     luaL_setfuncs(L, pk_funcs.as_ptr(), 0 as i32);
@@ -35140,10 +35135,10 @@ pub unsafe extern "C" fn luaopen_package(mut L: *mut State) -> i32 {
     lua_settop(L, -1 - 1 as i32);
     return 1;
 }
-static mut loadedlibs: [luaL_Reg; 11] = {
+static mut loadedlibs: [RegisteredFunction; 11] = {
     [
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"_G\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_base as unsafe extern "C" fn(*mut State) -> i32,
@@ -35152,7 +35147,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"package\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_package
@@ -35162,7 +35157,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"coroutine\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_coroutine
@@ -35172,7 +35167,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"table\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_table as unsafe extern "C" fn(*mut State) -> i32,
@@ -35181,7 +35176,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"io\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_io as unsafe extern "C" fn(*mut State) -> i32,
@@ -35190,7 +35185,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"os\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_os as unsafe extern "C" fn(*mut State) -> i32,
@@ -35199,7 +35194,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"string\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_string as unsafe extern "C" fn(*mut State) -> i32,
@@ -35208,7 +35203,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"math\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_math as unsafe extern "C" fn(*mut State) -> i32,
@@ -35217,7 +35212,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"utf8\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_utf8 as unsafe extern "C" fn(*mut State) -> i32,
@@ -35226,7 +35221,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: b"debug\0" as *const u8 as *const i8,
                 func: Some(
                     luaopen_debug as unsafe extern "C" fn(*mut State) -> i32,
@@ -35235,7 +35230,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
             init
         },
         {
-            let mut init = luaL_Reg {
+            let mut init = RegisteredFunction {
                 name: 0 as *const i8,
                 func: None,
             };
@@ -35245,7 +35240,7 @@ static mut loadedlibs: [luaL_Reg; 11] = {
 };
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn luaL_openlibs(mut L: *mut State) {
-    let mut lib: *const luaL_Reg = 0 as *const luaL_Reg;
+    let mut lib: *const RegisteredFunction = 0 as *const RegisteredFunction;
     lib = loadedlibs.as_ptr();
     while ((*lib).func).is_some() {
         luaL_requiref(L, (*lib).name, (*lib).func, 1);
@@ -35272,7 +35267,7 @@ pub unsafe extern "C" fn setsignal(
     sigemptyset(&mut sa.sa_mask);
     sigaction(sig, &mut sa, 0 as *mut sigaction);
 }
-pub unsafe extern "C" fn lstop(mut L: *mut State, mut _ar: *mut lua_Debug) {
+pub unsafe extern "C" fn lstop(mut L: *mut State, mut _ar: *mut Debug) {
     lua_sethook(L, None, 0, 0 as i32);
     luaL_error(L, b"interrupted!\0" as *const u8 as *const i8);
 }
@@ -35283,7 +35278,7 @@ pub unsafe extern "C" fn laction(mut i: i32) {
     setsignal(i, None);
     lua_sethook(
         globalL,
-        Some(lstop as unsafe extern "C" fn(*mut State, *mut lua_Debug) -> ()),
+        Some(lstop as unsafe extern "C" fn(*mut State, *mut Debug) -> ()),
         flag,
         1 as i32,
     );

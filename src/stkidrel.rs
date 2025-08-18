@@ -28,12 +28,12 @@ pub struct StackValueExtension {
 pub union Value {
     pub gc: *mut GCObject,
     pub p: *mut libc::c_void,
-    pub f: lua_CFunction,
+    pub f: CFunction,
     pub i: i64,
     pub n: f64,
     pub ub: u8,
 }
-pub type lua_CFunction = Option::<unsafe extern "C" fn(*mut State) -> i32>;
+pub type CFunction = Option::<unsafe extern "C" fn(*mut State) -> i32>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
@@ -47,17 +47,17 @@ pub struct UpVal {
     pub tt: u8,
     pub marked: u8,
     pub v: C2RustUnnamed_19,
-    pub u: C2RustUnnamed_17,
+    pub u: C2RustUnnamed17,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_17 {
-    pub open: C2RustUnnamed_18,
+pub union C2RustUnnamed17 {
+    pub open: C2RustUnnamed18,
     pub value: TValue,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_18 {
+pub struct C2RustUnnamed18 {
     pub next: *mut UpVal,
     pub previous: *mut *mut UpVal,
 }

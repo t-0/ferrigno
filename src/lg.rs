@@ -18,7 +18,7 @@ use crate::c::*;
 use crate::state::*;
 use crate::gcobject::*;
 use crate::lx::*;
-use crate::lua_debug::*;
+use crate::debug::*;
 use crate::tstring::*;
 use crate::callinfo::*;
 use crate::stkidrel::*;
@@ -29,5 +29,5 @@ use crate::tstring::*;
 #[repr(C)]
 pub struct LG {
     pub l: LX,
-    pub g: global_State,
+    pub g: Global,
 }
