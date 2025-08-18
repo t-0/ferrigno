@@ -1,19 +1,9 @@
 #![allow(
-    static_mut_refs,
-    unsafe_code,
-    unsafe_attr_outside_unsafe,
-    unsafe_op_in_unsafe_fn,
-    dead_code,
-    mutable_transmutes,
     non_camel_case_types,
     non_snake_case,
     non_upper_case_globals,
-    unused_assignments,
-    unused_mut,
-    unpredictable_function_pointer_comparisons,
-    unused_imports,
+    unused,
 )]
-use libc::{tolower, toupper, remove, rename, setlocale};
 pub const OP_EXTRAARG: u32 = 82;
 pub const OP_LOADKX: u32 = 4;
 pub const OP_LOADK: u32 = 3;
