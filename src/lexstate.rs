@@ -1,6 +1,3 @@
-#![allow(
-    non_snake_case,
-)]
 use crate::state::*;
 use crate::tstring::*;
 use crate::table::*;

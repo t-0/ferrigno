@@ -1,7 +1,4 @@
 #![allow(
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
     unused,
 )]
 pub const OP_EXTRAARG: u32 = 82;
@@ -87,8 +84,8 @@ pub const OP_LFALSESKIP: u32 = 6;
 pub const OP_LOADFALSE: u32 = 5;
 pub const OP_LOADF: u32 = 2;
 pub const OP_LOADI: u32 = 1;
-pub const iAx: u32 = 3;
-pub const iABC: u32 = 0;
-pub const iABx: u32 = 1;
-pub const isJ: u32 = 4;
-pub const iAsBx: u32 = 2;
+pub const IAX: u32 = 3;
+pub const IABC: u32 = 0;
+pub const IABX: u32 = 1;
+pub const ISJ: u32 = 4;
+pub const IASBX: u32 = 2;
