@@ -10,7 +10,7 @@ pub struct Proto {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
-    pub numparams: u8,
+    pub count_parameters: u8,
     pub is_variable_arguments: bool,
     pub maxstacksize: u8,
     pub sizeupvalues: i32,

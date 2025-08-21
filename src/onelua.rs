@@ -530,7 +530,7 @@ pub unsafe extern "C" fn luaD_hookcall(mut state: *mut State, mut ci: *mut CallI
             event,
             -1,
             1 as i32,
-            (*p).numparams as i32,
+            (*p).count_parameters as i32,
         );
         (*ci).u.l.savedpc = ((*ci).u.l.savedpc).offset(-1);
         (*ci).u.l.savedpc;
@@ -552,7 +552,7 @@ pub unsafe extern "C" fn rethook(
                 .l
                 .p;
             if (*p).is_variable_arguments {
-                delta = (*ci).u.l.nextraargs + (*p).numparams as i32
+                delta = (*ci).u.l.nextraargs + (*p).count_parameters as i32
                     + 1 as i32;
             }
         }
@@ -787,7 +787,7 @@ pub unsafe extern "C" fn luaD_pretailcall(
                     .l
                     .p;
                 let mut fsize: i32 = (*p).maxstacksize as i32;
-                let mut nfixparams: i32 = (*p).numparams as i32;
+                let mut nfixparams: i32 = (*p).count_parameters as i32;
                 let mut i: i32 = 0;
                 if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
                     <= (fsize - delta) as i64) as i32
@@ -865,7 +865,7 @@ pub unsafe extern "C" fn luaD_precall(
                     .p;
                 let mut narg: i32 = ((*state).top.p).offset_from(func)
                     as i64 as i32 - 1 as i32;
-                let mut nfixparams: i32 = (*p).numparams as i32;
+                let mut nfixparams: i32 = (*p).count_parameters as i32;
                 let mut fsize: i32 = (*p).maxstacksize as i32;
                 if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
                     <= fsize as i64) as i32 != 0 as i32)
@@ -4462,7 +4462,7 @@ pub unsafe extern "C" fn auxgetinfo(
                     (*ar).nparams = 0 as i32 as u8;
                 } else {
                     (*ar).is_variable_arguments = (*(*f).l.p).is_variable_arguments;
-                    (*ar).nparams = (*(*f).l.p).numparams;
+                    (*ar).nparams = (*(*f).l.p).count_parameters;
                 }
             }
             116 => {
@@ -9746,7 +9746,7 @@ pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Proto {
     (*f).sizeabslineinfo = 0 as i32;
     (*f).upvalues = 0 as *mut Upvaldesc;
     (*f).sizeupvalues = 0 as i32;
-    (*f).numparams = 0 as i32 as u8;
+    (*f).count_parameters = 0 as i32 as u8;
     (*f).is_variable_arguments = false;
     (*f).maxstacksize = 0 as i32 as u8;
     (*f).locvars = 0 as *mut LocalVariable;
@@ -10652,7 +10652,7 @@ pub unsafe extern "C" fn loadFunction(
     }
     (*f).line_defined = loadInt(S);
     (*f).last_line_defined = loadInt(S);
-    (*f).numparams = loadByte(S);
+    (*f).count_parameters = loadByte(S);
     (*f).is_variable_arguments = 0 != loadByte(S);
     (*f).maxstacksize = loadByte(S);
     loadCode(S, f);
@@ -10989,7 +10989,7 @@ pub unsafe extern "C" fn dumpFunction(
     }
     dumpInt(D, (*f).line_defined);
     dumpInt(D, (*f).last_line_defined);
-    dumpByte(D, (*f).numparams as i32);
+    dumpByte(D, (*f).count_parameters as i32);
     dumpByte(D, (*f).is_variable_arguments as i32);
     dumpByte(D, (*f).maxstacksize as i32);
     dumpCode(D, f);
@@ -12193,9 +12193,9 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
         }
     }
     adjustlocalvars(ls, nparams);
-    (*f).numparams = (*fs).count_active_variables;
+    (*f).count_parameters = (*fs).count_active_variables;
     if is_variable_arguments {
-        setvararg(fs, (*f).numparams as i32);
+        setvararg(fs, (*f).count_parameters as i32);
     }
     luaK_reserveregs(fs, (*fs).count_active_variables as i32);
 }
@@ -18333,7 +18333,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                         & !(!(!(0 as i32 as u32) << 8 as i32)
                             << 0 as i32 + 7 as i32 + 8 as i32
                                 + 1 as i32 + 8 as i32)
-                        | (((*p).numparams as i32 + 1 as i32)
+                        | (((*p).count_parameters as i32 + 1 as i32)
                             as u32)
                             << 0 as i32 + 7 as i32 + 8 as i32
                                 + 1 as i32 + 8 as i32
