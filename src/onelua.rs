@@ -11724,7 +11724,7 @@ pub unsafe extern "C" fn movegotosout(mut fs: *mut FunctionState, mut blockcontr
 pub unsafe extern "C" fn enterblock(
     mut fs: *mut FunctionState,
     mut blockcontrol: *mut BlockControl,
-    mut is_loop: u8,
+    mut is_loop: bool,
 ) {
     (*blockcontrol).is_loop = is_loop;
     (*blockcontrol).count_active_variables = (*fs).count_active_variables;
@@ -11767,7 +11767,7 @@ pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
     let mut hasclose: i32 = 0 as i32;
     let mut stklevel: i32 = reglevel(fs, (*blockcontrol).count_active_variables as i32);
     removevars(fs, (*blockcontrol).count_active_variables as i32);
-    if (*blockcontrol).is_loop != 0 {
+    if (*blockcontrol).is_loop {
         hasclose = createlabel(
             ls,
             luaS_newlstr(
@@ -11908,7 +11908,7 @@ pub unsafe extern "C" fn open_func(
         );
     } else {};
     (*f).maxstacksize = 2 as i32 as u8;
-    enterblock(fs, blockcontrol, 0 as i32 as u8);
+    enterblock(fs, blockcontrol, false);
 }
 pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
     let mut state: *mut State = (*ls).state;
@@ -12231,7 +12231,7 @@ pub unsafe extern "C" fn body(
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     new_fs.f = addprototype(ls);
@@ -12692,10 +12692,10 @@ pub unsafe extern "C" fn block(mut ls: *mut LexState) {
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
-    enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
+    enterblock(fs, &mut blockcontrol, false);
     statlist(ls);
     leaveblock(fs);
 }
@@ -12903,13 +12903,13 @@ pub unsafe extern "C" fn whilestat(mut ls: *mut LexState, mut line: i32) {
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     luaX_next(ls);
     whileinit = luaK_getlabel(fs);
     condexit = cond(ls);
-    enterblock(fs, &mut blockcontrol, 1 as u8);
+    enterblock(fs, &mut blockcontrol, true);
     checknext(ls, TK_DO as i32);
     block(ls);
     luaK_patchlist(fs, luaK_jump(fs), whileinit);
@@ -12927,7 +12927,7 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     let mut bl2: BlockControl = BlockControl {
@@ -12936,11 +12936,11 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
-    enterblock(fs, &mut bl1, 1 as u8);
-    enterblock(fs, &mut bl2, 0 as i32 as u8);
+    enterblock(fs, &mut bl1, true);
+    enterblock(fs, &mut bl2, false);
     luaX_next(ls);
     statlist(ls);
     check_match(ls, TK_UNTIL as i32, TK_REPEAT as i32, line);
@@ -13020,7 +13020,7 @@ pub unsafe extern "C" fn forbody(
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
@@ -13033,7 +13033,7 @@ pub unsafe extern "C" fn forbody(
         base,
         0 as i32 as u32,
     );
-    enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
+    enterblock(fs, &mut blockcontrol, false);
     adjustlocalvars(ls, nvars);
     luaK_reserveregs(fs, nvars);
     block(ls);
@@ -13176,10 +13176,10 @@ pub unsafe extern "C" fn forstat(mut ls: *mut LexState, mut line: i32) {
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
-    enterblock(fs, &mut blockcontrol, 1 as u8);
+    enterblock(fs, &mut blockcontrol, true);
     luaX_next(ls);
     varname = str_checkname(ls);
     match (*ls).t.token {
@@ -13209,7 +13209,7 @@ pub unsafe extern "C" fn test_then_block(
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
@@ -13227,7 +13227,7 @@ pub unsafe extern "C" fn test_then_block(
         let mut line: i32 = (*ls).linenumber;
         luaK_goiffalse((*ls).fs, &mut v);
         luaX_next(ls);
-        enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
+        enterblock(fs, &mut blockcontrol, false);
         newgotoentry(
             ls,
             luaS_newlstr(
@@ -13251,7 +13251,7 @@ pub unsafe extern "C" fn test_then_block(
         }
     } else {
         luaK_goiftrue((*ls).fs, &mut v);
-        enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
+        enterblock(fs, &mut blockcontrol, false);
         jf = v.f;
     }
     statlist(ls);
@@ -13556,7 +13556,7 @@ pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FunctionSt
         first_goto: 0,
         count_active_variables: 0,
         count_upvalues: 0,
-        is_loop: 0,
+        is_loop: false,
         is_inside_tbc: false,
     };
     let mut env: *mut Upvaldesc = 0 as *mut Upvaldesc;
