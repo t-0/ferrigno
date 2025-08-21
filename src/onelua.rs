@@ -3956,8 +3956,8 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).mainthread = state;
     (*g).seed = luai_makeseed(state);
     (*g).gcstp = 2 as i32 as u8;
-    (*g).strt.nuse = 0 as i32;
-    (*g).strt.size = (*g).strt.nuse;
+    (*g).strt.count_length = 0 as i32;
+    (*g).strt.size = (*g).strt.count_length;
     (*g).strt.hash = 0 as *mut *mut TString;
     (*g)
         .l_registry
@@ -8632,7 +8632,7 @@ pub unsafe extern "C" fn sweeptolive(
 }
 pub unsafe extern "C" fn checkSizes(mut state: *mut State, mut g: *mut Global) {
     if (*g).gcemergency == 0 {
-        if (*g).strt.nuse < (*g).strt.size / 4 as i32 {
+        if (*g).strt.count_length < (*g).strt.size / 4 as i32 {
             let mut olddebt: i64 = (*g).gc_debt;
             luaS_resize(state, (*g).strt.size / 2 as i32);
             (*g)
@@ -10022,15 +10022,15 @@ pub unsafe extern "C" fn luaS_remove(mut state: *mut State, mut ts: *mut TString
         p = &mut (**p).u.hnext;
     }
     *p = (**p).u.hnext;
-    (*tb).nuse -= 1;
-    (*tb).nuse;
+    (*tb).count_length -= 1;
+    (*tb).count_length;
 }
 pub unsafe extern "C" fn growstrtab(mut state: *mut State, mut tb: *mut StringTable) {
-    if (((*tb).nuse == 2147483647 as i32) as i32 != 0 as i32)
+    if (((*tb).count_length == 2147483647 as i32) as i32 != 0 as i32)
         as i32 as i64 != 0
     {
         luaC_fullgc(state, 1);
-        if (*tb).nuse == 2147483647 as i32 {
+        if (*tb).count_length == 2147483647 as i32 {
             luaD_throw(state, 4 as i32);
         }
     }
@@ -10085,7 +10085,7 @@ pub unsafe extern "C" fn internshrstr(
         }
         ts = (*ts).u.hnext;
     }
-    if (*tb).nuse >= (*tb).size {
+    if (*tb).count_length >= (*tb).size {
         growstrtab(state, tb);
         list = &mut *((*tb).hash)
             .offset(
@@ -10107,8 +10107,8 @@ pub unsafe extern "C" fn internshrstr(
     );
     (*ts).u.hnext = *list;
     *list = ts;
-    (*tb).nuse += 1;
-    (*tb).nuse;
+    (*tb).count_length += 1;
+    (*tb).count_length;
     return ts;
 }
 pub unsafe extern "C" fn luaS_newlstr(

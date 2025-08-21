@@ -3,6 +3,6 @@ use crate::tstring::*;
 #[repr(C)]
 pub struct StringTable {
     pub hash: *mut *mut TString,
-    pub nuse: i32,
+    pub count_length: i32,
     pub size: i32,
 }
