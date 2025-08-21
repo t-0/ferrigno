@@ -464,8 +464,8 @@ pub unsafe extern "C" fn luaD_hook(
             source: 0 as *const i8,
             source_length: 0,
             currentline: 0,
-            linedefined: 0,
-            lastlinedefined: 0,
+            line_defined: 0,
+            last_line_defined: 0,
             nups: 0,
             nparams: 0,
             is_variable_arguments: false,
@@ -4071,7 +4071,7 @@ pub unsafe extern "C" fn getbaseline(
         || program_counter < (*((*f).abslineinfo).offset(0 as i32 as isize)).program_counter
     {
         *basepc = -1;
-        return (*f).linedefined;
+        return (*f).line_defined;
     } else {
         let mut i: i32 = (program_counter as u32)
             .wrapping_div(128 as i32 as u32)
@@ -4321,8 +4321,8 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
             .source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
             .wrapping_sub(1 as i32 as u64);
-        (*ar).linedefined = -1;
-        (*ar).lastlinedefined = -1;
+        (*ar).line_defined = -1;
+        (*ar).last_line_defined = -1;
         (*ar).what = b"C\0" as *const u8 as *const i8;
     } else {
         let mut p: *const Proto = (*cl).l.p;
@@ -4342,10 +4342,10 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as i32 as u64);
         }
-        (*ar).linedefined = (*p).linedefined;
-        (*ar).lastlinedefined = (*p).lastlinedefined;
+        (*ar).line_defined = (*p).line_defined;
+        (*ar).last_line_defined = (*p).last_line_defined;
         (*ar)
-            .what = if (*ar).linedefined == 0 as i32 {
+            .what = if (*ar).line_defined == 0 as i32 {
             b"main\0" as *const u8 as *const i8
         } else {
             b"Lua\0" as *const u8 as *const i8
@@ -4377,7 +4377,7 @@ pub unsafe extern "C" fn collectvalidlines(mut state: *mut State, mut f: *mut Cl
         (*state).top.p;
     } else {
         let mut p: *const Proto = (*f).l.p;
-        let mut currentline: i32 = (*p).linedefined;
+        let mut currentline: i32 = (*p).line_defined;
         let mut t: *mut Table = luaH_new(state);
         let mut io: *mut TValue = &mut (*(*state).top.p).val;
         let mut x_: *mut Table = t;
@@ -9751,8 +9751,8 @@ pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Proto {
     (*f).maxstacksize = 0 as i32 as u8;
     (*f).locvars = 0 as *mut LocalVariable;
     (*f).sizelocvars = 0 as i32;
-    (*f).linedefined = 0 as i32;
-    (*f).lastlinedefined = 0 as i32;
+    (*f).line_defined = 0 as i32;
+    (*f).last_line_defined = 0 as i32;
     (*f).source = 0 as *mut TString;
     return f;
 }
@@ -10650,8 +10650,8 @@ pub unsafe extern "C" fn loadFunction(
     if ((*f).source).is_null() {
         (*f).source = psource;
     }
-    (*f).linedefined = loadInt(S);
-    (*f).lastlinedefined = loadInt(S);
+    (*f).line_defined = loadInt(S);
+    (*f).last_line_defined = loadInt(S);
     (*f).numparams = loadByte(S);
     (*f).is_variable_arguments = 0 != loadByte(S);
     (*f).maxstacksize = loadByte(S);
@@ -10987,8 +10987,8 @@ pub unsafe extern "C" fn dumpFunction(
     } else {
         dumpString(D, (*f).source);
     }
-    dumpInt(D, (*f).linedefined);
-    dumpInt(D, (*f).lastlinedefined);
+    dumpInt(D, (*f).line_defined);
+    dumpInt(D, (*f).last_line_defined);
     dumpByte(D, (*f).numparams as i32);
     dumpByte(D, (*f).is_variable_arguments as i32);
     dumpByte(D, (*f).maxstacksize as i32);
@@ -11065,7 +11065,7 @@ pub unsafe extern "C" fn errorlimit(
 ) -> ! {
     let mut state: *mut State = (*(*fs).ls).state;
     let mut msg: *const i8 = 0 as *const i8;
-    let mut line: i32 = (*(*fs).f).linedefined;
+    let mut line: i32 = (*(*fs).f).line_defined;
     let mut where_0: *const i8 = if line == 0 as i32 {
         b"main function\0" as *const u8 as *const i8
     } else {
@@ -11881,7 +11881,7 @@ pub unsafe extern "C" fn open_func(
     (*fs).ls = ls;
     (*ls).fs = fs;
     (*fs).program_counter = 0 as i32;
-    (*fs).previousline = (*f).linedefined;
+    (*fs).previousline = (*f).line_defined;
     (*fs).iwthabs = 0 as i32 as u8;
     (*fs).lasttarget = 0 as i32;
     (*fs).freereg = 0 as i32 as u8;
@@ -12235,7 +12235,7 @@ pub unsafe extern "C" fn body(
         is_inside_tbc: false,
     };
     new_fs.f = addprototype(ls);
-    (*new_fs.f).linedefined = line;
+    (*new_fs.f).line_defined = line;
     open_func(ls, &mut new_fs, &mut blockcontrol);
     checknext(ls, '(' as i32);
     if ismethod != 0 {
@@ -12256,7 +12256,7 @@ pub unsafe extern "C" fn body(
     parlist(ls);
     checknext(ls, ')' as i32);
     statlist(ls);
-    (*new_fs.f).lastlinedefined = (*ls).linenumber;
+    (*new_fs.f).last_line_defined = (*ls).linenumber;
     check_match(ls, TK_END as i32, TK_FUNCTION as i32, line);
     codeclosure(ls, e);
     close_func(ls);
@@ -23985,7 +23985,7 @@ pub unsafe extern "C" fn pushfuncname(mut state: *mut State, mut ar: *mut Debug)
             state,
             b"function <%s:%d>\0" as *const u8 as *const i8,
             ((*ar).short_src).as_mut_ptr(),
-            (*ar).linedefined,
+            (*ar).line_defined,
         );
     } else {
         lua_pushstring(state, b"?\0" as *const u8 as *const i8);
@@ -24000,8 +24000,8 @@ pub unsafe extern "C" fn lastlevel(mut state: *mut State) -> i32 {
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
@@ -24049,8 +24049,8 @@ pub unsafe extern "C" fn luaL_traceback(
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
@@ -24139,8 +24139,8 @@ pub unsafe extern "C" fn luaL_argerror(
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
@@ -24230,8 +24230,8 @@ pub unsafe extern "C" fn luaL_where(mut state: *mut State, mut level: i32) {
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
@@ -26570,8 +26570,8 @@ pub unsafe extern "C" fn auxstatus(
                     source: 0 as *const i8,
                     source_length: 0,
                     currentline: 0,
-                    linedefined: 0,
-                    lastlinedefined: 0,
+                    line_defined: 0,
+                    last_line_defined: 0,
                     nups: 0,
                     nparams: 0,
                     is_variable_arguments: false,
@@ -33590,8 +33590,8 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
@@ -33657,12 +33657,12 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         settabsi(
             state,
             b"linedefined\0" as *const u8 as *const i8,
-            ar.linedefined,
+            ar.line_defined,
         );
         settabsi(
             state,
             b"lastlinedefined\0" as *const u8 as *const i8,
-            ar.lastlinedefined,
+            ar.last_line_defined,
         );
         settabss(state, b"what\0" as *const u8 as *const i8, ar.what);
     }
@@ -33739,8 +33739,8 @@ pub unsafe extern "C" fn db_getlocal(mut state: *mut State) -> i32 {
             source: 0 as *const i8,
             source_length: 0,
             currentline: 0,
-            linedefined: 0,
-            lastlinedefined: 0,
+            line_defined: 0,
+            last_line_defined: 0,
             nups: 0,
             nparams: 0,
             is_variable_arguments: false,
@@ -33787,8 +33787,8 @@ pub unsafe extern "C" fn db_setlocal(mut state: *mut State) -> i32 {
         source: 0 as *const i8,
         source_length: 0,
         currentline: 0,
-        linedefined: 0,
-        lastlinedefined: 0,
+        line_defined: 0,
+        last_line_defined: 0,
         nups: 0,
         nparams: 0,
         is_variable_arguments: false,
