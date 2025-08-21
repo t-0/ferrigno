@@ -11664,13 +11664,13 @@ pub unsafe extern "C" fn newgotoentry(
 pub unsafe extern "C" fn solvegotos(
     mut ls: *mut LexState,
     mut lb: *mut Labeldesc,
-) -> i32 {
+) -> bool{
     let mut gl: *mut Labellist = &mut (*(*ls).dyd).gt;
     let mut i: i32 = (*(*(*ls).fs).blockcontrol).first_goto;
-    let mut needsclose: i32 = 0 as i32;
+    let mut needsclose = false;
     while i < (*gl).n {
         if (*((*gl).arr).offset(i as isize)).name == (*lb).name {
-            needsclose |= (*((*gl).arr).offset(i as isize)).close as i32;
+            needsclose = needsclose || (0 != (*((*gl).arr).offset(i as isize)).close);
             solvegoto(ls, i, lb);
         } else {
             i += 1;
@@ -11690,7 +11690,7 @@ pub unsafe extern "C" fn createlabel(
     if last != 0 {
         (*((*ll).arr).offset(l as isize)).count_active_variables = (*(*fs).blockcontrol).count_active_variables;
     }
-    if solvegotos(ls, &mut *((*ll).arr).offset(l as isize)) != 0 {
+    if solvegotos(ls, &mut *((*ll).arr).offset(l as isize)) {
         luaK_codeABCk(
             fs,
             OP_CLOSE,
