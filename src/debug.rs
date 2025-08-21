@@ -13,7 +13,7 @@ pub struct Debug {
     pub lastlinedefined: i32,
     pub nups: u8,
     pub nparams: u8,
-    pub is_variable_arguments: i8,
+    pub is_variable_arguments: bool,
     pub is_tail_call: bool,
     pub ftransfer: u16,
     pub ntransfer: u16,

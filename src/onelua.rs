@@ -468,7 +468,7 @@ pub unsafe extern "C" fn luaD_hook(
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            is_variable_arguments: 0,
+            is_variable_arguments: false,
             is_tail_call: false,
             ftransfer: 0,
             ntransfer: 0,
@@ -551,7 +551,7 @@ pub unsafe extern "C" fn rethook(
                 .cl
                 .l
                 .p;
-            if (*p).is_vararg != 0 {
+            if (*p).is_variable_arguments {
                 delta = (*ci).u.l.nextraargs + (*p).numparams as i32
                     + 1 as i32;
             }
@@ -4197,7 +4197,7 @@ pub unsafe extern "C" fn findvararg(
     mut n: i32,
     mut pos: *mut StkId,
 ) -> *const i8 {
-    if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_vararg != 0 {
+    if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_variable_arguments {
         let mut nextra: i32 = (*ci).u.l.nextraargs;
         if n >= -nextra {
             *pos = ((*ci).func.p)
@@ -4396,7 +4396,7 @@ pub unsafe extern "C" fn collectvalidlines(mut state: *mut State, mut f: *mut Cl
             v
                 .tt_ = (1 as i32 | (1 as i32) << 4 as i32)
                 as u8;
-            if (*p).is_vararg == 0 {
+            if !(*p).is_variable_arguments {
                 i = 0 as i32;
             } else {
                 currentline = nextline(p, currentline, 0 as i32);
@@ -4458,10 +4458,10 @@ pub unsafe extern "C" fn auxgetinfo(
                     && (*f).c.tt as i32
                         == 6 as i32 | (0 as i32) << 4 as i32)
                 {
-                    (*ar).is_variable_arguments = 1 as i32 as i8;
+                    (*ar).is_variable_arguments = true;
                     (*ar).nparams = 0 as i32 as u8;
                 } else {
-                    (*ar).is_variable_arguments = (*(*f).l.p).is_vararg as i8;
+                    (*ar).is_variable_arguments = (*(*f).l.p).is_variable_arguments;
                     (*ar).nparams = (*(*f).l.p).numparams;
                 }
             }
@@ -5213,7 +5213,7 @@ pub unsafe extern "C" fn luaG_tracecall(mut state: *mut State) -> i32 {
         1 as i32,
     );
     if (*ci).u.l.savedpc == (*p).code as *const u32 {
-        if (*p).is_vararg != 0 {
+        if (*p).is_variable_arguments {
             return 0 as i32
         } else if (*ci).callstatus as i32
             & (1 as i32) << 6 as i32 == 0
@@ -9747,7 +9747,7 @@ pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Proto {
     (*f).upvalues = 0 as *mut Upvaldesc;
     (*f).sizeupvalues = 0 as i32;
     (*f).numparams = 0 as i32 as u8;
-    (*f).is_vararg = 0 as i32 as u8;
+    (*f).is_variable_arguments = false;
     (*f).maxstacksize = 0 as i32 as u8;
     (*f).locvars = 0 as *mut LocalVariable;
     (*f).sizelocvars = 0 as i32;
@@ -10653,7 +10653,7 @@ pub unsafe extern "C" fn loadFunction(
     (*f).linedefined = loadInt(S);
     (*f).lastlinedefined = loadInt(S);
     (*f).numparams = loadByte(S);
-    (*f).is_vararg = loadByte(S);
+    (*f).is_variable_arguments = 0 != loadByte(S);
     (*f).maxstacksize = loadByte(S);
     loadCode(S, f);
     loadConstants(S, f);
@@ -10990,7 +10990,7 @@ pub unsafe extern "C" fn dumpFunction(
     dumpInt(D, (*f).linedefined);
     dumpInt(D, (*f).lastlinedefined);
     dumpByte(D, (*f).numparams as i32);
-    dumpByte(D, (*f).is_vararg as i32);
+    dumpByte(D, (*f).is_variable_arguments as i32);
     dumpByte(D, (*f).maxstacksize as i32);
     dumpCode(D, f);
     dumpConstants(D, f);
@@ -12155,7 +12155,7 @@ pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut Expressi
     luaK_settablesize(fs, pc, (*t).u.info, cc.na, cc.nh);
 }
 pub unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32) {
-    (*(*fs).f).is_vararg = 1 as i32 as u8;
+    (*(*fs).f).is_variable_arguments = true;
     luaK_codeABCk(
         fs,
         OP_VARARGPREP,
@@ -12169,7 +12169,7 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut f: *mut Proto = (*fs).f;
     let mut nparams: i32 = 0 as i32;
-    let mut is_variable_arguments: i32 = 0 as i32;
+    let mut is_variable_arguments = false;
     if (*ls).t.token != ')' as i32 {
         loop {
             match (*ls).t.token {
@@ -12179,7 +12179,7 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
                 }
                 280 => {
                     luaX_next(ls);
-                    is_variable_arguments = 1 as i32;
+                    is_variable_arguments = true;
                 }
                 _ => {
                     luaX_syntaxerror(
@@ -12188,14 +12188,14 @@ pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
                     );
                 }
             }
-            if !(is_variable_arguments == 0 && testnext(ls, ',' as i32) != 0) {
+            if !(!is_variable_arguments && testnext(ls, ',' as i32) != 0) {
                 break;
             }
         }
     }
     adjustlocalvars(ls, nparams);
     (*f).numparams = (*fs).count_active_variables;
-    if is_variable_arguments != 0 {
+    if is_variable_arguments {
         setvararg(fs, (*f).numparams as i32);
     }
     luaK_reserveregs(fs, (*fs).count_active_variables as i32);
@@ -12423,7 +12423,7 @@ pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut Expression
         }
         280 => {
             let mut fs: *mut FunctionState = (*ls).fs;
-            if (*(*fs).f).is_vararg == 0 {
+            if !(*(*fs).f).is_variable_arguments {
                 luaX_syntaxerror(
                     ls,
                     b"cannot use '...' outside a vararg function\0" as *const u8
@@ -18293,7 +18293,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
         {
             71 | 72 => {
                 if !((*fs).needclose as i32 != 0
-                    || (*p).is_vararg as i32 != 0)
+                    || (*p).is_variable_arguments as i32 != 0)
                 {
                     current_block_7 = 12599329904712511516;
                 } else {
@@ -18329,7 +18329,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                             & !(!(0 as i32 as u32) << 1 as i32)
                                 << 0 as i32 + 7 as i32 + 8 as i32;
                 }
-                if (*p).is_vararg != 0 {
+                if (*p).is_variable_arguments {
                     *pc = *pc
                         & !(!(!(0 as i32 as u32) << 8 as i32)
                             << 0 as i32 + 7 as i32 + 8 as i32
@@ -24005,7 +24005,7 @@ pub unsafe extern "C" fn lastlevel(mut state: *mut State) -> i32 {
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
@@ -24054,7 +24054,7 @@ pub unsafe extern "C" fn luaL_traceback(
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
@@ -24144,7 +24144,7 @@ pub unsafe extern "C" fn luaL_argerror(
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
@@ -24235,7 +24235,7 @@ pub unsafe extern "C" fn luaL_where(mut state: *mut State, mut level: i32) {
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
@@ -26575,7 +26575,7 @@ pub unsafe extern "C" fn auxstatus(
                     lastlinedefined: 0,
                     nups: 0,
                     nparams: 0,
-                    is_variable_arguments: 0,
+                    is_variable_arguments: false,
                     is_tail_call: false,
                     ftransfer: 0,
                     ntransfer: 0,
@@ -33595,7 +33595,7 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
@@ -33744,7 +33744,7 @@ pub unsafe extern "C" fn db_getlocal(mut state: *mut State) -> i32 {
             lastlinedefined: 0,
             nups: 0,
             nparams: 0,
-            is_variable_arguments: 0,
+            is_variable_arguments: false,
             is_tail_call: false,
             ftransfer: 0,
             ntransfer: 0,
@@ -33792,7 +33792,7 @@ pub unsafe extern "C" fn db_setlocal(mut state: *mut State) -> i32 {
         lastlinedefined: 0,
         nups: 0,
         nparams: 0,
-        is_variable_arguments: 0,
+        is_variable_arguments: false,
         is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,

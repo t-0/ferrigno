@@ -11,7 +11,7 @@ pub struct Prototype {
     pub tt: u8,
     pub marked: u8,
     pub numparams: u8,
-    pub is_vararg: u8,
+    pub is_variable_arguments: bool,
     pub maxstacksize: u8,
     pub sizeupvalues: i32,
     pub sizek: i32,
