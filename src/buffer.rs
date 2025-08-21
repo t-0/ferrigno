@@ -1,6 +1,5 @@
 use crate::state::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Buffer {
     pub b: *mut i8,
     pub size: u64,
@@ -9,7 +8,6 @@ pub struct Buffer {
     pub init: BufferInit,
 }
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union BufferInit {
     pub n: f64,
     pub u: f64,

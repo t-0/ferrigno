@@ -1,6 +1,5 @@
 use crate::tstring::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct StringTable {
     pub hash: *mut *mut TString,
     pub count_length: i32,

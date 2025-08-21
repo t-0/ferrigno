@@ -1,6 +1,5 @@
 use crate::stkidrel::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union UValue {
     pub uv: TValue,
     pub n: f64,

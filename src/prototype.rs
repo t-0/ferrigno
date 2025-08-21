@@ -8,7 +8,7 @@ use crate::upvaldesc::*;
 #[repr(C)]
 pub struct Prototype {
     pub next: *mut Object,
-    pub tt: u8,
+    pub tag: u8,
     pub marked: u8,
     pub count_parameters: u8,
     pub is_variable_arguments: bool,
@@ -30,5 +30,5 @@ pub struct Prototype {
     pub abslineinfo: *mut AbsoluteLineInfo,
     pub locvars: *mut LocalVariable,
     pub source: *mut TString,
-    pub gclist: *mut Object,
+    pub gc_list: *mut Object,
 }

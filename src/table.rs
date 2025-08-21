@@ -5,7 +5,7 @@ use crate::stkidrel::*;
 #[repr(C)]
 pub struct Table {
     pub next: *mut Object,
-    pub tt: u8,
+    pub tag: u8,
     pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
@@ -14,5 +14,5 @@ pub struct Table {
     pub node: *mut Node,
     pub lastfree: *mut Node,
     pub metatable: *mut Table,
-    pub gclist: *mut Object,
+    pub gc_list: *mut Object,
 }

@@ -12,7 +12,7 @@ pub union GCUnion {
     pub gc: Object,
     pub ts: TString,
     pub u: Udata,
-    pub cl: Closure,
+    pub cl: UClosure,
     pub h: Table,
     pub p: Prototype,
     pub th: State,

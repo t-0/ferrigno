@@ -3,7 +3,7 @@ use crate::object::*;
 #[repr(C)]
 pub struct TString {
     pub next: *mut Object,
-    pub tt: u8,
+    pub tag: u8,
     pub marked: u8,
     pub extra: u8,
     pub shrlen: u8,
@@ -12,7 +12,6 @@ pub struct TString {
     pub contents: [i8; 1],
 }
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union TStringLongShort {
     pub lnglen: u64,
     pub hnext: *mut TString,

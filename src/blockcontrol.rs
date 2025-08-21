@@ -1,5 +1,3 @@
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct BlockControl {
     pub previous: *mut BlockControl,
     pub first_label: i32,

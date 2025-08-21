@@ -2,7 +2,6 @@ use crate::prototype::*;
 use crate::lexstate::*;
 use crate::blockcontrol::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct FunctionState {
     pub f: *mut Prototype,
     pub prev: *mut FunctionState,

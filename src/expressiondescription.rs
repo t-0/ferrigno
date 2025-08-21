@@ -1,6 +1,5 @@
 use crate::rawvalue::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct ExpressionDescription {
     pub k: u32,
     pub u: RawValue,

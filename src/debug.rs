@@ -1,6 +1,5 @@
 use crate::callinfo::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Debug {
     pub event: i32,
     pub name: *const i8,

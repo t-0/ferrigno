@@ -7,7 +7,6 @@ use crate::tstring::*;
 use crate::table::*;
 use crate::stringtable::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct LongJump {
     pub previous: *mut LongJump,
     pub b: [__jmp_buf_tag; 1],
@@ -17,7 +16,7 @@ pub struct LongJump {
 #[repr(C)]
 pub struct State {
     pub next: *mut Object,
-    pub tt: u8,
+    pub tag: u8,
     pub marked: u8,
     pub status: u8,
     pub allowhook: u8,
@@ -29,7 +28,7 @@ pub struct State {
     pub stack: StkIdRel,
     pub openupval: *mut UpVal,
     pub tbclist: StkIdRel,
-    pub gclist: *mut Object,
+    pub gc_list: *mut Object,
     pub twups: *mut State,
     pub error_jump: *mut LongJump,
     pub base_ci: CallInfo,

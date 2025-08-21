@@ -1,6 +1,4 @@
 use crate::tstring::*;
-#[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Upvaldesc {
     pub name: *mut TString,
     pub instack: u8,

@@ -4,14 +4,12 @@ pub type ContextFunction = Option::<
     unsafe extern "C" fn(*mut State, i32, i64) -> i32,
 >;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union StkIdRel {
     pub p: StkId,
     pub offset: i64,
 }
 pub type StkId = *mut StackValue;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union StackValue {
     pub val: TValue,
     pub tbclist: StackValueExtension,
@@ -24,7 +22,6 @@ pub struct StackValueExtension {
     pub delta: u16,
 }
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union Value {
     pub gc: *mut Object,
     pub p: *mut libc::c_void,
@@ -35,7 +32,6 @@ pub union Value {
 }
 pub type CFunction = Option::<unsafe extern "C" fn(*mut State) -> i32>;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct TValue {
     pub value_: Value,
     pub tt_: u8,
@@ -44,7 +40,7 @@ pub struct TValue {
 #[repr(C)]
 pub struct UpVal {
     pub next: *mut Object,
-    pub tt: u8,
+    pub tag: u8,
     pub marked: u8,
     pub v: C2RustUnnamed_19,
     pub u: C2RustUnnamed17,

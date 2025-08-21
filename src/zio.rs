@@ -1,7 +1,6 @@
 use crate::state::*;
 use crate::readfunction::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct ZIO {
     pub n: u64,
     pub p: *const i8,
