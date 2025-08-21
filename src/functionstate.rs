@@ -8,7 +8,7 @@ pub struct FunctionState {
     pub prev: *mut FunctionState,
     pub ls: *mut LexState,
     pub blockcontrol: *mut BlockControl,
-    pub pc: i32,
+    pub program_counter: i32,
     pub lasttarget: i32,
     pub previousline: i32,
     pub nk: i32,

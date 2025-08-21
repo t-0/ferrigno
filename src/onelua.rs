@@ -4064,40 +4064,40 @@ pub unsafe extern "C" fn currentpc(mut ci: *mut CallInfo) -> i32 {
 }
 pub unsafe extern "C" fn getbaseline(
     mut f: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
     mut basepc: *mut i32,
 ) -> i32 {
     if (*f).sizeabslineinfo == 0 as i32
-        || pc < (*((*f).abslineinfo).offset(0 as i32 as isize)).pc
+        || program_counter < (*((*f).abslineinfo).offset(0 as i32 as isize)).program_counter
     {
         *basepc = -1;
         return (*f).linedefined;
     } else {
-        let mut i: i32 = (pc as u32)
+        let mut i: i32 = (program_counter as u32)
             .wrapping_div(128 as i32 as u32)
             .wrapping_sub(1 as i32 as u32) as i32;
         while (i + 1 as i32) < (*f).sizeabslineinfo
-            && pc >= (*((*f).abslineinfo).offset((i + 1 as i32) as isize)).pc
+            && program_counter >= (*((*f).abslineinfo).offset((i + 1 as i32) as isize)).program_counter
         {
             i += 1;
         }
-        *basepc = (*((*f).abslineinfo).offset(i as isize)).pc;
+        *basepc = (*((*f).abslineinfo).offset(i as isize)).program_counter;
         return (*((*f).abslineinfo).offset(i as isize)).line;
     };
 }
 pub unsafe extern "C" fn luaG_getfuncline(
     mut f: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> i32 {
     if ((*f).lineinfo).is_null() {
         return -1
     } else {
         let mut basepc: i32 = 0;
-        let mut baseline: i32 = getbaseline(f, pc, &mut basepc);
+        let mut baseline: i32 = getbaseline(f, program_counter, &mut basepc);
         loop {
             let fresh8 = basepc;
             basepc = basepc + 1;
-            if !(fresh8 < pc) {
+            if !(fresh8 < program_counter) {
                 break;
             }
             baseline += *((*f).lineinfo).offset(basepc as isize) as i32;
@@ -4356,12 +4356,12 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
 pub unsafe extern "C" fn nextline(
     mut p: *const Proto,
     mut currentline: i32,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> i32 {
-    if *((*p).lineinfo).offset(pc as isize) as i32 != -(0x80 as i32) {
-        return currentline + *((*p).lineinfo).offset(pc as isize) as i32
+    if *((*p).lineinfo).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+        return currentline + *((*p).lineinfo).offset(program_counter as isize) as i32
     } else {
-        return luaG_getfuncline(p, pc)
+        return luaG_getfuncline(p, program_counter)
     };
 }
 pub unsafe extern "C" fn collectvalidlines(mut state: *mut State, mut f: *mut Closure) {
@@ -4548,17 +4548,17 @@ pub unsafe extern "C" fn lua_getinfo(
     return status;
 }
 pub unsafe extern "C" fn filterpc(
-    mut pc: i32,
+    mut program_counter: i32,
     mut jmptarget: i32,
 ) -> i32 {
-    if pc < jmptarget { return -1 } else { return pc };
+    if program_counter < jmptarget { return -1 } else { return program_counter };
 }
 pub unsafe extern "C" fn findsetreg(
     mut p: *const Proto,
     mut lastpc: i32,
     mut reg: i32,
 ) -> i32 {
-    let mut pc: i32 = 0;
+    let mut program_counter: i32 = 0;
     let mut setreg: i32 = -1;
     let mut jmptarget: i32 = 0 as i32;
     if luaP_opmodes[(*((*p).code).offset(lastpc as isize) >> 0 as i32
@@ -4567,9 +4567,9 @@ pub unsafe extern "C" fn findsetreg(
     {
         lastpc -= 1;
     }
-    pc = 0 as i32;
-    while pc < lastpc {
-        let mut i: u32 = *((*p).code).offset(pc as isize);
+    program_counter = 0 as i32;
+    while program_counter < lastpc {
+        let mut i: u32 = *((*p).code).offset(program_counter as isize);
         let mut op: u32 = (i >> 0 as i32
             & !(!(0 as i32 as u32) << 7 as i32)
                 << 0 as i32) as u32;
@@ -4600,7 +4600,7 @@ pub unsafe extern "C" fn findsetreg(
                     - (((1 as i32)
                         << 8 as i32 + 8 as i32 + 1 as i32
                             + 8 as i32) - 1 as i32 >> 1 as i32);
-                let mut dest: i32 = pc + 1 as i32 + b_0;
+                let mut dest: i32 = program_counter + 1 as i32 + b_0;
                 if dest <= lastpc && dest > jmptarget {
                     jmptarget = dest;
                 }
@@ -4613,9 +4613,9 @@ pub unsafe extern "C" fn findsetreg(
             }
         }
         if change != 0 {
-            setreg = filterpc(pc, jmptarget);
+            setreg = filterpc(program_counter, jmptarget);
         }
-        pc += 1;
+        program_counter += 1;
     }
     return setreg;
 }
@@ -4639,15 +4639,15 @@ pub unsafe extern "C" fn basicgetobjname(
     mut reg: i32,
     mut name: *mut *const i8,
 ) -> *const i8 {
-    let mut pc: i32 = *ppc;
-    *name = luaF_getlocalname(p, reg + 1 as i32, pc);
+    let mut program_counter: i32 = *ppc;
+    *name = luaF_getlocalname(p, reg + 1 as i32, program_counter);
     if !(*name).is_null() {
         return strlocal.as_ptr();
     }
-    pc = findsetreg(p, pc, reg);
-    *ppc = pc;
-    if pc != -1 {
-        let mut i: u32 = *((*p).code).offset(pc as isize);
+    program_counter = findsetreg(p, program_counter, reg);
+    *ppc = program_counter;
+    if program_counter != -1 {
+        let mut i: u32 = *((*p).code).offset(program_counter as isize);
         let mut op: u32 = (i >> 0 as i32
             & !(!(0 as i32 as u32) << 7 as i32)
                 << 0 as i32) as u32;
@@ -4690,7 +4690,7 @@ pub unsafe extern "C" fn basicgetobjname(
             4 => {
                 return kname(
                     p,
-                    (*((*p).code).offset((pc + 1 as i32) as isize)
+                    (*((*p).code).offset((program_counter + 1 as i32) as isize)
                         >> 0 as i32 + 7 as i32
                         & !(!(0 as i32 as u32)
                             << 8 as i32 + 8 as i32 + 1 as i32
@@ -4705,18 +4705,18 @@ pub unsafe extern "C" fn basicgetobjname(
 }
 pub unsafe extern "C" fn rname(
     mut p: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
     mut c: i32,
     mut name: *mut *const i8,
 ) {
-    let mut what: *const i8 = basicgetobjname(p, &mut pc, c, name);
+    let mut what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
     if !(!what.is_null() && *what as i32 == 'c' as i32) {
         *name = b"?\0" as *const u8 as *const i8;
     }
 }
 pub unsafe extern "C" fn rkname(
     mut p: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
     mut i: u32,
     mut name: *mut *const i8,
 ) {
@@ -4731,12 +4731,12 @@ pub unsafe extern "C" fn rkname(
     {
         kname(p, c, name);
     } else {
-        rname(p, pc, c, name);
+        rname(p, program_counter, c, name);
     };
 }
 pub unsafe extern "C" fn isEnv(
     mut p: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
     mut i: u32,
     mut isup: i32,
 ) -> *const i8 {
@@ -4748,7 +4748,7 @@ pub unsafe extern "C" fn isEnv(
     if isup != 0 {
         name = upvalname(p, t);
     } else {
-        let mut what: *const i8 = basicgetobjname(p, &mut pc, t, &mut name);
+        let mut what: *const i8 = basicgetobjname(p, &mut program_counter, t, &mut name);
         if what != strlocal.as_ptr() && what != strupval.as_ptr() {
             name = 0 as *const i8;
         }
@@ -4820,11 +4820,11 @@ pub unsafe extern "C" fn getobjname(
 pub unsafe extern "C" fn funcnamefromcode(
     mut state: *mut State,
     mut p: *const Proto,
-    mut pc: i32,
+    mut program_counter: i32,
     mut name: *mut *const i8,
 ) -> *const i8 {
     let mut tm: u32 = TM_INDEX;
-    let mut i: u32 = *((*p).code).offset(pc as isize);
+    let mut i: u32 = *((*p).code).offset(program_counter as isize);
     match (i >> 0 as i32
         & !(!(0 as i32 as u32) << 7 as i32) << 0 as i32)
         as u32 as u32
@@ -4832,7 +4832,7 @@ pub unsafe extern "C" fn funcnamefromcode(
         68 | 69 => {
             return getobjname(
                 p,
-                pc,
+                program_counter,
                 (i >> 0 as i32 + 7 as i32
                     & !(!(0 as i32 as u32) << 8 as i32)
                         << 0 as i32) as i32,
@@ -5189,16 +5189,16 @@ pub unsafe extern "C" fn changedline(
     }
     if newpc - oldpc < 128 as i32 / 2 as i32 {
         let mut delta: i32 = 0 as i32;
-        let mut pc: i32 = oldpc;
+        let mut program_counter: i32 = oldpc;
         loop {
-            pc += 1;
-            let mut lineinfo: i32 = *((*p).lineinfo).offset(pc as isize)
+            program_counter += 1;
+            let mut lineinfo: i32 = *((*p).lineinfo).offset(program_counter as isize)
                 as i32;
             if lineinfo == -(0x80 as i32) {
                 break;
             }
             delta += lineinfo;
-            if pc == newpc {
+            if program_counter == newpc {
                 return (delta != 0 as i32) as i32;
             }
         }
@@ -5225,7 +5225,7 @@ pub unsafe extern "C" fn luaG_tracecall(mut state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luaG_traceexec(
     mut state: *mut State,
-    mut pc: *const u32,
+    mut program_counter: *const u32,
 ) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
     let mut mask: u8 = (*state).hookmask as u8;
@@ -5241,8 +5241,8 @@ pub unsafe extern "C" fn luaG_traceexec(
         );
         return 0;
     }
-    pc = pc.offset(1);
-    (*ci).u.l.savedpc = pc;
+    program_counter = program_counter.offset(1);
+    (*ci).u.l.savedpc = program_counter;
     counthook = (mask as i32 & (1 as i32) << 3 as i32 != 0
         && {
             (*state).hookcount -= 1;
@@ -5285,7 +5285,7 @@ pub unsafe extern "C" fn luaG_traceexec(
         } else {
             0 as i32
         };
-        let mut npci: i32 = pc.offset_from((*p).code) as i64
+        let mut npci: i32 = program_counter.offset_from((*p).code) as i64
             as i32 - 1 as i32;
         if npci <= oldpc || changedline(p, oldpc, npci) != 0 {
             let mut newline: i32 = luaG_getfuncline(p, npci);
@@ -9808,12 +9808,12 @@ pub unsafe extern "C" fn luaF_freeproto(mut state: *mut State, mut f: *mut Proto
 pub unsafe extern "C" fn luaF_getlocalname(
     mut f: *const Proto,
     mut local_number: i32,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> *const i8 {
     let mut i: i32 = 0;
     i = 0 as i32;
-    while i < (*f).sizelocvars && (*((*f).locvars).offset(i as isize)).startpc <= pc {
-        if pc < (*((*f).locvars).offset(i as isize)).endpc {
+    while i < (*f).sizelocvars && (*((*f).locvars).offset(i as isize)).startpc <= program_counter {
+        if program_counter < (*((*f).locvars).offset(i as isize)).endpc {
             local_number -= 1;
             if local_number == 0 as i32 {
                 return ((*(*((*f).locvars).offset(i as isize)).varname).contents)
@@ -10595,7 +10595,7 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
     (*f).sizeabslineinfo = n;
     i = 0 as i32;
     while i < n {
-        (*((*f).abslineinfo).offset(i as isize)).pc = loadInt(S);
+        (*((*f).abslineinfo).offset(i as isize)).program_counter = loadInt(S);
         (*((*f).abslineinfo).offset(i as isize)).line = loadInt(S);
         i += 1;
     }
@@ -10956,7 +10956,7 @@ pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
     dumpInt(D, n);
     i = 0 as i32;
     while i < n {
-        dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).pc);
+        dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).program_counter);
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).line);
         i += 1;
     }
@@ -11193,7 +11193,7 @@ pub unsafe extern "C" fn registerlocalvar(
     }
     let ref mut fresh35 = (*((*f).locvars).offset((*fs).ndebugvars as isize)).varname;
     *fresh35 = varname;
-    (*((*f).locvars).offset((*fs).ndebugvars as isize)).startpc = (*fs).pc;
+    (*((*f).locvars).offset((*fs).ndebugvars as isize)).startpc = (*fs).program_counter;
     if (*f).marked as i32 & (1 as i32) << 5 as i32 != 0
         && (*varname).marked as i32
             & ((1 as i32) << 3 as i32
@@ -11358,7 +11358,7 @@ pub unsafe extern "C" fn removevars(mut fs: *mut FunctionState, mut tolevel: i32
         (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_sub(1);
         let mut var: *mut LocalVariable = localdebuginfo(fs, (*fs).count_active_variables as i32);
         if !var.is_null() {
-            (*var).endpc = (*fs).pc;
+            (*var).endpc = (*fs).program_counter;
         }
     }
 }
@@ -11477,7 +11477,7 @@ pub unsafe extern "C" fn markupval(mut fs: *mut FunctionState, mut level: i32) {
 pub unsafe extern "C" fn marktobeclosed(mut fs: *mut FunctionState) {
     let mut blockcontrol: *mut BlockControl = (*fs).blockcontrol;
     (*blockcontrol).count_upvalues = 1 as i32 as u8;
-    (*blockcontrol).inside_tbc = 1 as i32 as u8;
+    (*blockcontrol).is_inside_tbc = true;
     (*fs).needclose = 1 as i32 as u8;
 }
 pub unsafe extern "C" fn singlevaraux(
@@ -11590,7 +11590,7 @@ pub unsafe extern "C" fn solvegoto(
     {
         jumpscopeerror(ls, gt);
     }
-    luaK_patchlist((*ls).fs, (*gt).pc, (*label).pc);
+    luaK_patchlist((*ls).fs, (*gt).program_counter, (*label).program_counter);
     i = g;
     while i < (*gl).n - 1 as i32 {
         *((*gl).arr)
@@ -11622,7 +11622,7 @@ pub unsafe extern "C" fn newlabelentry(
     mut l: *mut Labellist,
     mut name: *mut TString,
     mut line: i32,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> i32 {
     let mut n: i32 = (*l).n;
     (*l)
@@ -11649,7 +11649,7 @@ pub unsafe extern "C" fn newlabelentry(
     (*((*l).arr).offset(n as isize)).line = line;
     (*((*l).arr).offset(n as isize)).count_active_variables = (*(*ls).fs).count_active_variables;
     (*((*l).arr).offset(n as isize)).close = 0 as i32 as u8;
-    (*((*l).arr).offset(n as isize)).pc = pc;
+    (*((*l).arr).offset(n as isize)).program_counter = program_counter;
     (*l).n = n + 1 as i32;
     return n;
 }
@@ -11657,9 +11657,9 @@ pub unsafe extern "C" fn newgotoentry(
     mut ls: *mut LexState,
     mut name: *mut TString,
     mut line: i32,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> i32 {
-    return newlabelentry(ls, &mut (*(*ls).dyd).gt, name, line, pc);
+    return newlabelentry(ls, &mut (*(*ls).dyd).gt, name, line, program_counter);
 }
 pub unsafe extern "C" fn solvegotos(
     mut ls: *mut LexState,
@@ -11732,8 +11732,7 @@ pub unsafe extern "C" fn enterblock(
     (*blockcontrol).first_goto = (*(*(*fs).ls).dyd).gt.n;
     (*blockcontrol).count_upvalues = 0 as i32 as u8;
     (*blockcontrol)
-        .inside_tbc = (!((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).inside_tbc as i32 != 0)
-        as i32 as u8;
+        .is_inside_tbc = (!((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).is_inside_tbc as i32 != 0);
     (*blockcontrol).previous = (*fs).blockcontrol;
     (*fs).blockcontrol = blockcontrol;
 }
@@ -11881,7 +11880,7 @@ pub unsafe extern "C" fn open_func(
     (*fs).prev = (*ls).fs;
     (*fs).ls = ls;
     (*ls).fs = fs;
-    (*fs).pc = 0 as i32;
+    (*fs).program_counter = 0 as i32;
     (*fs).previousline = (*f).linedefined;
     (*fs).iwthabs = 0 as i32 as u8;
     (*fs).lasttarget = 0 as i32;
@@ -11923,7 +11922,7 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         state,
         (*f).code as *mut libc::c_void,
         &mut (*f).sizecode,
-        (*fs).pc,
+        (*fs).program_counter,
         ::core::mem::size_of::<u32>() as u64 as i32,
     ) as *mut u32;
     (*f)
@@ -11931,7 +11930,7 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         state,
         (*f).lineinfo as *mut libc::c_void,
         &mut (*f).sizelineinfo,
-        (*fs).pc,
+        (*fs).program_counter,
         ::core::mem::size_of::<i8>() as u64 as i32,
     ) as *mut i8;
     (*f)
@@ -12114,7 +12113,7 @@ pub unsafe extern "C" fn field(mut ls: *mut LexState, mut cc: *mut ConstructorCo
 pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut ExpressionDescription) {
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut line: i32 = (*ls).linenumber;
-    let mut pc: i32 = luaK_codeABCk(
+    let mut program_counter: i32 = luaK_codeABCk(
         fs,
         OP_NEWTABLE,
         0,
@@ -12152,7 +12151,7 @@ pub unsafe extern "C" fn constructor(mut ls: *mut LexState, mut t: *mut Expressi
     }
     check_match(ls, '}' as i32, '{' as i32, line);
     lastlistfield(fs, &mut cc);
-    luaK_settablesize(fs, pc, (*t).u.info, cc.na, cc.nh);
+    luaK_settablesize(fs, program_counter, (*t).u.info, cc.na, cc.nh);
 }
 pub unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32) {
     (*(*fs).f).is_variable_arguments = true;
@@ -12211,7 +12210,7 @@ pub unsafe extern "C" fn body(
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
         blockcontrol: 0 as *mut BlockControl,
-        pc: 0,
+        program_counter: 0,
         lasttarget: 0,
         previousline: 0,
         nk: 0,
@@ -12233,7 +12232,7 @@ pub unsafe extern "C" fn body(
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     new_fs.f = addprototype(ls);
     (*new_fs.f).linedefined = line;
@@ -12694,7 +12693,7 @@ pub unsafe extern "C" fn block(mut ls: *mut LexState) {
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     enterblock(fs, &mut blockcontrol, 0 as i32 as u8);
     statlist(ls);
@@ -12847,7 +12846,7 @@ pub unsafe extern "C" fn gotostat(mut ls: *mut LexState) {
                 0,
             );
         }
-        luaK_patchlist(fs, luaK_jump(fs), (*lb).pc);
+        luaK_patchlist(fs, luaK_jump(fs), (*lb).program_counter);
     };
 }
 pub unsafe extern "C" fn breakstat(mut ls: *mut LexState) {
@@ -12905,7 +12904,7 @@ pub unsafe extern "C" fn whilestat(mut ls: *mut LexState, mut line: i32) {
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     luaX_next(ls);
     whileinit = luaK_getlabel(fs);
@@ -12929,7 +12928,7 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     let mut bl2: BlockControl = BlockControl {
         previous: 0 as *mut BlockControl,
@@ -12938,7 +12937,7 @@ pub unsafe extern "C" fn repeatstat(mut ls: *mut LexState, mut line: i32) {
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     enterblock(fs, &mut bl1, 1 as u8);
     enterblock(fs, &mut bl2, 0 as i32 as u8);
@@ -12976,13 +12975,13 @@ pub unsafe extern "C" fn exp1(mut ls: *mut LexState) {
 }
 pub unsafe extern "C" fn fixforjump(
     mut fs: *mut FunctionState,
-    mut pc: i32,
+    mut program_counter: i32,
     mut dest: i32,
     mut back: i32,
 ) {
-    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize)
         as *mut u32;
-    let mut offset: i32 = dest - (pc + 1 as i32);
+    let mut offset: i32 = dest - (program_counter + 1 as i32);
     if back != 0 {
         offset = -offset;
     }
@@ -13022,7 +13021,7 @@ pub unsafe extern "C" fn forbody(
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut prep: i32 = 0;
@@ -13178,7 +13177,7 @@ pub unsafe extern "C" fn forstat(mut ls: *mut LexState, mut line: i32) {
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     enterblock(fs, &mut blockcontrol, 1 as u8);
     luaX_next(ls);
@@ -13211,7 +13210,7 @@ pub unsafe extern "C" fn test_then_block(
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     let mut fs: *mut FunctionState = (*ls).fs;
     let mut v: ExpressionDescription = ExpressionDescription {
@@ -13289,7 +13288,7 @@ pub unsafe extern "C" fn localfunc(mut ls: *mut LexState) {
     new_localvar(ls, str_checkname(ls));
     adjustlocalvars(ls, 1);
     body(ls, &mut b, 0, (*ls).linenumber);
-    (*localdebuginfo(fs, fvar)).startpc = (*fs).pc;
+    (*localdebuginfo(fs, fvar)).startpc = (*fs).program_counter;
 }
 pub unsafe extern "C" fn getlocalattribute(mut ls: *mut LexState) -> i32 {
     if testnext(ls, '<' as i32) != 0 {
@@ -13470,7 +13469,7 @@ pub unsafe extern "C" fn retstat(mut ls: *mut LexState) {
         {
             luaK_setreturns(fs, &mut e, -1);
             if e.k as u32 == VCALL as i32 as u32
-                && nret == 1 as i32 && (*(*fs).blockcontrol).inside_tbc == 0
+                && nret == 1 as i32 && !(*(*fs).blockcontrol).is_inside_tbc
             {
                 *((*(*fs).f).code)
                     .offset(
@@ -13558,7 +13557,7 @@ pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FunctionSt
         count_active_variables: 0,
         count_upvalues: 0,
         is_loop: 0,
-        inside_tbc: 0,
+        is_inside_tbc: false,
     };
     let mut env: *mut Upvaldesc = 0 as *mut Upvaldesc;
     open_func(ls, fs, &mut blockcontrol);
@@ -13618,7 +13617,7 @@ pub unsafe extern "C" fn luaY_parser(
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
         blockcontrol: 0 as *mut BlockControl,
-        pc: 0,
+        program_counter: 0,
         lasttarget: 0,
         previousline: 0,
         nk: 0,
@@ -16098,8 +16097,8 @@ pub unsafe extern "C" fn luaK_exp2const(
 }
 pub unsafe extern "C" fn previousinstruction(mut fs: *mut FunctionState) -> *mut u32 {
     static mut invalidinstruction: u32 = !(0 as i32 as u32);
-    if (*fs).pc > (*fs).lasttarget {
-        return &mut *((*(*fs).f).code).offset(((*fs).pc - 1 as i32) as isize)
+    if (*fs).program_counter > (*fs).lasttarget {
+        return &mut *((*(*fs).f).code).offset(((*fs).program_counter - 1 as i32) as isize)
             as *mut u32
     } else {
         return &invalidinstruction as *const u32 as *mut u32
@@ -16164,9 +16163,9 @@ pub unsafe extern "C" fn luaK_nil(
 }
 pub unsafe extern "C" fn getjump(
     mut fs: *mut FunctionState,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> i32 {
-    let mut offset: i32 = (*((*(*fs).f).code).offset(pc as isize)
+    let mut offset: i32 = (*((*(*fs).f).code).offset(program_counter as isize)
         >> 0 as i32 + 7 as i32
         & !(!(0 as i32 as u32)
             << 8 as i32 + 8 as i32 + 1 as i32 + 8 as i32)
@@ -16177,17 +16176,17 @@ pub unsafe extern "C" fn getjump(
     if offset == -1 {
         return -1
     } else {
-        return pc + 1 as i32 + offset
+        return program_counter + 1 as i32 + offset
     };
 }
 pub unsafe extern "C" fn fixjump(
     mut fs: *mut FunctionState,
-    mut pc: i32,
+    mut program_counter: i32,
     mut dest: i32,
 ) {
-    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+    let mut jmp: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize)
         as *mut u32;
-    let mut offset: i32 = dest - (pc + 1 as i32);
+    let mut offset: i32 = dest - (program_counter + 1 as i32);
     if !(-(((1 as i32)
         << 8 as i32 + 8 as i32 + 1 as i32 + 8 as i32)
         - 1 as i32 >> 1 as i32) <= offset
@@ -16280,16 +16279,16 @@ pub unsafe extern "C" fn condjump(
     return luaK_jump(fs);
 }
 pub unsafe extern "C" fn luaK_getlabel(mut fs: *mut FunctionState) -> i32 {
-    (*fs).lasttarget = (*fs).pc;
-    return (*fs).pc;
+    (*fs).lasttarget = (*fs).program_counter;
+    return (*fs).program_counter;
 }
 pub unsafe extern "C" fn getjumpcontrol(
     mut fs: *mut FunctionState,
-    mut pc: i32,
+    mut program_counter: i32,
 ) -> *mut u32 {
-    let mut pi: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+    let mut pi: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize)
         as *mut u32;
-    if pc >= 1 as i32
+    if program_counter >= 1 as i32
         && luaP_opmodes[(*pi.offset(-(1 as i32 as isize)) >> 0 as i32
             & !(!(0 as i32 as u32) << 7 as i32)
                 << 0 as i32) as u32 as usize] as i32
@@ -16397,7 +16396,7 @@ pub unsafe extern "C" fn savelineinfo(
     mut line: i32,
 ) {
     let mut linedif: i32 = line - (*fs).previousline;
-    let mut pc: i32 = (*fs).pc - 1 as i32;
+    let mut program_counter: i32 = (*fs).program_counter - 1 as i32;
     if abs(linedif) >= 0x80 as i32
         || {
             let fresh132 = (*fs).iwthabs;
@@ -16424,7 +16423,7 @@ pub unsafe extern "C" fn savelineinfo(
             }) as i32,
             b"lines\0" as *const u8 as *const i8,
         ) as *mut AbsoluteLineInfo;
-        (*((*f).abslineinfo).offset((*fs).nabslineinfo as isize)).pc = pc;
+        (*((*f).abslineinfo).offset((*fs).nabslineinfo as isize)).program_counter = program_counter;
         let fresh133 = (*fs).nabslineinfo;
         (*fs).nabslineinfo = (*fs).nabslineinfo + 1;
         (*((*f).abslineinfo).offset(fresh133 as isize)).line = line;
@@ -16435,7 +16434,7 @@ pub unsafe extern "C" fn savelineinfo(
         .lineinfo = luaM_growaux_(
         (*(*fs).ls).state,
         (*f).lineinfo as *mut libc::c_void,
-        pc,
+        program_counter,
         &mut (*f).sizelineinfo,
         ::core::mem::size_of::<i8>() as u64 as i32,
         (if 2147483647 as i32 as u64
@@ -16450,14 +16449,14 @@ pub unsafe extern "C" fn savelineinfo(
         }) as i32,
         b"opcodes\0" as *const u8 as *const i8,
     ) as *mut i8;
-    *((*f).lineinfo).offset(pc as isize) = linedif as i8;
+    *((*f).lineinfo).offset(program_counter as isize) = linedif as i8;
     (*fs).previousline = line;
 }
 pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FunctionState) {
     let mut f: *mut Proto = (*fs).f;
-    let mut pc: i32 = (*fs).pc - 1 as i32;
-    if *((*f).lineinfo).offset(pc as isize) as i32 != -(0x80 as i32) {
-        (*fs).previousline -= *((*f).lineinfo).offset(pc as isize) as i32;
+    let mut program_counter: i32 = (*fs).program_counter - 1 as i32;
+    if *((*f).lineinfo).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+        (*fs).previousline -= *((*f).lineinfo).offset(program_counter as isize) as i32;
         (*fs).iwthabs = ((*fs).iwthabs).wrapping_sub(1);
         (*fs).iwthabs;
     } else {
@@ -16468,8 +16467,8 @@ pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FunctionState) {
 }
 pub unsafe extern "C" fn removelastinstruction(mut fs: *mut FunctionState) {
     removelastlineinfo(fs);
-    (*fs).pc -= 1;
-    (*fs).pc;
+    (*fs).program_counter -= 1;
+    (*fs).program_counter;
 }
 pub unsafe extern "C" fn luaK_code(
     mut fs: *mut FunctionState,
@@ -16480,7 +16479,7 @@ pub unsafe extern "C" fn luaK_code(
         .code = luaM_growaux_(
         (*(*fs).ls).state,
         (*f).code as *mut libc::c_void,
-        (*fs).pc,
+        (*fs).program_counter,
         &mut (*f).sizecode,
         ::core::mem::size_of::<u32>() as u64 as i32,
         (if 2147483647 as i32 as u64
@@ -16495,11 +16494,11 @@ pub unsafe extern "C" fn luaK_code(
         }) as i32,
         b"opcodes\0" as *const u8 as *const i8,
     ) as *mut u32;
-    let fresh134 = (*fs).pc;
-    (*fs).pc = (*fs).pc + 1;
+    let fresh134 = (*fs).program_counter;
+    (*fs).program_counter = (*fs).program_counter + 1;
     *((*f).code).offset(fresh134 as isize) = i;
     savelineinfo(fs, f, (*(*fs).ls).lastline);
-    return (*fs).pc - 1 as i32;
+    return (*fs).program_counter - 1 as i32;
 }
 pub unsafe extern "C" fn luaK_codeABCk(
     mut fs: *mut FunctionState,
@@ -16919,10 +16918,10 @@ pub unsafe extern "C" fn luaK_setreturns(
     mut e: *mut ExpressionDescription,
     mut nresults: i32,
 ) {
-    let mut pc: *mut u32 = &mut *((*(*fs).f).code).offset((*e).u.info as isize)
+    let mut program_counter: *mut u32 = &mut *((*(*fs).f).code).offset((*e).u.info as isize)
         as *mut u32;
     if (*e).k as u32 == VCALL as i32 as u32 {
-        *pc = *pc
+        *program_counter = *program_counter
             & !(!(!(0 as i32 as u32) << 8 as i32)
                 << 0 as i32 + 7 as i32 + 8 as i32
                     + 1 as i32 + 8 as i32)
@@ -16933,7 +16932,7 @@ pub unsafe extern "C" fn luaK_setreturns(
                     << 0 as i32 + 7 as i32 + 8 as i32
                         + 1 as i32 + 8 as i32;
     } else {
-        *pc = *pc
+        *program_counter = *program_counter
             & !(!(!(0 as i32 as u32) << 8 as i32)
                 << 0 as i32 + 7 as i32 + 8 as i32
                     + 1 as i32 + 8 as i32)
@@ -16943,7 +16942,7 @@ pub unsafe extern "C" fn luaK_setreturns(
                 & !(!(0 as i32 as u32) << 8 as i32)
                     << 0 as i32 + 7 as i32 + 8 as i32
                         + 1 as i32 + 8 as i32;
-        *pc = *pc
+        *program_counter = *program_counter
             & !(!(!(0 as i32 as u32) << 8 as i32)
                 << 0 as i32 + 7 as i32)
             | ((*fs).freereg as u32) << 0 as i32 + 7 as i32
@@ -17116,9 +17115,9 @@ pub unsafe extern "C" fn discharge2reg(
             current_block_14 = 13242334135786603907;
         }
         17 => {
-            let mut pc: *mut u32 = &mut *((*(*fs).f).code)
+            let mut program_counter: *mut u32 = &mut *((*(*fs).f).code)
                 .offset((*e).u.info as isize) as *mut u32;
-            *pc = *pc
+            *program_counter = *program_counter
                 & !(!(!(0 as i32 as u32) << 8 as i32)
                     << 0 as i32 + 7 as i32)
                 | (reg as u32) << 0 as i32 + 7 as i32
@@ -17394,11 +17393,11 @@ pub unsafe extern "C" fn luaK_self(
     freeexp(fs, key);
 }
 pub unsafe extern "C" fn negatecondition(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
-    let mut pc: *mut u32 = getjumpcontrol(fs, (*e).u.info);
-    *pc = *pc
+    let mut program_counter: *mut u32 = getjumpcontrol(fs, (*e).u.info);
+    *program_counter = *program_counter
         & !(!(!(0 as i32 as u32) << 1 as i32)
             << 0 as i32 + 7 as i32 + 8 as i32)
-        | (((*pc >> 0 as i32 + 7 as i32 + 8 as i32
+        | (((*program_counter >> 0 as i32 + 7 as i32 + 8 as i32
             & !(!(0 as i32 as u32) << 1 as i32)
                 << 0 as i32) as i32 ^ 1 as i32) as u32)
             << 0 as i32 + 7 as i32 + 8 as i32
@@ -17444,39 +17443,39 @@ pub unsafe extern "C" fn jumponcond(
     );
 }
 pub unsafe extern "C" fn luaK_goiftrue(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
-    let mut pc: i32 = 0;
+    let mut program_counter: i32 = 0;
     luaK_dischargevars(fs, e);
     match (*e).k as u32 {
         16 => {
             negatecondition(fs, e);
-            pc = (*e).u.info;
+            program_counter = (*e).u.info;
         }
         4 | 5 | 6 | 7 | 2 => {
-            pc = -1;
+            program_counter = -1;
         }
         _ => {
-            pc = jumponcond(fs, e, 0 as i32);
+            program_counter = jumponcond(fs, e, 0 as i32);
         }
     }
-    luaK_concat(fs, &mut (*e).f, pc);
+    luaK_concat(fs, &mut (*e).f, program_counter);
     luaK_patchtohere(fs, (*e).t);
     (*e).t = -1;
 }
 pub unsafe extern "C" fn luaK_goiffalse(mut fs: *mut FunctionState, mut e: *mut ExpressionDescription) {
-    let mut pc: i32 = 0;
+    let mut program_counter: i32 = 0;
     luaK_dischargevars(fs, e);
     match (*e).k as u32 {
         16 => {
-            pc = (*e).u.info;
+            program_counter = (*e).u.info;
         }
         1 | 3 => {
-            pc = -1;
+            program_counter = -1;
         }
         _ => {
-            pc = jumponcond(fs, e, 1);
+            program_counter = jumponcond(fs, e, 1);
         }
     }
-    luaK_concat(fs, &mut (*e).t, pc);
+    luaK_concat(fs, &mut (*e).t, program_counter);
     luaK_patchtohere(fs, (*e).f);
     (*e).f = -1;
 }
@@ -17710,7 +17709,7 @@ pub unsafe extern "C" fn finishbinexpval(
     mut event: u32,
 ) {
     let mut v1: i32 = luaK_exp2anyreg(fs, e1);
-    let mut pc: i32 = luaK_codeABCk(
+    let mut program_counter: i32 = luaK_codeABCk(
         fs,
         op,
         0,
@@ -17719,7 +17718,7 @@ pub unsafe extern "C" fn finishbinexpval(
         0,
     );
     freeexps(fs, e1, e2);
-    (*e1).u.info = pc;
+    (*e1).u.info = program_counter;
     (*e1).k = VRELOC;
     luaK_fixline(fs, line);
     luaK_codeABCk(fs, mmop, v1, v2, event as i32, flip);
@@ -17804,8 +17803,8 @@ pub unsafe extern "C" fn finishbinexpneg(
             );
             *((*(*fs).f).code)
                 .offset(
-                    ((*fs).pc - 1 as i32) as isize,
-                ) = *((*(*fs).f).code).offset(((*fs).pc - 1 as i32) as isize)
+                    ((*fs).program_counter - 1 as i32) as isize,
+                ) = *((*(*fs).f).code).offset(((*fs).program_counter - 1 as i32) as isize)
                 & !(!(!(0 as i32 as u32) << 8 as i32)
                     << 0 as i32 + 7 as i32 + 8 as i32
                         + 1 as i32)
@@ -18195,12 +18194,12 @@ pub unsafe extern "C" fn luaK_fixline(mut fs: *mut FunctionState, mut line: i32)
 }
 pub unsafe extern "C" fn luaK_settablesize(
     mut fs: *mut FunctionState,
-    mut pc: i32,
+    mut program_counter: i32,
     mut ra: i32,
     mut asize: i32,
     mut hsize: i32,
 ) {
-    let mut inst: *mut u32 = &mut *((*(*fs).f).code).offset(pc as isize)
+    let mut inst: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize)
         as *mut u32;
     let mut rb: i32 = if hsize != 0 as i32 {
         luaO_ceillog2(hsize as u32) + 1 as i32
@@ -18258,8 +18257,8 @@ pub unsafe extern "C" fn finaltarget(
     let mut count: i32 = 0;
     count = 0 as i32;
     while count < 100 as i32 {
-        let mut pc: u32 = *code.offset(i as isize);
-        if (pc >> 0 as i32
+        let mut program_counter: u32 = *code.offset(i as isize);
+        if (program_counter >> 0 as i32
             & !(!(0 as i32 as u32) << 7 as i32)
                 << 0 as i32) as u32 as u32
             != OP_JMP as i32 as u32
@@ -18267,7 +18266,7 @@ pub unsafe extern "C" fn finaltarget(
             break;
         }
         i
-            += (pc >> 0 as i32 + 7 as i32
+            += (program_counter >> 0 as i32 + 7 as i32
                 & !(!(0 as i32 as u32)
                     << 8 as i32 + 8 as i32 + 1 as i32
                         + 8 as i32) << 0 as i32) as i32
@@ -18283,11 +18282,11 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
     let mut i: i32 = 0;
     let mut p: *mut Proto = (*fs).f;
     i = 0 as i32;
-    while i < (*fs).pc {
-        let mut pc: *mut u32 = &mut *((*p).code).offset(i as isize)
+    while i < (*fs).program_counter {
+        let mut program_counter: *mut u32 = &mut *((*p).code).offset(i as isize)
             as *mut u32;
         let mut current_block_7: u64;
-        match (*pc >> 0 as i32
+        match (*program_counter >> 0 as i32
             & !(!(0 as i32 as u32) << 7 as i32)
                 << 0 as i32) as u32 as u32
         {
@@ -18297,7 +18296,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                 {
                     current_block_7 = 12599329904712511516;
                 } else {
-                    *pc = *pc
+                    *program_counter = *program_counter
                         & !(!(!(0 as i32 as u32) << 7 as i32)
                             << 0 as i32)
                         | (OP_RETURN as i32 as u32) << 0 as i32
@@ -18321,7 +18320,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
         match current_block_7 {
             11006700562992250127 => {
                 if (*fs).needclose != 0 {
-                    *pc = *pc
+                    *program_counter = *program_counter
                         & !(!(!(0 as i32 as u32) << 1 as i32)
                             << 0 as i32 + 7 as i32 + 8 as i32)
                         | (1 as i32 as u32)
@@ -18330,7 +18329,7 @@ pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
                                 << 0 as i32 + 7 as i32 + 8 as i32;
                 }
                 if (*p).is_variable_arguments {
-                    *pc = *pc
+                    *program_counter = *program_counter
                         & !(!(!(0 as i32 as u32) << 8 as i32)
                             << 0 as i32 + 7 as i32 + 8 as i32
                                 + 1 as i32 + 8 as i32)
@@ -19648,14 +19647,14 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
     let mut cl: *mut LClosure = 0 as *mut LClosure;
     let mut k: *mut TValue = 0 as *mut TValue;
     let mut base: StkId = 0 as *mut StackValue;
-    let mut pc: *const u32 = 0 as *const u32;
+    let mut program_counter: *const u32 = 0 as *const u32;
     let mut trap: i32 = 0;
     '_startfunc: loop {
         trap = (*state).hookmask;
         '_returning: loop {
             cl = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l;
             k = (*(*cl).p).k;
-            pc = (*ci).u.l.savedpc;
+            program_counter = (*ci).u.l.savedpc;
             if (trap != 0 as i32) as i32 as i64 != 0 {
                 trap = luaG_tracecall(state);
             }
@@ -19663,11 +19662,11 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
             loop {
                 i = 0;
                 if (trap != 0 as i32) as i32 as i64 != 0 {
-                    trap = luaG_traceexec(state, pc);
+                    trap = luaG_traceexec(state, program_counter);
                     base = ((*ci).func.p).offset(1 as i32 as isize);
                 }
-                let fresh138 = pc;
-                pc = pc.offset(1);
+                let fresh138 = program_counter;
+                program_counter = program_counter.offset(1);
                 i = *fresh138;
                 match (i >> 0 as i32
                     & !(!(0 as i32 as u32) << 7 as i32)
@@ -19768,13 +19767,13 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         let mut rb_0: *mut TValue = 0 as *mut TValue;
                         rb_0 = k
                             .offset(
-                                (*pc >> 0 as i32 + 7 as i32
+                                (*program_counter >> 0 as i32 + 7 as i32
                                     & !(!(0 as i32 as u32)
                                         << 8 as i32 + 8 as i32 + 1 as i32
                                             + 8 as i32) << 0 as i32) as i32
                                     as isize,
                             );
-                        pc = pc.offset(1);
+                        program_counter = program_counter.offset(1);
                         let mut io1_1: *mut TValue = &mut (*ra_3).val;
                         let mut io2_1: *const TValue = rb_0;
                         (*io1_1).value_ = (*io2_1).value_;
@@ -19805,7 +19804,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             .val
                             .tt_ = (1 as i32
                             | (0 as i32) << 4 as i32) as u8;
-                        pc = pc.offset(1);
+                        program_counter = program_counter.offset(1);
                         continue;
                     }
                     7 => {
@@ -19958,7 +19957,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io1_4).value_ = (*io2_4).value_;
                             (*io1_4).tt_ = (*io2_4).tt_;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishget(state, count_upvalues, rc, ra_10, slot);
                             trap = (*ci).u.l.trap;
@@ -20042,7 +20041,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io1_5).value_ = (*io2_5).value_;
                             (*io1_5).tt_ = (*io2_5).tt_;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishget(state, rb_1, rc_0, ra_11, slot_0);
                             trap = (*ci).u.l.trap;
@@ -20110,7 +20109,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io_1)
                                 .tt_ = (3 as i32
                                 | (0 as i32) << 4 as i32) as u8;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishget(state, rb_2, &mut key_0, ra_12, slot_1);
                             trap = (*ci).u.l.trap;
@@ -20165,7 +20164,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io1_7).value_ = (*io2_7).value_;
                             (*io1_7).tt_ = (*io2_7).tt_;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishget(state, rb_3, rc_1, ra_13, slot_2);
                             trap = (*ci).u.l.trap;
@@ -20249,7 +20248,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 } else {};
                             } else {};
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishset(state, upval_0, rb_4, rc_2, slot_3);
                             trap = (*ci).u.l.trap;
@@ -20359,7 +20358,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 } else {};
                             } else {};
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishset(state, &mut (*ra_14).val, rb_5, rc_3, slot_4);
                             trap = (*ci).u.l.trap;
@@ -20453,7 +20452,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io_2)
                                 .tt_ = (3 as i32
                                 | (0 as i32) << 4 as i32) as u8;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishset(
                                 state,
@@ -20540,7 +20539,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 } else {};
                             } else {};
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishset(state, &mut (*ra_16).val, rb_6, rc_5, slot_6);
                             trap = (*ci).u.l.trap;
@@ -20574,14 +20573,14 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             as i32 != 0
                         {
                             c_1
-                                += (*pc >> 0 as i32 + 7 as i32
+                                += (*program_counter >> 0 as i32 + 7 as i32
                                     & !(!(0 as i32 as u32)
                                         << 8 as i32 + 8 as i32 + 1 as i32
                                             + 8 as i32) << 0 as i32) as i32
                                     * (((1 as i32) << 8 as i32)
                                         - 1 as i32 + 1 as i32);
                         }
-                        pc = pc.offset(1);
+                        program_counter = program_counter.offset(1);
                         (*state).top.p = ra_17.offset(1 as i32 as isize);
                         t = luaH_new(state);
                         let mut io_3: *mut TValue = &mut (*ra_17).val;
@@ -20595,7 +20594,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaH_resize(state, t, c_1 as u32, b_3 as u32);
                         }
                         if (*(*state).myglobal).gc_debt > 0 as i32 as i64 {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = ra_17.offset(1 as i32 as isize);
                             luaC_step(state);
                             trap = (*ci).u.l.trap;
@@ -20671,7 +20670,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io1_13).value_ = (*io2_13).value_;
                             (*io1_13).tt_ = (*io2_13).tt_;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaV_finishget(state, rb_7, rc_6, ra_18, slot_7);
                             trap = (*ci).u.l.trap;
@@ -20705,7 +20704,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             == 3 as i32 | (0 as i32) << 4 as i32
                         {
                             let mut iv1: i64 = (*v1).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_4: *mut TValue = &mut (*ra_19).val;
                             (*io_4)
                                 .value_
@@ -20719,7 +20718,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut nb: f64 = (*v1).value_.n;
                             let mut fimm: f64 = imm as f64;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_5: *mut TValue = &mut (*ra_19).val;
                             (*io_5).value_.n = nb + fimm;
                             (*io_5)
@@ -20759,7 +20758,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1: i64 = (*v1_0).value_.i;
                             let mut i2: i64 = (*v2).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_6: *mut TValue = &mut (*ra_20).val;
                             (*io_6)
                                 .value_
@@ -20802,7 +20801,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_7: *mut TValue = &mut (*ra_20).val;
                                 (*io_7).value_.n = n1 + n2;
                                 (*io_7)
@@ -20843,7 +20842,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_0: i64 = (*v1_1).value_.i;
                             let mut i2_0: i64 = (*v2_0).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_8: *mut TValue = &mut (*ra_21).val;
                             (*io_8)
                                 .value_
@@ -20886,7 +20885,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_9: *mut TValue = &mut (*ra_21).val;
                                 (*io_9).value_.n = n1_0 - n2_0;
                                 (*io_9)
@@ -20927,7 +20926,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_1: i64 = (*v1_2).value_.i;
                             let mut i2_1: i64 = (*v2_1).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_10: *mut TValue = &mut (*ra_22).val;
                             (*io_10)
                                 .value_
@@ -20970,7 +20969,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_11: *mut TValue = &mut (*ra_22).val;
                                 (*io_11).value_.n = n1_1 * n2_1;
                                 (*io_11)
@@ -20981,7 +20980,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         continue;
                     }
                     25 => {
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let mut v1_3: *mut TValue = &mut (*base
                             .offset(
@@ -21013,7 +21012,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_2: i64 = (*v1_3).value_.i;
                             let mut i2_2: i64 = (*v2_2).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_12: *mut TValue = &mut (*ra_23).val;
                             (*io_12).value_.i = luaV_mod(state, i1_2, i2_2);
                             (*io_12)
@@ -21053,7 +21052,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_13: *mut TValue = &mut (*ra_23).val;
                                 (*io_13).value_.n = luaV_modf(state, n1_2, n2_2);
                                 (*io_13)
@@ -21120,7 +21119,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 }
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_14: *mut TValue = &mut (*ra_24).val;
                             (*io_14)
                                 .value_
@@ -21192,7 +21191,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 }
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_15: *mut TValue = &mut (*ra_25).val;
                             (*io_15).value_.n = n1_4 / n2_4;
                             (*io_15)
@@ -21202,7 +21201,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         continue;
                     }
                     28 => {
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let mut v1_6: *mut TValue = &mut (*base
                             .offset(
@@ -21234,7 +21233,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_3: i64 = (*v1_6).value_.i;
                             let mut i2_3: i64 = (*v2_5).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_16: *mut TValue = &mut (*ra_26).val;
                             (*io_16).value_.i = luaV_idiv(state, i1_3, i2_3);
                             (*io_16)
@@ -21274,7 +21273,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_17: *mut TValue = &mut (*ra_26).val;
                                 (*io_17).value_.n = floor(n1_5 / n2_5);
                                 (*io_17)
@@ -21321,7 +21320,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_7, &mut i1_4, F2Ieq)
                         } != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_18: *mut TValue = &mut (*ra_27).val;
                             (*io_18)
                                 .value_
@@ -21370,7 +21369,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_8, &mut i1_5, F2Ieq)
                         } != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_19: *mut TValue = &mut (*ra_28).val;
                             (*io_19)
                                 .value_
@@ -21419,7 +21418,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaV_tointegerns(v1_9, &mut i1_6, F2Ieq)
                         } != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_20: *mut TValue = &mut (*ra_29).val;
                             (*io_20)
                                 .value_
@@ -21466,7 +21465,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaV_tointegerns(rb_8, &mut ib, F2Ieq)
                         } != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_21: *mut TValue = &mut (*ra_30).val;
                             (*io_21).value_.i = luaV_shiftl(ib, -ic as i64);
                             (*io_21)
@@ -21510,7 +21509,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaV_tointegerns(rb_9, &mut ib_0, F2Ieq)
                         } != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_22: *mut TValue = &mut (*ra_31).val;
                             (*io_22).value_.i = luaV_shiftl(ic_0 as i64, ib_0);
                             (*io_22)
@@ -21551,7 +21550,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_7: i64 = (*v1_10).value_.i;
                             let mut i2_7: i64 = (*v2_9).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_23: *mut TValue = &mut (*ra_32).val;
                             (*io_23)
                                 .value_
@@ -21594,7 +21593,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_24: *mut TValue = &mut (*ra_32).val;
                                 (*io_24).value_.n = n1_6 + n2_6;
                                 (*io_24)
@@ -21636,7 +21635,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_8: i64 = (*v1_11).value_.i;
                             let mut i2_8: i64 = (*v2_10).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_25: *mut TValue = &mut (*ra_33).val;
                             (*io_25)
                                 .value_
@@ -21679,7 +21678,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_26: *mut TValue = &mut (*ra_33).val;
                                 (*io_26).value_.n = n1_7 - n2_7;
                                 (*io_26)
@@ -21721,7 +21720,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_9: i64 = (*v1_12).value_.i;
                             let mut i2_9: i64 = (*v2_11).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_27: *mut TValue = &mut (*ra_34).val;
                             (*io_27)
                                 .value_
@@ -21764,7 +21763,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_28: *mut TValue = &mut (*ra_34).val;
                                 (*io_28).value_.n = n1_8 * n2_8;
                                 (*io_28)
@@ -21775,7 +21774,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         continue;
                     }
                     37 => {
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let mut v1_13: *mut TValue = &mut (*base
                             .offset(
@@ -21808,7 +21807,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_10: i64 = (*v1_13).value_.i;
                             let mut i2_10: i64 = (*v2_12).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_29: *mut TValue = &mut (*ra_35).val;
                             (*io_29).value_.i = luaV_mod(state, i1_10, i2_10);
                             (*io_29)
@@ -21848,7 +21847,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_30: *mut TValue = &mut (*ra_35).val;
                                 (*io_30).value_.n = luaV_modf(state, n1_9, n2_9);
                                 (*io_30)
@@ -21916,7 +21915,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 }
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_31: *mut TValue = &mut (*ra_36).val;
                             (*io_31)
                                 .value_
@@ -21989,7 +21988,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 }
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_32: *mut TValue = &mut (*ra_37).val;
                             (*io_32).value_.n = n1_11 / n2_11;
                             (*io_32)
@@ -21999,7 +21998,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         continue;
                     }
                     40 => {
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let mut v1_16: *mut TValue = &mut (*base
                             .offset(
@@ -22032,7 +22031,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             let mut i1_11: i64 = (*v1_16).value_.i;
                             let mut i2_11: i64 = (*v2_15).value_.i;
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_33: *mut TValue = &mut (*ra_38).val;
                             (*io_33).value_.i = luaV_idiv(state, i1_11, i2_11);
                             (*io_33)
@@ -22072,7 +22071,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     }
                                 }) != 0
                             {
-                                pc = pc.offset(1);
+                                program_counter = program_counter.offset(1);
                                     let mut io_34: *mut TValue = &mut (*ra_38).val;
                                 (*io_34).value_.n = floor(n1_12 / n2_12);
                                 (*io_34)
@@ -22130,7 +22129,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 luaV_tointegerns(v2_16, &mut i2_12, F2Ieq)
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_35: *mut TValue = &mut (*ra_39).val;
                             (*io_35)
                                 .value_
@@ -22190,7 +22189,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 luaV_tointegerns(v2_17, &mut i2_13, F2Ieq)
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_36: *mut TValue = &mut (*ra_40).val;
                             (*io_36)
                                 .value_
@@ -22250,7 +22249,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 luaV_tointegerns(v2_18, &mut i2_14, F2Ieq)
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_37: *mut TValue = &mut (*ra_41).val;
                             (*io_37)
                                 .value_
@@ -22310,7 +22309,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 luaV_tointegerns(v2_19, &mut i2_15, F2Ieq)
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_38: *mut TValue = &mut (*ra_42).val;
                             (*io_38)
                                 .value_
@@ -22373,7 +22372,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 luaV_tointegerns(v2_20, &mut i2_16, F2Ieq)
                             }) != 0
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                             let mut io_39: *mut TValue = &mut (*ra_43).val;
                             (*io_39).value_.i = luaV_shiftl(i1_16, i2_16);
                             (*io_39)
@@ -22389,7 +22388,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        let mut pi: u32 = *pc
+                        let mut pi: u32 = *program_counter
                             .offset(-(2 as i32 as isize));
                         let mut rb_10: *mut TValue = &mut (*base
                             .offset(
@@ -22411,7 +22410,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaT_trybinTM(state, &mut (*ra_44).val, rb_10, result, tm);
                         trap = (*ci).u.l.trap;
@@ -22424,7 +22423,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        let mut pi_0: u32 = *pc
+                        let mut pi_0: u32 = *program_counter
                             .offset(-(2 as i32 as isize));
                         let mut imm_0: i32 = (i
                             >> 0 as i32 + 7 as i32 + 8 as i32
@@ -22448,7 +22447,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaT_trybiniTM(
                             state,
@@ -22468,7 +22467,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        let mut pi_1: u32 = *pc
+                        let mut pi_1: u32 = *program_counter
                             .offset(-(2 as i32 as isize));
                         let mut imm_1: *mut TValue = k
                             .offset(
@@ -22493,7 +22492,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaT_trybinassocTM(
                             state,
@@ -22555,7 +22554,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 .tt_ = (3 as i32
                                 | (1 as i32) << 4 as i32) as u8;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaT_trybinTM(state, rb_11, rb_11, ra_47, TM_UNM);
                             trap = (*ci).u.l.trap;
@@ -22599,7 +22598,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 .tt_ = (3 as i32
                                 | (0 as i32) << 4 as i32) as u8;
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             luaT_trybinTM(state, rb_12, rb_12, ra_48, TM_BNOT);
                             trap = (*ci).u.l.trap;
@@ -22646,7 +22645,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaV_objlen(
                             state,
@@ -22677,11 +22676,11 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             & !(!(0 as i32 as u32) << 8 as i32)
                                 << 0 as i32) as i32;
                         (*state).top.p = ra_51.offset(n_1 as isize);
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         luaV_concat(state, n_1);
                         trap = (*ci).u.l.trap;
                         if (*(*state).myglobal).gc_debt > 0 as i32 as i64 {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*state).top.p;
                             luaC_step(state);
                             trap = (*ci).u.l.trap;
@@ -22695,7 +22694,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaF_close(state, ra_52, 0, 1);
                         trap = (*ci).u.l.trap;
@@ -22708,13 +22707,13 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaF_newtbcupval(state, ra_53);
                         continue;
                     }
                     56 => {
-                        pc = pc
+                        program_counter = program_counter
                             .offset(
                                 ((i >> 0 as i32 + 7 as i32
                                     & !(!(0 as i32 as u32)
@@ -22745,7 +22744,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                         << 0 as i32) as i32 as isize,
                             ))
                             .val;
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         cond_0 = luaV_equalobj(state, &mut (*ra_54).val, rb_14);
                         trap = (*ci).u.l.trap;
@@ -22755,10 +22754,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni: u32 = *pc;
-                            pc = pc
+                            let mut ni: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -22805,7 +22804,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             cond_1 = LTnum(&mut (*ra_55).val, rb_15);
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_1 = lessthanothers(state, &mut (*ra_55).val, rb_15);
                             trap = (*ci).u.l.trap;
@@ -22816,10 +22815,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_0: u32 = *pc;
-                            pc = pc
+                            let mut ni_0: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_0 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -22866,7 +22865,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             cond_2 = LEnum(&mut (*ra_56).val, rb_16);
                         } else {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_2 = lessequalothers(state, &mut (*ra_56).val, rb_16);
                             trap = (*ci).u.l.trap;
@@ -22877,10 +22876,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_1: u32 = *pc;
-                            pc = pc
+                            let mut ni_1: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_1 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -22921,10 +22920,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_2: u32 = *pc;
-                            pc = pc
+                            let mut ni_2: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_2 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -22973,10 +22972,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_3: u32 = *pc;
-                            pc = pc
+                            let mut ni_3: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_3 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23023,7 +23022,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     + 1 as i32 + 8 as i32
                                 & !(!(0 as i32 as u32) << 8 as i32)
                                     << 0 as i32) as i32;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_5 = luaT_callorderiTM(
                                 state,
@@ -23041,10 +23040,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_4: u32 = *pc;
-                            pc = pc
+                            let mut ni_4: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_4 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23091,7 +23090,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     + 1 as i32 + 8 as i32
                                 & !(!(0 as i32 as u32) << 8 as i32)
                                     << 0 as i32) as i32;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_6 = luaT_callorderiTM(
                                 state,
@@ -23109,10 +23108,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_5: u32 = *pc;
-                            pc = pc
+                            let mut ni_5: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_5 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23159,7 +23158,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     + 1 as i32 + 8 as i32
                                 & !(!(0 as i32 as u32) << 8 as i32)
                                     << 0 as i32) as i32;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_7 = luaT_callorderiTM(
                                 state,
@@ -23177,10 +23176,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_6: u32 = *pc;
-                            pc = pc
+                            let mut ni_6: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_6 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23227,7 +23226,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     + 1 as i32 + 8 as i32
                                 & !(!(0 as i32 as u32) << 8 as i32)
                                     << 0 as i32) as i32;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_8 = luaT_callorderiTM(
                                 state,
@@ -23245,10 +23244,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_7: u32 = *pc;
-                            pc = pc
+                            let mut ni_7: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_7 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23280,10 +23279,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
-                            let mut ni_8: u32 = *pc;
-                            pc = pc
+                            let mut ni_8: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_8 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23323,14 +23322,14 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0 as i32 as u32) << 1 as i32)
                                     << 0 as i32) as i32
                         {
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         } else {
                             let mut io1_14: *mut TValue = &mut (*ra_64).val;
                             let mut io2_14: *const TValue = rb_18;
                             (*io1_14).value_ = (*io2_14).value_;
                             (*io1_14).tt_ = (*io2_14).tt_;
-                            let mut ni_9: u32 = *pc;
-                            pc = pc
+                            let mut ni_9: u32 = *program_counter;
+                            program_counter = program_counter
                                 .offset(
                                     ((ni_9 >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
@@ -23366,7 +23365,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         if b_4 != 0 as i32 {
                             (*state).top.p = ra_65.offset(b_4 as isize);
                         }
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         newci = luaD_precall(state, ra_65, nresults);
                         if !newci.is_null() {
                             break '_returning;
@@ -23403,7 +23402,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             b_5 = ((*state).top.p).offset_from(ra_66) as i64
                                 as i32;
                         }
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         if (i
                             & (1 as u32)
                                 << 0 as i32 + 7 as i32 + 8 as i32)
@@ -23441,7 +23440,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             n_3 = ((*state).top.p).offset_from(ra_67) as i64
                                 as i32;
                         }
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         if (i
                             & (1 as u32)
                                 << 0 as i32 + 7 as i32 + 8 as i32)
@@ -23487,7 +23486,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                             << 0 as i32) as i32 as isize,
                                 );
                             (*state).top.p = ra_68;
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             luaD_poscall(state, ci, 0 as i32);
                             trap = 1 as i32;
                         } else {
@@ -23520,7 +23519,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                             << 0 as i32) as i32 as isize,
                                 );
                             (*state).top.p = ra_69.offset(1 as i32 as isize);
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             luaD_poscall(state, ci, 1);
                             trap = 1 as i32;
                         } else {
@@ -23599,7 +23598,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 (*io_45)
                                     .tt_ = (3 as i32
                                     | (0 as i32) << 4 as i32) as u8;
-                                pc = pc
+                                program_counter = program_counter
                                     .offset(
                                         -((i
                                             >> 0 as i32 + 7 as i32 + 8 as i32
@@ -23609,7 +23608,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     );
                             }
                         } else if floatforloop(ra_71) != 0 {
-                            pc = pc
+                            program_counter = program_counter
                                 .offset(
                                     -((i
                                         >> 0 as i32 + 7 as i32 + 8 as i32
@@ -23628,10 +23627,10 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         if forprep(state, ra_72) != 0 {
-                            pc = pc
+                            program_counter = program_counter
                                 .offset(
                                     ((i
                                         >> 0 as i32 + 7 as i32 + 8 as i32
@@ -23650,18 +23649,18 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaF_newtbcupval(state, ra_73.offset(3 as i32 as isize));
-                        pc = pc
+                        program_counter = program_counter
                             .offset(
                                 (i >> 0 as i32 + 7 as i32 + 8 as i32
                                     & !(!(0 as i32 as u32)
                                         << 8 as i32 + 8 as i32 + 1 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        let fresh143 = pc;
-                        pc = pc.offset(1);
+                        let fresh143 = program_counter;
+                        program_counter = program_counter.offset(1);
                         i = *fresh143;
                         current_block = 13973394567113199817;
                     }
@@ -23705,14 +23704,14 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         {
                             last = last
                                 .wrapping_add(
-                                    ((*pc >> 0 as i32 + 7 as i32
+                                    ((*program_counter >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32)
                                             << 8 as i32 + 8 as i32 + 1 as i32
                                                 + 8 as i32) << 0 as i32) as i32
                                         * (((1 as i32) << 8 as i32)
                                             - 1 as i32 + 1 as i32)) as u32,
                                 );
-                            pc = pc.offset(1);
+                            program_counter = program_counter.offset(1);
                         }
                         if last > luaH_realasize(h) {
                             luaH_resizearray(state, h, last);
@@ -23758,11 +23757,11 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                         << 8 as i32 + 8 as i32 + 1 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         pushclosure(state, p, ((*cl).upvals).as_mut_ptr(), base, ra_77);
                         if (*(*state).myglobal).gc_debt > 0 as i32 as i64 {
-                            (*ci).u.l.savedpc = pc;
+                            (*ci).u.l.savedpc = program_counter;
                             (*state).top.p = ra_77.offset(1 as i32 as isize);
                             luaC_step(state);
                             trap = (*ci).u.l.trap;
@@ -23781,14 +23780,14 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 + 1 as i32 + 8 as i32
                             & !(!(0 as i32 as u32) << 8 as i32)
                                 << 0 as i32) as i32 - 1 as i32;
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         (*state).top.p = (*ci).top.p;
                         luaT_getvarargs(state, ci, ra_78, n_5);
                         trap = (*ci).u.l.trap;
                         continue;
                     }
                     81 => {
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         luaT_adjustvarargs(
                             state,
                             (i >> 0 as i32 + 7 as i32
@@ -23831,7 +23830,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             .p = ra_74
                             .offset(4 as i32 as isize)
                             .offset(3 as i32 as isize);
-                        (*ci).u.l.savedpc = pc;
+                        (*ci).u.l.savedpc = program_counter;
                         luaD_call(
                             state,
                             ra_74.offset(4 as i32 as isize),
@@ -23852,8 +23851,8 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                             << 0 as i32) as i32 as isize,
                                 );
                         }
-                        let fresh144 = pc;
-                        pc = pc.offset(1);
+                        let fresh144 = program_counter;
+                        program_counter = program_counter.offset(1);
                         i = *fresh144;
                     }
                     _ => {}
@@ -23875,7 +23874,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         .val;
                     (*io1_16).value_ = (*io2_16).value_;
                     (*io1_16).tt_ = (*io2_16).tt_;
-                    pc = pc
+                    program_counter = program_counter
                         .offset(
                             -((i
                                 >> 0 as i32 + 7 as i32 + 8 as i32

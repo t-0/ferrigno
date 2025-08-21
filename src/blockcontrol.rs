@@ -7,5 +7,5 @@ pub struct BlockControl {
     pub count_active_variables: u8,
     pub count_upvalues: u8,
     pub is_loop: u8,
-    pub inside_tbc: u8,
+    pub is_inside_tbc: bool,
 }
