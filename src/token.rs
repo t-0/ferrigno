@@ -3,20 +3,17 @@
 )]
 use crate::tstring::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Token {
     pub token: i32,
     pub seminfo: SemInfo,
 }
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub union SemInfo {
     pub r: f64,
     pub i: i64,
     pub ts: *mut TString,
 }
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct C2RustUnnamed26 {
     pub left: u8,
     pub right: u8,
