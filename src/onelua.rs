@@ -469,7 +469,7 @@ pub unsafe extern "C" fn luaD_hook(
             nups: 0,
             nparams: 0,
             isvararg: 0,
-            istailcall: 0,
+            is_tail_call: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -4467,12 +4467,12 @@ pub unsafe extern "C" fn auxgetinfo(
             }
             116 => {
                 (*ar)
-                    .istailcall = (if !ci.is_null() {
-                    (*ci).callstatus as i32
-                        & (1 as i32) << 5 as i32
+                    .is_tail_call = (if !ci.is_null() {
+                    0 != ((*ci).callstatus as i32
+                        & (1 as i32) << 5 as i32)
                 } else {
-                    0 as i32
-                }) as i8;
+                    false
+                });
             }
             110 => {
                 (*ar).namewhat = getfuncname(state, ci, &mut (*ar).name);
@@ -24006,7 +24006,7 @@ pub unsafe extern "C" fn lastlevel(mut state: *mut State) -> i32 {
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],
@@ -24055,7 +24055,7 @@ pub unsafe extern "C" fn luaL_traceback(
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],
@@ -24116,7 +24116,7 @@ pub unsafe extern "C" fn luaL_traceback(
             luaL_addvalue(&mut b);
             pushfuncname(state, &mut ar);
             luaL_addvalue(&mut b);
-            if ar.istailcall != 0 {
+            if ar.is_tail_call {
                 luaL_addstring(
                     &mut b,
                     b"\n\t(...tail calls...)\0" as *const u8 as *const i8,
@@ -24145,7 +24145,7 @@ pub unsafe extern "C" fn luaL_argerror(
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],
@@ -24236,7 +24236,7 @@ pub unsafe extern "C" fn luaL_where(mut state: *mut State, mut level: i32) {
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],
@@ -26576,7 +26576,7 @@ pub unsafe extern "C" fn auxstatus(
                     nups: 0,
                     nparams: 0,
                     isvararg: 0,
-                    istailcall: 0,
+                    is_tail_call: false,
                     ftransfer: 0,
                     ntransfer: 0,
                     short_src: [0; 60],
@@ -33596,7 +33596,7 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],
@@ -33711,7 +33711,7 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         settabsb(
             state,
             b"istailcall\0" as *const u8 as *const i8,
-            ar.istailcall as i32,
+            if ar.is_tail_call { 1 } else { 0 }
         );
     }
     if !(strchr(options, 'L' as i32)).is_null() {
@@ -33745,7 +33745,7 @@ pub unsafe extern "C" fn db_getlocal(mut state: *mut State) -> i32 {
             nups: 0,
             nparams: 0,
             isvararg: 0,
-            istailcall: 0,
+            is_tail_call: false,
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
@@ -33793,7 +33793,7 @@ pub unsafe extern "C" fn db_setlocal(mut state: *mut State) -> i32 {
         nups: 0,
         nparams: 0,
         isvararg: 0,
-        istailcall: 0,
+        is_tail_call: false,
         ftransfer: 0,
         ntransfer: 0,
         short_src: [0; 60],

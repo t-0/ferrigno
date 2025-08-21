@@ -14,7 +14,7 @@ pub struct Debug {
     pub nups: u8,
     pub nparams: u8,
     pub isvararg: i8,
-    pub istailcall: i8,
+    pub is_tail_call: bool,
     pub ftransfer: u16,
     pub ntransfer: u16,
     pub short_src: [i8; 60],
