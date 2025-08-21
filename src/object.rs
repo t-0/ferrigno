@@ -9,16 +9,6 @@ macro_rules! ObjectBase {
             pub marked: u8,
             $($fpub $field : $type,)*
         }
-        impl $name {
-            $pub fn new(next: *mut Object, tag: u8, marked: u8, $($field:$type,)*) -> Self{
-                Self{
-                    next,
-                    tag,
-                    marked,
-                    $($field,)*
-                }
-            }
-        }
     }
 }
 #[derive(Copy, Clone)]
