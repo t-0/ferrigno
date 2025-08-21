@@ -39,7 +39,7 @@ mod matchstate;
 mod mbuffer;
 mod node;
 mod onelua;
-mod proto;
+mod prototype;
 mod ranstate;
 mod rn;
 mod sparser;

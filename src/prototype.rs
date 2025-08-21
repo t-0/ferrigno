@@ -6,7 +6,7 @@ use crate::absolutelineinfo::*;
 use crate::upvaldesc::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Proto {
+pub struct Prototype {
     pub next: *mut GCObject,
     pub tt: u8,
     pub marked: u8,
@@ -24,7 +24,7 @@ pub struct Proto {
     pub last_line_defined: i32,
     pub k: *mut TValue,
     pub code: *mut u32,
-    pub p: *mut *mut Proto,
+    pub p: *mut *mut Prototype,
     pub upvalues: *mut Upvaldesc,
     pub lineinfo: *mut i8,
     pub abslineinfo: *mut AbsoluteLineInfo,

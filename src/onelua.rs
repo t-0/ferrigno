@@ -50,7 +50,7 @@ use crate::matchstate::*;
 use crate::mbuffer::*;
 use crate::mbuffer::*;
 use crate::node::*;
-use crate::proto::*;
+use crate::prototype::*;
 use crate::ranstate::*;
 use crate::readfunction::*;
 use crate::registeredfunction::*;
@@ -519,7 +519,7 @@ pub unsafe extern "C" fn luaD_hookcall(mut state: *mut State, mut ci: *mut CallI
         } else {
             0 as i32
         };
-        let mut p: *mut Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion))
+        let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion))
             .cl
             .l
             .p;
@@ -547,7 +547,7 @@ pub unsafe extern "C" fn rethook(
         let mut ftransfer: i32 = 0;
         if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0
         {
-            let mut p: *mut Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion))
+            let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion))
                 .cl
                 .l
                 .p;
@@ -782,7 +782,7 @@ pub unsafe extern "C" fn luaD_pretailcall(
             }
             22 => return precallC(state, func, -1, (*func).val.value_.f),
             6 => {
-                let mut p: *mut Proto = (*((*func).val.value_.gc as *mut GCUnion))
+                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion))
                     .cl
                     .l
                     .p;
@@ -859,7 +859,7 @@ pub unsafe extern "C" fn luaD_precall(
             }
             6 => {
                 let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-                let mut p: *mut Proto = (*((*func).val.value_.gc as *mut GCUnion))
+                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion))
                     .cl
                     .l
                     .p;
@@ -3381,7 +3381,7 @@ pub unsafe extern "C" fn aux_upvalue(
         6 => {
             let mut f_0: *mut LClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).cl.l;
             let mut name: *mut TString = 0 as *mut TString;
-            let mut p: *mut Proto = (*f_0).p;
+            let mut p: *mut Prototype = (*f_0).p;
             if !((n as u32).wrapping_sub(1 as u32)
                 < (*p).sizeupvalues as u32)
             {
@@ -4063,7 +4063,7 @@ pub unsafe extern "C" fn currentpc(mut ci: *mut CallInfo) -> i32 {
         as i64 as i32 - 1 as i32;
 }
 pub unsafe extern "C" fn getbaseline(
-    mut f: *const Proto,
+    mut f: *const Prototype,
     mut program_counter: i32,
     mut basepc: *mut i32,
 ) -> i32 {
@@ -4086,7 +4086,7 @@ pub unsafe extern "C" fn getbaseline(
     };
 }
 pub unsafe extern "C" fn luaG_getfuncline(
-    mut f: *const Proto,
+    mut f: *const Prototype,
     mut program_counter: i32,
 ) -> i32 {
     if ((*f).lineinfo).is_null() {
@@ -4182,7 +4182,7 @@ pub unsafe extern "C" fn lua_getstack(
     return status;
 }
 pub unsafe extern "C" fn upvalname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut uv: i32,
 ) -> *const i8 {
     let mut s: *mut TString = (*((*p).upvalues).offset(uv as isize)).name;
@@ -4325,7 +4325,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
         (*ar).last_line_defined = -1;
         (*ar).what = b"C\0" as *const u8 as *const i8;
     } else {
-        let mut p: *const Proto = (*cl).l.p;
+        let mut p: *const Prototype = (*cl).l.p;
         if !((*p).source).is_null() {
             (*ar).source = ((*(*p).source).contents).as_mut_ptr();
             (*ar)
@@ -4354,7 +4354,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
     luaO_chunkid(((*ar).short_src).as_mut_ptr(), (*ar).source, (*ar).source_length);
 }
 pub unsafe extern "C" fn nextline(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut currentline: i32,
     mut program_counter: i32,
 ) -> i32 {
@@ -4376,7 +4376,7 @@ pub unsafe extern "C" fn collectvalidlines(mut state: *mut State, mut f: *mut Cl
         (*state).top.p = ((*state).top.p).offset(1);
         (*state).top.p;
     } else {
-        let mut p: *const Proto = (*f).l.p;
+        let mut p: *const Prototype = (*f).l.p;
         let mut currentline: i32 = (*p).line_defined;
         let mut t: *mut Table = luaH_new(state);
         let mut io: *mut TValue = &mut (*(*state).top.p).val;
@@ -4554,7 +4554,7 @@ pub unsafe extern "C" fn filterpc(
     if program_counter < jmptarget { return -1 } else { return program_counter };
 }
 pub unsafe extern "C" fn findsetreg(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut lastpc: i32,
     mut reg: i32,
 ) -> i32 {
@@ -4620,7 +4620,7 @@ pub unsafe extern "C" fn findsetreg(
     return setreg;
 }
 pub unsafe extern "C" fn kname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut index: i32,
     mut name: *mut *const i8,
 ) -> *const i8 {
@@ -4634,7 +4634,7 @@ pub unsafe extern "C" fn kname(
     };
 }
 pub unsafe extern "C" fn basicgetobjname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut ppc: *mut i32,
     mut reg: i32,
     mut name: *mut *const i8,
@@ -4704,7 +4704,7 @@ pub unsafe extern "C" fn basicgetobjname(
     return 0 as *const i8;
 }
 pub unsafe extern "C" fn rname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut program_counter: i32,
     mut c: i32,
     mut name: *mut *const i8,
@@ -4715,7 +4715,7 @@ pub unsafe extern "C" fn rname(
     }
 }
 pub unsafe extern "C" fn rkname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut program_counter: i32,
     mut i: u32,
     mut name: *mut *const i8,
@@ -4735,7 +4735,7 @@ pub unsafe extern "C" fn rkname(
     };
 }
 pub unsafe extern "C" fn isEnv(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut program_counter: i32,
     mut i: u32,
     mut isup: i32,
@@ -4763,7 +4763,7 @@ pub unsafe extern "C" fn isEnv(
     };
 }
 pub unsafe extern "C" fn getobjname(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut lastpc: i32,
     mut reg: i32,
     mut name: *mut *const i8,
@@ -4819,7 +4819,7 @@ pub unsafe extern "C" fn getobjname(
 }
 pub unsafe extern "C" fn funcnamefromcode(
     mut state: *mut State,
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut program_counter: i32,
     mut name: *mut *const i8,
 ) -> *const i8 {
@@ -5180,7 +5180,7 @@ pub unsafe extern "C" fn luaG_runerror(
     luaG_errormsg(state);
 }
 pub unsafe extern "C" fn changedline(
-    mut p: *const Proto,
+    mut p: *const Prototype,
     mut oldpc: i32,
     mut newpc: i32,
 ) -> i32 {
@@ -5207,7 +5207,7 @@ pub unsafe extern "C" fn changedline(
 }
 pub unsafe extern "C" fn luaG_tracecall(mut state: *mut State) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
-    let mut p: *mut Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+    let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
     ::core::ptr::write_volatile(
         &mut (*ci).u.l.trap as *mut i32,
         1 as i32,
@@ -5229,7 +5229,7 @@ pub unsafe extern "C" fn luaG_traceexec(
 ) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
     let mut mask: u8 = (*state).hookmask as u8;
-    let mut p: *const Proto = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+    let mut p: *const Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
     let mut counthook: i32 = 0;
     if mask as i32
         & ((1 as i32) << 2 as i32
@@ -6920,7 +6920,7 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
     mut state: *mut State,
     mut nfixparams: i32,
     mut ci: *mut CallInfo,
-    mut p: *const Proto,
+    mut p: *const Prototype,
 ) {
     let mut i: i32 = 0;
     let mut actual: i32 = ((*state).top.p).offset_from((*ci).func.p) as i64
@@ -8156,7 +8156,7 @@ pub unsafe extern "C" fn traverseudata(
 }
 pub unsafe extern "C" fn traverseproto(
     mut g: *mut Global,
-    mut f: *mut Proto,
+    mut f: *mut Prototype,
 ) -> i32 {
     let mut i: i32 = 0;
     if !((*f).source).is_null() {
@@ -9461,7 +9461,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
                 * nupvals) as u64,
     );
     let mut c: *mut LClosure = &mut (*(o as *mut GCUnion)).cl.l;
-    (*c).p = 0 as *mut Proto;
+    (*c).p = 0 as *mut Prototype;
     (*c).nupvalues = nupvals as u8;
     loop {
         let fresh17 = nupvals;
@@ -9727,16 +9727,16 @@ pub unsafe extern "C" fn luaF_close(
     }
     return level;
 }
-pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Proto {
+pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Prototype {
     let mut o: *mut GCObject = luaC_newobj(
         state,
         9 as i32 + 1 as i32 | (0 as i32) << 4 as i32,
-        ::core::mem::size_of::<Proto>() as u64,
+        ::core::mem::size_of::<Prototype>() as u64,
     );
-    let mut f: *mut Proto = &mut (*(o as *mut GCUnion)).p;
+    let mut f: *mut Prototype = &mut (*(o as *mut GCUnion)).p;
     (*f).k = 0 as *mut TValue;
     (*f).sizek = 0 as i32;
-    (*f).p = 0 as *mut *mut Proto;
+    (*f).p = 0 as *mut *mut Prototype;
     (*f).sizep = 0 as i32;
     (*f).code = 0 as *mut u32;
     (*f).sizecode = 0 as i32;
@@ -9756,7 +9756,7 @@ pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Proto {
     (*f).source = 0 as *mut TString;
     return f;
 }
-pub unsafe extern "C" fn luaF_freeproto(mut state: *mut State, mut f: *mut Proto) {
+pub unsafe extern "C" fn luaF_freeproto(mut state: *mut State, mut f: *mut Prototype) {
     luaM_free_(
         state,
         (*f).code as *mut libc::c_void,
@@ -9767,7 +9767,7 @@ pub unsafe extern "C" fn luaF_freeproto(mut state: *mut State, mut f: *mut Proto
         state,
         (*f).p as *mut libc::c_void,
         ((*f).sizep as u64)
-            .wrapping_mul(::core::mem::size_of::<*mut Proto>() as u64),
+            .wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
     );
     luaM_free_(
         state,
@@ -9802,11 +9802,11 @@ pub unsafe extern "C" fn luaF_freeproto(mut state: *mut State, mut f: *mut Proto
     luaM_free_(
         state,
         f as *mut libc::c_void,
-        ::core::mem::size_of::<Proto>() as u64,
+        ::core::mem::size_of::<Prototype>() as u64,
     );
 }
 pub unsafe extern "C" fn luaF_getlocalname(
-    mut f: *const Proto,
+    mut f: *const Prototype,
     mut local_number: i32,
     mut program_counter: i32,
 ) -> *const i8 {
@@ -10307,7 +10307,7 @@ pub unsafe extern "C" fn loadInteger(mut S: *mut LoadState) -> i64 {
 }
 pub unsafe extern "C" fn loadStringN(
     mut S: *mut LoadState,
-    mut p: *mut Proto,
+    mut p: *mut Prototype,
 ) -> *mut TString {
     let mut state: *mut State = (*S).state;
     let mut ts: *mut TString = 0 as *mut TString;
@@ -10363,7 +10363,7 @@ pub unsafe extern "C" fn loadStringN(
 }
 pub unsafe extern "C" fn loadString(
     mut S: *mut LoadState,
-    mut p: *mut Proto,
+    mut p: *mut Prototype,
 ) -> *mut TString {
     let mut st: *mut TString = loadStringN(S, p);
     if st.is_null() {
@@ -10374,7 +10374,7 @@ pub unsafe extern "C" fn loadString(
     }
     return st;
 }
-pub unsafe extern "C" fn loadCode(mut S: *mut LoadState, mut f: *mut Proto) {
+pub unsafe extern "C" fn loadCode(mut S: *mut LoadState, mut f: *mut Prototype) {
     let mut n: i32 = loadInt(S);
     if ::core::mem::size_of::<i32>() as u64
         >= ::core::mem::size_of::<u64>() as u64
@@ -10399,7 +10399,7 @@ pub unsafe extern "C" fn loadCode(mut S: *mut LoadState, mut f: *mut Proto) {
             .wrapping_mul(::core::mem::size_of::<u32>() as u64),
     );
 }
-pub unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Proto) {
+pub unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = loadInt(S);
     if ::core::mem::size_of::<i32>() as u64
@@ -10472,14 +10472,14 @@ pub unsafe extern "C" fn loadConstants(mut S: *mut LoadState, mut f: *mut Proto)
         i += 1;
     }
 }
-pub unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
+pub unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = loadInt(S);
     if ::core::mem::size_of::<i32>() as u64
         >= ::core::mem::size_of::<u64>() as u64
         && (n as u64).wrapping_add(1 as i32 as u64)
             > (!(0 as i32 as u64))
-                .wrapping_div(::core::mem::size_of::<*mut Proto>() as u64)
+                .wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
     {
         luaM_toobig((*S).state);
     } else {};
@@ -10487,14 +10487,14 @@ pub unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
         .p = luaM_malloc_(
         (*S).state,
         (n as u64)
-            .wrapping_mul(::core::mem::size_of::<*mut Proto>() as u64),
+            .wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
         0,
-    ) as *mut *mut Proto;
+    ) as *mut *mut Prototype;
     (*f).sizep = n;
     i = 0 as i32;
     while i < n {
         let ref mut fresh27 = *((*f).p).offset(i as isize);
-        *fresh27 = 0 as *mut Proto;
+        *fresh27 = 0 as *mut Prototype;
         i += 1;
     }
     i = 0 as i32;
@@ -10516,7 +10516,7 @@ pub unsafe extern "C" fn loadProtos(mut S: *mut LoadState, mut f: *mut Proto) {
         i += 1;
     }
 }
-pub unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) {
+pub unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = 0;
     n = loadInt(S);
@@ -10550,7 +10550,7 @@ pub unsafe extern "C" fn loadUpvalues(mut S: *mut LoadState, mut f: *mut Proto) 
         i += 1;
     }
 }
-pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
+pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = 0;
     n = loadInt(S);
@@ -10643,7 +10643,7 @@ pub unsafe extern "C" fn loadDebug(mut S: *mut LoadState, mut f: *mut Proto) {
 }
 pub unsafe extern "C" fn loadFunction(
     mut S: *mut LoadState,
-    mut f: *mut Proto,
+    mut f: *mut Prototype,
     mut psource: *mut TString,
 ) {
     (*f).source = loadStringN(S, f);
@@ -10886,7 +10886,7 @@ pub unsafe extern "C" fn dumpString(mut D: *mut DumpState, mut s: *const TString
         );
     };
 }
-pub unsafe extern "C" fn dumpCode(mut D: *mut DumpState, mut f: *const Proto) {
+pub unsafe extern "C" fn dumpCode(mut D: *mut DumpState, mut f: *const Prototype) {
     dumpInt(D, (*f).sizecode);
     dumpBlock(
         D,
@@ -10895,7 +10895,7 @@ pub unsafe extern "C" fn dumpCode(mut D: *mut DumpState, mut f: *const Proto) {
             .wrapping_mul(::core::mem::size_of::<u32>() as u64),
     );
 }
-pub unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Proto) {
+pub unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizek;
     dumpInt(D, n);
@@ -10919,7 +10919,7 @@ pub unsafe extern "C" fn dumpConstants(mut D: *mut DumpState, mut f: *const Prot
         i += 1;
     }
 }
-pub unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Proto) {
+pub unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizep;
     dumpInt(D, n);
@@ -10929,7 +10929,7 @@ pub unsafe extern "C" fn dumpProtos(mut D: *mut DumpState, mut f: *const Proto) 
         i += 1;
     }
 }
-pub unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto) {
+pub unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = (*f).sizeupvalues;
     dumpInt(D, n);
@@ -10941,7 +10941,7 @@ pub unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto
         i += 1;
     }
 }
-pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
+pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = 0;
     n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelineinfo };
@@ -10979,7 +10979,7 @@ pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Proto) {
 }
 pub unsafe extern "C" fn dumpFunction(
     mut D: *mut DumpState,
-    mut f: *const Proto,
+    mut f: *const Prototype,
     mut psource: *mut TString,
 ) {
     if (*D).strip != 0 || (*f).source == psource {
@@ -11026,7 +11026,7 @@ pub unsafe extern "C" fn dumpHeader(mut D: *mut DumpState) {
 }
 pub unsafe extern "C" fn luaU_dump(
     mut state: *mut State,
-    mut f: *const Proto,
+    mut f: *const Prototype,
     mut w: WriteFunction,
     mut data: *mut libc::c_void,
     mut strip: i32,
@@ -11164,7 +11164,7 @@ pub unsafe extern "C" fn registerlocalvar(
     mut fs: *mut FunctionState,
     mut varname: *mut TString,
 ) -> i32 {
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     let mut oldsize: i32 = (*f).sizelocvars;
     (*f)
         .locvars = luaM_growaux_(
@@ -11378,7 +11378,7 @@ pub unsafe extern "C" fn searchupvalue(
     return -1;
 }
 pub unsafe extern "C" fn allocupvalue(mut fs: *mut FunctionState) -> *mut Upvaldesc {
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     let mut oldsize: i32 = (*f).sizeupvalues;
     checklimit(
         fs,
@@ -11802,11 +11802,11 @@ pub unsafe extern "C" fn leaveblock(mut fs: *mut FunctionState) {
         undefgoto(ls, &mut *((*(*ls).dyd).gt.arr).offset((*blockcontrol).first_goto as isize));
     }
 }
-pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
-    let mut clp: *mut Proto = 0 as *mut Proto;
+pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Prototype {
+    let mut clp: *mut Prototype = 0 as *mut Prototype;
     let mut state: *mut State = (*ls).state;
     let mut fs: *mut FunctionState = (*ls).fs;
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     if (*fs).np >= (*f).sizep {
         let mut oldsize: i32 = (*f).sizep;
         (*f)
@@ -11815,28 +11815,28 @@ pub unsafe extern "C" fn addprototype(mut ls: *mut LexState) -> *mut Proto {
             (*f).p as *mut libc::c_void,
             (*fs).np,
             &mut (*f).sizep,
-            ::core::mem::size_of::<*mut Proto>() as u64 as i32,
+            ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
             (if (((1 as i32)
                 << 8 as i32 + 8 as i32 + 1 as i32)
                 - 1 as i32) as u64
                 <= (!(0 as i32 as u64))
-                    .wrapping_div(::core::mem::size_of::<*mut Proto>() as u64)
+                    .wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
             {
                 (((1 as i32)
                     << 8 as i32 + 8 as i32 + 1 as i32)
                     - 1 as i32) as u32
             } else {
                 (!(0 as i32 as u64))
-                    .wrapping_div(::core::mem::size_of::<*mut Proto>() as u64)
+                    .wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
                     as u32
             }) as i32,
             b"functions\0" as *const u8 as *const i8,
-        ) as *mut *mut Proto;
+        ) as *mut *mut Prototype;
         while oldsize < (*f).sizep {
             let fresh45 = oldsize;
             oldsize = oldsize + 1;
             let ref mut fresh46 = *((*f).p).offset(fresh45 as isize);
-            *fresh46 = 0 as *mut Proto;
+            *fresh46 = 0 as *mut Prototype;
         }
     }
     clp = luaF_newproto(state);
@@ -11876,7 +11876,7 @@ pub unsafe extern "C" fn open_func(
     mut fs: *mut FunctionState,
     mut blockcontrol: *mut BlockControl,
 ) {
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     (*fs).prev = (*ls).fs;
     (*fs).ls = ls;
     (*ls).fs = fs;
@@ -11913,7 +11913,7 @@ pub unsafe extern "C" fn open_func(
 pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
     let mut state: *mut State = (*ls).state;
     let mut fs: *mut FunctionState = (*ls).fs;
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     luaK_ret(fs, luaY_nvarstack(fs), 0 as i32);
     leaveblock(fs);
     luaK_finish(fs);
@@ -11955,8 +11955,8 @@ pub unsafe extern "C" fn close_func(mut ls: *mut LexState) {
         (*f).p as *mut libc::c_void,
         &mut (*f).sizep,
         (*fs).np,
-        ::core::mem::size_of::<*mut Proto>() as u64 as i32,
-    ) as *mut *mut Proto;
+        ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
+    ) as *mut *mut Prototype;
     (*f)
         .locvars = luaM_shrinkvector_(
         state,
@@ -12166,7 +12166,7 @@ pub unsafe extern "C" fn setvararg(mut fs: *mut FunctionState, mut nparams: i32)
 }
 pub unsafe extern "C" fn parlist(mut ls: *mut LexState) {
     let mut fs: *mut FunctionState = (*ls).fs;
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     let mut nparams: i32 = 0 as i32;
     let mut is_variable_arguments = false;
     if (*ls).t.token != ')' as i32 {
@@ -12206,7 +12206,7 @@ pub unsafe extern "C" fn body(
     mut line: i32,
 ) {
     let mut new_fs: FunctionState = FunctionState {
-        f: 0 as *mut Proto,
+        f: 0 as *mut Prototype,
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
         blockcontrol: 0 as *mut BlockControl,
@@ -13613,7 +13613,7 @@ pub unsafe extern "C" fn luaY_parser(
         envn: 0 as *mut TString,
     };
     let mut funcstate: FunctionState = FunctionState {
-        f: 0 as *mut Proto,
+        f: 0 as *mut Prototype,
         prev: 0 as *mut FunctionState,
         ls: 0 as *mut LexState,
         blockcontrol: 0 as *mut BlockControl,
@@ -16392,7 +16392,7 @@ pub unsafe extern "C" fn luaK_patchtohere(mut fs: *mut FunctionState, mut list: 
 }
 pub unsafe extern "C" fn savelineinfo(
     mut fs: *mut FunctionState,
-    mut f: *mut Proto,
+    mut f: *mut Prototype,
     mut line: i32,
 ) {
     let mut linedif: i32 = line - (*fs).previousline;
@@ -16453,7 +16453,7 @@ pub unsafe extern "C" fn savelineinfo(
     (*fs).previousline = line;
 }
 pub unsafe extern "C" fn removelastlineinfo(mut fs: *mut FunctionState) {
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     let mut program_counter: i32 = (*fs).program_counter - 1 as i32;
     if *((*f).lineinfo).offset(program_counter as isize) as i32 != -(0x80 as i32) {
         (*fs).previousline -= *((*f).lineinfo).offset(program_counter as isize) as i32;
@@ -16474,7 +16474,7 @@ pub unsafe extern "C" fn luaK_code(
     mut fs: *mut FunctionState,
     mut i: u32,
 ) -> i32 {
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     (*f)
         .code = luaM_growaux_(
         (*(*fs).ls).state,
@@ -16671,7 +16671,7 @@ pub unsafe extern "C" fn addk(
         tt_: 0,
     };
     let mut state: *mut State = (*(*fs).ls).state;
-    let mut f: *mut Proto = (*fs).f;
+    let mut f: *mut Prototype = (*fs).f;
     let mut idx: *const TValue = luaH_get((*(*fs).ls).h, key);
     let mut k: i32 = 0;
     let mut oldsize: i32 = 0;
@@ -18280,7 +18280,7 @@ pub unsafe extern "C" fn finaltarget(
 }
 pub unsafe extern "C" fn luaK_finish(mut fs: *mut FunctionState) {
     let mut i: i32 = 0;
-    let mut p: *mut Proto = (*fs).f;
+    let mut p: *mut Prototype = (*fs).f;
     i = 0 as i32;
     while i < (*fs).program_counter {
         let mut program_counter: *mut u32 = &mut *((*p).code).offset(i as isize)
@@ -19503,7 +19503,7 @@ pub unsafe extern "C" fn luaV_shiftl(mut x: i64, mut y: i64) -> i64 {
 }
 pub unsafe extern "C" fn pushclosure(
     mut state: *mut State,
-    mut p: *mut Proto,
+    mut p: *mut Prototype,
     mut encup: *mut *mut UpVal,
     mut base: StkId,
     mut ra: StkId,
@@ -23750,7 +23750,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                     & !(!(0 as i32 as u32) << 8 as i32)
                                         << 0 as i32) as i32 as isize,
                             );
-                        let mut p: *mut Proto = *((*(*cl).p).p)
+                        let mut p: *mut Prototype = *((*(*cl).p).p)
                             .offset(
                                 (i >> 0 as i32 + 7 as i32 + 8 as i32
                                     & !(!(0 as i32 as u32)

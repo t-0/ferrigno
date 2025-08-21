@@ -1,6 +1,6 @@
 use crate::gcobject::*;
 use crate::stkidrel::*;
-use crate::proto::*;
+use crate::prototype::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Closure {
@@ -15,7 +15,7 @@ pub struct LClosure {
     pub marked: u8,
     pub nupvalues: u8,
     pub gclist: *mut GCObject,
-    pub p: *mut Proto,
+    pub p: *mut Prototype,
     pub upvals: [*mut UpVal; 1],
 }
 #[derive(Copy, Clone)]

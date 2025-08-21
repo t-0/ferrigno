@@ -3,7 +3,7 @@ use crate::gcobject::*;
 use crate::tstring::*;
 use crate::stkidrel::*;
 use crate::table::*;
-use crate::proto::*;
+use crate::prototype::*;
 use crate::udata::*;
 use crate::closure::*;
 #[derive(Copy, Clone)]
@@ -14,7 +14,7 @@ pub union GCUnion {
     pub u: Udata,
     pub cl: Closure,
     pub h: Table,
-    pub p: Proto,
+    pub p: Prototype,
     pub th: State,
     pub upv: UpVal,
 }
