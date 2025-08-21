@@ -6,6 +6,6 @@ pub struct DumpState {
     pub state: *mut State,
     pub writer: WriteFunction,
     pub data: *mut libc::c_void,
-    pub strip: i32,
+    pub is_strip: bool,
     pub status: i32,
 }

@@ -3075,7 +3075,7 @@ pub unsafe extern "C" fn lua_dump(
     mut state: *mut State,
     mut writer_0: WriteFunction,
     mut data: *mut libc::c_void,
-    mut strip: i32,
+    mut is_strip: bool,
 ) -> i32 {
     let mut status: i32 = 0;
     let mut o: *mut TValue = 0 as *mut TValue;
@@ -3089,7 +3089,7 @@ pub unsafe extern "C" fn lua_dump(
             (*((*o).value_.gc as *mut GCUnion)).cl.l.p,
             writer_0,
             data,
-            strip,
+            is_strip,
         );
     } else {
         status = 1 as i32;
@@ -10944,7 +10944,7 @@ pub unsafe extern "C" fn dumpUpvalues(mut D: *mut DumpState, mut f: *const Proto
 pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Prototype) {
     let mut i: i32 = 0;
     let mut n: i32 = 0;
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelineinfo };
+    n = if (*D).is_strip { 0 as i32 } else { (*f).sizelineinfo };
     dumpInt(D, n);
     dumpBlock(
         D,
@@ -10952,7 +10952,7 @@ pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Prototyp
         (n as u64)
             .wrapping_mul(::core::mem::size_of::<i8>() as u64),
     );
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizeabslineinfo };
+    n = if (*D).is_strip { 0 as i32 } else { (*f).sizeabslineinfo };
     dumpInt(D, n);
     i = 0 as i32;
     while i < n {
@@ -10960,7 +10960,7 @@ pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Prototyp
         dumpInt(D, (*((*f).abslineinfo).offset(i as isize)).line);
         i += 1;
     }
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizelocvars };
+    n = if (*D).is_strip { 0 as i32 } else { (*f).sizelocvars };
     dumpInt(D, n);
     i = 0 as i32;
     while i < n {
@@ -10969,7 +10969,7 @@ pub unsafe extern "C" fn dumpDebug(mut D: *mut DumpState, mut f: *const Prototyp
         dumpInt(D, (*((*f).locvars).offset(i as isize)).endpc);
         i += 1;
     }
-    n = if (*D).strip != 0 { 0 as i32 } else { (*f).sizeupvalues };
+    n = if (*D).is_strip { 0 as i32 } else { (*f).sizeupvalues };
     dumpInt(D, n);
     i = 0 as i32;
     while i < n {
@@ -10982,7 +10982,7 @@ pub unsafe extern "C" fn dumpFunction(
     mut f: *const Prototype,
     mut psource: *mut TString,
 ) {
-    if (*D).strip != 0 || (*f).source == psource {
+    if (*D).is_strip || (*f).source == psource {
         dumpString(D, 0 as *const TString);
     } else {
         dumpString(D, (*f).source);
@@ -11029,19 +11029,19 @@ pub unsafe extern "C" fn luaU_dump(
     mut f: *const Prototype,
     mut w: WriteFunction,
     mut data: *mut libc::c_void,
-    mut strip: i32,
+    mut is_strip: bool,
 ) -> i32 {
     let mut D: DumpState = DumpState {
         state: 0 as *mut State,
         writer: None,
         data: 0 as *mut libc::c_void,
-        strip: 0,
+        is_strip: false,
         status: 0,
     };
     D.state = state;
     D.writer = w;
     D.data = data;
-    D.strip = strip;
+    D.is_strip = is_strip;
     D.status = 0 as i32;
     dumpHeader(&mut D);
     dumpByte(&mut D, (*f).sizeupvalues);
@@ -29440,7 +29440,7 @@ pub unsafe extern "C" fn str_dump(mut state: *mut State) -> i32 {
             init: BufferInit { n: 0. },
         },
     };
-    let mut strip: i32 = lua_toboolean(state, 2 as i32);
+    let mut is_strip = 0 != lua_toboolean(state, 2 as i32);
     luaL_checktype(state, 1, 6 as i32);
     lua_settop(state, 1);
     streamwriter.init = 0 as i32;
@@ -29456,7 +29456,7 @@ pub unsafe extern "C" fn str_dump(mut state: *mut State) -> i32 {
                 ) -> i32,
         ),
         &mut streamwriter as *mut StreamWriter as *mut libc::c_void,
-        strip,
+        is_strip,
     ) != 0 as i32) as i32 != 0 as i32) as i32
         as i64 != 0
     {
