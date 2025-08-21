@@ -6214,8 +6214,8 @@ pub unsafe extern "C" fn pushstr(
         as u8;
     (*state).top.p = ((*state).top.p).offset(1);
     (*state).top.p;
-    if (*buff).pushed == 0 {
-        (*buff).pushed = 1 as i32;
+    if !(*buff).is_pushed {
+        (*buff).is_pushed = true;
     } else {
         luaV_concat(state, 2 as i32);
     };
@@ -6261,13 +6261,13 @@ pub unsafe extern "C" fn luaO_pushvfstring(
 ) -> *const i8 {
     let mut buff: BuffFS = BuffFS {
         state: 0 as *mut State,
-        pushed: 0,
+        is_pushed: false,
         blen: 0,
         space: [0; 199],
     };
     let mut e: *const i8 = 0 as *const i8;
     buff.blen = 0 as i32;
-    buff.pushed = buff.blen;
+    buff.is_pushed = 0 != buff.blen;
     buff.state = state;
     loop {
         e = strchr(fmt, '%' as i32);
