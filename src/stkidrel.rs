@@ -1,5 +1,5 @@
 use crate::state::*;
-use crate::gcobject::*;
+use crate::object::*;
 pub type ContextFunction = Option::<
     unsafe extern "C" fn(*mut State, i32, i64) -> i32,
 >;
@@ -26,7 +26,7 @@ pub struct StackValueExtension {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
-    pub gc: *mut GCObject,
+    pub gc: *mut Object,
     pub p: *mut libc::c_void,
     pub f: CFunction,
     pub i: i64,
@@ -43,7 +43,7 @@ pub struct TValue {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpVal {
-    pub next: *mut GCObject,
+    pub next: *mut Object,
     pub tt: u8,
     pub marked: u8,
     pub v: C2RustUnnamed_19,

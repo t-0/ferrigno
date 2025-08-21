@@ -1,7 +1,7 @@
 use crate::c::*;
 use crate::callinfo::*;
 use crate::debug::*;
-use crate::gcobject::*;
+use crate::object::*;
 use crate::stkidrel::*;
 use crate::tstring::*;
 use crate::table::*;
@@ -16,7 +16,7 @@ pub struct LongJump {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
-    pub next: *mut GCObject,
+    pub next: *mut Object,
     pub tt: u8,
     pub marked: u8,
     pub status: u8,
@@ -29,7 +29,7 @@ pub struct State {
     pub stack: StkIdRel,
     pub openupval: *mut UpVal,
     pub tbclist: StkIdRel,
-    pub gclist: *mut GCObject,
+    pub gclist: *mut Object,
     pub twups: *mut State,
     pub error_jump: *mut LongJump,
     pub base_ci: CallInfo,
@@ -66,23 +66,23 @@ pub struct Global {
     pub gcpause: u8,
     pub gcstepmul: u8,
     pub gcstepsize: u8,
-    pub allgc: *mut GCObject,
-    pub sweepgc: *mut *mut GCObject,
-    pub finobj: *mut GCObject,
-    pub gray: *mut GCObject,
-    pub grayagain: *mut GCObject,
-    pub weak: *mut GCObject,
-    pub ephemeron: *mut GCObject,
-    pub allweak: *mut GCObject,
-    pub tobefnz: *mut GCObject,
-    pub fixedgc: *mut GCObject,
-    pub survival: *mut GCObject,
-    pub old1: *mut GCObject,
-    pub reallyold: *mut GCObject,
-    pub firstold1: *mut GCObject,
-    pub finobjsur: *mut GCObject,
-    pub finobjold1: *mut GCObject,
-    pub finobjrold: *mut GCObject,
+    pub allgc: *mut Object,
+    pub sweepgc: *mut *mut Object,
+    pub finobj: *mut Object,
+    pub gray: *mut Object,
+    pub grayagain: *mut Object,
+    pub weak: *mut Object,
+    pub ephemeron: *mut Object,
+    pub allweak: *mut Object,
+    pub tobefnz: *mut Object,
+    pub fixedgc: *mut Object,
+    pub survival: *mut Object,
+    pub old1: *mut Object,
+    pub reallyold: *mut Object,
+    pub firstold1: *mut Object,
+    pub finobjsur: *mut Object,
+    pub finobjold1: *mut Object,
+    pub finobjrold: *mut Object,
     pub twups: *mut State,
     pub panic: CFunction,
     pub mainthread: *mut State,

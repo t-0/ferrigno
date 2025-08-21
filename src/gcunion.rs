@@ -1,5 +1,5 @@
 use crate::state::*;
-use crate::gcobject::*;
+use crate::object::*;
 use crate::tstring::*;
 use crate::stkidrel::*;
 use crate::table::*;
@@ -9,7 +9,7 @@ use crate::closure::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {
-    pub gc: GCObject,
+    pub gc: Object,
     pub ts: TString,
     pub u: Udata,
     pub cl: Closure,

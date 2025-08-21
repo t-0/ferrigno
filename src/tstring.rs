@@ -1,8 +1,8 @@
-use crate::gcobject::*;
+use crate::object::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
-    pub next: *mut GCObject,
+    pub next: *mut Object,
     pub tt: u8,
     pub marked: u8,
     pub extra: u8,

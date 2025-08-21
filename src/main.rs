@@ -14,7 +14,7 @@ mod dumpstate;
 mod dynamicdata;
 mod expressiondescription;
 mod functionstate;
-mod gcobject;
+mod object;
 mod gcunion;
 mod gmatchstate;
 mod header;

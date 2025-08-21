@@ -1,10 +1,10 @@
 use crate::node::*;
-use crate::gcobject::*;
+use crate::object::*;
 use crate::stkidrel::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub next: *mut GCObject,
+    pub next: *mut Object,
     pub tt: u8,
     pub marked: u8,
     pub flags: u8,
@@ -14,5 +14,5 @@ pub struct Table {
     pub node: *mut Node,
     pub lastfree: *mut Node,
     pub metatable: *mut Table,
-    pub gclist: *mut GCObject,
+    pub gclist: *mut Object,
 }

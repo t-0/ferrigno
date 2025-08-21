@@ -30,7 +30,7 @@ use crate::dumpstate::*;
 use crate::dynamicdata::*;
 use crate::expressiondescription::*;
 use crate::functionstate::*;
-use crate::gcobject::*;
+use crate::object::*;
 use crate::gcunion::*;
 use crate::gmatchstate::*;
 use crate::header::*;
@@ -1591,7 +1591,7 @@ pub unsafe extern "C" fn lua_closeslot(mut state: *mut State, mut idx: i32) {
 pub unsafe extern "C" fn reverse(mut _L: *mut State, mut from: StkId, mut to: StkId) {
     while from < to {
         let mut temp: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io1: *mut TValue = &mut temp;
@@ -2357,7 +2357,7 @@ pub unsafe extern "C" fn lua_geti(
         (*io1).tt_ = (*io2).tt_;
     } else {
         let mut aux: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut aux;
@@ -2431,7 +2431,7 @@ pub unsafe extern "C" fn lua_rawgetp(
 ) -> i32 {
     let mut t: *mut Table = 0 as *mut Table;
     let mut k: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     t = gettable(state, idx);
@@ -2706,7 +2706,7 @@ pub unsafe extern "C" fn lua_seti(
         } else {};
     } else {
         let mut aux: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut aux;
@@ -2769,7 +2769,7 @@ pub unsafe extern "C" fn lua_rawsetp(
     mut p: *const libc::c_void,
 ) {
     let mut k: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io: *mut TValue = &mut k;
@@ -3360,7 +3360,7 @@ pub unsafe extern "C" fn aux_upvalue(
     mut fi: *mut TValue,
     mut n: i32,
     mut val: *mut *mut TValue,
-    mut owner: *mut *mut GCObject,
+    mut owner: *mut *mut Object,
 ) -> *const i8 {
     match (*fi).tt_ as i32 & 0x3f as i32 {
         38 => {
@@ -3416,7 +3416,7 @@ pub unsafe extern "C" fn lua_getupvalue(
 ) -> *const i8 {
     let mut name: *const i8 = 0 as *const i8;
     let mut val: *mut TValue = 0 as *mut TValue;
-    name = aux_upvalue(index2value(state, funcindex), n, &mut val, 0 as *mut *mut GCObject);
+    name = aux_upvalue(index2value(state, funcindex), n, &mut val, 0 as *mut *mut Object);
     if !name.is_null() {
         let mut io1: *mut TValue = &mut (*(*state).top.p).val;
         let mut io2: *const TValue = val;
@@ -3435,7 +3435,7 @@ pub unsafe extern "C" fn lua_setupvalue(
 ) -> *const i8 {
     let mut name: *const i8 = 0 as *const i8;
     let mut val: *mut TValue = 0 as *mut TValue;
-    let mut owner: *mut GCObject = 0 as *mut GCObject;
+    let mut owner: *mut Object = 0 as *mut Object;
     let mut fi: *mut TValue = 0 as *mut TValue;
     fi = index2value(state, funcindex);
     name = aux_upvalue(fi, n, &mut val, &mut owner);
@@ -3820,7 +3820,7 @@ pub unsafe extern "C" fn close_state(mut state: *mut State) {
 #[unsafe (no_mangle)]
 pub unsafe extern "C" fn lua_newthread(mut state: *mut State) -> *mut State {
     let mut g: *mut Global = (*state).myglobal;
-    let mut o: *mut GCObject = 0 as *mut GCObject;
+    let mut o: *mut Object = 0 as *mut Object;
     let mut L1: *mut State = 0 as *mut State;
     if (*(*state).myglobal).gc_debt > 0 as i32 as i64 {
         luaC_step(state);
@@ -3945,7 +3945,7 @@ pub unsafe extern "C" fn lua_newstate(
             | (1 as i32) << 4 as i32)) as u8;
     preinit_thread(state, g);
     (*g).allgc = &mut (*(state as *mut GCUnion)).gc;
-    (*state).next = 0 as *mut GCObject;
+    (*state).next = 0 as *mut Object;
     (*state)
         .count_c_calls = ((*state).count_c_calls as u32)
         .wrapping_add(0x10000 as i32 as u32) as u32 as u32;
@@ -3967,20 +3967,20 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).gckind = 0 as i32 as u8;
     (*g).gcstopem = 0 as i32 as u8;
     (*g).gcemergency = 0 as i32 as u8;
-    (*g).fixedgc = 0 as *mut GCObject;
+    (*g).fixedgc = 0 as *mut Object;
     (*g).tobefnz = (*g).fixedgc;
     (*g).finobj = (*g).tobefnz;
-    (*g).reallyold = 0 as *mut GCObject;
+    (*g).reallyold = 0 as *mut Object;
     (*g).old1 = (*g).reallyold;
     (*g).survival = (*g).old1;
     (*g).firstold1 = (*g).survival;
-    (*g).finobjrold = 0 as *mut GCObject;
+    (*g).finobjrold = 0 as *mut Object;
     (*g).finobjold1 = (*g).finobjrold;
     (*g).finobjsur = (*g).finobjold1;
-    (*g).sweepgc = 0 as *mut *mut GCObject;
-    (*g).grayagain = 0 as *mut GCObject;
+    (*g).sweepgc = 0 as *mut *mut Object;
+    (*g).grayagain = 0 as *mut Object;
     (*g).gray = (*g).grayagain;
-    (*g).allweak = 0 as *mut GCObject;
+    (*g).allweak = 0 as *mut Object;
     (*g).ephemeron = (*g).allweak;
     (*g).weak = (*g).ephemeron;
     (*g).twups = 0 as *mut State;
@@ -4390,7 +4390,7 @@ pub unsafe extern "C" fn collectvalidlines(mut state: *mut State, mut f: *mut Cl
         if !((*p).lineinfo).is_null() {
             let mut i: i32 = 0;
             let mut v: TValue = TValue {
-                value_: Value { gc: 0 as *mut GCObject },
+                value_: Value { gc: 0 as *mut Object },
                 tt_: 0,
             };
             v
@@ -4467,12 +4467,12 @@ pub unsafe extern "C" fn auxgetinfo(
             }
             116 => {
                 (*ar)
-                    .is_tail_call = (if !ci.is_null() {
+                    .is_tail_call = if !ci.is_null() {
                     0 != ((*ci).callstatus as i32
                         & (1 as i32) << 5 as i32)
                 } else {
                     false
-                });
+                };
             }
             110 => {
                 (*ar).namewhat = getfuncname(state, ci, &mut (*ar).name);
@@ -6294,7 +6294,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
             }
             100 => {
                 let mut num: TValue = TValue {
-                    value_: Value { gc: 0 as *mut GCObject },
+                    value_: Value { gc: 0 as *mut Object },
                     tt_: 0,
                 };
                 let mut io: *mut TValue = &mut num;
@@ -6306,7 +6306,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
             }
             73 => {
                 let mut num_0: TValue = TValue {
-                    value_: Value { gc: 0 as *mut GCObject },
+                    value_: Value { gc: 0 as *mut Object },
                     tt_: 0,
                 };
                 let mut io_0: *mut TValue = &mut num_0;
@@ -6318,7 +6318,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
             }
             102 => {
                 let mut num_1: TValue = TValue {
-                    value_: Value { gc: 0 as *mut GCObject },
+                    value_: Value { gc: 0 as *mut Object },
                     tt_: 0,
                 };
                 let mut io_1: *mut TValue = &mut num_1;
@@ -6860,7 +6860,7 @@ pub unsafe extern "C" fn luaT_trybiniTM(
     mut event: u32,
 ) {
     let mut aux: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io: *mut TValue = &mut aux;
@@ -6891,7 +6891,7 @@ pub unsafe extern "C" fn luaT_callorderiTM(
     mut event: u32,
 ) -> i32 {
     let mut aux: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut p2: *const TValue = 0 as *const TValue;
@@ -7565,7 +7565,7 @@ static mut luaP_opmodes: [u8; 83] = [
         | (0 as i32) << 5 as i32 | (0 as i32) << 4 as i32
         | (0 as i32) << 3 as i32 | IAX as i32) as u8,
 ];
-pub unsafe extern "C" fn getgclist(mut o: *mut GCObject) -> *mut *mut GCObject {
+pub unsafe extern "C" fn getgclist(mut o: *mut Object) -> *mut *mut Object {
     match (*o).tt as i32 {
         5 => return &mut (*(o as *mut GCUnion)).h.gclist,
         6 => return &mut (*(o as *mut GCUnion)).cl.l.gclist,
@@ -7576,13 +7576,13 @@ pub unsafe extern "C" fn getgclist(mut o: *mut GCObject) -> *mut *mut GCObject {
             let mut u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
             return &mut (*u).gclist;
         }
-        _ => return 0 as *mut *mut GCObject,
+        _ => return 0 as *mut *mut Object,
     };
 }
 pub unsafe extern "C" fn linkgclist_(
-    mut o: *mut GCObject,
-    mut pnext: *mut *mut GCObject,
-    mut list: *mut *mut GCObject,
+    mut o: *mut Object,
+    mut pnext: *mut *mut Object,
+    mut list: *mut *mut Object,
 ) {
     *pnext = *list;
     *list = o;
@@ -7600,7 +7600,7 @@ pub unsafe extern "C" fn clearkey(mut n: *mut Node) {
 }
 pub unsafe extern "C" fn iscleared(
     mut g: *mut Global,
-    mut o: *const GCObject,
+    mut o: *const Object,
 ) -> i32 {
     if o.is_null() {
         return 0 as i32
@@ -7620,8 +7620,8 @@ pub unsafe extern "C" fn iscleared(
 }
 pub unsafe extern "C" fn luaC_barrier_(
     mut state: *mut State,
-    mut o: *mut GCObject,
-    mut v: *mut GCObject,
+    mut o: *mut Object,
+    mut v: *mut Object,
 ) {
     let mut g: *mut Global = (*state).myglobal;
     if (*g).gcstate as i32 <= 2 as i32 {
@@ -7643,7 +7643,7 @@ pub unsafe extern "C" fn luaC_barrier_(
             as u8;
     }
 }
-pub unsafe extern "C" fn luaC_barrierback_(mut state: *mut State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn luaC_barrierback_(mut state: *mut State, mut o: *mut Object) {
     let mut g: *mut Global = (*state).myglobal;
     if (*o).marked as i32 & 7 as i32 == 6 as i32 {
         (*o)
@@ -7661,7 +7661,7 @@ pub unsafe extern "C" fn luaC_barrierback_(mut state: *mut State, mut o: *mut GC
             | 5 as i32) as u8;
     }
 }
-pub unsafe extern "C" fn luaC_fix(mut state: *mut State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn luaC_fix(mut state: *mut State, mut o: *mut Object) {
     let mut g: *mut Global = (*state).myglobal;
     (*o)
         .marked = ((*o).marked as i32
@@ -7681,11 +7681,11 @@ pub unsafe extern "C" fn luaC_newobjdt(
     mut tt: i32,
     mut sz: u64,
     mut offset: u64,
-) -> *mut GCObject {
+) -> *mut Object {
     let mut g: *mut Global = (*state).myglobal;
     let mut p: *mut i8 = luaM_malloc_(state, sz, tt & 0xf as i32)
         as *mut i8;
-    let mut o: *mut GCObject = p.offset(offset as isize) as *mut GCObject;
+    let mut o: *mut Object = p.offset(offset as isize) as *mut Object;
     (*o)
         .marked = ((*g).currentwhite as i32
         & ((1 as i32) << 3 as i32
@@ -7699,10 +7699,10 @@ pub unsafe extern "C" fn luaC_newobj(
     mut state: *mut State,
     mut tt: i32,
     mut sz: u64,
-) -> *mut GCObject {
+) -> *mut Object {
     return luaC_newobjdt(state, tt, sz, 0 as i32 as u64);
 }
-pub unsafe extern "C" fn reallymarkobject(mut g: *mut Global, mut o: *mut GCObject) {
+pub unsafe extern "C" fn reallymarkobject(mut g: *mut Global, mut o: *mut Object) {
     let mut current_block_18: u64;
     match (*o).tt as i32 {
         4 | 20 => {
@@ -7794,7 +7794,7 @@ pub unsafe extern "C" fn markmt(mut g: *mut Global) {
     }
 }
 pub unsafe extern "C" fn markbeingfnz(mut g: *mut Global) -> u64 {
-    let mut o: *mut GCObject = 0 as *mut GCObject;
+    let mut o: *mut Object = 0 as *mut Object;
     let mut count: u64 = 0 as i32 as u64;
     o = (*g).tobefnz;
     while !o.is_null() {
@@ -7852,9 +7852,9 @@ pub unsafe extern "C" fn remarkupvals(mut g: *mut Global) -> i32 {
     return work;
 }
 pub unsafe extern "C" fn cleargraylists(mut g: *mut Global) {
-    (*g).grayagain = 0 as *mut GCObject;
+    (*g).grayagain = 0 as *mut Object;
     (*g).gray = (*g).grayagain;
-    (*g).ephemeron = 0 as *mut GCObject;
+    (*g).ephemeron = 0 as *mut Object;
     (*g).allweak = (*g).ephemeron;
     (*g).weak = (*g).allweak;
 }
@@ -7876,7 +7876,7 @@ pub unsafe extern "C" fn restartcollection(mut g: *mut Global) {
     markmt(g);
     markbeingfnz(g);
 }
-pub unsafe extern "C" fn genlink(mut g: *mut Global, mut o: *mut GCObject) {
+pub unsafe extern "C" fn genlink(mut g: *mut Global, mut o: *mut Object) {
     if (*o).marked as i32 & 7 as i32 == 5 as i32 {
         linkgclist_(&mut (*(o as *mut GCUnion)).gc, getgclist(o), &mut (*g).grayagain);
     } else if (*o).marked as i32 & 7 as i32 == 6 as i32 {
@@ -7912,7 +7912,7 @@ pub unsafe extern "C" fn traverseweakvalue(mut g: *mut Global, mut h: *mut Table
                     {
                         (*n).i_val.value_.gc
                     } else {
-                        0 as *mut GCObject
+                        0 as *mut Object
                     },
                 ) != 0
             {
@@ -7975,7 +7975,7 @@ pub unsafe extern "C" fn traverseephemeron(
             {
                 (*n).u.key_val.gc
             } else {
-                0 as *mut GCObject
+                0 as *mut Object
             },
         ) != 0
         {
@@ -8340,7 +8340,7 @@ pub unsafe extern "C" fn traversethread(
         + ((*th).stack_last.p).offset_from((*th).stack.p) as i64 as i32;
 }
 pub unsafe extern "C" fn propagatemark(mut g: *mut Global) -> u64 {
-    let mut o: *mut GCObject = (*g).gray;
+    let mut o: *mut Object = (*g).gray;
     (*o)
         .marked = ((*o).marked as i32 | (1 as i32) << 5 as i32)
         as u8;
@@ -8366,9 +8366,9 @@ pub unsafe extern "C" fn convergeephemerons(mut g: *mut Global) {
     let mut changed: i32 = 0;
     let mut dir: i32 = 0 as i32;
     loop {
-        let mut w: *mut GCObject = 0 as *mut GCObject;
-        let mut next: *mut GCObject = (*g).ephemeron;
-        (*g).ephemeron = 0 as *mut GCObject;
+        let mut w: *mut Object = 0 as *mut Object;
+        let mut next: *mut Object = (*g).ephemeron;
+        (*g).ephemeron = 0 as *mut Object;
         changed = 0 as i32;
         loop {
             w = next;
@@ -8391,7 +8391,7 @@ pub unsafe extern "C" fn convergeephemerons(mut g: *mut Global) {
         }
     };
 }
-pub unsafe extern "C" fn clearbykeys(mut g: *mut Global, mut l: *mut GCObject) {
+pub unsafe extern "C" fn clearbykeys(mut g: *mut Global, mut l: *mut Object) {
     while !l.is_null() {
         let mut h: *mut Table = &mut (*(l as *mut GCUnion)).h;
         let mut limit: *mut Node = &mut *((*h).node)
@@ -8408,7 +8408,7 @@ pub unsafe extern "C" fn clearbykeys(mut g: *mut Global, mut l: *mut GCObject) {
                 {
                     (*n).u.key_val.gc
                 } else {
-                    0 as *mut GCObject
+                    0 as *mut Object
                 },
             ) != 0
             {
@@ -8427,8 +8427,8 @@ pub unsafe extern "C" fn clearbykeys(mut g: *mut Global, mut l: *mut GCObject) {
 }
 pub unsafe extern "C" fn clearbyvalues(
     mut g: *mut Global,
-    mut l: *mut GCObject,
-    mut f: *mut GCObject,
+    mut l: *mut Object,
+    mut f: *mut Object,
 ) {
     while l != f {
         let mut h: *mut Table = &mut (*(l as *mut GCUnion)).h;
@@ -8449,7 +8449,7 @@ pub unsafe extern "C" fn clearbyvalues(
                 {
                     (*o).value_.gc
                 } else {
-                    0 as *mut GCObject
+                    0 as *mut Object
                 },
             ) != 0
             {
@@ -8468,7 +8468,7 @@ pub unsafe extern "C" fn clearbyvalues(
                 {
                     (*n).i_val.value_.gc
                 } else {
-                    0 as *mut GCObject
+                    0 as *mut Object
                 },
             ) != 0
             {
@@ -8495,7 +8495,7 @@ pub unsafe extern "C" fn freeupval(mut state: *mut State, mut uv: *mut UpVal) {
         ::core::mem::size_of::<UpVal>() as u64,
     );
 }
-pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut GCObject) {
+pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut Object) {
     match (*o).tt as i32 {
         10 => {
             luaF_freeproto(state, &mut (*(o as *mut GCUnion)).p);
@@ -8582,10 +8582,10 @@ pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut GCObject) {
 }
 pub unsafe extern "C" fn sweeplist(
     mut state: *mut State,
-    mut p: *mut *mut GCObject,
+    mut p: *mut *mut Object,
     mut countin: i32,
     mut countout: *mut i32,
-) -> *mut *mut GCObject {
+) -> *mut *mut Object {
     let mut g: *mut Global = (*state).myglobal;
     let mut ow: i32 = (*g).currentwhite as i32
         ^ ((1 as i32) << 3 as i32
@@ -8596,7 +8596,7 @@ pub unsafe extern "C" fn sweeplist(
             | (1 as i32) << 4 as i32)) as u8 as i32;
     i = 0 as i32;
     while !(*p).is_null() && i < countin {
-        let mut curr: *mut GCObject = *p;
+        let mut curr: *mut Object = *p;
         let mut marked: i32 = (*curr).marked as i32;
         if marked & ow != 0 {
             *p = (*curr).next;
@@ -8615,13 +8615,13 @@ pub unsafe extern "C" fn sweeplist(
     if !countout.is_null() {
         *countout = i;
     }
-    return if (*p).is_null() { 0 as *mut *mut GCObject } else { p };
+    return if (*p).is_null() { 0 as *mut *mut Object } else { p };
 }
 pub unsafe extern "C" fn sweeptolive(
     mut state: *mut State,
-    mut p: *mut *mut GCObject,
-) -> *mut *mut GCObject {
-    let mut old: *mut *mut GCObject = p;
+    mut p: *mut *mut Object,
+) -> *mut *mut Object {
+    let mut old: *mut *mut Object = p;
     loop {
         p = sweeplist(state, p, 1, 0 as *mut i32);
         if !(p == old) {
@@ -8642,8 +8642,8 @@ pub unsafe extern "C" fn checkSizes(mut state: *mut State, mut g: *mut Global) {
         }
     }
 }
-pub unsafe extern "C" fn udata2finalize(mut g: *mut Global) -> *mut GCObject {
-    let mut o: *mut GCObject = (*g).tobefnz;
+pub unsafe extern "C" fn udata2finalize(mut g: *mut Global) -> *mut Object {
+    let mut o: *mut Object = (*g).tobefnz;
     (*g).tobefnz = (*o).next;
     (*o).next = (*g).allgc;
     (*g).allgc = o;
@@ -8679,11 +8679,11 @@ pub unsafe extern "C" fn GCTM(mut state: *mut State) {
     let mut g: *mut Global = (*state).myglobal;
     let mut tm: *const TValue = 0 as *const TValue;
     let mut v: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io: *mut TValue = &mut v;
-    let mut i_g: *mut GCObject = udata2finalize(g);
+    let mut i_g: *mut Object = udata2finalize(g);
     (*io).value_.gc = i_g;
     (*io)
         .tt_ = ((*i_g).tt as i32 | (1 as i32) << 6 as i32)
@@ -8754,16 +8754,16 @@ pub unsafe extern "C" fn callallpendingfinalizers(mut state: *mut State) {
         GCTM(state);
     }
 }
-pub unsafe extern "C" fn findlast(mut p: *mut *mut GCObject) -> *mut *mut GCObject {
+pub unsafe extern "C" fn findlast(mut p: *mut *mut Object) -> *mut *mut Object {
     while !(*p).is_null() {
         p = &mut (**p).next;
     }
     return p;
 }
 pub unsafe extern "C" fn separatetobefnz(mut g: *mut Global, mut all: i32) {
-    let mut curr: *mut GCObject = 0 as *mut GCObject;
-    let mut p: *mut *mut GCObject = &mut (*g).finobj;
-    let mut lastnext: *mut *mut GCObject = findlast(&mut (*g).tobefnz);
+    let mut curr: *mut Object = 0 as *mut Object;
+    let mut p: *mut *mut Object = &mut (*g).finobj;
+    let mut lastnext: *mut *mut Object = findlast(&mut (*g).tobefnz);
     loop {
         curr = *p;
         if !(curr != (*g).finobjold1) {
@@ -8785,12 +8785,12 @@ pub unsafe extern "C" fn separatetobefnz(mut g: *mut Global, mut all: i32) {
         }
     };
 }
-pub unsafe extern "C" fn checkpointer(mut p: *mut *mut GCObject, mut o: *mut GCObject) {
+pub unsafe extern "C" fn checkpointer(mut p: *mut *mut Object, mut o: *mut Object) {
     if o == *p {
         *p = (*o).next;
     }
 }
-pub unsafe extern "C" fn correctpointers(mut g: *mut Global, mut o: *mut GCObject) {
+pub unsafe extern "C" fn correctpointers(mut g: *mut Global, mut o: *mut Object) {
     checkpointer(&mut (*g).survival, o);
     checkpointer(&mut (*g).old1, o);
     checkpointer(&mut (*g).reallyold, o);
@@ -8798,7 +8798,7 @@ pub unsafe extern "C" fn correctpointers(mut g: *mut Global, mut o: *mut GCObjec
 }
 pub unsafe extern "C" fn luaC_checkfinalizer(
     mut state: *mut State,
-    mut o: *mut GCObject,
+    mut o: *mut Object,
     mut mt: *mut Table,
 ) {
     let mut g: *mut Global = (*state).myglobal;
@@ -8818,7 +8818,7 @@ pub unsafe extern "C" fn luaC_checkfinalizer(
     {
         return
     } else {
-        let mut p: *mut *mut GCObject = 0 as *mut *mut GCObject;
+        let mut p: *mut *mut Object = 0 as *mut *mut Object;
         if 3 as i32 <= (*g).gcstate as i32
             && (*g).gcstate as i32 <= 6 as i32
         {
@@ -8831,7 +8831,7 @@ pub unsafe extern "C" fn luaC_checkfinalizer(
                     & ((1 as i32) << 3 as i32
                         | (1 as i32) << 4 as i32)) as u8
                     as i32) as u8;
-            if (*g).sweepgc == &mut (*o).next as *mut *mut GCObject {
+            if (*g).sweepgc == &mut (*o).next as *mut *mut Object {
                 (*g).sweepgc = sweeptolive(state, (*g).sweepgc);
             }
         } else {
@@ -8869,8 +8869,8 @@ pub unsafe extern "C" fn setpause(mut g: *mut Global) {
     }
     luaE_setdebt(g, debt);
 }
-pub unsafe extern "C" fn sweep2old(mut state: *mut State, mut p: *mut *mut GCObject) {
-    let mut curr: *mut GCObject = 0 as *mut GCObject;
+pub unsafe extern "C" fn sweep2old(mut state: *mut State, mut p: *mut *mut Object) {
+    let mut curr: *mut Object = 0 as *mut Object;
     let mut g: *mut Global = (*state).myglobal;
     loop {
         curr = *p;
@@ -8919,10 +8919,10 @@ pub unsafe extern "C" fn sweep2old(mut state: *mut State, mut p: *mut *mut GCObj
 pub unsafe extern "C" fn sweepgen(
     mut state: *mut State,
     mut g: *mut Global,
-    mut p: *mut *mut GCObject,
-    mut limit: *mut GCObject,
-    mut pfirstold1: *mut *mut GCObject,
-) -> *mut *mut GCObject {
+    mut p: *mut *mut Object,
+    mut limit: *mut Object,
+    mut pfirstold1: *mut *mut Object,
+) -> *mut *mut Object {
     static mut nextage: [u8; 7] = [
         1 as i32 as u8,
         3 as i32 as u8,
@@ -8935,7 +8935,7 @@ pub unsafe extern "C" fn sweepgen(
     let mut white: i32 = ((*g).currentwhite as i32
         & ((1 as i32) << 3 as i32
             | (1 as i32) << 4 as i32)) as u8 as i32;
-    let mut curr: *mut GCObject = 0 as *mut GCObject;
+    let mut curr: *mut Object = 0 as *mut Object;
     loop {
         curr = *p;
         if !(curr != limit) {
@@ -8971,7 +8971,7 @@ pub unsafe extern "C" fn sweepgen(
     }
     return p;
 }
-pub unsafe extern "C" fn whitelist(mut g: *mut Global, mut p: *mut GCObject) {
+pub unsafe extern "C" fn whitelist(mut g: *mut Global, mut p: *mut Object) {
     let mut white: i32 = ((*g).currentwhite as i32
         & ((1 as i32) << 3 as i32
             | (1 as i32) << 4 as i32)) as u8 as i32;
@@ -8985,15 +8985,15 @@ pub unsafe extern "C" fn whitelist(mut g: *mut Global, mut p: *mut GCObject) {
         p = (*p).next;
     }
 }
-pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut GCObject) -> *mut *mut GCObject {
+pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut Object {
     let mut current_block: u64;
-    let mut curr: *mut GCObject = 0 as *mut GCObject;
+    let mut curr: *mut Object = 0 as *mut Object;
     loop {
         curr = *p;
         if curr.is_null() {
             break;
         }
-        let mut next: *mut *mut GCObject = getgclist(curr);
+        let mut next: *mut *mut Object = getgclist(curr);
         if !((*curr).marked as i32
             & ((1 as i32) << 3 as i32
                 | (1 as i32) << 4 as i32) != 0)
@@ -9034,23 +9034,23 @@ pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut GCObject) -> *mut *mut
     return p;
 }
 pub unsafe extern "C" fn correctgraylists(mut g: *mut Global) {
-    let mut list: *mut *mut GCObject = correctgraylist(&mut (*g).grayagain);
+    let mut list: *mut *mut Object = correctgraylist(&mut (*g).grayagain);
     *list = (*g).weak;
-    (*g).weak = 0 as *mut GCObject;
+    (*g).weak = 0 as *mut Object;
     list = correctgraylist(list);
     *list = (*g).allweak;
-    (*g).allweak = 0 as *mut GCObject;
+    (*g).allweak = 0 as *mut Object;
     list = correctgraylist(list);
     *list = (*g).ephemeron;
-    (*g).ephemeron = 0 as *mut GCObject;
+    (*g).ephemeron = 0 as *mut Object;
     correctgraylist(list);
 }
 pub unsafe extern "C" fn markold(
     mut g: *mut Global,
-    mut from: *mut GCObject,
-    mut to: *mut GCObject,
+    mut from: *mut Object,
+    mut to: *mut Object,
 ) {
-    let mut p: *mut GCObject = 0 as *mut GCObject;
+    let mut p: *mut Object = 0 as *mut Object;
     p = from;
     while p != to {
         if (*p).marked as i32 & 7 as i32 == 3 as i32 {
@@ -9073,14 +9073,14 @@ pub unsafe extern "C" fn finishgencycle(mut state: *mut State, mut g: *mut Globa
     }
 }
 pub unsafe extern "C" fn youngcollection(mut state: *mut State, mut g: *mut Global) {
-    let mut psurvival: *mut *mut GCObject = 0 as *mut *mut GCObject;
-    let mut dummy: *mut GCObject = 0 as *mut GCObject;
+    let mut psurvival: *mut *mut Object = 0 as *mut *mut Object;
+    let mut dummy: *mut Object = 0 as *mut Object;
     if !((*g).firstold1).is_null() {
         markold(g, (*g).firstold1, (*g).reallyold);
-        (*g).firstold1 = 0 as *mut GCObject;
+        (*g).firstold1 = 0 as *mut Object;
     }
     markold(g, (*g).finobj, (*g).finobjrold);
-    markold(g, (*g).tobefnz, 0 as *mut GCObject);
+    markold(g, (*g).tobefnz, 0 as *mut Object);
     atomic(state);
     (*g).gcstate = 3 as i32 as u8;
     psurvival = sweepgen(state, g, &mut (*g).allgc, (*g).survival, &mut (*g).firstold1);
@@ -9088,13 +9088,13 @@ pub unsafe extern "C" fn youngcollection(mut state: *mut State, mut g: *mut Glob
     (*g).reallyold = (*g).old1;
     (*g).old1 = *psurvival;
     (*g).survival = (*g).allgc;
-    dummy = 0 as *mut GCObject;
+    dummy = 0 as *mut Object;
     psurvival = sweepgen(state, g, &mut (*g).finobj, (*g).finobjsur, &mut dummy);
     sweepgen(state, g, psurvival, (*g).finobjold1, &mut dummy);
     (*g).finobjrold = (*g).finobjold1;
     (*g).finobjold1 = *psurvival;
     (*g).finobjsur = (*g).finobj;
-    sweepgen(state, g, &mut (*g).tobefnz, 0 as *mut GCObject, &mut dummy);
+    sweepgen(state, g, &mut (*g).tobefnz, 0 as *mut Object, &mut dummy);
     finishgencycle(state, g);
 }
 pub unsafe extern "C" fn atomic2gen(mut state: *mut State, mut g: *mut Global) {
@@ -9104,7 +9104,7 @@ pub unsafe extern "C" fn atomic2gen(mut state: *mut State, mut g: *mut Global) {
     (*g).survival = (*g).allgc;
     (*g).old1 = (*g).survival;
     (*g).reallyold = (*g).old1;
-    (*g).firstold1 = 0 as *mut GCObject;
+    (*g).firstold1 = 0 as *mut Object;
     sweep2old(state, &mut (*g).finobj);
     (*g).finobjsur = (*g).finobj;
     (*g).finobjold1 = (*g).finobjsur;
@@ -9137,12 +9137,12 @@ pub unsafe extern "C" fn entergen(
 }
 pub unsafe extern "C" fn enterinc(mut g: *mut Global) {
     whitelist(g, (*g).allgc);
-    (*g).survival = 0 as *mut GCObject;
+    (*g).survival = 0 as *mut Object;
     (*g).old1 = (*g).survival;
     (*g).reallyold = (*g).old1;
     whitelist(g, (*g).finobj);
     whitelist(g, (*g).tobefnz);
-    (*g).finobjsur = 0 as *mut GCObject;
+    (*g).finobjsur = 0 as *mut Object;
     (*g).finobjold1 = (*g).finobjsur;
     (*g).finobjrold = (*g).finobjold1;
     (*g).gcstate = 8 as i32 as u8;
@@ -9221,11 +9221,11 @@ pub unsafe extern "C" fn entersweep(mut state: *mut State) {
 }
 pub unsafe extern "C" fn deletelist(
     mut state: *mut State,
-    mut p: *mut GCObject,
-    mut limit: *mut GCObject,
+    mut p: *mut Object,
+    mut limit: *mut Object,
 ) {
     while p != limit {
-        let mut next: *mut GCObject = (*p).next;
+        let mut next: *mut Object = (*p).next;
         freeobj(state, p);
         p = next;
     }
@@ -9237,15 +9237,15 @@ pub unsafe extern "C" fn luaC_freeallobjects(mut state: *mut State) {
     separatetobefnz(g, 1);
     callallpendingfinalizers(state);
     deletelist(state, (*g).allgc, &mut (*((*g).mainthread as *mut GCUnion)).gc);
-    deletelist(state, (*g).fixedgc, 0 as *mut GCObject);
+    deletelist(state, (*g).fixedgc, 0 as *mut Object);
 }
 pub unsafe extern "C" fn atomic(mut state: *mut State) -> u64 {
     let mut g: *mut Global = (*state).myglobal;
     let mut work: u64 = 0 as i32 as u64;
-    let mut origweak: *mut GCObject = 0 as *mut GCObject;
-    let mut origall: *mut GCObject = 0 as *mut GCObject;
-    let mut grayagain: *mut GCObject = (*g).grayagain;
-    (*g).grayagain = 0 as *mut GCObject;
+    let mut origweak: *mut Object = 0 as *mut Object;
+    let mut origall: *mut Object = 0 as *mut Object;
+    let mut grayagain: *mut Object = (*g).grayagain;
+    (*g).grayagain = 0 as *mut Object;
     (*g).gcstate = 2 as i32 as u8;
     if (*state).marked as i32
         & ((1 as i32) << 3 as i32
@@ -9268,8 +9268,8 @@ pub unsafe extern "C" fn atomic(mut state: *mut State) -> u64 {
     (*g).gray = grayagain;
     work = (work as u64).wrapping_add(propagateall(g)) as u64 as u64;
     convergeephemerons(g);
-    clearbyvalues(g, (*g).weak, 0 as *mut GCObject);
-    clearbyvalues(g, (*g).allweak, 0 as *mut GCObject);
+    clearbyvalues(g, (*g).weak, 0 as *mut Object);
+    clearbyvalues(g, (*g).allweak, 0 as *mut Object);
     origweak = (*g).weak;
     origall = (*g).allweak;
     separatetobefnz(g, 0 as i32);
@@ -9291,7 +9291,7 @@ pub unsafe extern "C" fn sweepstep(
     mut state: *mut State,
     mut g: *mut Global,
     mut nextstate: i32,
-    mut nextlist: *mut *mut GCObject,
+    mut nextlist: *mut *mut Object,
 ) -> i32 {
     if !((*g).sweepgc).is_null() {
         let mut olddebt: i64 = (*g).gc_debt;
@@ -9337,7 +9337,7 @@ pub unsafe extern "C" fn singlestep(mut state: *mut State) -> u64 {
             work = sweepstep(state, g, 5 as i32, &mut (*g).tobefnz) as u64;
         }
         5 => {
-            work = sweepstep(state, g, 6 as i32, 0 as *mut *mut GCObject) as u64;
+            work = sweepstep(state, g, 6 as i32, 0 as *mut *mut Object) as u64;
         }
         6 => {
             checkSizes(state, g);
@@ -9438,7 +9438,7 @@ pub unsafe extern "C" fn luaF_newCclosure(
     mut state: *mut State,
     mut nupvals: i32,
 ) -> *mut CClosure {
-    let mut o: *mut GCObject = luaC_newobj(
+    let mut o: *mut Object = luaC_newobj(
         state,
         6 as i32 | (2 as i32) << 4 as i32,
         (32 as u64 as i32
@@ -9453,7 +9453,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
     mut state: *mut State,
     mut nupvals: i32,
 ) -> *mut LClosure {
-    let mut o: *mut GCObject = luaC_newobj(
+    let mut o: *mut Object = luaC_newobj(
         state,
         6 as i32 | (0 as i32) << 4 as i32,
         (32 as u64 as i32
@@ -9478,7 +9478,7 @@ pub unsafe extern "C" fn luaF_initupvals(mut state: *mut State, mut cl: *mut LCl
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < (*cl).nupvalues as i32 {
-        let mut o: *mut GCObject = luaC_newobj(
+        let mut o: *mut Object = luaC_newobj(
             state,
             9 as i32 | (0 as i32) << 4 as i32,
             ::core::mem::size_of::<UpVal>() as u64,
@@ -9509,7 +9509,7 @@ pub unsafe extern "C" fn newupval(
     mut level: StkId,
     mut prev: *mut *mut UpVal,
 ) -> *mut UpVal {
-    let mut o: *mut GCObject = luaC_newobj(
+    let mut o: *mut Object = luaC_newobj(
         state,
         9 as i32 | (0 as i32) << 4 as i32,
         ::core::mem::size_of::<UpVal>() as u64,
@@ -9728,7 +9728,7 @@ pub unsafe extern "C" fn luaF_close(
     return level;
 }
 pub unsafe extern "C" fn luaF_newproto(mut state: *mut State) -> *mut Prototype {
-    let mut o: *mut GCObject = luaC_newobj(
+    let mut o: *mut Object = luaC_newobj(
         state,
         9 as i32 + 1 as i32 | (0 as i32) << 4 as i32,
         ::core::mem::size_of::<Prototype>() as u64,
@@ -9982,7 +9982,7 @@ pub unsafe extern "C" fn createstrobj(
     mut h: u32,
 ) -> *mut TString {
     let mut ts: *mut TString = 0 as *mut TString;
-    let mut o: *mut GCObject = 0 as *mut GCObject;
+    let mut o: *mut Object = 0 as *mut Object;
     let mut totalsize: u64 = 0;
     totalsize = (24 as u64)
         .wrapping_add(
@@ -10179,7 +10179,7 @@ pub unsafe extern "C" fn luaS_newudata(
 ) -> *mut Udata {
     let mut u: *mut Udata = 0 as *mut Udata;
     let mut i: i32 = 0;
-    let mut o: *mut GCObject = 0 as *mut GCObject;
+    let mut o: *mut Object = 0 as *mut Object;
     if ((s
         > (if (::core::mem::size_of::<u64>() as u64)
             < ::core::mem::size_of::<i64>() as u64
@@ -11732,7 +11732,7 @@ pub unsafe extern "C" fn enterblock(
     (*blockcontrol).first_goto = (*(*(*fs).ls).dyd).gt.n;
     (*blockcontrol).count_upvalues = 0 as i32 as u8;
     (*blockcontrol)
-        .is_inside_tbc = (!((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).is_inside_tbc as i32 != 0);
+        .is_inside_tbc = !((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).is_inside_tbc as i32 != 0;
     (*blockcontrol).previous = (*fs).blockcontrol;
     (*fs).blockcontrol = blockcontrol;
 }
@@ -14002,7 +14002,7 @@ pub unsafe extern "C" fn read_numeral(
     mut seminfo: *mut SemInfo,
 ) -> i32 {
     let mut obj: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut expo: *const i8 = b"Ee\0" as *const u8 as *const i8;
@@ -14879,14 +14879,14 @@ static mut dummynode_: Node = Node {
     u: {
         let mut init = NodeKey {
             value_: Value {
-                gc: 0 as *const GCObject as *mut GCObject,
+                gc: 0 as *const Object as *mut Object,
             },
             tt_: (0 as i32 | (1 as i32) << 4 as i32) as u8,
             key_tt: (0 as i32 | (0 as i32) << 4 as i32)
                 as u8,
             next: 0,
             key_val: Value {
-                gc: 0 as *const GCObject as *mut GCObject,
+                gc: 0 as *const Object as *mut Object,
             },
         };
         init
@@ -14895,7 +14895,7 @@ static mut dummynode_: Node = Node {
 static mut absentkey: TValue = {
     let mut init = TValue {
         value_: Value {
-            gc: 0 as *const GCObject as *mut GCObject,
+            gc: 0 as *const Object as *mut Object,
         },
         tt_: (0 as i32 | (2 as i32) << 4 as i32) as u8,
     };
@@ -15028,7 +15028,7 @@ pub unsafe extern "C" fn mainpositionTV(
                 ) as *mut Node;
         }
         _ => {
-            let mut o: *mut GCObject = (*key).value_.gc;
+            let mut o: *mut Object = (*key).value_.gc;
             return &mut *((*t).node)
                 .offset(
                     ((o as u64
@@ -15050,7 +15050,7 @@ pub unsafe extern "C" fn mainpositionfromnode(
     mut nd: *mut Node,
 ) -> *mut Node {
     let mut key: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io_: *mut TValue = &mut key;
@@ -15434,7 +15434,7 @@ pub unsafe extern "C" fn reinsert(
         let mut old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
         if !((*old).i_val.tt_ as i32 & 0xf as i32 == 0 as i32) {
             let mut k: TValue = TValue {
-                value_: Value { gc: 0 as *mut GCObject },
+                value_: Value { gc: 0 as *mut Object },
                 tt_: 0,
             };
             let mut io_: *mut TValue = &mut k;
@@ -15465,7 +15465,7 @@ pub unsafe extern "C" fn luaH_resize(
 ) {
     let mut i: u32 = 0;
     let mut newt: Table = Table {
-        next: 0 as *mut GCObject,
+        next: 0 as *mut Object,
         tt: 0,
         marked: 0,
         flags: 0,
@@ -15475,7 +15475,7 @@ pub unsafe extern "C" fn luaH_resize(
         node: 0 as *mut Node,
         lastfree: 0 as *mut Node,
         metatable: 0 as *mut Table,
-        gclist: 0 as *mut GCObject,
+        gclist: 0 as *mut Object,
     };
     let mut oldasize: u32 = setlimittosize(t);
     let mut newarray: *mut TValue = 0 as *mut TValue;
@@ -15573,7 +15573,7 @@ pub unsafe extern "C" fn rehash(
     luaH_resize(state, t, asize, (totaluse as u32).wrapping_sub(na));
 }
 pub unsafe extern "C" fn luaH_new(mut state: *mut State) -> *mut Table {
-    let mut o: *mut GCObject = luaC_newobj(
+    let mut o: *mut Object = luaC_newobj(
         state,
         5 as i32 | (0 as i32) << 4 as i32,
         ::core::mem::size_of::<Table>() as u64,
@@ -15622,7 +15622,7 @@ pub unsafe extern "C" fn luaH_newkey(
 ) {
     let mut mp: *mut Node = 0 as *mut Node;
     let mut aux: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     if (((*key).tt_ as i32 & 0xf as i32 == 0 as i32)
@@ -15782,7 +15782,7 @@ pub unsafe extern "C" fn luaH_getstr(
         return luaH_getshortstr(t, key)
     } else {
         let mut ko: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut ko;
@@ -15850,7 +15850,7 @@ pub unsafe extern "C" fn luaH_setint(
         == 0 as i32 | (2 as i32) << 4 as i32
     {
         let mut k: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io: *mut TValue = &mut k;
@@ -16667,7 +16667,7 @@ pub unsafe extern "C" fn addk(
     mut v: *mut TValue,
 ) -> i32 {
     let mut val: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut state: *mut State = (*(*fs).ls).state;
@@ -16750,7 +16750,7 @@ pub unsafe extern "C" fn stringK(
     mut s: *mut TString,
 ) -> i32 {
     let mut o: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io: *mut TValue = &mut o;
@@ -16766,7 +16766,7 @@ pub unsafe extern "C" fn luaK_intK(
     mut n: i64,
 ) -> i32 {
     let mut o: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut io: *mut TValue = &mut o;
@@ -16779,7 +16779,7 @@ pub unsafe extern "C" fn luaK_numberK(
     mut r: f64,
 ) -> i32 {
     let mut o: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut ik: i64 = 0;
@@ -16797,7 +16797,7 @@ pub unsafe extern "C" fn luaK_numberK(
             r + r * q
         };
         let mut kv: TValue = TValue {
-            value_: Value { gc: 0 as *mut GCObject },
+            value_: Value { gc: 0 as *mut Object },
             tt_: 0,
         };
         let mut io_0: *mut TValue = &mut kv;
@@ -16810,7 +16810,7 @@ pub unsafe extern "C" fn luaK_numberK(
 }
 pub unsafe extern "C" fn boolF(mut fs: *mut FunctionState) -> i32 {
     let mut o: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     o.tt_ = (1 as i32 | (0 as i32) << 4 as i32) as u8;
@@ -16818,7 +16818,7 @@ pub unsafe extern "C" fn boolF(mut fs: *mut FunctionState) -> i32 {
 }
 pub unsafe extern "C" fn boolT(mut fs: *mut FunctionState) -> i32 {
     let mut o: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     o.tt_ = (1 as i32 | (1 as i32) << 4 as i32) as u8;
@@ -16826,11 +16826,11 @@ pub unsafe extern "C" fn boolT(mut fs: *mut FunctionState) -> i32 {
 }
 pub unsafe extern "C" fn nilK(mut fs: *mut FunctionState) -> i32 {
     let mut k: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut v: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     v.tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
@@ -17627,15 +17627,15 @@ pub unsafe extern "C" fn constfolding(
     mut e2: *const ExpressionDescription,
 ) -> i32 {
     let mut v1: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut v2: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     let mut res: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     if tonumeral(e1, &mut v1) == 0 || tonumeral(e2, &mut v2) == 0
@@ -18369,7 +18369,7 @@ pub unsafe extern "C" fn luaV_tonumber_(
     mut n: *mut f64,
 ) -> i32 {
     let mut v: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     if (*obj).tt_ as i32
@@ -18438,7 +18438,7 @@ pub unsafe extern "C" fn luaV_tointeger(
     mut mode: u32,
 ) -> i32 {
     let mut v: TValue = TValue {
-        value_: Value { gc: 0 as *mut GCObject },
+        value_: Value { gc: 0 as *mut Object },
         tt_: 0,
     };
     if l_strton(obj, &mut v) != 0 {
@@ -20101,7 +20101,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io1_6).tt_ = (*io2_6).tt_;
                         } else {
                             let mut key_0: TValue = TValue {
-                                value_: Value { gc: 0 as *mut GCObject },
+                                value_: Value { gc: 0 as *mut Object },
                                 tt_: 0,
                             };
                             let mut io_1: *mut TValue = &mut key_0;
@@ -20444,7 +20444,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             } else {};
                         } else {
                             let mut key_3: TValue = TValue {
-                                value_: Value { gc: 0 as *mut GCObject },
+                                value_: Value { gc: 0 as *mut Object },
                                 tt_: 0,
                             };
                             let mut io_2: *mut TValue = &mut key_3;
