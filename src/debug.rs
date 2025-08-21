@@ -7,7 +7,7 @@ pub struct Debug {
     pub namewhat: *const i8,
     pub what: *const i8,
     pub source: *const i8,
-    pub srclen: u64,
+    pub source_length: u64,
     pub currentline: i32,
     pub linedefined: i32,
     pub lastlinedefined: i32,

@@ -462,7 +462,7 @@ pub unsafe extern "C" fn luaD_hook(
             namewhat: 0 as *const i8,
             what: 0 as *const i8,
             source: 0 as *const i8,
-            srclen: 0,
+            source_length: 0,
             currentline: 0,
             linedefined: 0,
             lastlinedefined: 0,
@@ -4318,7 +4318,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
     {
         (*ar).source = b"=[C]\0" as *const u8 as *const i8;
         (*ar)
-            .srclen = (::core::mem::size_of::<[i8; 5]>() as u64)
+            .source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
             .wrapping_sub(1 as i32 as u64);
         (*ar).linedefined = -1;
@@ -4329,7 +4329,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
         if !((*p).source).is_null() {
             (*ar).source = ((*(*p).source).contents).as_mut_ptr();
             (*ar)
-                .srclen = if (*(*p).source).shrlen as i32 != 0xff as i32
+                .source_length = if (*(*p).source).shrlen as i32 != 0xff as i32
             {
                 (*(*p).source).shrlen as u64
             } else {
@@ -4338,7 +4338,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
         } else {
             (*ar).source = b"=?\0" as *const u8 as *const i8;
             (*ar)
-                .srclen = (::core::mem::size_of::<[i8; 3]>() as u64)
+                .source_length = (::core::mem::size_of::<[i8; 3]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as i32 as u64);
         }
@@ -4351,7 +4351,7 @@ pub unsafe extern "C" fn funcinfo(mut ar: *mut Debug, mut cl: *mut Closure) {
             b"Lua\0" as *const u8 as *const i8
         };
     }
-    luaO_chunkid(((*ar).short_src).as_mut_ptr(), (*ar).source, (*ar).srclen);
+    luaO_chunkid(((*ar).short_src).as_mut_ptr(), (*ar).source, (*ar).source_length);
 }
 pub unsafe extern "C" fn nextline(
     mut p: *const Proto,
@@ -6399,15 +6399,15 @@ pub unsafe extern "C" fn luaO_pushfstring(
 pub unsafe extern "C" fn luaO_chunkid(
     mut out: *mut i8,
     mut source: *const i8,
-    mut srclen: u64,
+    mut source_length: u64,
 ) {
     let mut bufflen: u64 = 60 as i32 as u64;
     if *source as i32 == '=' as i32 {
-        if srclen <= bufflen {
+        if source_length <= bufflen {
             memcpy(
                 out as *mut libc::c_void,
                 source.offset(1 as i32 as isize) as *const libc::c_void,
-                srclen
+                source_length
                     .wrapping_mul(
                         ::core::mem::size_of::<i8>() as u64,
                     ),
@@ -6429,11 +6429,11 @@ pub unsafe extern "C" fn luaO_chunkid(
             *out = '\0' as i32 as i8;
         }
     } else if *source as i32 == '@' as i32 {
-        if srclen <= bufflen {
+        if source_length <= bufflen {
             memcpy(
                 out as *mut libc::c_void,
                 source.offset(1 as i32 as isize) as *const libc::c_void,
-                srclen
+                source_length
                     .wrapping_mul(
                         ::core::mem::size_of::<i8>() as u64,
                     ),
@@ -6471,7 +6471,7 @@ pub unsafe extern "C" fn luaO_chunkid(
                 out as *mut libc::c_void,
                 source
                     .offset(1 as i32 as isize)
-                    .offset(srclen as isize)
+                    .offset(source_length as isize)
                     .offset(-(bufflen as isize)) as *const libc::c_void,
                 bufflen
                     .wrapping_mul(
@@ -6506,32 +6506,32 @@ pub unsafe extern "C" fn luaO_chunkid(
                     .wrapping_sub(1 as i32 as u64)
                     .wrapping_add(1 as i32 as u64),
             ) as u64 as u64;
-        if srclen < bufflen && nl.is_null() {
+        if source_length < bufflen && nl.is_null() {
             memcpy(
                 out as *mut libc::c_void,
                 source as *const libc::c_void,
-                srclen
+                source_length
                     .wrapping_mul(
                         ::core::mem::size_of::<i8>() as u64,
                     ),
             );
-            out = out.offset(srclen as isize);
+            out = out.offset(source_length as isize);
         } else {
             if !nl.is_null() {
-                srclen = nl.offset_from(source) as i64 as u64;
+                source_length = nl.offset_from(source) as i64 as u64;
             }
-            if srclen > bufflen {
-                srclen = bufflen;
+            if source_length > bufflen {
+                source_length = bufflen;
             }
             memcpy(
                 out as *mut libc::c_void,
                 source as *const libc::c_void,
-                srclen
+                source_length
                     .wrapping_mul(
                         ::core::mem::size_of::<i8>() as u64,
                     ),
             );
-            out = out.offset(srclen as isize);
+            out = out.offset(source_length as isize);
             memcpy(
                 out as *mut libc::c_void,
                 b"...\0" as *const u8 as *const i8 as *const libc::c_void,
@@ -23998,7 +23998,7 @@ pub unsafe extern "C" fn lastlevel(mut state: *mut State) -> i32 {
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
@@ -24047,7 +24047,7 @@ pub unsafe extern "C" fn luaL_traceback(
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
@@ -24137,7 +24137,7 @@ pub unsafe extern "C" fn luaL_argerror(
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
@@ -24228,7 +24228,7 @@ pub unsafe extern "C" fn luaL_where(mut state: *mut State, mut level: i32) {
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
@@ -26568,7 +26568,7 @@ pub unsafe extern "C" fn auxstatus(
                     namewhat: 0 as *const i8,
                     what: 0 as *const i8,
                     source: 0 as *const i8,
-                    srclen: 0,
+                    source_length: 0,
                     currentline: 0,
                     linedefined: 0,
                     lastlinedefined: 0,
@@ -33588,7 +33588,7 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
@@ -33643,7 +33643,7 @@ pub unsafe extern "C" fn db_getinfo(mut state: *mut State) -> i32 {
     }
     lua_createtable(state, 0, 0 as i32);
     if !(strchr(options, 'S' as i32)).is_null() {
-        lua_pushlstring(state, ar.source, ar.srclen);
+        lua_pushlstring(state, ar.source, ar.source_length);
         lua_setfield(
             state,
             -(2 as i32),
@@ -33737,7 +33737,7 @@ pub unsafe extern "C" fn db_getlocal(mut state: *mut State) -> i32 {
             namewhat: 0 as *const i8,
             what: 0 as *const i8,
             source: 0 as *const i8,
-            srclen: 0,
+            source_length: 0,
             currentline: 0,
             linedefined: 0,
             lastlinedefined: 0,
@@ -33785,7 +33785,7 @@ pub unsafe extern "C" fn db_setlocal(mut state: *mut State) -> i32 {
         namewhat: 0 as *const i8,
         what: 0 as *const i8,
         source: 0 as *const i8,
-        srclen: 0,
+        source_length: 0,
         currentline: 0,
         linedefined: 0,
         lastlinedefined: 0,
