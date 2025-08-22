@@ -1,14 +1,14 @@
 use crate::state::*;
 #[derive(Copy, Clone)]
 pub struct Buffer {
-    pub b: *mut i8,
-    pub size: u64,
-    pub n: u64,
+    pub pointer: *mut i8,
+    pub allocated: u64,
+    pub length: u64,
     pub state: *mut State,
-    pub init: BufferInit,
+    pub initial_data: BufferInitial,
 }
 #[derive(Copy, Clone)]
-pub union BufferInit {
+pub union BufferInitial {
     pub n: f64,
     pub u: f64,
     pub s: *mut libc::c_void,
