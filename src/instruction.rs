@@ -1,6 +1,4 @@
-#![allow(
-    unused,
-)]
+#![allow(unused)]
 pub const OP_EXTRAARG: u32 = 82;
 pub const OP_LOADKX: u32 = 4;
 pub const OP_LOADK: u32 = 3;

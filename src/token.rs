@@ -1,6 +1,4 @@
-#![allow(
-    unused,
-)]
+#![allow(unused)]
 use crate::tstring::*;
 #[derive(Copy, Clone)]
 pub struct Token {

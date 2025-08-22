@@ -1,15 +1,13 @@
-use crate::object::*;
-use crate::tstring::*;
-use crate::stkidrel::*;
-use crate::localvariable::*;
 use crate::absolutelineinfo::*;
+use crate::localvariable::*;
+use crate::object::*;
+use crate::stkidrel::*;
+use crate::tstring::*;
 use crate::upvaldesc::*;
-#[derive(Copy, Clone)]
-#[repr(C)]
+use crate::ObjectBase;
+ObjectBase! {
+#[derive(Debug, Copy, Clone)]
 pub struct Prototype {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
     pub count_parameters: u8,
     pub is_variable_arguments: bool,
     pub maxstacksize: u8,
@@ -31,4 +29,5 @@ pub struct Prototype {
     pub locvars: *mut LocalVariable,
     pub source: *mut TString,
     pub gc_list: *mut Object,
+}
 }

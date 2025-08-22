@@ -1,8 +1,6 @@
-use crate::state::*;
 use crate::object::*;
-pub type ContextFunction = Option::<
-    unsafe extern "C" fn(*mut State, i32, i64) -> i32,
->;
+use crate::state::*;
+pub type ContextFunction = Option<unsafe extern "C" fn(*mut State, i32, i64) -> i32>;
 #[derive(Copy, Clone)]
 pub union StkIdRel {
     pub p: StkId,
@@ -30,7 +28,7 @@ pub union Value {
     pub n: f64,
     pub ub: u8,
 }
-pub type CFunction = Option::<unsafe extern "C" fn(*mut State) -> i32>;
+pub type CFunction = Option<unsafe extern "C" fn(*mut State) -> i32>;
 #[derive(Copy, Clone)]
 pub struct TValue {
     pub value_: Value,

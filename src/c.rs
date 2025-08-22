@@ -1,8 +1,4 @@
-#![allow(
-    non_camel_case_types,
-    non_snake_case,
-    non_upper_case_globals,
-)]
+#![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 unsafe extern "C" {
     pub type _IO_wide_data;
     pub type _IO_codecvt;
@@ -27,11 +23,7 @@ unsafe extern "C" {
     pub unsafe fn _setjmp(_: *mut __jmp_buf_tag) -> i32;
     pub unsafe fn _longjmp(_: *mut __jmp_buf_tag, _: i32) -> !;
     pub unsafe fn sigemptyset(__set: *mut __sigset_t) -> i32;
-    pub unsafe fn sigaction(
-        __sig: i32,
-        __act: *const sigaction,
-        __oact: *mut sigaction,
-    ) -> i32;
+    pub unsafe fn sigaction(__sig: i32, __act: *const sigaction, __oact: *mut sigaction) -> i32;
     pub static mut stdin: *mut FILE;
     pub static mut stdout: *mut FILE;
     pub static mut stderr: *mut FILE;
@@ -39,50 +31,18 @@ unsafe extern "C" {
     pub fn tmpfile() -> *mut FILE;
     pub fn fflush(__stream: *mut FILE) -> i32;
     pub fn fopen(_: *const i8, _: *const i8) -> *mut FILE;
-    pub fn freopen(
-        __filename: *const i8,
-        __modes: *const i8,
-        __stream: *mut FILE,
-    ) -> *mut FILE;
-    pub fn setvbuf(
-        __stream: *mut FILE,
-        __buf: *mut i8,
-        __modes: i32,
-        __n: u64,
-    ) -> i32;
+    pub fn freopen(__filename: *const i8, __modes: *const i8, __stream: *mut FILE) -> *mut FILE;
+    pub fn setvbuf(__stream: *mut FILE, __buf: *mut i8, __modes: i32, __n: u64) -> i32;
     pub fn fprintf(_: *mut FILE, _: *const i8, _: ...) -> i32;
-    pub fn snprintf(
-        _: *mut i8,
-        _: u64,
-        _: *const i8,
-        _: ...
-    ) -> i32;
+    pub fn snprintf(_: *mut i8, _: u64, _: *const i8, _: ...) -> i32;
     pub fn getc(__stream: *mut FILE) -> i32;
     pub fn getc_unlocked(__stream: *mut FILE) -> i32;
-    pub fn fgets(
-        __s: *mut i8,
-        __n: i32,
-        __stream: *mut FILE,
-    ) -> *mut i8;
+    pub fn fgets(__s: *mut i8, __n: i32, __stream: *mut FILE) -> *mut i8;
     pub fn fputs(__s: *const i8, __stream: *mut FILE) -> i32;
     pub fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
-    pub fn fread(
-        _: *mut libc::c_void,
-        _: u64,
-        _: u64,
-        _: *mut FILE,
-    ) -> u64;
-    pub fn fwrite(
-        _: *const libc::c_void,
-        _: u64,
-        _: u64,
-        _: *mut FILE,
-    ) -> u64;
-    pub fn fseeko(
-        __stream: *mut FILE,
-        __off: i64,
-        __whence: i32,
-    ) -> i32;
+    pub fn fread(_: *mut libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
+    pub fn fwrite(_: *const libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
+    pub fn fseeko(__stream: *mut FILE, __off: i64, __whence: i32) -> i32;
     pub fn ftello(__stream: *mut FILE) -> i64;
     pub fn clearerr(__stream: *mut FILE);
     pub fn feof(__stream: *mut FILE) -> i32;
@@ -100,28 +60,12 @@ unsafe extern "C" {
     pub fn mkstemp(__template: *mut i8) -> i32;
     pub fn system(__command: *const i8) -> i32;
     pub fn abs(_: i32) -> i32;
-    pub fn memcpy(
-        _: *mut libc::c_void,
-        _: *const libc::c_void,
-        _: u64,
-    ) -> *mut libc::c_void;
-    pub fn memcmp(
-        _: *const libc::c_void,
-        _: *const libc::c_void,
-        _: u64,
-    ) -> i32;
-    pub fn memchr(
-        _: *const libc::c_void,
-        _: i32,
-        _: u64,
-    ) -> *mut libc::c_void;
+    pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: u64) -> *mut libc::c_void;
+    pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void, _: u64) -> i32;
+    pub fn memchr(_: *const libc::c_void, _: i32, _: u64) -> *mut libc::c_void;
     pub fn strcpy(_: *mut i8, _: *const i8) -> *mut i8;
     pub fn strcmp(_: *const i8, _: *const i8) -> i32;
-    pub fn strncmp(
-        _: *const i8,
-        _: *const i8,
-        _: u64,
-    ) -> i32;
+    pub fn strncmp(_: *const i8, _: *const i8, _: u64) -> i32;
     pub fn strcoll(__s1: *const i8, __s2: *const i8) -> i32;
     pub fn strchr(_: *const i8, _: i32) -> *mut i8;
     pub fn strspn(_: *const i8, _: *const i8) -> u64;
@@ -133,20 +77,12 @@ unsafe extern "C" {
     pub fn time(__timer: *mut i64) -> i64;
     pub fn difftime(__time1: i64, __time0: i64) -> f64;
     pub fn mktime(__tp: *mut tm) -> i64;
-    pub fn strftime(
-        __s: *mut i8,
-        __maxsize: u64,
-        __format: *const i8,
-        __tp: *const tm,
-    ) -> u64;
+    pub fn strftime(__s: *mut i8, __maxsize: u64, __format: *const i8, __tp: *const tm) -> u64;
     pub fn gmtime_r(__timer: *const i64, __tp: *mut tm) -> *mut tm;
     pub fn localtime_r(__timer: *const i64, __tp: *mut tm) -> *mut tm;
     pub fn dlopen(__file: *const i8, __mode: i32) -> *mut libc::c_void;
     pub fn dlclose(__handle: *mut libc::c_void) -> i32;
-    pub fn dlsym(
-        __handle: *mut libc::c_void,
-        __name: *const i8,
-    ) -> *mut libc::c_void;
+    pub fn dlsym(__handle: *mut libc::c_void, __name: *const i8) -> *mut libc::c_void;
     pub fn dlerror() -> *mut i8;
     pub fn close(__fd: i32) -> i32;
     pub fn isatty(__fd: i32) -> i32;
@@ -279,22 +215,20 @@ pub struct C2RustUnnamed_9 {
     pub si_pid: i32,
     pub si_uid: u32,
 }
-pub type __sighandler_t = Option::<unsafe extern "C" fn(i32) -> ()>;
+pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct sigaction {
     pub __sigaction_handler: C2RustUnnamed_10,
     pub sa_mask: __sigset_t,
     pub sa_flags: i32,
-    pub sa_restorer: Option::<unsafe extern "C" fn() -> ()>,
+    pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union C2RustUnnamed_10 {
     pub sa_handler: __sighandler_t,
-    pub sa_sigaction: Option::<
-        unsafe extern "C" fn(i32, *mut siginfo_t, *mut libc::c_void) -> (),
-    >,
+    pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut siginfo_t, *mut libc::c_void) -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

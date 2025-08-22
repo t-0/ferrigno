@@ -1,5 +1,5 @@
-use crate::labellist::*;
 use crate::labeldesc::*;
+use crate::labellist::*;
 #[derive(Copy, Clone)]
 pub struct DynamicData {
     pub actvar: C2RustUnnamed21,

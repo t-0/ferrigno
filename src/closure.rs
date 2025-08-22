@@ -1,6 +1,6 @@
 use crate::object::*;
-use crate::stkidrel::*;
 use crate::prototype::*;
+use crate::stkidrel::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UClosure {

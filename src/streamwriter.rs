@@ -1,6 +1,4 @@
-#![allow (
-    non_snake_case,
-)]
+#![allow(non_snake_case)]
 use crate::buffer::*;
 #[derive(Copy, Clone)]
 pub struct StreamWriter {

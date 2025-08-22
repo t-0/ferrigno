@@ -1,11 +1,11 @@
-use crate::state::*;
+use crate::closure::*;
 use crate::object::*;
-use crate::tstring::*;
+use crate::prototype::*;
+use crate::state::*;
 use crate::stkidrel::*;
 use crate::table::*;
-use crate::prototype::*;
+use crate::tstring::*;
 use crate::udata::*;
-use crate::closure::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {

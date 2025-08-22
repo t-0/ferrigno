@@ -1,11 +1,11 @@
-use crate::state::*;
-use crate::tstring::*;
-use crate::table::*;
-use crate::zio::*;
 use crate::dynamicdata::*;
-use crate::mbuffer::*;
 use crate::functionstate::*;
+use crate::mbuffer::*;
+use crate::state::*;
+use crate::table::*;
 use crate::token::*;
+use crate::tstring::*;
+use crate::zio::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LexState {

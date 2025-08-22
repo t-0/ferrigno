@@ -1,5 +1,5 @@
-use crate::state::*;
 use crate::readfunction::*;
+use crate::state::*;
 #[derive(Copy, Clone)]
 pub struct ZIO {
     pub n: u64,

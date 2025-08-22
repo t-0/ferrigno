@@ -3,9 +3,9 @@ use crate::callinfo::*;
 use crate::debug::*;
 use crate::object::*;
 use crate::stkidrel::*;
-use crate::tstring::*;
-use crate::table::*;
 use crate::stringtable::*;
+use crate::table::*;
+use crate::tstring::*;
 #[derive(Copy, Clone)]
 pub struct LongJump {
     pub previous: *mut LongJump,
@@ -40,7 +40,7 @@ pub struct State {
     pub hookcount: i32,
     pub hookmask: i32,
 }
-pub type HookFunction = Option::<unsafe extern "C" fn(*mut State, *mut Debug) -> ()>;
+pub type HookFunction = Option<unsafe extern "C" fn(*mut State, *mut Debug) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Global {
@@ -92,14 +92,7 @@ pub struct Global {
     pub warnf: WarnFunction,
     pub ud_warn: *mut libc::c_void,
 }
-pub type WarnFunction = Option::<
-    unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> (),
->;
-pub type AllocationFunction = Option::<
-    unsafe extern "C" fn(
-        *mut libc::c_void,
-        *mut libc::c_void,
-        u64,
-        u64,
-    ) -> *mut libc::c_void,
+pub type WarnFunction = Option<unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()>;
+pub type AllocationFunction = Option<
+    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
