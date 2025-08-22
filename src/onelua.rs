@@ -455,7 +455,7 @@ pub unsafe extern "C" fn luaD_hookcall(mut state: *mut State, mut ci: *mut CallI
         } else {
             0 as i32
         };
-        let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+        let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
         (*ci).u.l.savedpc = ((*ci).u.l.savedpc).offset(1);
         (*ci).u.l.savedpc;
         luaD_hook(state, event, -1, 1 as i32, (*p).count_parameters as i32);
@@ -469,7 +469,7 @@ pub unsafe extern "C" fn rethook(mut state: *mut State, mut ci: *mut CallInfo, m
         let mut delta: i32 = 0 as i32;
         let mut ftransfer: i32 = 0;
         if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
-            let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+            let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
             if (*p).is_variable_arguments {
                 delta = (*ci).u.l.nextraargs + (*p).count_parameters as i32 + 1 as i32;
             }
@@ -482,7 +482,7 @@ pub unsafe extern "C" fn rethook(mut state: *mut State, mut ci: *mut CallInfo, m
     ci = (*ci).previous;
     if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
         (*state).oldpc = ((*ci).u.l.savedpc)
-            .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).code)
+            .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
             as i64 as i32
             - 1 as i32;
     }
@@ -667,12 +667,12 @@ pub unsafe extern "C" fn luaD_pretailcall(
                     state,
                     func,
                     -1,
-                    (*((*func).val.value_.gc as *mut GCUnion)).cl.c.f,
+                    (*((*func).val.value_.gc as *mut GCUnion)).ccl.f,
                 );
             }
             22 => return precallC(state, func, -1, (*func).val.value_.f),
             6 => {
-                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion)).cl.l.p;
+                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion)).lcl.p;
                 let mut fsize: i32 = (*p).maxstacksize as i32;
                 let mut nfixparams: i32 = (*p).count_parameters as i32;
                 let mut i: i32 = 0;
@@ -729,7 +729,7 @@ pub unsafe extern "C" fn luaD_precall(
                     state,
                     func,
                     nresults,
-                    (*((*func).val.value_.gc as *mut GCUnion)).cl.c.f,
+                    (*((*func).val.value_.gc as *mut GCUnion)).ccl.f,
                 );
                 return 0 as *mut CallInfo;
             }
@@ -739,7 +739,7 @@ pub unsafe extern "C" fn luaD_precall(
             }
             6 => {
                 let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion)).cl.l.p;
+                let mut p: *mut Prototype = (*((*func).val.value_.gc as *mut GCUnion)).lcl.p;
                 let mut narg: i32 = ((*state).top.p).offset_from(func) as i64 as i32 - 1 as i32;
                 let mut nfixparams: i32 = (*p).count_parameters as i32;
                 let mut fsize: i32 = (*p).maxstacksize as i32;
@@ -1246,7 +1246,7 @@ pub unsafe extern "C" fn index2value(mut state: *mut State, mut idx: i32) -> *mu
             == 6 as i32 | (2 as i32) << 4 as i32 | (1 as i32) << 6 as i32
         {
             let mut func: *mut CClosure =
-                &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.c;
+                &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).ccl;
             return if idx <= (*func).count_upvalues as i32 {
                 &mut *((*func).upvalue)
                     .as_mut_ptr()
@@ -1415,8 +1415,7 @@ pub unsafe extern "C" fn lua_copy(mut state: *mut State, mut fromidx: i32, mut t
     if toidx < -(1000000 as i32) - 1000 as i32 {
         if (*fr).tt_ as i32 & (1 as i32) << 6 as i32 != 0 {
             if (*((*(*(*state).ci).func.p).val.value_.gc as *mut GCUnion))
-                .cl
-                .c
+                .ccl
                 .marked as i32
                 & (1 as i32) << 5 as i32
                 != 0
@@ -1427,8 +1426,7 @@ pub unsafe extern "C" fn lua_copy(mut state: *mut State, mut fromidx: i32, mut t
                 luaC_barrier_(
                     state,
                     &mut (*(&mut (*((*(*(*state).ci).func.p).val.value_.gc as *mut GCUnion))
-                        .cl
-                        .c as *mut CClosure as *mut GCUnion))
+                        .ccl as *mut CClosure as *mut GCUnion))
                         .gc,
                     &mut (*((*fr).value_.gc as *mut GCUnion)).gc,
                 );
@@ -1670,7 +1668,7 @@ pub unsafe extern "C" fn lua_tocfunction(mut state: *mut State, mut idx: i32) ->
     if (*o).tt_ as i32 == 6 as i32 | (1 as i32) << 4 as i32 {
         return (*o).value_.f;
     } else if (*o).tt_ as i32 == 6 as i32 | (2 as i32) << 4 as i32 | (1 as i32) << 6 as i32 {
-        return (*((*o).value_.gc as *mut GCUnion)).cl.c.f;
+        return (*((*o).value_.gc as *mut GCUnion)).ccl.f;
     } else {
         return None;
     };
@@ -2592,8 +2590,7 @@ pub unsafe extern "C" fn lua_load(
             .val
             .value_
             .gc as *mut GCUnion))
-            .cl
-            .l;
+            .lcl;
         if (*f).count_upvalues as i32 >= 1 as i32 {
             let mut gt: *const TValue =
                 &mut *((*((*(*state).myglobal).l_registry.value_.gc as *mut GCUnion))
@@ -2642,7 +2639,7 @@ pub unsafe extern "C" fn lua_dump(
     if (*o).tt_ as i32 == 6 as i32 | (0 as i32) << 4 as i32 | (1 as i32) << 6 as i32 {
         status = luaU_dump(
             state,
-            (*((*o).value_.gc as *mut GCUnion)).cl.l.p,
+            (*((*o).value_.gc as *mut GCUnion)).lcl.p,
             writer_0,
             data,
             is_strip,
@@ -2889,7 +2886,7 @@ pub unsafe extern "C" fn aux_upvalue(
 ) -> *const i8 {
     match (*fi).tt_ as i32 & 0x3f as i32 {
         38 => {
-            let mut f: *mut CClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).cl.c;
+            let mut f: *mut CClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).ccl;
             if !((n as u32).wrapping_sub(1 as u32) < (*f).count_upvalues as u32) {
                 return 0 as *const i8;
             }
@@ -2900,7 +2897,7 @@ pub unsafe extern "C" fn aux_upvalue(
             return b"\0" as *const u8 as *const i8;
         }
         6 => {
-            let mut f_0: *mut LClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).cl.l;
+            let mut f_0: *mut LClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).lcl;
             let mut name: *mut TString = 0 as *mut TString;
             let mut p: *mut Prototype = (*f_0).p;
             if !((n as u32).wrapping_sub(1 as u32) < (*p).sizeupvalues as u32) {
@@ -2998,7 +2995,7 @@ pub unsafe extern "C" fn getupvalref(
     static mut nullup: *const UpVal = 0 as *const UpVal;
     let mut f: *mut LClosure = 0 as *mut LClosure;
     let mut fi: *mut TValue = index2value(state, fidx);
-    f = &mut (*((*fi).value_.gc as *mut GCUnion)).cl.l;
+    f = &mut (*((*fi).value_.gc as *mut GCUnion)).lcl;
     if !pf.is_null() {
         *pf = f;
     }
@@ -3021,7 +3018,7 @@ pub unsafe extern "C" fn lua_upvalueid(
             return *getupvalref(state, fidx, n, 0 as *mut *mut LClosure) as *mut libc::c_void;
         }
         38 => {
-            let mut f: *mut CClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).cl.c;
+            let mut f: *mut CClosure = &mut (*((*fi).value_.gc as *mut GCUnion)).ccl;
             if 1 as i32 <= n && n <= (*f).count_upvalues as i32 {
                 return &mut *((*f).upvalue).as_mut_ptr().offset((n - 1 as i32) as isize)
                     as *mut TValue as *mut libc::c_void;
@@ -3494,7 +3491,7 @@ static mut strupval: [i8; 8] =
     unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
 pub unsafe extern "C" fn currentpc(mut ci: *mut CallInfo) -> i32 {
     return ((*ci).u.l.savedpc)
-        .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).code)
+        .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
         as i64 as i32
         - 1 as i32;
 }
@@ -3544,7 +3541,7 @@ pub unsafe extern "C" fn luaG_getfuncline(
 }
 pub unsafe extern "C" fn getcurrentline(mut ci: *mut CallInfo) -> i32 {
     return luaG_getfuncline(
-        (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p,
+        (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
         currentpc(ci),
     );
 }
@@ -3624,7 +3621,7 @@ pub unsafe extern "C" fn findvararg(
     mut n: i32,
     mut pos: *mut StkId,
 ) -> *const i8 {
-    if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).is_variable_arguments {
+    if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).is_variable_arguments {
         let mut nextra: i32 = (*ci).u.l.nextraargs;
         if n >= -nextra {
             *pos = ((*ci).func.p)
@@ -3648,7 +3645,7 @@ pub unsafe extern "C" fn luaG_findlocal(
             return findvararg(ci, n, pos);
         } else {
             name = luaF_getlocalname(
-                (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p,
+                (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
                 n,
                 currentpc(ci),
             );
@@ -3693,8 +3690,7 @@ pub unsafe extern "C" fn lua_getlocal(
                     .val
                     .value_
                     .gc as *mut GCUnion))
-                    .cl
-                    .l
+                    .lcl
                     .p,
                 n,
                 0,
@@ -3921,7 +3917,7 @@ pub unsafe extern "C" fn lua_getinfo(
     cl = if (*func).tt_ as i32 == 6 as i32 | (0 as i32) << 4 as i32 | (1 as i32) << 6 as i32
         || (*func).tt_ as i32 == 6 as i32 | (2 as i32) << 4 as i32 | (1 as i32) << 6 as i32
     {
-        &mut (*((*func).value_.gc as *mut GCUnion)).cl
+        &mut (*((*func).value_.gc as *mut GCUnion)).ucl
     } else {
         0 as *mut UClosure
     };
@@ -4247,7 +4243,7 @@ pub unsafe extern "C" fn funcnamefromcall(
     } else if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
         return funcnamefromcode(
             state,
-            (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p,
+            (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
             currentpc(ci),
             name,
         );
@@ -4272,7 +4268,7 @@ pub unsafe extern "C" fn getupvalname(
     mut o: *const TValue,
     mut name: *mut *const i8,
 ) -> *const i8 {
-    let mut c: *mut LClosure = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l;
+    let mut c: *mut LClosure = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl;
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < (*c).count_upvalues as i32 {
@@ -4305,7 +4301,7 @@ pub unsafe extern "C" fn varinfo(mut state: *mut State, mut o: *const TValue) ->
             let mut reg: i32 = instack(ci, o);
             if reg >= 0 as i32 {
                 kind = getobjname(
-                    (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p,
+                    (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
                     currentpc(ci),
                     reg,
                     &mut name,
@@ -4486,7 +4482,7 @@ pub unsafe extern "C" fn luaG_runerror(
         luaG_addinfo(
             state,
             msg,
-            (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p).source,
+            (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).source,
             getcurrentline(ci),
         );
         let mut io1: *mut TValue = &mut (*((*state).top.p).offset(-(2 as i32 as isize))).val;
@@ -4525,7 +4521,7 @@ pub unsafe extern "C" fn changedline(
 }
 pub unsafe extern "C" fn luaG_tracecall(mut state: *mut State) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
-    let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+    let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
     ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1 as i32);
     if (*ci).u.l.savedpc == (*p).code as *const u32 {
         if (*p).is_variable_arguments {
@@ -4542,7 +4538,7 @@ pub unsafe extern "C" fn luaG_traceexec(
 ) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
     let mut mask: u8 = (*state).hookmask as u8;
-    let mut p: *const Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l.p;
+    let mut p: *const Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
     let mut counthook: i32 = 0;
     if mask as i32 & ((1 as i32) << 2 as i32 | (1 as i32) << 3 as i32) == 0 {
         ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 0);
@@ -6893,8 +6889,8 @@ static mut luaP_opmodes: [u8; 83] = [
 pub unsafe extern "C" fn getgclist(mut o: *mut Object) -> *mut *mut Object {
     match (*o).tag as i32 {
         5 => return &mut (*(o as *mut GCUnion)).h.gc_list,
-        6 => return &mut (*(o as *mut GCUnion)).cl.l.gc_list,
-        38 => return &mut (*(o as *mut GCUnion)).cl.c.gc_list,
+        6 => return &mut (*(o as *mut GCUnion)).lcl.gc_list,
+        38 => return &mut (*(o as *mut GCUnion)).ccl.gc_list,
         8 => return &mut (*(o as *mut GCUnion)).th.gc_list,
         10 => return &mut (*(o as *mut GCUnion)).p.gc_list,
         7 => {
@@ -7561,8 +7557,8 @@ pub unsafe extern "C" fn propagatemark(mut g: *mut Global) -> u64 {
     match (*o).tag as i32 {
         5 => return traversetable(g, &mut (*(o as *mut GCUnion)).h),
         7 => return traverseudata(g, &mut (*(o as *mut GCUnion)).u) as u64,
-        6 => return traverseLclosure(g, &mut (*(o as *mut GCUnion)).cl.l) as u64,
-        38 => return traverseCclosure(g, &mut (*(o as *mut GCUnion)).cl.c) as u64,
+        6 => return traverseLclosure(g, &mut (*(o as *mut GCUnion)).lcl) as u64,
+        38 => return traverseCclosure(g, &mut (*(o as *mut GCUnion)).ccl) as u64,
         10 => return traverseproto(g, &mut (*(o as *mut GCUnion)).p) as u64,
         8 => return traversethread(g, &mut (*(o as *mut GCUnion)).th) as u64,
         _ => return 0 as i32 as u64,
@@ -7695,7 +7691,7 @@ pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut Object) {
             freeupval(state, &mut (*(o as *mut GCUnion)).upv);
         }
         6 => {
-            let mut cl: *mut LClosure = &mut (*(o as *mut GCUnion)).cl.l;
+            let mut cl: *mut LClosure = &mut (*(o as *mut GCUnion)).lcl;
             luaM_free_(
                 state,
                 cl as *mut libc::c_void,
@@ -7705,7 +7701,7 @@ pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut Object) {
             );
         }
         38 => {
-            let mut cl_0: *mut CClosure = &mut (*(o as *mut GCUnion)).cl.c;
+            let mut cl_0: *mut CClosure = &mut (*(o as *mut GCUnion)).ccl;
             luaM_free_(
                 state,
                 cl_0 as *mut libc::c_void,
@@ -8528,7 +8524,7 @@ pub unsafe extern "C" fn luaF_newCclosure(
         6 as i32 | (2 as i32) << 4 as i32,
         (32 as u64 as i32 + ::core::mem::size_of::<TValue>() as u64 as i32 * nupvals) as u64,
     );
-    let mut c: *mut CClosure = &mut (*(o as *mut GCUnion)).cl.c;
+    let mut c: *mut CClosure = &mut (*(o as *mut GCUnion)).ccl;
     (*c).count_upvalues = nupvals as u8;
     return c;
 }
@@ -8541,7 +8537,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
         6 as i32 | (0 as i32) << 4 as i32,
         (32 as u64 as i32 + ::core::mem::size_of::<*mut TValue>() as u64 as i32 * nupvals) as u64,
     );
-    let mut c: *mut LClosure = &mut (*(o as *mut GCUnion)).cl.l;
+    let mut c: *mut LClosure = &mut (*(o as *mut GCUnion)).lcl;
     (*c).p = 0 as *mut Prototype;
     (*c).count_upvalues = nupvals as u8;
     loop {
@@ -17489,7 +17485,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
     '_startfunc: loop {
         trap = (*state).hookmask;
         '_returning: loop {
-            cl = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).cl.l;
+            cl = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl;
             k = (*(*cl).p).k;
             program_counter = (*ci).u.l.savedpc;
             if (trap != 0 as i32) as i32 as i64 != 0 {
