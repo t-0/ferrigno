@@ -96,32 +96,6 @@ pub const _ISdigit: u32 = 2048;
 pub const _ISalpha: u32 = 1024;
 pub const _ISlower: u32 = 512;
 pub const _ISupper: u32 = 256;
-pub struct lconv {
-    pub decimal_point: *mut i8,
-    pub thousands_sep: *mut i8,
-    pub grouping: *mut i8,
-    pub int_curr_symbol: *mut i8,
-    pub currency_symbol: *mut i8,
-    pub mon_decimal_point: *mut i8,
-    pub mon_thousands_sep: *mut i8,
-    pub mon_grouping: *mut i8,
-    pub positive_sign: *mut i8,
-    pub negative_sign: *mut i8,
-    pub int_frac_digits: i8,
-    pub frac_digits: i8,
-    pub p_cs_precedes: i8,
-    pub p_sep_by_space: i8,
-    pub n_cs_precedes: i8,
-    pub n_sep_by_space: i8,
-    pub p_sign_posn: i8,
-    pub n_sign_posn: i8,
-    pub int_p_cs_precedes: i8,
-    pub int_p_sep_by_space: i8,
-    pub int_n_cs_precedes: i8,
-    pub int_n_sep_by_space: i8,
-    pub int_p_sign_posn: i8,
-    pub int_n_sign_posn: i8,
-}
 pub type __jmp_buf = [u32; 8];
 #[derive(Copy, Clone)]
 pub struct __sigset_t {
