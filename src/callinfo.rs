@@ -1,27 +1,27 @@
 use crate::stkidrel::*;
 #[derive(Copy, Clone)]
-pub union C2RustUnnamed11 {
+pub union CallInfoSomethingElse {
     pub funcidx: i32,
     pub nyield: i32,
     pub nres: i32,
-    pub transferinfo: C2RustUnnamed12,
+    pub transferinfo: TransferInfo,
 }
 #[derive(Copy, Clone)]
-pub struct C2RustUnnamed15 {
-    pub savedpc: *const u32,
+pub struct CallInfoSomethingL {
+    pub saved_program_counter: *const u32,
     pub trap: i32,
-    pub nextraargs: i32,
+    pub count_extra_arguments: i32,
 }
 #[derive(Copy, Clone)]
-pub struct C2RustUnnamed14 {
+pub struct CallInfoSomethingC {
     pub k: ContextFunction,
-    pub old_errfunc: i64,
+    pub old_error_function: i64,
     pub ctx: i64,
 }
 #[derive(Copy, Clone)]
-pub union C2RustUnnamed13 {
-    pub l: C2RustUnnamed15,
-    pub c: C2RustUnnamed14,
+pub union CallInfoSomething {
+    pub l: CallInfoSomethingL,
+    pub c: CallInfoSomethingC,
 }
 #[derive(Copy, Clone)]
 pub struct CallInfo {
@@ -29,13 +29,13 @@ pub struct CallInfo {
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,
-    pub u: C2RustUnnamed13,
-    pub u2: C2RustUnnamed11,
-    pub nresults: i16,
-    pub callstatus: u16,
+    pub u: CallInfoSomething,
+    pub u2: CallInfoSomethingElse,
+    pub count_results: i16,
+    pub call_status: u16,
 }
 #[derive(Copy, Clone)]
-pub struct C2RustUnnamed12 {
+pub struct TransferInfo {
     pub ftransfer: u16,
     pub ntransfer: u16,
 }
