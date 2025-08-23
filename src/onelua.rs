@@ -25609,16 +25609,16 @@ pub unsafe extern "C" fn start_capture(
     mut what: i32,
 ) -> *const i8 {
     let mut res: *const i8 = 0 as *const i8;
-    let mut level: i32 = (*ms).level as i32;
-    if level >= 32 as i32 {
+    let mut level: usize = (*ms).level;
+    if level >= MAX_CAPTURES {
         luaL_error(
             (*ms).state,
             b"too many captures\0" as *const u8 as *const i8,
         );
     }
-    (*ms).capture[level as usize].init = s;
-    (*ms).capture[level as usize].len = what as i64;
-    (*ms).level = (level + 1 as i32) as u8;
+    (*ms).capture[level].init = s;
+    (*ms).capture[level].len = what as i64;
+    (*ms).level = level + 1;
     res = match_0(ms, s, p);
     if res.is_null() {
         (*ms).level = ((*ms).level).wrapping_sub(1);
@@ -26087,7 +26087,7 @@ pub unsafe extern "C" fn prepstate(
     (*ms).p_end = p.offset(lp as isize);
 }
 pub unsafe extern "C" fn reprepstate(mut ms: *mut MatchState) {
-    (*ms).level = 0 as i32 as u8;
+    (*ms).level = 0;
 }
 pub unsafe extern "C" fn str_find_aux(mut state: *mut State, mut find: i32) -> i32 {
     let mut ls: u64 = 0;
