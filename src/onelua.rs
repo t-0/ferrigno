@@ -2510,7 +2510,7 @@ pub unsafe extern "C" fn lua_callk(
 }
 pub unsafe extern "C" fn f_call(mut state: *mut State, mut ud: *mut libc::c_void) {
     let mut c: *mut CallS = ud as *mut CallS;
-    luaD_callnoyield(state, (*c).func, (*c).nresults);
+    luaD_callnoyield(state, (*c).function, (*c).nresults);
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_pcallk(
@@ -2522,7 +2522,7 @@ pub unsafe extern "C" fn lua_pcallk(
     mut k: ContextFunction,
 ) -> i32 {
     let mut c: CallS = CallS {
-        func: 0 as *mut StackValue,
+        function: 0 as *mut StackValue,
         nresults: 0,
     };
     let mut status: i32 = 0;
@@ -2533,14 +2533,14 @@ pub unsafe extern "C" fn lua_pcallk(
         let mut o: StkId = index2stack(state, errfunc);
         func = (o as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
     }
-    c.func = ((*state).top.p).offset(-((nargs + 1 as i32) as isize));
+    c.function = ((*state).top.p).offset(-((nargs + 1 as i32) as isize));
     if k.is_none() || !((*state).count_c_calls & 0xffff0000 as u32 == 0 as i32 as u32) {
         c.nresults = nresults;
         status = luaD_pcall(
             state,
             Some(f_call as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
             &mut c as *mut CallS as *mut libc::c_void,
-            (c.func as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
+            (c.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
             func,
         );
     } else {
@@ -2548,13 +2548,13 @@ pub unsafe extern "C" fn lua_pcallk(
         (*ci).u.c.k = k;
         (*ci).u.c.ctx = ctx;
         (*ci).u2.funcidx =
-            (c.func as *mut i8).offset_from((*state).stack.p as *mut i8) as i64 as i32;
+            (c.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64 as i32;
         (*ci).u.c.old_errfunc = (*state).errfunc;
         (*state).errfunc = func;
         (*ci).callstatus = ((*ci).callstatus as i32 & !((1 as i32) << 0 as i32)
             | (*state).allowhook as i32) as u16;
         (*ci).callstatus = ((*ci).callstatus as i32 | (1 as i32) << 4 as i32) as u16;
-        luaD_call(state, c.func, nresults);
+        luaD_call(state, c.function, nresults);
         (*ci).callstatus = ((*ci).callstatus as i32 & !((1 as i32) << 4 as i32)) as u16;
         (*state).errfunc = (*ci).u.c.old_errfunc;
         status = 0 as i32;

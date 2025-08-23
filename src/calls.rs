@@ -1,5 +1,5 @@
 use crate::stkidrel::*;
 pub struct CallS {
-    pub func: StkId,
+    pub function: StkId,
     pub nresults: i32,
 }
