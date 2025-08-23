@@ -5,16 +5,6 @@ unsafe extern "C" {
     pub type _IO_marker;
     pub unsafe fn __ctype_b_loc() -> *mut *const u16;
     pub unsafe fn __errno_location() -> *mut i32;
-    pub unsafe fn atan2(_: f64, _: f64) -> f64;
-    pub unsafe fn frexp(_: f64, _: *mut i32) -> f64;
-    pub unsafe fn ldexp(_: f64, _: i32) -> f64;
-    pub unsafe fn log(_: f64) -> f64;
-    pub unsafe fn log10(_: f64) -> f64;
-    pub unsafe fn log2(_: f64) -> f64;
-    pub unsafe fn pow(_: f64, _: f64) -> f64;
-    pub unsafe fn sqrt(_: f64) -> f64;
-    pub unsafe fn ceil(_: f64) -> f64;
-    pub unsafe fn floor(_: f64) -> f64;
     pub unsafe fn fmod(_: f64, _: f64) -> f64;
     pub unsafe fn _setjmp(_: *mut __jmp_buf_tag) -> i32;
     pub unsafe fn _longjmp(_: *mut __jmp_buf_tag, _: i32) -> !;
@@ -33,8 +23,8 @@ unsafe extern "C" {
     pub fn snprintf(_: *mut i8, _: u64, _: *const i8, _: ...) -> i32;
     pub fn getc(__stream: *mut FILE) -> i32;
     pub fn getc_unlocked(__stream: *mut FILE) -> i32;
-    pub fn fgets(__s: *mut i8, __n: i32, __stream: *mut FILE) -> *mut i8;
-    pub fn fputs(__s: *const i8, __stream: *mut FILE) -> i32;
+    pub fn fgets(s: *mut i8, __n: i32, __stream: *mut FILE) -> *mut i8;
+    pub fn fputs(s: *const i8, __stream: *mut FILE) -> i32;
     pub fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
     pub fn fread(_: *mut libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
     pub fn fwrite(_: *const libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
@@ -69,18 +59,18 @@ unsafe extern "C" {
     pub fn strlen(_: *const i8) -> u64;
     pub fn strerror(_: i32) -> *mut i8;
     pub fn clock() -> i64;
-    pub fn time(__timer: *mut i64) -> i64;
-    pub fn difftime(__time1: i64, __time0: i64) -> f64;
-    pub fn mktime(__tp: *mut tm) -> i64;
-    pub fn strftime(__s: *mut i8, __maxsize: u64, __format: *const i8, __tp: *const tm) -> u64;
-    pub fn gmtime_r(__timer: *const i64, __tp: *mut tm) -> *mut tm;
-    pub fn localtime_r(__timer: *const i64, __tp: *mut tm) -> *mut tm;
-    pub fn dlopen(__file: *const i8, __mode: i32) -> *mut libc::c_void;
-    pub fn dlclose(__handle: *mut libc::c_void) -> i32;
-    pub fn dlsym(__handle: *mut libc::c_void, __name: *const i8) -> *mut libc::c_void;
+    pub fn time(timer: *mut i64) -> i64;
+    pub fn difftime(time1: i64, time0: i64) -> f64;
+    pub fn mktime(tp: *mut tm) -> i64;
+    pub fn strftime(s: *mut i8, __maxsize: u64, __format: *const i8, tp: *const tm) -> u64;
+    pub fn gmtime_r(timer: *const i64, tp: *mut tm) -> *mut tm;
+    pub fn localtime_r(timer: *const i64, tp: *mut tm) -> *mut tm;
+    pub fn dlopen(file: *const i8, __mode: i32) -> *mut libc::c_void;
+    pub fn dlclose(handle: *mut libc::c_void) -> i32;
+    pub fn dlsym(handle: *mut libc::c_void, __name: *const i8) -> *mut libc::c_void;
     pub fn dlerror() -> *mut i8;
-    pub fn close(__fd: i32) -> i32;
-    pub fn isatty(__fd: i32) -> i32;
+    pub fn close(fd: i32) -> i32;
+    pub fn isatty(fd: i32) -> i32;
 }
 pub const _ISalnum: u32 = 8;
 pub const _ISpunct: u32 = 4;
@@ -104,14 +94,14 @@ pub struct __jmp_buf_tag {
 }
 #[derive(Copy, Clone)]
 pub union sigval {
-    pub sival_int: i32,
-    pub sival_ptr: *mut libc::c_void,
+    pub _sival_int: i32,
+    pub _sival_ptr: *mut libc::c_void,
 }
 #[derive(Copy, Clone)]
 pub struct siginfo_t {
-    pub si_signo: i32,
-    pub si_errno: i32,
-    pub si_code: i32,
+    pub _si_signo: i32,
+    pub _si_errno: i32,
+    pub _si_code: i32,
     pub __pad0: i32,
     pub _sifields: C2RustUnnamed_0,
 }
@@ -134,13 +124,13 @@ pub struct C2RustUnnamed_1 {
 }
 #[derive(Copy, Clone)]
 pub struct C2RustUnnamed_2 {
-    pub si_band: i64,
-    pub si_fd: i32,
+    pub _si_band: i64,
+    pub _si_fd: i32,
 }
 #[derive(Copy, Clone)]
 pub struct C2RustUnnamed_3 {
-    pub si_addr: *mut libc::c_void,
-    pub si_addr_lsb: i16,
+    pub _si_addr: *mut libc::c_void,
+    pub _si_addr_lsb: i16,
     pub _bounds: C2RustUnnamed_4,
 }
 #[derive(Copy, Clone)]

@@ -5055,10 +5055,10 @@ pub unsafe extern "C" fn numarith(
             return if v2 == 2i32 as f64 {
                 v1 * v1
             } else {
-                pow(v1, v2)
+                v1.powf (v2)
             };
         }
-        6 => return floor(v1 / v2),
+        6 => return (v1 / v2).floor(),
         12 => return -v1,
         3 => return luaV_modf(state, v1, v2),
         _ => return 0i32 as f64,
@@ -13482,10 +13482,72 @@ pub unsafe extern "C" fn hashint(mut t: *const Table, mut i: i64) -> *mut Node {
         ) as *mut Node;
     };
 }
+fn frexp_(x: f64) -> (f64, i32) {
+    // If the input is zero, return (0.0, 0)
+    if x == 0.0 {
+        return (0.0, 0);
+    }
+
+    // Convert the input to its IEEE 754 binary representation
+    let bits = x.to_bits();
+
+    // Determine the sign of the input
+    // If the most significant bit (bit 63) is 1, the input is negative
+    let sign = if (bits >> 63) != 0 { -1.0 } else { 1.0 };
+
+    // Extract the exponent from the binary representation
+    // Bits 52 to 62 represent the exponent in IEEE 754 format
+    // Subtract 1023 to obtain the actual exponent value
+    let exponent = ((bits >> 52) & 0x7ff) as i32 - 1023;
+
+    // Extract the mantissa (significand) from the binary representation
+    // Bits 0 to 51 represent the mantissa
+    // Set the implicit leading bit (bit 52) to 1 to normalize the mantissa
+    // Multiply the mantissa by the sign to handle negative inputs correctly
+    let mantissa = sign * f64::from_bits((bits & 0xfffffffffffff) | 0x3fe0000000000000);
+
+    // Return the normalized mantissa and the exponent incremented by 1
+    (mantissa, exponent + 1)
+}
+
+// ┌─────────────────────────────────────────────────────────┐
+//  Pure Rust ldexp
+// └─────────────────────────────────────────────────────────┘
+fn ldexp_(x: f64, exp: i32) -> f64 {
+    // If the input is zero or the exponent is zero, return the input unchanged
+    if x == 0.0 || exp == 0 {
+        return x;
+    }
+
+    // Convert the input to its IEEE 754 binary representation
+    let bits = x.to_bits();
+
+    // Extract the exponent from the binary representation
+    // Bits 52 to 62 represent the exponent in IEEE 754 format
+    let exponent = ((bits >> 52) & 0x7ff) as i32;
+
+    // Calculate the new exponent by adding the input exponent to the existing exponent
+    let new_exponent = exponent + exp;
+
+    // Check if the new exponent is within the valid range for IEEE 754 format
+    if !(0..=0x7ff).contains(&new_exponent) {
+        // If the exponent is out of range, return infinity or zero depending on the input sign
+        return if (bits >> 63) != 0 {
+            f64::NEG_INFINITY
+        } else {
+            f64::INFINITY
+        };
+    }
+
+    // Combine the new exponent with the mantissa and sign bits to create the result
+    let result_bits = (bits & 0x800fffffffffffff) | ((new_exponent as u64) << 52);
+    f64::from_bits(result_bits)
+}
 pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
     let mut i: i32 = 0;
     let mut ni: i64 = 0;
-    n = frexp(n, &mut i) * -((-(2147483647 as i32) - 1i32) as f64);
+    (n, i) = frexp_(n);
+    n = n * -((-(2147483647 as i32) - 1i32) as f64);
     if !(n >= (-(9223372036854775807 as i64) - 1 as i64) as f64
         && n < -((-(9223372036854775807 as i64) - 1 as i64) as f64)
         && {
@@ -15016,7 +15078,7 @@ pub unsafe extern "C" fn luaK_numberK(mut fs: *mut FunctionState, mut r: f64) ->
         return addk(fs, &mut o, &mut o);
     } else {
         let nbm: i32 = 53 as i32;
-        let q: f64 = ldexp(1.0f64, -nbm + 1i32);
+        let q: f64 = ldexp_(1.0f64, -nbm + 1i32);
         let k: f64 = if ik == 0i32 as i64 { q } else { r + r * q };
         let mut kv: TValue = TValue {
             value_: Value {
@@ -16411,7 +16473,7 @@ pub unsafe extern "C" fn luaV_tonumber_(mut obj: *const TValue, mut n: *mut f64)
     };
 }
 pub unsafe extern "C" fn luaV_flttointeger(mut n: f64, mut p: *mut i64, mut mode: u32) -> i32 {
-    let mut f: f64 = floor(n);
+    let mut f: f64 = n.floor();
     if n != f {
         if mode as u32 == F2Ieq as i32 as u32 {
             return 0i32;
@@ -18619,9 +18681,9 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io_14).value_.n = if n2_3 == 2i32 as f64 {
                                 n1_3 * n1_3
                             } else {
-                                pow(n1_3, n2_3)
+                                n1_3.powf (n2_3)
                             };
-                            (*io_14).tt_ = (3i32 | (1i32) << 4i32) as u8;
+                            (*io_14).tt_ = (3i32 | 1i32 << 4i32) as u8;
                         }
                         continue;
                     }
@@ -18730,7 +18792,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             {
                                 program_counter = program_counter.offset(1);
                                 let mut io_17: *mut TValue = &mut (*ra_26).val;
-                                (*io_17).value_.n = floor(n1_5 / n2_5);
+                                (*io_17).value_.n = (n1_5 / n2_5).floor();
                                 (*io_17).tt_ = (3i32 | (1i32) << 4i32) as u8;
                             }
                         }
@@ -19208,7 +19270,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             (*io_31).value_.n = if n2_10 == 2i32 as f64 {
                                 n1_10 * n1_10
                             } else {
-                                pow(n1_10, n2_10)
+                                n1_10.powf (n2_10)
                             };
                             (*io_31).tt_ = (3i32 | (1i32) << 4i32) as u8;
                         }
@@ -19321,7 +19383,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             {
                                 program_counter = program_counter.offset(1);
                                 let mut io_34: *mut TValue = &mut (*ra_38).val;
-                                (*io_34).value_.n = floor(n1_12 / n2_12);
+                                (*io_34).value_.n = (n1_12 / n2_12).floor();
                                 (*io_34).tt_ = (3i32 | (1i32) << 4i32) as u8;
                             }
                         }
@@ -27989,7 +28051,7 @@ pub unsafe extern "C" fn math_acos(mut state: *mut State) -> i32 {
 pub unsafe extern "C" fn math_atan(mut state: *mut State) -> i32 {
     let mut y: f64 = luaL_checknumber(state, 1);
     let mut x: f64 = luaL_optnumber(state, 2i32, 1i32 as f64);
-    lua_pushnumber(state, atan2(y, x));
+    lua_pushnumber(state, y.atan2(x));
     return 1;
 }
 pub unsafe extern "C" fn math_toint(mut state: *mut State) -> i32 {
@@ -28021,7 +28083,7 @@ pub unsafe extern "C" fn math_floor(mut state: *mut State) -> i32 {
     if lua_isinteger(state, 1) != 0 {
         lua_settop(state, 1);
     } else {
-        let mut d: f64 = floor(luaL_checknumber(state, 1));
+        let mut d: f64 = luaL_checknumber(state, 1).floor();
         pushnumint(state, d);
     }
     return 1;
@@ -28030,7 +28092,7 @@ pub unsafe extern "C" fn math_ceil(mut state: *mut State) -> i32 {
     if lua_isinteger(state, 1) != 0 {
         lua_settop(state, 1);
     } else {
-        let mut d: f64 = ceil(luaL_checknumber(state, 1));
+        let mut d: f64 = luaL_checknumber(state, 1).ceil();
         pushnumint(state, d);
     }
     return 1;
@@ -28064,9 +28126,9 @@ pub unsafe extern "C" fn math_modf(mut state: *mut State) -> i32 {
     } else {
         let mut n: f64 = luaL_checknumber(state, 1);
         let mut ip: f64 = if n < 0i32 as f64 {
-            ceil(n)
+            n.ceil()
         } else {
-            floor(n)
+            n.floor()
         };
         pushnumint(state, ip);
         lua_pushnumber(state, if n == ip { 0.0f64 } else { n - ip });
@@ -28074,7 +28136,7 @@ pub unsafe extern "C" fn math_modf(mut state: *mut State) -> i32 {
     return 2i32;
 }
 pub unsafe extern "C" fn math_sqrt(mut state: *mut State) -> i32 {
-    lua_pushnumber(state, sqrt(luaL_checknumber(state, 1)));
+    lua_pushnumber(state, luaL_checknumber(state, 1).sqrt());
     return 1;
 }
 pub unsafe extern "C" fn math_ult(mut state: *mut State) -> i32 {
@@ -28087,15 +28149,15 @@ pub unsafe extern "C" fn math_log(mut state: *mut State) -> i32 {
     let mut x: f64 = luaL_checknumber(state, 1);
     let mut res: f64 = 0.;
     if lua_type(state, 2i32) <= 0i32 {
-        res = log(x);
+        res = x.ln();
     } else {
         let mut base: f64 = luaL_checknumber(state, 2i32);
         if base == 2.0f64 {
-            res = log2(x);
+            res = x.log2();
         } else if base == 10.0f64 {
-            res = log10(x);
+            res = x.log10();
         } else {
-            res = log(x) / log(base);
+            res = x.ln() / base.ln();
         }
     }
     lua_pushnumber(state, res);
@@ -30622,12 +30684,12 @@ pub unsafe fn main_0(mut argc: i32, mut argv: *mut *mut i8) -> i32 {
     let mut state: *mut State = luaL_newstate();
     if state.is_null() {
         l_message(
-            *argv.offset(0i32 as isize),
+            *argv.offset(0),
             b"cannot create state: not enough memory\0" as *const u8 as *const i8,
         );
         return 1;
     }
-    lua_gc(state, 0i32);
+    lua_gc(state, 0);
     lua_pushcclosure(
         state,
         Some(pmain as unsafe extern "C" fn(*mut State) -> i32),
