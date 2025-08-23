@@ -26,7 +26,6 @@ pub union Value {
     pub f: CFunction,
     pub i: i64,
     pub n: f64,
-    pub ub: u8,
 }
 pub type CFunction = Option<unsafe extern "C" fn(*mut State) -> i32>;
 #[derive(Copy, Clone)]

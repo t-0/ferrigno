@@ -5,7 +5,6 @@ unsafe extern "C" {
     pub type _IO_marker;
     pub unsafe fn __ctype_b_loc() -> *mut *const u16;
     pub unsafe fn __errno_location() -> *mut i32;
-    pub unsafe fn localeconv() -> *mut lconv;
     pub unsafe fn acos(_: f64) -> f64;
     pub unsafe fn asin(_: f64) -> f64;
     pub unsafe fn atan2(_: f64, _: f64) -> f64;

@@ -2,6 +2,8 @@ use crate::closure::*;
 use crate::object::*;
 use crate::prototype::*;
 use crate::state::*;
+use crate::cclosure::*;
+use crate::lclosure::*;
 use crate::stkidrel::*;
 use crate::table::*;
 use crate::tstring::*;
