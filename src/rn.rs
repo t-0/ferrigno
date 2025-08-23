@@ -4,5 +4,5 @@ pub struct RN {
     pub f: *mut FILE,
     pub c: i32,
     pub n: i32,
-    pub buff: [i8; 201],
+    pub buffer: [i8; 201],
 }

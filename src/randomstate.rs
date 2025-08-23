@@ -1,4 +1,4 @@
 #[derive(Copy, Clone)]
-pub struct RanState {
+pub struct RandomState {
     pub s: [u64; 4],
 }

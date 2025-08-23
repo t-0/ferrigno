@@ -6,7 +6,6 @@ use crate::stringtable::*;
 use crate::table::*;
 use crate::tstring::*;
 #[derive(Copy, Clone)]
-#[repr(C)]
 pub struct Global {
     pub frealloc: AllocationFunction,
     pub ud: *mut libc::c_void,
@@ -14,7 +13,7 @@ pub struct Global {
     pub gc_debt: i64,
     pub gc_estimate: u64,
     pub lastatomic: u64,
-    pub strt: StringTable,
+    pub string_table: StringTable,
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: u32,

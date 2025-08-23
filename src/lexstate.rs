@@ -16,10 +16,10 @@ pub struct LexState {
     pub lookahead: Token,
     pub fs: *mut FunctionState,
     pub state: *mut State,
-    pub z: *mut ZIO,
-    pub buff: *mut Buffer,
+    pub zio: *mut ZIO,
+    pub buffer: *mut Buffer,
     pub h: *mut Table,
-    pub dyd: *mut DynamicData,
+    pub dynamic_data: *mut DynamicData,
     pub source: *mut TString,
     pub envn: *mut TString,
 }
