@@ -21413,7 +21413,7 @@ pub unsafe extern "C" fn prepbuffsize(mut B: *mut Buffer, mut sz: u64, mut boxid
         let mut state: *mut State = (*B).state;
         let mut newbuff: *mut i8 = 0 as *mut i8;
         let mut newsize: u64 = newbuffsize(B, sz);
-        if (*B).pointer != ((*B).initial_data.block).as_mut_ptr() {
+        if (*B).pointer != ((*B).buffer_initial.block).as_mut_ptr() {
             newbuff = resizebox(state, boxidx, newsize) as *mut i8;
         } else {
             lua_rotate(state, boxidx, -1);
@@ -21457,7 +21457,7 @@ pub unsafe extern "C" fn luaL_addstring(mut B: *mut Buffer, mut s: *const i8) {
 pub unsafe extern "C" fn luaL_pushresult(mut B: *mut Buffer) {
     let mut state: *mut State = (*B).state;
     lua_pushlstring(state, (*B).pointer, (*B).length);
-    if (*B).pointer != ((*B).initial_data.block).as_mut_ptr() {
+    if (*B).pointer != ((*B).buffer_initial.block).as_mut_ptr() {
         lua_closeslot(state, -(2 as i32));
     }
     lua_rotate(state, -(2 as i32), -1);
@@ -21485,7 +21485,7 @@ pub unsafe extern "C" fn luaL_addvalue(mut B: *mut Buffer) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaL_buffinit(mut state: *mut State, mut B: *mut Buffer) {
     (*B).state = state;
-    (*B).pointer = ((*B).initial_data.block).as_mut_ptr();
+    (*B).pointer = ((*B).buffer_initial.block).as_mut_ptr();
     (*B).length = 0 as i32 as u64;
     (*B).allocated = (16 as i32 as u64)
         .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)

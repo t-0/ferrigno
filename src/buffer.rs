@@ -8,7 +8,7 @@ pub struct Buffer {
     pub allocated: u64,
     pub length: u64,
     pub state: *mut State,
-    pub initial_data: BufferInitial,
+    pub buffer_initial: BufferInitial,
 }
 #[derive(Copy, Clone)]
 pub union BufferInitial {
@@ -21,7 +21,7 @@ impl New for Buffer {
             allocated: 0,
             length: 0,
             state: 0 as *mut State,
-            initial_data: BufferInitial { block: [0; 1024]},
+            buffer_initial: BufferInitial { block: [0; 1024] },
         };
     }
 }
