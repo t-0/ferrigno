@@ -1147,9 +1147,9 @@ pub unsafe extern "C" fn luaD_protectedparser(
     let mut p: SParser = SParser {
         z: 0 as *mut ZIO,
         buff: Mbuffer {
-            buffer: 0 as *mut i8,
-            n: 0,
-            buffsize: 0,
+            pointer: 0 as *mut i8,
+            length: 0,
+            size: 0,
         },
         dyd: DynamicData {
             actvar: C2RustUnnamed21 {
@@ -1183,8 +1183,8 @@ pub unsafe extern "C" fn luaD_protectedparser(
     p.dyd.gt.size = 0 as i32;
     p.dyd.label.arr = 0 as *mut Labeldesc;
     p.dyd.label.size = 0 as i32;
-    p.buff.buffer = 0 as *mut i8;
-    p.buff.buffsize = 0 as i32 as u64;
+    p.buff.pointer = 0 as *mut i8;
+    p.buff.size = 0 as i32 as u64;
     status = luaD_pcall(
         state,
         Some(f_parser as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
@@ -1192,13 +1192,13 @@ pub unsafe extern "C" fn luaD_protectedparser(
         ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
         (*state).errfunc,
     );
-    p.buff.buffer = luaM_saferealloc_(
+    p.buff.pointer = luaM_saferealloc_(
         state,
-        p.buff.buffer as *mut libc::c_void,
-        (p.buff.buffsize).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+        p.buff.pointer as *mut libc::c_void,
+        (p.buff.size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
         (0 as i32 as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
     ) as *mut i8;
-    p.buff.buffsize = 0 as i32 as u64;
+    p.buff.size = 0 as i32 as u64;
     luaM_free_(
         state,
         p.dyd.actvar.arr as *mut libc::c_void,
@@ -12424,9 +12424,9 @@ static mut luaX_tokens: [*const i8; 37] = [
 ];
 pub unsafe extern "C" fn save(mut ls: *mut LexState, mut c: i32) {
     let mut b: *mut Mbuffer = (*ls).buff;
-    if ((*b).n).wrapping_add(1 as i32 as u64) > (*b).buffsize {
+    if ((*b).length).wrapping_add(1 as i32 as u64) > (*b).size {
         let mut newsize: u64 = 0;
-        if (*b).buffsize
+        if (*b).size
             >= (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                 !(0 as i32 as u64)
             } else {
@@ -12440,18 +12440,18 @@ pub unsafe extern "C" fn save(mut ls: *mut LexState, mut c: i32) {
                 0,
             );
         }
-        newsize = ((*b).buffsize).wrapping_mul(2 as i32 as u64);
-        (*b).buffer = luaM_saferealloc_(
+        newsize = ((*b).size).wrapping_mul(2 as i32 as u64);
+        (*b).pointer = luaM_saferealloc_(
             (*ls).state,
-            (*b).buffer as *mut libc::c_void,
-            ((*b).buffsize).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            (*b).pointer as *mut libc::c_void,
+            ((*b).size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
             newsize.wrapping_mul(::core::mem::size_of::<i8>() as u64),
         ) as *mut i8;
-        (*b).buffsize = newsize;
+        (*b).size = newsize;
     }
-    let fresh49 = (*b).n;
-    (*b).n = ((*b).n).wrapping_add(1);
-    *((*b).buffer).offset(fresh49 as isize) = c as i8;
+    let fresh49 = (*b).length;
+    (*b).length = ((*b).length).wrapping_add(1);
+    *((*b).pointer).offset(fresh49 as isize) = c as i8;
 }
 pub unsafe extern "C" fn luaX_init(mut state: *mut State) {
     let mut i: i32 = 0;
@@ -12495,7 +12495,7 @@ pub unsafe extern "C" fn txtToken(mut ls: *mut LexState, mut token: i32) -> *con
             return luaO_pushfstring(
                 (*ls).state,
                 b"'%s'\0" as *const u8 as *const i8,
-                (*(*ls).buff).buffer,
+                (*(*ls).buff).pointer,
             );
         }
         _ => return luaX_token2str(ls, token),
@@ -12597,13 +12597,13 @@ pub unsafe extern "C" fn luaX_setinput(
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
             .wrapping_sub(1 as i32 as u64),
     );
-    (*(*ls).buff).buffer = luaM_saferealloc_(
+    (*(*ls).buff).pointer = luaM_saferealloc_(
         (*ls).state,
-        (*(*ls).buff).buffer as *mut libc::c_void,
-        ((*(*ls).buff).buffsize).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+        (*(*ls).buff).pointer as *mut libc::c_void,
+        ((*(*ls).buff).size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
         (32 as i32 as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
     ) as *mut i8;
-    (*(*ls).buff).buffsize = 32 as i32 as u64;
+    (*(*ls).buff).size = 32 as i32 as u64;
 }
 pub unsafe extern "C" fn check_next1(mut ls: *mut LexState, mut c: i32) -> i32 {
     if (*ls).current == c {
@@ -12697,7 +12697,7 @@ pub unsafe extern "C" fn read_numeral(mut ls: *mut LexState, mut seminfo: *mut S
         };
     }
     save(ls, '\0' as i32);
-    if luaO_str2num((*(*ls).buff).buffer, &mut obj) == 0 as i32 as u64 {
+    if luaO_str2num((*(*ls).buff).pointer, &mut obj) == 0 as i32 as u64 {
         lexerror(
             ls,
             b"malformed number\0" as *const u8 as *const i8,
@@ -12803,7 +12803,7 @@ pub unsafe extern "C" fn read_long_string(
                 save(ls, '\n' as i32);
                 inclinenumber(ls);
                 if seminfo.is_null() {
-                    (*(*ls).buff).n = 0 as i32 as u64;
+                    (*(*ls).buff).length = 0 as i32 as u64;
                 }
             }
             _ => {
@@ -12835,8 +12835,8 @@ pub unsafe extern "C" fn read_long_string(
     if !seminfo.is_null() {
         (*seminfo).ts = luaX_newstring(
             ls,
-            ((*(*ls).buff).buffer).offset(sep as isize),
-            ((*(*ls).buff).n).wrapping_sub((2 as i32 as u64).wrapping_mul(sep)),
+            ((*(*ls).buff).pointer).offset(sep as isize),
+            ((*(*ls).buff).length).wrapping_sub((2 as i32 as u64).wrapping_mul(sep)),
         );
     }
 }
@@ -12878,7 +12878,7 @@ pub unsafe extern "C" fn gethexa(mut ls: *mut LexState) -> i32 {
 pub unsafe extern "C" fn readhexaesc(mut ls: *mut LexState) -> i32 {
     let mut r: i32 = gethexa(ls);
     r = (r << 4 as i32) + gethexa(ls);
-    (*(*ls).buff).n = ((*(*ls).buff).n as u64).wrapping_sub(2 as i32 as u64) as u64 as u64;
+    (*(*ls).buff).length = ((*(*ls).buff).length as u64).wrapping_sub(2 as i32 as u64) as u64 as u64;
     return r;
 }
 pub unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> u64 {
@@ -12937,7 +12937,7 @@ pub unsafe extern "C" fn readutf8esc(mut ls: *mut LexState) -> u64 {
     } else {
         luaZ_fill((*ls).z)
     };
-    (*(*ls).buff).n = ((*(*ls).buff).n as u64).wrapping_sub(i as u64) as u64 as u64;
+    (*(*ls).buff).length = ((*(*ls).buff).length as u64).wrapping_sub(i as u64) as u64 as u64;
     return r;
 }
 pub unsafe extern "C" fn utf8esc(mut ls: *mut LexState) {
@@ -12973,7 +12973,7 @@ pub unsafe extern "C" fn readdecesc(mut ls: *mut LexState) -> i32 {
         (r <= 127 as i32 * 2 as i32 + 1 as i32) as i32,
         b"decimal escape too large\0" as *const u8 as *const i8,
     );
-    (*(*ls).buff).n = ((*(*ls).buff).n as u64).wrapping_sub(i as u64) as u64 as u64;
+    (*(*ls).buff).length = ((*(*ls).buff).length as u64).wrapping_sub(i as u64) as u64 as u64;
     return r;
 }
 pub unsafe extern "C" fn read_string(
@@ -13070,8 +13070,8 @@ pub unsafe extern "C" fn read_string(
                         continue;
                     }
                     122 => {
-                        (*(*ls).buff).n =
-                            ((*(*ls).buff).n as u64).wrapping_sub(1 as i32 as u64) as u64 as u64;
+                        (*(*ls).buff).length =
+                            ((*(*ls).buff).length as u64).wrapping_sub(1 as i32 as u64) as u64 as u64;
                         let fresh93 = (*(*ls).z).n;
                         (*(*ls).z).n = ((*(*ls).z).n).wrapping_sub(1);
                         (*ls).current = if fresh93 > 0 as i32 as u64 {
@@ -13126,8 +13126,8 @@ pub unsafe extern "C" fn read_string(
                     }
                     _ => {}
                 }
-                (*(*ls).buff).n =
-                    ((*(*ls).buff).n as u64).wrapping_sub(1 as i32 as u64) as u64 as u64;
+                (*(*ls).buff).length =
+                    ((*(*ls).buff).length as u64).wrapping_sub(1 as i32 as u64) as u64 as u64;
                 save(ls, c);
             }
             _ => {
@@ -13156,12 +13156,12 @@ pub unsafe extern "C" fn read_string(
     };
     (*seminfo).ts = luaX_newstring(
         ls,
-        ((*(*ls).buff).buffer).offset(1 as i32 as isize),
-        ((*(*ls).buff).n).wrapping_sub(2 as i32 as u64),
+        ((*(*ls).buff).pointer).offset(1 as i32 as isize),
+        ((*(*ls).buff).length).wrapping_sub(2 as i32 as u64),
     );
 }
 pub unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) -> i32 {
-    (*(*ls).buff).n = 0 as i32 as u64;
+    (*(*ls).buff).length = 0 as i32 as u64;
     loop {
         let mut current_block_85: u64;
         match (*ls).current {
@@ -13203,10 +13203,10 @@ pub unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) 
                 };
                 if (*ls).current == '[' as i32 {
                     let mut sep: u64 = skip_sep(ls);
-                    (*(*ls).buff).n = 0 as i32 as u64;
+                    (*(*ls).buff).length = 0 as i32 as u64;
                     if sep >= 2 as i32 as u64 {
                         read_long_string(ls, 0 as *mut SemInfo, sep);
-                        (*(*ls).buff).n = 0 as i32 as u64;
+                        (*(*ls).buff).length = 0 as i32 as u64;
                         current_block_85 = 10512632378975961025;
                     } else {
                         current_block_85 = 3512920355445576850;
@@ -13404,7 +13404,7 @@ pub unsafe extern "C" fn llex(mut ls: *mut LexState, mut seminfo: *mut SemInfo) 
                             break;
                         }
                     }
-                    ts = luaX_newstring(ls, (*(*ls).buff).buffer, (*(*ls).buff).n);
+                    ts = luaX_newstring(ls, (*(*ls).buff).pointer, (*(*ls).buff).length);
                     (*seminfo).ts = ts;
                     if (*ts).tag as i32 == 4 as i32 | (0 as i32) << 4 as i32
                         && (*ts).extra as i32 > 0 as i32

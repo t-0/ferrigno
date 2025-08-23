@@ -1,7 +1,7 @@
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Mbuffer {
-    pub buffer: *mut i8,
-    pub n: u64,
-    pub buffsize: u64,
+    pub pointer: *mut i8,
+    pub length: u64,
+    pub size: u64,
 }
