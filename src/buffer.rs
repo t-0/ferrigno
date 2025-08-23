@@ -1,4 +1,7 @@
 use crate::state::*;
+pub trait New {
+    fn new() -> Self;
+}
 #[derive(Copy, Clone)]
 pub struct Buffer {
     pub pointer: *mut i8,
@@ -9,10 +12,16 @@ pub struct Buffer {
 }
 #[derive(Copy, Clone)]
 pub union BufferInitial {
-    pub n: f64,
-    pub u: f64,
-    pub s: *mut libc::c_void,
-    pub i: i64,
-    pub l: i64,
-    pub b: [i8; 1024],
+    pub block: [i8; 1024],
+}
+impl New for Buffer {
+    fn new() -> Self {
+        return Buffer {
+            pointer: 0 as *mut i8,
+            allocated: 0,
+            length: 0,
+            state: 0 as *mut State,
+            initial_data: BufferInitial { block: [0; 1024]},
+        };
+    }
 }
