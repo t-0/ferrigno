@@ -25,7 +25,7 @@ pub union C2RustUnnamed13 {
 }
 #[derive(Copy, Clone)]
 pub struct CallInfo {
-    pub func: StkIdRel,
+    pub function: StkIdRel,
     pub top: StkIdRel,
     pub previous: *mut CallInfo,
     pub next: *mut CallInfo,

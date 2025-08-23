@@ -227,8 +227,8 @@ pub unsafe extern "C" fn relstack(mut state: *mut State) {
     ci = (*state).ci;
     while !ci.is_null() {
         (*ci).top.offset = ((*ci).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
-        (*ci).func.offset =
-            ((*ci).func.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+        (*ci).function.offset =
+            ((*ci).function.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
         ci = (*ci).previous;
     }
 }
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn correctstack(mut state: *mut State) {
     ci = (*state).ci;
     while !ci.is_null() {
         (*ci).top.p = ((*state).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
-        (*ci).func.p = ((*state).stack.p as *mut i8).offset((*ci).func.offset as isize) as StkId;
+        (*ci).function.p = ((*state).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
         if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
             ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1 as i32);
         }
@@ -455,7 +455,7 @@ pub unsafe extern "C" fn luaD_hookcall(mut state: *mut State, mut ci: *mut CallI
         } else {
             0 as i32
         };
-        let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
+        let mut p: *mut Prototype = (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p;
         (*ci).u.l.savedpc = ((*ci).u.l.savedpc).offset(1);
         (*ci).u.l.savedpc;
         luaD_hook(state, event, -1, 1 as i32, (*p).count_parameters as i32);
@@ -469,20 +469,20 @@ pub unsafe extern "C" fn rethook(mut state: *mut State, mut ci: *mut CallInfo, m
         let mut delta: i32 = 0 as i32;
         let mut ftransfer: i32 = 0;
         if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
-            let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
+            let mut p: *mut Prototype = (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p;
             if (*p).is_variable_arguments {
                 delta = (*ci).u.l.nextraargs + (*p).count_parameters as i32 + 1 as i32;
             }
         }
-        (*ci).func.p = ((*ci).func.p).offset(delta as isize);
-        ftransfer = firstres.offset_from((*ci).func.p) as i64 as u16 as i32;
+        (*ci).function.p = ((*ci).function.p).offset(delta as isize);
+        ftransfer = firstres.offset_from((*ci).function.p) as i64 as u16 as i32;
         luaD_hook(state, 1, -1, ftransfer, nres);
-        (*ci).func.p = ((*ci).func.p).offset(-(delta as isize));
+        (*ci).function.p = ((*ci).function.p).offset(-(delta as isize));
     }
     ci = (*ci).previous;
     if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
         (*state).oldpc = ((*ci).u.l.savedpc)
-            .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
+            .offset_from((*(*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
             as i64 as i32
             - 1 as i32;
     }
@@ -594,7 +594,7 @@ pub unsafe extern "C" fn luaD_poscall(mut state: *mut State, mut ci: *mut CallIn
     if (((*state).hookmask != 0 && !(wanted < -1)) as i32 != 0 as i32) as i32 as i64 != 0 {
         rethook(state, ci, nres);
     }
-    moveresults(state, (*ci).func.p, nres, wanted);
+    moveresults(state, (*ci).function.p, nres, wanted);
     (*state).ci = (*ci).previous;
 }
 #[inline]
@@ -611,7 +611,7 @@ pub unsafe extern "C" fn prepCallInfo(
         luaE_extendCI(state)
     };
     let mut ci: *mut CallInfo = (*state).ci;
-    (*ci).func.p = func;
+    (*ci).function.p = func;
     (*ci).nresults = nret as i16;
     (*ci).callstatus = mask as u16;
     (*ci).top.p = top;
@@ -689,16 +689,16 @@ pub unsafe extern "C" fn luaD_pretailcall(
                     luaD_growstack(state, fsize - delta, 1);
                     func = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
                 }
-                (*ci).func.p = ((*ci).func.p).offset(-(delta as isize));
+                (*ci).function.p = ((*ci).function.p).offset(-(delta as isize));
                 i = 0 as i32;
                 while i < narg1 {
-                    let mut io1: *mut TValue = &mut (*((*ci).func.p).offset(i as isize)).val;
+                    let mut io1: *mut TValue = &mut (*((*ci).function.p).offset(i as isize)).val;
                     let mut io2: *const TValue = &mut (*func.offset(i as isize)).val;
                     (*io1).value_ = (*io2).value_;
                     (*io1).tt_ = (*io2).tt_;
                     i += 1;
                 }
-                func = (*ci).func.p;
+                func = (*ci).function.p;
                 while narg1 <= nfixparams {
                     (*func.offset(narg1 as isize)).val.tt_ =
                         (0 as i32 | (0 as i32) << 4 as i32) as u8;
@@ -956,7 +956,7 @@ pub unsafe extern "C" fn lua_resume(
                 b"cannot resume non-suspended coroutine\0" as *const u8 as *const i8,
                 nargs,
             );
-        } else if ((*state).top.p).offset_from(((*(*state).ci).func.p).offset(1 as i32 as isize))
+        } else if ((*state).top.p).offset_from(((*(*state).ci).function.p).offset(1 as i32 as isize))
             as i64
             == nargs as i64
         {
@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn lua_resume(
     *nresults = if status == 1 as i32 {
         (*(*state).ci).u2.nyield
     } else {
-        ((*state).top.p).offset_from(((*(*state).ci).func.p).offset(1 as i32 as isize)) as i64
+        ((*state).top.p).offset_from(((*(*state).ci).function.p).offset(1 as i32 as isize)) as i64
             as i32
     };
     return status;
@@ -1230,7 +1230,7 @@ pub static mut lua_ident: [i8; 129] = unsafe {
 pub unsafe extern "C" fn index2value(mut state: *mut State, mut idx: i32) -> *mut TValue {
     let mut ci: *mut CallInfo = (*state).ci;
     if idx > 0 as i32 {
-        let mut o: StkId = ((*ci).func.p).offset(idx as isize);
+        let mut o: StkId = ((*ci).function.p).offset(idx as isize);
         if o >= (*state).top.p {
             return &mut (*(*state).myglobal).nilvalue;
         } else {
@@ -1242,11 +1242,11 @@ pub unsafe extern "C" fn index2value(mut state: *mut State, mut idx: i32) -> *mu
         return &mut (*(*state).myglobal).l_registry;
     } else {
         idx = -(1000000 as i32) - 1000 as i32 - idx;
-        if (*(*ci).func.p).val.tt_ as i32
+        if (*(*ci).function.p).val.tt_ as i32
             == 6 as i32 | (2 as i32) << 4 as i32 | (1 as i32) << 6 as i32
         {
             let mut func: *mut CClosure =
-                &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).ccl;
+                &mut (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).ccl;
             return if idx <= (*func).count_upvalues as i32 {
                 &mut *((*func).upvalue)
                     .as_mut_ptr()
@@ -1263,7 +1263,7 @@ pub unsafe extern "C" fn index2value(mut state: *mut State, mut idx: i32) -> *mu
 pub unsafe extern "C" fn index2stack(mut state: *mut State, mut idx: i32) -> StkId {
     let mut ci: *mut CallInfo = (*state).ci;
     if idx > 0 as i32 {
-        let mut o: StkId = ((*ci).func.p).offset(idx as isize);
+        let mut o: StkId = ((*ci).function.p).offset(idx as isize);
         return o;
     } else {
         return ((*state).top.p).offset(idx as isize);
@@ -1318,12 +1318,12 @@ pub unsafe extern "C" fn lua_absindex(mut state: *mut State, mut idx: i32) -> i3
     return if idx > 0 as i32 || idx <= -(1000000 as i32) - 1000 as i32 {
         idx
     } else {
-        ((*state).top.p).offset_from((*(*state).ci).func.p) as i64 as i32 + idx
+        ((*state).top.p).offset_from((*(*state).ci).function.p) as i64 as i32 + idx
     };
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_gettop(mut state: *mut State) -> i32 {
-    return ((*state).top.p).offset_from(((*(*state).ci).func.p).offset(1 as i32 as isize)) as i64
+    return ((*state).top.p).offset_from(((*(*state).ci).function.p).offset(1 as i32 as isize)) as i64
         as i32;
 }
 #[unsafe(no_mangle)]
@@ -1333,7 +1333,7 @@ pub unsafe extern "C" fn lua_settop(mut state: *mut State, mut idx: i32) {
     let mut newtop: StkId = 0 as *mut StackValue;
     let mut diff: i64 = 0;
     ci = (*state).ci;
-    func = (*ci).func.p;
+    func = (*ci).function.p;
     if idx >= 0 as i32 {
         diff = func
             .offset(1 as i32 as isize)
@@ -1414,7 +1414,7 @@ pub unsafe extern "C" fn lua_copy(mut state: *mut State, mut fromidx: i32, mut t
     (*io1).tt_ = (*io2).tt_;
     if toidx < -(1000000 as i32) - 1000 as i32 {
         if (*fr).tt_ as i32 & (1 as i32) << 6 as i32 != 0 {
-            if (*((*(*(*state).ci).func.p).val.value_.gc as *mut GCUnion))
+            if (*((*(*(*state).ci).function.p).val.value_.gc as *mut GCUnion))
                 .ccl
                 .marked as i32
                 & (1 as i32) << 5 as i32
@@ -1425,7 +1425,7 @@ pub unsafe extern "C" fn lua_copy(mut state: *mut State, mut fromidx: i32, mut t
             {
                 luaC_barrier_(
                     state,
-                    &mut (*(&mut (*((*(*(*state).ci).func.p).val.value_.gc as *mut GCUnion))
+                    &mut (*(&mut (*((*(*(*state).ci).function.p).val.value_.gc as *mut GCUnion))
                         .ccl as *mut CClosure as *mut GCUnion))
                         .gc,
                     &mut (*((*fr).value_.gc as *mut GCUnion)).gc,
@@ -3193,7 +3193,7 @@ pub unsafe extern "C" fn stack_init(mut L1: *mut State, mut state: *mut State) {
     (*ci).previous = 0 as *mut CallInfo;
     (*ci).next = (*ci).previous;
     (*ci).callstatus = ((1 as i32) << 1 as i32) as u16;
-    (*ci).func.p = (*L1).top.p;
+    (*ci).function.p = (*L1).top.p;
     (*ci).u.c.k = None;
     (*ci).nresults = 0 as i32 as i16;
     (*(*L1).top.p).val.tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
@@ -3337,7 +3337,7 @@ pub unsafe extern "C" fn luaE_resetthread(mut state: *mut State, mut status: i32
     (*state).ci = &mut (*state).base_ci;
     let mut ci: *mut CallInfo = (*state).ci;
     (*(*state).stack.p).val.tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
-    (*ci).func.p = (*state).stack.p;
+    (*ci).function.p = (*state).stack.p;
     (*ci).callstatus = ((1 as i32) << 1 as i32) as u16;
     if status == 1 as i32 {
         status = 0 as i32;
@@ -3491,7 +3491,7 @@ static mut strupval: [i8; 8] =
     unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
 pub unsafe extern "C" fn currentpc(mut ci: *mut CallInfo) -> i32 {
     return ((*ci).u.l.savedpc)
-        .offset_from((*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
+        .offset_from((*(*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p).code)
         as i64 as i32
         - 1 as i32;
 }
@@ -3541,7 +3541,7 @@ pub unsafe extern "C" fn luaG_getfuncline(
 }
 pub unsafe extern "C" fn getcurrentline(mut ci: *mut CallInfo) -> i32 {
     return luaG_getfuncline(
-        (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
+        (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p,
         currentpc(ci),
     );
 }
@@ -3621,10 +3621,10 @@ pub unsafe extern "C" fn findvararg(
     mut n: i32,
     mut pos: *mut StkId,
 ) -> *const i8 {
-    if (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).is_variable_arguments {
+    if (*(*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p).is_variable_arguments {
         let mut nextra: i32 = (*ci).u.l.nextraargs;
         if n >= -nextra {
-            *pos = ((*ci).func.p)
+            *pos = ((*ci).function.p)
                 .offset(-(nextra as isize))
                 .offset(-((n + 1 as i32) as isize));
             return b"(vararg)\0" as *const u8 as *const i8;
@@ -3638,14 +3638,14 @@ pub unsafe extern "C" fn luaG_findlocal(
     mut n: i32,
     mut pos: *mut StkId,
 ) -> *const i8 {
-    let mut base: StkId = ((*ci).func.p).offset(1 as i32 as isize);
+    let mut base: StkId = ((*ci).function.p).offset(1 as i32 as isize);
     let mut name: *const i8 = 0 as *const i8;
     if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
         if n < 0 as i32 {
             return findvararg(ci, n, pos);
         } else {
             name = luaF_getlocalname(
-                (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
+                (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p,
                 n,
                 currentpc(ci),
             );
@@ -3655,7 +3655,7 @@ pub unsafe extern "C" fn luaG_findlocal(
         let mut limit: StkId = if ci == (*state).ci {
             (*state).top.p
         } else {
-            (*(*ci).next).func.p
+            (*(*ci).next).function.p
         };
         if limit.offset_from(base) as i64 >= n as i64 && n > 0 as i32 {
             name = if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
@@ -3912,7 +3912,7 @@ pub unsafe extern "C" fn lua_getinfo(
         (*state).top.p;
     } else {
         ci = (*ar).i_ci;
-        func = &mut (*(*ci).func.p).val;
+        func = &mut (*(*ci).function.p).val;
     }
     cl = if (*func).tt_ as i32 == 6 as i32 | (0 as i32) << 4 as i32 | (1 as i32) << 6 as i32
         || (*func).tt_ as i32 == 6 as i32 | (2 as i32) << 4 as i32 | (1 as i32) << 6 as i32
@@ -4243,7 +4243,7 @@ pub unsafe extern "C" fn funcnamefromcall(
     } else if (*ci).callstatus as i32 & (1 as i32) << 1 as i32 == 0 {
         return funcnamefromcode(
             state,
-            (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
+            (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p,
             currentpc(ci),
             name,
         );
@@ -4253,7 +4253,7 @@ pub unsafe extern "C" fn funcnamefromcall(
 }
 pub unsafe extern "C" fn instack(mut ci: *mut CallInfo, mut o: *const TValue) -> i32 {
     let mut pos: i32 = 0;
-    let mut base: StkId = ((*ci).func.p).offset(1 as i32 as isize);
+    let mut base: StkId = ((*ci).function.p).offset(1 as i32 as isize);
     pos = 0 as i32;
     while base.offset(pos as isize) < (*ci).top.p {
         if o == &mut (*base.offset(pos as isize)).val as *mut TValue as *const TValue {
@@ -4268,7 +4268,7 @@ pub unsafe extern "C" fn getupvalname(
     mut o: *const TValue,
     mut name: *mut *const i8,
 ) -> *const i8 {
-    let mut c: *mut LClosure = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl;
+    let mut c: *mut LClosure = &mut (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl;
     let mut i: i32 = 0;
     i = 0 as i32;
     while i < (*c).count_upvalues as i32 {
@@ -4301,7 +4301,7 @@ pub unsafe extern "C" fn varinfo(mut state: *mut State, mut o: *const TValue) ->
             let mut reg: i32 = instack(ci, o);
             if reg >= 0 as i32 {
                 kind = getobjname(
-                    (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p,
+                    (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p,
                     currentpc(ci),
                     reg,
                     &mut name,
@@ -4482,7 +4482,7 @@ pub unsafe extern "C" fn luaG_runerror(
         luaG_addinfo(
             state,
             msg,
-            (*(*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p).source,
+            (*(*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p).source,
             getcurrentline(ci),
         );
         let mut io1: *mut TValue = &mut (*((*state).top.p).offset(-(2 as i32 as isize))).val;
@@ -4521,7 +4521,7 @@ pub unsafe extern "C" fn changedline(
 }
 pub unsafe extern "C" fn luaG_tracecall(mut state: *mut State) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
-    let mut p: *mut Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
+    let mut p: *mut Prototype = (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p;
     ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1 as i32);
     if (*ci).u.l.savedpc == (*p).code as *const u32 {
         if (*p).is_variable_arguments {
@@ -4538,7 +4538,7 @@ pub unsafe extern "C" fn luaG_traceexec(
 ) -> i32 {
     let mut ci: *mut CallInfo = (*state).ci;
     let mut mask: u8 = (*state).hookmask as u8;
-    let mut p: *const Prototype = (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl.p;
+    let mut p: *const Prototype = (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl.p;
     let mut counthook: i32 = 0;
     if mask as i32 & ((1 as i32) << 2 as i32 | (1 as i32) << 3 as i32) == 0 {
         ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 0);
@@ -6012,7 +6012,7 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
     mut p: *const Prototype,
 ) {
     let mut i: i32 = 0;
-    let mut actual: i32 = ((*state).top.p).offset_from((*ci).func.p) as i64 as i32 - 1 as i32;
+    let mut actual: i32 = ((*state).top.p).offset_from((*ci).function.p) as i64 as i32 - 1 as i32;
     let mut nextra: i32 = actual - nfixparams;
     (*ci).u.l.nextraargs = nextra;
     if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
@@ -6025,7 +6025,7 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
     let fresh12 = (*state).top.p;
     (*state).top.p = ((*state).top.p).offset(1);
     let mut io1: *mut TValue = &mut (*fresh12).val;
-    let mut io2: *const TValue = &mut (*(*ci).func.p).val;
+    let mut io2: *const TValue = &mut (*(*ci).function.p).val;
     (*io1).value_ = (*io2).value_;
     (*io1).tt_ = (*io2).tt_;
     i = 1 as i32;
@@ -6033,13 +6033,13 @@ pub unsafe extern "C" fn luaT_adjustvarargs(
         let fresh13 = (*state).top.p;
         (*state).top.p = ((*state).top.p).offset(1);
         let mut io1_0: *mut TValue = &mut (*fresh13).val;
-        let mut io2_0: *const TValue = &mut (*((*ci).func.p).offset(i as isize)).val;
+        let mut io2_0: *const TValue = &mut (*((*ci).function.p).offset(i as isize)).val;
         (*io1_0).value_ = (*io2_0).value_;
         (*io1_0).tt_ = (*io2_0).tt_;
-        (*((*ci).func.p).offset(i as isize)).val.tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
+        (*((*ci).function.p).offset(i as isize)).val.tt_ = (0 as i32 | (0 as i32) << 4 as i32) as u8;
         i += 1;
     }
-    (*ci).func.p = ((*ci).func.p).offset((actual + 1 as i32) as isize);
+    (*ci).function.p = ((*ci).function.p).offset((actual + 1 as i32) as isize);
     (*ci).top.p = ((*ci).top.p).offset((actual + 1 as i32) as isize);
 }
 pub unsafe extern "C" fn luaT_getvarargs(
@@ -6069,7 +6069,7 @@ pub unsafe extern "C" fn luaT_getvarargs(
     while i < wanted && i < nextra {
         let mut io1: *mut TValue = &mut (*where_0.offset(i as isize)).val;
         let mut io2: *const TValue =
-            &mut (*((*ci).func.p).offset(-(nextra as isize)).offset(i as isize)).val;
+            &mut (*((*ci).function.p).offset(-(nextra as isize)).offset(i as isize)).val;
         (*io1).value_ = (*io2).value_;
         (*io1).tt_ = (*io2).tt_;
         i += 1;
@@ -8648,7 +8648,7 @@ pub unsafe extern "C" fn callclosemethod(
 pub unsafe extern "C" fn checkclosemth(mut state: *mut State, mut level: StkId) {
     let mut tm: *const TValue = luaT_gettmbyobj(state, &mut (*level).val, TM_CLOSE);
     if (*tm).tt_ as i32 & 0xf as i32 == 0 as i32 {
-        let mut idx: i32 = level.offset_from((*(*state).ci).func.p) as i64 as i32;
+        let mut idx: i32 = level.offset_from((*(*state).ci).function.p) as i64 as i32;
         let mut vname: *const i8 = luaG_findlocal(state, (*state).ci, idx, 0 as *mut StkId);
         if vname.is_null() {
             vname = b"?\0" as *const u8 as *const i8;
@@ -17397,7 +17397,7 @@ pub unsafe extern "C" fn pushclosure(
 }
 pub unsafe extern "C" fn luaV_finishOp(mut state: *mut State) {
     let mut ci: *mut CallInfo = (*state).ci;
-    let mut base: StkId = ((*ci).func.p).offset(1 as i32 as isize);
+    let mut base: StkId = ((*ci).function.p).offset(1 as i32 as isize);
     let mut inst: u32 = *((*ci).u.l.savedpc).offset(-(1 as i32 as isize));
     let mut op: u32 = (inst >> 0 as i32 & !(!(0 as i32 as u32) << 7 as i32) << 0 as i32) as u32;
     match op as u32 {
@@ -17485,18 +17485,18 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
     '_startfunc: loop {
         trap = (*state).hookmask;
         '_returning: loop {
-            cl = &mut (*((*(*ci).func.p).val.value_.gc as *mut GCUnion)).lcl;
+            cl = &mut (*((*(*ci).function.p).val.value_.gc as *mut GCUnion)).lcl;
             k = (*(*cl).p).k;
             program_counter = (*ci).u.l.savedpc;
             if (trap != 0 as i32) as i32 as i64 != 0 {
                 trap = luaG_tracecall(state);
             }
-            base = ((*ci).func.p).offset(1 as i32 as isize);
+            base = ((*ci).function.p).offset(1 as i32 as isize);
             loop {
                 i = 0;
                 if (trap != 0 as i32) as i32 as i64 != 0 {
                     trap = luaG_traceexec(state, program_counter);
-                    base = ((*ci).func.p).offset(1 as i32 as isize);
+                    base = ((*ci).function.p).offset(1 as i32 as isize);
                 }
                 let fresh138 = program_counter;
                 program_counter = program_counter.offset(1);
@@ -20389,7 +20389,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         if n_2 < 0 as i32 {
                             continue '_startfunc;
                         }
-                        (*ci).func.p = ((*ci).func.p).offset(-(delta as isize));
+                        (*ci).function.p = ((*ci).function.p).offset(-(delta as isize));
                         luaD_poscall(state, ci, n_2);
                         trap = (*ci).u.l.trap;
                         break;
@@ -20420,7 +20420,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaF_close(state, base, -1, 1);
                             trap = (*ci).u.l.trap;
                             if (trap != 0 as i32) as i32 as i64 != 0 {
-                                base = ((*ci).func.p).offset(1 as i32 as isize);
+                                base = ((*ci).function.p).offset(1 as i32 as isize);
                                 ra_67 = base.offset(
                                     (i >> 0 as i32 + 7 as i32
                                         & !(!(0 as i32 as u32) << 8 as i32) << 0 as i32)
@@ -20429,7 +20429,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             }
                         }
                         if nparams1_0 != 0 {
-                            (*ci).func.p = ((*ci).func.p)
+                            (*ci).function.p = ((*ci).function.p)
                                 .offset(-(((*ci).u.l.nextraargs + nparams1_0) as isize));
                         }
                         (*state).top.p = ra_67.offset(n_3 as isize);
@@ -20698,7 +20698,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                             luaD_hookcall(state, ci);
                             (*state).oldpc = 1 as i32;
                         }
-                        base = ((*ci).func.p).offset(1 as i32 as isize);
+                        base = ((*ci).function.p).offset(1 as i32 as isize);
                         continue;
                     }
                     82 | _ => {
@@ -20729,7 +20729,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                         );
                         trap = (*ci).u.l.trap;
                         if (trap != 0 as i32) as i32 as i64 != 0 {
-                            base = ((*ci).func.p).offset(1 as i32 as isize);
+                            base = ((*ci).function.p).offset(1 as i32 as isize);
                             ra_74 = base.offset(
                                 (i >> 0 as i32 + 7 as i32
                                     & !(!(0 as i32 as u32) << 8 as i32) << 0 as i32)
