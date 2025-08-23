@@ -1,6 +1,6 @@
 use crate::dynamicdata::*;
 use crate::functionstate::*;
-use crate::rawbuffer::*;
+use crate::buffer::*;
 use crate::state::*;
 use crate::table::*;
 use crate::token::*;
@@ -17,7 +17,7 @@ pub struct LexState {
     pub fs: *mut FunctionState,
     pub state: *mut State,
     pub z: *mut ZIO,
-    pub buff: *mut RawBuffer,
+    pub buff: *mut Buffer,
     pub h: *mut Table,
     pub dyd: *mut DynamicData,
     pub source: *mut TString,

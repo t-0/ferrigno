@@ -29,7 +29,6 @@ mod loadstate;
 mod localvariable;
 mod lx;
 mod matchstate;
-mod rawbuffer;
 mod nativeendian;
 mod new;
 mod node;
