@@ -5,10 +5,7 @@ unsafe extern "C" {
     pub type _IO_marker;
     pub unsafe fn __ctype_b_loc() -> *mut *const u16;
     pub unsafe fn __errno_location() -> *mut i32;
-    pub unsafe fn acos(_: f64) -> f64;
-    pub unsafe fn asin(_: f64) -> f64;
     pub unsafe fn atan2(_: f64, _: f64) -> f64;
-    pub unsafe fn exp(_: f64) -> f64;
     pub unsafe fn frexp(_: f64, _: *mut i32) -> f64;
     pub unsafe fn ldexp(_: f64, _: i32) -> f64;
     pub unsafe fn log(_: f64) -> f64;
@@ -57,7 +54,6 @@ unsafe extern "C" {
     pub fn exit(_: i32) -> !;
     pub fn getenv(__name: *const i8) -> *mut i8;
     pub fn mkstemp(__template: *mut i8) -> i32;
-    pub fn system(__command: *const i8) -> i32;
     pub fn abs(_: i32) -> i32;
     pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: u64) -> *mut libc::c_void;
     pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void, _: u64) -> i32;
