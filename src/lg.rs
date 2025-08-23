@@ -1,5 +1,5 @@
 use crate::lx::*;
-use crate::state::*;
+use crate::global::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LG {

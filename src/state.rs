@@ -1,17 +1,9 @@
-use crate::c::*;
+use crate::longjump::*;
 use crate::callinfo::*;
-use crate::debug::*;
+use crate::global::*;
 use crate::object::*;
+use crate::functions::*;
 use crate::stkidrel::*;
-use crate::stringtable::*;
-use crate::table::*;
-use crate::tstring::*;
-#[derive(Copy, Clone)]
-pub struct LongJump {
-    pub previous: *mut LongJump,
-    pub b: [__jmp_buf_tag; 1],
-    pub status: i32,
-}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
@@ -40,59 +32,3 @@ pub struct State {
     pub hookcount: i32,
     pub hookmask: i32,
 }
-pub type HookFunction = Option<unsafe extern "C" fn(*mut State, *mut Debug) -> ()>;
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct Global {
-    pub frealloc: AllocationFunction,
-    pub ud: *mut libc::c_void,
-    pub totalbytes: i64,
-    pub gc_debt: i64,
-    pub gc_estimate: u64,
-    pub lastatomic: u64,
-    pub strt: StringTable,
-    pub l_registry: TValue,
-    pub nilvalue: TValue,
-    pub seed: u32,
-    pub currentwhite: u8,
-    pub gcstate: u8,
-    pub gckind: u8,
-    pub gcstopem: u8,
-    pub genminormul: u8,
-    pub genmajormul: u8,
-    pub gcstp: u8,
-    pub gcemergency: u8,
-    pub gcpause: u8,
-    pub gcstepmul: u8,
-    pub gcstepsize: u8,
-    pub allgc: *mut Object,
-    pub sweepgc: *mut *mut Object,
-    pub finobj: *mut Object,
-    pub gray: *mut Object,
-    pub grayagain: *mut Object,
-    pub weak: *mut Object,
-    pub ephemeron: *mut Object,
-    pub allweak: *mut Object,
-    pub tobefnz: *mut Object,
-    pub fixedgc: *mut Object,
-    pub survival: *mut Object,
-    pub old1: *mut Object,
-    pub reallyold: *mut Object,
-    pub firstold1: *mut Object,
-    pub finobjsur: *mut Object,
-    pub finobjold1: *mut Object,
-    pub finobjrold: *mut Object,
-    pub twups: *mut State,
-    pub panic: CFunction,
-    pub mainthread: *mut State,
-    pub memerrmsg: *mut TString,
-    pub tmname: [*mut TString; 25],
-    pub mt: [*mut Table; 9],
-    pub strcache: [[*mut TString; 2]; 53],
-    pub warnf: WarnFunction,
-    pub ud_warn: *mut libc::c_void,
-}
-pub type WarnFunction = Option<unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()>;
-pub type AllocationFunction = Option<
-    unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
->;
