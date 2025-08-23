@@ -14,11 +14,13 @@
     unused_imports
 )]
 use crate::absolutelineinfo::*;
+use crate::new::*;
 use crate::blockcontrol::*;
 use crate::buffer::*;
 use crate::bufffs::*;
 use crate::c::*;
 use crate::callinfo::*;
+use crate::new::*;
 use crate::calls::*;
 use crate::closep::*;
 use crate::closure::*;
@@ -44,8 +46,7 @@ use crate::loadstate::*;
 use crate::localvariable::*;
 use crate::lx::*;
 use crate::matchstate::*;
-use crate::mbuffer::*;
-use crate::mbuffer::*;
+use crate::rawbuffer::*;
 use crate::nativeendian::*;
 use crate::node::*;
 use crate::object::*;
@@ -1146,11 +1147,7 @@ pub unsafe extern "C" fn luaD_protectedparser(
 ) -> i32 {
     let mut p: SParser = SParser {
         z: 0 as *mut ZIO,
-        buff: Mbuffer {
-            pointer: 0 as *mut i8,
-            length: 0,
-            size: 0,
-        },
+        buff: RawBuffer::new(),
         dyd: DynamicData {
             actvar: C2RustUnnamed21 {
                 arr: 0 as *mut Vardesc,
@@ -12289,7 +12286,7 @@ pub unsafe extern "C" fn mainfunc(mut ls: *mut LexState, mut fs: *mut FunctionSt
 pub unsafe extern "C" fn luaY_parser(
     mut state: *mut State,
     mut z: *mut ZIO,
-    mut buff: *mut Mbuffer,
+    mut buff: *mut RawBuffer,
     mut dyd: *mut DynamicData,
     mut name: *const i8,
     mut firstchar: i32,
@@ -12309,7 +12306,7 @@ pub unsafe extern "C" fn luaY_parser(
         fs: 0 as *mut FunctionState,
         state: 0 as *mut State,
         z: 0 as *mut ZIO,
-        buff: 0 as *mut Mbuffer,
+        buff: 0 as *mut RawBuffer,
         h: 0 as *mut Table,
         dyd: 0 as *mut DynamicData,
         source: 0 as *mut TString,
@@ -12423,7 +12420,7 @@ static mut luaX_tokens: [*const i8; 37] = [
     b"<string>\0" as *const u8 as *const i8,
 ];
 pub unsafe extern "C" fn save(mut ls: *mut LexState, mut c: i32) {
-    let mut b: *mut Mbuffer = (*ls).buff;
+    let mut b: *mut RawBuffer = (*ls).buff;
     if ((*b).length).wrapping_add(1 as i32 as u64) > (*b).size {
         let mut newsize: u64 = 0;
         if (*b).size

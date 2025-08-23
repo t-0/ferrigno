@@ -1,7 +1,5 @@
 use crate::state::*;
-pub trait New {
-    fn new() -> Self;
-}
+use crate::new::*;
 #[derive(Copy, Clone)]
 pub struct Buffer {
     pub pointer: *mut i8,
