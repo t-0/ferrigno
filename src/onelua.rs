@@ -4813,7 +4813,7 @@ pub unsafe extern "C" fn pushstr(buffer: *mut BuffFS, str: *const i8, lstr: u64)
 pub unsafe extern "C" fn clearbuff(buffer: *mut BuffFS) { unsafe {
     pushstr(
         buffer,
-        ((*buffer).space).as_mut_ptr(),
+        ((*buffer).block).as_mut_ptr(),
         (*buffer).size as u64,
     );
     (*buffer).size = 0;
@@ -4822,7 +4822,7 @@ pub unsafe extern "C" fn getbuff(buffer: *mut BuffFS, sz: i32) -> *mut i8 { unsa
     if sz > 60 as i32 + 44 as i32 + 95 as i32 - (*buffer).size {
         clearbuff(buffer);
     }
-    return ((*buffer).space)
+    return ((*buffer).block)
         .as_mut_ptr()
         .offset((*buffer).size as isize);
 }}
@@ -4846,12 +4846,7 @@ pub unsafe extern "C" fn luaO_pushvfstring(
     mut fmt: *const i8,
     mut argp: ::core::ffi::VaList,
 ) -> *const i8 { unsafe {
-    let mut buffer: BuffFS = BuffFS {
-        state: std::ptr::null_mut(),
-        is_pushed: false,
-        size: 0,
-        space: [0; 199],
-    };
+    let mut buffer: BuffFS = BuffFS::new();
     let mut e: *const i8 = std::ptr::null();
     buffer.size = 0;
     buffer.is_pushed = 0 != buffer.size;
