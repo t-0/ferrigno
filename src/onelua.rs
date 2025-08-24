@@ -1174,11 +1174,6 @@ pub unsafe extern "C" fn lua_absindex(state: *mut State, idx: i32) -> i32 { unsa
     };
 }}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_gettop(state: *mut State) -> i32 { unsafe {
-    return ((*state).top.p).offset_from(((*(*state).ci).function.p).offset(1 as isize)) as i64
-        as i32;
-}}
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_settop(state: *mut State, idx: i32) { unsafe {
     let ci;
     let mut newtop;
@@ -11344,47 +11339,8 @@ pub unsafe extern "C" fn luay_parser(
     name: *const i8,
     firstchar: i32,
 ) -> *mut LClosure { unsafe {
-    let mut lexstate: LexState = LexState {
-        current: 0,
-        linenumber: 0,
-        lastline: 0,
-        t: Token {
-            token: 0,
-            seminfo: SemanticInfo { r: 0. },
-        },
-        lookahead: Token {
-            token: 0,
-            seminfo: SemanticInfo { r: 0. },
-        },
-        fs: std::ptr::null_mut(),
-        state: std::ptr::null_mut(),
-        zio: std::ptr::null_mut(),
-        buffer: std::ptr::null_mut(),
-        h: std::ptr::null_mut(),
-        dynamic_data: std::ptr::null_mut(),
-        source: std::ptr::null_mut(),
-        envn: std::ptr::null_mut(),
-    };
-    let mut funcstate: FunctionState = FunctionState {
-        f: std::ptr::null_mut(),
-        prev: std::ptr::null_mut(),
-        ls: std::ptr::null_mut(),
-        blockcontrol: std::ptr::null_mut(),
-        program_counter: 0,
-        lasttarget: 0,
-        previousline: 0,
-        nk: 0,
-        np: 0,
-        nabslineinfo: 0,
-        firstlocal: 0,
-        first_label: 0,
-        ndebugvars: 0,
-        count_active_variables: 0,
-        nups: 0,
-        freereg: 0,
-        iwthabs: 0,
-        needclose: 0,
-    };
+    let mut lexstate: LexState = LexState::new();
+    let mut funcstate: FunctionState = FunctionState::new();
     let cl: *mut LClosure = luaf_newlclosure(state, 1);
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut LClosure = cl;
@@ -19252,7 +19208,7 @@ pub unsafe extern "C" fn findfield(state: *mut State, objidx: i32, level: i32) -
     return false;
 }}
 pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -> i32 { unsafe {
-    let top: i32 = lua_gettop(state);
+    let top: i32 = (*state).get_top();
     lua_getinfo(state, b"f\0" as *const u8 as *const i8, ar);
     lua_getfield(
         state,
@@ -20083,7 +20039,7 @@ pub unsafe extern "C" fn lual_loadfilex(
     let status: i32;
     let mut readstatus: i32 = 0;
     let mut c: i32 = 0;
-    let fnameindex: i32 = lua_gettop(state) + 1;
+    let fnameindex: i32 = (*state).get_top() + 1;
     if filename.is_null() {
         lua_pushstring(state, b"=stdin\0" as *const u8 as *const i8);
         lf.f = stdin;
@@ -20553,7 +20509,7 @@ pub unsafe extern "C" fn lual_checkversion_(state: *mut State, ver: f64, sz: u64
     }
 }}
 pub unsafe extern "C" fn luab_print(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     let mut i: i32;
     i = 1;
     while i <= n {
@@ -20586,7 +20542,7 @@ pub unsafe extern "C" fn luab_print(state: *mut State) -> i32 { unsafe {
     return 0;
 }}
 pub unsafe extern "C" fn luab_warn(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     let mut i: i32;
     lual_checklstring(state, 1, std::ptr::null_mut());
     i = 2;
@@ -20996,7 +20952,7 @@ pub unsafe extern "C" fn luab_load(state: *mut State) -> i32 { unsafe {
     return load_aux(state, status, env);
 }}
 pub unsafe extern "C" fn dofilecont(state: *mut State, mut _d1: i32, mut _d2: i64) -> i32 { unsafe {
-    return lua_gettop(state) - 1;
+    return (*state).get_top() - 1;
 }}
 pub unsafe extern "C" fn luab_dofile(state: *mut State) -> i32 { unsafe {
     let fname: *const i8 = lual_optlstring(state, 1, std::ptr::null(), std::ptr::null_mut());
@@ -21015,7 +20971,7 @@ pub unsafe extern "C" fn luab_dofile(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn luab_assert(state: *mut State) -> i32 { unsafe {
     if (lua_toboolean(state, 1) != 0) as i32 as i64 != 0 {
-        return lua_gettop(state);
+        return (*state).get_top();
     } else {
         lual_checkany(state, 1);
         lua_rotate(state, 1, -1);
@@ -21026,7 +20982,7 @@ pub unsafe extern "C" fn luab_assert(state: *mut State) -> i32 { unsafe {
     };
 }}
 pub unsafe extern "C" fn luab_select(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     if lua_type(state, 1) == 4 && *lua_tolstring(state, 1, std::ptr::null_mut()) as i32 == '#' as i32 {
         (*state).push_integer((n - 1) as i64);
         return 1;
@@ -21056,7 +21012,7 @@ pub unsafe extern "C" fn finishpcall(
         lua_pushvalue(state, -(2));
         return 2;
     } else {
-        return lua_gettop(state) - extra as i32;
+        return (*state).get_top() - extra as i32;
     };
 }}
 pub unsafe extern "C" fn luab_pcall(state: *mut State) -> i32 { unsafe {
@@ -21066,7 +21022,7 @@ pub unsafe extern "C" fn luab_pcall(state: *mut State) -> i32 { unsafe {
     lua_rotate(state, 1, 1);
     status = lua_pcallk(
         state,
-        lua_gettop(state) - 2,
+        (*state).get_top() - 2,
         -1,
         0,
         0,
@@ -21076,7 +21032,7 @@ pub unsafe extern "C" fn luab_pcall(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn luab_xpcall(state: *mut State) -> i32 { unsafe {
     let status: i32;
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     lual_checktype(state, 2, 6);
     (*state).push_boolean(true);
     lua_pushvalue(state, 1);
@@ -21307,7 +21263,7 @@ pub unsafe extern "C" fn auxresume(
 pub unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 { unsafe {
     let co: *mut State = getco(state);
     let mut r: i32 = 0;
-    r = auxresume(state, co, lua_gettop(state) - 1);
+    r = auxresume(state, co, (*state).get_top() - 1);
     if ((r < 0) as i32 != 0) as i32 as i64 != 0 {
         (*state).push_boolean(false);
         lua_rotate(state, -(2), 1);
@@ -21320,7 +21276,7 @@ pub unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 { unsafe {
     let co: *mut State = lua_tothread(state, -(1000000 as i32) - 1000 as i32 - 1);
-    let r: i32 = auxresume(state, co, lua_gettop(state));
+    let r: i32 = auxresume(state, co, (*state).get_top());
     if ((r < 0) as i32 != 0) as i32 as i64 != 0 {
         let mut stat: i32 = lua_status(co);
         if stat != 0 && stat != 1 {
@@ -21354,7 +21310,7 @@ pub unsafe extern "C" fn luab_cowrap(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn luab_yield(state: *mut State) -> i32 { unsafe {
-    return lua_yieldk(state, lua_gettop(state), 0, None);
+    return lua_yieldk(state, (*state).get_top(), 0, None);
 }}
 static mut COROUTINE_STATUS_NAMES: [*const i8; 4] = [
     b"running\0" as *const u8 as *const i8,
@@ -21390,7 +21346,7 @@ pub unsafe extern "C" fn auxstatus(state: *mut State, co: *mut State) -> i32 { u
                 };
                 if lua_getstack(co, 0, &mut ar) != 0 {
                     return 3;
-                } else if lua_gettop(co) == 0 {
+                } else if (*co).get_top() == 0 {
                     return 1;
                 } else {
                     return 2;
@@ -21560,7 +21516,7 @@ pub unsafe extern "C" fn tinsert(state: *mut State) -> i32 { unsafe {
     checktab(state, 1, 1 | 2 | 4);
     let mut e: i64 = lual_len(state, 1);
     e = (e as u64).wrapping_add(1 as u64) as i64;
-    match lua_gettop(state) {
+    match (*state).get_top() {
         2 => {
             pos = e;
         }
@@ -21696,7 +21652,7 @@ pub unsafe extern "C" fn tconcat(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn tpack(state: *mut State) -> i32 { unsafe {
     let mut i: i32;
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     lua_createtable(state, n, 1);
     lua_rotate(state, 1, 1);
     i = n;
@@ -22201,7 +22157,7 @@ pub unsafe extern "C" fn io_output(state: *mut State) -> i32 { unsafe {
     );
 }}
 pub unsafe extern "C" fn aux_lines(state: *mut State, to_close: bool) { unsafe {
-    let n: i32 = lua_gettop(state) - 1;
+    let n: i32 = (*state).get_top() - 1;
     (((n <= 250 as i32) as i32 != 0) as i32 as i64 != 0
         || lual_argerror(
             state,
@@ -22440,7 +22396,7 @@ pub unsafe extern "C" fn read_chars(state: *mut State, f: *mut FILE, n: u64) -> 
     return (nr > 0u64) as i32;
 }}
 pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> i32 { unsafe {
-    let mut nargs: i32 = lua_gettop(state) - 1;
+    let mut nargs: i32 = (*state).get_top() - 1;
     let mut n: i32;
     let mut success: i32 = 0;
     clearerr(f);
@@ -22555,7 +22511,7 @@ pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 { unsafe {
     };
 }}
 pub unsafe extern "C" fn g_write(state: *mut State, f: *mut FILE, mut arg: i32) -> i32 { unsafe {
-    let mut nargs: i32 = lua_gettop(state) - arg;
+    let mut nargs: i32 = (*state).get_top() - arg;
     let mut status: i32 = 1;
     *__errno_location() = 0;
     loop {
@@ -23590,7 +23546,7 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 { unsafe {
     return n;
 }}
 pub unsafe extern "C" fn str_char(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     let mut i: i32;
     let mut b = Buffer::new();
     let p: *mut i8 = lual_buffinitsize(state, &mut b, n as u64);
@@ -24965,7 +24921,7 @@ pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) { unsafe {
 }}
 pub unsafe extern "C" fn str_format(state: *mut State) -> i32 { unsafe {
     let mut current_block: u64;
-    let top: i32 = lua_gettop(state);
+    let top: i32 = (*state).get_top();
     let mut arg: i32 = 1;
     let mut sfl: u64 = 0;
     let mut strfrmt: *const i8 = lual_checklstring(state, arg, &mut sfl);
@@ -26095,7 +26051,7 @@ pub unsafe extern "C" fn pushutfchar(state: *mut State, arg: i32) { unsafe {
     lua_pushfstring(state, b"%U\0" as *const u8 as *const i8, code as i64);
 }}
 pub unsafe extern "C" fn utfchar(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     if n == 1 {
         pushutfchar(state, 1);
     } else {
@@ -26458,7 +26414,7 @@ pub unsafe extern "C" fn math_rad(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn math_min(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     let mut imin: i32 = 1;
     let mut i: i32;
     (((n >= 1) as i32 != 0) as i32 as i64 != 0
@@ -26475,7 +26431,7 @@ pub unsafe extern "C" fn math_min(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn math_max(state: *mut State) -> i32 { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     let mut imax: i32 = 1;
     let mut i: i32;
     (((n >= 1) as i32 != 0) as i32 as i64 != 0
@@ -26558,7 +26514,7 @@ pub unsafe extern "C" fn math_random(state: *mut State) -> i32 { unsafe {
     let ransate: *mut RandomState =
         lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
     let rv: u64 = nextrand(((*ransate).s).as_mut_ptr());
-    match lua_gettop(state) {
+    match (*state).get_top() {
         0 => {
             (*state).push_number(i2d(rv));
             return 1;
@@ -28423,7 +28379,7 @@ pub unsafe extern "C" fn msghandler(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn docall(state: *mut State, narg: i32, nres: i32) -> i32 { unsafe {
     let status: i32;
-    let base: i32 = lua_gettop(state) - narg;
+    let base: i32 = (*state).get_top() - narg;
     lua_pushcclosure(
         state,
         Some(msghandler as unsafe extern "C" fn(*mut State) -> i32),
@@ -28803,7 +28759,7 @@ pub unsafe extern "C" fn loadline(state: *mut State) -> i32 { unsafe {
     return status;
 }}
 pub unsafe extern "C" fn l_print(state: *mut State) { unsafe {
-    let n: i32 = lua_gettop(state);
+    let n: i32 = (*state).get_top();
     if n > 0 {
         lual_checkstack(
             state,

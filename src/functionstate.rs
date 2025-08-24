@@ -1,6 +1,7 @@
 use crate::blockcontrol::*;
 use crate::lexstate::*;
 use crate::prototype::*;
+use crate::new::*;
 #[derive(Copy, Clone)]
 pub struct FunctionState {
     pub f: *mut Prototype,
@@ -21,4 +22,28 @@ pub struct FunctionState {
     pub freereg: u8,
     pub iwthabs: u8,
     pub needclose: u8,
+}
+impl New for FunctionState {
+    fn new() -> Self {
+        return FunctionState {
+            f: std::ptr::null_mut(),
+            prev: std::ptr::null_mut(),
+            ls: std::ptr::null_mut(),
+            blockcontrol: std::ptr::null_mut(),
+            program_counter: 0,
+            lasttarget: 0,
+            previousline: 0,
+            nk: 0,
+            np: 0,
+            nabslineinfo: 0,
+            firstlocal: 0,
+            first_label: 0,
+            ndebugvars: 0,
+            count_active_variables: 0,
+            nups: 0,
+            freereg: 0,
+            iwthabs: 0,
+            needclose: 0,
+        };
+    }
 }

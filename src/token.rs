@@ -1,8 +1,17 @@
 use crate::semanticinfo::*;
+use crate::new::*;
 #[derive(Copy, Clone)]
 pub struct Token {
     pub token: i32,
     pub seminfo: SemanticInfo,
+}
+impl New for Token {
+    fn new() -> Self {
+        return Token {
+            token: 0,
+            seminfo: SemanticInfo::new(),
+        };
+    }
 }
 pub const TK_WHILE: i32 = 277;
 pub const TK_EOS: i32 = 288;
