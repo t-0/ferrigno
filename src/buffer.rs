@@ -15,10 +15,10 @@ pub union BufferInitial {
 impl New for Buffer {
     fn new() -> Self {
         return Buffer {
-            pointer: 0 as *mut i8,
+            pointer: std::ptr::null_mut(),
             size: 0,
             length: 0,
-            state: 0 as *mut State,
+            state: std::ptr::null_mut(),
             buffer_initial: BufferInitial { block: [0; 1024] },
         };
     }

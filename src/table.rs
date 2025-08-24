@@ -41,7 +41,7 @@ impl Table {
                     }
                 }
             }
-            return 0 as *mut Node;
+            return std::ptr::null_mut();
         }
     }
 }

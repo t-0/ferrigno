@@ -90,12 +90,12 @@ impl Global {
     pub unsafe extern "C" fn enter_incremental(& mut self) {
         unsafe {
             self.white_list(self.allgc);
-            self.survival = 0 as *mut Object;
+            self.survival = std::ptr::null_mut();
             self.old1 = self.survival;
             self.reallyold = self.old1;
             self.white_list(self.finobj);
             self.white_list(self.tobefnz);
-            self.finobjsur = 0 as *mut Object;
+            self.finobjsur = std::ptr::null_mut();
             self.finobjold1 = self.finobjsur;
             self.finobjrold = self.finobjold1;
             self.gcstate = 8i32 as u8;

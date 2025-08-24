@@ -8,7 +8,7 @@ pub struct LongJump {
 impl New for LongJump {
     fn new () -> Self {
         return LongJump {
-            previous: 0 as *mut LongJump,
+            previous: std::ptr::null_mut(),
             b: [__jmp_buf_tag {
                 __mask_was_saved: 0,
                 __saved_mask: __sigset_t { __val: [0; 16] },

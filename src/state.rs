@@ -89,22 +89,35 @@ impl State {
     pub fn is_yieldable(&mut self) -> bool {
         return self.count_c_calls & 0xffff0000u32 == 0;
     }
-    pub unsafe extern "C" fn push_boolean(& mut self, value: bool) {
+    pub unsafe extern "C" fn push_boolean(& mut self, x: bool) {
         unsafe {
-            if value {
-                (*self.top.p).val.tag = (1u8 | 1u8 << 4u8) as u8;
+            if x {
+                (*self.top.p).val.tag = 1u8 | 1u8 << 4u8;
             } else {
-                (*self.top.p).val.tag = (1u8 | 0u8 << 4u8) as u8;
+                (*self.top.p).val.tag = 1u8 | 0u8 << 4u8;
             }
             self.top.p = self.top.p.offset(1);
-            self.top.p;
         }
     }
     pub unsafe extern "C" fn push_integer(& mut self, x: i64) {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.i = x;
-            (*t_value).tag = (3u8 | (0u8) << 4u8) as u8;
+            (*t_value).tag = 3u8 | 0u8 << 4u8;
+            self.top.p = self.top.p.offset(1);
+        }
+    }
+    pub unsafe extern "C" fn lua_pushnil(&mut self) {
+        unsafe {
+            (*self.top.p).val.tag = 0u8 | 0u8 << 4u8;
+            self.top.p = self.top.p.offset(1);
+        }
+    }
+    pub unsafe extern "C" fn lua_pushnumber(&mut self, x: f64) {
+        unsafe {
+            let t_value: *mut TValue = &mut (*self.top.p).val;
+            (*t_value).value.n = x;
+            (*t_value).tag = 3u8 | 1u8 << 4u8;
             self.top.p = self.top.p.offset(1);
         }
     }
