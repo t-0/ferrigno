@@ -1456,8 +1456,7 @@ pub unsafe extern "C" fn lua_tolstring(
     idx: i32,
     len: *mut u64,
 ) -> *const i8 { unsafe {
-    let mut o: *mut TValue = std::ptr::null_mut();
-    o = index2value(state, idx);
+    let mut o: *mut TValue = index2value(state, idx);
     if !((*o).tag as i32 & 0xf as i32 == 4) {
         if !((*o).tag as i32 & 0xf as i32 == 3) {
             if !len.is_null() {
@@ -1558,8 +1557,7 @@ pub unsafe extern "C" fn lua_pushlstring(
     s: *const i8,
     len: u64,
 ) -> *const i8 { unsafe {
-    let mut ts: *mut TString = std::ptr::null_mut();
-    ts = if len == 0u64 {
+    let ts: *mut TString = if len == 0u64 {
         luas_new(state, b"\0" as *const u8 as *const i8)
     } else {
         luas_newlstr(state, s, len)
@@ -1580,8 +1578,7 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
     if s.is_null() {
         (*(*state).top.p).val.tag = (0 | 0 << 4) as u8;
     } else {
-        let mut ts: *mut TString = std::ptr::null_mut();
-        ts = luas_new(state, s);
+        let ts: *mut TString = luas_new(state, s);
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = ts;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
@@ -1601,8 +1598,7 @@ pub unsafe extern "C" fn lua_pushvfstring(
     fmt: *const i8,
     mut argp: ::core::ffi::VaList,
 ) -> *const i8 { unsafe {
-    let mut ret: *const i8 = std::ptr::null();
-    ret = luao_pushvfstring(state, fmt, argp.as_va_list());
+    let ret: *const i8 = luao_pushvfstring(state, fmt, argp.as_va_list());
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
