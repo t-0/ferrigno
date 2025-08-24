@@ -19251,7 +19251,7 @@ pub unsafe extern "C" fn findfield(state: *mut State, objidx: i32, level: i32) -
     if level == 0 || !(lua_type(state, -1) == 5) {
         return false;
     }
-    (*state).lua_pushnil();
+    (*state).push_nil();
     while lua_next(state, -(2)) != 0 {
         if lua_type(state, -(2)) == 4 {
             if lua_rawequal(state, objidx, -1) {
@@ -19592,7 +19592,7 @@ pub unsafe extern "C" fn luaL_fileresult(
         return 1;
     } else {
         let mut msg: *const i8;
-        (*state).lua_pushnil();
+        (*state).push_nil();
         msg = if en != 0 {
             strerror(en) as *const i8
         } else {
@@ -19622,7 +19622,7 @@ pub unsafe extern "C" fn luaL_execresult(state: *mut State, mut stat: i32) -> i3
         if *what as i32 == 'e' as i32 && stat == 0 {
             (*state).push_boolean(true);
         } else {
-            (*state).lua_pushnil();
+            (*state).push_nil();
         }
         lua_pushstring(state, what);
         (*state).push_integer(stat as i64);
@@ -20695,7 +20695,7 @@ pub unsafe extern "C" fn luaB_tonumber(state: *mut State) -> i32 { unsafe {
             return 1;
         }
     }
-    (*state).lua_pushnil();
+    (*state).push_nil();
     return 1;
 }}
 pub unsafe extern "C" fn luaB_error(state: *mut State) -> i32 { unsafe {
@@ -20711,7 +20711,7 @@ pub unsafe extern "C" fn luaB_error(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn luaB_getmetatable(state: *mut State) -> i32 { unsafe {
     luaL_checkany(state, 1);
     if lua_getmetatable(state, 1) == 0 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 1;
     }
     luaL_getmetafield(state, 1, b"__metatable\0" as *const u8 as *const i8);
@@ -20767,7 +20767,7 @@ pub unsafe extern "C" fn luaB_rawset(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn pushmode(state: *mut State, oldmode: i32) -> i32 { unsafe {
     if oldmode == -1 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     } else {
         lua_pushstring(
             state,
@@ -20808,7 +20808,7 @@ pub unsafe extern "C" fn luaB_collectgarbage(state: *mut State) -> i32 { unsafe 
             let k: i32 = lua_gc(state, o);
             let b: i32 = lua_gc(state, 4);
             if !(k == -1) {
-                (*state).lua_pushnumber(k as f64 + b as f64 / 1024 as i32 as f64);
+                (*state).push_number(k as f64 + b as f64 / 1024 as i32 as f64);
                 return 1;
             }
         }
@@ -20854,7 +20854,7 @@ pub unsafe extern "C" fn luaB_collectgarbage(state: *mut State) -> i32 { unsafe 
             }
         }
     }
-    (*state).lua_pushnil();
+    (*state).push_nil();
     return 1;
 }}
 pub unsafe extern "C" fn luaB_type(state: *mut State) -> i32 { unsafe {
@@ -20871,7 +20871,7 @@ pub unsafe extern "C" fn luaB_next(state: *mut State) -> i32 { unsafe {
     if lua_next(state, 1) != 0 {
         return 2;
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 1;
     };
 }}
@@ -20887,7 +20887,7 @@ pub unsafe extern "C" fn luaB_pairs(state: *mut State) -> i32 { unsafe {
             0,
         );
         lua_pushvalue(state, 1);
-        (*state).lua_pushnil();
+        (*state).push_nil();
     } else {
         lua_pushvalue(state, 1);
         lua_callk(
@@ -20931,7 +20931,7 @@ pub unsafe extern "C" fn load_aux(state: *mut State, status: i32, envidx: i32) -
         }
         return 1;
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         lua_rotate(state, -(2), 1);
         return 2;
     };
@@ -21628,7 +21628,7 @@ pub unsafe extern "C" fn tremove(state: *mut State) -> i32 { unsafe {
         lua_seti(state, 1, pos);
         pos += 1;
     }
-    (*state).lua_pushnil();
+    (*state).push_nil();
     lua_seti(state, 1, pos);
     return 1;
 }}
@@ -22021,7 +22021,7 @@ pub unsafe extern "C" fn io_type(state: *mut State) -> i32 { unsafe {
     luaL_checkany(state, 1);
     p = luaL_testudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
     if p.is_null() {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     } else if ((*p).closef).is_none() {
         lua_pushstring(state, b"closed file\0" as *const u8 as *const i8);
     } else {
@@ -22244,7 +22244,7 @@ pub unsafe extern "C" fn f_lines(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 { unsafe {
     let mut to_close: bool = false;
     if lua_type(state, 1) == -1 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     if lua_type(state, 1) == 0 {
         lua_getfield(
@@ -22265,8 +22265,8 @@ pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 { unsafe {
     }
     aux_lines(state, to_close);
     if to_close {
-        (*state).lua_pushnil();
-        (*state).lua_pushnil();
+        (*state).push_nil();
+        (*state).push_nil();
         lua_pushvalue(state, 1);
         return 4;
     } else {
@@ -22359,7 +22359,7 @@ pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 { u
     if (lua_stringtonumber(state, (rn.buffer).as_mut_ptr()) != 0u64) as i32 as i64 != 0 {
         return 1;
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 0;
     };
 }}
@@ -22523,7 +22523,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
     }
     if success == 0 {
         lua_settop(state, -1 - 1);
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return n - first;
 }}
@@ -22897,7 +22897,7 @@ pub unsafe extern "C" fn io_noclose(state: *mut State) -> i32 { unsafe {
     let p: *mut Stream =
         luaL_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
     (*p).closef = Some(io_noclose as unsafe extern "C" fn(*mut State) -> i32);
-    (*state).lua_pushnil();
+    (*state).push_nil();
     lua_pushstring(
         state,
         b"cannot close standard file\0" as *const u8 as *const i8,
@@ -23010,7 +23010,7 @@ pub unsafe extern "C" fn os_getenv(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn os_clock(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(clock() as f64 / 1000000 as i32 as i64 as f64);
+    (*state).push_number(clock() as f64 / 1000000 as i32 as i64 as f64);
     return 1;
 }}
 pub unsafe extern "C" fn setfield(
@@ -23276,7 +23276,7 @@ pub unsafe extern "C" fn os_time(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn os_difftime(state: *mut State) -> i32 { unsafe {
     let t1: i64 = l_checktime(state, 1);
     let t2: i64 = l_checktime(state, 2);
-    (*state).lua_pushnumber(difftime(t1, t2));
+    (*state).push_number(difftime(t1, t2));
     return 1;
 }}
 pub unsafe extern "C" fn os_setlocale(state: *mut State) -> i32 { unsafe {
@@ -23633,15 +23633,15 @@ pub unsafe extern "C" fn writer(
     let stream_writer: *mut StreamWriter = ud as *mut StreamWriter;
     if (*stream_writer).init == 0 {
         (*stream_writer).init = 1;
-        luaL_buffinit(state, &mut (*stream_writer).B);
+        luaL_buffinit(state, &mut (*stream_writer).buffer);
     }
-    luaL_addlstring(&mut (*stream_writer).B, b as *const i8, size);
+    luaL_addlstring(&mut (*stream_writer).buffer, b as *const i8, size);
     return 0;
 }}
 pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 { unsafe {
     let mut stream_writer: StreamWriter = StreamWriter {
         init: 0,
-        B: Buffer::new(),
+        buffer: Buffer::new(),
     };
     let is_strip = 0 != lua_toboolean(state, 2);
     luaL_checktype(state, 1, 6);
@@ -23669,7 +23669,7 @@ pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 { unsafe {
             b"unable to dump given function\0" as *const u8 as *const i8,
         );
     }
-    luaL_pushresult(&mut stream_writer.B);
+    luaL_pushresult(&mut stream_writer.buffer);
     return 1;
 }}
 pub unsafe extern "C" fn tonum(state: *mut State, arg: i32) -> i32 { unsafe {
@@ -24523,7 +24523,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 { uns
     let init: u64 =
         (posrelatI(luaL_optinteger(state, 3, 1 as i64), ls)).wrapping_sub(1 as u64);
     if init > ls {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 1;
     }
     if find != 0 && (lua_toboolean(state, 4) != 0 || nospecials(p, lp) != 0) {
@@ -24575,7 +24575,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 { uns
             }
         }
     }
-    (*state).lua_pushnil();
+    (*state).push_nil();
     return 1;
 }}
 pub unsafe extern "C" fn str_find(state: *mut State) -> i32 { unsafe {
@@ -25429,7 +25429,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
     let mut arg: i32 = 1;
     let mut totalsize: u64 = 0;
     initheader(state, &mut h);
-    (*state).lua_pushnil();
+    (*state).push_nil();
     luaL_buffinit(state, &mut b);
     while *fmt as i32 != '\0' as i32 {
         let mut size: i32 = 0;
@@ -25743,7 +25743,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     ::core::mem::size_of::<libc::c_float>() as u64 as i32,
                     h.islittle,
                 );
-                (*state).lua_pushnumber(f as f64);
+                (*state).push_number(f as f64);
             }
             3 => {
                 let mut f_0: f64 = 0.;
@@ -25753,7 +25753,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     ::core::mem::size_of::<f64>() as u64 as i32,
                     h.islittle,
                 );
-                (*state).lua_pushnumber(f_0);
+                (*state).push_number(f_0);
             }
             4 => {
                 let mut f_1: f64 = 0.;
@@ -25763,7 +25763,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     ::core::mem::size_of::<f64>() as u64 as i32,
                     h.islittle,
                 );
-                (*state).lua_pushnumber(f_1);
+                (*state).push_number(f_1);
             }
             5 => {
                 lua_pushlstring(state, data.offset(pos as isize), size as u64);
@@ -26052,7 +26052,7 @@ pub unsafe extern "C" fn utflen(state: *mut State) -> i32 { unsafe {
         let s1: *const i8 =
             utf8_decode(s.offset(posi as isize), std::ptr::null_mut(), (lax == 0) as i32);
         if s1.is_null() {
-            (*state).lua_pushnil();
+            (*state).push_nil();
             (*state).push_integer(posi + 1);
             return 2;
         }
@@ -26190,7 +26190,7 @@ pub unsafe extern "C" fn byteoffset(state: *mut State) -> i32 { unsafe {
     if n == 0 {
         (*state).push_integer(posi + 1);
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -26332,34 +26332,34 @@ pub unsafe extern "C" fn math_abs(state: *mut State) -> i32 { unsafe {
         }
         (*state).push_integer(n);
     } else {
-        (*state).lua_pushnumber(luaL_checknumber(state, 1).abs());
+        (*state).push_number(luaL_checknumber(state, 1).abs());
     }
     return 1;
 }}
 pub unsafe extern "C" fn math_sin(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).sin());
+    (*state).push_number(luaL_checknumber(state, 1).sin());
     return 1;
 }}
 pub unsafe extern "C" fn math_cos(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).cos());
+    (*state).push_number(luaL_checknumber(state, 1).cos());
     return 1;
 }}
 pub unsafe extern "C" fn math_tan(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).tan());
+    (*state).push_number(luaL_checknumber(state, 1).tan());
     return 1;
 }}
 pub unsafe extern "C" fn math_asin(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).asin());
+    (*state).push_number(luaL_checknumber(state, 1).asin());
     return 1;
 }}
 pub unsafe extern "C" fn math_acos(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).acos());
+    (*state).push_number(luaL_checknumber(state, 1).acos());
     return 1;
 }}
 pub unsafe extern "C" fn math_atan(state: *mut State) -> i32 { unsafe {
     let y: f64 = luaL_checknumber(state, 1);
     let x: f64 = luaL_optnumber(state, 2, 1.0);
-    (*state).lua_pushnumber(y.atan2(x));
+    (*state).push_number(y.atan2(x));
     return 1;
 }}
 pub unsafe extern "C" fn math_toint(state: *mut State) -> i32 { unsafe {
@@ -26369,7 +26369,7 @@ pub unsafe extern "C" fn math_toint(state: *mut State) -> i32 { unsafe {
         (*state).push_integer(n);
     } else {
         luaL_checkany(state, 1);
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -26384,7 +26384,7 @@ pub unsafe extern "C" fn pushnumint(state: *mut State, d: f64) { unsafe {
     {
         (*state).push_integer(n);
     } else {
-        (*state).lua_pushnumber(d);
+        (*state).push_number(d);
     };
 }}
 pub unsafe extern "C" fn math_floor(state: *mut State) -> i32 { unsafe {
@@ -26417,7 +26417,7 @@ pub unsafe extern "C" fn math_fmod(state: *mut State) -> i32 { unsafe {
             (*state).push_integer(lua_tointegerx(state, 1, std::ptr::null_mut()) % d);
         }
     } else {
-        (*state).lua_pushnumber(
+        (*state).push_number(
             fmod(luaL_checknumber(state, 1), luaL_checknumber(state, 2)),
         );
     }
@@ -26426,17 +26426,17 @@ pub unsafe extern "C" fn math_fmod(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn math_modf(state: *mut State) -> i32 { unsafe {
     if lua_isinteger(state, 1) {
         lua_settop(state, 1);
-        (*state).lua_pushnumber(0.0);
+        (*state).push_number(0.0);
     } else {
         let n: f64 = luaL_checknumber(state, 1);
         let ip: f64 = if n < 0.0 { n.ceil() } else { n.floor() };
         pushnumint(state, ip);
-        (*state).lua_pushnumber(if n == ip { 0.0 } else { n - ip });
+        (*state).push_number(if n == ip { 0.0 } else { n - ip });
     }
     return 2;
 }}
 pub unsafe extern "C" fn math_sqrt(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).sqrt());
+    (*state).push_number(luaL_checknumber(state, 1).sqrt());
     return 1;
 }}
 pub unsafe extern "C" fn math_ult(state: *mut State) -> i32 { unsafe {
@@ -26460,19 +26460,19 @@ pub unsafe extern "C" fn math_log(state: *mut State) -> i32 { unsafe {
             res = x.ln() / base.ln();
         }
     }
-    (*state).lua_pushnumber(res);
+    (*state).push_number(res);
     return 1;
 }}
 pub unsafe extern "C" fn math_exp(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1).exp());
+    (*state).push_number(luaL_checknumber(state, 1).exp());
     return 1;
 }}
 pub unsafe extern "C" fn math_deg(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1) * (180.0f64 / PI));
+    (*state).push_number(luaL_checknumber(state, 1) * (180.0f64 / PI));
     return 1;
 }}
 pub unsafe extern "C" fn math_rad(state: *mut State) -> i32 { unsafe {
-    (*state).lua_pushnumber(luaL_checknumber(state, 1) * (PI / 180.0f64));
+    (*state).push_number(luaL_checknumber(state, 1) * (PI / 180.0f64));
     return 1;
 }}
 pub unsafe extern "C" fn math_min(state: *mut State) -> i32 { unsafe {
@@ -26521,7 +26521,7 @@ pub unsafe extern "C" fn math_type(state: *mut State) -> i32 { unsafe {
         );
     } else {
         luaL_checkany(state, 1);
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -26578,7 +26578,7 @@ pub unsafe extern "C" fn math_random(state: *mut State) -> i32 { unsafe {
     let rv: u64 = nextrand(((*ransate).s).as_mut_ptr());
     match lua_gettop(state) {
         0 => {
-            (*state).lua_pushnumber(I2d(rv));
+            (*state).push_number(I2d(rv));
             return 1;
         }
         1 => {
@@ -26900,9 +26900,9 @@ pub unsafe extern "C" fn luaopen_math(state: *mut State) -> i32 { unsafe {
             .wrapping_sub(1 as u64) as i32,
     );
     luaL_setfuncs(state, MATH_FUNCTIONS.as_ptr(), 0);
-    (*state).lua_pushnumber(PI);
+    (*state).push_number(PI);
     lua_setfield(state, -(2), b"pi\0" as *const u8 as *const i8);
-    (*state).lua_pushnumber(::core::f64::INFINITY);
+    (*state).push_number(::core::f64::INFINITY);
     lua_setfield(state, -(2), b"huge\0" as *const u8 as *const i8);
     (*state).push_integer(9223372036854775807 as i64);
     lua_setfield(state, -(2), b"maxinteger\0" as *const u8 as *const i8);
@@ -26924,7 +26924,7 @@ pub unsafe extern "C" fn db_getregistry(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn db_getmetatable(state: *mut State) -> i32 { unsafe {
     luaL_checkany(state, 1);
     if lua_getmetatable(state, 1) == 0 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -26940,7 +26940,7 @@ pub unsafe extern "C" fn db_setmetatable(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn db_getuservalue(state: *mut State) -> i32 { unsafe {
     let n: i32 = luaL_optinteger(state, 2, 1) as i32;
     if lua_type(state, 1) != 7 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     } else if lua_getiuservalue(state, 1, n) != -1 {
         (*state).push_boolean(true);
         return 2;
@@ -26953,7 +26953,7 @@ pub unsafe extern "C" fn db_setuservalue(state: *mut State) -> i32 { unsafe {
     luaL_checkany(state, 2);
     lua_settop(state, 2);
     if lua_setiuservalue(state, 1, n) == 0 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -27030,7 +27030,7 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 { unsafe {
         lua_pushvalue(state, arg + 1);
         lua_xmove(state, L1, 1);
     } else if lua_getstack(L1, luaL_checkinteger(state, arg + 1) as i32, &mut ar) == 0 {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 1;
     }
     if lua_getinfo(L1, options, &mut ar) == 0 {
@@ -27156,7 +27156,7 @@ pub unsafe extern "C" fn db_getlocal(state: *mut State) -> i32 { unsafe {
             lua_rotate(state, -(2), 1);
             return 2;
         } else {
-            (*state).lua_pushnil();
+            (*state).push_nil();
             return 1;
         }
     };
@@ -27252,7 +27252,7 @@ pub unsafe extern "C" fn db_upvalueid(state: *mut State) -> i32 { unsafe {
     if !id.is_null() {
         lua_pushlightuserdata(state, id);
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
     }
     return 1;
 }}
@@ -27291,7 +27291,7 @@ pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut Debug) { unsafe {
         if (*ar).currentline >= 0 {
             (*state).push_integer((*ar).currentline as i64);
         } else {
-            (*state).lua_pushnil();
+            (*state).push_nil();
         }
         lua_callk(state, 2, 0, 0, None);
     }
@@ -27371,7 +27371,7 @@ pub unsafe extern "C" fn db_gethook(state: *mut State) -> i32 { unsafe {
     let mask: i32 = lua_gethookmask(L1);
     let hook: HookFunction = lua_gethook(L1);
     if hook.is_none() {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         return 1;
     } else if hook != Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ()) {
         lua_pushstring(state, b"external hook\0" as *const u8 as *const i8);
@@ -27756,7 +27756,7 @@ pub unsafe extern "C" fn ll_loadlib(state: *mut State) -> i32 { unsafe {
     if ((stat == 0) as i32 != 0) as i32 as i64 != 0 {
         return 1;
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         lua_rotate(state, -(2), 1);
         lua_pushstring(
             state,
@@ -27855,7 +27855,7 @@ pub unsafe extern "C" fn ll_searchpath(state: *mut State) -> i32 { unsafe {
     if !f.is_null() {
         return 1;
     } else {
-        (*state).lua_pushnil();
+        (*state).push_nil();
         lua_rotate(state, -(2), 1);
         return 2;
     };

@@ -1,4 +1,3 @@
-#![allow(unused)]
 pub const TM_MODE: u32 = 3;
 pub const TM_N: u32 = 25;
 pub const TM_CLOSE: u32 = 24;

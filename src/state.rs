@@ -107,13 +107,13 @@ impl State {
             self.top.p = self.top.p.offset(1);
         }
     }
-    pub unsafe extern "C" fn lua_pushnil(&mut self) {
+    pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
             (*self.top.p).val.tag = 0u8 | 0u8 << 4u8;
             self.top.p = self.top.p.offset(1);
         }
     }
-    pub unsafe extern "C" fn lua_pushnumber(&mut self, x: f64) {
+    pub unsafe extern "C" fn push_number(&mut self, x: f64) {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.n = x;
