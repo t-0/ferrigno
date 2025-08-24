@@ -1,14 +1,13 @@
-#![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 unsafe extern "C" {
-    pub type _IO_wide_data;
-    pub type _IO_codecvt;
-    pub type _IO_marker;
+    pub type _IOWideData;
+    pub type _IOCodeConvert;
+    pub type _IOMarker;
     pub unsafe fn __ctype_b_loc() -> *mut *const u16;
     pub unsafe fn __errno_location() -> *mut i32;
     pub unsafe fn fmod(_: f64, _: f64) -> f64;
-    pub unsafe fn _setjmp(_: *mut __jmp_buf_tag) -> i32;
-    pub unsafe fn _longjmp(_: *mut __jmp_buf_tag, _: i32) -> !;
-    pub unsafe fn sigemptyset(__set: *mut __sigset_t) -> i32;
+    pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
+    pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
+    pub unsafe fn sigemptyset(__set: *mut SIgnalSet) -> i32;
     pub unsafe fn sigaction(__sig: i32, __act: *const sigaction, __oact: *mut sigaction) -> i32;
     pub static mut stdin: *mut FILE;
     pub static mut stdout: *mut FILE;
@@ -61,10 +60,10 @@ unsafe extern "C" {
     pub fn clock() -> i64;
     pub fn time(timer: *mut i64) -> i64;
     pub fn difftime(time1: i64, time0: i64) -> f64;
-    pub fn mktime(tp: *mut tm) -> i64;
-    pub fn strftime(s: *mut i8, __maxsize: u64, __format: *const i8, tp: *const tm) -> u64;
-    pub fn gmtime_r(timer: *const i64, tp: *mut tm) -> *mut tm;
-    pub fn localtime_r(timer: *const i64, tp: *mut tm) -> *mut tm;
+    pub fn mktime(tp: *mut TM) -> i64;
+    pub fn strftime(s: *mut i8, __maxsize: u64, __format: *const i8, tp: *const TM) -> u64;
+    pub fn gmtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
+    pub fn localtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
     pub fn dlopen(file: *const i8, __mode: i32) -> *mut libc::c_void;
     pub fn dlclose(handle: *mut libc::c_void) -> i32;
     pub fn dlsym(handle: *mut libc::c_void, __name: *const i8) -> *mut libc::c_void;
@@ -72,27 +71,27 @@ unsafe extern "C" {
     pub fn close(fd: i32) -> i32;
     pub fn isatty(fd: i32) -> i32;
 }
-pub const _ISalnum: u32 = 8;
-pub const _ISpunct: u32 = 4;
-pub const _IScntrl: u32 = 2;
-pub const _ISgraph: u32 = 32768;
-pub const _ISspace: u32 = 8192;
-pub const _ISxdigit: u32 = 4096;
-pub const _ISdigit: u32 = 2048;
-pub const _ISalpha: u32 = 1024;
-pub const _ISlower: u32 = 512;
-pub const _ISupper: u32 = 256;
-pub type __jmp_buf = [u32; 8];
+pub const _ISALPHANUMERIC: u32 = 8;
+pub const _ISPUNCTUATION: u32 = 4;
+pub const _ISCONTROL: u32 = 2;
+pub const _ISGRAPH: u32 = 32768;
+pub const _ISSPACE: u32 = 8192;
+pub const _ISXDIGIT: u32 = 4096;
+pub const _ISDIGIT: u32 = 2048;
+pub const _ISALPHA: u32 = 1024;
+pub const _ISLOWER: u32 = 512;
+pub const _ISUPPER: u32 = 256;
+pub type __JumpBuffer = [u32; 8];
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct __sigset_t {
+pub struct SIgnalSet {
     pub __val: [u64; 16],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct __jmp_buf_tag {
+pub struct JumpBufferTag {
     pub __mask_was_saved: i32,
-    pub __saved_mask: __sigset_t,
+    pub __saved_mask: SIgnalSet,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -102,7 +101,7 @@ pub union sigval {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct siginfo_t {
+pub struct SignalInfo {
     pub _si_signo: i32,
     pub _si_errno: i32,
     pub _si_code: i32,
@@ -182,20 +181,20 @@ pub struct SigInfoAA {
     pub si_pid: i32,
     pub si_uid: u32,
 }
-pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
+pub type SignalHandler = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct sigaction {
     pub __sigaction_handler: SigActionA,
-    pub sa_mask: __sigset_t,
+    pub sa_mask: SIgnalSet,
     pub sa_flags: i32,
     pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union SigActionA {
-    pub sa_handler: __sighandler_t,
-    pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut siginfo_t, *mut libc::c_void) -> ()>,
+    pub sa_handler: SignalHandler,
+    pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut SignalInfo, *mut libc::c_void) -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -212,7 +211,7 @@ pub struct FILE {
     pub _IO_save_base: *mut i8,
     pub _IO_backup_base: *mut i8,
     pub _IO_save_end: *mut i8,
-    pub _markers: *mut _IO_marker,
+    pub _markers: *mut _IOMarker,
     pub _chain: *mut FILE,
     pub _fileno: i32,
     pub _flags2: i32,
@@ -222,8 +221,8 @@ pub struct FILE {
     pub _shortbuf: [i8; 1],
     pub _lock: *mut libc::c_void,
     pub _offset: i64,
-    pub _codecvt: *mut _IO_codecvt,
-    pub _wide_data: *mut _IO_wide_data,
+    pub _codecvt: *mut _IOCodeConvert,
+    pub _wide_data: *mut _IOWideData,
     pub _freeres_list: *mut FILE,
     pub _freeres_buf: *mut libc::c_void,
     pub __pad5: u64,
@@ -232,7 +231,7 @@ pub struct FILE {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct tm {
+pub struct TM {
     pub tm_sec: i32,
     pub tm_min: i32,
     pub tm_hour: i32,
