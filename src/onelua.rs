@@ -2569,7 +2569,7 @@ pub unsafe extern "C" fn lua_gc(mut state: *mut State, mut what: i32, mut args: 
             (*g).gcstp = 1i32 as u8;
         }
         1 => {
-            luaE_setdebt(g, 0i32 as i64);
+            (*g).set_debt(0i32 as i64);
             (*g).gcstp = 0i32 as u8;
         }
         2 => {
@@ -2587,11 +2587,11 @@ pub unsafe extern "C" fn lua_gc(mut state: *mut State, mut what: i32, mut args: 
             let mut oldstp: u8 = (*g).gcstp;
             (*g).gcstp = 0i32 as u8;
             if data == 0i32 {
-                luaE_setdebt(g, 0i32 as i64);
+                (*g).set_debt(0i32 as i64);
                 luaC_step(state);
             } else {
                 debt = data as i64 * 1024 as i32 as i64 + (*g).gc_debt;
-                luaE_setdebt(g, debt);
+                (*g).set_debt(debt);
                 if (*(*state).global).gc_debt > 0i32 as i64 {
                     luaC_step(state);
                 }
@@ -2985,14 +2985,6 @@ pub unsafe extern "C" fn luai_makeseed(mut state: *mut State) -> u32 {
     );
     p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32 as i32;
     return luaS_hash(buffer.as_mut_ptr(), p as u64, h);
-}
-pub unsafe extern "C" fn luaE_setdebt(mut g: *mut Global, mut debt: i64) {
-    let mut tb: i64 = ((*g).totalbytes + (*g).gc_debt) as u64 as i64;
-    if debt < tb - (!(0i32 as u64) >> 1i32) as i64 {
-        debt = tb - (!(0i32 as u64) >> 1i32) as i64;
-    }
-    (*g).totalbytes = tb - debt;
-    (*g).gc_debt = debt;
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_setcstacklimit(mut _L: *mut State, mut _limit: u32) -> i32 {
@@ -7905,7 +7897,7 @@ pub unsafe extern "C" fn setpause(mut g: *mut Global) {
     if debt > 0i32 as i64 {
         debt = 0i32 as i64;
     }
-    luaE_setdebt(g, debt);
+    (*g).set_debt(debt);
 }
 pub unsafe extern "C" fn sweep2old(mut state: *mut State, mut p: *mut *mut Object) {
     let mut curr: *mut Object = 0 as *mut Object;
@@ -7987,18 +7979,6 @@ pub unsafe extern "C" fn sweepgen(
         }
     }
     return p;
-}
-pub unsafe extern "C" fn whitelist(mut g: *mut Global, mut p: *mut Object) {
-    let mut white: i32 =
-        ((*g).currentwhite as i32 & ((1i32) << 3i32 | (1i32) << 4i32)) as u8 as i32;
-    while !p.is_null() {
-        (*p).marked = ((*p).marked as i32
-            & !((1i32) << 5i32
-                | ((1i32) << 3i32 | (1i32) << 4i32)
-                | 7i32)
-            | white) as u8;
-        p = (*p).next;
-    }
 }
 pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut Object {
     let mut current_block: u64;
@@ -8117,35 +8097,14 @@ pub unsafe extern "C" fn atomic2gen(mut state: *mut State, mut g: *mut Global) {
     (*g).gc_estimate = ((*g).totalbytes + (*g).gc_debt) as u64;
     finishgencycle(state, g);
 }
-pub unsafe extern "C" fn setminordebt(mut g: *mut Global) {
-    luaE_setdebt(
-        g,
-        -((((*g).totalbytes + (*g).gc_debt) as u64).wrapping_div(100 as i32 as u64) as i64
-            * (*g).genminormul as i64),
-    );
-}
 pub unsafe extern "C" fn entergen(mut state: *mut State, mut g: *mut Global) -> u64 {
     let mut numobjs: u64 = 0;
     luaC_runtilstate(state, (1i32) << 8i32);
     luaC_runtilstate(state, (1i32) << 0i32);
     numobjs = atomic(state);
     atomic2gen(state, g);
-    setminordebt(g);
+    (*g).set_minor_debt();
     return numobjs;
-}
-pub unsafe extern "C" fn enterinc(mut g: *mut Global) {
-    whitelist(g, (*g).allgc);
-    (*g).survival = 0 as *mut Object;
-    (*g).old1 = (*g).survival;
-    (*g).reallyold = (*g).old1;
-    whitelist(g, (*g).finobj);
-    whitelist(g, (*g).tobefnz);
-    (*g).finobjsur = 0 as *mut Object;
-    (*g).finobjold1 = (*g).finobjsur;
-    (*g).finobjrold = (*g).finobjold1;
-    (*g).gcstate = 8i32 as u8;
-    (*g).gckind = 0i32 as u8;
-    (*g).lastatomic = 0i32 as u64;
 }
 pub unsafe extern "C" fn luaC_changemode(mut state: *mut State, mut newmode: i32) {
     let mut g: *mut Global = (*state).global;
@@ -8153,26 +8112,26 @@ pub unsafe extern "C" fn luaC_changemode(mut state: *mut State, mut newmode: i32
         if newmode == 1i32 {
             entergen(state, g);
         } else {
-            enterinc(g);
+            (*g).enter_incremental();
         }
     }
     (*g).lastatomic = 0i32 as u64;
 }
 pub unsafe extern "C" fn fullgen(mut state: *mut State, mut g: *mut Global) -> u64 {
-    enterinc(g);
+    (*g).enter_incremental();
     return entergen(state, g);
 }
 pub unsafe extern "C" fn stepgenfull(mut state: *mut State, mut g: *mut Global) {
     let mut newatomic: u64 = 0;
     let mut lastatomic: u64 = (*g).lastatomic;
     if (*g).gckind as i32 == 1i32 {
-        enterinc(g);
+        (*g).enter_incremental();
     }
     luaC_runtilstate(state, (1i32) << 0i32);
     newatomic = atomic(state);
     if newatomic < lastatomic.wrapping_add(lastatomic >> 3i32) {
         atomic2gen(state, g);
-        setminordebt(g);
+        (*g).set_minor_debt();
     } else {
         (*g).gc_estimate = ((*g).totalbytes + (*g).gc_debt) as u64;
         entersweep(state);
@@ -8201,7 +8160,7 @@ pub unsafe extern "C" fn genstep(mut state: *mut State, mut g: *mut Global) {
             }
         } else {
             youngcollection(state, g);
-            setminordebt(g);
+            (*g).set_minor_debt();
             (*g).gc_estimate = majorbase;
         }
     };
@@ -8272,7 +8231,7 @@ pub unsafe extern "C" fn atomic(mut state: *mut State) -> u64 {
     clearbykeys(g, (*g).allweak);
     clearbyvalues(g, (*g).weak, origweak);
     clearbyvalues(g, (*g).allweak, origall);
-    luaS_clearcache(g);
+    (*g).clear_cache();
     (*g).currentwhite =
         ((*g).currentwhite as i32 ^ ((1i32) << 3i32 | (1i32) << 4i32)) as u8;
     return work;
@@ -8381,13 +8340,13 @@ pub unsafe extern "C" fn incstep(mut state: *mut State, mut g: *mut Global) {
     } else {
         debt = ((debt / stepmul as i64) as u64)
             .wrapping_mul(::core::mem::size_of::<TValue>() as u64) as i64;
-        luaE_setdebt(g, debt);
+        (*g).set_debt(debt);
     };
 }
 pub unsafe extern "C" fn luaC_step(mut state: *mut State) {
     let mut g: *mut Global = (*state).global;
     if !((*g).gcstp as i32 == 0i32) {
-        luaE_setdebt(g, -(2000 as i32) as i64);
+        (*g).set_debt(-(2000 as i32) as i64);
     } else if (*g).gckind as i32 == 1i32 || (*g).lastatomic != 0i32 as u64 {
         genstep(state, g);
     } else {
@@ -8844,24 +8803,6 @@ pub unsafe extern "C" fn luaS_resize(mut state: *mut State, mut nsize: i32) {
             tablerehash(newvect, osize, nsize);
         }
     };
-}
-pub unsafe extern "C" fn luaS_clearcache(mut g: *mut Global) {
-    let mut i: i32 = 0;
-    let mut j: i32 = 0;
-    i = 0i32;
-    while i < 53 as i32 {
-        j = 0i32;
-        while j < 2i32 {
-            if (*(*g).strcache[i as usize][j as usize]).marked as i32
-                & ((1i32) << 3i32 | (1i32) << 4i32)
-                != 0
-            {
-                (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
-            }
-            j += 1;
-        }
-        i += 1;
-    }
 }
 pub unsafe extern "C" fn luaS_init(mut state: *mut State) {
     let mut g: *mut Global = (*state).global;

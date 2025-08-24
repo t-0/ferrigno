@@ -66,18 +66,16 @@ impl State {
     }
     pub unsafe extern "C" fn correct_stack(&mut self) {
         unsafe {
-            let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-            let mut up: *mut UpValue = 0 as *mut UpValue;
             (*self).top.p = ((*self).stack.p as *mut i8).offset((*self).top.offset as isize) as StkId;
             (*self).tbclist.p =
                 ((*self).stack.p as *mut i8).offset((*self).tbclist.offset as isize) as StkId;
-            up = (*self).openupval;
+            let mut up: *mut UpValue = (*self).openupval;
             while !up.is_null() {
                 (*up).v.p =
                     &mut (*(((*self).stack.p as *mut i8).offset((*up).v.offset as isize) as StkId)).val;
                 up = (*up).u.open.next;
             }
-            ci = (*self).ci;
+            let mut ci: *mut CallInfo = (*self).ci;
             while !ci.is_null() {
                 (*ci).top.p = ((*self).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
                 (*ci).function.p = ((*self).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
