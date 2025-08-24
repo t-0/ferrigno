@@ -10350,15 +10350,7 @@ pub unsafe extern "C" fn body(
         iwthabs: 0,
         needclose: 0,
     };
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     new_fs.f = addprototype(ls);
     (*new_fs.f).line_defined = line;
     open_func(ls, &mut new_fs, &mut blockcontrol);
@@ -10632,15 +10624,7 @@ pub unsafe extern "C" fn expr(ls: *mut LexState, v: *mut ExpressionDescription) 
 }}
 pub unsafe extern "C" fn block(ls: *mut LexState) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     enterblock(fs, &mut blockcontrol, false);
     statlist(ls);
     leaveblock(fs);
@@ -10805,15 +10789,7 @@ pub unsafe extern "C" fn whilestat(ls: *mut LexState, line: i32) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
     let mut whileinit: i32 = 0;
     let mut condexit: i32 = 0;
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     luaX_next(ls);
     whileinit = luaK_getlabel(fs);
     condexit = cond(ls);
@@ -10829,24 +10805,8 @@ pub unsafe extern "C" fn repeatstat(ls: *mut LexState, line: i32) { unsafe {
     let mut condexit: i32 = 0;
     let fs: *mut FunctionState = (*ls).fs;
     let repeat_init: i32 = luaK_getlabel(fs);
-    let mut bl1: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
-    let mut bl2: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut bl1: BlockControl = BlockControl::new();
+    let mut bl2: BlockControl = BlockControl::new();
     enterblock(fs, &mut bl1, true);
     enterblock(fs, &mut bl2, false);
     luaX_next(ls);
@@ -10911,15 +10871,7 @@ pub unsafe extern "C" fn forbody(
 ) { unsafe {
     static mut FOR_PREP: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
     static mut FOR_LOOP: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     let fs: *mut FunctionState = (*ls).fs;
     let mut prep: i32 = 0;
     let mut endfor: i32 = 0;
@@ -11052,15 +11004,7 @@ pub unsafe extern "C" fn forlist(ls: *mut LexState, indexname: *mut TString) { u
 }}
 pub unsafe extern "C" fn forstat(ls: *mut LexState, line: i32) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     enterblock(fs, &mut blockcontrol, true);
     luaX_next(ls);
     let varname: *mut TString = str_checkname(ls);
@@ -11079,15 +11023,7 @@ pub unsafe extern "C" fn forstat(ls: *mut LexState, line: i32) { unsafe {
     leaveblock(fs);
 }}
 pub unsafe extern "C" fn test_then_block(ls: *mut LexState, escapelist: *mut i32) { unsafe {
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     let fs: *mut FunctionState = (*ls).fs;
     let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
@@ -11394,15 +11330,7 @@ pub unsafe extern "C" fn statement(ls: *mut LexState) { unsafe {
     (*(*ls).state).count_c_calls;
 }}
 pub unsafe extern "C" fn mainfunc(ls: *mut LexState, fs: *mut FunctionState) { unsafe {
-    let mut blockcontrol: BlockControl = BlockControl {
-        previous: std::ptr::null_mut(),
-        first_label: 0,
-        first_goto: 0,
-        count_active_variables: 0,
-        count_upvalues: 0,
-        is_loop: false,
-        is_inside_tbc: false,
-    };
+    let mut blockcontrol: BlockControl = BlockControl::new();
     let mut env: *mut Upvaldesc = std::ptr::null_mut();
     open_func(ls, fs, &mut blockcontrol);
     setvararg(fs, 0);
