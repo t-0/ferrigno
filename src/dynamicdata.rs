@@ -8,7 +8,7 @@ pub struct DynamicData {
 }
 #[derive(Copy, Clone)]
 pub struct DynamicDataActiveVariable {
-    pub arr: *mut VariableDescriptionOrValue,
+    pub arr: *mut VariableDescription,
     pub n: i32,
     pub size: i32,
 }
