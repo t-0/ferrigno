@@ -1,10 +1,6 @@
 #![allow(
     static_mut_refs,
     unsafe_code,
-    unsafe_attr_outside_unsafe,
-    unsafe_op_in_unsafe_fn,
-    mutable_transmutes,
-    non_camel_case_types,
     non_snake_case,
     unused_assignments,
     unpredictable_function_pointer_comparisons,
