@@ -1,13 +1,13 @@
-use crate::longjump::*;
 use crate::callinfo::*;
-use crate::global::*;
-use crate::object::*;
 use crate::functions::*;
-use crate::stkidrel::*;
-use crate::stackvalue::*;
-use crate::tvalue::*;
-use crate::tstring::*;
 use crate::gcunion::*;
+use crate::global::*;
+use crate::longjump::*;
+use crate::object::*;
+use crate::stackvalue::*;
+use crate::stkidrel::*;
+use crate::tstring::*;
+use crate::tvalue::*;
 use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -38,11 +38,7 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl State {
-    pub unsafe extern "C" fn set_error_object(
-        &mut self,
-        error_code: i32,
-        old_top: StkId,
-    ) {
+    pub unsafe extern "C" fn set_error_object(&mut self, error_code: i32, old_top: StkId) {
         unsafe {
             match error_code {
                 4 => {
@@ -66,24 +62,31 @@ impl State {
     }
     pub unsafe extern "C" fn correct_stack(&mut self) {
         unsafe {
-            (*self).top.p = ((*self).stack.p as *mut i8).offset((*self).top.offset as isize) as StkId;
+            (*self).top.p =
+                ((*self).stack.p as *mut i8).offset((*self).top.offset as isize) as StkId;
             (*self).tbclist.p =
                 ((*self).stack.p as *mut i8).offset((*self).tbclist.offset as isize) as StkId;
             let mut up: *mut UpValue = (*self).openupval;
             while !up.is_null() {
-                (*up).v.p =
-                    &mut (*(((*self).stack.p as *mut i8).offset((*up).v.offset as isize) as StkId)).val;
+                (*up).v.p = &mut (*(((*self).stack.p as *mut i8).offset((*up).v.offset as isize)
+                    as StkId))
+                    .val;
                 up = (*up).u.open.next;
             }
             let mut ci: *mut CallInfo = (*self).ci;
             while !ci.is_null() {
-                (*ci).top.p = ((*self).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
-                (*ci).function.p = ((*self).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
+                (*ci).top.p =
+                    ((*self).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
+                (*ci).function.p =
+                    ((*self).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
                 if (*ci).call_status as i32 & (1i32) << 1i32 == 0 {
                     ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1i32);
                 }
                 ci = (*ci).previous;
             }
         }
+    }
+    pub fn is_yieldable(&mut self) -> bool {
+        return self.count_c_calls & 0xffff0000u32 == 0;
     }
 }

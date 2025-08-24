@@ -777,8 +777,7 @@ pub unsafe extern "C" fn unroll(mut state: *mut State, mut _ud: *mut libc::c_voi
     }
 }
 pub unsafe extern "C" fn findpcall(mut state: *mut State) -> *mut CallInfo {
-    let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-    ci = (*state).ci;
+    let mut ci: *mut CallInfo = (*state).ci;
     while !ci.is_null() {
         if (*ci).call_status as i32 & (1i32) << 4i32 != 0 {
             return ci;
@@ -912,10 +911,6 @@ pub unsafe extern "C" fn lua_resume(
             as i32
     };
     return status;
-}
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_isyieldable(mut state: *mut State) -> i32 {
-    return ((*state).count_c_calls & 0xffff0000 as u32 == 0u32) as i32;
 }
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_yieldk(
@@ -22838,7 +22833,7 @@ pub unsafe extern "C" fn luaB_yieldable(mut state: *mut State) -> i32 {
     } else {
         getco(state)
     };
-    lua_pushboolean(state, lua_isyieldable(co));
+    lua_pushboolean(state, if (*co).is_yieldable() { 1 } else { 0 });
     return 1;
 }
 pub unsafe extern "C" fn luaB_corunning(mut state: *mut State) -> i32 {
