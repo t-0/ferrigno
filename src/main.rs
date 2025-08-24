@@ -69,6 +69,8 @@ mod udata;
 mod upvaldesc;
 mod uvalue;
 mod zio;
+mod k;
+mod operator_;
 pub fn main() {
     let mut args: Vec<*mut libc::c_char> = Vec::new();
     for arg in ::std::env::args() {

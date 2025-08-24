@@ -87,40 +87,9 @@ use crate::zio::*;
 use crate::math::*;
 use crate::f2i::*;
 use crate::v::*;
+use crate::operator_::*;
+use crate::k::*;
 use libc::{remove, rename, setlocale, tolower, toupper, system};
-pub const OPR_NOBINOPR: u32 = 21;
-pub const OPR_OR: u32 = 20;
-pub const OPR_AND: u32 = 19;
-pub const OPR_GE: u32 = 18;
-pub const OPR_GT: u32 = 17;
-pub const OPR_NE: u32 = 16;
-pub const OPR_LE: u32 = 15;
-pub const OPR_LT: u32 = 14;
-pub const OPR_EQ: u32 = 13;
-pub const OPR_CONCAT: u32 = 12;
-pub const OPR_SHR: u32 = 11;
-pub const OPR_SHL: u32 = 10;
-pub const OPR_BXOR: u32 = 9;
-pub const OPR_BOR: u32 = 8;
-pub const OPR_BAND: u32 = 7;
-pub const OPR_IDIV: u32 = 6;
-pub const OPR_DIV: u32 = 5;
-pub const OPR_POW: u32 = 4;
-pub const OPR_MOD: u32 = 3;
-pub const OPR_MUL: u32 = 2;
-pub const OPR_SUB: u32 = 1;
-pub const OPR_ADD: u32 = 0;
-pub const Knop: u32 = 10;
-pub const Kpadding: u32 = 8;
-pub const Kpaddalign: u32 = 9;
-pub const Kzstr: u32 = 7;
-pub const Kstring: u32 = 6;
-pub const Kchar: u32 = 5;
-pub const Kdouble: u32 = 4;
-pub const Knumber: u32 = 3;
-pub const Kfloat: u32 = 2;
-pub const Kint: u32 = 0;
-pub const Kuint: u32 = 1;
 pub unsafe extern "C" fn luaD_seterrorobj(
     mut state: *mut State,
     mut errcode: i32,
@@ -26809,7 +26778,7 @@ pub unsafe extern "C" fn getoption(
     mut h: *mut Header,
     mut fmt: *mut *const i8,
     mut size: *mut i32,
-) -> u32 {
+) -> K {
     let fresh180 = *fmt;
     *fmt = (*fmt).offset(1);
     let mut opt: i32 = *fresh180 as i32;
@@ -26817,63 +26786,63 @@ pub unsafe extern "C" fn getoption(
     match opt {
         98 => {
             *size = ::core::mem::size_of::<i8>() as u64 as i32;
-            return Kint;
+            return K::Integer;
         }
         66 => {
             *size = ::core::mem::size_of::<i8>() as u64 as i32;
-            return Kuint;
+            return K::Unsigned;
         }
         104 => {
             *size = ::core::mem::size_of::<i16>() as u64 as i32;
-            return Kint;
+            return K::Integer;
         }
         72 => {
             *size = ::core::mem::size_of::<i16>() as u64 as i32;
-            return Kuint;
+            return K::Unsigned;
         }
         108 => {
             *size = ::core::mem::size_of::<i64>() as u64 as i32;
-            return Kint;
+            return K::Integer;
         }
         76 => {
             *size = ::core::mem::size_of::<i64>() as u64 as i32;
-            return Kuint;
+            return K::Unsigned;
         }
         106 => {
             *size = ::core::mem::size_of::<i64>() as u64 as i32;
-            return Kint;
+            return K::Integer;
         }
         74 => {
             *size = ::core::mem::size_of::<i64>() as u64 as i32;
-            return Kuint;
+            return K::Unsigned;
         }
         84 => {
             *size = ::core::mem::size_of::<u64>() as u64 as i32;
-            return Kuint;
+            return K::Unsigned;
         }
         102 => {
             *size = ::core::mem::size_of::<libc::c_float>() as u64 as i32;
-            return Kfloat;
+            return K::Float;
         }
         110 => {
             *size = ::core::mem::size_of::<f64>() as u64 as i32;
-            return Knumber;
+            return K::Number;
         }
         100 => {
             *size = ::core::mem::size_of::<f64>() as u64 as i32;
-            return Kdouble;
+            return K::Double;
         }
         105 => {
             *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as u64 as i32);
-            return Kint;
+            return K::Integer;
         }
         73 => {
             *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as u64 as i32);
-            return Kuint;
+            return K::Unsigned;
         }
         115 => {
             *size = getnumlimit(h, fmt, ::core::mem::size_of::<u64>() as u64 as i32);
-            return Kstring;
+            return K::String;
         }
         99 => {
             *size = getnum(fmt, -1);
@@ -26883,14 +26852,14 @@ pub unsafe extern "C" fn getoption(
                     b"missing size for format option 'c'\0" as *const u8 as *const i8,
                 );
             }
-            return Kchar;
+            return K::Character;
         }
-        122 => return Kzstr,
+        122 => return K::ZString,
         120 => {
             *size = 1i32;
-            return Kpadding;
+            return K::Padding;
         }
-        88 => return Kpaddalign,
+        88 => return K::PaddingAlignment,
         32 => {}
         60 => {
             (*h).islittle = 1i32;
@@ -26913,7 +26882,7 @@ pub unsafe extern "C" fn getoption(
             );
         }
     }
-    return Knop;
+    return K::NoOperator;
 }
 pub unsafe extern "C" fn getdetails(
     mut h: *mut Header,
@@ -26921,12 +26890,12 @@ pub unsafe extern "C" fn getdetails(
     mut fmt: *mut *const i8,
     mut psize: *mut i32,
     mut ntoalign: *mut i32,
-) -> u32 {
-    let mut opt: u32 = getoption(h, fmt, psize);
+) -> K {
+    let mut opt: K = getoption(h, fmt, psize);
     let mut align: i32 = *psize;
-    if opt as u32 == Kpaddalign as i32 as u32 {
+    if opt as u32 == K::PaddingAlignment as i32 as u32 {
         if **fmt as i32 == '\0' as i32
-            || getoption(h, fmt, &mut align) as u32 == Kchar as i32 as u32
+            || getoption(h, fmt, &mut align) as u32 == K::Character as i32 as u32
             || align == 0i32
         {
             luaL_argerror(
@@ -26936,7 +26905,7 @@ pub unsafe extern "C" fn getdetails(
             );
         }
     }
-    if align <= 1i32 || opt as u32 == Kchar as i32 as u32 {
+    if align <= 1i32 || opt as u32 == K::Character as i32 as u32 {
         *ntoalign = 0i32;
     } else {
         if align > (*h).maxalign {
@@ -27040,7 +27009,7 @@ pub unsafe extern "C" fn str_pack(mut state: *mut State) -> i32 {
     while *fmt as i32 != '\0' as i32 {
         let mut size: i32 = 0;
         let mut ntoalign: i32 = 0;
-        let mut opt: u32 = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
+        let mut opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
         totalsize = (totalsize as u64).wrapping_add((ntoalign + size) as u64) as u64 as u64;
         loop {
             let fresh184 = ntoalign;
@@ -27224,8 +27193,8 @@ pub unsafe extern "C" fn str_packsize(mut state: *mut State) -> i32 {
     while *fmt as i32 != '\0' as i32 {
         let mut size: i32 = 0;
         let mut ntoalign: i32 = 0;
-        let mut opt: u32 = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
-        (((opt as u32 != Kstring as i32 as u32 && opt as u32 != Kzstr as i32 as u32) as i32
+        let mut opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
+        (((opt as u32 != K::String as i32 as u32 && opt as u32 != K::ZString as i32 as u32) as i32
             != 0i32) as i32 as i64
             != 0
             || luaL_argerror(
@@ -27336,7 +27305,7 @@ pub unsafe extern "C" fn str_unpack(mut state: *mut State) -> i32 {
     while *fmt as i32 != '\0' as i32 {
         let mut size: i32 = 0;
         let mut ntoalign: i32 = 0;
-        let mut opt: u32 = getdetails(&mut h, pos, &mut fmt, &mut size, &mut ntoalign);
+        let mut opt: K = getdetails(&mut h, pos, &mut fmt, &mut size, &mut ntoalign);
         ((((ntoalign as u64).wrapping_add(size as u64) <= ld.wrapping_sub(pos)) as i32 != 0i32)
             as i32 as i64
             != 0
@@ -27359,7 +27328,7 @@ pub unsafe extern "C" fn str_unpack(mut state: *mut State) -> i32 {
                     data.offset(pos as isize),
                     h.islittle,
                     size,
-                    (opt as u32 == Kint as i32 as u32) as i32,
+                    (opt as u32 == K::Integer as i32 as u32) as i32,
                 );
                 lua_pushinteger(state, res);
             }
