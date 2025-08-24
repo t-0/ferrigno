@@ -9,7 +9,6 @@
     non_snake_case,
     non_upper_case_globals,
     unused_assignments,
-    unused_mut,
     unpredictable_function_pointer_comparisons,
     unused_imports
 )]
@@ -92,19 +91,19 @@ use crate::value::*;
 use crate::variabledescription::*;
 use crate::zio::*;
 use libc::{remove, rename, setlocale, system, tolower, toupper};
-pub unsafe extern "C" fn luaD_throw(mut state: *mut State, mut error_code: i32) -> ! {
+pub unsafe extern "C" fn luaD_throw(state: *mut State, mut error_code: i32) -> ! {
     if !((*state).error_jump).is_null() {
         ::core::ptr::write_volatile(&mut (*(*state).error_jump).status as *mut i32, error_code);
         _longjmp(((*(*state).error_jump).b).as_mut_ptr(), 1);
     } else {
-        let mut g: *mut Global = (*state).global;
+        let g: *mut Global = (*state).global;
         error_code = luaE_resetthread(state, error_code);
         (*state).status = error_code as u8;
         if !((*(*g).mainthread).error_jump).is_null() {
             let fresh0 = (*(*g).mainthread).top.p;
             (*(*g).mainthread).top.p = ((*(*g).mainthread).top.p).offset(1);
-            let mut io1: *mut TValue = &mut (*fresh0).val;
-            let mut io2: *const TValue = &mut (*((*state).top.p).offset(-(1 as isize))).val;
+            let io1: *mut TValue = &mut (*fresh0).val;
+            let io2: *const TValue = &mut (*((*state).top.p).offset(-(1 as isize))).val;
             (*io1).value = (*io2).value;
             (*io1).tag = (*io2).tag;
             luaD_throw((*g).mainthread, error_code);
@@ -117,11 +116,11 @@ pub unsafe extern "C" fn luaD_throw(mut state: *mut State, mut error_code: i32) 
     };
 }
 pub unsafe extern "C" fn luaD_rawrunprotected(
-    mut state: *mut State,
-    mut f: Pfunc,
-    mut ud: *mut libc::c_void,
+    state: *mut State,
+    f: Pfunc,
+    ud: *mut libc::c_void,
 ) -> i32 {
-    let mut oldnCcalls: u32 = (*state).count_c_calls;
+    let oldnCcalls: u32 = (*state).count_c_calls;
     let mut lj = LongJump::new ();
     ::core::ptr::write_volatile(&mut lj.status as *mut i32, 0);
     lj.previous = (*state).error_jump;
@@ -135,7 +134,7 @@ pub unsafe extern "C" fn luaD_rawrunprotected(
     (*state).count_c_calls = oldnCcalls;
     return lj.status;
 }
-pub unsafe extern "C" fn relstack(mut state: *mut State) {
+pub unsafe extern "C" fn relstack(state: *mut State) {
     let mut ci: *mut CallInfo = std::ptr::null_mut();
     let mut up: *mut UpValue = std::ptr::null_mut();
     (*state).top.offset =
@@ -156,16 +155,16 @@ pub unsafe extern "C" fn relstack(mut state: *mut State) {
         ci = (*ci).previous;
     }
 }
-pub unsafe extern "C" fn luaD_errerr(mut state: *mut State) -> ! {
-    let mut msg: *mut TString = luaS_newlstr(
+pub unsafe extern "C" fn luaD_errerr(state: *mut State) -> ! {
+    let msg: *mut TString = luaS_newlstr(
         state,
         b"error in error handling\0" as *const u8 as *const i8,
         (::core::mem::size_of::<[i8; 24]>() as u64)
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
             .wrapping_sub(1 as u64),
     );
-    let mut io: *mut TValue = &mut (*(*state).top.p).val;
-    let mut x_: *mut TString = msg;
+    let io: *mut TValue = &mut (*(*state).top.p).val;
+    let x_: *mut TString = msg;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag as i32 | 1 << 6) as u8;
     (*state).top.p = ((*state).top.p).offset(1);
@@ -173,14 +172,14 @@ pub unsafe extern "C" fn luaD_errerr(mut state: *mut State) -> ! {
     luaD_throw(state, 5);
 }
 pub unsafe extern "C" fn luaD_reallocstack(
-    mut state: *mut State,
-    mut newsize: i32,
-    mut raiseerror: i32,
+    state: *mut State,
+    newsize: i32,
+    raiseerror: i32,
 ) -> i32 {
-    let mut oldsize: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
+    let oldsize: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
     let mut i: i32 = 0;
     let mut newstack: StkId = std::ptr::null_mut();
-    let mut oldgcstop: i32 = (*(*state).global).gcstopem as i32;
+    let oldgcstop: i32 = (*(*state).global).gcstopem as i32;
     relstack(state);
     (*(*state).global).gcstopem = 1;
     newstack = luaM_realloc_(
@@ -209,11 +208,11 @@ pub unsafe extern "C" fn luaD_reallocstack(
     return 1;
 }
 pub unsafe extern "C" fn luaD_growstack(
-    mut state: *mut State,
-    mut n: i32,
-    mut raiseerror: i32,
+    state: *mut State,
+    n: i32,
+    raiseerror: i32,
 ) -> i32 {
-    let mut size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
+    let size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
     if ((size > 1000000 as i32) as i32 != 0) as i32 as i64 != 0 {
         if raiseerror != 0 {
             luaD_errerr(state);
@@ -221,7 +220,7 @@ pub unsafe extern "C" fn luaD_growstack(
         return 0;
     } else if n < 1000000 as i32 {
         let mut newsize: i32 = 2 * size;
-        let mut needed: i32 = ((*state).top.p).offset_from((*state).stack.p) as i64 as i32 + n;
+        let needed: i32 = ((*state).top.p).offset_from((*state).stack.p) as i64 as i32 + n;
         if newsize > 1000000 as i32 {
             newsize = 1000000 as i32;
         }
@@ -238,7 +237,7 @@ pub unsafe extern "C" fn luaD_growstack(
     }
     return 0;
 }
-pub unsafe extern "C" fn stackinuse(mut state: *mut State) -> i32 {
+pub unsafe extern "C" fn stackinuse(state: *mut State) -> i32 {
     let mut ci: *mut CallInfo = std::ptr::null_mut();
     let mut res: i32 = 0;
     let mut lim: StkId = (*state).top.p;
@@ -255,9 +254,9 @@ pub unsafe extern "C" fn stackinuse(mut state: *mut State) -> i32 {
     }
     return res;
 }
-pub unsafe extern "C" fn luaD_shrinkstack(mut state: *mut State) {
-    let mut inuse: i32 = stackinuse(state);
-    let mut max: i32 = if inuse > 1000000 as i32 / 3 {
+pub unsafe extern "C" fn luaD_shrinkstack(state: *mut State) {
+    let inuse: i32 = stackinuse(state);
+    let max: i32 = if inuse > 1000000 as i32 / 3 {
         1000000 as i32
     } else {
         inuse * 3
@@ -265,7 +264,7 @@ pub unsafe extern "C" fn luaD_shrinkstack(mut state: *mut State) {
     if inuse <= 1000000 as i32
         && ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32 > max
     {
-        let mut nsize: i32 = if inuse > 1000000 as i32 / 2 {
+        let nsize: i32 = if inuse > 1000000 as i32 / 2 {
             1000000 as i32
         } else {
             inuse * 2
@@ -274,7 +273,7 @@ pub unsafe extern "C" fn luaD_shrinkstack(mut state: *mut State) {
     }
     luaE_shrinkCI(state);
 }
-pub unsafe extern "C" fn luaD_inctop(mut state: *mut State) {
+pub unsafe extern "C" fn luaD_inctop(state: *mut State) {
     if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 1) as i32 != 0)
         as i32 as i64
         != 0
@@ -285,19 +284,19 @@ pub unsafe extern "C" fn luaD_inctop(mut state: *mut State) {
     (*state).top.p;
 }
 pub unsafe extern "C" fn luaD_hook(
-    mut state: *mut State,
-    mut event: i32,
-    mut line: i32,
-    mut ftransfer: i32,
-    mut ntransfer: i32,
+    state: *mut State,
+    event: i32,
+    line: i32,
+    ftransfer: i32,
+    ntransfer: i32,
 ) {
-    let mut hook: HookFunction = (*state).hook;
+    let hook: HookFunction = (*state).hook;
     if hook.is_some() && (*state).allow_hook as i32 != 0 {
         let mut mask: i32 = 1 << 3;
-        let mut ci: *mut CallInfo = (*state).ci;
-        let mut top: i64 =
+        let ci: *mut CallInfo = (*state).ci;
+        let top: i64 =
             ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
-        let mut ci_top: i64 =
+        let ci_top: i64 =
             ((*ci).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
         let mut ar: Debug = Debug {
             event: 0,
@@ -349,15 +348,15 @@ pub unsafe extern "C" fn luaD_hook(
         (*ci).call_status = ((*ci).call_status as i32 & !mask) as u16;
     }
 }
-pub unsafe extern "C" fn luaD_hookcall(mut state: *mut State, mut ci: *mut CallInfo) {
+pub unsafe extern "C" fn luaD_hookcall(state: *mut State, ci: *mut CallInfo) {
     (*state).old_program_counter = 0;
     if (*state).hook_mask & 1 << 0 != 0 {
-        let mut event: i32 = if (*ci).call_status as i32 & 1 << 5 != 0 {
+        let event: i32 = if (*ci).call_status as i32 & 1 << 5 != 0 {
             4
         } else {
             0
         };
-        let mut p: *mut Prototype = (*((*(*ci).function.p).val.value.gc as *mut GCUnion)).lcl.p;
+        let p: *mut Prototype = (*((*(*ci).function.p).val.value.gc as *mut GCUnion)).lcl.p;
         (*ci).u.l.saved_program_counter = ((*ci).u.l.saved_program_counter).offset(1);
         (*ci).u.l.saved_program_counter;
         luaD_hook(state, event, -1, 1, (*p).count_parameters as i32);
@@ -948,10 +947,7 @@ pub unsafe extern "C" fn luaD_closeprotected(
     let mut old_ci: *mut CallInfo = (*state).ci;
     let mut old_allowhooks: u8 = (*state).allow_hook;
     loop {
-        let mut pcl: CloseP = CloseP {
-            level: std::ptr::null_mut(),
-            status: 0,
-        };
+        let mut pcl = CloseP::new();
         pcl.level = ((*state).stack.p as *mut i8).offset(level as isize) as StkId;
         pcl.status = status;
         status = luaD_rawrunprotected(
@@ -1016,7 +1012,7 @@ pub unsafe extern "C" fn f_parser(mut state: *mut State, mut ud: *mut libc::c_vo
     } else {
         luaZ_fill((*p).zio)
     };
-    if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0 as usize] as i32 {
+    if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
         checkmode(state, (*p).mode, b"binary\0" as *const u8 as *const i8);
         cl = luaU_undump(state, (*p).zio, (*p).name);
     } else {
@@ -2519,10 +2515,10 @@ pub unsafe extern "C" fn lua_gc(mut state: *mut State, mut what: i32, mut args: 
                 11 as i32
             };
             if minormul != 0 {
-                (*g).genminormul = minormul as u8;
+                (*g).genminormul = minormul as u64;
             }
             if majormul != 0 {
-                (*g).genmajormul = (majormul / 4) as u8;
+                (*g).genmajormul = (majormul / 4) as u64;
             }
             luaC_changemode(state, 1);
         }
@@ -3217,12 +3213,12 @@ pub unsafe extern "C" fn lua_newstate(
     (*g).lastatomic = 0;
     let mut io: *mut TValue = &mut (*g).nilvalue;
     (*io).value.i = 0;
-    (*io).tag = (3 | 0 << 4) as u8;
-    (*g).gcpause = (200 as i32 / 4) as u8;
-    (*g).gcstepmul = (100 as i32 / 4) as u8;
-    (*g).gcstepsize = 13 as i32 as u8;
-    (*g).genmajormul = (100 as i32 / 4) as u8;
-    (*g).genminormul = 20 as i32 as u8;
+    (*io).tag = 3 | 0 << 4;
+    (*g).gcpause = 200 / 4;
+    (*g).gcstepmul = 100 / 4;
+    (*g).gcstepsize = 13;
+    (*g).genmajormul = 100 / 4;
+    (*g).genminormul = 20;
     i = 0;
     while i < 9 as i32 {
         (*g).mt[i as usize] = std::ptr::null_mut();
@@ -4186,8 +4182,8 @@ pub unsafe extern "C" fn luaG_addinfo(
             },
         );
     } else {
-        buffer[0 as usize] = '?' as i8;
-        buffer[1 as usize] = '\0' as i8;
+        buffer[0] = '?' as i8;
+        buffer[1] = '\0' as i8;
     }
     return luaO_pushfstring(
         state,
@@ -7677,7 +7673,7 @@ pub unsafe extern "C" fn genstep(mut state: *mut State, mut g: *mut Global) {
         let mut majorbase: u64 = (*g).gc_estimate;
         let mut majorinc: u64 = majorbase
             .wrapping_div(100 as i32 as u64)
-            .wrapping_mul(((*g).genmajormul as i32 * 4) as u64);
+            .wrapping_mul((*g).genmajormul * 4);
         if (*g).gc_debt > 0
             && ((*g).totalbytes + (*g).gc_debt) as u64 > majorbase.wrapping_add(majorinc)
         {
@@ -9024,7 +9020,7 @@ pub unsafe extern "C" fn luaU_undump(
     if *name as i32 == '@' as i32 || *name as i32 == '=' as i32 {
         S.name = name.offset(1 as isize);
     } else if *name as i32
-        == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0 as usize] as i32
+        == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32
     {
         S.name = b"binary string\0" as *const u8 as *const i8;
     } else {
@@ -12602,7 +12598,7 @@ pub unsafe extern "C" fn luaX_lookahead(mut ls: *mut LexState) -> i32 {
 }
 static mut dummynode_: Node = Node {
     u: {
-        let mut init = NodeKey {
+        let init = NodeKey {
             value: Value {
                 gc: std::ptr::null_mut(),
             },
@@ -20262,7 +20258,7 @@ pub unsafe extern "C" fn luaL_loadfilex(
         lf.n = lf.n + 1;
         lf.buffer[fresh148 as usize] = '\n' as i8;
     }
-    if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0 as usize] as i32 {
+    if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
         lf.n = 0;
         if !filename.is_null() {
             *__errno_location() = 0;
@@ -22418,7 +22414,7 @@ pub unsafe extern "C" fn io_lines(mut state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn nextc(mut rn: *mut RN) -> i32 {
     if (((*rn).n >= 200 as i32) as i32 != 0) as i32 as i64 != 0 {
-        (*rn).buffer[0 as usize] = '\0' as i8;
+        (*rn).buffer[0] = '\0' as i8;
         return 0;
     } else {
         let fresh152 = (*rn).n;
@@ -22461,8 +22457,8 @@ pub unsafe extern "C" fn read_number(mut state: *mut State, mut f: *mut FILE) ->
     let mut decp: [i8; 2] = [0; 2];
     rn.f = f;
     rn.n = 0;
-    decp[0 as usize] = '.' as i8;
-    decp[1 as usize] = '.' as i8;
+    decp[0] = '.' as i8;
+    decp[1] = '.' as i8;
     flockfile(rn.f);
     loop {
         rn.c = getc_unlocked(rn.f);
@@ -23349,7 +23345,7 @@ pub unsafe extern "C" fn os_date(mut state: *mut State) -> i32 {
     } else {
         let mut cc: [i8; 4] = [0; 4];
         let mut b = Buffer::new();
-        cc[0 as usize] = '%' as i8;
+        cc[0] = '%' as i8;
         luaL_buffinit(state, &mut b);
         while s < se {
             if *s as i32 != '%' as i32 {

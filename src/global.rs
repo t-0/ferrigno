@@ -21,8 +21,8 @@ pub struct Global {
     pub gcstate: u8,
     pub gckind: u8,
     pub gcstopem: u8,
-    pub genminormul: u8,
-    pub genmajormul: u8,
+    pub genminormul: u64,
+    pub genmajormul: u64,
     pub gcstp: u8,
     pub gcemergency: u8,
     pub gcpause: u8,
@@ -58,10 +58,10 @@ pub struct Global {
 impl Global {
     pub unsafe extern "C" fn clear_cache(&mut self) {
         unsafe {
-            let mut i: i32 = 0i32;
+            let mut i: i32 = 0;
             while i < 53 as i32 {
-                let mut j: i32 = 0i32;
-                while j < 2i32 {
+                let mut j: i32 = 0;
+                while j < 2 {
                     if (*self.strcache[i as usize][j as usize]).marked as i32
                         & ((1i32) << 3i32 | (1i32) << 4i32)
                         != 0
@@ -74,20 +74,19 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn white_list(& mut self, mut p: *mut Object) {
+    pub unsafe extern "C" fn white_list(&mut self, mut p: *mut Object) {
         unsafe {
-            let white: i32 = (self.currentwhite as i32 & ((1i32) << 3i32 | (1i32) << 4i32)) as u8 as i32;
+            let white: i32 =
+                (self.currentwhite as i32 & ((1i32) << 3i32 | (1i32) << 4i32)) as u8 as i32;
             while !p.is_null() {
                 (*p).marked = ((*p).marked as i32
-                    & !((1i32) << 5i32
-                        | ((1i32) << 3i32 | (1i32) << 4i32)
-                        | 7i32)
+                    & !((1i32) << 5i32 | ((1i32) << 3i32 | (1i32) << 4i32) | 7i32)
                     | white) as u8;
                 p = (*p).next;
             }
         }
     }
-    pub unsafe extern "C" fn enter_incremental(& mut self) {
+    pub unsafe extern "C" fn enter_incremental(&mut self) {
         unsafe {
             self.white_list(self.allgc);
             self.survival = std::ptr::null_mut();
@@ -103,7 +102,7 @@ impl Global {
             self.lastatomic = 0i32 as u64;
         }
     }
-    pub unsafe extern "C" fn set_debt(& mut self, mut debt: i64) {
+    pub unsafe extern "C" fn set_debt(&mut self, mut debt: i64) {
         let tb: i64 = (self.totalbytes + self.gc_debt) as u64 as i64;
         if debt < tb - (!(0i32 as u64) >> 1i32) as i64 {
             debt = tb - (!(0i32 as u64) >> 1i32) as i64;
@@ -111,12 +110,9 @@ impl Global {
         self.totalbytes = tb - debt;
         self.gc_debt = debt;
     }
-    pub unsafe extern "C" fn set_minor_debt(& mut self) {
+    pub unsafe extern "C" fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(
-                -(((self.totalbytes + self.gc_debt) as u64).wrapping_div(100 as i32 as u64) as i64
-                    * self.genminormul as i64),
-            );
+            self.set_debt(-((self.totalbytes + self.gc_debt).wrapping_div(100) * self.genminormul as i64));
         }
     }
 }
