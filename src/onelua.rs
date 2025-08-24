@@ -161,28 +161,6 @@ pub unsafe extern "C" fn relstack(mut state: *mut State) {
         ci = (*ci).previous;
     }
 }
-pub unsafe extern "C" fn correctstack(mut state: *mut State) {
-    let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-    let mut up: *mut UpValue = 0 as *mut UpValue;
-    (*state).top.p = ((*state).stack.p as *mut i8).offset((*state).top.offset as isize) as StkId;
-    (*state).tbclist.p =
-        ((*state).stack.p as *mut i8).offset((*state).tbclist.offset as isize) as StkId;
-    up = (*state).openupval;
-    while !up.is_null() {
-        (*up).v.p =
-            &mut (*(((*state).stack.p as *mut i8).offset((*up).v.offset as isize) as StkId)).val;
-        up = (*up).u.open.next;
-    }
-    ci = (*state).ci;
-    while !ci.is_null() {
-        (*ci).top.p = ((*state).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
-        (*ci).function.p = ((*state).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
-        if (*ci).call_status as i32 & (1i32) << 1i32 == 0 {
-            ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1i32);
-        }
-        ci = (*ci).previous;
-    }
-}
 pub unsafe extern "C" fn luaD_errerr(mut state: *mut State) -> ! {
     let mut msg: *mut TString = luaS_newlstr(
         state,
@@ -218,7 +196,7 @@ pub unsafe extern "C" fn luaD_reallocstack(
     ) as *mut StackValue;
     (*(*state).global).gcstopem = oldgcstop as u8;
     if ((newstack == 0 as *mut libc::c_void as StkId) as i32 != 0i32) as i32 as i64 != 0 {
-        correctstack(state);
+        (*state).correct_stack();
         if raiseerror != 0 {
             luaD_throw(state, 4i32);
         } else {
@@ -226,7 +204,7 @@ pub unsafe extern "C" fn luaD_reallocstack(
         }
     }
     (*state).stack.p = newstack;
-    correctstack(state);
+    (*state).correct_stack();
     (*state).stack_last.p = ((*state).stack.p).offset(newsize as isize);
     i = oldsize + 5i32;
     while i < newsize + 5i32 {
