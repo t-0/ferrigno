@@ -84,20 +84,24 @@ pub const _ISlower: u32 = 512;
 pub const _ISupper: u32 = 256;
 pub type __jmp_buf = [u32; 8];
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct __sigset_t {
     pub __val: [u64; 16],
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct __jmp_buf_tag {
     pub __mask_was_saved: i32,
     pub __saved_mask: __sigset_t,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union sigval {
     pub _sival_int: i32,
     pub _sival_ptr: *mut libc::c_void,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct siginfo_t {
     pub _si_signo: i32,
     pub _si_errno: i32,
@@ -106,6 +110,7 @@ pub struct siginfo_t {
     pub _sifields: C2RustUnnamed_0,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union C2RustUnnamed_0 {
     pub _pad: [i32; 28],
     pub _kill: C2RustUnnamed_9,
@@ -117,17 +122,20 @@ pub union C2RustUnnamed_0 {
     pub _sigsys: C2RustUnnamed_1,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct C2RustUnnamed_1 {
     pub _call_addr: *mut libc::c_void,
     pub _syscall: i32,
     pub _arch: u32,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct C2RustUnnamed_2 {
     pub _si_band: i64,
     pub _si_fd: i32,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct C2RustUnnamed_3 {
     pub _si_addr: *mut libc::c_void,
     pub _si_addr_lsb: i16,
