@@ -1,0 +1,14 @@
+use crate::stkidrel::*;
+#[derive(Copy, Clone)]
+pub union StackValue {
+    pub val: TValue,
+    pub tbclist: StackValueExtension,
+}
+pub type StkId = *mut StackValue;
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct StackValueExtension {
+    pub value_: Value,
+    pub tt_: u8,
+    pub delta: u16,
+}

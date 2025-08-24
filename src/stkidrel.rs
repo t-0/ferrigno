@@ -1,23 +1,10 @@
 use crate::object::*;
-use crate::state::*;
-pub type ContextFunction = Option<unsafe extern "C" fn(*mut State, i32, i64) -> i32>;
+use crate::functions::*;
+use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 pub union StkIdRel {
     pub p: StkId,
     pub offset: i64,
-}
-pub type StkId = *mut StackValue;
-#[derive(Copy, Clone)]
-pub union StackValue {
-    pub val: TValue,
-    pub tbclist: StackValueExtension,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct StackValueExtension {
-    pub value_: Value,
-    pub tt_: u8,
-    pub delta: u16,
 }
 #[derive(Copy, Clone)]
 pub union Value {
@@ -27,7 +14,6 @@ pub union Value {
     pub i: i64,
     pub n: f64,
 }
-pub type CFunction = Option<unsafe extern "C" fn(*mut State) -> i32>;
 #[derive(Copy, Clone)]
 pub struct TValue {
     pub value_: Value,

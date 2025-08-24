@@ -44,6 +44,7 @@ use crate::header::*;
 use crate::instruction::*;
 use crate::labeldescription::*;
 use crate::labellist::*;
+use crate::stackvalue::*;
 use crate::lexstate::*;
 use crate::lexstate::*;
 use crate::lg::*;
@@ -11211,27 +11212,27 @@ pub unsafe extern "C" fn suffixedexp(mut ls: *mut LexState, mut v: *mut Expressi
 }
 pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut ExpressionDescription) {
     match (*ls).t.token {
-        289 => {
+        TK_FLT => {
             init_exp(v, VKFLT, 0i32);
             (*v).u.nval = (*ls).t.seminfo.r;
         }
-        290 => {
+        TK_INT => {
             init_exp(v, VKINT, 0i32);
             (*v).u.ival = (*ls).t.seminfo.i;
         }
-        292 => {
+        TK_STRING => {
             codestring(v, (*ls).t.seminfo.ts);
         }
-        269 => {
+        TK_NIL => {
             init_exp(v, VNIL, 0i32);
         }
-        275 => {
+        TK_TRUE => {
             init_exp(v, VTRUE, 0i32);
         }
-        262 => {
+        TK_FALSE => {
             init_exp(v, VFALSE, 0i32);
         }
-        280 => {
+        TK_DOTS => {
             let mut fs: *mut FunctionState = (*ls).fs;
             if !(*(*fs).f).is_variable_arguments {
                 luaX_syntaxerror(
@@ -11245,7 +11246,7 @@ pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut Expression
             constructor(ls, v);
             return;
         }
-        264 => {
+        TK_FUNCTION => {
             luaX_next(ls);
             body(ls, v, 0, (*ls).linenumber);
             return;
@@ -11259,7 +11260,7 @@ pub unsafe extern "C" fn simpleexp(mut ls: *mut LexState, mut v: *mut Expression
 }
 pub unsafe extern "C" fn getunopr(mut op: i32) -> u32 {
     match op {
-        270 => return OPR_NOT,
+        TK_NOT => return OPR_NOT,
         45 => return OPR_MINUS,
         126 => return OPR_BNOT,
         35 => return OPR_LEN,

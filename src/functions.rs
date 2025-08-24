@@ -5,3 +5,5 @@ pub type WarnFunction = Option<unsafe extern "C" fn(*mut libc::c_void, *const i8
 pub type AllocationFunction = Option<
     unsafe extern "C" fn(*mut libc::c_void, *mut libc::c_void, u64, u64) -> *mut libc::c_void,
 >;
+pub type ContextFunction = Option<unsafe extern "C" fn(*mut State, i32, i64) -> i32>;
+pub type CFunction = Option<unsafe extern "C" fn(*mut State) -> i32>;

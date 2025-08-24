@@ -28,6 +28,7 @@ mod lg;
 mod loadf;
 mod loads;
 mod loadstate;
+mod stackvalue;
 mod localvariable;
 mod variabledescription;
 mod lx;

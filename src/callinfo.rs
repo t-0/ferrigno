@@ -1,4 +1,5 @@
 use crate::stkidrel::*;
+use crate::functions::*;
 #[derive(Copy, Clone)]
 pub struct CallInfo {
     pub function: StkIdRel,

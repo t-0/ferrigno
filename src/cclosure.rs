@@ -1,5 +1,6 @@
 use crate::object::*;
 use crate::stkidrel::*;
+use crate::functions::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CClosure {
