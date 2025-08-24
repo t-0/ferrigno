@@ -11,8 +11,8 @@ pub union VariableDescriptionOrValue {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct VariableDescription {
-    pub value_: Value,
-    pub tt_: u8,
+    pub value: Value,
+    pub tag: u8,
     pub kind: u8,
     pub ridx: u8,
     pub pidx: i16,
