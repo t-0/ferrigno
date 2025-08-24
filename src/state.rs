@@ -52,7 +52,7 @@ impl State {
                     (*io).tag = ((*x_).tag as i32 | (1i32) << 6i32) as u8;
                 }
                 0 => {
-                    (*old_top).val.tag = (0i32 | (0i32) << 4i32) as u8;
+                    (*old_top).val.tag = 0;
                 }
                 _ => {
                     let io1: *mut TValue = &mut (*old_top).val;
@@ -61,7 +61,7 @@ impl State {
                     (*io1).tag = (*io2).tag;
                 }
             }
-            self.top.p = old_top.offset(1i32 as isize);
+            self.top.p = old_top.offset(1);
         }
     }
 }
