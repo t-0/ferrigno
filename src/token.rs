@@ -27,11 +27,6 @@ pub const TK_END: i32 = 261;
 pub const TK_FALSE: i32 = 262;
 pub const TK_TRUE: i32 = 275;
 pub const TK_NIL: i32 = 269;
-pub const OPR_NOUNOPR: u32 = 4;
-pub const OPR_LEN: u32 = 3;
-pub const OPR_NOT: u32 = 2;
-pub const OPR_BNOT: u32 = 1;
-pub const OPR_MINUS: u32 = 0;
 pub const TK_NOT: i32 = 270;
 pub const TK_GOTO: i32 = 265;
 pub const TK_BREAK: i32 = 257;
@@ -46,3 +41,42 @@ pub const TK_DO: i32 = 258;
 pub const TK_IN: i32 = 267;
 pub const TK_IF: i32 = 266;
 pub const TK_THEN: i32 = 274;
+pub const TOKENS: [*const i8; 37] = [
+    b"and\0" as *const u8 as *const i8,
+    b"break\0" as *const u8 as *const i8,
+    b"do\0" as *const u8 as *const i8,
+    b"else\0" as *const u8 as *const i8,
+    b"elseif\0" as *const u8 as *const i8,
+    b"end\0" as *const u8 as *const i8,
+    b"false\0" as *const u8 as *const i8,
+    b"for\0" as *const u8 as *const i8,
+    b"function\0" as *const u8 as *const i8,
+    b"goto\0" as *const u8 as *const i8,
+    b"if\0" as *const u8 as *const i8,
+    b"in\0" as *const u8 as *const i8,
+    b"local\0" as *const u8 as *const i8,
+    b"nil\0" as *const u8 as *const i8,
+    b"not\0" as *const u8 as *const i8,
+    b"or\0" as *const u8 as *const i8,
+    b"repeat\0" as *const u8 as *const i8,
+    b"return\0" as *const u8 as *const i8,
+    b"then\0" as *const u8 as *const i8,
+    b"true\0" as *const u8 as *const i8,
+    b"until\0" as *const u8 as *const i8,
+    b"while\0" as *const u8 as *const i8,
+    b"//\0" as *const u8 as *const i8,
+    b"..\0" as *const u8 as *const i8,
+    b"...\0" as *const u8 as *const i8,
+    b"==\0" as *const u8 as *const i8,
+    b">=\0" as *const u8 as *const i8,
+    b"<=\0" as *const u8 as *const i8,
+    b"~=\0" as *const u8 as *const i8,
+    b"<<\0" as *const u8 as *const i8,
+    b">>\0" as *const u8 as *const i8,
+    b"::\0" as *const u8 as *const i8,
+    b"<eof>\0" as *const u8 as *const i8,
+    b"<number>\0" as *const u8 as *const i8,
+    b"<integer>\0" as *const u8 as *const i8,
+    b"<name>\0" as *const u8 as *const i8,
+    b"<string>\0" as *const u8 as *const i8,
+];

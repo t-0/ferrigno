@@ -1,6 +1,7 @@
 #![feature(extern_types, c_variadic)]
 mod absolutelineinfo;
 mod blockcontrol;
+mod unary;
 mod buffer;
 mod bufffs;
 mod c;
@@ -13,6 +14,7 @@ mod constructorcontrol;
 mod debug;
 mod dumpstate;
 mod dynamicdata;
+mod utility;
 mod expressiondescription;
 mod f2i;
 mod functionstate;
