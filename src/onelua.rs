@@ -1,6 +1,7 @@
 #![allow(
     static_mut_refs,
     unsafe_code,
+    unused_assignments,
     unpredictable_function_pointer_comparisons,
 )]
 use crate::absolutelineinfo::*;
@@ -5137,7 +5138,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
     o: *const TValue,
     event: u32,
 ) -> *const TValue { unsafe {
-    let mut mt: *mut Table;
+    let mt: *mut Table;
     match (*o).tag as i32 & 0xf as i32 {
         5 => {
             mt = (*((*o).value.gc as *mut GCUnion)).h.metatable;
@@ -5149,10 +5150,10 @@ pub unsafe extern "C" fn luat_gettmbyobj(
             mt = (*(*state).global).mt[((*o).tag as i32 & 0xf as i32) as usize];
         }
     }
-    return if !mt.is_null() {
-        luah_getshortstr(mt, (*(*state).global).tmname[event as usize])
-    } else {
+    return if mt.is_null() {
         &mut (*(*state).global).nilvalue as *mut TValue as *const TValue
+    } else {
+        luah_getshortstr(mt, (*(*state).global).tmname[event as usize])
     };
 }}
 pub unsafe extern "C" fn luat_objtypename(
