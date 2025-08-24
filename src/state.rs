@@ -4,6 +4,7 @@ use crate::global::*;
 use crate::object::*;
 use crate::functions::*;
 use crate::stkidrel::*;
+use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
@@ -18,7 +19,7 @@ pub struct State {
     pub ci: *mut CallInfo,
     pub stack_last: StkIdRel,
     pub stack: StkIdRel,
-    pub openupval: *mut UpVal,
+    pub openupval: *mut UpValue,
     pub tbclist: StkIdRel,
     pub gc_list: *mut Object,
     pub twups: *mut State,

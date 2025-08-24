@@ -1,6 +1,6 @@
 use crate::state::*;
 use crate::object::*;
-use crate::stkidrel::*;
+use crate::tvalue::*;
 use crate::functions::*;
 use crate::stringtable::*;
 use crate::table::*;

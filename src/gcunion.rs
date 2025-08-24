@@ -4,7 +4,7 @@ use crate::prototype::*;
 use crate::state::*;
 use crate::cclosure::*;
 use crate::lclosure::*;
-use crate::stkidrel::*;
+use crate::upvalue::*;
 use crate::table::*;
 use crate::tstring::*;
 use crate::udata::*;
@@ -20,5 +20,5 @@ pub union GCUnion {
     pub h: Table,
     pub p: Prototype,
     pub th: State,
-    pub upv: UpVal,
+    pub upv: UpValue,
 }

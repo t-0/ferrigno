@@ -1,7 +1,7 @@
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
 use crate::object::*;
-use crate::stkidrel::*;
+use crate::tvalue::*;
 use crate::tstring::*;
 use crate::upvaldesc::*;
 use crate::ObjectBase;

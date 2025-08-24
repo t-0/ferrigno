@@ -19,9 +19,12 @@ use crate::blockcontrol::*;
 use crate::buffer::*;
 use crate::bufffs::*;
 use crate::c::*;
+use crate::value::*;
+use crate::tvalue::*;
 use crate::priority::*;
 use crate::global::*;
 use crate::callinfo::*;
+use crate::upvalue::*;
 use crate::variabledescription::*;
 use crate::semanticinfo::*;
 use crate::longjump::*;
@@ -131,11 +134,6 @@ pub const OPR_MOD: u32 = 3;
 pub const OPR_MUL: u32 = 2;
 pub const OPR_SUB: u32 = 1;
 pub const OPR_ADD: u32 = 0;
-pub const OPR_NOUNOPR: u32 = 4;
-pub const OPR_LEN: u32 = 3;
-pub const OPR_NOT: u32 = 2;
-pub const OPR_BNOT: u32 = 1;
-pub const OPR_MINUS: u32 = 0;
 pub const Knop: u32 = 10;
 pub const Kpadding: u32 = 8;
 pub const Kpaddalign: u32 = 9;
@@ -223,7 +221,7 @@ pub unsafe extern "C" fn luaD_rawrunprotected(
 }
 pub unsafe extern "C" fn relstack(mut state: *mut State) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-    let mut up: *mut UpVal = 0 as *mut UpVal;
+    let mut up: *mut UpValue = 0 as *mut UpValue;
     (*state).top.offset =
         ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
     (*state).tbclist.offset =
@@ -244,7 +242,7 @@ pub unsafe extern "C" fn relstack(mut state: *mut State) {
 }
 pub unsafe extern "C" fn correctstack(mut state: *mut State) {
     let mut ci: *mut CallInfo = 0 as *mut CallInfo;
-    let mut up: *mut UpVal = 0 as *mut UpVal;
+    let mut up: *mut UpValue = 0 as *mut UpValue;
     (*state).top.p = ((*state).stack.p as *mut i8).offset((*state).top.offset as isize) as StkId;
     (*state).tbclist.p =
         ((*state).stack.p as *mut i8).offset((*state).tbclist.offset as isize) as StkId;
@@ -2997,8 +2995,8 @@ pub unsafe extern "C" fn getupvalref(
     mut fidx: i32,
     mut n: i32,
     mut pf: *mut *mut LClosure,
-) -> *mut *mut UpVal {
-    static mut nullup: *const UpVal = 0 as *const UpVal;
+) -> *mut *mut UpValue {
+    static mut nullup: *const UpValue = 0 as *const UpValue;
     let mut f: *mut LClosure = 0 as *mut LClosure;
     let mut fi: *mut TValue = index2value(state, fidx);
     f = &mut (*((*fi).value_.gc as *mut GCUnion)).lcl;
@@ -3007,9 +3005,9 @@ pub unsafe extern "C" fn getupvalref(
     }
     if 1i32 <= n && n <= (*(*f).p).sizeupvalues {
         return &mut *((*f).upvalues).as_mut_ptr().offset((n - 1i32) as isize)
-            as *mut *mut UpVal;
+            as *mut *mut UpValue;
     } else {
-        return &nullup as *const *const UpVal as *mut *mut UpVal;
+        return &nullup as *const *const UpValue as *mut *mut UpValue;
     };
 }
 #[unsafe(no_mangle)]
@@ -3044,8 +3042,8 @@ pub unsafe extern "C" fn lua_upvaluejoin(
     mut n2: i32,
 ) {
     let mut f1: *mut LClosure = 0 as *mut LClosure;
-    let mut up1: *mut *mut UpVal = getupvalref(state, fidx1, n1, &mut f1);
-    let mut up2: *mut *mut UpVal = getupvalref(state, fidx2, n2, 0 as *mut *mut LClosure);
+    let mut up1: *mut *mut UpValue = getupvalref(state, fidx1, n1, &mut f1);
+    let mut up2: *mut *mut UpValue = getupvalref(state, fidx2, n2, 0 as *mut *mut LClosure);
     *up1 = *up2;
     if (*f1).marked as i32 & (1i32) << 5i32 != 0
         && (**up1).marked as i32 & ((1i32) << 3i32 | (1i32) << 4i32) != 0
@@ -3262,7 +3260,7 @@ pub unsafe extern "C" fn preinit_thread(mut state: *mut State, mut g: *mut Globa
     (*state).basehookcount = 0i32;
     (*state).allow_hook = 1i32 as u8;
     (*state).hookcount = (*state).basehookcount;
-    (*state).openupval = 0 as *mut UpVal;
+    (*state).openupval = 0 as *mut UpValue;
     (*state).status = 0i32 as u8;
     (*state).errfunc = 0i32 as i64;
     (*state).oldpc = 0i32;
@@ -7009,7 +7007,7 @@ pub unsafe extern "C" fn reallymarkobject(mut g: *mut Global, mut o: *mut Object
             current_block_18 = 18317007320854588510;
         }
         9 => {
-            let mut uv: *mut UpVal = &mut (*(o as *mut GCUnion)).upv;
+            let mut uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
             if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
                 (*uv).marked = ((*uv).marked as i32
                     & !((1i32) << 5i32 | ((1i32) << 3i32 | (1i32) << 4i32))
@@ -7107,7 +7105,7 @@ pub unsafe extern "C" fn remarkupvals(mut g: *mut Global) -> i32 {
         {
             p = &mut (*thread).twups;
         } else {
-            let mut uv: *mut UpVal = 0 as *mut UpVal;
+            let mut uv: *mut UpValue = 0 as *mut UpValue;
             *p = (*thread).twups;
             (*thread).twups = thread;
             uv = (*thread).openupval;
@@ -7498,7 +7496,7 @@ pub unsafe extern "C" fn traverseLclosure(mut g: *mut Global, mut cl: *mut LClos
     }
     i = 0i32;
     while i < (*cl).count_upvalues as i32 {
-        let mut uv: *mut UpVal = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
+        let mut uv: *mut UpValue = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
         if !uv.is_null() {
             if (*uv).marked as i32 & ((1i32) << 3i32 | (1i32) << 4i32) != 0 {
                 reallymarkobject(g, &mut (*(uv as *mut GCUnion)).gc);
@@ -7509,7 +7507,7 @@ pub unsafe extern "C" fn traverseLclosure(mut g: *mut Global, mut cl: *mut LClos
     return 1i32 + (*cl).count_upvalues as i32;
 }
 pub unsafe extern "C" fn traversethread(mut g: *mut Global, mut th: *mut State) -> i32 {
-    let mut uv: *mut UpVal = 0 as *mut UpVal;
+    let mut uv: *mut UpValue = 0 as *mut UpValue;
     let mut o: StkId = (*th).stack.p;
     if (*th).marked as i32 & 7i32 > 1i32 || (*g).gcstate as i32 == 0i32 {
         linkgclist_(
@@ -7676,14 +7674,14 @@ pub unsafe extern "C" fn clearbyvalues(mut g: *mut Global, mut l: *mut Object, m
         l = (*(l as *mut GCUnion)).h.gc_list;
     }
 }
-pub unsafe extern "C" fn freeupval(mut state: *mut State, mut uv: *mut UpVal) {
+pub unsafe extern "C" fn freeupval(mut state: *mut State, mut uv: *mut UpValue) {
     if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
         luaF_unlinkupval(uv);
     }
     luaM_free_(
         state,
         uv as *mut libc::c_void,
-        ::core::mem::size_of::<UpVal>() as u64,
+        ::core::mem::size_of::<UpValue>() as u64,
     );
 }
 pub unsafe extern "C" fn freeobj(mut state: *mut State, mut o: *mut Object) {
@@ -8551,7 +8549,7 @@ pub unsafe extern "C" fn luaF_newLclosure(
             break;
         }
         let ref mut fresh18 = *((*c).upvalues).as_mut_ptr().offset(nupvals as isize);
-        *fresh18 = 0 as *mut UpVal;
+        *fresh18 = 0 as *mut UpValue;
     }
     return c;
 }
@@ -8562,9 +8560,9 @@ pub unsafe extern "C" fn luaF_initupvals(mut state: *mut State, mut cl: *mut LCl
         let mut o: *mut Object = luaC_newobj(
             state,
             9 as i32 | (0i32) << 4i32,
-            ::core::mem::size_of::<UpVal>() as u64,
+            ::core::mem::size_of::<UpValue>() as u64,
         );
-        let mut uv: *mut UpVal = &mut (*(o as *mut GCUnion)).upv;
+        let mut uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
         (*uv).v.p = &mut (*uv).u.value;
         (*(*uv).v.p).tt_ = (0i32 | (0i32) << 4i32) as u8;
         let ref mut fresh19 = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
@@ -8585,15 +8583,15 @@ pub unsafe extern "C" fn luaF_initupvals(mut state: *mut State, mut cl: *mut LCl
 pub unsafe extern "C" fn newupval(
     mut state: *mut State,
     mut level: StkId,
-    mut prev: *mut *mut UpVal,
-) -> *mut UpVal {
+    mut prev: *mut *mut UpValue,
+) -> *mut UpValue {
     let mut o: *mut Object = luaC_newobj(
         state,
         9 as i32 | (0i32) << 4i32,
-        ::core::mem::size_of::<UpVal>() as u64,
+        ::core::mem::size_of::<UpValue>() as u64,
     );
-    let mut uv: *mut UpVal = &mut (*(o as *mut GCUnion)).upv;
-    let mut next: *mut UpVal = *prev;
+    let mut uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
+    let mut next: *mut UpValue = *prev;
     (*uv).v.p = &mut (*level).val;
     (*uv).u.open.next = next;
     (*uv).u.open.previous = prev;
@@ -8607,9 +8605,9 @@ pub unsafe extern "C" fn newupval(
     }
     return uv;
 }
-pub unsafe extern "C" fn luaF_findupval(mut state: *mut State, mut level: StkId) -> *mut UpVal {
-    let mut pp: *mut *mut UpVal = &mut (*state).openupval;
-    let mut p: *mut UpVal = 0 as *mut UpVal;
+pub unsafe extern "C" fn luaF_findupval(mut state: *mut State, mut level: StkId) -> *mut UpValue {
+    let mut pp: *mut *mut UpValue = &mut (*state).openupval;
+    let mut p: *mut UpValue = 0 as *mut UpValue;
     loop {
         p = *pp;
         if !(!p.is_null() && (*p).v.p as StkId >= level) {
@@ -8706,14 +8704,14 @@ pub unsafe extern "C" fn luaF_newtbcupval(mut state: *mut State, mut level: StkI
     (*level).tbclist.delta = level.offset_from((*state).tbclist.p) as i64 as u16;
     (*state).tbclist.p = level;
 }
-pub unsafe extern "C" fn luaF_unlinkupval(mut uv: *mut UpVal) {
+pub unsafe extern "C" fn luaF_unlinkupval(mut uv: *mut UpValue) {
     *(*uv).u.open.previous = (*uv).u.open.next;
     if !((*uv).u.open.next).is_null() {
         (*(*uv).u.open.next).u.open.previous = (*uv).u.open.previous;
     }
 }
 pub unsafe extern "C" fn luaF_closeupval(mut state: *mut State, mut level: StkId) {
-    let mut uv: *mut UpVal = 0 as *mut UpVal;
+    let mut uv: *mut UpValue = 0 as *mut UpValue;
     let mut upl: StkId = 0 as *mut StackValue;
     loop {
         uv = (*state).openupval;
@@ -17390,7 +17388,7 @@ pub unsafe extern "C" fn luaV_shiftl(mut x: i64, mut y: i64) -> i64 {
 pub unsafe extern "C" fn pushclosure(
     mut state: *mut State,
     mut p: *mut Prototype,
-    mut encup: *mut *mut UpVal,
+    mut encup: *mut *mut UpValue,
     mut base: StkId,
     mut ra: StkId,
 ) {
@@ -17695,7 +17693,7 @@ pub unsafe extern "C" fn luaV_execute(mut state: *mut State, mut ci: *mut CallIn
                                 & !(!(0u32) << 8i32) << 0i32)
                                 as i32 as isize,
                         );
-                        let mut uv: *mut UpVal = *((*cl).upvalues).as_mut_ptr().offset(
+                        let mut uv: *mut UpValue = *((*cl).upvalues).as_mut_ptr().offset(
                             (i >> 0i32 + 7i32 + 8i32 + 1i32
                                 & !(!(0u32) << 8i32) << 0i32)
                                 as i32 as isize,

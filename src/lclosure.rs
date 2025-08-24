@@ -1,6 +1,6 @@
 use crate::object::*;
 use crate::prototype::*;
-use crate::stkidrel::*;
+use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LClosure {
@@ -10,5 +10,5 @@ pub struct LClosure {
     pub count_upvalues: u8,
     pub gc_list: *mut Object,
     pub p: *mut Prototype,
-    pub upvalues: [*mut UpVal; 1],
+    pub upvalues: [*mut UpValue; 1],
 }
