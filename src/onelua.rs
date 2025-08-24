@@ -28350,7 +28350,7 @@ pub unsafe extern "C" fn setsignal(
     handler: Option<unsafe extern "C" fn(i32) -> ()>,
 ) { unsafe {
     let mut sa: sigaction = sigaction {
-        __sigaction_handler: C2RustUnnamed_10 { sa_handler: None },
+        __sigaction_handler: SigActionA { sa_handler: None },
         sa_mask: __sigset_t { __val: [0; 16] },
         sa_flags: 0,
         sa_restorer: None,

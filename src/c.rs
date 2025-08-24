@@ -107,55 +107,55 @@ pub struct siginfo_t {
     pub _si_errno: i32,
     pub _si_code: i32,
     pub __pad0: i32,
-    pub _sifields: C2RustUnnamed_0,
+    pub _sifields: SigInfoA,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_0 {
+pub union SigInfoA {
     pub _pad: [i32; 28],
-    pub _kill: C2RustUnnamed_9,
-    pub _timer: C2RustUnnamed_8,
-    pub _rt: C2RustUnnamed_7,
-    pub _sigchld: C2RustUnnamed_6,
-    pub _sigfault: C2RustUnnamed_3,
-    pub _sigpoll: C2RustUnnamed_2,
-    pub _sigsys: C2RustUnnamed_1,
+    pub _kill: SigInfoAA,
+    pub _timer: SigInfoAB,
+    pub _rt: SigInfoAC,
+    pub _sigchld: SigInfoAD,
+    pub _sigfault: SigInfoAE,
+    pub _sigpoll: SigInfoAF,
+    pub _sigsys: SigInfoAG,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_1 {
+pub struct SigInfoAG {
     pub _call_addr: *mut libc::c_void,
     pub _syscall: i32,
     pub _arch: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_2 {
+pub struct SigInfoAF {
     pub _si_band: i64,
     pub _si_fd: i32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_3 {
+pub struct SigInfoAE {
     pub _si_addr: *mut libc::c_void,
     pub _si_addr_lsb: i16,
-    pub _bounds: C2RustUnnamed_4,
+    pub _bounds: SigInfoAEA,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_4 {
-    pub _addr_bnd: C2RustUnnamed_5,
+pub union SigInfoAEA {
+    pub _addr_bnd: SigInfoAEAA,
     pub _pkey: u32,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_5 {
+pub struct SigInfoAEAA {
     pub _lower: *mut libc::c_void,
     pub _upper: *mut libc::c_void,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_6 {
+pub struct SigInfoAD {
     pub si_pid: i32,
     pub si_uid: u32,
     pub si_status: i32,
@@ -164,21 +164,21 @@ pub struct C2RustUnnamed_6 {
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_7 {
+pub struct SigInfoAC {
     pub si_pid: i32,
     pub si_uid: u32,
     pub si_sigval: sigval,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_8 {
+pub struct SigInfoAB {
     pub si_tid: i32,
     pub si_overrun: i32,
     pub si_sigval: sigval,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct C2RustUnnamed_9 {
+pub struct SigInfoAA {
     pub si_pid: i32,
     pub si_uid: u32,
 }
@@ -186,14 +186,14 @@ pub type __sighandler_t = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct sigaction {
-    pub __sigaction_handler: C2RustUnnamed_10,
+    pub __sigaction_handler: SigActionA,
     pub sa_mask: __sigset_t,
     pub sa_flags: i32,
     pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub union C2RustUnnamed_10 {
+pub union SigActionA {
     pub sa_handler: __sighandler_t,
     pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut siginfo_t, *mut libc::c_void) -> ()>,
 }
