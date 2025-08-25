@@ -5343,7 +5343,7 @@ pub unsafe extern "C" fn luat_callorderitm(
     mut p1: *const TValue,
     v2: i32,
     flip: i32,
-    isfloat: i32,
+    is_float: bool,
     event: u32,
 ) -> i32 { unsafe {
     let mut aux: TValue = TValue {
@@ -5353,7 +5353,7 @@ pub unsafe extern "C" fn luat_callorderitm(
         tag: 0,
     };
     let p2: *const TValue;
-    if isfloat != 0 {
+    if is_float {
         let io: *mut TValue = &mut aux;
         (*io).value.n = v2 as f64;
         (*io).tag = (3 | 1 << 4) as u8;
@@ -14468,7 +14468,7 @@ pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> i32 { unsaf
 pub unsafe extern "C" fn is_sc_number(
     e: *mut ExpressionDescription,
     pi: *mut i32,
-    isfloat: *mut i32,
+    is_float: *mut bool,
 ) -> i32 { unsafe {
     let mut i: i64 = 0;
     if (*e).k as u32 == VKINT as i32 as u32 {
@@ -14476,7 +14476,7 @@ pub unsafe extern "C" fn is_sc_number(
     } else if (*e).k as u32 == VKFLT as i32 as u32
         && luav_flttointeger((*e).u.nval, &mut i, F2I::Equal) != 0
     {
-        *isfloat = 1;
+        *is_float = true;
     } else {
         return 0;
     }
@@ -14778,13 +14778,13 @@ pub unsafe extern "C" fn codeorder(
     let r1: i32;
     let r2: i32;
     let mut im: i32 = 0;
-    let mut isfloat: i32 = 0;
+    let mut is_float: bool = false;
     let op: u32;
-    if is_sc_number(e2, &mut im, &mut isfloat) != 0 {
+    if is_sc_number(e2, &mut im, &mut is_float) != 0 {
         r1 = luak_exp2anyreg(fs, e1);
         r2 = im;
         op = binopr2op(opr, OPR_LT, OP_LTI);
-    } else if is_sc_number(e1, &mut im, &mut isfloat) != 0 {
+    } else if is_sc_number(e1, &mut im, &mut is_float) != 0 {
         r1 = luak_exp2anyreg(fs, e2);
         r2 = im;
         op = binopr2op(opr, OPR_LT, OP_GTI);
@@ -14794,7 +14794,7 @@ pub unsafe extern "C" fn codeorder(
         op = binopr2op(opr, OPR_LT, OP_LT);
     }
     freeexps(fs, e1, e2);
-    (*e1).u.info = condjump(fs, op, r1, r2, isfloat, 1);
+    (*e1).u.info = condjump(fs, op, r1, r2, is_float as i32, 1);
     (*e1).k = VJMP;
 }}
 pub unsafe extern "C" fn codeeq(
@@ -14806,13 +14806,13 @@ pub unsafe extern "C" fn codeeq(
     let r1: i32;
     let r2: i32;
     let mut im: i32 = 0;
-    let mut isfloat: i32 = 0;
+    let mut is_float: bool = false;
     let op: u32;
     if (*e1).k as u32 != VNONRELOC as i32 as u32 {
         swapexps(e1, e2);
     }
     r1 = luak_exp2anyreg(fs, e1);
-    if is_sc_number(e2, &mut im, &mut isfloat) != 0 {
+    if is_sc_number(e2, &mut im, &mut is_float) != 0 {
         op = OP_EQI;
         r2 = im;
     } else if exp2rk(fs, e2) != 0 {
@@ -14828,7 +14828,7 @@ pub unsafe extern "C" fn codeeq(
         op,
         r1,
         r2,
-        isfloat,
+        is_float as i32,
         (opr as u32 == OPR_EQ as i32 as u32) as i32,
     );
     (*e1).k = VJMP;
@@ -14910,7 +14910,7 @@ pub unsafe extern "C" fn luak_infix(
         }
         14 | 15 | 17 | 18 => {
             let mut dummy: i32 = 0;
-            let mut dummy2: i32 = 0;
+            let mut dummy2: bool = false;
             if is_sc_number(v, &mut dummy, &mut dummy2) == 0 {
                 luak_exp2anyreg(fs, v);
             }
@@ -18511,9 +18511,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             let fim: f64 = im_0 as f64;
                             cond_5 = (fa < fim) as i32;
                         } else {
-                            let isf: i32 = (i >> 0 + 7 + 8 + 1 + 8
-                                & !(!(0u32) << 8) << 0)
-                                as i32;
+                            let isf: bool = (i >> 0 + 7 + 8 + 1 + 8
+                                & !(!(0u32) << 8) << 0) != 0;
                             (*ci).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_5 =
@@ -18550,9 +18549,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             let fim_0: f64 = im_1 as f64;
                             cond_6 = (fa_0 <= fim_0) as i32;
                         } else {
-                            let isf_0: i32 = (i >> 0 + 7 + 8 + 1 + 8
-                                & !(!(0u32) << 8) << 0)
-                                as i32;
+                            let isf_0: bool = (i >> 0 + 7 + 8 + 1 + 8
+                                & !(!(0u32) << 8) << 0) != 0;
                             (*ci).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_6 =
@@ -18589,9 +18587,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             let fim_1: f64 = im_2 as f64;
                             cond_7 = (fa_1 > fim_1) as i32;
                         } else {
-                            let isf_1: i32 = (i >> 0 + 7 + 8 + 1 + 8
-                                & !(!(0u32) << 8) << 0)
-                                as i32;
+                            let isf_1: bool = (i >> 0 + 7 + 8 + 1 + 8
+                                & !(!(0u32) << 8) << 0) != 0;
                             (*ci).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_7 = luat_callorderitm(
@@ -18634,9 +18631,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             let fim_2: f64 = im_3 as f64;
                             cond_8 = (fa_2 >= fim_2) as i32;
                         } else {
-                            let isf_2: i32 = (i >> 0 + 7 + 8 + 1 + 8
-                                & !(!(0u32) << 8) << 0)
-                                as i32;
+                            let isf_2: bool = (i >> 0 + 7 + 8 + 1 + 8
+                                & !(!(0u32) << 8) << 0) != 0;
                             (*ci).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*ci).top.p;
                             cond_8 = luat_callorderitm(
