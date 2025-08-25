@@ -1405,18 +1405,18 @@ pub unsafe extern "C" fn lua_stringtonumber(state: *mut State, s: *const i8) -> 
 pub unsafe extern "C" fn lua_tonumberx(
     state: *mut State,
     idx: i32,
-    pisnum: *mut i32,
+    is_number: *mut bool,
 ) -> f64 { unsafe {
     let mut n: f64 = 0.0;
     let o: *const TValue = index2value(state, idx);
-    let isnum: i32 = if (*o).tag as i32 == 3 | 1 << 4 {
+    let is_number_: bool = if (*o).tag as i32 == 3 | 1 << 4 {
         n = (*o).value.n;
-        1
+        true
     } else {
-        if luav_tonumber_(o, &mut n) { 1 } else { 0 }
+        luav_tonumber_(o, &mut n)
     };
-    if !pisnum.is_null() {
-        *pisnum = isnum;
+    if !is_number.is_null() {
+        *is_number = is_number_;
     }
     return n;
 }}
@@ -1424,19 +1424,19 @@ pub unsafe extern "C" fn lua_tonumberx(
 pub unsafe extern "C" fn lua_tointegerx(
     state: *mut State,
     idx: i32,
-    pisnum: *mut i32,
+    is_number: *mut bool,
 ) -> i64 { unsafe {
     let mut res: i64 = 0;
     let o: *const TValue = index2value(state, idx);
-    let isnum: i32 =
+    let is_number_: bool =
         if (((*o).tag as i32 == 3 | 0 << 4) as i32 != 0) as i32 as i64 != 0 {
             res = (*o).value.i;
-            1
+            true
         } else {
-            luav_tointeger(o, &mut res, F2I::Equal)
+            luav_tointeger(o, &mut res, F2I::Equal) != 0
         };
-    if !pisnum.is_null() {
-        *pisnum = isnum;
+    if !is_number.is_null() {
+        *is_number = is_number_;
     }
     return res;
 }}
@@ -19613,9 +19613,9 @@ pub unsafe extern "C" fn lual_optlstring(
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_checknumber(state: *mut State, arg: i32) -> f64 { unsafe {
-    let mut isnum: i32 = 0;
-    let d: f64 = lua_tonumberx(state, arg, &mut isnum);
-    if ((isnum == 0) as i32 != 0) as i32 as i64 != 0 {
+    let mut is_number: bool = false;
+    let d: f64 = lua_tonumberx(state, arg, &mut is_number);
+    if !is_number {
         tag_error(state, arg, 3);
     }
     return d;
@@ -19641,12 +19641,12 @@ pub unsafe extern "C" fn interror(state: *mut State, arg: i32) { unsafe {
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_checkinteger(state: *mut State, arg: i32) -> i64 { unsafe {
-    let mut isnum: i32 = 0;
-    let d: i64 = lua_tointegerx(state, arg, &mut isnum);
-    if ((isnum == 0) as i32 != 0) as i32 as i64 != 0 {
+    let mut is_number: bool = false;
+    let ret: i64 = lua_tointegerx(state, arg, &mut is_number);
+    if !is_number {
         interror(state, arg);
     }
-    return d;
+    return ret;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_optinteger(state: *mut State, arg: i32, def: i64) -> i64 { unsafe {
@@ -20074,14 +20074,11 @@ pub unsafe extern "C" fn lual_callmeta(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_len(state: *mut State, idx: i32) -> i64 { unsafe {
     let l: i64;
-    let mut isnum: i32 = 0;
+    let mut is_number: bool = false;
     lua_len(state, idx);
-    l = lua_tointegerx(state, -1, &mut isnum);
-    if ((isnum == 0) as i32 != 0) as i32 as i64 != 0 {
-        lual_error(
-            state,
-            b"object length is not an integer\0" as *const u8 as *const i8,
-        );
+    l = lua_tointegerx(state, -1, &mut is_number);
+    if !is_number {
+        lual_error(state, b"object length is not an integer\0" as *const u8 as *const i8);
     }
     lua_settop(state, -1 - 1);
     return l;
@@ -22920,10 +22917,10 @@ pub unsafe extern "C" fn getfield(
     d: i32,
     delta: i32,
 ) -> i32 { unsafe {
-    let mut isnum: i32 = 0;
+    let mut is_number: bool = false;
     let t: i32 = lua_getfield(state, -1, key);
-    let mut res: i64 = lua_tointegerx(state, -1, &mut isnum);
-    if isnum == 0 {
+    let mut res: i64 = lua_tointegerx(state, -1, &mut is_number);
+    if !is_number {
         if ((t != 0) as i32 != 0) as i32 as i64 != 0 {
             return lual_error(
                 state,
@@ -26205,9 +26202,9 @@ pub unsafe extern "C" fn math_atan(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn math_toint(state: *mut State) -> i32 { unsafe {
-    let mut valid: i32 = 0;
-    let n: i64 = lua_tointegerx(state, 1, &mut valid);
-    if (valid != 0) as i32 as i64 != 0 {
+    let mut is_number: bool = false;
+    let n: i64 = lua_tointegerx(state, 1, &mut is_number);
+    if is_number {
         (*state).push_integer(n);
     } else {
         lual_checkany(state, 1);
