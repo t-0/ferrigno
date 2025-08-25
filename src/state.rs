@@ -42,7 +42,7 @@ pub struct State {
 }
 impl TObject for State {
     fn get_tag_type(&self) -> u8 {
-        self.tag & TAG_TYPE_MASK
+        self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
         "State".to_string()
@@ -118,13 +118,13 @@ impl State {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.i = x;
-            (*t_value).tag = 3u8 | 0u8 << 4u8;
+            (*t_value).tag = TAG_TYPE_NUMERIC_INTEGER;
             self.top.p = self.top.p.offset(1);
         }
     }
     pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
-            (*self.top.p).val.tag = 0u8 | 0u8 << 4u8;
+            (*self.top.p).val.tag = TAG_TYPE_NIL_NIL;
             self.top.p = self.top.p.offset(1);
         }
     }

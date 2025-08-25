@@ -306,7 +306,7 @@ unsafe extern "C" fn set_seed(
 ) { unsafe {
     let mut i: i32;
     *randomstate.offset(0 as isize) = n1 as u64;
-    *randomstate.offset(1 as isize) = 0xff as i32 as u64;
+    *randomstate.offset(1 as isize) = 0xFF as i32 as u64;
     *randomstate.offset(2 as isize) = n2 as u64;
     *randomstate.offset(3 as isize) = 0;
     i = 0;

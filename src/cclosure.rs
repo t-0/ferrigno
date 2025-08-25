@@ -16,7 +16,7 @@ pub struct CClosure {
 }
 impl TObject for CClosure {
     fn get_tag_type(&self) -> u8 {
-        self.tag & TAG_TYPE_MASK
+        self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
         "CClosure".to_string()

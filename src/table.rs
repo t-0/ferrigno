@@ -19,7 +19,7 @@ pub struct Table {
 }
 impl TObject for Table {
     fn get_tag_type(&self) -> u8 {
-        self.tag & TAG_TYPE_MASK
+        self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
         "Table".to_string()
