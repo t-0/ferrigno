@@ -1819,7 +1819,7 @@ pub unsafe extern "C" fn lua_rawgetp(
     t = gettable(state, index);
     let io: *mut TValue = &mut k;
     (*io).value.p = p as *mut libc::c_void;
-    (*io).tag = (2 | 0 << 4) as u8;
+    (*io).tag = TAG_TYPE_POINTER;
     return finishrawget(state, luah_get(t, &mut k));
 }}
 #[unsafe(no_mangle)]
@@ -2090,7 +2090,7 @@ pub unsafe extern "C" fn lua_rawsetp(
     };
     let io: *mut TValue = &mut k;
     (*io).value.p = p as *mut libc::c_void;
-    (*io).tag = (2 | 0 << 4) as u8;
+    (*io).tag = TAG_TYPE_POINTER;
     aux_rawset(state, index, &mut k, 1);
 }}
 #[unsafe(no_mangle)]
@@ -3454,7 +3454,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
                 },
                 tag: 0,
             };
-            v.tag = (1 | 1 << 4) as u8;
+            v.tag = TAG_TYPE_BOOLEAN_TRUE;
             if !(*p).is_variable_arguments {
                 i = 0;
             } else {
@@ -8464,7 +8464,7 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
                 (*o).tag = (TAG_TYPE_BOOLEAN_FALSE) as u8;
             }
             17 => {
-                (*o).tag = (1 | 1 << 4) as u8;
+                (*o).tag = TAG_TYPE_BOOLEAN_TRUE;
             }
             19 => {
                 let io: *mut TValue = o;
@@ -13153,7 +13153,7 @@ pub unsafe extern "C" fn luak_exp2const(
             return 1;
         }
         2 => {
-            (*v).tag = (1 | 1 << 4) as u8;
+            (*v).tag = TAG_TYPE_BOOLEAN_TRUE;
             return 1;
         }
         1 => {
@@ -13723,7 +13723,7 @@ pub unsafe extern "C" fn bool_true(fs: *mut FunctionState) -> i32 { unsafe {
         },
         tag: 0,
     };
-    o.tag = (1 | 1 << 4) as u8;
+    o.tag = TAG_TYPE_BOOLEAN_TRUE;
     return addk(fs, &mut o, &mut o);
 }}
 pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 { unsafe {
@@ -16189,7 +16189,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_6: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        (*ra_6).val.tag = (1 | 1 << 4) as u8;
+                        (*ra_6).val.tag = TAG_TYPE_BOOLEAN_TRUE;
                         continue;
                     }
                     8 => {
@@ -18109,7 +18109,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         if (*rb_13).tag == TAG_TYPE_BOOLEAN_FALSE
                             || (*rb_13).tag & TAG_TYPE_MASK_ == 0
                         {
-                            (*ra_49).val.tag = (1 | 1 << 4) as u8;
+                            (*ra_49).val.tag = TAG_TYPE_BOOLEAN_TRUE;
                         } else {
                             (*ra_49).val.tag = (TAG_TYPE_BOOLEAN_FALSE) as u8;
                         }
