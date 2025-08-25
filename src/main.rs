@@ -41,7 +41,6 @@ mod localvariable;
 mod variabledescription;
 mod lx;
 mod matchstate;
-mod nativeendian;
 mod new;
 mod lclosure;
 mod cclosure;
