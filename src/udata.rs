@@ -14,7 +14,7 @@ pub struct Udata {
     pub uv: [UValue; 1],
 }
 impl TObject for Udata {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "Udata".to_string()
     }
 }

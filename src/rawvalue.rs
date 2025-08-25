@@ -15,6 +15,6 @@ pub struct RawValueRegister {
 }
 #[derive(Copy, Clone)]
 pub struct RawValueReference {
-    pub idx: i16,
+    pub index: i16,
     pub t: u8,
 }

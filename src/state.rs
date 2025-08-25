@@ -39,7 +39,7 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl TObject for State {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "State".to_string()
     }
 }

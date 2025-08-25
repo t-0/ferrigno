@@ -12,7 +12,7 @@ macro_rules! ObjectBase {
     }
 }
 pub trait TObject {
-    fn get_class_name() -> String;
+    fn get_class_name(& mut self) -> String;
 }
 #[derive(Copy, Clone)]
 pub struct Object {
@@ -21,7 +21,7 @@ pub struct Object {
     pub marked: u8,
 }
 impl TObject for Object {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "Object".to_string()
     }
 }

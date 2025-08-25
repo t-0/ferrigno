@@ -13,7 +13,7 @@ pub struct LClosure {
     pub upvalues: [*mut UpValue; 1],
 }
 impl TObject for LClosure {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "LClosure".to_string()
     }
 }

@@ -10,7 +10,7 @@ pub struct UpValue {
     pub u: UpValueB,
 }
 impl TObject for UpValue {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "UpValue".to_string()
     }
 }

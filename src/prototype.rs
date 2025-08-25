@@ -1,7 +1,6 @@
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
 use crate::object::*;
-use crate::onelua::*;
 use crate::tvalue::*;
 use crate::tstring::*;
 use crate::state::*;
@@ -34,7 +33,7 @@ pub struct Prototype {
 }
 }
 impl TObject for Prototype {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "Prototype".to_string()
     }
 }

@@ -17,7 +17,7 @@ pub struct Table {
 }
 }
 impl TObject for Table {
-    fn get_class_name() -> String {
+    fn get_class_name(& mut self) -> String {
         "Table".to_string()
     }
 }
