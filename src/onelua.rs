@@ -10,6 +10,7 @@ use crate::unary::*;
 use crate::bufffs::*;
 use crate::utility::*;
 use crate::c::*;
+use crate::character::*;
 use crate::callinfo::*;
 use crate::calls::*;
 use crate::cclosure::*;
@@ -10309,7 +10310,7 @@ pub unsafe extern "C" fn funcargs(ls: *mut LexState, f: *mut ExpressionDescripti
     };
     let line: i32 = (*ls).linenumber;
     match (*ls).t.token {
-        40 => {
+        CHARACTER_PARENTHESIS_LEFT => {
             luax_next(ls);
             if (*ls).t.token == ')' as i32 {
                 args.k = VVOID;
@@ -10321,7 +10322,7 @@ pub unsafe extern "C" fn funcargs(ls: *mut LexState, f: *mut ExpressionDescripti
             }
             check_match(ls, ')' as i32, '(' as i32, line);
         }
-        123 => {
+        CHARACTER_BRACE_LEFT => {
             constructor(ls, &mut args);
         }
         292 => {
@@ -11175,7 +11176,7 @@ pub unsafe extern "C" fn statement(ls: *mut LexState) { unsafe {
     let line: i32 = (*ls).linenumber;
     luae_inccstack((*ls).state);
     match (*ls).t.token {
-        59 => {
+        CHARACTER_SEMICOLON => {
             luax_next(ls);
         }
         TK_IF => {
@@ -12210,7 +12211,7 @@ pub unsafe extern "C" fn llex(ls: *mut LexState, seminfo: *mut SemanticInfo) -> 
                     return '~' as i32;
                 }
             }
-            58 => {
+            CHARACTER_COLON => {
                 let fresh121 = (*(*ls).zio).n;
                 (*(*ls).zio).n = ((*(*ls).zio).n).wrapping_sub(1);
                 (*ls).current = if fresh121 > 0u64 {
@@ -23957,7 +23958,7 @@ pub unsafe extern "C" fn match_0(
             break;
         }
         match *p as i32 {
-            40 => {
+            CHARACTER_PARENTHESIS_LEFT => {
                 if *p.offset(1 as isize) as i32 == ')' as i32 {
                     s = start_capture(ms, s, p.offset(2 as isize), -(2));
                 } else {
@@ -23966,7 +23967,7 @@ pub unsafe extern "C" fn match_0(
                 current_block = 6476622998065200121;
                 break;
             }
-            41 => {
+            CHARACTER_PARENTHESIS_RIGHT => {
                 s = end_capture(ms, s, p.offset(1 as isize));
                 current_block = 6476622998065200121;
                 break;
@@ -25156,7 +25157,7 @@ pub unsafe extern "C" fn getoption(
             (*h).islittle = NATIVE_ENDIAN.little as i32;
         }
         33 => {
-            let maxalign: i32 = 8 as u64 as i32;
+            let maxalign: i32 = 8;
             (*h).maxalign = getnumlimit(h, fmt, maxalign);
         }
         _ => {

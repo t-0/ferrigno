@@ -48,6 +48,7 @@ mod cclosure;
 mod global;
 mod functions;
 mod node;
+mod character;
 mod longjump;
 mod object;
 mod onelua;
