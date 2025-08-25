@@ -158,7 +158,7 @@ pub unsafe extern "C" fn luad_errerr(state: *mut State) -> ! { unsafe {
 pub unsafe extern "C" fn luad_reallocstack(
     state: *mut State,
     new_size: i32,
-    raiseerror: i32,
+    should_raise_error: bool,
 ) -> i32 { unsafe {
     let old_size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
     let oldgcstop: i32 = (*(*state).global).gcstopem as i32;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn luad_reallocstack(
     (*(*state).global).gcstopem = oldgcstop as u8;
     if ((newstack == std::ptr::null_mut() as StkId) as i32 != 0) as i32 as i64 != 0 {
         (*state).correct_stack();
-        if raiseerror != 0 {
+        if should_raise_error {
             luad_throw(state, 4);
         } else {
             return 0;
@@ -192,29 +192,29 @@ pub unsafe extern "C" fn luad_reallocstack(
 pub unsafe extern "C" fn luad_growstack(
     state: *mut State,
     n: i32,
-    raiseerror: i32,
+    should_raise_error: bool,
 ) -> i32 { unsafe {
     let size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32;
-    if ((size > 1000000 as i32) as i32 != 0) as i32 as i64 != 0 {
-        if raiseerror != 0 {
+    if size > 1000000 {
+        if should_raise_error {
             luad_errerr(state);
         }
         return 0;
-    } else if n < 1000000 as i32 {
+    } else if n < 1000000 {
         let mut new_size: i32 = 2 * size;
         let needed: i32 = ((*state).top.p).offset_from((*state).stack.p) as i64 as i32 + n;
-        if new_size > 1000000 as i32 {
-            new_size = 1000000 as i32;
+        if new_size > 1000000 {
+            new_size = 1000000;
         }
         if new_size < needed {
             new_size = needed;
         }
-        if ((new_size <= 1000000 as i32) as i32 != 0) as i32 as i64 != 0 {
-            return luad_reallocstack(state, new_size, raiseerror);
+        if new_size <= 1000000 {
+            return luad_reallocstack(state, new_size, should_raise_error);
         }
     }
-    luad_reallocstack(state, 1000000 as i32 + 200 as i32, raiseerror);
-    if raiseerror != 0 {
+    luad_reallocstack(state, 1000000 + 200, should_raise_error);
+    if should_raise_error {
         luag_runerror(state, b"stack overflow\0" as *const u8 as *const i8);
     }
     return 0;
@@ -236,20 +236,20 @@ pub unsafe extern "C" fn stackinuse(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn luad_shrinkstack(state: *mut State) { unsafe {
     let inuse: i32 = stackinuse(state);
-    let max: i32 = if inuse > 1000000 as i32 / 3 {
-        1000000 as i32
+    let max: i32 = if inuse > 1000000 / 3 {
+        1000000
     } else {
         inuse * 3
     };
-    if inuse <= 1000000 as i32
+    if inuse <= 1000000
         && ((*state).stack_last.p).offset_from((*state).stack.p) as i64 as i32 > max
     {
-        let new_size: i32 = if inuse > 1000000 as i32 / 2 {
-            1000000 as i32
+        let new_size: i32 = if inuse > 1000000 / 2 {
+            1000000
         } else {
             inuse * 2
         };
-        luad_reallocstack(state, new_size, 0);
+        luad_reallocstack(state, new_size, false);
     }
     luae_shrinkci(state);
 }}
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn luad_inctop(state: *mut State) { unsafe {
         as i32 as i64
         != 0
     {
-        luad_growstack(state, 1, 1);
+        luad_growstack(state, 1, true);
     }
     (*state).top.p = ((*state).top.p).offset(1);
     (*state).top.p;
@@ -312,7 +312,7 @@ pub unsafe extern "C" fn luad_hook(
             != 0) as i32 as i64
             != 0
         {
-            luad_growstack(state, 20 as i32, 1);
+            luad_growstack(state, 20 as i32, true);
         }
         if (*call_info).top.p < ((*state).top.p).offset(20 as i32 as isize) {
             (*call_info).top.p = ((*state).top.p).offset(20 as i32 as isize);
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StkId) -> St
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        luad_growstack(state, 1, 1);
+        luad_growstack(state, 1, true);
         function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
     }
     let tm: *const TValue = luat_gettmbyobj(state, &mut (*function).val, TM_CALL);
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn precallc(
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        luad_growstack(state, 20 as i32, 1);
+        luad_growstack(state, 20 as i32, true);
         function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
     }
     let call_info = prepcallinfo(
@@ -563,7 +563,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                     if (*(*state).global).gc_debt > 0 {
                         luac_step(state);
                     }
-                    luad_growstack(state, fsize - delta, 1);
+                    luad_growstack(state, fsize - delta, true);
                     function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
                 }
                 (*call_info).function.p = ((*call_info).function.p).offset(-(delta as isize));
@@ -629,7 +629,7 @@ pub unsafe extern "C" fn luad_precall(
                     if (*(*state).global).gc_debt > 0 {
                         luac_step(state);
                     }
-                    luad_growstack(state, fsize, 1);
+                    luad_growstack(state, fsize, true);
                     function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
                 }
                 call_info = prepcallinfo(
@@ -674,7 +674,7 @@ pub unsafe extern "C" fn ccall(
         {
             let t__: i64 =
                 (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
-            luad_growstack(state, 0, 1);
+            luad_growstack(state, 0, true);
             function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
         }
         luae_checkcstack(state);
@@ -1115,7 +1115,7 @@ pub unsafe extern "C" fn lua_checkstack(state: *mut State, n: i32) -> i32 { unsa
     if ((*state).stack_last.p).offset_from((*state).top.p) as i64 > n as i64 {
         res = 1;
     } else {
-        res = luad_growstack(state, n, 0);
+        res = luad_growstack(state, n, false);
     }
     if res != 0 && (*call_info).top.p < ((*state).top.p).offset(n as isize) {
         (*call_info).top.p = ((*state).top.p).offset(n as isize);
@@ -3019,7 +3019,7 @@ pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) ->
     luad_reallocstack(
         state,
         ((*call_info).top.p).offset_from((*state).stack.p) as i64 as i32,
-        0,
+        false,
     );
     return status;
 }}
@@ -5338,7 +5338,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
         != 0) as i32 as i64
         != 0
     {
-        luad_growstack(state, (*p).maxstacksize as i32 + 1, 1);
+        luad_growstack(state, (*p).maxstacksize as i32 + 1, true);
     }
     let fresh12 = (*state).top.p;
     (*state).top.p = ((*state).top.p).offset(1);
@@ -5378,7 +5378,7 @@ pub unsafe extern "C" fn luat_getvarargs(
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
-            luad_growstack(state, nextra, 1);
+            luad_growstack(state, nextra, true);
             where_0 = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
         }
         (*state).top.p = where_0.offset(nextra as isize);
