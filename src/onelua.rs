@@ -44,6 +44,7 @@ use crate::longjump::*;
 use crate::lx::*;
 use crate::matchstate::*;
 use crate::math::*;
+use crate::nativeendian::*;
 use crate::new::*;
 use crate::node::*;
 use crate::object::*;
@@ -24662,6 +24663,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 { unsafe {
     lual_pushresult(&mut b);
     return 1;
 }}
+static mut NATIVE_ENDIAN: NativeEndian = NativeEndian { dummy: 1 };
 pub unsafe extern "C" fn digit(c: i32) -> i32 {
     return ('0' as i32 <= c && c <= '9' as i32) as i32;
 }
@@ -24709,7 +24711,7 @@ pub unsafe extern "C" fn getnumlimit(
 }}
 pub unsafe extern "C" fn initheader(state: *mut State, h: *mut Header) { unsafe {
     (*h).state = state;
-    (*h).is_little = cfg!(target_endian = "little");
+    (*h).islittle = NATIVE_ENDIAN.little as i32;
     (*h).maxalign = 1;
 }}
 pub unsafe extern "C" fn getoption(
@@ -24800,13 +24802,13 @@ pub unsafe extern "C" fn getoption(
         88 => return K::PaddingAlignment,
         32 => {}
         60 => {
-            (*h).is_little = true;
+            (*h).islittle = 1;
         }
         62 => {
-            (*h).is_little = false;
+            (*h).islittle = 0;
         }
         61 => {
-            (*h).is_little = cfg!(target_endian = "little");
+            (*h).islittle = NATIVE_ENDIAN.little as i32;
         }
         33 => {
             let maxalign: i32 = 8;
@@ -24863,25 +24865,25 @@ pub unsafe extern "C" fn getdetails(
 pub unsafe extern "C" fn packint(
     b: *mut Buffer,
     mut n: u64,
-    is_little: bool,
+    islittle: i32,
     size: i32,
     is_negative_: i32,
 ) { unsafe {
     let buffer: *mut i8 = lual_prepbuffsize(b, size as u64);
     let mut i: i32;
-    *buffer.offset((if is_little { 0 } else { size - 1 }) as isize) =
+    *buffer.offset((if islittle != 0 { 0 } else { size - 1 }) as isize) =
         (n & ((1 << 8) - 1) as u64) as i8;
     i = 1;
     while i < size {
         n >>= 8;
-        *buffer.offset((if is_little { i } else { size - 1 - i }) as isize) =
+        *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
             (n & ((1 << 8) - 1) as u64) as i8;
         i += 1;
     }
     if is_negative_ != 0 && size > ::core::mem::size_of::<i64>() as u64 as i32 {
         i = ::core::mem::size_of::<i64>() as u64 as i32;
         while i < size {
-            *buffer.offset((if is_little { i } else { size - 1 - i }) as isize) =
+            *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
                 ((1 << 8) - 1) as i8;
             i += 1;
         }
@@ -24892,9 +24894,9 @@ pub unsafe extern "C" fn copywithendian(
     mut dest: *mut i8,
     mut src: *const i8,
     mut size: i32,
-    is_little: bool,
+    islittle: i32,
 ) { unsafe {
-    if is_little == cfg!(target_endian = "little") {
+    if islittle == NATIVE_ENDIAN.little as i32 {
         memcpy(
             dest as *mut libc::c_void,
             src as *const libc::c_void,
@@ -24920,7 +24922,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
     let mut b = Buffer::new();
     let mut h: Header = Header {
         state: std::ptr::null_mut(),
-        is_little: false,
+        islittle: 0,
         maxalign: 0,
     };
     let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
@@ -24959,7 +24961,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                             b"integer overflow\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                 }
-                packint(&mut b, n as u64, h.is_little, size, (n < 0) as i32);
+                packint(&mut b, n as u64, h.islittle, size, (n < 0) as i32);
                 current_block_33 = 3222590281903869779;
             }
             1 => {
@@ -24973,7 +24975,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                             b"unsigned overflow\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                 }
-                packint(&mut b, n_0 as u64, h.is_little, size, 0);
+                packint(&mut b, n_0 as u64, h.islittle, size, 0);
                 current_block_33 = 3222590281903869779;
             }
             2 => {
@@ -24984,7 +24986,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                     buffer,
                     &mut f as *mut libc::c_float as *mut i8,
                     ::core::mem::size_of::<libc::c_float>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 b.length = (b.length as u64).wrapping_add(size as u64) as u64 as u64;
                 current_block_33 = 3222590281903869779;
@@ -24997,7 +24999,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                     buff_0,
                     &mut f_0 as *mut f64 as *mut i8,
                     ::core::mem::size_of::<f64>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 b.length = (b.length as u64).wrapping_add(size as u64) as u64 as u64;
                 current_block_33 = 3222590281903869779;
@@ -25010,7 +25012,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                     buff_1,
                     &mut f_1 as *mut f64 as *mut i8,
                     ::core::mem::size_of::<f64>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 b.length = (b.length as u64).wrapping_add(size as u64) as u64 as u64;
                 current_block_33 = 3222590281903869779;
@@ -25050,7 +25052,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
                         arg,
                         b"string length does not fit in given size\0" as *const u8 as *const i8,
                     ) != 0) as i32;
-                packint(&mut b, length_0 as u64, h.is_little, size, 0);
+                packint(&mut b, length_0 as u64, h.islittle, size, 0);
                 lual_addlstring(&mut b, s_0, length_0);
                 totalsize = (totalsize as u64).wrapping_add(length_0) as u64 as u64;
                 current_block_33 = 3222590281903869779;
@@ -25100,7 +25102,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn str_packsize(state: *mut State) -> i32 { unsafe {
     let mut h: Header = Header {
         state: std::ptr::null_mut(),
-        is_little: false,
+        islittle: 0,
         maxalign: 0,
     };
     let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
@@ -25141,7 +25143,7 @@ pub unsafe extern "C" fn str_packsize(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn unpackint(
     state: *mut State,
     str: *const i8,
-    is_little: bool,
+    islittle: i32,
     size: i32,
     issigned: i32,
 ) -> i64 { unsafe {
@@ -25155,7 +25157,7 @@ pub unsafe extern "C" fn unpackint(
     i = limit - 1;
     while i >= 0 {
         res <<= 8;
-        res |= *str.offset((if is_little { i } else { size - 1 - i }) as isize) as u8 as u64;
+        res |= *str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as u64;
         i -= 1;
     }
     if size < ::core::mem::size_of::<i64>() as u64 as i32 {
@@ -25171,7 +25173,7 @@ pub unsafe extern "C" fn unpackint(
         };
         i = limit;
         while i < size {
-            if ((*str.offset((if is_little { i } else { size - 1 - i }) as isize) as u8
+            if ((*str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8
                 as i32
                 != mask_0) as i32
                 != 0) as i32 as i64
@@ -25191,7 +25193,7 @@ pub unsafe extern "C" fn unpackint(
 pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
     let mut h: Header = Header {
         state: std::ptr::null_mut(),
-        is_little: false,
+        islittle: 0,
         maxalign: 0,
     };
     let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
@@ -25227,7 +25229,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                 let res: i64 = unpackint(
                     state,
                     data.offset(pos as isize),
-                    h.is_little,
+                    h.islittle,
                     size,
                     (opt as u32 == K::Integer as i32 as u32) as i32,
                 );
@@ -25239,7 +25241,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     &mut f as *mut libc::c_float as *mut i8,
                     data.offset(pos as isize),
                     ::core::mem::size_of::<libc::c_float>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 (*state).push_number(f as f64);
             }
@@ -25249,7 +25251,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     &mut f_0 as *mut f64 as *mut i8,
                     data.offset(pos as isize),
                     ::core::mem::size_of::<f64>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 (*state).push_number(f_0);
             }
@@ -25259,7 +25261,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
                     &mut f_1 as *mut f64 as *mut i8,
                     data.offset(pos as isize),
                     ::core::mem::size_of::<f64>() as u64 as i32,
-                    h.is_little,
+                    h.islittle,
                 );
                 (*state).push_number(f_1);
             }
@@ -25268,7 +25270,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 { unsafe {
             }
             6 => {
                 let length: u64 =
-                    unpackint(state, data.offset(pos as isize), h.is_little, size, 0) as u64;
+                    unpackint(state, data.offset(pos as isize), h.islittle, size, 0) as u64;
                 (((length <= ld.wrapping_sub(pos).wrapping_sub(size as u64)) as i32 != 0) as i32
                     as i64
                     != 0
