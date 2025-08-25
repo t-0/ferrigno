@@ -15080,7 +15080,6 @@ pub unsafe extern "C" fn luak_setlist(
 }}
 pub unsafe extern "C" fn finaltarget(code: *mut u32, mut i: i32) -> i32 { unsafe {
     let mut count: i32 = 0;
-    count = 0;
     while count < 100 as i32 {
         let program_counter: u32 = *code.offset(i as isize);
         if (program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 as u32
@@ -15290,7 +15289,7 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
         if forlimit(state, init, plimit, &mut limit, step) != 0 {
             return 1;
         } else {
-            let mut count: u64 = 0;
+            let mut count: u64;
             if step > 0 {
                 count = (limit as u64).wrapping_sub(init as u64);
                 if step != 1 {
@@ -15400,7 +15399,6 @@ pub unsafe extern "C" fn luav_finishget(
 ) { unsafe {
     let mut loop_0: i32 = 0;
     let mut tm: *const TValue;
-    loop_0 = 0;
     while loop_0 < 2000 as i32 {
         if slot.is_null() {
             tm = luat_gettmbyobj(state, t, TM_INDEX);
@@ -15461,7 +15459,6 @@ pub unsafe extern "C" fn luav_finishset(
     mut slot: *const TValue,
 ) { unsafe {
     let mut loop_0: i32 = 0;
-    loop_0 = 0;
     while loop_0 < 2000 as i32 {
         let tm: *const TValue;
         if !slot.is_null() {
@@ -15920,7 +15917,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
                     .u
                     .lnglen
             };
-            let mut ts: *mut TString = std::ptr::null_mut();
+            let ts: *mut TString;
             n = 1;
             while n < total
                 && ((*top.offset(-(n as isize)).offset(-(1 as isize)))
@@ -16086,8 +16083,7 @@ pub unsafe extern "C" fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 { un
     };
 }}
 pub unsafe extern "C" fn luav_modf(mut _state: *mut State, m: f64, n: f64) -> f64 { unsafe {
-    let mut r: f64 = 0.;
-    r = fmod(m, n);
+    let mut r: f64 = fmod(m, n);
     if if r > 0.0 {
         (n < 0.0) as i32
     } else {
@@ -16220,17 +16216,17 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) { unsafe {
     };
 }}
 pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) { unsafe {
-    let mut i: u32 = 0;
-    let mut ra_65: StkId = std::ptr::null_mut();
-    let mut newci: *mut CallInfo = std::ptr::null_mut();
-    let mut b_4: i32 = 0;
-    let mut count_results: i32 = 0;
+    let mut i: u32;
+    let mut ra_65: StkId;
+    let mut newci: *mut CallInfo;
+    let mut b_4: i32;
+    let mut count_results: i32;
     let mut current_block: u64;
     let mut cl: *mut LClosure;
-    let mut k: *mut TValue = std::ptr::null_mut();
-    let mut base: StkId = std::ptr::null_mut();
-    let mut program_counter: *const u32 = std::ptr::null();
-    let mut trap: i32 = 0;
+    let mut k: *mut TValue;
+    let mut base: StkId;
+    let mut program_counter: *const u32;
+    let mut trap: i32;
     '_startfunc: loop {
         trap = (*state).hook_mask;
         '_returning: loop {
@@ -16242,7 +16238,6 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
             }
             base = ((*ci).function.p).offset(1 as isize);
             loop {
-                i = 0;
                 if (trap != 0) as i32 as i64 != 0 {
                     trap = luag_traceexec(state, program_counter);
                     base = ((*ci).function.p).offset(1 as isize);
@@ -16310,8 +16305,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_3: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut rb_0: *mut TValue = std::ptr::null_mut();
-                        rb_0 = k.offset(
+                        let rb_0: *mut TValue = k.offset(
                             (*program_counter >> 0 + 7
                                 & !(!(0u32) << 8 + 8 + 1 + 8) << 0)
                                 as i32 as isize,
@@ -16451,7 +16445,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_11: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_0: *const TValue = std::ptr::null();
+                        let slot_0: *const TValue;
                         let rb_1: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -16462,7 +16456,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                                 as i32 as isize,
                         ))
                         .val;
-                        let mut n: u64 = 0;
+                        let n: u64;
                         if if (*rc_0).tag as i32 == 3 | 0 << 4 {
                             n = (*rc_0).value.i as u64;
                             if !((*rb_1).tag as i32 == 5 | 0 << 4 | 1 << 6) {
@@ -16508,7 +16502,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_12: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_1: *const TValue = std::ptr::null();
+                        let slot_1: *const TValue;
                         let rb_2: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -16558,7 +16552,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_13: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_2: *const TValue = std::ptr::null();
+                        let slot_2: *const TValue;
                         let rb_3: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -16593,7 +16587,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         continue;
                     }
                     15 => {
-                        let mut slot_3: *const TValue = std::ptr::null();
+                        let slot_3: *const TValue;
                         let upval_0: *mut TValue = (**((*cl).upvalues).as_mut_ptr().offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         ))
@@ -16656,7 +16650,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_14: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_4: *const TValue = std::ptr::null();
+                        let slot_4: *const TValue;
                         let rb_5: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -16676,7 +16670,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             ))
                             .val
                         };
-                        let mut n_0: u64 = 0;
+                        let n_0: u64;
                         if if (*rb_5).tag as i32 == 3 | 0 << 4 {
                             n_0 = (*rb_5).value.i as u64;
                             if !((*ra_14).val.tag as i32 == 5 | 0 << 4 | 1 << 6)
@@ -16737,7 +16731,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_15: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_5: *const TValue = std::ptr::null();
+                        let slot_5: *const TValue;
                         let c_0: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
                         let rc_4: *mut TValue = if (i & (1 as u32) << 0 + 7 + 8) as i32
@@ -16809,7 +16803,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_16: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_6: *const TValue = std::ptr::null();
+                        let slot_6: *const TValue;
                         let rb_6: *mut TValue = k.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -16904,7 +16898,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_18: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut slot_7: *const TValue = std::ptr::null();
+                        let slot_7: *const TValue;
                         let rb_7: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -18339,7 +18333,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_54: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_0: i32 = 0;
+                        let cond_0: i32;
                         let rb_14: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -18368,7 +18362,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_55: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_1: i32 = 0;
+                        let cond_1: i32;
                         let rb_15: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -18409,7 +18403,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_56: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_2: i32 = 0;
+                        let cond_2: i32;
                         let rb_16: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -18475,7 +18469,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_58: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_4: i32 = 0;
+                        let cond_4: i32;
                         let im: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
@@ -18505,7 +18499,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_59: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_5: i32 = 0;
+                        let cond_5: i32;
                         let im_0: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
@@ -18544,7 +18538,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_60: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_6: i32 = 0;
+                        let cond_6: i32;
                         let im_1: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
@@ -18583,7 +18577,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_61: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_7: i32 = 0;
+                        let cond_7: i32;
                         let im_2: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
@@ -18628,7 +18622,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         let ra_62: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let mut cond_8: i32 = 0;
+                        let cond_8: i32;
                         let im_3: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
@@ -18727,7 +18721,6 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         ra_65 = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        newci = std::ptr::null_mut();
                         b_4 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
                         count_results = (i >> 0 + 7 + 8 + 1 + 8
                             & !(!(0u32) << 8) << 0)
@@ -18750,7 +18743,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         );
                         let mut b_5: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
-                        let mut n_2: i32 = 0;
+                        let n_2: i32;
                         let nparams1: i32 = (i >> 0 + 7 + 8 + 1 + 8
                             & !(!(0u32) << 8) << 0)
                             as i32;
@@ -18824,7 +18817,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                             luad_poscall(state, ci, 0);
                             trap = 1;
                         } else {
-                            let mut nres: i32 = 0;
+                            let mut nres: i32;
                             (*state).ci = (*ci).previous;
                             (*state).top.p = base.offset(-(1 as isize));
                             nres = (*ci).count_results as i32;
@@ -19052,7 +19045,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                 }
                 match current_block {
                     13973394567113199817 => {
-                        let mut ra_74: StkId = base.offset(
+                        let ra_74: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
                         memcpy(
@@ -19071,9 +19064,6 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         trap = (*ci).u.l.trap;
                         if (trap != 0) as i32 as i64 != 0 {
                             base = ((*ci).function.p).offset(1 as isize);
-                            ra_74 = base.offset(
-                                (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
-                            );
                         }
                         let fresh144 = program_counter;
                         program_counter = program_counter.offset(1);
@@ -19368,7 +19358,7 @@ pub unsafe extern "C" fn lual_typeerror(
     tname: *const i8,
 ) -> i32 { unsafe {
     let msg: *const i8;
-    let mut typearg: *const i8 = std::ptr::null();
+    let typearg: *const i8;
     if lual_getmetafield(state, arg, b"__name\0" as *const u8 as *const i8) == 4 {
         typearg = lua_tolstring(state, -1, std::ptr::null_mut());
     } else if lua_type(state, arg) == 2 {
@@ -19743,7 +19733,7 @@ pub unsafe extern "C" fn prepbuffsize(buffer: *mut Buffer, sz: u64, boxidx: i32)
         return ((*buffer).pointer).offset((*buffer).length as isize);
     } else {
         let state: *mut State = (*buffer).state;
-        let mut newbuff: *mut i8 = std::ptr::null_mut();
+        let newbuff: *mut i8;
         let newsize: u64 = newbuffsize(buffer, sz);
         if (*buffer).pointer != ((*buffer).buffer_initial.block).as_mut_ptr() {
             newbuff = resizebox(state, boxidx, newsize) as *mut i8;
@@ -19835,7 +19825,7 @@ pub unsafe extern "C" fn lual_buffinitsize(
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_ref(state: *mut State, mut t: i32) -> i32 { unsafe {
-    let mut ref_0: i32 = 0;
+    let mut ref_0: i32;
     if lua_type(state, -1) == 0 {
         lua_settop(state, -1 - 1);
         return -1;
@@ -19954,7 +19944,7 @@ pub unsafe extern "C" fn lual_loadfilex(
         buffer: [0; 8192],
     };
     let status: i32;
-    let mut readstatus: i32 = 0;
+    let readstatus: i32;
     let mut c: i32 = 0;
     let fnameindex: i32 = (*state).get_top() + 1;
     if filename.is_null() {
@@ -20058,7 +20048,7 @@ pub unsafe extern "C" fn lual_getmetafield(
     if lua_getmetatable(state, obj) == 0 {
         return 0;
     } else {
-        let mut tag: i32 = 0;
+        let tag: i32;
         lua_pushstring(state, event);
         tag = lua_rawget(state, -(2));
         if tag == 0 {
@@ -20086,7 +20076,7 @@ pub unsafe extern "C" fn lual_callmeta(
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_len(state: *mut State, idx: i32) -> i64 { unsafe {
-    let mut l: i64 = 0;
+    let l: i64;
     let mut isnum: i32 = 0;
     lua_len(state, idx);
     l = lua_tointegerx(state, -1, &mut isnum);
@@ -20245,7 +20235,7 @@ pub unsafe extern "C" fn lual_addgsub(
     p: *const i8,
     r: *const i8,
 ) { unsafe {
-    let mut wild: *const i8 = std::ptr::null();
+    let mut wild: *const i8;
     let l: u64 = strlen(p);
     loop {
         wild = strstr(s, p);
@@ -20534,7 +20524,7 @@ pub unsafe extern "C" fn luab_tonumber(state: *mut State) -> i32 { unsafe {
         }
     } else {
         let mut l_0: u64 = 0;
-        let mut s_0: *const i8 = std::ptr::null();
+        let s_0: *const i8;
         let mut n: i64 = 0;
         let base: i64 = lual_checkinteger(state, 2);
         lual_checktype(state, 1, 4);
@@ -21179,7 +21169,7 @@ pub unsafe extern "C" fn auxresume(
 }}
 pub unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 { unsafe {
     let co: *mut State = getco(state);
-    let mut r: i32 = 0;
+    let r: i32;
     r = auxresume(state, co, (*state).get_top() - 1);
     if ((r < 0) as i32 != 0) as i32 as i64 != 0 {
         (*state).push_boolean(false);
@@ -21210,7 +21200,7 @@ pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 { unsafe {
     return r;
 }}
 pub unsafe extern "C" fn luab_cocreate(state: *mut State) -> i32 { unsafe {
-    let mut nl: *mut State = std::ptr::null_mut();
+    let nl: *mut State;
     lual_checktype(state, 1, 6);
     nl = lua_newthread(state);
     lua_pushvalue(state, 1);
@@ -21429,7 +21419,7 @@ pub unsafe extern "C" fn checktab(state: *mut State, arg: i32, what: i32) { unsa
     }
 }}
 pub unsafe extern "C" fn tinsert(state: *mut State) -> i32 { unsafe {
-    let mut pos: i64 = 0;
+    let pos: i64;
     checktab(state, 1, 1 | 2 | 4);
     let mut e: i64 = lual_len(state, 1);
     e = (e as u64).wrapping_add(1 as u64) as i64;
@@ -21438,7 +21428,7 @@ pub unsafe extern "C" fn tinsert(state: *mut State) -> i32 { unsafe {
             pos = e;
         }
         3 => {
-            let mut i: i64 = 0;
+            let mut i: i64;
             pos = lual_checkinteger(state, 2);
             ((((pos as u64).wrapping_sub(1 as u32 as u64) < e as u64) as i32 != 0) as i32 as i64
                 != 0
@@ -21499,8 +21489,8 @@ pub unsafe extern "C" fn tmove(state: *mut State) -> i32 { unsafe {
     checktab(state, 1, 1);
     checktab(state, tag, 2);
     if e >= f {
-        let mut n: i64 = 0;
-        let mut i: i64 = 0;
+        let n: i64;
+        let mut i: i64;
         (((f > 0 || e < 9223372036854775807 as i64 + f) as i32 != 0) as i32 as i64
             != 0
             || lual_argerror(
@@ -21582,7 +21572,7 @@ pub unsafe extern "C" fn tpack(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn tunpack(state: *mut State) -> i32 { unsafe {
-    let mut n: u64 = 0;
+    let mut n: u64;
     let mut i: i64 = lual_optinteger(state, 2, 1);
     let e: i64 = if lua_type(state, 3) <= 0 {
         lual_len(state, 1)
@@ -21616,7 +21606,7 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 { unsafe {
     let mut c: i64 = clock();
     let mut t: i64 = time(std::ptr::null_mut());
     let mut buffer: [u32; 4] = [0; 4];
-    let mut i: u32 = 0;
+    let mut i: u32;
     let mut rnd: u32 = 0u32;
     memcpy(
         buffer.as_mut_ptr() as *mut libc::c_void,
@@ -21712,8 +21702,8 @@ pub unsafe extern "C" fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
 }
 pub unsafe extern "C" fn auxsort(state: *mut State, mut lo: u32, mut up: u32, mut rnd: u32) { unsafe {
     while lo < up {
-        let mut p: u32 = 0;
-        let mut n: u32 = 0;
+        let mut p: u32;
+        let n: u32;
         lua_geti(state, 1, lo as i64);
         lua_geti(state, 1, up as i64);
         if sort_comp(state, -1, -(2)) != 0 {
@@ -21872,7 +21862,7 @@ pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 { unsafe {
         && strspn(mode, b"b\0" as *const u8 as *const i8) == strlen(mode)) as i32;
 }}
 pub unsafe extern "C" fn io_type(state: *mut State) -> i32 { unsafe {
-    let mut p: *mut Stream = std::ptr::null_mut();
+    let p: *mut Stream;
     lual_checkany(state, 1);
     p = lual_testudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
     if p.is_null() {
@@ -22025,7 +22015,7 @@ pub unsafe extern "C" fn io_tmpfile(state: *mut State) -> i32 { unsafe {
     };
 }}
 pub unsafe extern "C" fn getiofile(state: *mut State, findex: *const i8) -> *mut FILE { unsafe {
-    let mut p: *mut Stream = std::ptr::null_mut();
+    let p: *mut Stream;
     lua_getfield(state, -(1000000 as i32) - 1000 as i32, findex);
     p = lua_touserdata(state, -1) as *mut Stream;
     if (((*p).closef).is_none() as i32 != 0) as i32 as i64 != 0 {
@@ -22097,7 +22087,7 @@ pub unsafe extern "C" fn f_lines(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 { unsafe {
-    let mut to_close: bool = false;
+    let to_close: bool;
     if lua_type(state, 1) == -1 {
         (*state).push_nil();
     }
@@ -22267,7 +22257,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, f: *mut FILE, chop: i32) -
     return (c == '\n' as i32 || lua_rawlen(state, -1) > 0u64) as i32;
 }}
 pub unsafe extern "C" fn read_all(state: *mut State, f: *mut FILE) { unsafe {
-    let mut nr: u64 = 0;
+    let mut nr: u64;
     let mut b = Buffer::new();
     lual_buffinit(state, &mut b);
     loop {
@@ -22297,8 +22287,8 @@ pub unsafe extern "C" fn read_all(state: *mut State, f: *mut FILE) { unsafe {
     lual_pushresult(&mut b);
 }}
 pub unsafe extern "C" fn read_chars(state: *mut State, f: *mut FILE, n: u64) -> i32 { unsafe {
-    let mut nr: u64 = 0;
-    let mut p: *mut i8 = std::ptr::null_mut();
+    let nr: u64;
+    let p: *mut i8;
     let mut b = Buffer::new();
     lual_buffinit(state, &mut b);
     p = lual_prepbuffsize(&mut b, n);
@@ -22315,7 +22305,7 @@ pub unsafe extern "C" fn read_chars(state: *mut State, f: *mut FILE, n: u64) -> 
 pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> i32 { unsafe {
     let mut nargs: i32 = (*state).get_top() - 1;
     let mut n: i32;
-    let mut success: i32 = 0;
+    let mut success: i32;
     clearerr(f);
     *__errno_location() = 0;
     if nargs == 0 {
@@ -22814,7 +22804,7 @@ pub unsafe extern "C" fn luaopen_io(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn os_execute(state: *mut State) -> i32 { unsafe {
     let cmd: *const i8 = lual_optlstring(state, 1, std::ptr::null(), std::ptr::null_mut());
-    let mut stat: i32 = 0;
+    let stat: i32;
     *__errno_location() = 0;
     stat = system(cmd);
     if !cmd.is_null() {
@@ -22841,7 +22831,7 @@ pub unsafe extern "C" fn os_rename(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn os_tmpname(state: *mut State) -> i32 { unsafe {
     let mut buffer: [i8; 32] = [0; 32];
-    let mut err: i32 = 0;
+    let mut err: i32;
     strcpy(
         buffer.as_mut_ptr(),
         b"/tmp/lua_XXXXXX\0" as *const u8 as *const i8,
@@ -23042,7 +23032,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 { unsafe {
         __tm_gmtoff: 0,
         __tm_zone: std::ptr::null(),
     };
-    let mut stm: *mut TM = std::ptr::null_mut();
+    let stm: *mut TM;
     if *s as i32 == '!' as i32 {
         stm = gmtime_r(&mut t, &mut tmr);
         s = s.offset(1);
@@ -23072,7 +23062,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 { unsafe {
                 b.length = (b.length).wrapping_add(1);
                 *(b.pointer).offset(fresh158 as isize) = *fresh157;
             } else {
-                let mut reslen: u64 = 0;
+                let reslen: u64;
                 let buffer: *mut i8 = lual_prepbuffsize(&mut b, 250 as i32 as u64);
                 s = s.offset(1);
                 s = checkoption(
@@ -23090,7 +23080,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 { unsafe {
     return 1;
 }}
 pub unsafe extern "C" fn os_time(state: *mut State) -> i32 { unsafe {
-    let mut t: i64 = 0;
+    let t: i64;
     if lua_type(state, 1) <= 0 {
         t = time(std::ptr::null_mut());
     } else {
@@ -23333,7 +23323,7 @@ pub unsafe extern "C" fn str_sub(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn str_reverse(state: *mut State) -> i32 { unsafe {
     let mut l: u64 = 0;
-    let mut i: u64 = 0;
+    let mut i: u64;
     let mut b = Buffer::new();
     let s: *const i8 = lual_checklstring(state, 1, &mut l);
     let p: *mut i8 = lual_buffinitsize(state, &mut b, l);
@@ -23347,7 +23337,7 @@ pub unsafe extern "C" fn str_reverse(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn str_lower(state: *mut State) -> i32 { unsafe {
     let mut l: u64 = 0;
-    let mut i: u64 = 0;
+    let mut i: u64;
     let mut b = Buffer::new();
     let s: *const i8 = lual_checklstring(state, 1, &mut l);
     let p: *mut i8 = lual_buffinitsize(state, &mut b, l);
@@ -23361,7 +23351,7 @@ pub unsafe extern "C" fn str_lower(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn str_upper(state: *mut State) -> i32 { unsafe {
     let mut l: u64 = 0;
-    let mut i: u64 = 0;
+    let mut i: u64;
     let mut b = Buffer::new();
     let s: *const i8 = lual_checklstring(state, 1, &mut l);
     let p: *mut i8 = lual_buffinitsize(state, &mut b, l);
@@ -23894,7 +23884,7 @@ pub unsafe extern "C" fn start_capture(
     p: *const i8,
     what: i32,
 ) -> *const i8 { unsafe {
-    let mut res: *const i8 = std::ptr::null();
+    let res: *const i8;
     let level: usize = (*ms).level;
     if level >= MAX_CAPTURES {
         lual_error(
@@ -23918,7 +23908,7 @@ pub unsafe extern "C" fn end_capture(
     p: *const i8,
 ) -> *const i8 { unsafe {
     let l: i32 = capture_to_close(ms);
-    let mut res: *const i8 = std::ptr::null();
+    let res: *const i8;
     (*ms).capture[l as usize].len = s.offset_from((*ms).capture[l as usize].init) as i64;
     res = match_0(ms, s, p);
     if res.is_null() {
@@ -23931,7 +23921,7 @@ pub unsafe extern "C" fn match_capture(
     s: *const i8,
     mut l: i32,
 ) -> *const i8 { unsafe {
-    let mut len: u64 = 0;
+    let len: u64;
     l = check_capture(ms, l);
     len = (*ms).capture[l as usize].len as u64;
     if ((*ms).src_end).offset_from(s) as i64 as u64 >= len
@@ -24006,8 +23996,8 @@ pub unsafe extern "C" fn match_0(
                             continue;
                         }
                         8236137900636309791 => {
-                            let mut ep: *const i8 = std::ptr::null();
-                            let mut previous: i8 = 0;
+                            let ep: *const i8;
+                            let previous: i8;
                             p = p.offset(2 as isize);
                             if ((*p as i32 != '[' as i32) as i32 != 0) as i32 as i64 != 0 {
                                 lual_error(
@@ -24065,8 +24055,8 @@ pub unsafe extern "C" fn match_0(
                             continue;
                         }
                         8236137900636309791 => {
-                            let mut ep: *const i8 = std::ptr::null();
-                            let mut previous: i8 = 0;
+                            let ep: *const i8;
+                            let previous: i8;
                             p = p.offset(2 as isize);
                             if ((*p as i32 != '[' as i32) as i32 != 0) as i32 as i64 != 0 {
                                 lual_error(
@@ -24124,8 +24114,8 @@ pub unsafe extern "C" fn match_0(
                             continue;
                         }
                         8236137900636309791 => {
-                            let mut ep: *const i8 = std::ptr::null();
-                            let mut previous: i8 = 0;
+                            let ep: *const i8;
+                            let previous: i8;
                             p = p.offset(2 as isize);
                             if ((*p as i32 != '[' as i32) as i32 != 0) as i32 as i64 != 0 {
                                 lual_error(
@@ -24189,7 +24179,7 @@ pub unsafe extern "C" fn match_0(
         } else {
             match *ep_0 as i32 {
                 63 => {
-                    let mut res: *const i8 = std::ptr::null();
+                    let res: *const i8;
                     res = match_0(ms, s.offset(1 as isize), ep_0.offset(1 as isize));
                     if !res.is_null() {
                         s = res;
@@ -24411,7 +24401,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 { uns
         }
         prepstate(&mut ms, state, s, ls, p, lp);
         loop {
-            let mut res: *const i8 = std::ptr::null();
+            let res: *const i8;
             reprepstate(&mut ms);
             res = match_0(&mut ms, s1, p);
             if !res.is_null() {
@@ -24442,11 +24432,11 @@ pub unsafe extern "C" fn str_match(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn gmatch_aux(state: *mut State) -> i32 { unsafe {
     let gm: *mut GMatchState =
         lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
-    let mut src: *const i8 = std::ptr::null();
+    let mut src: *const i8;
     (*gm).ms.state = state;
     src = (*gm).src;
     while src <= (*gm).ms.src_end {
-        let mut e: *const i8 = std::ptr::null();
+        let e: *const i8;
         reprepstate(&mut (*gm).ms);
         e = match_0(&mut (*gm).ms, src, (*gm).p);
         if !e.is_null() && e != (*gm).lastmatch {
@@ -24465,7 +24455,7 @@ pub unsafe extern "C" fn gmatch(state: *mut State) -> i32 { unsafe {
     let p: *const i8 = lual_checklstring(state, 2, &mut lp);
     let mut init: u64 =
         (posrelati(lual_optinteger(state, 3, 1 as i64), ls)).wrapping_sub(1 as u64);
-    let mut gm: *mut GMatchState = std::ptr::null_mut();
+    let gm: *mut GMatchState;
     lua_settop(state, 2);
     gm = lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>() as u64, 0)
         as *mut GMatchState;
@@ -24492,7 +24482,7 @@ pub unsafe extern "C" fn add_s(
     let mut l: u64 = 0;
     let state: *mut State = (*ms).state;
     let mut news: *const i8 = lua_tolstring(state, 3, &mut l);
-    let mut p: *const i8 = std::ptr::null();
+    let mut p: *const i8;
     loop {
         p = memchr(news as *const libc::c_void, '%' as i32, l) as *mut i8;
         if p.is_null() {
@@ -24607,7 +24597,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 { unsafe {
     }
     prepstate(&mut ms, state, src, srcl, p, lp);
     while n < max_s {
-        let mut e: *const i8 = std::ptr::null();
+        let e: *const i8;
         reprepstate(&mut ms);
         e = match_0(&mut ms, src, p);
         if !e.is_null() && e != lastmatch {
@@ -24697,7 +24687,7 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut len: u6
     *((*b).pointer).offset(fresh172 as isize) = '"' as i8;
 }}
 pub unsafe extern "C" fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: f64) -> i32 { unsafe {
-    let mut s: *const i8 = std::ptr::null();
+    let s: *const i8;
     if n == ::core::f64::INFINITY {
         s = b"1e9999\0" as *const u8 as *const i8;
     } else if n == -::core::f64::INFINITY {
@@ -24737,7 +24727,7 @@ pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32)
         }
         3 => {
             let buffer: *mut i8 = lual_prepbuffsize(b, 120 as i32 as u64);
-            let mut nb: i32 = 0;
+            let nb: i32;
             if lua_isinteger(state, arg) {
                 let n: i64 = lua_tointegerx(state, arg, std::ptr::null_mut());
                 let format: *const i8 = if n == -(9223372036854775807 as i64) - 1 as i64 {
@@ -25924,7 +25914,7 @@ pub unsafe extern "C" fn codepoint(state: *mut State) -> i32 { unsafe {
     let pose: i64 = u_posrelat(lual_optinteger(state, 3, posi), len);
     let lax: i32 = lua_toboolean(state, 4);
     let mut n: i32;
-    let mut se: *const i8 = std::ptr::null();
+    let se: *const i8;
     (((posi >= 1) as i32 != 0) as i32 as i64 != 0
         || lual_argerror(state, 2, b"out of bounds\0" as *const u8 as *const i8) != 0)
         as i32;
@@ -26302,7 +26292,7 @@ pub unsafe extern "C" fn math_ult(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn math_log(state: *mut State) -> i32 { unsafe {
     let x: f64 = lual_checknumber(state, 1);
-    let mut res: f64 = 0.;
+    let res: f64;
     if lua_type(state, 2) <= 0 {
         res = x.ln();
     } else {
@@ -26425,9 +26415,9 @@ pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState
     };
 }}
 pub unsafe extern "C" fn math_random(state: *mut State) -> i32 { unsafe {
-    let mut low: i64 = 0;
-    let mut up: i64 = 0;
-    let mut p: u64 = 0;
+    let low: i64;
+    let up: i64;
+    let p: u64;
     let ransate: *mut RandomState =
         lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
     let rv: u64 = nextrand(((*ransate).s).as_mut_ptr());
@@ -27087,7 +27077,7 @@ pub unsafe extern "C" fn checkupval(
     argnup: i32,
     pnup: *mut i32,
 ) -> *mut libc::c_void { unsafe {
-    let mut id: *mut libc::c_void = std::ptr::null_mut();
+    let id: *mut libc::c_void;
     let nup: i32 = lual_checkinteger(state, argnup) as i32;
     lual_checktype(state, argf, 6);
     id = lua_upvalueid(state, argf, nup);
@@ -27189,9 +27179,9 @@ pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 { unsa
 }}
 pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 { unsafe {
     let mut arg: i32 = 0;
-    let mut mask: i32 = 0;
-    let mut count: i32 = 0;
-    let mut function: HookFunction = None;
+    let mask: i32;
+    let count: i32;
+    let function: HookFunction;
     let other_state: *mut State = getthread(state, &mut arg);
     if lua_type(state, arg + 1) <= 0 {
         lua_settop(state, arg + 1);
@@ -27482,7 +27472,7 @@ pub unsafe extern "C" fn lsys_sym(
     return f;
 }}
 pub unsafe extern "C" fn noenv(state: *mut State) -> i32 { unsafe {
-    let mut b: i32 = 0;
+    let b: i32;
     lua_getfield(
         state,
         -(1000000 as i32) - 1000 as i32,
@@ -27498,7 +27488,7 @@ pub unsafe extern "C" fn setpath(
     envname: *const i8,
     dft: *const i8,
 ) { unsafe {
-    let mut dftmark: *const i8 = std::ptr::null();
+    let dftmark: *const i8;
     let nver: *const i8 = lua_pushfstring(
         state,
         b"%s%s\0" as *const u8 as *const i8,
@@ -27550,7 +27540,7 @@ pub unsafe extern "C" fn checkclib(
     state: *mut State,
     path: *const i8,
 ) -> *mut libc::c_void { unsafe {
-    let mut plib: *mut libc::c_void = std::ptr::null_mut();
+    let plib: *mut libc::c_void;
     lua_getfield(state, -(1000000 as i32) - 1000 as i32, CLIBS);
     lua_getfield(state, -1, path);
     plib = lua_touserdata(state, -1);
