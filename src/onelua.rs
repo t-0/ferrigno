@@ -330,8 +330,8 @@ pub unsafe extern "C" fn luad_hook(
 }}
 pub unsafe extern "C" fn luad_hookcall(state: *mut State, call_info: *mut CallInfo) { unsafe {
     (*state).old_program_counter = 0;
-    if (*state).hook_mask & 1 << 0 != 0 {
-        let event: i32 = if (*call_info).call_status as i32 & 1 << 5 != 0 {
+    if (*state).hook_mask & (1 << 0) != 0 {
+        let event: i32 = if ((*call_info).call_status & (1 << 5)) != 0 {
             4
         } else {
             0
