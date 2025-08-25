@@ -3861,7 +3861,7 @@ pub unsafe extern "C" fn funcnamefromcode(
         49 => {
             tm = TM_UNM;
         }
-        50 => {
+        OP_BNOT => {
             tm = TM_BNOT;
         }
         52 => {
@@ -17029,7 +17029,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    23 => {
+                    OP_SUBK => {
                         let v1_1: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -17085,7 +17085,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    24 => {
+                    OP_MULK => {
                         let v1_2: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -17141,7 +17141,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    25 => {
+                    OP_MODK => {
                         (*ci).u.l.saved_program_counter = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let v1_3: *mut TValue = &mut (*base.offset(
@@ -17199,7 +17199,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    26 => {
+                    OP_POWK => {
                         let ra_24: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17248,7 +17248,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    27 => {
+                    OP_DIVK => {
                         let ra_25: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17293,7 +17293,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    28 => {
+                    OP_IDIVK => {
                         (*ci).u.l.saved_program_counter = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let v1_6: *mut TValue = &mut (*base.offset(
@@ -17351,7 +17351,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    29 => {
+                    OP_BANDK => {
                         let ra_27: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17383,7 +17383,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    30 => {
+                    OP_BORK => {
                         let ra_28: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17415,7 +17415,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    31 => {
+                    OP_BXORK => {
                         let ra_29: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17566,7 +17566,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    35 => {
+                    OP_SUB => {
                         let v1_11: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -17623,7 +17623,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    36 => {
+                    OP_MUL => {
                         let v1_12: *mut TValue = &mut (*base.offset(
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 as isize,
@@ -17680,7 +17680,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    37 => {
+                    OP_MOD => {
                         (*ci).u.l.saved_program_counter = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let v1_13: *mut TValue = &mut (*base.offset(
@@ -17739,7 +17739,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    38 => {
+                    OP_POW => {
                         let ra_36: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17789,7 +17789,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    39 => {
+                    OP_DIV => {
                         let ra_37: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17835,7 +17835,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    40 => {
+                    OP_IDIV => {
                         (*ci).u.l.saved_program_counter = program_counter;
                         (*state).top.p = (*ci).top.p;
                         let v1_16: *mut TValue = &mut (*base.offset(
@@ -17894,7 +17894,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    41 => {
+                    OP_BAND => {
                         let ra_39: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17936,7 +17936,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    42 => {
+                    OP_BOR => {
                         let ra_40: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -17978,7 +17978,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    43 => {
+                    OP_BXOR => {
                         let ra_41: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -18020,7 +18020,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    45 => {
+                    OP_SHR => {
                         let ra_42: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
@@ -18063,7 +18063,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut ci: *mut CallInfo) 
                         }
                         continue;
                     }
-                    44 => {
+                    OP_SHL => {
                         let ra_43: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
