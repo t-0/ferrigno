@@ -159,7 +159,7 @@ impl State {
         countout: *mut i32,
     ) -> *mut *mut Object { unsafe {
         let g: *mut Global = self.global;
-        let ow: i32 = (*g).currentwhite as i32 ^ (1 << 3 | 1 << 4);
+        let other_white: i32 = (*g).currentwhite as i32 ^ (1 << 3 | 1 << 4);
         let mut i: i32;
         let white: i32 =
             ((*g).currentwhite as i32 & (1 << 3 | 1 << 4)) as u8 as i32;
@@ -167,7 +167,7 @@ impl State {
         while !(*p).is_null() && i < countin {
             let curr: *mut Object = *p;
             let marked: i32 = (*curr).marked as i32;
-            if marked & ow != 0 {
+            if marked & other_white != 0 {
                 *p = (*curr).next;
                 freeobj(self, curr);
             } else {

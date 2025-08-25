@@ -72,6 +72,7 @@ mod udata;
 mod upvaldesc;
 mod uvalue;
 mod zio;
+mod coroutine;
 mod k;
 mod operator_;
 pub fn main() {

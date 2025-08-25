@@ -1,11 +1,13 @@
-use crate::ObjectBase;
 use crate::node::*;
 use crate::object::*;
 use crate::tvalue::*;
 
-ObjectBase! {
 #[derive(Debug, Copy, Clone)]
+#[repr(C)]
 pub struct Table {
+    pub next: *mut Object,
+    pub tag: u8,
+    pub marked: u8,
     pub flags: u8,
     pub lsizenode: u8,
     pub alimit: u32,
@@ -14,7 +16,6 @@ pub struct Table {
     pub last_free: *mut Node,
     pub metatable: *mut Table,
     pub gc_list: *mut Object,
-}
 }
 impl TObject for Table {
     fn get_class_name(& mut self) -> String {

@@ -3,6 +3,7 @@
     unpredictable_function_pointer_comparisons,
     unsafe_code,
 )]
+use crate::coroutine::*;
 use crate::absolutelineinfo::*;
 use crate::blockcontrol::*;
 use crate::buffer::*;
@@ -49,7 +50,6 @@ use crate::object::*;
 use crate::operator_::*;
 use crate::priority::*;
 use crate::prototype::*;
-use crate::randomstate::*;
 use crate::rawvalue::*;
 use crate::registeredfunction::*;
 use crate::rn::*;
@@ -550,7 +550,7 @@ pub unsafe extern "C" fn luad_pretailcall(
             22 => return precallc(state, function, -1, (*function).val.value.f),
             6 => {
                 let p: *mut Prototype = (*((*function).val.value.gc as *mut GCUnion)).lcl.p;
-                let fsize: i32 = (*p).maxstacksize as i32;
+                let fsize: i32 = (*p).maximum_stack_size as i32;
                 let nfixparams: i32 = (*p).count_parameters as i32;
                 let mut i: i32;
                 if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
@@ -618,7 +618,7 @@ pub unsafe extern "C" fn luad_precall(
                 let p: *mut Prototype = (*((*function).val.value.gc as *mut GCUnion)).lcl.p;
                 let mut narg: i32 = ((*state).top.p).offset_from(function) as i64 as i32 - 1;
                 let nfixparams: i32 = (*p).count_parameters as i32;
-                let fsize: i32 = (*p).maxstacksize as i32;
+                let fsize: i32 = (*p).maximum_stack_size as i32;
                 if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= fsize as i64)
                     as i32
                     != 0) as i32 as i64
@@ -2597,7 +2597,7 @@ pub unsafe extern "C" fn aux_upvalue(
         6 => {
             let f_0: *mut LClosure = &mut (*((*fi).value.gc as *mut GCUnion)).lcl;
             let p: *mut Prototype = (*f_0).p;
-            if !((n as u32).wrapping_sub(1 as u32) < (*p).sizeupvalues as u32) {
+            if !((n as u32).wrapping_sub(1 as u32) < (*p).size_upvalues as u32) {
                 return std::ptr::null();
             }
             *val = (**((*f_0).upvalues).as_mut_ptr().offset((n - 1) as isize))
@@ -2686,7 +2686,7 @@ pub unsafe extern "C" fn getupvalref(
     if !pf.is_null() {
         *pf = f;
     }
-    if 1 <= n && n <= (*(*f).p).sizeupvalues {
+    if 1 <= n && n <= (*(*f).p).size_upvalues {
         return &mut *((*f).upvalues).as_mut_ptr().offset((n - 1) as isize) as *mut *mut UpValue;
     } else {
         return &NULLUP as *const *const UpValue as *mut *mut UpValue;
@@ -3162,8 +3162,8 @@ pub unsafe extern "C" fn getbaseline(
     program_counter: i32,
     basepc: *mut i32,
 ) -> i32 { unsafe {
-    if (*f).sizeabslineinfo == 0
-        || program_counter < (*((*f).abslineinfo).offset(0 as isize)).program_counter
+    if (*f).size_absolute_line_info == 0
+        || program_counter < (*((*f).absolute_line_info).offset(0 as isize)).program_counter
     {
         *basepc = -1;
         return (*f).line_defined;
@@ -3171,20 +3171,20 @@ pub unsafe extern "C" fn getbaseline(
         let mut i: i32 = (program_counter as u32)
             .wrapping_div(128 as i32 as u32)
             .wrapping_sub(1 as u32) as i32;
-        while (i + 1) < (*f).sizeabslineinfo
-            && program_counter >= (*((*f).abslineinfo).offset((i + 1) as isize)).program_counter
+        while (i + 1) < (*f).size_absolute_line_info
+            && program_counter >= (*((*f).absolute_line_info).offset((i + 1) as isize)).program_counter
         {
             i += 1;
         }
-        *basepc = (*((*f).abslineinfo).offset(i as isize)).program_counter;
-        return (*((*f).abslineinfo).offset(i as isize)).line;
+        *basepc = (*((*f).absolute_line_info).offset(i as isize)).program_counter;
+        return (*((*f).absolute_line_info).offset(i as isize)).line;
     };
 }}
 pub unsafe extern "C" fn luag_getfuncline(
     f: *const Prototype,
     program_counter: i32,
 ) -> i32 { unsafe {
-    if ((*f).lineinfo).is_null() {
+    if ((*f).line_info).is_null() {
         return -1;
     } else {
         let mut basepc: i32 = 0;
@@ -3195,7 +3195,7 @@ pub unsafe extern "C" fn luag_getfuncline(
             if !(fresh8 < program_counter) {
                 break;
             }
-            baseline += *((*f).lineinfo).offset(basepc as isize) as i32;
+            baseline += *((*f).line_info).offset(basepc as isize) as i32;
         }
         return baseline;
     };
@@ -3429,8 +3429,8 @@ pub unsafe extern "C" fn nextline(
     currentline: i32,
     program_counter: i32,
 ) -> i32 { unsafe {
-    if *((*p).lineinfo).offset(program_counter as isize) as i32 != -(0x80 as i32) {
-        return currentline + *((*p).lineinfo).offset(program_counter as isize) as i32;
+    if *((*p).line_info).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+        return currentline + *((*p).line_info).offset(program_counter as isize) as i32;
     } else {
         return luag_getfuncline(p, program_counter);
     };
@@ -3450,7 +3450,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
         (*io).tag = (5 | 0 << 4 | 1 << 6) as u8;
         (*state).top.p = ((*state).top.p).offset(1);
         (*state).top.p;
-        if !((*p).lineinfo).is_null() {
+        if !((*p).line_info).is_null() {
             let mut i: i32;
             let mut v: TValue = TValue {
                 value: Value {
@@ -3465,7 +3465,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
                 currentline = nextline(p, currentline, 0);
                 i = 1;
             }
-            while i < (*p).sizelineinfo {
+            while i < (*p).size_line_info {
                 currentline = nextline(p, currentline, i);
                 luah_setint(state, t, currentline as i64, &mut v);
                 i += 1;
@@ -4130,7 +4130,7 @@ pub unsafe extern "C" fn changedline(
     old_program_counter: i32,
     newpc: i32,
 ) -> i32 { unsafe {
-    if ((*p).lineinfo).is_null() {
+    if ((*p).line_info).is_null() {
         return 0;
     }
     if newpc - old_program_counter < 128 as i32 / 2 {
@@ -4138,11 +4138,11 @@ pub unsafe extern "C" fn changedline(
         let mut program_counter: i32 = old_program_counter;
         loop {
             program_counter += 1;
-            let lineinfo: i32 = *((*p).lineinfo).offset(program_counter as isize) as i32;
-            if lineinfo == -(0x80 as i32) {
+            let line_info: i32 = *((*p).line_info).offset(program_counter as isize) as i32;
+            if line_info == -(0x80 as i32) {
                 break;
             }
-            delta += lineinfo;
+            delta += line_info;
             if program_counter == newpc {
                 return (delta != 0) as i32;
             }
@@ -4204,7 +4204,7 @@ pub unsafe extern "C" fn luag_traceexec(
         luad_hook(state, 3, -1, 0, 0);
     }
     if mask as i32 & 1 << 2 != 0 {
-        let old_program_counter: i32 = if (*state).old_program_counter < (*p).sizecode {
+        let old_program_counter: i32 = if (*state).old_program_counter < (*p).size_code {
             (*state).old_program_counter
         } else {
             0
@@ -5334,11 +5334,11 @@ pub unsafe extern "C" fn luat_adjustvarargs(
     let nextra: i32 = actual - nfixparams;
     (*call_info).u.l.count_extra_arguments = nextra;
     if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
-        <= ((*p).maxstacksize as i32 + 1) as i64) as i32
+        <= ((*p).maximum_stack_size as i32 + 1) as i64) as i32
         != 0) as i32 as i64
         != 0
     {
-        luad_growstack(state, (*p).maxstacksize as i32 + 1, true);
+        luad_growstack(state, (*p).maximum_stack_size as i32 + 1, true);
     }
     let fresh12 = (*state).top.p;
     (*state).top.p = ((*state).top.p).offset(1);
@@ -6692,7 +6692,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
         }
     }
     i = 0;
-    while i < (*f).sizek {
+    while i < (*f).size_k {
         if (*((*f).k).offset(i as isize)).tag as i32 & 1 << 6 != 0
             && (*(*((*f).k).offset(i as isize)).value.gc).marked as i32
                 & (1 << 3 | 1 << 4)
@@ -6703,7 +6703,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
         i += 1;
     }
     i = 0;
-    while i < (*f).sizeupvalues {
+    while i < (*f).size_upvalues {
         if !((*((*f).upvalues).offset(i as isize)).name).is_null() {
             if (*(*((*f).upvalues).offset(i as isize)).name).marked as i32
                 & (1 << 3 | 1 << 4)
@@ -6718,7 +6718,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
         i += 1;
     }
     i = 0;
-    while i < (*f).sizep {
+    while i < (*f).size_p {
         if !(*((*f).p).offset(i as isize)).is_null() {
             if (**((*f).p).offset(i as isize)).marked as i32 & (1 << 3 | 1 << 4)
                 != 0
@@ -6729,21 +6729,21 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
         i += 1;
     }
     i = 0;
-    while i < (*f).sizelocvars {
-        if !((*((*f).locvars).offset(i as isize)).varname).is_null() {
-            if (*(*((*f).locvars).offset(i as isize)).varname).marked as i32
+    while i < (*f).size_local_variables {
+        if !((*((*f).local_variables).offset(i as isize)).varname).is_null() {
+            if (*(*((*f).local_variables).offset(i as isize)).varname).marked as i32
                 & (1 << 3 | 1 << 4)
                 != 0
             {
                 reallymarkobject(
                     g,
-                    &mut (*((*((*f).locvars).offset(i as isize)).varname as *mut GCUnion)).gc,
+                    &mut (*((*((*f).local_variables).offset(i as isize)).varname as *mut GCUnion)).gc,
                 );
             }
         }
         i += 1;
     }
-    return 1 + (*f).sizek + (*f).sizeupvalues + (*f).sizep + (*f).sizelocvars;
+    return 1 + (*f).size_k + (*f).size_upvalues + (*f).size_p + (*f).size_local_variables;
 }}
 pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> i32 { unsafe {
     let mut i: i32;
@@ -7945,22 +7945,22 @@ pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype { un
     );
     let f: *mut Prototype = &mut (*(o as *mut GCUnion)).p;
     (*f).k = std::ptr::null_mut();
-    (*f).sizek = 0;
+    (*f).size_k = 0;
     (*f).p = std::ptr::null_mut();
-    (*f).sizep = 0;
+    (*f).size_p = 0;
     (*f).code = std::ptr::null_mut();
-    (*f).sizecode = 0;
-    (*f).lineinfo = std::ptr::null_mut();
-    (*f).sizelineinfo = 0;
-    (*f).abslineinfo = std::ptr::null_mut();
-    (*f).sizeabslineinfo = 0;
+    (*f).size_code = 0;
+    (*f).line_info = std::ptr::null_mut();
+    (*f).size_line_info = 0;
+    (*f).absolute_line_info = std::ptr::null_mut();
+    (*f).size_absolute_line_info = 0;
     (*f).upvalues = std::ptr::null_mut();
-    (*f).sizeupvalues = 0;
+    (*f).size_upvalues = 0;
     (*f).count_parameters = 0;
     (*f).is_variable_arguments = false;
-    (*f).maxstacksize = 0;
-    (*f).locvars = std::ptr::null_mut();
-    (*f).sizelocvars = 0;
+    (*f).maximum_stack_size = 0;
+    (*f).local_variables = std::ptr::null_mut();
+    (*f).size_local_variables = 0;
     (*f).line_defined = 0;
     (*f).last_line_defined = 0;
     (*f).source = std::ptr::null_mut();
@@ -7973,11 +7973,11 @@ pub unsafe extern "C" fn luaf_getlocalname(
 ) -> *const i8 { unsafe {
     let mut i: i32;
     i = 0;
-    while i < (*f).sizelocvars && (*((*f).locvars).offset(i as isize)).startpc <= program_counter {
-        if program_counter < (*((*f).locvars).offset(i as isize)).endpc {
+    while i < (*f).size_local_variables && (*((*f).local_variables).offset(i as isize)).startpc <= program_counter {
+        if program_counter < (*((*f).local_variables).offset(i as isize)).endpc {
             local_number -= 1;
             if local_number == 0 {
-                return ((*(*((*f).locvars).offset(i as isize)).varname).contents).as_mut_ptr();
+                return ((*(*((*f).local_variables).offset(i as isize)).varname).contents).as_mut_ptr();
             }
         }
         i += 1;
@@ -8428,7 +8428,7 @@ pub unsafe extern "C" fn load_code(load_state: *mut LoadState, f: *mut Prototype
         (n as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
         0,
     ) as *mut u32;
-    (*f).sizecode = n;
+    (*f).size_code = n;
     load_block(
         load_state,
         (*f).code as *mut libc::c_void,
@@ -8450,7 +8450,7 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
         (n as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
         0,
     ) as *mut TValue;
-    (*f).sizek = n;
+    (*f).size_k = n;
     i = 0;
     while i < n {
         (*((*f).k).offset(i as isize)).tag = (0 | 0 << 4) as u8;
@@ -8506,7 +8506,7 @@ pub unsafe extern "C" fn load_prototypes(load_state: *mut LoadState, f: *mut Pro
         (n as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
         0,
     ) as *mut *mut Prototype;
-    (*f).sizep = n;
+    (*f).size_p = n;
     i = 0;
     while i < n {
         let ref mut fresh27 = *((*f).p).offset(i as isize);
@@ -8548,7 +8548,7 @@ pub unsafe extern "C" fn load_upvalues(load_state: *mut LoadState, f: *mut Proto
         (n as u64).wrapping_mul(::core::mem::size_of::<Upvaldesc>() as u64),
         0,
     ) as *mut Upvaldesc;
-    (*f).sizeupvalues = n;
+    (*f).size_upvalues = n;
     i = 0;
     while i < n {
         let ref mut fresh29 = (*((*f).upvalues).offset(i as isize)).name;
@@ -8574,15 +8574,15 @@ pub unsafe extern "C" fn load_debug(load_state: *mut LoadState, f: *mut Prototyp
         (*((*load_state).state)).too_big();
     } else {
     };
-    (*f).lineinfo = luam_malloc_(
+    (*f).line_info = luam_malloc_(
         (*load_state).state,
         (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
         0,
     ) as *mut i8;
-    (*f).sizelineinfo = n;
+    (*f).size_line_info = n;
     load_block(
         load_state,
-        (*f).lineinfo as *mut libc::c_void,
+        (*f).line_info as *mut libc::c_void,
         (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
     );
     n = load_int(load_state);
@@ -8593,16 +8593,16 @@ pub unsafe extern "C" fn load_debug(load_state: *mut LoadState, f: *mut Prototyp
         (*((*load_state).state)).too_big();
     } else {
     };
-    (*f).abslineinfo = luam_malloc_(
+    (*f).absolute_line_info = luam_malloc_(
         (*load_state).state,
         (n as u64).wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
         0,
     ) as *mut AbsoluteLineInfo;
-    (*f).sizeabslineinfo = n;
+    (*f).size_absolute_line_info = n;
     i = 0;
     while i < n {
-        (*((*f).abslineinfo).offset(i as isize)).program_counter = load_int(load_state);
-        (*((*f).abslineinfo).offset(i as isize)).line = load_int(load_state);
+        (*((*f).absolute_line_info).offset(i as isize)).program_counter = load_int(load_state);
+        (*((*f).absolute_line_info).offset(i as isize)).line = load_int(load_state);
         i += 1;
     }
     n = load_int(load_state);
@@ -8613,29 +8613,29 @@ pub unsafe extern "C" fn load_debug(load_state: *mut LoadState, f: *mut Prototyp
         (*((*load_state).state)).too_big();
     } else {
     };
-    (*f).locvars = luam_malloc_(
+    (*f).local_variables = luam_malloc_(
         (*load_state).state,
         (n as u64).wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
         0,
     ) as *mut LocalVariable;
-    (*f).sizelocvars = n;
+    (*f).size_local_variables = n;
     i = 0;
     while i < n {
-        let ref mut fresh30 = (*((*f).locvars).offset(i as isize)).varname;
+        let ref mut fresh30 = (*((*f).local_variables).offset(i as isize)).varname;
         *fresh30 = std::ptr::null_mut();
         i += 1;
     }
     i = 0;
     while i < n {
-        let ref mut fresh31 = (*((*f).locvars).offset(i as isize)).varname;
+        let ref mut fresh31 = (*((*f).local_variables).offset(i as isize)).varname;
         *fresh31 = load_string_n(load_state, f);
-        (*((*f).locvars).offset(i as isize)).startpc = load_int(load_state);
-        (*((*f).locvars).offset(i as isize)).endpc = load_int(load_state);
+        (*((*f).local_variables).offset(i as isize)).startpc = load_int(load_state);
+        (*((*f).local_variables).offset(i as isize)).endpc = load_int(load_state);
         i += 1;
     }
     n = load_int(load_state);
     if n != 0 {
-        n = (*f).sizeupvalues;
+        n = (*f).size_upvalues;
     }
     i = 0;
     while i < n {
@@ -8657,7 +8657,7 @@ pub unsafe extern "C" fn load_function(
     (*f).last_line_defined = load_int(load_state);
     (*f).count_parameters = load_byte(load_state);
     (*f).is_variable_arguments = 0 != load_byte(load_state);
-    (*f).maxstacksize = load_byte(load_state);
+    (*f).maximum_stack_size = load_byte(load_state);
     load_code(load_state, f);
     load_constants(load_state, f);
     load_upvalues(load_state, f);
@@ -8869,16 +8869,16 @@ pub unsafe extern "C" fn dump_string(dump_state: *mut DumpState, s: *const TStri
     };
 }}
 pub unsafe extern "C" fn dump_code(dump_state: *mut DumpState, f: *const Prototype) { unsafe {
-    dump_int(dump_state, (*f).sizecode);
+    dump_int(dump_state, (*f).size_code);
     dump_block(
         dump_state,
         (*f).code as *const libc::c_void,
-        ((*f).sizecode as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
+        ((*f).size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
     );
 }}
 pub unsafe extern "C" fn dump_constants(dump_state: *mut DumpState, f: *const Prototype) { unsafe {
     let mut i: i32;
-    let n: i32 = (*f).sizek;
+    let n: i32 = (*f).size_k;
     dump_int(dump_state, n);
     i = 0;
     while i < n {
@@ -8902,7 +8902,7 @@ pub unsafe extern "C" fn dump_constants(dump_state: *mut DumpState, f: *const Pr
 }}
 pub unsafe extern "C" fn dump_prototypes(dump_state: *mut DumpState, f: *const Prototype) { unsafe {
     let mut i: i32;
-    let n: i32 = (*f).sizep;
+    let n: i32 = (*f).size_p;
     dump_int(dump_state, n);
     i = 0;
     while i < n {
@@ -8912,7 +8912,7 @@ pub unsafe extern "C" fn dump_prototypes(dump_state: *mut DumpState, f: *const P
 }}
 pub unsafe extern "C" fn dump_upvalues(dump_state: *mut DumpState, f: *const Prototype) { unsafe {
     let mut i: i32;
-    let n: i32 = (*f).sizeupvalues;
+    let n: i32 = (*f).size_upvalues;
     dump_int(dump_state, n);
     i = 0;
     while i < n {
@@ -8928,43 +8928,43 @@ pub unsafe extern "C" fn dump_debug(dump_state: *mut DumpState, f: *const Protot
     n = if (*dump_state).is_strip {
         0
     } else {
-        (*f).sizelineinfo
+        (*f).size_line_info
     };
     dump_int(dump_state, n);
     dump_block(
         dump_state,
-        (*f).lineinfo as *const libc::c_void,
+        (*f).line_info as *const libc::c_void,
         (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
     );
     n = if (*dump_state).is_strip {
         0
     } else {
-        (*f).sizeabslineinfo
+        (*f).size_absolute_line_info
     };
     dump_int(dump_state, n);
     i = 0;
     while i < n {
-        dump_int(dump_state, (*((*f).abslineinfo).offset(i as isize)).program_counter);
-        dump_int(dump_state, (*((*f).abslineinfo).offset(i as isize)).line);
+        dump_int(dump_state, (*((*f).absolute_line_info).offset(i as isize)).program_counter);
+        dump_int(dump_state, (*((*f).absolute_line_info).offset(i as isize)).line);
         i += 1;
     }
     n = if (*dump_state).is_strip {
         0
     } else {
-        (*f).sizelocvars
+        (*f).size_local_variables
     };
     dump_int(dump_state, n);
     i = 0;
     while i < n {
-        dump_string(dump_state, (*((*f).locvars).offset(i as isize)).varname);
-        dump_int(dump_state, (*((*f).locvars).offset(i as isize)).startpc);
-        dump_int(dump_state, (*((*f).locvars).offset(i as isize)).endpc);
+        dump_string(dump_state, (*((*f).local_variables).offset(i as isize)).varname);
+        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).startpc);
+        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).endpc);
         i += 1;
     }
     n = if (*dump_state).is_strip {
         0
     } else {
-        (*f).sizeupvalues
+        (*f).size_upvalues
     };
     dump_int(dump_state, n);
     i = 0;
@@ -8987,7 +8987,7 @@ pub unsafe extern "C" fn dump_function(
     dump_int(dump_state, (*f).last_line_defined);
     dump_byte(dump_state, (*f).count_parameters as i32);
     dump_byte(dump_state, (*f).is_variable_arguments as i32);
-    dump_byte(dump_state, (*f).maxstacksize as i32);
+    dump_byte(dump_state, (*f).maximum_stack_size as i32);
     dump_code(dump_state, f);
     dump_constants(dump_state, f);
     dump_upvalues(dump_state, f);
@@ -9038,7 +9038,7 @@ pub unsafe extern "C" fn luau_dump(
     dump_state.is_strip = is_strip;
     dump_state.status = 0;
     dump_header(&mut dump_state);
-    dump_byte(&mut dump_state, (*f).sizeupvalues);
+    dump_byte(&mut dump_state, (*f).size_upvalues);
     dump_function(&mut dump_state, f, std::ptr::null_mut());
     return dump_state.status;
 }}
@@ -9155,12 +9155,12 @@ pub unsafe extern "C" fn registerlocalvar(
     varname: *mut TString,
 ) -> i32 { unsafe {
     let f: *mut Prototype = (*fs).f;
-    let mut old_size: i32 = (*f).sizelocvars;
-    (*f).locvars = luam_growaux_(
+    let mut old_size: i32 = (*f).size_local_variables;
+    (*f).local_variables = luam_growaux_(
         (*ls).state,
-        (*f).locvars as *mut libc::c_void,
+        (*f).local_variables as *mut libc::c_void,
         (*fs).ndebugvars as i32,
-        &mut (*f).sizelocvars,
+        &mut (*f).size_local_variables,
         ::core::mem::size_of::<LocalVariable>() as u64 as i32,
         (if 32767 as i32 as u64
             <= (!(0u64)).wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
@@ -9171,15 +9171,15 @@ pub unsafe extern "C" fn registerlocalvar(
         }) as i32,
         b"local variables\0" as *const u8 as *const i8,
     ) as *mut LocalVariable;
-    while old_size < (*f).sizelocvars {
+    while old_size < (*f).size_local_variables {
         let fresh33 = old_size;
         old_size = old_size + 1;
-        let ref mut fresh34 = (*((*f).locvars).offset(fresh33 as isize)).varname;
+        let ref mut fresh34 = (*((*f).local_variables).offset(fresh33 as isize)).varname;
         *fresh34 = std::ptr::null_mut();
     }
-    let ref mut fresh35 = (*((*f).locvars).offset((*fs).ndebugvars as isize)).varname;
+    let ref mut fresh35 = (*((*f).local_variables).offset((*fs).ndebugvars as isize)).varname;
     *fresh35 = varname;
-    (*((*f).locvars).offset((*fs).ndebugvars as isize)).startpc = (*fs).program_counter;
+    (*((*f).local_variables).offset((*fs).ndebugvars as isize)).startpc = (*fs).program_counter;
     if (*f).marked as i32 & 1 << 5 != 0
         && (*varname).marked as i32 & (1 << 3 | 1 << 4) != 0
     {
@@ -9262,7 +9262,7 @@ pub unsafe extern "C" fn localdebuginfo(
         return std::ptr::null_mut();
     } else {
         let index: i32 = (*vd).vd.pidx as i32;
-        return &mut *((*(*fs).f).locvars).offset(index as isize) as *mut LocalVariable;
+        return &mut *((*(*fs).f).local_variables).offset(index as isize) as *mut LocalVariable;
     };
 }}
 pub unsafe extern "C" fn init_var(
@@ -9350,7 +9350,7 @@ pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TStrin
 }}
 pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc { unsafe {
     let f: *mut Prototype = (*fs).f;
-    let mut old_size: i32 = (*f).sizeupvalues;
+    let mut old_size: i32 = (*f).size_upvalues;
     checklimit(
         fs,
         (*fs).nups as i32 + 1,
@@ -9361,7 +9361,7 @@ pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc 
         (*(*fs).ls).state,
         (*f).upvalues as *mut libc::c_void,
         (*fs).nups as i32,
-        &mut (*f).sizeupvalues,
+        &mut (*f).size_upvalues,
         ::core::mem::size_of::<Upvaldesc>() as u64 as i32,
         (if 255 as i32 as u64
             <= (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64)
@@ -9372,7 +9372,7 @@ pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc 
         }) as i32,
         b"upvalues\0" as *const u8 as *const i8,
     ) as *mut Upvaldesc;
-    while old_size < (*f).sizeupvalues {
+    while old_size < (*f).size_upvalues {
         let fresh41 = old_size;
         old_size = old_size + 1;
         let ref mut fresh42 = (*((*f).upvalues).offset(fresh41 as isize)).name;
@@ -9759,13 +9759,13 @@ pub unsafe extern "C" fn addprototype(ls: *mut LexState) -> *mut Prototype { uns
     let state: *mut State = (*ls).state;
     let fs: *mut FunctionState = (*ls).fs;
     let f: *mut Prototype = (*fs).f;
-    if (*fs).np >= (*f).sizep {
-        let mut old_size: i32 = (*f).sizep;
+    if (*fs).np >= (*f).size_p {
+        let mut old_size: i32 = (*f).size_p;
         (*f).p = luam_growaux_(
             state,
             (*f).p as *mut libc::c_void,
             (*fs).np,
-            &mut (*f).sizep,
+            &mut (*f).size_p,
             ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
             (if ((1 << 8 + 8 + 1) - 1) as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
@@ -9777,7 +9777,7 @@ pub unsafe extern "C" fn addprototype(ls: *mut LexState) -> *mut Prototype { uns
                 }) as i32,
                 b"functions\0" as *const u8 as *const i8,
             ) as *mut *mut Prototype;
-            while old_size < (*f).sizep {
+            while old_size < (*f).size_p {
                 let fresh45 = old_size;
                 old_size = old_size + 1;
                 let ref mut fresh46 = *((*f).p).offset(fresh45 as isize);
@@ -9845,7 +9845,7 @@ pub unsafe extern "C" fn open_func(
         );
     } else {
     };
-    (*f).maxstacksize = 2 as u8;
+    (*f).maximum_stack_size = 2 as u8;
     enterblock(fs, blockcontrol, false);
 }}
 pub unsafe extern "C" fn close_func(ls: *mut LexState) { unsafe {
@@ -9858,49 +9858,49 @@ pub unsafe extern "C" fn close_func(ls: *mut LexState) { unsafe {
     (*f).code = luam_shrinkvector_(
         state,
         (*f).code as *mut libc::c_void,
-        &mut (*f).sizecode,
+        &mut (*f).size_code,
         (*fs).program_counter,
         ::core::mem::size_of::<u32>() as u64 as i32,
     ) as *mut u32;
-    (*f).lineinfo = luam_shrinkvector_(
+    (*f).line_info = luam_shrinkvector_(
         state,
-        (*f).lineinfo as *mut libc::c_void,
-        &mut (*f).sizelineinfo,
+        (*f).line_info as *mut libc::c_void,
+        &mut (*f).size_line_info,
         (*fs).program_counter,
         ::core::mem::size_of::<i8>() as u64 as i32,
     ) as *mut i8;
-    (*f).abslineinfo = luam_shrinkvector_(
+    (*f).absolute_line_info = luam_shrinkvector_(
         state,
-        (*f).abslineinfo as *mut libc::c_void,
-        &mut (*f).sizeabslineinfo,
+        (*f).absolute_line_info as *mut libc::c_void,
+        &mut (*f).size_absolute_line_info,
         (*fs).nabslineinfo,
         ::core::mem::size_of::<AbsoluteLineInfo>() as u64 as i32,
     ) as *mut AbsoluteLineInfo;
     (*f).k = luam_shrinkvector_(
         state,
         (*f).k as *mut libc::c_void,
-        &mut (*f).sizek,
+        &mut (*f).size_k,
         (*fs).nk,
         ::core::mem::size_of::<TValue>() as u64 as i32,
     ) as *mut TValue;
     (*f).p = luam_shrinkvector_(
         state,
         (*f).p as *mut libc::c_void,
-        &mut (*f).sizep,
+        &mut (*f).size_p,
         (*fs).np,
         ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
     ) as *mut *mut Prototype;
-    (*f).locvars = luam_shrinkvector_(
+    (*f).local_variables = luam_shrinkvector_(
         state,
-        (*f).locvars as *mut libc::c_void,
-        &mut (*f).sizelocvars,
+        (*f).local_variables as *mut libc::c_void,
+        &mut (*f).size_local_variables,
         (*fs).ndebugvars as i32,
         ::core::mem::size_of::<LocalVariable>() as u64 as i32,
     ) as *mut LocalVariable;
     (*f).upvalues = luam_shrinkvector_(
         state,
         (*f).upvalues as *mut libc::c_void,
-        &mut (*f).sizeupvalues,
+        &mut (*f).size_upvalues,
         (*fs).nups as i32,
         ::core::mem::size_of::<Upvaldesc>() as u64 as i32,
     ) as *mut Upvaldesc;
@@ -13387,11 +13387,11 @@ pub unsafe extern "C" fn savelineinfo(
         (*fs).iwthabs = ((*fs).iwthabs).wrapping_add(1);
         fresh132 as i32 >= 128 as i32
     } {
-        (*f).abslineinfo = luam_growaux_(
+        (*f).absolute_line_info = luam_growaux_(
             (*(*fs).ls).state,
-            (*f).abslineinfo as *mut libc::c_void,
+            (*f).absolute_line_info as *mut libc::c_void,
             (*fs).nabslineinfo,
-            &mut (*f).sizeabslineinfo,
+            &mut (*f).size_absolute_line_info,
             ::core::mem::size_of::<AbsoluteLineInfo>() as u64 as i32,
             (if 2147483647 as i32 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
@@ -13403,18 +13403,18 @@ pub unsafe extern "C" fn savelineinfo(
             }) as i32,
             b"lines\0" as *const u8 as *const i8,
         ) as *mut AbsoluteLineInfo;
-        (*((*f).abslineinfo).offset((*fs).nabslineinfo as isize)).program_counter = program_counter;
+        (*((*f).absolute_line_info).offset((*fs).nabslineinfo as isize)).program_counter = program_counter;
         let fresh133 = (*fs).nabslineinfo;
         (*fs).nabslineinfo = (*fs).nabslineinfo + 1;
-        (*((*f).abslineinfo).offset(fresh133 as isize)).line = line;
+        (*((*f).absolute_line_info).offset(fresh133 as isize)).line = line;
         linedif = -(0x80 as i32);
         (*fs).iwthabs = 1;
     }
-    (*f).lineinfo = luam_growaux_(
+    (*f).line_info = luam_growaux_(
         (*(*fs).ls).state,
-        (*f).lineinfo as *mut libc::c_void,
+        (*f).line_info as *mut libc::c_void,
         program_counter,
-        &mut (*f).sizelineinfo,
+        &mut (*f).size_line_info,
         ::core::mem::size_of::<i8>() as u64 as i32,
         (if 2147483647 as i32 as u64
             <= (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -13425,14 +13425,14 @@ pub unsafe extern "C" fn savelineinfo(
         }) as i32,
         b"opcodes\0" as *const u8 as *const i8,
     ) as *mut i8;
-    *((*f).lineinfo).offset(program_counter as isize) = linedif as i8;
+    *((*f).line_info).offset(program_counter as isize) = linedif as i8;
     (*fs).previousline = line;
 }}
 pub unsafe extern "C" fn removelastlineinfo(fs: *mut FunctionState) { unsafe {
     let f: *mut Prototype = (*fs).f;
     let program_counter: i32 = (*fs).program_counter - 1;
-    if *((*f).lineinfo).offset(program_counter as isize) as i32 != -(0x80 as i32) {
-        (*fs).previousline -= *((*f).lineinfo).offset(program_counter as isize) as i32;
+    if *((*f).line_info).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+        (*fs).previousline -= *((*f).line_info).offset(program_counter as isize) as i32;
         (*fs).iwthabs = ((*fs).iwthabs).wrapping_sub(1);
         (*fs).iwthabs;
     } else {
@@ -13452,7 +13452,7 @@ pub unsafe extern "C" fn luak_code(fs: *mut FunctionState, i: u32) -> i32 { unsa
         (*(*fs).ls).state,
         (*f).code as *mut libc::c_void,
         (*fs).program_counter,
-        &mut (*f).sizecode,
+        &mut (*f).size_code,
         ::core::mem::size_of::<u32>() as u64 as i32,
         (if 2147483647 as i32 as u64
             <= (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
@@ -13538,14 +13538,14 @@ pub unsafe extern "C" fn luak_codek(fs: *mut FunctionState, reg: i32, k: i32) ->
 }}
 pub unsafe extern "C" fn luak_checkstack(fs: *mut FunctionState, n: i32) { unsafe {
     let newstack: i32 = (*fs).freereg as i32 + n;
-    if newstack > (*(*fs).f).maxstacksize as i32 {
+    if newstack > (*(*fs).f).maximum_stack_size as i32 {
         if newstack >= 255 as i32 {
             luax_syntaxerror(
                 (*fs).ls,
                 b"function or expression needs too many registers\0" as *const u8 as *const i8,
             );
         }
-        (*(*fs).f).maxstacksize = newstack as u8;
+        (*(*fs).f).maximum_stack_size = newstack as u8;
     }
 }}
 pub unsafe extern "C" fn luak_reserveregs(fs: *mut FunctionState, n: i32) { unsafe {
@@ -13614,7 +13614,7 @@ pub unsafe extern "C" fn addk(
             return k;
         }
     }
-    let mut old_size: i32 = (*f).sizek;
+    let mut old_size: i32 = (*f).size_k;
     k = (*fs).nk;
     let io: *mut TValue = &mut val;
     (*io).value.i = k as i64;
@@ -13624,7 +13624,7 @@ pub unsafe extern "C" fn addk(
         state,
         (*f).k as *mut libc::c_void,
         k,
-        &mut (*f).sizek,
+        &mut (*f).size_k,
         ::core::mem::size_of::<TValue>() as u64 as i32,
         (if ((1 << 8 + 8 + 1 + 8) - 1) as u64
             <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
@@ -13635,7 +13635,7 @@ pub unsafe extern "C" fn addk(
         }) as i32,
         b"constants\0" as *const u8 as *const i8,
     ) as *mut TValue;
-    while old_size < (*f).sizek {
+    while old_size < (*f).size_k {
         let fresh135 = old_size;
         old_size = old_size + 1;
         (*((*f).k).offset(fresh135 as isize)).tag = (0 | 0 << 4) as u8;
@@ -15982,7 +15982,7 @@ pub unsafe extern "C" fn pushclosure(
     base: StkId,
     ra: StkId,
 ) { unsafe {
-    let nup: i32 = (*p).sizeupvalues;
+    let nup: i32 = (*p).size_upvalues;
     let uv: *mut Upvaldesc = (*p).upvalues;
     let mut i: i32;
     let ncl: *mut LClosure = luaf_newlclosure(state, nup);
@@ -21029,20 +21029,6 @@ pub unsafe extern "C" fn auxresume(
         return -1;
     };
 }}
-pub unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 { unsafe {
-    let co: *mut State = getco(state);
-    let r: i32;
-    r = auxresume(state, co, (*state).get_top() - 1);
-    if ((r < 0) as i32 != 0) as i32 as i64 != 0 {
-        (*state).push_boolean(false);
-        lua_rotate(state, -(2), 1);
-        return 2;
-    } else {
-        (*state).push_boolean(true);
-        lua_rotate(state, -(r + 1), 1);
-        return r + 1;
-    };
-}}
 pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 { unsafe {
     let co: *mut State = lua_tothread(state, -(1000000 as i32) - 1000 as i32 - 1);
     let r: i32 = auxresume(state, co, (*state).get_top());
@@ -21061,198 +21047,8 @@ pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 { unsafe {
     }
     return r;
 }}
-pub unsafe extern "C" fn luab_cocreate(state: *mut State) -> i32 { unsafe {
-    let nl: *mut State;
-    lual_checktype(state, 1, 6);
-    nl = lua_newthread(state);
-    lua_pushvalue(state, 1);
-    lua_xmove(state, nl, 1);
-    return 1;
-}}
-pub unsafe extern "C" fn luab_cowrap(state: *mut State) -> i32 { unsafe {
-    luab_cocreate(state);
-    lua_pushcclosure(
-        state,
-        Some(luab_auxwrap as unsafe extern "C" fn(*mut State) -> i32),
-        1,
-    );
-    return 1;
-}}
-pub unsafe extern "C" fn luab_yield(state: *mut State) -> i32 { unsafe {
-    return lua_yieldk(state, (*state).get_top(), 0, None);
-}}
-static mut COROUTINE_STATUS_NAMES: [*const i8; 4] = [
-    b"running\0" as *const u8 as *const i8,
-    b"dead\0" as *const u8 as *const i8,
-    b"suspended\0" as *const u8 as *const i8,
-    b"normal\0" as *const u8 as *const i8,
-];
-pub unsafe extern "C" fn auxstatus(state: *mut State, co: *mut State) -> i32 { unsafe {
-    if state == co {
-        return 0;
-    } else {
-        match lua_status(co) {
-            1 => return 2,
-            0 => {
-                let mut ar: Debug = Debug {
-                    event: 0,
-                    name: std::ptr::null(),
-                    namewhat: std::ptr::null(),
-                    what: std::ptr::null(),
-                    source: std::ptr::null(),
-                    source_length: 0,
-                    currentline: 0,
-                    line_defined: 0,
-                    last_line_defined: 0,
-                    nups: 0,
-                    nparams: 0,
-                    is_variable_arguments: false,
-                    is_tail_call: false,
-                    ftransfer: 0,
-                    ntransfer: 0,
-                    short_src: [0; 60],
-                    i_ci: std::ptr::null_mut(),
-                };
-                if lua_getstack(co, 0, &mut ar) != 0 {
-                    return 3;
-                } else if (*co).get_top() == 0 {
-                    return 1;
-                } else {
-                    return 2;
-                }
-            }
-            _ => return 1,
-        }
-    };
-}}
-pub unsafe extern "C" fn luab_costatus(state: *mut State) -> i32 { unsafe {
-    let co: *mut State = getco(state);
-    lua_pushstring(state, COROUTINE_STATUS_NAMES[auxstatus(state, co) as usize]);
-    return 1;
-}}
-pub unsafe extern "C" fn luab_yieldable(state: *mut State) -> i32 { unsafe {
-    let coroutine: *mut State = if lua_type(state, 1) == -1 {
-        state
-    } else {
-        getco(state)
-    };
-    (*state).push_boolean((*coroutine).is_yieldable());
-    return 1;
-}}
-pub unsafe extern "C" fn luab_corunning(state: *mut State) -> i32 { unsafe {
-    (*state).push_boolean(lua_pushthread(state));
-    return 2;
-}}
-pub unsafe extern "C" fn luab_close(state: *mut State) -> i32 { unsafe {
-    let co: *mut State = getco(state);
-    let mut status: i32 = auxstatus(state, co);
-    match status {
-        1 | 2 => {
-            status = lua_closethread(co, state);
-            if status == 0 {
-                (*state).push_boolean(true);
-                return 1;
-            } else {
-                (*state).push_boolean(false);
-                lua_xmove(co, state, 1);
-                return 2;
-            }
-        }
-        _ => {
-            return lual_error(
-                state,
-                b"cannot close a %s coroutine\0" as *const u8 as *const i8,
-                COROUTINE_STATUS_NAMES[status as usize],
-            );
-        }
-    };
-}}
-static mut COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
-    [
-        {
-            let init = RegisteredFunction {
-                name: b"create\0" as *const u8 as *const i8,
-                function: Some(luab_cocreate as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"resume\0" as *const u8 as *const i8,
-                function: Some(luab_coresume as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"running\0" as *const u8 as *const i8,
-                function: Some(luab_corunning as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"status\0" as *const u8 as *const i8,
-                function: Some(luab_costatus as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"wrap\0" as *const u8 as *const i8,
-                function: Some(luab_cowrap as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"yield\0" as *const u8 as *const i8,
-                function: Some(luab_yield as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"isyieldable\0" as *const u8 as *const i8,
-                function: Some(luab_yieldable as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"close\0" as *const u8 as *const i8,
-                function: Some(luab_close as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: std::ptr::null(),
-                function: None,
-            };
-            init
-        },
-    ]
-};
+
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaopen_coroutine(state: *mut State) -> i32 { unsafe {
-    lual_checkversion_(
-        state,
-        504.0,
-        (::core::mem::size_of::<i64>() as u64)
-            .wrapping_mul(16 as i32 as u64)
-            .wrapping_add(::core::mem::size_of::<f64>() as u64),
-    );
-    lua_createtable(
-        state,
-        0,
-        (::core::mem::size_of::<[RegisteredFunction; 9]>() as u64)
-            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-            .wrapping_sub(1 as u64) as i32,
-    );
-    lual_setfuncs(state, COROUTINE_FUNCTIONS.as_ptr(), 0);
-    return 1;
-}}
 pub unsafe extern "C" fn checkfield(state: *mut State, key: *const i8, n: i32) -> i32 { unsafe {
     lua_pushstring(state, key);
     return (lua_rawget(state, -n) != 0) as i32;
@@ -26029,593 +25825,6 @@ pub unsafe extern "C" fn luaopen_utf8(state: *mut State) -> i32 { unsafe {
             .wrapping_sub(1 as u64),
     );
     lua_setfield(state, -(2), b"charpattern\0" as *const u8 as *const i8);
-    return 1;
-}}
-pub unsafe extern "C" fn math_abs(state: *mut State) -> i32 { unsafe {
-    if lua_isinteger(state, 1) {
-        let mut n: i64 = lua_tointegerx(state, 1, std::ptr::null_mut());
-        if n < 0 {
-            n = (0u64).wrapping_sub(n as u64) as i64;
-        }
-        (*state).push_integer(n);
-    } else {
-        (*state).push_number(lual_checknumber(state, 1).abs());
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn math_sin(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).sin());
-    return 1;
-}}
-pub unsafe extern "C" fn math_cos(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).cos());
-    return 1;
-}}
-pub unsafe extern "C" fn math_tan(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).tan());
-    return 1;
-}}
-pub unsafe extern "C" fn math_asin(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).asin());
-    return 1;
-}}
-pub unsafe extern "C" fn math_acos(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).acos());
-    return 1;
-}}
-pub unsafe extern "C" fn math_atan(state: *mut State) -> i32 { unsafe {
-    let y: f64 = lual_checknumber(state, 1);
-    let x: f64 = lual_optnumber(state, 2, 1.0);
-    (*state).push_number(y.atan2(x));
-    return 1;
-}}
-pub unsafe extern "C" fn math_toint(state: *mut State) -> i32 { unsafe {
-    let mut is_number: bool = false;
-    let n: i64 = lua_tointegerx(state, 1, &mut is_number);
-    if is_number {
-        (*state).push_integer(n);
-    } else {
-        lual_checkany(state, 1);
-        (*state).push_nil();
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn pushnumint(state: *mut State, d: f64) { unsafe {
-    let mut n: i64 = 0;
-    if d >= (-(9223372036854775807 as i64) - 1 as i64) as f64
-        && d < -((-(9223372036854775807 as i64) - 1 as i64) as f64)
-        && {
-            n = d as i64;
-            1 != 0
-        }
-    {
-        (*state).push_integer(n);
-    } else {
-        (*state).push_number(d);
-    };
-}}
-pub unsafe extern "C" fn math_floor(state: *mut State) -> i32 { unsafe {
-    if lua_isinteger(state, 1) {
-        lua_settop(state, 1);
-    } else {
-        let d: f64 = lual_checknumber(state, 1).floor();
-        pushnumint(state, d);
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn math_ceil(state: *mut State) -> i32 { unsafe {
-    if lua_isinteger(state, 1) {
-        lua_settop(state, 1);
-    } else {
-        let d: f64 = lual_checknumber(state, 1).ceil();
-        pushnumint(state, d);
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn math_fmod(state: *mut State) -> i32 { unsafe {
-    if lua_isinteger(state, 1) && lua_isinteger(state, 2) {
-        let d: i64 = lua_tointegerx(state, 2, std::ptr::null_mut());
-        if (d as u64).wrapping_add(1 as u32 as u64) <= 1 as u32 as u64 {
-            (((d != 0) as i32 != 0) as i32 as i64 != 0
-                || lual_argerror(state, 2, b"zero\0" as *const u8 as *const i8) != 0)
-                as i32;
-            (*state).push_integer(0);
-        } else {
-            (*state).push_integer(lua_tointegerx(state, 1, std::ptr::null_mut()) % d);
-        }
-    } else {
-        (*state).push_number(
-            fmod(lual_checknumber(state, 1), lual_checknumber(state, 2)),
-        );
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn math_modf(state: *mut State) -> i32 { unsafe {
-    if lua_isinteger(state, 1) {
-        lua_settop(state, 1);
-        (*state).push_number(0.0);
-    } else {
-        let n: f64 = lual_checknumber(state, 1);
-        let ip: f64 = if n < 0.0 { n.ceil() } else { n.floor() };
-        pushnumint(state, ip);
-        (*state).push_number(if n == ip { 0.0 } else { n - ip });
-    }
-    return 2;
-}}
-pub unsafe extern "C" fn math_sqrt(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).sqrt());
-    return 1;
-}}
-pub unsafe extern "C" fn math_ult(state: *mut State) -> i32 { unsafe {
-    let a: i64 = lual_checkinteger(state, 1);
-    let b: i64 = lual_checkinteger(state, 2);
-    (*state).push_boolean(0 != ((a as u64) < b as u64) as i32);
-    return 1;
-}}
-pub unsafe extern "C" fn math_log(state: *mut State) -> i32 { unsafe {
-    let x: f64 = lual_checknumber(state, 1);
-    let res: f64;
-    if lua_type(state, 2) <= 0 {
-        res = x.ln();
-    } else {
-        let base: f64 = lual_checknumber(state, 2);
-        if base == 2.0f64 {
-            res = x.log2();
-        } else if base == 10.0f64 {
-            res = x.log10();
-        } else {
-            res = x.ln() / base.ln();
-        }
-    }
-    (*state).push_number(res);
-    return 1;
-}}
-pub unsafe extern "C" fn math_exp(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1).exp());
-    return 1;
-}}
-pub unsafe extern "C" fn math_deg(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1) * (180.0f64 / PI));
-    return 1;
-}}
-pub unsafe extern "C" fn math_rad(state: *mut State) -> i32 { unsafe {
-    (*state).push_number(lual_checknumber(state, 1) * (PI / 180.0f64));
-    return 1;
-}}
-pub unsafe extern "C" fn math_min(state: *mut State) -> i32 { unsafe {
-    let n: i32 = (*state).get_top();
-    let mut imin: i32 = 1;
-    let mut i: i32;
-    (((n >= 1) as i32 != 0) as i32 as i64 != 0
-        || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
-        as i32;
-    i = 2;
-    while i <= n {
-        if lua_compare(state, i, imin, 1) != 0 {
-            imin = i;
-        }
-        i += 1;
-    }
-    lua_pushvalue(state, imin);
-    return 1;
-}}
-pub unsafe extern "C" fn math_max(state: *mut State) -> i32 { unsafe {
-    let n: i32 = (*state).get_top();
-    let mut imax: i32 = 1;
-    let mut i: i32;
-    (((n >= 1) as i32 != 0) as i32 as i64 != 0
-        || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
-        as i32;
-    i = 2;
-    while i <= n {
-        if lua_compare(state, imax, i, 1) != 0 {
-            imax = i;
-        }
-        i += 1;
-    }
-    lua_pushvalue(state, imax);
-    return 1;
-}}
-pub unsafe extern "C" fn math_type(state: *mut State) -> i32 { unsafe {
-    if lua_type(state, 1) == 3 {
-        lua_pushstring(
-            state,
-            if lua_isinteger(state, 1) {
-                b"integer\0" as *const u8 as *const i8
-            } else {
-                b"float\0" as *const u8 as *const i8
-            },
-        );
-    } else {
-        lual_checkany(state, 1);
-        (*state).push_nil();
-    }
-    return 1;
-}}
-pub unsafe extern "C" fn rotl(x: u64, n: i32) -> u64 {
-    return x << n | (x & 0xffffffffffffffff as u64) >> 64 as i32 - n;
-}
-pub unsafe extern "C" fn nextrand(randomstate: *mut u64) -> u64 { unsafe {
-    let state0: u64 = *randomstate.offset(0 as isize);
-    let state1: u64 = *randomstate.offset(1 as isize);
-    let state2: u64 = *randomstate.offset(2 as isize) ^ state0;
-    let state3: u64 = *randomstate.offset(3 as isize) ^ state1;
-    let res: u64 = (rotl(state1.wrapping_mul(5 as u64), 7)).wrapping_mul(9 as i32 as u64);
-    *randomstate.offset(0 as isize) = state0 ^ state3;
-    *randomstate.offset(1 as isize) = state1 ^ state2;
-    *randomstate.offset(2 as isize) = state2 ^ state1 << 17 as i32;
-    *randomstate.offset(3 as isize) = rotl(state3, 45 as i32);
-    return res;
-}}
-pub unsafe extern "C" fn i2d(x: u64) -> f64 {
-    let sx: i64 = ((x & 0xffffffffffffffff as u64) >> 64 as i32 - 53 as i32) as i64;
-    let mut res: f64 = sx as f64 * (0.5f64 / ((1 as u64) << 53 as i32 - 1) as f64);
-    if sx < 0 {
-        res += 1.0f64;
-    }
-    return res;
-}
-pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState) -> u64 { unsafe {
-    if n & n.wrapping_add(1 as u64) == 0u64 {
-        return ran & n;
-    } else {
-        let mut lim: u64 = n;
-        lim |= lim >> 1;
-        lim |= lim >> 2;
-        lim |= lim >> 4;
-        lim |= lim >> 8;
-        lim |= lim >> 16;
-        lim |= lim >> 32;
-        loop {
-            ran &= lim;
-            if !(ran > n) {
-                break;
-            }
-            ran = (nextrand(((*ransate).s).as_mut_ptr()) & 0xffffffffffffffff as u64) as u64;
-        }
-        return ran;
-    };
-}}
-pub unsafe extern "C" fn math_random(state: *mut State) -> i32 { unsafe {
-    let low: i64;
-    let up: i64;
-    let p: u64;
-    let ransate: *mut RandomState =
-        lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-    let rv: u64 = nextrand(((*ransate).s).as_mut_ptr());
-    match (*state).get_top() {
-        0 => {
-            (*state).push_number(i2d(rv));
-            return 1;
-        }
-        1 => {
-            low = 1;
-            up = lual_checkinteger(state, 1);
-            if up == 0 {
-                (*state).push_integer((rv & 0xffffffffffffffff as u64) as u64 as i64);
-                return 1;
-            }
-        }
-        2 => {
-            low = lual_checkinteger(state, 1);
-            up = lual_checkinteger(state, 2);
-        }
-        _ => {
-            return lual_error(
-                state,
-                b"wrong number of arguments\0" as *const u8 as *const i8,
-            );
-        }
-    }
-    (((low <= up) as i32 != 0) as i32 as i64 != 0
-        || lual_argerror(
-            state,
-            1,
-            b"interval is empty\0" as *const u8 as *const i8,
-        ) != 0) as i32;
-    p = project(
-        (rv & 0xffffffffffffffff as u64) as u64,
-        (up as u64).wrapping_sub(low as u64),
-        ransate,
-    );
-    (*state).push_integer(p.wrapping_add(low as u64) as i64);
-    return 1;
-}}
-pub unsafe extern "C" fn setseed(
-    state: *mut State,
-    randomstate: *mut u64,
-    n1: u64,
-    n2: u64,
-) { unsafe {
-    let mut i: i32;
-    *randomstate.offset(0 as isize) = n1 as u64;
-    *randomstate.offset(1 as isize) = 0xff as i32 as u64;
-    *randomstate.offset(2 as isize) = n2 as u64;
-    *randomstate.offset(3 as isize) = 0;
-    i = 0;
-    while i < 16 as i32 {
-        nextrand(randomstate);
-        i += 1;
-    }
-    (*state).push_integer(n1 as i64);
-    (*state).push_integer(n2 as i64);
-}}
-pub unsafe extern "C" fn randseed(state: *mut State, randomstate: *mut RandomState) { unsafe {
-    let seed1: u64 = time(std::ptr::null_mut()) as u64;
-    let seed2: u64 = state as u64 as u64;
-    setseed(state, ((*randomstate).s).as_mut_ptr(), seed1, seed2);
-}}
-pub unsafe extern "C" fn math_randomseed(state: *mut State) -> i32 { unsafe {
-    let randomstate: *mut RandomState =
-        lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-    if lua_type(state, 1) == -1 {
-        randseed(state, randomstate);
-    } else {
-        let n1: i64 = lual_checkinteger(state, 1);
-        let n2: i64 = lual_optinteger(state, 2, 0);
-        setseed(state, ((*randomstate).s).as_mut_ptr(), n1 as u64, n2 as u64);
-    }
-    return 2;
-}}
-static mut MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
-    [
-        {
-            let init = RegisteredFunction {
-                name: b"random\0" as *const u8 as *const i8,
-                function: Some(math_random as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"randomseed\0" as *const u8 as *const i8,
-                function: Some(math_randomseed as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: std::ptr::null(),
-                function: None,
-            };
-            init
-        },
-    ]
-};
-pub unsafe extern "C" fn setrandfunc(state: *mut State) { unsafe {
-    let ranstate: *mut RandomState =
-        lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>() as u64, 0)
-            as *mut RandomState;
-    randseed(state, ranstate);
-    lua_settop(state, -(2) - 1);
-    lual_setfuncs(state, MATH_RANDOM_FUNCTIONS.as_ptr(), 1);
-}}
-static mut MATH_FUNCTIONS: [RegisteredFunction; 28] = {
-    [
-        {
-            let init = RegisteredFunction {
-                name: b"abs\0" as *const u8 as *const i8,
-                function: Some(math_abs as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"acos\0" as *const u8 as *const i8,
-                function: Some(math_acos as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"asin\0" as *const u8 as *const i8,
-                function: Some(math_asin as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"atan\0" as *const u8 as *const i8,
-                function: Some(math_atan as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"ceil\0" as *const u8 as *const i8,
-                function: Some(math_ceil as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"cos\0" as *const u8 as *const i8,
-                function: Some(math_cos as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"deg\0" as *const u8 as *const i8,
-                function: Some(math_deg as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"exp\0" as *const u8 as *const i8,
-                function: Some(math_exp as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"tointeger\0" as *const u8 as *const i8,
-                function: Some(math_toint as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"floor\0" as *const u8 as *const i8,
-                function: Some(math_floor as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"fmod\0" as *const u8 as *const i8,
-                function: Some(math_fmod as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"ult\0" as *const u8 as *const i8,
-                function: Some(math_ult as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"log\0" as *const u8 as *const i8,
-                function: Some(math_log as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"max\0" as *const u8 as *const i8,
-                function: Some(math_max as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"min\0" as *const u8 as *const i8,
-                function: Some(math_min as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"modf\0" as *const u8 as *const i8,
-                function: Some(math_modf as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"rad\0" as *const u8 as *const i8,
-                function: Some(math_rad as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"sin\0" as *const u8 as *const i8,
-                function: Some(math_sin as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"sqrt\0" as *const u8 as *const i8,
-                function: Some(math_sqrt as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"tan\0" as *const u8 as *const i8,
-                function: Some(math_tan as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"type\0" as *const u8 as *const i8,
-                function: Some(math_type as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"random\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"randomseed\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"pi\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"huge\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"maxinteger\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"mininteger\0" as *const u8 as *const i8,
-                function: None,
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: std::ptr::null(),
-                function: None,
-            };
-            init
-        },
-    ]
-};
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn luaopen_math(state: *mut State) -> i32 { unsafe {
-    lual_checkversion_(
-        state,
-        504.0,
-        (::core::mem::size_of::<i64>() as u64)
-            .wrapping_mul(16 as i32 as u64)
-            .wrapping_add(::core::mem::size_of::<f64>() as u64),
-    );
-    lua_createtable(
-        state,
-        0,
-        (::core::mem::size_of::<[RegisteredFunction; 28]>() as u64)
-            .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-            .wrapping_sub(1 as u64) as i32,
-    );
-    lual_setfuncs(state, MATH_FUNCTIONS.as_ptr(), 0);
-    (*state).push_number(PI);
-    lua_setfield(state, -(2), b"pi\0" as *const u8 as *const i8);
-    (*state).push_number(::core::f64::INFINITY);
-    lua_setfield(state, -(2), b"huge\0" as *const u8 as *const i8);
-    (*state).push_integer(9223372036854775807 as i64);
-    lua_setfield(state, -(2), b"maxinteger\0" as *const u8 as *const i8);
-    (*state).push_integer(-(9223372036854775807 as i64) - 1 as i64);
-    lua_setfield(state, -(2), b"mininteger\0" as *const u8 as *const i8);
-    setrandfunc(state);
     return 1;
 }}
 static mut HOOKKEY: *const i8 = b"_HOOKKEY\0" as *const u8 as *const i8;
