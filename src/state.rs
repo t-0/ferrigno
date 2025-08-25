@@ -17,14 +17,14 @@ pub struct State {
     pub marked: u8,
     pub status: u8,
     pub allow_hook: u8,
-    pub nci: u16,
+    pub count_call_info: u16,
     pub top: StkIdRel,
     pub global: *mut Global,
-    pub ci: *mut CallInfo,
+    pub call_info: *mut CallInfo,
     pub stack_last: StkIdRel,
     pub stack: StkIdRel,
-    pub openupval: *mut UpValue,
-    pub tbclist: StkIdRel,
+    pub open_upvalue: *mut UpValue,
+    pub tbc_list: StkIdRel,
     pub gc_list: *mut Object,
     pub twups: *mut State,
     pub error_jump: *mut LongJump,
@@ -64,25 +64,26 @@ impl State {
         unsafe {
             (*self).top.p =
                 ((*self).stack.p as *mut i8).offset((*self).top.offset as isize) as StkId;
-            (*self).tbclist.p =
-                ((*self).stack.p as *mut i8).offset((*self).tbclist.offset as isize) as StkId;
-            let mut up: *mut UpValue = (*self).openupval;
+            (*self).tbc_list.p =
+                ((*self).stack.p as *mut i8).offset((*self).tbc_list.offset as isize) as StkId;
+            let mut up: *mut UpValue = (*self).open_upvalue;
             while !up.is_null() {
                 (*up).v.p = &mut (*(((*self).stack.p as *mut i8).offset((*up).v.offset as isize)
                     as StkId))
                     .val;
                 up = (*up).u.open.next;
             }
-            let mut ci: *mut CallInfo = (*self).ci;
-            while !ci.is_null() {
-                (*ci).top.p =
-                    ((*self).stack.p as *mut i8).offset((*ci).top.offset as isize) as StkId;
-                (*ci).function.p =
-                    ((*self).stack.p as *mut i8).offset((*ci).function.offset as isize) as StkId;
-                if (*ci).call_status as i32 & (1i32) << 1i32 == 0 {
-                    ::core::ptr::write_volatile(&mut (*ci).u.l.trap as *mut i32, 1i32);
+            let mut call_info: *mut CallInfo = (*self).call_info;
+            while !call_info.is_null() {
+                (*call_info).top.p =
+                    ((*self).stack.p as *mut i8).offset((*call_info).top.offset as isize) as StkId;
+                (*call_info).function.p = ((*self).stack.p as *mut i8)
+                    .offset((*call_info).function.offset as isize)
+                    as StkId;
+                if (*call_info).call_status as i32 & (1i32) << 1i32 == 0 {
+                    ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1i32);
                 }
-                ci = (*ci).previous;
+                call_info = (*call_info).previous;
             }
         }
     }
@@ -127,8 +128,22 @@ impl State {
             return self
                 .top
                 .p
-                .offset_from(((*self.ci).function.p).offset(1 as isize)) as i64
-                as i32;
+                .offset_from(((*self.call_info).function.p).offset(1 as isize))
+                as i64 as i32;
+        }
+    }
+    pub unsafe extern "C" fn find_pcall(&mut self) -> *mut CallInfo {
+        unsafe {
+            let mut it = self.call_info;
+            return loop {
+                if it.is_null() {
+                    break it;
+                } else if ((*it).call_status & (1 << 4)) != 0 {
+                    break it;
+                } else {
+                    it = (*it).previous;
+                }
+            };
         }
     }
 }
