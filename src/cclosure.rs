@@ -12,3 +12,8 @@ pub struct CClosure {
     pub f: CFunction,
     pub upvalue: [TValue; 1],
 }
+impl TObject for CClosure {
+    fn get_class_name() -> String {
+        "CClosure".to_string()
+    }
+}

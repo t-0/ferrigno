@@ -7,6 +7,7 @@ use crate::object::*;
 use crate::stackvalue::*;
 use crate::stkidrel::*;
 use crate::tstring::*;
+use crate::onelua::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 #[derive(Copy, Clone)]
@@ -36,6 +37,11 @@ pub struct State {
     pub base_hook_count: i32,
     pub hook_count: i32,
     pub hook_mask: i32,
+}
+impl TObject for State {
+    fn get_class_name() -> String {
+        "State".to_string()
+    }
 }
 impl State {
     pub unsafe extern "C" fn set_error_object(&mut self, error_code: i32, old_top: StkId) {
@@ -146,4 +152,58 @@ impl State {
             };
         }
     }
+    pub unsafe extern "C" fn sweep_list(
+        & mut self,
+        mut p: *mut *mut Object,
+        countin: i32,
+        countout: *mut i32,
+    ) -> *mut *mut Object { unsafe {
+        let g: *mut Global = self.global;
+        let ow: i32 = (*g).currentwhite as i32 ^ (1 << 3 | 1 << 4);
+        let mut i: i32;
+        let white: i32 =
+            ((*g).currentwhite as i32 & (1 << 3 | 1 << 4)) as u8 as i32;
+        i = 0;
+        while !(*p).is_null() && i < countin {
+            let curr: *mut Object = *p;
+            let marked: i32 = (*curr).marked as i32;
+            if marked & ow != 0 {
+                *p = (*curr).next;
+                freeobj(self, curr);
+            } else {
+                (*curr).marked = (marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
+                    | white) as u8;
+                p = &mut (*curr).next;
+            }
+            i += 1;
+        }
+        if !countout.is_null() {
+            *countout = i;
+        }
+        return if (*p).is_null() {
+            std::ptr::null_mut()
+        } else {
+            p
+        };
+    }}
+    pub unsafe extern "C" fn free_memory(
+        & mut self,
+        block: *mut libc::c_void,
+        old_size: u64,
+    ) { unsafe {
+        let g: *mut Global = self.global;
+        (Some(((*g).frealloc).expect("non-null function pointer"))).expect("non-null function pointer")(
+            (*g).ud,
+            block,
+            old_size,
+            0u64,
+        );
+        (*g).gc_debt = ((*g).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
+    }}
+    pub unsafe extern "C" fn too_big(& mut self) -> ! { unsafe {
+        luag_runerror(
+            self,
+            b"memory allocation error: block too big\0" as *const u8 as *const i8,
+        );
+    }}
 }

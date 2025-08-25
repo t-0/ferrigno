@@ -16,6 +16,11 @@ pub struct Table {
     pub gc_list: *mut Object,
 }
 }
+impl TObject for Table {
+    fn get_class_name() -> String {
+        "Table".to_string()
+    }
+}
 impl Table {
     pub unsafe extern "C" fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
         unsafe {

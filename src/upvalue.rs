@@ -9,6 +9,11 @@ pub struct UpValue {
     pub v: UpValueA,
     pub u: UpValueB,
 }
+impl TObject for UpValue {
+    fn get_class_name() -> String {
+        "UpValue".to_string()
+    }
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UpValueA {

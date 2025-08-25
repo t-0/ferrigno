@@ -13,3 +13,8 @@ pub struct Udata {
     pub gc_list: *mut Object,
     pub uv: [UValue; 1],
 }
+impl TObject for Udata {
+    fn get_class_name() -> String {
+        "Udata".to_string()
+    }
+}

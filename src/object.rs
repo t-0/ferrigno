@@ -11,9 +11,17 @@ macro_rules! ObjectBase {
         }
     }
 }
+pub trait TObject {
+    fn get_class_name() -> String;
+}
 #[derive(Copy, Clone)]
 pub struct Object {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
+}
+impl TObject for Object {
+    fn get_class_name() -> String {
+        "Object".to_string()
+    }
 }
