@@ -1504,7 +1504,7 @@ pub unsafe extern "C" fn lua_touserdata(state: *mut State, index: i32) -> *mut l
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_tothread(state: *mut State, index: i32) -> *mut State { unsafe {
     let o: *const TValue = index2value(state, index);
-    return if !((*o).tag == 8 | 0 << 4 | 1 << 6) {
+    return if !((*o).tag == TAG_TYPE_STATE | 1 << 6) {
         std::ptr::null_mut()
     } else {
         &mut (*((*o).value.gc as *mut GCUnion)).th
@@ -1642,7 +1642,7 @@ pub unsafe extern "C" fn lua_pushthread(state: *mut State) -> bool { unsafe {
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut State = state;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (8 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_STATE | 1 << 6) as u8;
     (*state).top.p = (*state).top.p.offset(1);
     (*state).top.p;
     return (*(*state).global).mainthread == state;
@@ -2341,7 +2341,7 @@ pub unsafe extern "C" fn lua_dump(
 ) -> i32 { unsafe {
     let status: i32;
     let o: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    if (*o).tag == 6 | 0 << 4 | 1 << 6 {
+    if (*o).tag == TAG_TYPE_CLOSURE_L | 1 << 6 {
         status = luau_dump(
             state,
             (*((*o).value.gc as *mut GCUnion)).lcl.p,
@@ -2462,7 +2462,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_error(state: *mut State) -> i32 { unsafe {
     let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    if (*errobj).tag == 4 | 0 << 4 | 1 << 6
+    if (*errobj).tag == TAG_TYPE_STRING_SHORT | 1 << 6
         && &mut (*((*errobj).value.gc as *mut GCUnion)).ts as *mut TString
             == (*(*state).global).memerrmsg
     {
@@ -2557,7 +2557,7 @@ pub unsafe extern "C" fn lua_newuserdatauv(
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut Udata = u;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (7 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_USER | 1 << 6) as u8;
     (*state).top.p = (*state).top.p.offset(1);
     (*state).top.p;
     if (*(*state).global).gc_debt > 0 {
@@ -2897,7 +2897,7 @@ pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) { unsa
         &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
     let x0: *mut State = state;
     (*io_0).value.gc = &mut (*(x0 as *mut GCUnion)).gc;
-    (*io_0).tag = (8 | 0 << 4 | 1 << 6) as u8;
+    (*io_0).tag = (TAG_TYPE_STATE | 1 << 6) as u8;
     let io_1: *mut TValue =
         &mut *((*registry).array).offset((2 - 1) as isize) as *mut TValue;
     let x1: *mut Table = luah_new(state);
@@ -2967,7 +2967,7 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State { unsafe
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut State = other_state;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (8 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_STATE | 1 << 6) as u8;
     (*state).top.p = (*state).top.p.offset(1);
     (*state).top.p;
     preinit_thread(other_state, g);
@@ -3053,7 +3053,7 @@ pub unsafe extern "C" fn lua_newstate(
     }
     let mut state: *mut State = &mut (*l).l.l;
     let g: *mut Global = &mut (*l).g;
-    (*state).tag = (8 | 0 << 4) as u8;
+    (*state).tag = (TAG_TYPE_STATE) as u8;
     (*g).currentwhite = (1 << 3) as u8;
     (*state).marked = ((*g).currentwhite as i32 & (1 << 3 | 1 << 4)) as u8;
     preinit_thread(state, g);
@@ -3338,7 +3338,7 @@ pub unsafe extern "C" fn lua_getlocal(
 ) -> *const i8 { unsafe {
     let name;
     if ar.is_null() {
-        if !((*(*state).top.p.offset(-(1 as isize))).val.tag             == 6 | 0 << 4 | 1 << 6)
+        if !((*(*state).top.p.offset(-(1 as isize))).val.tag             == TAG_TYPE_CLOSURE_L | 1 << 6)
         {
             name = std::ptr::null();
         } else {
@@ -3383,7 +3383,7 @@ pub unsafe extern "C" fn lua_setlocal(
     return name;
 }}
 pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) { unsafe {
-    if !(!cl.is_null() && (*cl).c.tag == 6 | 0 << 4) {
+    if !(!cl.is_null() && (*cl).c.tag == TAG_TYPE_CLOSURE_L) {
         (*ar).source = b"=[C]\0" as *const u8 as *const i8;
         (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -3432,7 +3432,7 @@ pub unsafe extern "C" fn nextline(
     };
 }}
 pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) { unsafe {
-    if !(!f.is_null() && (*f).c.tag == 6 | 0 << 4) {
+    if !(!f.is_null() && (*f).c.tag == TAG_TYPE_CLOSURE_L) {
         (*(*state).top.p).val.tag = TAG_TYPE_NIL_NIL;
         (*state).top.p = (*state).top.p.offset(1);
         (*state).top.p;
@@ -3507,7 +3507,7 @@ pub unsafe extern "C" fn auxgetinfo(
                 } else {
                     (*f).c.count_upvalues as i32
                 }) as u8;
-                if !(!f.is_null() && (*f).c.tag == 6 | 0 << 4) {
+                if !(!f.is_null() && (*f).c.tag == TAG_TYPE_CLOSURE_L) {
                     (*ar).is_variable_arguments = true;
                     (*ar).nparams = 0;
                 } else {
@@ -3566,7 +3566,7 @@ pub unsafe extern "C" fn lua_getinfo(
         call_info = (*ar).i_ci;
         function = &mut (*(*call_info).function.p).val;
     }
-    let cl: *mut UClosure = if (*function).tag == 6 | 0 << 4 | 1 << 6
+    let cl: *mut UClosure = if (*function).tag == TAG_TYPE_CLOSURE_L | 1 << 6
         || (*function).tag == TAG_TYPE_CLOSURE_C | 1 << 6
     {
         &mut (*((*function).value.gc as *mut GCUnion)).ucl
@@ -5097,7 +5097,7 @@ pub unsafe extern "C" fn luat_objtypename(
     if (*o).tag == TAG_TYPE_TABLE | 1 << 6 && {
         mt = (*((*o).value.gc as *mut GCUnion)).h.metatable;
         !mt.is_null()
-    } || (*o).tag == 7 | 0 << 4 | 1 << 6 && {
+    } || (*o).tag == TAG_TYPE_USER | 1 << 6 && {
         mt = (*((*o).value.gc as *mut GCUnion)).u.metatable;
         !mt.is_null()
     } {
@@ -6630,7 +6630,7 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 { u
             reallymarkobject(g, &mut (*((*h).metatable as *mut GCUnion)).gc);
         }
     }
-    if !mode.is_null() && (*mode).tag == 4 | 0 << 4 | 1 << 6 && {
+    if !mode.is_null() && (*mode).tag == TAG_TYPE_STRING_SHORT | 1 << 6 && {
         smode = &mut (*((*mode).value.gc as *mut GCUnion)).ts as *mut TString;
         weakkey = strchr(((*smode).contents).as_mut_ptr(), 'k' as i32);
         weakvalue = strchr(((*smode).contents).as_mut_ptr(), 'v' as i32);
@@ -7234,7 +7234,7 @@ pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
             freeobj(state, curr);
         } else {
             (*curr).marked = ((*curr).marked as i32 & !(7) | 4) as u8;
-            if (*curr).tag == 8 | 0 << 4 {
+            if (*curr).tag == TAG_TYPE_STATE {
                 let th: *mut State = &mut (*(curr as *mut GCUnion)).th;
                 linkgclist_(
                     &mut (*(th as *mut GCUnion)).gc,
@@ -7306,7 +7306,7 @@ pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut O
                 (*curr).marked = ((*curr).marked as i32 | 1 << 5) as u8;
                 (*curr).marked = ((*curr).marked as i32 ^ (5 ^ 6)) as u8;
                 current_block = 11248371660297272285;
-            } else if (*curr).tag == 8 | 0 << 4 {
+            } else if (*curr).tag == TAG_TYPE_STATE {
                 current_block = 11248371660297272285;
             } else {
                 if (*curr).marked as i32 & 7 == 6 {
@@ -8755,7 +8755,7 @@ pub unsafe extern "C" fn luau_undump(
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut LClosure = cl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (6 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_CLOSURE_L | 1 << 6) as u8;
     luad_inctop(state);
     (*cl).p = luaf_newproto(state);
     if (*cl).marked as i32 & 1 << 5 != 0
@@ -11135,7 +11135,7 @@ pub unsafe extern "C" fn luay_parser(
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut LClosure = cl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (6 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_CLOSURE_L | 1 << 6) as u8;
     luad_inctop(state);
     lexstate.h = luah_new(state);
     let io_0: *mut TValue = &mut (*(*state).top.p).val;
@@ -12147,7 +12147,7 @@ pub unsafe extern "C" fn llex(ls: *mut LexState, seminfo: *mut SemanticInfo) -> 
                     }
                     let ts: *mut TString = luax_newstring(ls, (*(*ls).buffer).pointer, (*(*ls).buffer).length);
                     (*seminfo).ts = ts;
-                    if (*ts).tag == 4 | 0 << 4 && (*ts).extra as i32 > 0 {
+                    if (*ts).tag == TAG_TYPE_STRING_SHORT && (*ts).extra as i32 > 0 {
                         return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
                     } else {
                         return TK_NAME as i32;
@@ -12203,7 +12203,7 @@ static mut ABSENT_KEY: TValue = {
         value: Value {
             gc: std::ptr::null_mut(),
         },
-        tag: (0 | (2) << 4) as u8,
+        tag: TAG_TYPE_NIL_ABSENTKEY,
     };
     init
 };
@@ -12463,7 +12463,7 @@ pub unsafe extern "C" fn findindex(
         return i;
     } else {
         let n: *const TValue = getgeneric(t, key, 1);
-        if (((*n).tag == 0 | (2) << 4) as i32 != 0) as i32 as i64 != 0 {
+        if (((*n).tag == TAG_TYPE_NIL_ABSENTKEY) as i32 != 0) as i32 as i64 != 0 {
             luag_runerror(state, b"invalid key to 'next'\0" as *const u8 as *const i8);
         }
         i = (n as *mut Node).offset_from(&mut *((*t).node).offset(0 as isize) as *mut Node)
@@ -12918,7 +12918,7 @@ pub unsafe extern "C" fn luah_getshortstr(
         .offset(((*key).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32 as isize)
         as *mut Node;
     loop {
-        if (*n).u.key_tag as i32 == 4 | 0 << 4 | 1 << 6
+        if (*n).u.key_tag == TAG_TYPE_STRING_SHORT | 1 << 6
             && &mut (*((*n).u.key_value.gc as *mut GCUnion)).ts as *mut TString == key
         {
             return &mut (*n).i_value;
@@ -12932,7 +12932,7 @@ pub unsafe extern "C" fn luah_getshortstr(
     }
 }}
 pub unsafe extern "C" fn luah_getstr(t: *mut Table, key: *mut TString) -> *const TValue { unsafe {
-    if (*key).tag == 4 | 0 << 4 {
+    if (*key).tag == TAG_TYPE_STRING_SHORT {
         return luah_getshortstr(t, key);
     } else {
         let mut ko: TValue = TValue {
@@ -12970,7 +12970,7 @@ pub unsafe extern "C" fn luah_finishset(
     slot: *const TValue,
     value: *mut TValue,
 ) { unsafe {
-    if (*slot).tag == 0 | (2) << 4 {
+    if (*slot).tag == TAG_TYPE_NIL_ABSENTKEY {
         luah_newkey(state, t, key, value);
     } else {
         let io1: *mut TValue = slot as *mut TValue;
@@ -12995,7 +12995,7 @@ pub unsafe extern "C" fn luah_setint(
     value: *mut TValue,
 ) { unsafe {
     let p: *const TValue = luah_getint(t, key);
-    if (*p).tag == 0 | (2) << 4 {
+    if (*p).tag == TAG_TYPE_NIL_ABSENTKEY {
         let mut k: TValue = TValue {
             value: Value {
                 gc: std::ptr::null_mut(),
@@ -14311,7 +14311,7 @@ pub unsafe extern "C" fn is_k_string(
     return ((*e).k as u32 == VK as i32 as u32
         && !((*e).t != (*e).f)
         && (*e).u.info <= (1 << 8) - 1
-        && (*((*(*fs).f).k).offset((*e).u.info as isize)).tag             == 4 | 0 << 4 | 1 << 6) as i32;
+        && (*((*(*fs).f).k).offset((*e).u.info as isize)).tag             == TAG_TYPE_STRING_SHORT | 1 << 6) as i32;
 }}
 pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> i32 { unsafe {
     return ((*e).k as u32 == VKINT as i32 as u32 && !((*e).t != (*e).f)) as i32;
@@ -15737,7 +15737,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
                 })
         {
             luat_tryconcattm(state);
-        } else if (*top.offset(-(1 as isize))).val.tag             == 4 | 0 << 4 | 1 << 6
+        } else if (*top.offset(-(1 as isize))).val.tag             == TAG_TYPE_STRING_SHORT | 1 << 6
             && (*((*top.offset(-(1 as isize))).val.value.gc as *mut GCUnion))
                 .ts
                 .short_length as i32
@@ -15748,7 +15748,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
                     luao_tostring(state, &mut (*top.offset(-(2 as isize))).val);
                     1 != 0
                 }) as i32;
-        } else if (*top.offset(-(2 as isize))).val.tag             == 4 | 0 << 4 | 1 << 6
+        } else if (*top.offset(-(2 as isize))).val.tag             == TAG_TYPE_STRING_SHORT | 1 << 6
             && (*((*top.offset(-(2 as isize))).val.value.gc as *mut GCUnion))
                 .ts
                 .short_length as i32
@@ -15976,7 +15976,7 @@ pub unsafe extern "C" fn pushclosure(
     let io: *mut TValue = &mut (*ra).val;
     let x_: *mut LClosure = ncl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = (6 | 0 << 4 | 1 << 6) as u8;
+    (*io).tag = (TAG_TYPE_CLOSURE_L | 1 << 6) as u8;
     i = 0;
     while i < nup {
         if (*uv.offset(i as isize)).is_in_stack {
