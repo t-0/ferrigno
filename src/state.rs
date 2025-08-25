@@ -1,9 +1,11 @@
 use crate::callinfo::*;
+use crate::tag::*;
 use crate::functions::*;
 use crate::gcunion::*;
 use crate::global::*;
 use crate::longjump::*;
 use crate::object::*;
+use crate::table::*;
 use crate::stackvalue::*;
 use crate::stkidrel::*;
 use crate::tstring::*;
@@ -39,8 +41,14 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl TObject for State {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "State".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        std::ptr::null_mut()
     }
 }
 impl State {

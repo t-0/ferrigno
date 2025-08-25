@@ -1,6 +1,8 @@
 use crate::object::*;
 use crate::tvalue::*;
 use crate::functions::*;
+use crate::table::*;
+use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CClosure {
@@ -13,7 +15,13 @@ pub struct CClosure {
     pub upvalue: [TValue; 1],
 }
 impl TObject for CClosure {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "CClosure".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        std::ptr::null_mut()
     }
 }

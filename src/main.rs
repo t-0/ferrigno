@@ -69,6 +69,7 @@ mod token;
 mod tstring;
 mod ubox;
 mod udata;
+mod tag;
 mod upvaldesc;
 mod uvalue;
 mod zio;

@@ -7,6 +7,7 @@ use crate::coroutine::*;
 use crate::absolutelineinfo::*;
 use crate::blockcontrol::*;
 use crate::buffer::*;
+use crate::tag::*;
 use crate::bufffs::*;
 use crate::c::*;
 use crate::callinfo::*;
@@ -1742,7 +1743,7 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
         0
     } else {
         slot = if (n as u64).wrapping_sub(1 as u32 as u64)
-            < (*((*t).value.gc as *mut GCUnion)).h.alimit as u64
+            < (*((*t).value.gc as *mut GCUnion)).h.array_limit as u64
         {
             &mut *((*((*t).value.gc as *mut GCUnion)).h.array).offset((n - 1) as isize)
                 as *mut TValue as *const TValue
@@ -1843,29 +1844,26 @@ pub unsafe extern "C" fn lua_createtable(state: *mut State, narray: i32, nrec: i
 pub unsafe extern "C" fn lua_getmetatable(state: *mut State, objindex: i32) -> i32 { unsafe {
     let obj: *const TValue = index2value(state, objindex);
     let mt: *mut Table;
-    match (*obj).tag as i32 & 0xf as i32 {
-        5 => {
+    match (*obj).tag & 0xf {
+        TAG_TYPE_TABLE => {
             mt = (*((*obj).value.gc as *mut GCUnion)).h.metatable;
         }
-        7 => {
+        TAG_TYPE_USER => {
             mt = (*((*obj).value.gc as *mut GCUnion)).u.metatable;
         }
         _ => {
             mt = (*(*state).global).mt[((*obj).tag as i32 & 0xf as i32) as usize];
         }
     }
-    let res: i32 = if mt.is_null() {
+    if mt.is_null() {
         0
     } else {
         let io: *mut TValue = &mut (*(*state).top.p).val;
-        let x_: *mut Table = mt;
-        (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
+        (*io).value.gc = &mut (*(mt as *mut GCUnion)).gc;
         (*io).tag = (5 | 0 << 4 | 1 << 6) as u8;
-        (*state).top.p = ((*state).top.p).offset(1);
-        (*state).top.p;
+        (*state).top.p = (*state).top.p.offset(1);
         1
-    };
-    return res;
+    }
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_getiuservalue(state: *mut State, index: i32, n: i32) -> i32 { unsafe {
@@ -1997,7 +1995,7 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) { unsaf
         0
     } else {
         slot = if (n as u64).wrapping_sub(1 as u32 as u64)
-            < (*((*t).value.gc as *mut GCUnion)).h.alimit as u64
+            < (*((*t).value.gc as *mut GCUnion)).h.array_limit as u64
         {
             &mut *((*((*t).value.gc as *mut GCUnion)).h.array).offset((n - 1) as isize)
                 as *mut TValue as *const TValue
@@ -2965,7 +2963,7 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State { unsafe
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
-    let o: *mut Object = luac_newobjdt(state, 8, ::core::mem::size_of::<LX>() as u64, 8 as u64);
+    let o: *mut Object = luac_newobjdt(state, TAG_TYPE_STATE, ::core::mem::size_of::<LX>() as u64, 8 as u64);
     let other_state: *mut State = &mut (*(o as *mut GCUnion)).th;
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut State = other_state;
@@ -6292,12 +6290,12 @@ pub unsafe extern "C" fn luac_fix(state: *mut State, o: *mut Object) { unsafe {
 }}
 pub unsafe extern "C" fn luac_newobjdt(
     state: *mut State,
-    tag: i32,
+    tag: u8,
     size: u64,
     offset: u64,
 ) -> *mut Object { unsafe {
     let g: *mut Global = (*state).global;
-    let p: *mut i8 = luam_malloc_(state, size, tag & 0xf as i32) as *mut i8;
+    let p: *mut i8 = luam_malloc_(state, size, (tag & TAG_TYPE_MASK) as i32) as *mut i8;
     let o: *mut Object = p.offset(offset as isize) as *mut Object;
     (*o).marked = ((*g).currentwhite as i32 & (1 << 3 | 1 << 4)) as u8;
     (*o).tag = tag as u8;
@@ -6307,7 +6305,7 @@ pub unsafe extern "C" fn luac_newobjdt(
 }}
 pub unsafe extern "C" fn luac_newobj(
     state: *mut State,
-    tag: i32,
+    tag: u8,
     size: u64,
 ) -> *mut Object { unsafe {
     return luac_newobjdt(state, tag, size, 0u64);
@@ -6460,8 +6458,8 @@ pub unsafe extern "C" fn genlink(g: *mut Global, o: *mut Object) { unsafe {
 }}
 pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) { unsafe {
     let limit: *mut Node =
-    &mut *((*h).node).offset((1 << (*h).lsizenode as i32) as u64 as isize) as *mut Node;
-    let mut hasclears: i32 = ((*h).alimit > 0u32) as i32;
+    &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as u64 as isize) as *mut Node;
+    let mut hasclears: i32 = ((*h).array_limit > 0u32) as i32;
     let mut n: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
     while n < limit {
         if (*n).i_value.tag as i32 & 0xf as i32 == 0 {
@@ -6510,7 +6508,7 @@ pub unsafe extern "C" fn traverseephemeron(
     let mut hasclears: i32 = 0;
     let mut hasww: i32 = 0;
     let asize: u32 = luah_realasize(h);
-    let new_size: u32 = (1 << (*h).lsizenode as i32) as u32;
+    let new_size: u32 = (1 << (*h).log_size_node as i32) as u32;
     let mut i: u32 = 0;
     while i < asize {
         if (*((*h).array).offset(i as isize)).tag as i32 & 1 << 6 != 0
@@ -6581,7 +6579,7 @@ pub unsafe extern "C" fn traverseephemeron(
 }}
 pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { unsafe {
     let limit: *mut Node =
-    &mut *((*h).node).offset((1 << (*h).lsizenode as i32) as u64 as isize) as *mut Node;
+    &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as u64 as isize) as *mut Node;
     let asize: u32 = luah_realasize(h);
     let mut i: u32 = 0u32;
     while i < asize {
@@ -6654,12 +6652,12 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 { u
     } else {
         traversestrongtable(g, h);
     }
-    return (1 as u32).wrapping_add((*h).alimit).wrapping_add(
+    return (1 as u32).wrapping_add((*h).array_limit).wrapping_add(
         (2
             * (if ((*h).last_free).is_null() {
                 0
             } else {
-                1 << (*h).lsizenode as i32
+                1 << (*h).log_size_node as i32
             })) as u32,
     ) as u64;
 }}
@@ -6876,7 +6874,7 @@ pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) { unsaf
     while !l.is_null() {
         let h: *mut Table = &mut (*(l as *mut GCUnion)).h;
         let limit: *mut Node = &mut *((*h).node)
-            .offset((1 << (*h).lsizenode as i32) as u64 as isize)
+            .offset((1 << (*h).log_size_node as i32) as u64 as isize)
             as *mut Node;
         let mut n: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
         while n < limit {
@@ -6903,7 +6901,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
     while l != f {
         let h: *mut Table = &mut (*(l as *mut GCUnion)).h;
         let limit: *mut Node = &mut *((*h).node)
-        .offset((1 << (*h).lsizenode as i32) as u64 as isize)
+        .offset((1 << (*h).log_size_node as i32) as u64 as isize)
             as *mut Node;
         let mut i: u32 = 0;
         let asize: u32 = luah_realasize(h);
@@ -7686,7 +7684,7 @@ pub unsafe extern "C" fn luaf_newcclosure(
 ) -> *mut CClosure { unsafe {
     let o: *mut Object = luac_newobj(
         state,
-        6 | (2) << 4,
+        TAG_TYPE_CLOSURE_C,
         (32 as u64 as i32 + ::core::mem::size_of::<TValue>() as u64 as i32 * nupvals) as u64,
     );
     let c: *mut CClosure = &mut (*(o as *mut GCUnion)).ccl;
@@ -7699,7 +7697,7 @@ pub unsafe extern "C" fn luaf_newlclosure(
 ) -> *mut LClosure { unsafe {
     let o: *mut Object = luac_newobj(
         state,
-        6 | 0 << 4,
+        TAG_TYPE_CLOSURE_L,
         (32 as u64 as i32 + ::core::mem::size_of::<*mut TValue>() as u64 as i32 * nupvals) as u64,
     );
     let c: *mut LClosure = &mut (*(o as *mut GCUnion)).lcl;
@@ -7722,7 +7720,7 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut LClosure) {
     while i < (*cl).count_upvalues as i32 {
         let o: *mut Object = luac_newobj(
             state,
-            9 as i32 | 0 << 4,
+            TAG_TYPE_UPVALUE,
             ::core::mem::size_of::<UpValue>() as u64,
         );
         let uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
@@ -7750,7 +7748,7 @@ pub unsafe extern "C" fn newupval(
 ) -> *mut UpValue { unsafe {
     let o: *mut Object = luac_newobj(
         state,
-        9 as i32 | 0 << 4,
+        TAG_TYPE_UPVALUE,
         ::core::mem::size_of::<UpValue>() as u64,
     );
     let uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
@@ -7940,7 +7938,7 @@ pub unsafe extern "C" fn luaf_close(
 pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype { unsafe {
     let o: *mut Object = luac_newobj(
         state,
-        9 as i32 + 1 | 0 << 4,
+        TAG_TYPE_PROTOTYPE,
         ::core::mem::size_of::<Prototype>() as u64,
     );
     let f: *mut Prototype = &mut (*(o as *mut GCUnion)).p;
@@ -8092,7 +8090,7 @@ pub unsafe extern "C" fn luas_init(state: *mut State) { unsafe {
 pub unsafe extern "C" fn createstrobj(
     state: *mut State,
     l: u64,
-    tag: i32,
+    tag: u8,
     h: u32,
 ) -> *mut TString { unsafe {
     let totalsize: u64 = (24 as u64).wrapping_add(
@@ -8108,7 +8106,7 @@ pub unsafe extern "C" fn createstrobj(
 }}
 pub unsafe extern "C" fn luas_createlngstrobj(state: *mut State, l: u64) -> *mut TString { unsafe {
     let ts: *mut TString =
-        createstrobj(state, l, 4 | 1 << 4, (*(*state).global).seed);
+        createstrobj(state, l, TAG_TYPE_STRING_LONG, (*(*state).global).seed);
     (*ts).u.long_length = l;
     (*ts).short_length = 0xff as i32 as u8;
     return ts;
@@ -8179,7 +8177,7 @@ pub unsafe extern "C" fn internshrstr(
         list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as i32 as isize)
             as *mut *mut TString;
     }
-    ts = createstrobj(state, l, 4 | 0 << 4, h);
+    ts = createstrobj(state, l, TAG_TYPE_STRING_SHORT, h);
     (*ts).short_length = l as u8;
     memcpy(
         ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
@@ -8271,7 +8269,7 @@ pub unsafe extern "C" fn luas_newudata(
     }
     let o: *mut Object = luac_newobj(
         state,
-        7 | 0 << 4,
+        TAG_TYPE_USER,
         (if nuvalue == 0 {
             32 as u64
         } else {
@@ -12215,11 +12213,11 @@ pub unsafe extern "C" fn hashint(t: *const Table, i: i64) -> *mut Node { unsafe 
     let ui: u64 = i as u64;
     if ui <= 2147483647 as i32 as u32 as u64 {
         return &mut *((*t).node)
-            .offset((ui as i32 % ((1 << (*t).lsizenode as i32) - 1 | 1)) as isize)
+            .offset((ui as i32 % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize)
             as *mut Node;
     } else {
         return &mut *((*t).node).offset(
-            ui.wrapping_rem(((1 << (*t).lsizenode as i32) - 1 | 1) as u64) as isize,
+            ui.wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u64) as isize,
         ) as *mut Node;
     };
 }}
@@ -12281,31 +12279,31 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             let n: f64 = (*key).value.n;
             return &mut *((*t).node).offset(
                 ((l_hashfloat as unsafe extern "C" fn(f64) -> i32)(n)
-                    % ((1 << (*t).lsizenode as i32) - 1 | 1)) as isize,
+                    % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize,
             ) as *mut Node;
         }
         4 => {
             let ts: *mut TString = &mut (*((*key).value.gc as *mut GCUnion)).ts;
             return &mut *((*t).node).offset(
-                ((*ts).hash & ((1 << (*t).lsizenode as i32) - 1) as u32) as i32 as isize,
+                ((*ts).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32 as isize,
             ) as *mut Node;
         }
         20 => {
             let ts_0: *mut TString = &mut (*((*key).value.gc as *mut GCUnion)).ts;
             return &mut *((*t).node).offset(
                 ((luas_hashlongstr as unsafe extern "C" fn(*mut TString) -> u32)(ts_0)
-                    & ((1 << (*t).lsizenode as i32) - 1) as u32) as i32
+                    & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32
                     as isize,
             ) as *mut Node;
         }
         1 => {
             return &mut *((*t).node)
-                .offset((0 & (1 << (*t).lsizenode as i32) - 1) as isize)
+                .offset((0 & (1 << (*t).log_size_node as i32) - 1) as isize)
                 as *mut Node;
         }
         17 => {
             return &mut *((*t).node)
-                .offset((1 & (1 << (*t).lsizenode as i32) - 1) as isize)
+                .offset((1 & (1 << (*t).log_size_node as i32) - 1) as isize)
                 as *mut Node;
         }
         2 => {
@@ -12315,7 +12313,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                     & (2147483647 as i32 as u32)
                         .wrapping_mul(2 as u32)
                         .wrapping_add(1 as u32) as u64) as u32)
-                    .wrapping_rem(((1 << (*t).lsizenode as i32) - 1 | 1) as u32)
+                    .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                     as isize,
             ) as *mut Node;
         }
@@ -12326,7 +12324,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                     & (2147483647 as i32 as u32)
                         .wrapping_mul(2 as u32)
                         .wrapping_add(1 as u32) as u64) as u32)
-                    .wrapping_rem(((1 << (*t).lsizenode as i32) - 1 | 1) as u32)
+                    .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                     as isize,
             ) as *mut Node;
         }
@@ -12337,7 +12335,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                     & (2147483647 as i32 as u32)
                         .wrapping_mul(2 as u32)
                         .wrapping_add(1 as u32) as u64) as u32)
-                    .wrapping_rem(((1 << (*t).lsizenode as i32) - 1 | 1) as u32)
+                    .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                     as isize,
             ) as *mut Node;
         }
@@ -12386,11 +12384,11 @@ pub unsafe extern "C" fn equalkey(
 }}
 pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 { unsafe {
     if (*t).flags as i32 & 1 << 7 == 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1 as u32) == 0u32
+        || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32
     {
-        return (*t).alimit;
+        return (*t).array_limit;
     } else {
-        let mut size: u32 = (*t).alimit;
+        let mut size: u32 = (*t).array_limit;
         size |= size >> 1;
         size |= size >> 2;
         size |= size >> 4;
@@ -12402,12 +12400,12 @@ pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 { unsafe {
 }}
 pub unsafe extern "C" fn ispow2realasize(t: *const Table) -> i32 { unsafe {
     return ((*t).flags as i32 & 1 << 7 != 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1 as u32) == 0u32) as i32;
+        || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32) as i32;
 }}
 pub unsafe extern "C" fn setlimittosize(t: *mut Table) -> u32 { unsafe {
-    (*t).alimit = luah_realasize(t);
+    (*t).array_limit = luah_realasize(t);
     (*t).flags = ((*t).flags as i32 & !(1 << 7) as u8 as i32) as u8;
-    return (*t).alimit;
+    return (*t).array_limit;
 }}
 pub unsafe extern "C" fn getgeneric(
     t: *mut Table,
@@ -12496,7 +12494,7 @@ pub unsafe extern "C" fn luah_next(
         i = i.wrapping_add(1);
     }
     i = i.wrapping_sub(asize);
-    while (i as i32) < 1 << (*t).lsizenode as i32 {
+    while (i as i32) < 1 << (*t).log_size_node as i32 {
         if !((*((*t).node).offset(i as isize)).i_value.tag as i32 & 0xf as i32 == 0) {
             let n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             let io_: *mut TValue = &mut (*key).val;
@@ -12517,7 +12515,7 @@ pub unsafe extern "C" fn freehash(state: *mut State, t: *mut Table) { unsafe {
     if !((*t).last_free).is_null() {
         (*state).free_memory(
             (*t).node as *mut libc::c_void,
-            ((1 << (*t).lsizenode as i32) as u64)
+            ((1 << (*t).log_size_node as i32) as u64)
                 .wrapping_mul(::core::mem::size_of::<Node>() as u64),
         );
     }
@@ -12557,7 +12555,7 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 { u
     let mut ttlg: u32;
     let mut ause: u32 = 0u32;
     let mut i: u32 = 1 as u32;
-    let asize: u32 = (*t).alimit;
+    let asize: u32 = (*t).array_limit;
     lg = 0;
     ttlg = 1 as u32;
     while lg
@@ -12597,7 +12595,7 @@ pub unsafe extern "C" fn numusehash(
 ) -> i32 { unsafe {
     let mut totaluse: i32 = 0;
     let mut ause: i32 = 0;
-    let mut i: i32 = 1 << (*t).lsizenode as i32;
+    let mut i: i32 = 1 << (*t).log_size_node as i32;
     loop {
         let fresh131 = i;
         i = i - 1;
@@ -12618,7 +12616,7 @@ pub unsafe extern "C" fn numusehash(
 pub unsafe extern "C" fn setnodevector(state: *mut State, t: *mut Table, mut size: u32) { unsafe {
     if size == 0u32 {
         (*t).node = &DUMMY_NODE as *const Node as *mut Node;
-        (*t).lsizenode = 0;
+        (*t).log_size_node = 0;
         (*t).last_free = std::ptr::null_mut();
     } else {
         let mut i: i32;
@@ -12661,13 +12659,13 @@ pub unsafe extern "C" fn setnodevector(state: *mut State, t: *mut Table, mut siz
             (*n).i_value.tag = (0 | 1 << 4) as u8;
             i += 1;
         }
-        (*t).lsizenode = lsize as u8;
+        (*t).log_size_node = lsize as u8;
         (*t).last_free = &mut *((*t).node).offset(size as isize) as *mut Node;
     };
 }}
 pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, t: *mut Table) { unsafe {
     let mut j: i32;
-    let size: i32 = 1 << (*ot).lsizenode as i32;
+    let size: i32 = 1 << (*ot).log_size_node as i32;
     j = 0;
     while j < size {
         let old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
@@ -12699,8 +12697,8 @@ pub unsafe extern "C" fn luah_resize(
         tag: 0,
         marked: 0,
         flags: 0,
-        lsizenode: 0,
-        alimit: 0,
+        log_size_node: 0,
+        array_limit: 0,
         array: std::ptr::null_mut(),
         node: std::ptr::null_mut(),
         last_free: std::ptr::null_mut(),
@@ -12711,7 +12709,7 @@ pub unsafe extern "C" fn luah_resize(
     let new_array: *mut TValue;
     setnodevector(state, &mut new_table, nhsize);
     if new_array_size < old_array_size {
-        (*t).alimit = new_array_size;
+        (*t).array_limit = new_array_size;
         Table::exchange_hash_part(t, &mut new_table);
         i = new_array_size;
         while i < old_array_size {
@@ -12725,7 +12723,7 @@ pub unsafe extern "C" fn luah_resize(
             }
             i = i.wrapping_add(1);
         }
-        (*t).alimit = old_array_size;
+        (*t).array_limit = old_array_size;
         Table::exchange_hash_part(t, &mut new_table);
     }
     new_array = luam_realloc_(
@@ -12740,7 +12738,7 @@ pub unsafe extern "C" fn luah_resize(
     }
     Table::exchange_hash_part(t, &mut new_table);
     (*t).array = new_array;
-    (*t).alimit = new_array_size;
+    (*t).array_limit = new_array_size;
     i = old_array_size;
     while i < new_array_size {
         (*((*t).array).offset(i as isize)).tag = (0 | 1 << 4) as u8;
@@ -12757,7 +12755,7 @@ pub unsafe extern "C" fn luah_resizearray(
     let new_size: i32 = if ((*table).last_free).is_null() {
         0
     } else {
-        1 << (*table).lsizenode as i32
+        1 << (*table).log_size_node as i32
     };
     luah_resize(state, table, new_array_size, new_size as u32);
 }}
@@ -12790,14 +12788,14 @@ pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const
 pub unsafe extern "C" fn luah_new(state: *mut State) -> *mut Table { unsafe {
     let o: *mut Object = luac_newobj(
         state,
-        5 | 0 << 4,
+        TAG_TYPE_TABLE,
         ::core::mem::size_of::<Table>() as u64,
     );
     let new_table: *mut Table = &mut (*(o as *mut GCUnion)).h;
     (*new_table).metatable = std::ptr::null_mut();
     (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
     (*new_table).array = std::ptr::null_mut();
-    (*new_table).alimit = 0u32;
+    (*new_table).array_limit = 0u32;
     setnodevector(state, new_table, 0u32);
     return new_table;
 }}
@@ -12890,14 +12888,14 @@ pub unsafe extern "C" fn luah_newkey(
     (*io1).tag = (*io2).tag;
 }}
 pub unsafe extern "C" fn luah_getint(t: *mut Table, key: i64) -> *const TValue { unsafe {
-    let alimit: u64 = (*t).alimit as u64;
-    if (key as u64).wrapping_sub(1 as u32 as u64) < alimit {
+    let array_limit: u64 = (*t).array_limit as u64;
+    if (key as u64).wrapping_sub(1 as u32 as u64) < array_limit {
         return &mut *((*t).array).offset((key - 1) as isize) as *mut TValue;
     } else if (*t).flags as i32 & 1 << 7 != 0
-        && (key as u64).wrapping_sub(1 as u32 as u64) & !alimit.wrapping_sub(1 as u32 as u64)
-            < alimit
+        && (key as u64).wrapping_sub(1 as u32 as u64) & !array_limit.wrapping_sub(1 as u32 as u64)
+            < array_limit
     {
-        (*t).alimit = key as u32;
+        (*t).array_limit = key as u32;
         return &mut *((*t).array).offset((key - 1) as isize) as *mut TValue;
     } else {
         let mut n: *mut Node = hashint(t, key);
@@ -12920,7 +12918,7 @@ pub unsafe extern "C" fn luah_getshortstr(
     key: *mut TString,
 ) -> *const TValue { unsafe {
     let mut n: *mut Node = &mut *((*t).node)
-        .offset(((*key).hash & ((1 << (*t).lsizenode as i32) - 1) as u32) as i32 as isize)
+        .offset(((*key).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32 as isize)
         as *mut Node;
     loop {
         if (*n).u.key_tag as i32 == 4 | 0 << 4 | 1 << 6
@@ -13060,7 +13058,7 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
     return i;
 }}
 pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
-    let mut limit: u32 = (*t).alimit;
+    let mut limit: u32 = (*t).array_limit;
     if limit > 0u32
         && (*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).tag as i32 & 0xf as i32
             == 0
@@ -13075,21 +13073,21 @@ pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
                     & limit.wrapping_sub(1 as u32).wrapping_sub(1 as u32)
                     == 0u32)
             {
-                (*t).alimit = limit.wrapping_sub(1 as u32);
+                (*t).array_limit = limit.wrapping_sub(1 as u32);
                 (*t).flags = ((*t).flags as i32 | 1 << 7) as u8;
             }
             return limit.wrapping_sub(1 as u32) as u64;
         } else {
             let boundary: u32 = binsearch((*t).array, 0u32, limit);
             if ispow2realasize(t) != 0 && boundary > (luah_realasize(t)).wrapping_div(2 as u32) {
-                (*t).alimit = boundary;
+                (*t).array_limit = boundary;
                 (*t).flags = ((*t).flags as i32 | 1 << 7) as u8;
             }
             return boundary as u64;
         }
     }
     if !((*t).flags as i32 & 1 << 7 == 0
-        || (*t).alimit & ((*t).alimit).wrapping_sub(1 as u32) == 0u32)
+        || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32)
     {
         if (*((*t).array).offset(limit as isize)).tag as i32 & 0xf as i32 == 0 {
             return limit as u64;
@@ -13098,8 +13096,8 @@ pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
         if (*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).tag as i32 & 0xf as i32
             == 0
         {
-            let boundary_0: u32 = binsearch((*t).array, (*t).alimit, limit);
-            (*t).alimit = boundary_0;
+            let boundary_0: u32 = binsearch((*t).array, (*t).array_limit, limit);
+            (*t).array_limit = boundary_0;
             return boundary_0 as u64;
         }
     }
@@ -16332,7 +16330,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 0
                             } else {
                                 slot_0 = if n.wrapping_sub(1 as u32 as u64)
-                                    < (*((*rb_1).value.gc as *mut GCUnion)).h.alimit as u64
+                                    < (*((*rb_1).value.gc as *mut GCUnion)).h.array_limit as u64
                                 {
                                     &mut *((*((*rb_1).value.gc as *mut GCUnion)).h.array)
                                         .offset(n.wrapping_sub(1 as u64) as isize)
@@ -16384,7 +16382,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             0
                         } else {
                             slot_1 = if (c as u64).wrapping_sub(1 as u32 as u64)
-                                < (*((*rb_2).value.gc as *mut GCUnion)).h.alimit as u64
+                                < (*((*rb_2).value.gc as *mut GCUnion)).h.array_limit as u64
                             {
                                 &mut *((*((*rb_2).value.gc as *mut GCUnion)).h.array)
                                     .offset((c - 1) as isize)
@@ -16547,7 +16545,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 0
                             } else {
                                 slot_4 = if n_0.wrapping_sub(1 as u32 as u64)
-                                    < (*((*ra_14).val.value.gc as *mut GCUnion)).h.alimit as u64
+                                    < (*((*ra_14).val.value.gc as *mut GCUnion)).h.array_limit as u64
                                 {
                                     &mut *((*((*ra_14).val.value.gc as *mut GCUnion)).h.array)
                                         .offset(n_0.wrapping_sub(1 as u64) as isize)
@@ -16621,7 +16619,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             0
                         } else {
                             slot_5 = if (c_0 as u64).wrapping_sub(1 as u32 as u64)
-                                < (*((*ra_15).val.value.gc as *mut GCUnion)).h.alimit as u64
+                                < (*((*ra_15).val.value.gc as *mut GCUnion)).h.array_limit as u64
                             {
                                 &mut *((*((*ra_15).val.value.gc as *mut GCUnion)).h.array)
                                     .offset((c_0 - 1) as isize)

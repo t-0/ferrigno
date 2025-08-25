@@ -1,0 +1,11 @@
+pub const TAG_TYPE_STRING: u8 = 0x4;
+pub const TAG_TYPE_STRING_SHORT: u8 = 0x4 | (0x00 << 0x04);
+pub const TAG_TYPE_STRING_LONG: u8 = 0x4 | (0x01 << 0x04);
+pub const TAG_TYPE_TABLE: u8 = 0x5;
+pub const TAG_TYPE_CLOSURE_C: u8 = 0x06 | (0x02 << 0x04);
+pub const TAG_TYPE_CLOSURE_L: u8 = 0x06 | (0x00 << 0x04);
+pub const TAG_TYPE_USER: u8 = 0x7;
+pub const TAG_TYPE_STATE: u8 = 0x8;
+pub const TAG_TYPE_UPVALUE: u8 = 0x9;
+pub const TAG_TYPE_PROTOTYPE: u8 = 0xA;
+pub const TAG_TYPE_MASK: u8 = 0xF;

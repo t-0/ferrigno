@@ -11,8 +11,12 @@
 //         }
 //     }
 // }
+use crate::table::*;
+use crate::tag::*;
 pub trait TObject {
+    fn get_tag_type(&self) -> u8;
     fn get_class_name(& mut self) -> String;
+    fn get_metatable(& mut self) -> *mut Table;
 }
 #[derive(Copy, Clone)]
 pub struct Object {
@@ -21,7 +25,13 @@ pub struct Object {
     pub marked: u8,
 }
 impl TObject for Object {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "Object".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        std::ptr::null_mut()
     }
 }

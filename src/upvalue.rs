@@ -1,5 +1,7 @@
 use crate::object::*;
 use crate::tvalue::*;
+use crate::table::*;
+use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
@@ -10,8 +12,14 @@ pub struct UpValue {
     pub u: UpValueB,
 }
 impl TObject for UpValue {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "UpValue".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        std::ptr::null_mut()
     }
 }
 #[derive(Copy, Clone)]

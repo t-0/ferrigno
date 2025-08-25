@@ -1,7 +1,9 @@
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
+use crate::tag::*;
 use crate::object::*;
 use crate::tvalue::*;
+use crate::table::*;
 use crate::tstring::*;
 use crate::state::*;
 use crate::upvaldesc::*;
@@ -34,8 +36,14 @@ pub struct Prototype {
     pub gc_list: *mut Object,
 }
 impl TObject for Prototype {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "Prototype".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        std::ptr::null_mut()
     }
 }
 impl Prototype {

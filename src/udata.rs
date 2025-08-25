@@ -1,6 +1,7 @@
 use crate::object::*;
 use crate::table::*;
 use crate::uvalue::*;
+use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Udata {
@@ -14,7 +15,13 @@ pub struct Udata {
     pub uv: [UValue; 1],
 }
 impl TObject for Udata {
+    fn get_tag_type(&self) -> u8 {
+        self.tag & TAG_TYPE_MASK
+    }
     fn get_class_name(& mut self) -> String {
         "Udata".to_string()
+    }
+    fn get_metatable(& mut self) -> *mut Table {
+        self.metatable
     }
 }
