@@ -13,5 +13,5 @@ pub struct MatchState {
 #[derive(Copy, Clone)]
 pub struct MatchStateCapture {
     pub init: *const i8,
-    pub len: i64,
+    pub length: i64,
 }
