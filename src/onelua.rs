@@ -92,7 +92,7 @@ pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> !
             let io1: *mut TValue = &mut (*fresh0).val;
             let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
             (*io1).value = (*io2).value;
-            (*io1).tag = (*io2).tag;
+            (*io1).tag = (*io2).get_tag();
             luad_throw((*g).mainthread, error_code);
         } else {
             if ((*g).panic).is_some() {
@@ -382,7 +382,7 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StkId) -> St
         function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StkId;
     }
     let tm: *const TValue = luat_gettmbyobj(state, &mut (*function).val, TM_CALL);
-    if (((*tm).tag & TAG_TYPE_MASK_ == 0) as i32 != 0) as i32 as i64 != 0 {
+    if (*tm).get_tag_type() == TAG_TYPE_NIL {
         luag_callerror(state, &mut (*function).val);
     }
     p = (*state).top.p;
@@ -398,7 +398,7 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StkId) -> St
     let io1_0: *mut TValue = &mut (*function).val;
     let io2_0: *const TValue = tm;
     (*io1_0).value = (*io2_0).value;
-    (*io1_0).tag = (*io2_0).tag;
+    (*io1_0).tag = (*io2_0).get_tag();
     return function;
 }}
 #[inline]
@@ -1268,7 +1268,7 @@ pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) { unsafe {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> i32 { unsafe {
     let o: *const TValue = index2value(state, index);
-    return if !((*o).tag & TAG_TYPE_MASK_ == 0)
+    return if ((*o).tag & TAG_TYPE_MASK_ != TAG_TYPE_NIL)
         || o != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue
     {
         ((*o).tag & TAG_TYPE_MASK_) as i32
