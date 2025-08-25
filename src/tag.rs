@@ -1,3 +1,5 @@
+pub const TAG_TYPE_INTEGER: u8 = 0x03 | (0x00 << 0x04);
+pub const TAG_TYPE_NUMBER: u8 = 0x03 | (0x01 << 0x04);
 pub const TAG_TYPE_STRING: u8 = 0x4;
 pub const TAG_TYPE_STRING_SHORT: u8 = 0x4 | (0x00 << 0x04);
 pub const TAG_TYPE_STRING_LONG: u8 = 0x4 | (0x01 << 0x04);
