@@ -9,7 +9,7 @@ const BUFFFS_SIZE: usize = 0x100;
 pub struct BuffFS {
     state: *mut State,
     is_pushed: bool,
-    size: i32,
+    size: u64,
     block: [i8; BUFFFS_SIZE],
 }
 impl BuffFS {
@@ -34,19 +34,17 @@ pub unsafe extern "C" fn clear(& mut self) { unsafe {
     };
     self.size = 0;
 }}
-pub unsafe extern "C" fn get_raw(& mut self, size: i32) -> *mut i8 { unsafe {
-    if size > 60 as i32 + 44 as i32 + 95 as i32 - self.size {
+pub unsafe extern "C" fn get_raw(& mut self, size: u64) -> *mut i8 { unsafe {
+    if size > ((60 + 44 + 95) - self.size as u64) {
         self.clear();
     }
-    return (self.block)
-        .as_mut_ptr()
-        .offset(self.size as isize);
+    return self.block.as_mut_ptr().offset(self.size as isize);
 }}
 pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64) { unsafe {
     if length <= (60 as i32 + 44 as i32 + 95 as i32) as u64 {
-        let bf: *mut i8 = self.get_raw(length as i32);
+        let bf: *mut i8 = self.get_raw(length);
         memcpy(bf as *mut libc::c_void, pointer as *const libc::c_void, length);
-        self.size += length as i32;
+        self.size += length;
     } else {
         self.clear();
         let io: *mut TValue = &mut (*(*self.state).top.p).val;
@@ -62,11 +60,11 @@ pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64)
     };
 }}
 pub unsafe extern "C" fn add_number(& mut self, number: *mut TValue) { unsafe {
-    let number_buffer: *mut i8 = self.get_raw(44 as i32);
-    let length: i32 = tostringbuff(number, number_buffer);
+    let number_buffer: *mut i8 = self.get_raw(44);
+    let length = tostringbuff(number, number_buffer);
     self.size += length;
 }}
-pub fn add_length(& mut self, length: i32) {
+pub fn add_length(& mut self, length: u64) {
     self.size += length;
 }
 }

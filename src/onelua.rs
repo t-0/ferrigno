@@ -4629,22 +4629,22 @@ pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: u64) -> i32 { unsa
     }
     return n;
 }}
-pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> i32 { unsafe {
-    let mut length: i32;
+pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 { unsafe {
+    let mut length: u64;
     if (*obj).tag == TAG_TYPE_NUMERIC_INTEGER {
         length = snprintf(
             buffer,
             44 as i32 as u64,
             b"%lld\0" as *const u8 as *const i8,
             (*obj).value.i,
-        );
+        ) as u64;
     } else {
         length = snprintf(
             buffer,
             44 as i32 as u64,
             b"%.14g\0" as *const u8 as *const i8,
             (*obj).value.n,
-        );
+        ) as u64;
         if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
             as i32
             == '\0' as i32
@@ -4661,9 +4661,9 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> i32 
 }}
 pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) { unsafe {
     let mut buffer: [i8; 44] = [0; 44];
-    let length: i32 = tostringbuff(obj, buffer.as_mut_ptr());
+    let length = tostringbuff(obj, buffer.as_mut_ptr());
     let io: *mut TValue = obj;
-    let x_: *mut TString = luas_newlstr(state, buffer.as_mut_ptr(), length as u64);
+    let x_: *mut TString = luas_newlstr(state, buffer.as_mut_ptr(), length);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
 }}
@@ -4729,12 +4729,12 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 buff_fs.add_number(&mut num_1);
             }
             112 => {
-                let size: i32 = (3 as u64)
+                let size = (3 as u64)
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_add(8 as u64) as i32;
+                    .wrapping_add(8 as u64);
                 let bf: *mut i8 = buff_fs.get_raw(size);
                 let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
-                let length: i32 = snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p);
+                let length = snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p) as u64;
                 buff_fs.add_length (length);
             }
             85 => {
