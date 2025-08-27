@@ -200,7 +200,6 @@ impl State {
     ) { unsafe {
         let g: *mut Global = self.global;
         raw_allocate(
-            std::ptr::null_mut(),
             block,
             old_size,
             0u64,

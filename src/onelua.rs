@@ -2902,7 +2902,6 @@ pub unsafe extern "C" fn close_state(state: *mut State) { unsafe {
     );
     freestack(state);
     raw_allocate(
-        std::ptr::null_mut(),
         (state as *mut u8).offset(-(8 as u64 as isize)) as *mut LX as *mut libc::c_void,
         ::core::mem::size_of::<LG>() as u64,
         0u64,
@@ -2990,7 +2989,6 @@ pub unsafe extern "C" fn lua_resetthread(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn lua_newstate() -> *mut State { unsafe {
     let mut i: i32;
     let l: *mut LG = raw_allocate(
-        std::ptr::null_mut(),
         std::ptr::null_mut(),
         8 as u64,
         ::core::mem::size_of::<LG>() as u64,
@@ -4218,7 +4216,7 @@ pub unsafe extern "C" fn tryagain(
     let g: *mut Global = (*state).global;
     if get_tag_type((*g).nilvalue.tag) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
         luac_fullgc(state, 1);
-        return raw_allocate(std::ptr::null_mut(), block, old_size, new_size);
+        return raw_allocate(block, old_size, new_size);
     } else {
         return std::ptr::null_mut();
     };
@@ -4230,7 +4228,7 @@ pub unsafe extern "C" fn luam_realloc_(
     new_size: u64,
 ) -> *mut libc::c_void { unsafe {
     let g: *mut Global = (*state).global;
-    let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), block, old_size, new_size);
+    let mut new_block: *mut libc::c_void = raw_allocate(block, old_size, new_size);
     if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i32 as i64 != 0 {
         new_block = tryagain(state, block, old_size, new_size);
         if new_block.is_null() {
@@ -4265,7 +4263,6 @@ pub unsafe extern "C" fn luam_malloc_(
         let g: *mut Global = (*state).global;
         let mut new_block: *mut libc::c_void =
             raw_allocate(
-                std::ptr::null_mut(),
                 std::ptr::null_mut(),
                 tag as u64,
                 size,
@@ -19389,7 +19386,7 @@ pub unsafe extern "C" fn resizebox(
     let ud: *mut libc::c_void = std::ptr::null_mut();
     let box_0: *mut UBox = lua_touserdata(state, index) as *mut UBox;
     let temp: *mut libc::c_void =
-        raw_allocate(ud, (*box_0).box_0, (*box_0).bsize, new_size);
+        raw_allocate((*box_0).box_0, (*box_0).bsize, new_size);
     if ((temp.is_null() && new_size > 0u64) as i32 != 0) as i32 as i64 != 0 {
         lua_pushstring(state, b"not enough memory\0" as *const u8 as *const i8);
         lua_error(state);
@@ -19873,7 +19870,6 @@ pub unsafe extern "C" fn lual_gsub(
     return lua_tolstring(state, -1, std::ptr::null_mut());
 }}
 pub unsafe extern "C" fn raw_allocate(
-    mut _ud: *mut libc::c_void,
     ptr: *mut libc::c_void,
     mut _osize: u64,
     new_size: u64,
