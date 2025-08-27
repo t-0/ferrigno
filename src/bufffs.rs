@@ -41,16 +41,16 @@ pub unsafe extern "C" fn get_raw(& mut self, size: u64) -> *mut i8 { unsafe {
     return self.block.as_mut_ptr().offset(self.size as isize);
 }}
 pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64) { unsafe {
-    if length <= (60 as i32 + 44 as i32 + 95 as i32) as u64 {
-        let bf: *mut i8 = self.get_raw(length);
+    if length <= (60 + 44 + 95) {
+        let bf = self.get_raw(length);
         memcpy(bf as *mut libc::c_void, pointer as *const libc::c_void, length);
         self.size += length;
     } else {
         self.clear();
-        let io: *mut TValue = &mut (*(*self.state).top.p).val;
-        let ts: *mut TString = luas_newlstr(self.state, pointer, length);
+        let io = &mut (*(*self.state).top.p).val;
+        let ts = luas_newlstr(self.state, pointer, length);
         (*io).value.gc = &mut (*(ts as *mut GCUnion)).gc;
-        (*io).tag = ((*ts).tag | TAG_COLLECTABLE) as u8;
+        (*io).tag = (*ts).tag | TAG_COLLECTABLE;
         (*self.state).top.p = (*self.state).top.p.offset(1);
         if self.is_pushed {
             luav_concat(self.state, 2);
@@ -60,9 +60,8 @@ pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64)
     };
 }}
 pub unsafe extern "C" fn add_number(& mut self, number: *mut TValue) { unsafe {
-    let number_buffer: *mut i8 = self.get_raw(44);
-    let length = tostringbuff(number, number_buffer);
-    self.size += length;
+    let number_buffer = self.get_raw(44);
+    self.size += tostringbuff(number, number_buffer);
 }}
 pub fn add_length(& mut self, length: u64) {
     self.size += length;
