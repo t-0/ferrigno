@@ -1,7 +1,10 @@
 use crate::functions::*;
 use crate::object::*;
+use crate::tag::*;
 use crate::state::*;
+use crate::gcunion::*;
 use crate::stringtable::*;
+use crate::onelua::*;
 use crate::table::*;
 use crate::tstring::*;
 use crate::tvalue::*;
@@ -111,4 +114,18 @@ impl Global {
             self.set_debt(-((self.totalbytes + self.gc_debt).wrapping_div(100) * self.genminormul as i64));
         }
     }
+    pub unsafe extern "C" fn propagatemark(& mut self) -> u64 { unsafe {
+        let o: *mut Object = self.gray;
+        (*o).marked = ((*o).marked as i32 | 1 << 5) as u8;
+        self.gray = *getgclist(o);
+        match (*o).tag {
+            TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
+            TAG_VARIANT_USER => return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64,
+            TAG_VARIANT_CLOSURE_L => return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64,
+            TAG_VARIANT_CLOSURE_C => return traversecclosure(self, &mut (*(o as *mut GCUnion)).ccl) as u64,
+            TAG_VARIANT_PROTOTYPE => return traverseproto(self, &mut (*(o as *mut GCUnion)).p) as u64,
+            TAG_VARIANT_STATE => return traversethread(self, &mut (*(o as *mut GCUnion)).th) as u64,
+            _ => return 0,
+        };
+    }}
 }

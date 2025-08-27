@@ -1454,11 +1454,11 @@ pub unsafe extern "C" fn lua_tolstring(
 pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 { unsafe {
     let o: *const TValue = index2value(state, index);
     match get_tag_variant((*o).tag) {
-        4 => return (*((*o).value.gc as *mut GCUnion)).ts.short_length as u64,
-        20 => return (*((*o).value.gc as *mut GCUnion)).ts.u.long_length as u64,
-        7 => return (*((*o).value.gc as *mut GCUnion)).u.length as u64,
-        5 => return luah_getn(&mut (*((*o).value.gc as *mut GCUnion)).h),
-        _ => return 0u64,
+        TAG_VARIANT_STRING_SHORT => return (*((*o).value.gc as *mut GCUnion)).ts.short_length as u64,
+        TAG_VARIANT_STRING_LONG => return (*((*o).value.gc as *mut GCUnion)).ts.u.long_length as u64,
+        TAG_VARIANT_USER => return (*((*o).value.gc as *mut GCUnion)).u.length as u64,
+        TAG_VARIANT_TABLE => return luah_getn(&mut (*((*o).value.gc as *mut GCUnion)).h),
+        _ => return 0,
     };
 }}
 #[unsafe(no_mangle)]
@@ -6084,15 +6084,12 @@ static mut OPMODES: [u8; 83] = [
 ];
 pub unsafe extern "C" fn getgclist(o: *mut Object) -> *mut *mut Object { unsafe {
     match (*o).tag {
-        5 => return &mut (*(o as *mut GCUnion)).h.gc_list,
-        6 => return &mut (*(o as *mut GCUnion)).lcl.gc_list,
-        38 => return &mut (*(o as *mut GCUnion)).ccl.gc_list,
-        8 => return &mut (*(o as *mut GCUnion)).th.gc_list,
-        10 => return &mut (*(o as *mut GCUnion)).p.gc_list,
-        7 => {
-            let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
-            return &mut (*u).gc_list;
-        }
+        TAG_VARIANT_TABLE => return &mut (*(o as *mut GCUnion)).h.gc_list,
+        TAG_VARIANT_CLOSURE_L => return &mut (*(o as *mut GCUnion)).lcl.gc_list,
+        TAG_VARIANT_CLOSURE_C => return &mut (*(o as *mut GCUnion)).ccl.gc_list,
+        TAG_VARIANT_STATE => return &mut (*(o as *mut GCUnion)).th.gc_list,
+        TAG_VARIANT_PROTOTYPE => return &mut (*(o as *mut GCUnion)).p.gc_list,
+        TAG_VARIANT_USER => return &mut (*(o as *mut GCUnion)).u.gc_list,
         _ => return std::ptr::null_mut(),
     };
 }}
@@ -6193,12 +6190,12 @@ pub unsafe extern "C" fn luac_newobj(
 pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsafe {
     let current_block_18: u64;
     match (*o).tag {
-        4 | 20 => {
+        TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
             (*o).marked =
                 ((*o).marked as i32 & !(1 << 3 | 1 << 4) | 1 << 5) as u8;
             current_block_18 = 18317007320854588510;
         }
-        9 => {
+        TAG_VARIANT_UPVALUE => {
             let uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
             if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
                 (*uv).marked = ((*uv).marked as i32
@@ -6215,7 +6212,7 @@ pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsa
             }
             current_block_18 = 18317007320854588510;
         }
-        7 => {
+        TAG_VARIANT_USER => {
             let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
             if (*u).nuvalue as i32 == 0 {
                 if !((*u).metatable).is_null() {
@@ -6230,7 +6227,7 @@ pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsa
                 current_block_18 = 15904375183555213903;
             }
         }
-        6 | 38 | 5 | 8 | 10 => {
+        TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C | TAG_VARIANT_TABLE | TAG_VARIANT_STATE | TAG_VARIANT_PROTOTYPE => {
             current_block_18 = 15904375183555213903;
         }
         _ => {
@@ -6703,24 +6700,10 @@ pub unsafe extern "C" fn traversethread(g: *mut Global, th: *mut State) -> i32 {
     }
     return 1 + ((*th).stack_last.p).offset_from((*th).stack.p) as i64 as i32;
 }}
-pub unsafe extern "C" fn propagatemark(g: *mut Global) -> u64 { unsafe {
-    let o: *mut Object = (*g).gray;
-    (*o).marked = ((*o).marked as i32 | 1 << 5) as u8;
-    (*g).gray = *getgclist(o);
-    match (*o).tag {
-        5 => return traversetable(g, &mut (*(o as *mut GCUnion)).h),
-        7 => return traverseudata(g, &mut (*(o as *mut GCUnion)).u) as u64,
-        6 => return traverselclosure(g, &mut (*(o as *mut GCUnion)).lcl) as u64,
-        38 => return traversecclosure(g, &mut (*(o as *mut GCUnion)).ccl) as u64,
-        10 => return traverseproto(g, &mut (*(o as *mut GCUnion)).p) as u64,
-        8 => return traversethread(g, &mut (*(o as *mut GCUnion)).th) as u64,
-        _ => return 0u64,
-    };
-}}
 pub unsafe extern "C" fn propagateall(g: *mut Global) -> u64 { unsafe {
     let mut tot: u64 = 0;
     while !((*g).gray).is_null() {
-        tot = (tot as u64).wrapping_add(propagatemark(g)) as u64 as u64;
+        tot = (tot as u64).wrapping_add((*g).propagatemark()) as u64 as u64;
     }
     return tot;
 }}
@@ -6832,13 +6815,13 @@ pub unsafe extern "C" fn freeupval(state: *mut State, uv: *mut UpValue) { unsafe
 }}
 pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
     match (*o).tag {
-        10 => {
+        TAG_VARIANT_PROTOTYPE => {
             (*(&mut (*(o as *mut GCUnion)).p)).free_prototype(state);
         }
-        9 => {
+        TAG_VARIANT_UPVALUE => {
             freeupval(state, &mut (*(o as *mut GCUnion)).upv);
         }
-        6 => {
+        TAG_VARIANT_CLOSURE_L => {
             let cl: *mut LClosure = &mut (*(o as *mut GCUnion)).lcl;
             (*state).free_memory(
                 cl as *mut libc::c_void,
@@ -6847,7 +6830,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
                         * (*cl).count_upvalues as i32) as u64,
             );
         }
-        38 => {
+        TAG_VARIANT_CLOSURE_C => {
             let cl_0: *mut CClosure = &mut (*(o as *mut GCUnion)).ccl;
             (*state).free_memory(
                 cl_0 as *mut libc::c_void,
@@ -6856,13 +6839,13 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
                         * (*cl_0).count_upvalues as i32) as u64,
             );
         }
-        5 => {
+        TAG_VARIANT_TABLE => {
             luah_free(state, &mut (*(o as *mut GCUnion)).h);
         }
-        8 => {
+        TAG_VARIANT_STATE => {
             luae_freethread(state, &mut (*(o as *mut GCUnion)).th);
         }
-        7 => {
+        TAG_VARIANT_USER => {
             let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
             (*state).free_memory(
                 o as *mut libc::c_void,
@@ -6876,7 +6859,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
                 .wrapping_add((*u).length),
             );
         }
-        4 => {
+        TAG_VARIANT_STRING_SHORT => {
             let ts: *mut TString = &mut (*(o as *mut GCUnion)).ts;
             luas_remove(state, ts);
             (*state).free_memory(
@@ -6887,7 +6870,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
                 ),
             );
         }
-        20 => {
+        TAG_VARIANT_STRING_LONG => {
             let ts_0: *mut TString = &mut (*(o as *mut GCUnion)).ts;
             (*state).free_memory(
                 ts_0 as *mut libc::c_void,
@@ -7453,7 +7436,7 @@ pub unsafe extern "C" fn singlestep(state: *mut State) -> u64 { unsafe {
                 (*g).gcstate = 1;
                 work = 0;
             } else {
-                work = propagatemark(g);
+                work = (*g).propagatemark();
             }
         }
         1 => {
@@ -19383,7 +19366,6 @@ pub unsafe extern "C" fn resizebox(
     index: i32,
     new_size: u64,
 ) -> *mut libc::c_void { unsafe {
-    let ud: *mut libc::c_void = std::ptr::null_mut();
     let box_0: *mut UBox = lua_touserdata(state, index) as *mut UBox;
     let temp: *mut libc::c_void =
         raw_allocate((*box_0).box_0, (*box_0).bsize, new_size);
