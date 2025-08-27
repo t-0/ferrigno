@@ -81,7 +81,7 @@ use libc::{remove, rename, setlocale, system, tolower, toupper};
 pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> ! { unsafe {
     if !((*state).error_jump).is_null() {
         ::core::ptr::write_volatile(&mut (*(*state).error_jump).status as *mut i32, error_code);
-        _longjmp(((*(*state).error_jump).b).as_mut_ptr(), 1);
+        _longjmp(((*(*state).error_jump).jbt).as_mut_ptr(), 1);
     } else {
         let g: *mut Global = (*state).global;
         error_code = luae_resetthread(state, error_code);
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn luad_rawrunprotected(
     ::core::ptr::write_volatile(&mut long_jump.status as *mut i32, 0);
     long_jump.previous = (*state).error_jump;
     (*state).error_jump = &mut long_jump;
-    if _setjmp((long_jump.b).as_mut_ptr()) == 0 {
+    if _setjmp((long_jump.jbt).as_mut_ptr()) == 0 {
         (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(
             state, ud,
         );
@@ -141,7 +141,7 @@ pub unsafe extern "C" fn relstack(state: *mut State) { unsafe {
     }
 }}
 pub unsafe extern "C" fn luad_errerr(state: *mut State) -> ! { unsafe {
-    let msg: *mut TString = luas_newlstr(
+    let message: *mut TString = luas_newlstr(
         state,
         b"error in error handling\0" as *const u8 as *const i8,
         (::core::mem::size_of::<[i8; 24]>() as u64)
@@ -149,11 +149,9 @@ pub unsafe extern "C" fn luad_errerr(state: *mut State) -> ! { unsafe {
             .wrapping_sub(1 as u64),
     );
     let io: *mut TValue = &mut (*(*state).top.p).val;
-    let x_: *mut TString = msg;
-    (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
+    (*io).value.gc = &mut (*(message as *mut GCUnion)).gc;
+    (*io).tag = ((*message).tag | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     luad_throw(state, 5);
 }}
 pub unsafe extern "C" fn luad_reallocstack(
@@ -262,7 +260,6 @@ pub unsafe extern "C" fn luad_inctop(state: *mut State) { unsafe {
         luad_growstack(state, 1, true);
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
 }}
 pub unsafe extern "C" fn luad_hook(
     state: *mut State,
@@ -394,7 +391,6 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StkId) -> St
         p = p.offset(-1);
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     let io1_0: *mut TValue = &mut (*function).val;
     let io2_0: *const TValue = tm;
     (*io1_0).value = (*io2_0).value;
@@ -746,16 +742,15 @@ pub unsafe extern "C" fn unroll(state: *mut State, mut _ud: *mut libc::c_void) {
 }}
 pub unsafe extern "C" fn resume_error(
     state: *mut State,
-    msg: *const i8,
+    message: *const i8,
     narg: i32,
 ) -> i32 { unsafe {
     (*state).top.p = (*state).top.p.offset(-(narg as isize));
     let io: *mut TValue = &mut (*(*state).top.p).val;
-    let x_: *mut TString = luas_new(state, msg);
+    let x_: *mut TString = luas_new(state, message);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     return 2;
 }}
 pub unsafe extern "C" fn resume(state: *mut State, ud: *mut libc::c_void) { unsafe {
@@ -1263,7 +1258,6 @@ pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) { unsafe {
     (*io1).value = (*io2).value;
     (*io1).tag = (*io2).tag;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> i32 { unsafe {
@@ -1330,8 +1324,7 @@ pub unsafe extern "C" fn lua_arith(state: *mut State, op: i32) { unsafe {
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    }
+        }
     luao_arith(
         state,
         op,
@@ -1340,7 +1333,6 @@ pub unsafe extern "C" fn lua_arith(state: *mut State, op: i32) { unsafe {
         (*state).top.p.offset(-(2 as isize)),
     );
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_compare(
@@ -1377,8 +1369,7 @@ pub unsafe extern "C" fn lua_stringtonumber(state: *mut State, s: *const i8) -> 
     let size: u64 = luao_str2num(s, &mut (*(*state).top.p).val);
     if size != 0u64 {
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    }
+        }
     return size;
 }}
 #[unsafe(no_mangle)]
@@ -1543,7 +1534,6 @@ pub unsafe extern "C" fn lua_pushlstring(
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
@@ -1562,7 +1552,6 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
         s = ((*ts).contents).as_mut_ptr();
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
@@ -1601,8 +1590,7 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
         (*io).value.f = fn_0;
         (*io).tag = (TAG_TYPE_CLOSURE_CFUNCTION) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    } else {
+        } else {
         let cl: *mut CClosure = luaf_newcclosure(state, n);
         (*cl).f = fn_0;
         (*state).top.p = (*state).top.p.offset(-(n as isize));
@@ -1623,8 +1611,7 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
         (*io_0).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io_0).tag = (TAG_TYPE_CLOSURE_C | TAG_COLLECTABLE) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-        if (*(*state).global).gc_debt > 0 {
+            if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
     };
@@ -1635,7 +1622,6 @@ pub unsafe extern "C" fn lua_pushlightuserdata(state: *mut State, p: *mut libc::
     (*io).value.p = p;
     (*io).tag = TAG_TYPE_POINTER;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_pushthread(state: *mut State) -> bool { unsafe {
@@ -1644,7 +1630,6 @@ pub unsafe extern "C" fn lua_pushthread(state: *mut State) -> bool { unsafe {
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = (TAG_TYPE_STATE | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     return (*(*state).global).mainthread == state;
 }}
 #[inline]
@@ -1668,15 +1653,13 @@ pub unsafe extern "C" fn auxgetstr(
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    } else {
+        } else {
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-        luav_finishget(
+            luav_finishget(
             state,
             t,
             &mut (*(*state).top.p.offset(-(1 as isize))).val,
@@ -1769,7 +1752,6 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
         luav_finishget(state, t, &mut aux, (*state).top.p, slot);
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     return ((*(*state).top.p.offset(-(1 as isize))).val.tag & TAG_TYPE_MASK_) as i32;
 }}
 #[inline]
@@ -1783,7 +1765,6 @@ pub unsafe extern "C" fn finishrawget(state: *mut State, val: *const TValue) -> 
         (*io1).tag = (*io2).tag;
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     return ((*(*state).top.p.offset(-(1 as isize))).val.tag & TAG_TYPE_MASK_) as i32;
 }}
 pub unsafe extern "C" fn gettable(state: *mut State, index: i32) -> *mut Table { unsafe {
@@ -1795,7 +1776,6 @@ pub unsafe extern "C" fn lua_rawget(state: *mut State, index: i32) -> i32 { unsa
     let t: *mut Table = gettable(state, index);
     let val: *const TValue = luah_get(t, &mut (*(*state).top.p.offset(-(1 as isize))).val);
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
     return finishrawget(state, val);
 }}
 #[unsafe(no_mangle)]
@@ -1831,7 +1811,6 @@ pub unsafe extern "C" fn lua_createtable(state: *mut State, narray: i32, nrec: i
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = (TAG_TYPE_TABLE | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     if narray > 0 || nrec > 0 {
         luah_resize(state, t, narray as u32, nrec as u32);
     }
@@ -1882,7 +1861,6 @@ pub unsafe extern "C" fn lua_getiuservalue(state: *mut State, index: i32, n: i32
         t = ((*(*state).top.p).val.tag & TAG_TYPE_MASK_) as i32;
     }
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     return t;
 }}
 pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *const i8) { unsafe {
@@ -1912,15 +1890,13 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
         } else {
         };
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-    } else {
+        } else {
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-        luav_finishset(
+            luav_finishset(
             state,
             t,
             &mut (*(*state).top.p.offset(-(1 as isize))).val,
@@ -2038,7 +2014,6 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) { unsaf
         );
     }
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
 }}
 pub unsafe extern "C" fn aux_rawset(
     state: *mut State,
@@ -2114,7 +2089,6 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) { un
     } else {
     };
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i32 { unsafe {
@@ -2167,7 +2141,6 @@ pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i
         }
     }
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
     return 1;
 }}
 #[unsafe(no_mangle)]
@@ -2198,7 +2171,6 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
         res = 1;
     }
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
     return res;
 }}
 #[unsafe(no_mangle)]
@@ -2502,8 +2474,7 @@ pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) { unsafe {
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    }
+        }
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
@@ -2513,7 +2484,6 @@ pub unsafe extern "C" fn lua_len(state: *mut State, index: i32) { unsafe {
     let t: *mut TValue = index2value(state, index);
     luav_objlen(state, (*state).top.p, t);
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_getallocf(
@@ -2544,8 +2514,8 @@ pub unsafe extern "C" fn lua_setwarnf(
     (*(*state).global).warnf = f;
 }}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_warning(state: *mut State, msg: *const i8, tocont: i32) { unsafe {
-    luae_warning(state, msg, tocont);
+pub unsafe extern "C" fn lua_warning(state: *mut State, message: *const i8, tocont: i32) { unsafe {
+    luae_warning(state, message, tocont);
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_newuserdatauv(
@@ -2559,7 +2529,6 @@ pub unsafe extern "C" fn lua_newuserdatauv(
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = (TAG_TYPE_USER | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
@@ -2634,8 +2603,7 @@ pub unsafe extern "C" fn lua_getupvalue(
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    }
+        }
     return name;
 }}
 #[unsafe(no_mangle)]
@@ -2650,8 +2618,7 @@ pub unsafe extern "C" fn lua_setupvalue(
     let name: *const i8 = aux_upvalue(fi, n, &mut val, &mut owner);
     if !name.is_null() {
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-        let io1: *mut TValue = val;
+            let io1: *mut TValue = val;
         let io2: *const TValue = &mut (*(*state).top.p).val;
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
@@ -2969,7 +2936,6 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State { unsafe
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = (TAG_TYPE_STATE | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     preinit_thread(other_state, g);
     ::core::ptr::write_volatile(&mut (*other_state).hook_mask as *mut i32, (*state).hook_mask);
     (*other_state).base_hook_count = (*state).base_hook_count;
@@ -3126,15 +3092,15 @@ pub unsafe extern "C" fn lua_close(mut state: *mut State) { unsafe {
     state = (*(*state).global).mainthread;
     close_state(state);
 }}
-pub unsafe extern "C" fn luae_warning(state: *mut State, msg: *const i8, tocont: i32) { unsafe {
+pub unsafe extern "C" fn luae_warning(state: *mut State, message: *const i8, tocont: i32) { unsafe {
     let wf: WarnFunction = (*(*state).global).warnf;
     if wf.is_some() {
-        wf.expect("non-null function pointer")((*(*state).global).ud_warn, msg, tocont);
+        wf.expect("non-null function pointer")((*(*state).global).ud_warn, message, tocont);
     }
 }}
 pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) { unsafe {
     let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    let msg: *const i8 = if (*errobj).tag & TAG_TYPE_MASK_ == 4 {
+    let message: *const i8 = if (*errobj).tag & TAG_TYPE_MASK_ == 4 {
         ((*((*errobj).value.gc as *mut GCUnion)).ts.contents).as_mut_ptr() as *const i8
     } else {
         b"error object is not a string\0" as *const u8 as *const i8
@@ -3142,7 +3108,7 @@ pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) {
     luae_warning(state, b"error in \0" as *const u8 as *const i8, 1);
     luae_warning(state, where_0, 1);
     luae_warning(state, b" (\0" as *const u8 as *const i8, 1);
-    luae_warning(state, msg, 1);
+    luae_warning(state, message, 1);
     luae_warning(state, b")\0" as *const u8 as *const i8, 0);
 }}
 static mut STRING_LOCAL: [i8; 6] = unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
@@ -3359,8 +3325,7 @@ pub unsafe extern "C" fn lua_getlocal(
             (*io1).value = (*io2).value;
             (*io1).tag = (*io2).tag;
             (*state).top.p = (*state).top.p.offset(1);
-            (*state).top.p;
-        }
+                }
     }
     return name;
 }}
@@ -3378,8 +3343,7 @@ pub unsafe extern "C" fn lua_setlocal(
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-    }
+        }
     return name;
 }}
 pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) { unsafe {
@@ -3435,8 +3399,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
     if !(!f.is_null() && (*f).c.tag == TAG_TYPE_CLOSURE_L) {
         (*(*state).top.p).val.tag = TAG_TYPE_NIL_NIL;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    } else {
+        } else {
         let p: *const Prototype = (*f).l.p;
         let mut currentline: i32 = (*p).line_defined;
         let t: *mut Table = luah_new(state);
@@ -3445,8 +3408,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
         (*io).tag = (TAG_TYPE_TABLE | TAG_COLLECTABLE) as u8;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-        if !((*p).line_info).is_null() {
+            if !((*p).line_info).is_null() {
             let mut i: i32;
             let mut v: TValue = TValue {
                 value: Value {
@@ -3561,8 +3523,7 @@ pub unsafe extern "C" fn lua_getinfo(
         function = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         what = what.offset(1);
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-    } else {
+        } else {
         call_info = (*ar).i_ci;
         function = &mut (*(*call_info).function.p).val;
     }
@@ -3580,8 +3541,7 @@ pub unsafe extern "C" fn lua_getinfo(
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-    }
+        }
     if !(strchr(what, 'L' as i32)).is_null() {
         collectvalidlines(state, cl);
     }
@@ -4001,12 +3961,12 @@ pub unsafe extern "C" fn luag_opinterror(
     state: *mut State,
     p1: *const TValue,
     mut p2: *const TValue,
-    msg: *const i8,
+    message: *const i8,
 ) -> ! { unsafe {
     if !((*p1).tag & TAG_TYPE_MASK_ == 3) {
         p2 = p1;
     }
-    luag_typeerror(state, p2, msg);
+    luag_typeerror(state, p2, message);
 }}
 pub unsafe extern "C" fn luag_tointerror(
     state: *mut State,
@@ -4047,7 +4007,7 @@ pub unsafe extern "C" fn luag_ordererror(
 }}
 pub unsafe extern "C" fn luag_addinfo(
     state: *mut State,
-    msg: *const i8,
+    message: *const i8,
     src: *mut TString,
     line: i32,
 ) -> *const i8 { unsafe {
@@ -4071,7 +4031,7 @@ pub unsafe extern "C" fn luag_addinfo(
         b"%s:%d: %s\0" as *const u8 as *const i8,
         buffer.as_mut_ptr(),
         line,
-        msg,
+        message,
     );
 }}
 pub unsafe extern "C" fn luag_errormsg(state: *mut State) -> ! { unsafe {
@@ -4087,8 +4047,7 @@ pub unsafe extern "C" fn luag_errormsg(state: *mut State) -> ! { unsafe {
         (*io1_0).value = (*io2_0).value;
         (*io1_0).tag = (*io2_0).tag;
         (*state).top.p = (*state).top.p.offset(1);
-        (*state).top.p;
-        luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 1);
+            luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 1);
     }
     luad_throw(state, 2);
 }}
@@ -4098,17 +4057,17 @@ pub unsafe extern "C" fn luag_runerror(
     args: ...
 ) -> ! { unsafe {
     let call_info: *mut CallInfo = (*state).call_info;
-    let msg: *const i8;
+    let message: *const i8;
     let mut argp: ::core::ffi::VaListImpl;
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
     argp = args.clone();
-    msg = luao_pushvfstring(state, fmt, argp.as_va_list());
+    message = luao_pushvfstring(state, fmt, argp.as_va_list());
     if (*call_info).call_status as i32 & 1 << 1 == 0 {
         luag_addinfo(
             state,
-            msg,
+            message,
             (*(*((*(*call_info).function.p).val.value.gc as *mut GCUnion)).lcl.p).source,
             getcurrentline(call_info),
         );
@@ -4117,8 +4076,7 @@ pub unsafe extern "C" fn luag_runerror(
         (*io1).value = (*io2).value;
         (*io1).tag = (*io2).tag;
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-    }
+        }
     luag_errormsg(state);
 }}
 pub unsafe extern "C" fn changedline(
@@ -4716,7 +4674,6 @@ pub unsafe extern "C" fn pushstr(buffer: *mut BuffFS, str: *const i8, lstr: u64)
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
     (*state).top.p = (*state).top.p.offset(1);
-    (*state).top.p;
     if !(*buffer).is_pushed {
         (*buffer).is_pushed = true;
     } else {
@@ -4863,11 +4820,11 @@ pub unsafe extern "C" fn luao_pushfstring(
     fmt: *const i8,
     args: ...
 ) -> *const i8 { unsafe {
-    let msg: *const i8;
+    let message: *const i8;
     let mut argp: ::core::ffi::VaListImpl;
     argp = args.clone();
-    msg = luao_pushvfstring(state, fmt, argp.as_va_list());
-    return msg;
+    message = luao_pushvfstring(state, fmt, argp.as_va_list());
+    return message;
 }}
 pub unsafe extern "C" fn luao_chunkid(
     mut out: *mut i8,
@@ -7108,8 +7065,7 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) { unsafe {
         if ((status != 0) as i32 != 0) as i32 as i64 != 0 {
             luae_warnerror(state, b"__gc\0" as *const u8 as *const i8);
             (*state).top.p = (*state).top.p.offset(-1);
-            (*state).top.p;
-        }
+                }
     }
 }}
 pub unsafe extern "C" fn runafewfinalizers(state: *mut State, n: i32) -> i32 { unsafe {
@@ -8385,8 +8341,7 @@ pub unsafe extern "C" fn load_string_n(load_state: *mut LoadState, p: *mut Proto
                 size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
             (*state).top.p = (*state).top.p.offset(-1);
-            (*state).top.p;
-        }
+                }
     }
     if (*p).marked as i32 & 1 << 5 != 0
         && (*ts).marked as i32 & (1 << 3 | 1 << 4) != 0
@@ -8660,7 +8615,7 @@ pub unsafe extern "C" fn load_function(
     load_prototypes(load_state, f);
     load_debug(load_state, f);
 }}
-pub unsafe extern "C" fn check_literal(load_state: *mut LoadState, s: *const i8, msg: *const i8) { unsafe {
+pub unsafe extern "C" fn check_literal(load_state: *mut LoadState, s: *const i8, message: *const i8) { unsafe {
     let mut buffer: [i8; 12] = [0; 12];
     let length: u64 = strlen(s);
     load_block(
@@ -8674,7 +8629,7 @@ pub unsafe extern "C" fn check_literal(load_state: *mut LoadState, s: *const i8,
         length,
     ) != 0
     {
-        error(load_state, msg);
+        error(load_state, message);
     }
 }}
 pub unsafe extern "C" fn f_check_size(load_state: *mut LoadState, size: u64, tname: *const i8) { unsafe {
@@ -9054,7 +9009,7 @@ pub unsafe extern "C" fn errorlimit(
     what: *const i8,
 ) -> ! { unsafe {
     let state: *mut State = (*(*fs).ls).state;
-    let msg: *const i8;
+    let message: *const i8;
     let line: i32 = (*(*fs).f).line_defined;
     let where_0: *const i8 = if line == 0 {
         b"main function\0" as *const u8 as *const i8
@@ -9065,14 +9020,14 @@ pub unsafe extern "C" fn errorlimit(
             line,
         )
     };
-    msg = luao_pushfstring(
+    message = luao_pushfstring(
         state,
         b"too many %s (limit is %d) in %s\0" as *const u8 as *const i8,
         what,
         limit,
         where_0,
     );
-    luax_syntaxerror((*fs).ls, msg);
+    luax_syntaxerror((*fs).ls, message);
 }}
 pub unsafe extern "C" fn checklimit(
     fs: *mut FunctionState,
@@ -9297,12 +9252,12 @@ pub unsafe extern "C" fn check_readonly(ls: *mut LexState, e: *mut ExpressionDes
         _ => return,
     }
     if !varname.is_null() {
-        let msg: *const i8 = luao_pushfstring(
+        let message: *const i8 = luao_pushfstring(
             (*ls).state,
             b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
             ((*varname).contents).as_mut_ptr(),
         );
-        luak_semerror(ls, msg);
+        luak_semerror(ls, message);
     }
 }}
 pub unsafe extern "C" fn adjustlocalvars(ls: *mut LexState, nvars: i32) { unsafe {
@@ -9524,16 +9479,16 @@ pub unsafe extern "C" fn jumpscopeerror(ls: *mut LexState, gt: *mut LabelDescrip
             .name)
             .contents)
             .as_mut_ptr();
-    let mut msg: *const i8 =
+    let mut message: *const i8 =
         b"<goto %s> at line %d jumps into the scope of local '%s'\0" as *const u8 as *const i8;
-    msg = luao_pushfstring(
+    message = luao_pushfstring(
         (*ls).state,
-        msg,
+        message,
         ((*(*gt).name).contents).as_mut_ptr(),
         (*gt).line,
         varname,
     );
-    luak_semerror(ls, msg);
+    luak_semerror(ls, message);
 }}
 pub unsafe extern "C" fn solvegoto(
     ls: *mut LexState,
@@ -9690,7 +9645,7 @@ pub unsafe extern "C" fn enterblock(
     (*fs).blockcontrol = blockcontrol;
 }}
 pub unsafe extern "C" fn undefgoto(ls: *mut LexState, gt: *mut LabelDescription) -> ! { unsafe {
-    let mut msg: *const i8;
+    let mut message: *const i8;
     if (*gt).name
         == luas_newlstr(
             (*ls).state,
@@ -9700,18 +9655,18 @@ pub unsafe extern "C" fn undefgoto(ls: *mut LexState, gt: *mut LabelDescription)
                 .wrapping_sub(1 as u64),
         )
     {
-        msg = b"break outside loop at line %d\0" as *const u8 as *const i8;
-        msg = luao_pushfstring((*ls).state, msg, (*gt).line);
+        message = b"break outside loop at line %d\0" as *const u8 as *const i8;
+        message = luao_pushfstring((*ls).state, message, (*gt).line);
     } else {
-        msg = b"no visible label '%s' for <goto> at line %d\0" as *const u8 as *const i8;
-        msg = luao_pushfstring(
+        message = b"no visible label '%s' for <goto> at line %d\0" as *const u8 as *const i8;
+        message = luao_pushfstring(
             (*ls).state,
-            msg,
+            message,
             ((*(*gt).name).contents).as_mut_ptr(),
             (*gt).line,
         );
     }
-    luak_semerror(ls, msg);
+    luak_semerror(ls, message);
 }}
 pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) { unsafe {
     let blockcontrol: *mut BlockControl = (*fs).blockcontrol;
@@ -10541,15 +10496,15 @@ pub unsafe extern "C" fn breakstat(ls: *mut LexState) { unsafe {
 pub unsafe extern "C" fn checkrepeated(ls: *mut LexState, name: *mut TString) { unsafe {
     let lb: *mut LabelDescription = findlabel(ls, name);
     if ((lb != std::ptr::null_mut() as *mut LabelDescription) as i32 != 0) as i32 as i64 != 0 {
-        let mut msg: *const i8 =
+        let mut message: *const i8 =
             b"label '%s' already defined on line %d\0" as *const u8 as *const i8;
-        msg = luao_pushfstring(
+        message = luao_pushfstring(
             (*ls).state,
-            msg,
+            message,
             ((*name).contents).as_mut_ptr(),
             (*lb).line,
         );
-        luak_semerror(ls, msg);
+        luak_semerror(ls, message);
     }
 }}
 pub unsafe extern "C" fn labelstat(ls: *mut LexState, name: *mut TString, line: i32) { unsafe {
@@ -11174,7 +11129,6 @@ pub unsafe extern "C" fn luay_parser(
     luax_setinput(state, &mut lexstate, zio, (*funcstate.f).source, firstchar);
     mainfunc(&mut lexstate, &mut funcstate);
     (*state).top.p = (*state).top.p.offset(-1);
-    (*state).top.p;
     return cl;
 }}
 pub unsafe extern "C" fn save(ls: *mut LexState, c: i32) { unsafe {
@@ -11254,20 +11208,20 @@ pub unsafe extern "C" fn text_token(ls: *mut LexState, token: i32) -> *const i8 
         _ => return luax_token2str(ls, token),
     };
 }}
-pub unsafe extern "C" fn lexerror(ls: *mut LexState, mut msg: *const i8, token: i32) -> ! { unsafe {
-    msg = luag_addinfo((*ls).state, msg, (*ls).source, (*ls).line_number);
+pub unsafe extern "C" fn lexerror(ls: *mut LexState, mut message: *const i8, token: i32) -> ! { unsafe {
+    message = luag_addinfo((*ls).state, message, (*ls).source, (*ls).line_number);
     if token != 0 {
         luao_pushfstring(
             (*ls).state,
             b"%s near %s\0" as *const u8 as *const i8,
-            msg,
+            message,
             text_token(ls, token),
         );
     }
     luad_throw((*ls).state, 3);
 }}
-pub unsafe extern "C" fn luax_syntaxerror(ls: *mut LexState, msg: *const i8) -> ! { unsafe {
-    lexerror(ls, msg, (*ls).t.token);
+pub unsafe extern "C" fn luax_syntaxerror(ls: *mut LexState, message: *const i8) -> ! { unsafe {
+    lexerror(ls, message, (*ls).t.token);
 }}
 pub unsafe extern "C" fn luax_newstring(
     ls: *mut LexState,
@@ -11292,8 +11246,7 @@ pub unsafe extern "C" fn luax_newstring(
             luac_step(state);
         }
         (*state).top.p = (*state).top.p.offset(-1);
-        (*state).top.p;
-    }
+        }
     return ts;
 }}
 pub unsafe extern "C" fn inclinenumber(ls: *mut LexState) { unsafe {
@@ -11526,13 +11479,13 @@ pub unsafe extern "C" fn read_long_string(
                 } else {
                     b"comment\0" as *const u8 as *const i8
                 };
-                let msg: *const i8 = luao_pushfstring(
+                let message: *const i8 = luao_pushfstring(
                     (*ls).state,
                     b"unfinished long %s (starting at line %d)\0" as *const u8 as *const i8,
                     what,
                     line,
                 );
-                lexerror(ls, msg, TK_EOS as i32);
+                lexerror(ls, message, TK_EOS as i32);
             }
             93 => {
                 if !(skip_sep(ls) == sep) {
@@ -11591,7 +11544,7 @@ pub unsafe extern "C" fn read_long_string(
         );
     }
 }}
-pub unsafe extern "C" fn esccheck(ls: *mut LexState, c: i32, msg: *const i8) { unsafe {
+pub unsafe extern "C" fn esccheck(ls: *mut LexState, c: i32, message: *const i8) { unsafe {
     if c == 0 {
         if (*ls).current != -1 {
             save(ls, (*ls).current);
@@ -11605,7 +11558,7 @@ pub unsafe extern "C" fn esccheck(ls: *mut LexState, c: i32, msg: *const i8) { u
                 luaz_fill((*ls).zio)
             };
         }
-        lexerror(ls, msg, TK_STRING as i32);
+        lexerror(ls, message, TK_STRING as i32);
     }
 }}
 pub unsafe extern "C" fn gethexa(ls: *mut LexState) -> i32 { unsafe {
@@ -13105,9 +13058,9 @@ pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
         return hash_search(t, limit as u64);
     };
 }}
-pub unsafe extern "C" fn luak_semerror(ls: *mut LexState, msg: *const i8) -> ! { unsafe {
+pub unsafe extern "C" fn luak_semerror(ls: *mut LexState, message: *const i8) -> ! { unsafe {
     (*ls).t.token = 0;
-    luax_syntaxerror(ls, msg);
+    luax_syntaxerror(ls, message);
 }}
 pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> i32 { unsafe {
     if (*e).t == (*e).f {
@@ -15338,11 +15291,9 @@ pub unsafe extern "C" fn luav_finishset(
                 (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
                 (*io).tag = (TAG_TYPE_TABLE | TAG_COLLECTABLE) as u8;
                 (*state).top.p = (*state).top.p.offset(1);
-                (*state).top.p;
-                luah_finishset(state, h, key, slot, val);
+                            luah_finishset(state, h, key, slot, val);
                 (*state).top.p = (*state).top.p.offset(-1);
-                (*state).top.p;
-                (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
+                            (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                 if (*val).tag & TAG_COLLECTABLE != 0 {
                     if (*(h as *mut GCUnion)).gc.marked as i32 & 1 << 5 != 0
                         && (*(*val).value.gc).marked as i32 & (1 << 3 | 1 << 4) != 0
@@ -16035,8 +15986,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) { unsafe {
                 || (*(*state).top.p.offset(-(1 as isize))).val.tag & TAG_TYPE_MASK_ == 0)
                 as i32;
             (*state).top.p = (*state).top.p.offset(-1);
-            (*state).top.p;
-            if res != (inst >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
+                    if res != (inst >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
                 (*call_info).u.l.saved_program_counter = ((*call_info).u.l.saved_program_counter).offset(1);
                 (*call_info).u.l.saved_program_counter;
             }
@@ -19055,7 +19005,7 @@ pub unsafe extern "C" fn lastlevel(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn lual_traceback(
     state: *mut State,
     other_state: *mut State,
-    msg: *const i8,
+    message: *const i8,
     mut level: i32,
 ) { unsafe {
     let mut b = Buffer::new();
@@ -19085,8 +19035,8 @@ pub unsafe extern "C" fn lual_traceback(
         -1
     };
     b.lual_buffinit(state);
-    if !msg.is_null() {
-        b.lual_addstring(msg);
+    if !message.is_null() {
+        b.lual_addstring(message);
         (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
         let fresh145 = b.length;
         b.length = (b.length).wrapping_add(1);
@@ -19204,7 +19154,7 @@ pub unsafe extern "C" fn lual_typeerror(
     arg: i32,
     tname: *const i8,
 ) -> i32 { unsafe {
-    let msg: *const i8;
+    let message: *const i8;
     let typearg: *const i8;
     if lual_getmetafield(state, arg, b"__name\0" as *const u8 as *const i8) == 4 {
         typearg = lua_tolstring(state, -1, std::ptr::null_mut());
@@ -19213,13 +19163,13 @@ pub unsafe extern "C" fn lual_typeerror(
     } else {
         typearg = lua_typename(state, lua_type(state, arg));
     }
-    msg = lua_pushfstring(
+    message = lua_pushfstring(
         state,
         b"%s expected, got %s\0" as *const u8 as *const i8,
         tname,
         typearg,
     );
-    return lual_argerror(state, arg, msg);
+    return lual_argerror(state, arg, message);
 }}
 pub unsafe extern "C" fn tag_error(state: *mut State, arg: i32, tag: i32) { unsafe {
     lual_typeerror(state, arg, lua_typename(state, tag));
@@ -19283,17 +19233,17 @@ pub unsafe extern "C" fn lual_fileresult(
         (*state).push_boolean(true);
         return 1;
     } else {
-        let msg: *const i8;
+        let message: *const i8;
         (*state).push_nil();
-        msg = if en != 0 {
+        message = if en != 0 {
             strerror(en) as *const i8
         } else {
             b"(no extra info)\0" as *const u8 as *const i8
         };
         if !fname.is_null() {
-            lua_pushfstring(state, b"%s: %s\0" as *const u8 as *const i8, fname, msg);
+            lua_pushfstring(state, b"%s: %s\0" as *const u8 as *const i8, fname, message);
         } else {
-            lua_pushstring(state, msg);
+            lua_pushstring(state, message);
         }
         (*state).push_integer(en as i64);
         return 3;
@@ -19403,14 +19353,14 @@ pub unsafe extern "C" fn lual_checkoption(
 pub unsafe extern "C" fn lual_checkstack(
     state: *mut State,
     space: i32,
-    msg: *const i8,
+    message: *const i8,
 ) { unsafe {
     if ((lua_checkstack(state, space) == 0) as i32 != 0) as i32 as i64 != 0 {
-        if !msg.is_null() {
+        if !message.is_null() {
             lual_error(
                 state,
                 b"stack overflow (%s)\0" as *const u8 as *const i8,
-                msg,
+                message,
             );
         } else {
             lual_error(state, b"stack overflow\0" as *const u8 as *const i8);
@@ -20012,7 +19962,7 @@ pub unsafe extern "C" fn l_alloc(
     };
 }}
 pub unsafe extern "C" fn panic(state: *mut State) -> i32 { unsafe {
-    let msg: *const i8 = if lua_type(state, -1) == 4 {
+    let message: *const i8 = if lua_type(state, -1) == 4 {
         lua_tolstring(state, -1, std::ptr::null_mut())
     } else {
         b"error object is not a string\0" as *const u8 as *const i8
@@ -20020,7 +19970,7 @@ pub unsafe extern "C" fn panic(state: *mut State) -> i32 { unsafe {
     fprintf(
         stderr,
         b"PANIC: unprotected error in call to Lua API (%s)\n\0" as *const u8 as *const i8,
-        msg,
+        message,
     );
     fflush(stderr);
     return 0;
@@ -26217,8 +26167,8 @@ pub unsafe extern "C" fn db_debug(state: *mut State) -> i32 { unsafe {
 pub unsafe extern "C" fn db_traceback(state: *mut State) -> i32 { unsafe {
     let mut arg: i32 = 0;
     let other_state: *mut State = getthread(state, &mut arg);
-    let msg: *const i8 = lua_tolstring(state, arg + 1, std::ptr::null_mut());
-    if msg.is_null() && !(lua_type(state, arg + 1) <= 0) {
+    let message: *const i8 = lua_tolstring(state, arg + 1, std::ptr::null_mut());
+    if message.is_null() && !(lua_type(state, arg + 1) <= 0) {
         lua_pushvalue(state, arg + 1);
     } else {
         let level: i32 = lual_optinteger(
@@ -26226,7 +26176,7 @@ pub unsafe extern "C" fn db_traceback(state: *mut State) -> i32 { unsafe {
             arg + 2,
             (if state == other_state { 1 } else { 0 }) as i64,
         ) as i32;
-        lual_traceback(state, other_state, msg, level);
+        lual_traceback(state, other_state, message, level);
     }
     return 1;
 }}
@@ -26794,7 +26744,7 @@ pub unsafe extern "C" fn searcher_preload(state: *mut State) -> i32 { unsafe {
 }}
 pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) { unsafe {
     let mut i: i32;
-    let mut msg = Buffer::new();
+    let mut message = Buffer::new();
     if ((lua_getfield(
         state,
         -(1000000 as i32) - 1000 as i32 - 1,
@@ -26808,14 +26758,14 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) { unsafe
             b"'package.searchers' must be a table\0" as *const u8 as *const i8,
         );
     }
-    msg.lual_buffinit(state);
+    message.lual_buffinit(state);
     i = 1;
     loop {
-        msg.lual_addstring(b"\n\t\0" as *const u8 as *const i8);
+        message.lual_addstring(b"\n\t\0" as *const u8 as *const i8);
         if ((lua_rawgeti(state, 3, i as i64) == 0) as i32 != 0) as i32 as i64 != 0 {
             lua_settop(state, -1 - 1);
-            msg.length = (msg.length as u64).wrapping_sub(2 as u64) as u64 as u64;
-            msg.lual_pushresult();
+            message.length = (message.length as u64).wrapping_sub(2 as u64) as u64 as u64;
+            message.lual_pushresult();
             lual_error(
                 state,
                 b"module '%s' not found:%s\0" as *const u8 as *const i8,
@@ -26829,10 +26779,10 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) { unsafe
             return;
         } else if lua_isstring(state, -(2)) {
             lua_settop(state, -1 - 1);
-            msg.lual_addvalue();
+            message.lual_addvalue();
         } else {
             lua_settop(state, -(2) - 1);
-            msg.length = (msg.length as u64).wrapping_sub(2 as u64) as u64 as u64;
+            message.length = (message.length as u64).wrapping_sub(2 as u64) as u64 as u64;
         }
         i += 1;
     }
@@ -27186,41 +27136,41 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) { unsafe {
     );
     fflush(stderr);
 }}
-pub unsafe extern "C" fn l_message(pname: *const i8, msg: *const i8) { unsafe {
+pub unsafe extern "C" fn l_message(pname: *const i8, message: *const i8) { unsafe {
     if !pname.is_null() {
         fprintf(stderr, b"%s: \0" as *const u8 as *const i8, pname);
         fflush(stderr);
     }
-    fprintf(stderr, b"%s\n\0" as *const u8 as *const i8, msg);
+    fprintf(stderr, b"%s\n\0" as *const u8 as *const i8, message);
     fflush(stderr);
 }}
 pub unsafe extern "C" fn report(state: *mut State, status: i32) -> i32 { unsafe {
     if status != 0 {
-        let mut msg: *const i8 = lua_tolstring(state, -1, std::ptr::null_mut());
-        if msg.is_null() {
-            msg = b"(error message not a string)\0" as *const u8 as *const i8;
+        let mut message: *const i8 = lua_tolstring(state, -1, std::ptr::null_mut());
+        if message.is_null() {
+            message = b"(error message not a string)\0" as *const u8 as *const i8;
         }
-        l_message(PROGRAM_NAME, msg);
+        l_message(PROGRAM_NAME, message);
         lua_settop(state, -1 - 1);
     }
     return status;
 }}
 pub unsafe extern "C" fn msghandler(state: *mut State) -> i32 { unsafe {
-    let mut msg: *const i8 = lua_tolstring(state, 1, std::ptr::null_mut());
-    if msg.is_null() {
+    let mut message: *const i8 = lua_tolstring(state, 1, std::ptr::null_mut());
+    if message.is_null() {
         if lual_callmeta(state, 1, b"__tostring\0" as *const u8 as *const i8) != 0
             && lua_type(state, -1) == 4
         {
             return 1;
         } else {
-            msg = lua_pushfstring(
+            message = lua_pushfstring(
                 state,
                 b"(error object is a %s value)\0" as *const u8 as *const i8,
                 lua_typename(state, lua_type(state, 1)),
             );
         }
     }
-    lual_traceback(state, state, msg, 1);
+    lual_traceback(state, state, message, 1);
     return 1;
 }}
 pub unsafe extern "C" fn docall(state: *mut State, narg: i32, nres: i32) -> i32 { unsafe {
@@ -27501,13 +27451,13 @@ pub unsafe extern "C" fn get_prompt(state: *mut State, firstline: i32) -> *const
 pub unsafe extern "C" fn incomplete(state: *mut State, status: i32) -> i32 { unsafe {
     if status == 3 {
         let mut lmsg: u64 = 0;
-        let msg: *const i8 = lua_tolstring(state, -1, &mut lmsg);
+        let message: *const i8 = lua_tolstring(state, -1, &mut lmsg);
         if lmsg
             >= (::core::mem::size_of::<[i8; 6]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as u64)
             && strcmp(
-                msg.offset(lmsg as isize).offset(
+                message.offset(lmsg as isize).offset(
                     -((::core::mem::size_of::<[i8; 6]>() as u64)
                         .wrapping_div(::core::mem::size_of::<i8>() as u64)
                         .wrapping_sub(1 as u64) as isize),

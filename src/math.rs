@@ -126,7 +126,7 @@ unsafe extern "C" fn math_sqrt(state: *mut State) -> i32 { unsafe {
 unsafe extern "C" fn math_ult(state: *mut State) -> i32 { unsafe {
     let a: i64 = lual_checkinteger(state, 1);
     let b: i64 = lual_checkinteger(state, 2);
-    (*state).push_boolean(0 != ((a as u64) < b as u64) as i32);
+    (*state).push_boolean((a as u64) < (b as u64));
     1
 }}
 unsafe extern "C" fn math_log(state: *mut State) -> i32 { unsafe {

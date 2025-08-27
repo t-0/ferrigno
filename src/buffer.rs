@@ -82,9 +82,9 @@ impl Buffer {
     }}
     pub unsafe extern "C" fn lual_addlstring(& mut self, s: *const i8, l: u64) { unsafe {
         if l > 0u64 {
-            let b: *mut i8 = self.prepbuffsize(l, -1);
+            let raw: *mut i8 = self.prepbuffsize(l, -1);
             memcpy(
-                b as *mut libc::c_void,
+                raw as *mut libc::c_void,
                 s as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
