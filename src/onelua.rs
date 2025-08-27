@@ -4667,77 +4667,30 @@ pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) { un
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
 }}
-pub unsafe extern "C" fn pushstr(buffer: *mut BuffFS, str: *const i8, lstr: u64) { unsafe {
-    let state: *mut State = (*buffer).state;
-    let io: *mut TValue = &mut (*(*state).top.p).val;
-    let x_: *mut TString = luas_newlstr(state, str, lstr);
-    (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).tag = ((*x_).tag | TAG_COLLECTABLE) as u8;
-    (*state).top.p = (*state).top.p.offset(1);
-    if !(*buffer).is_pushed {
-        (*buffer).is_pushed = true;
-    } else {
-        luav_concat(state, 2);
-    };
-}}
-pub unsafe extern "C" fn clearbuff(buffer: *mut BuffFS) { unsafe {
-    pushstr(
-        buffer,
-        ((*buffer).block).as_mut_ptr(),
-        (*buffer).size as u64,
-    );
-    (*buffer).size = 0;
-}}
-pub unsafe extern "C" fn getbuff(buffer: *mut BuffFS, size: i32) -> *mut i8 { unsafe {
-    if size > 60 as i32 + 44 as i32 + 95 as i32 - (*buffer).size {
-        clearbuff(buffer);
-    }
-    return ((*buffer).block)
-        .as_mut_ptr()
-        .offset((*buffer).size as isize);
-}}
-pub unsafe extern "C" fn addstr2buff(buffer: *mut BuffFS, str: *const i8, slen: u64) { unsafe {
-    if slen <= (60 as i32 + 44 as i32 + 95 as i32) as u64 {
-        let bf: *mut i8 = getbuff(buffer, slen as i32);
-        memcpy(bf as *mut libc::c_void, str as *const libc::c_void, slen);
-        (*buffer).size += slen as i32;
-    } else {
-        clearbuff(buffer);
-        pushstr(buffer, str, slen);
-    };
-}}
-pub unsafe extern "C" fn addnum2buff(buffer: *mut BuffFS, num: *mut TValue) { unsafe {
-    let numbuff: *mut i8 = getbuff(buffer, 44 as i32);
-    let length: i32 = tostringbuff(num, numbuff);
-    (*buffer).size += length;
-}}
 pub unsafe extern "C" fn luao_pushvfstring(
     state: *mut State,
     mut fmt: *const i8,
     mut argp: ::core::ffi::VaList,
 ) -> *const i8 { unsafe {
-    let mut buffer: BuffFS = BuffFS::new();
+    let mut buff_fs = BuffFS::new(state);
     let mut e: *const i8;
-    buffer.size = 0;
-    buffer.is_pushed = 0 != buffer.size;
-    buffer.state = state;
     loop {
         e = strchr(fmt, '%' as i32);
         if e.is_null() {
             break;
         }
-        addstr2buff(&mut buffer, fmt, e.offset_from(fmt) as i64 as u64);
+        buff_fs.add_string(fmt, e.offset_from(fmt) as i64 as u64);
         match *e.offset(1 as isize) as i32 {
             115 => {
                 let mut s: *const i8 = argp.arg::<*mut i8>();
                 if s.is_null() {
                     s = b"(null)\0" as *const u8 as *const i8;
                 }
-                addstr2buff(&mut buffer, s, strlen(s));
+                buff_fs.add_string(s, strlen(s));
             }
             99 => {
                 let mut c: i8 = argp.arg::<i32>() as u8 as i8;
-                addstr2buff(&mut buffer, &mut c, ::core::mem::size_of::<i8>() as u64);
+                buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as u64);
             }
             100 => {
                 let mut num: TValue = TValue {
@@ -4749,7 +4702,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 let io: *mut TValue = &mut num;
                 (*io).value.i = argp.arg::<i32>() as i64;
                 (*io).tag = TAG_TYPE_NUMERIC_INTEGER;
-                addnum2buff(&mut buffer, &mut num);
+                buff_fs.add_number(&mut num);
             }
             73 => {
                 let mut num_0: TValue = TValue {
@@ -4761,7 +4714,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 let io_0: *mut TValue = &mut num_0;
                 (*io_0).value.i = argp.arg::<i64>();
                 (*io_0).tag = TAG_TYPE_NUMERIC_INTEGER;
-                addnum2buff(&mut buffer, &mut num_0);
+                buff_fs.add_number(&mut num_0);
             }
             102 => {
                 let mut num_1: TValue = TValue {
@@ -4773,22 +4726,21 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 let io_1: *mut TValue = &mut num_1;
                 (*io_1).value.n = argp.arg::<f64>();
                 (*io_1).tag = TAG_TYPE_NUMERIC_NUMBER;
-                addnum2buff(&mut buffer, &mut num_1);
+                buff_fs.add_number(&mut num_1);
             }
             112 => {
                 let size: i32 = (3 as u64)
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
                     .wrapping_add(8 as u64) as i32;
-                let bf: *mut i8 = getbuff(&mut buffer, size);
+                let bf: *mut i8 = buff_fs.get_raw(size);
                 let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                 let length: i32 = snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p);
-                buffer.size += length;
+                buff_fs.add_length (length);
             }
             85 => {
                 let mut bf_0: [i8; 8] = [0; 8];
                 let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as u64);
-                addstr2buff(
-                    &mut buffer,
+                buff_fs.add_string(
                     bf_0.as_mut_ptr()
                         .offset(8 as isize)
                         .offset(-(length_0 as isize)),
@@ -4796,7 +4748,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 );
             }
             37 => {
-                addstr2buff(&mut buffer, b"%\0" as *const u8 as *const i8, 1 as u64);
+                buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as u64);
             }
             _ => {
                 luag_runerror(
@@ -4808,8 +4760,8 @@ pub unsafe extern "C" fn luao_pushvfstring(
         }
         fmt = e.offset(2 as isize);
     }
-    addstr2buff(&mut buffer, fmt, strlen(fmt));
-    clearbuff(&mut buffer);
+    buff_fs.add_string(fmt, strlen(fmt));
+    buff_fs.clear();
     return ((*((*(*state).top.p.offset(-(1 as isize))).val.value.gc as *mut GCUnion))
         .ts
         .contents)
