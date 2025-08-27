@@ -63,8 +63,8 @@ impl Global {
             while i < 53 as i32 {
                 let mut j: i32 = 0;
                 while j < 2 {
-                    if (*self.strcache[i as usize][j as usize]).marked as i32
-                        & ((1i32) << 3i32 | (1i32) << 4i32)
+                    if (*self.strcache[i as usize][j as usize]).marked
+                        & (1 << 3 | 1 << 4)
                         != 0
                     {
                         self.strcache[i as usize][j as usize] = self.memerrmsg;
@@ -116,7 +116,7 @@ impl Global {
     }
     pub unsafe extern "C" fn propagatemark(& mut self) -> u64 { unsafe {
         let o: *mut Object = self.gray;
-        (*o).marked = ((*o).marked as i32 | 1 << 5) as u8;
+        (*o).marked = (*o).marked | (1 << 5);
         self.gray = *getgclist(o);
         match (*o).tag {
             TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),

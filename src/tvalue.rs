@@ -9,9 +9,7 @@ pub struct TValue {
 impl New for TValue {
     fn new() -> Self {
         TValue {
-            value: Value {
-                gc: std::ptr::null_mut(),
-            },
+            value: Value::new(),
             tag: TAG_VARIANT_NIL_NIL,
         }
     }
