@@ -17,7 +17,7 @@ pub struct Global {
     pub l_registry: TValue,
     pub nilvalue: TValue,
     pub seed: u32,
-    pub currentwhite: u8,
+    pub current_white: u8,
     pub gcstate: u8,
     pub gckind: u8,
     pub gcstopem: u8,
@@ -76,12 +76,10 @@ impl Global {
     }
     pub unsafe extern "C" fn white_list(&mut self, mut p: *mut Object) {
         unsafe {
-            let white: i32 =
-                (self.currentwhite as i32 & ((1i32) << 3i32 | (1i32) << 4i32)) as u8 as i32;
+            let white = self.current_white & ((1 << 3) | (1 << 4));
             while !p.is_null() {
-                (*p).marked = ((*p).marked as i32
-                    & !((1i32) << 5i32 | ((1i32) << 3i32 | (1i32) << 4i32) | 7i32)
-                    | white) as u8;
+                (*p).marked = (*p).marked
+                    & !((1 << 5) | ((1 << 3) | (1 << 4)) | (7)) | white;
                 p = (*p).next;
             }
         }

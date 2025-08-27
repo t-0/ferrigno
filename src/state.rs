@@ -118,13 +118,13 @@ impl State {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.i = x;
-            (*t_value).tag = TAG_TYPE_NUMERIC_INTEGER;
+            (*t_value).tag = TAG_VARIANT_NUMERIC_INTEGER;
             self.top.p = self.top.p.offset(1);
         }
     }
     pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
-            (*self.top.p).val.tag = TAG_TYPE_NIL_NIL;
+            (*self.top.p).val.tag = TAG_VARIANT_NIL_NIL;
             self.top.p = self.top.p.offset(1);
         }
     }
@@ -167,20 +167,19 @@ impl State {
         countout: *mut i32,
     ) -> *mut *mut Object { unsafe {
         let g: *mut Global = self.global;
-        let other_white: i32 = (*g).currentwhite as i32 ^ (1 << 3 | 1 << 4);
+        let other_white = (*g).current_white ^ (1 << 3 | 1 << 4);
         let mut i: i32;
-        let white: i32 =
-            ((*g).currentwhite as i32 & (1 << 3 | 1 << 4)) as u8 as i32;
+        let white = (*g).current_white & ((1 << 3) | (1 << 4));
         i = 0;
         while !(*p).is_null() && i < countin {
             let curr: *mut Object = *p;
-            let marked: i32 = (*curr).marked as i32;
+            let marked = (*curr).marked;
             if marked & other_white != 0 {
                 *p = (*curr).next;
                 freeobj(self, curr);
             } else {
-                (*curr).marked = (marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
-                    | white) as u8;
+                (*curr).marked = marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
+                    | white;
                 p = &mut (*curr).next;
             }
             i += 1;
