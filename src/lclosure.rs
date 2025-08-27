@@ -15,6 +15,9 @@ pub struct LClosure {
     pub upvalues: [*mut UpValue; 1],
 }
 impl TObject for LClosure {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }

@@ -4,6 +4,7 @@
     unsafe_code,
 )]
 use crate::coroutine::*;
+use crate::object::*;
 use crate::absolutelineinfo::*;
 use crate::blockcontrol::*;
 use crate::buffer::*;
@@ -47,7 +48,6 @@ use crate::math::*;
 use crate::nativeendian::*;
 use crate::new::*;
 use crate::node::*;
-use crate::object::*;
 use crate::operator_::*;
 use crate::priority::*;
 use crate::prototype::*;
@@ -150,7 +150,7 @@ pub unsafe extern "C" fn luad_errerr(state: *mut State) -> ! { unsafe {
     );
     let io: *mut TValue = &mut (*(*state).top.p).val;
     (*io).value.gc = &mut (*(message as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*message).tag));
+    (*io).set_tag (set_collectable((*message).get_tag()));
     (*state).top.p = (*state).top.p.offset(1);
     luad_throw(state, 5);
 }}
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StkId) -> St
         let io1: *mut TValue = &mut (*p).val;
         let io2: *const TValue = &mut (*p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         p = p.offset(-1);
     }
     (*state).top.p = (*state).top.p.offset(1);
@@ -418,7 +418,7 @@ pub unsafe extern "C" fn moveresults(
                 let io1: *mut TValue = &mut (*res).val;
                 let io2: *const TValue = &mut (*(*state).top.p.offset(-(nres as isize))).val;
                 (*io1).value = (*io2).value;
-                (*io1).set_tag ((*io2).tag);
+                (*io1).set_tag ((*io2).get_tag());
             }
             (*state).top.p = res.offset(1 as isize);
             return;
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn moveresults(
         let io1_0: *mut TValue = &mut (*res.offset(i as isize)).val;
         let io2_0: *const TValue = &mut (*firstresult.offset(i as isize)).val;
         (*io1_0).value = (*io2_0).value;
-        (*io1_0).tag = (*io2_0).tag;
+        (*io1_0).set_tag ((*io2_0).get_tag());
         i += 1;
     }
     while i < wanted {
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                     let io1: *mut TValue = &mut (*((*call_info).function.p).offset(i as isize)).val;
                     let io2: *const TValue = &mut (*function.offset(i as isize)).val;
                     (*io1).value = (*io2).value;
-                    (*io1).set_tag ((*io2).tag);
+                    (*io1).set_tag ((*io2).get_tag());
                     i += 1;
                 }
                 function = (*call_info).function.p;
@@ -749,7 +749,7 @@ pub unsafe extern "C" fn resume_error(
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut TString = luas_new(state, message);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).tag));
+    (*io).set_tag (set_collectable((*x_).get_tag()));
     (*state).top.p = (*state).top.p.offset(1);
     return 2;
 }}
@@ -1078,7 +1078,7 @@ pub unsafe extern "C" fn index2value(state: *mut State, mut index: i32) -> *mut 
         return &mut (*(*state).global).l_registry;
     } else {
         index = -(1000000 as i32) - 1000 as i32 - index;
-        if (*(*call_info).function.p).val.tag == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
+        if (*(*call_info).function.p).val.get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
             let function: *mut CClosure =
                 &mut (*((*(*call_info).function.p).val.value.gc as *mut GCUnion)).ccl;
             return if index <= (*function).count_upvalues as i32 {
@@ -1130,7 +1130,7 @@ pub unsafe extern "C" fn lua_xmove(from: *mut State, to: *mut State, n: i32) { u
         let io1: *mut TValue = &mut (*(*to).top.p).val;
         let io2: *const TValue = &mut (*((*from).top.p).offset(i as isize)).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*to).top.p = ((*to).top.p).offset(1);
         (*to).top.p;
         i += 1;
@@ -1195,15 +1195,15 @@ pub unsafe extern "C" fn reverse(mut _state: *mut State, mut from: StkId, mut to
         let io1: *mut TValue = &mut temp;
         let io2: *const TValue = &mut (*from).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         let io1_0: *mut TValue = &mut (*from).val;
         let io2_0: *const TValue = &mut (*to).val;
         (*io1_0).value = (*io2_0).value;
-        (*io1_0).tag = (*io2_0).tag;
+        (*io1_0).set_tag((*io2_0).get_tag());
         let io1_1: *mut TValue = &mut (*to).val;
         let io2_1: *const TValue = &mut temp;
         (*io1_1).value = (*io2_1).value;
-        (*io1_1).tag = (*io2_1).tag;
+        (*io1_1).set_tag((*io2_1).get_tag());
         from = from.offset(1);
         to = to.offset(-1);
     }
@@ -1228,9 +1228,9 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
     let io1: *mut TValue = to;
     let io2: *const TValue = fr;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     if toidx < -(1000000 as i32) - 1000 as i32 {
-        if is_collectable((*fr).tag) {
+        if is_collectable((*fr).get_tag()) {
             if (*((*(*(*state).call_info).function.p).val.value.gc as *mut GCUnion))
                 .ccl
                 .marked
@@ -1256,16 +1256,16 @@ pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) { unsafe {
     let io1: *mut TValue = &mut (*(*state).top.p).val;
     let io2: *const TValue = index2value(state, index);
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     (*state).top.p = (*state).top.p.offset(1);
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> i32 { unsafe {
     let o: *const TValue = index2value(state, index);
-    return if (get_tag_type((*o).tag) != TAG_TYPE_NIL)
+    return if (get_tag_type((*o).get_tag()) != TAG_TYPE_NIL)
         || o != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue
     {
-        get_tag_type ((*o).tag) as i32
+        (*o).get_tag_type() as i32
     } else {
         TAG_NONE_
     };
@@ -1277,16 +1277,16 @@ pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: i32) -> *const 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_iscfunction(state: *mut State, index: i32) -> bool { unsafe {
     let o: *const TValue = index2value(state, index);
-    return (*o).tag == TAG_VARIANT_CLOSURE_CFUNCTION || (*o).tag == COLLECTABLE_TAG_VARIANT_CLOSURE_C;
+    return (*o).get_tag() == TAG_VARIANT_CLOSURE_CFUNCTION || (*o).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_isinteger(state: *mut State, index: i32) -> bool { unsafe {
-    return (*index2value(state, index)).tag == TAG_VARIANT_NUMERIC_INTEGER;
+    return (*index2value(state, index)).get_tag() == TAG_VARIANT_NUMERIC_INTEGER;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_isnumber(state: *mut State, index: i32) -> bool { unsafe {
     let o: *const TValue = index2value(state, index);
-    return if (*o).tag == TAG_VARIANT_NUMERIC_NUMBER {
+    return if (*o).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
         true
     } else {
         let mut n: f64 = 0.0;
@@ -1296,7 +1296,7 @@ pub unsafe extern "C" fn lua_isnumber(state: *mut State, index: i32) -> bool { u
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_isstring(state: *mut State, index: i32) -> bool { unsafe {
     let o: *const TValue = index2value(state, index);
-    return match get_tag_type((*o).tag) {
+    return match get_tag_type((*o).get_tag()) {
         TAG_TYPE_NUMERIC => true,
         TAG_TYPE_STRING => true,
         _ => false,
@@ -1310,9 +1310,9 @@ pub unsafe extern "C" fn lua_rawequal(
 ) -> bool { unsafe {
     let o1: *const TValue = index2value(state, index1);
     let o2: *const TValue = index2value(state, index2);
-    return if (!(get_tag_type((*o1).tag) == TAG_TYPE_NIL)
+    return if (!(get_tag_type((*o1).get_tag()) == TAG_TYPE_NIL)
         || o1 != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue)
-        && (!(get_tag_type((*o2).tag) == TAG_TYPE_NIL)
+        && (!(get_tag_type((*o2).get_tag()) == TAG_TYPE_NIL)
             || o2 != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue)
     {
         0 != luav_equalobj(std::ptr::null_mut(), o1, o2)
@@ -1326,7 +1326,7 @@ pub unsafe extern "C" fn lua_arith(state: *mut State, op: i32) { unsafe {
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(1);
         }
     luao_arith(
@@ -1348,9 +1348,9 @@ pub unsafe extern "C" fn lua_compare(
     let o1: *const TValue = index2value(state, index1);
     let o2: *const TValue = index2value(state, index2);
     let mut i: i32 = 0;
-    if (!(get_tag_type((*o1).tag) == TAG_TYPE_NIL)
+    if (!(get_tag_type((*o1).get_tag()) == TAG_TYPE_NIL)
         || o1 != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue)
-        && (!(get_tag_type((*o2).tag) == TAG_TYPE_NIL)
+        && (!(get_tag_type((*o2).get_tag()) == TAG_TYPE_NIL)
             || o2 != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue)
     {
         match op {
@@ -1384,7 +1384,7 @@ pub unsafe extern "C" fn lua_tonumberx(
 ) -> f64 { unsafe {
     let mut n: f64 = 0.0;
     let o: *const TValue = index2value(state, index);
-    let is_number_: bool = if (*o).tag == TAG_VARIANT_NUMERIC_NUMBER {
+    let is_number_: bool = if (*o).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
         n = (*o).value.n;
         true
     } else {
@@ -1404,7 +1404,7 @@ pub unsafe extern "C" fn lua_tointegerx(
     let mut res: i64 = 0;
     let o: *const TValue = index2value(state, index);
     let is_number_: bool =
-        if (((*o).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64 != 0 {
+        if (((*o).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64 != 0 {
             res = (*o).value.i;
             true
         } else {
@@ -1418,7 +1418,7 @@ pub unsafe extern "C" fn lua_tointegerx(
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_toboolean(state: *mut State, index: i32) -> i32 { unsafe {
     let o: *const TValue = index2value(state, index);
-    return !((*o).tag == TAG_VARIANT_BOOLEAN_FALSE || get_tag_type((*o).tag) == TAG_TYPE_NIL)
+    return !((*o).get_tag() == TAG_VARIANT_BOOLEAN_FALSE || get_tag_type((*o).get_tag()) == TAG_TYPE_NIL)
         as i32;
 }}
 #[unsafe(no_mangle)]
@@ -1428,8 +1428,8 @@ pub unsafe extern "C" fn lua_tolstring(
     length: *mut u64,
 ) -> *const i8 { unsafe {
     let mut o: *mut TValue = index2value(state, index);
-    if !(get_tag_type((*o).tag) == TAG_TYPE_STRING) {
-        if !(get_tag_type((*o).tag) == TAG_TYPE_NUMERIC) {
+    if !(get_tag_type((*o).get_tag()) == TAG_TYPE_STRING) {
+        if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NUMERIC) {
             if !length.is_null() {
                 *length = 0;
             }
@@ -1464,9 +1464,9 @@ pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 { unsa
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunction { unsafe {
     let o: *const TValue = index2value(state, index);
-    if (*o).tag == TAG_VARIANT_CLOSURE_CFUNCTION {
+    if (*o).get_tag() == TAG_VARIANT_CLOSURE_CFUNCTION {
         return (*o).value.f;
-    } else if (*o).tag == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
+    } else if (*o).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
         return (*((*o).value.gc as *mut GCUnion)).ccl.f;
     } else {
         return None;
@@ -1474,7 +1474,7 @@ pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunc
 }}
 #[inline]
 pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void { unsafe {
-    match get_tag_type((*o).tag) {
+    match get_tag_type((*o).get_tag()) {
         7 => {
             return (&mut (*((*o).value.gc as *mut GCUnion)).u as *mut Udata as *mut i8).offset(
                 (if (*((*o).value.gc as *mut GCUnion)).u.nuvalue as i32 == 0 {
@@ -1499,7 +1499,7 @@ pub unsafe extern "C" fn lua_touserdata(state: *mut State, index: i32) -> *mut l
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_tothread(state: *mut State, index: i32) -> *mut State { unsafe {
     let o: *const TValue = index2value(state, index);
-    return if !((*o).tag == COLLECTABLE_TAG_VARIANT_STATE) {
+    return if !((*o).get_tag() == COLLECTABLE_TAG_VARIANT_STATE) {
         std::ptr::null_mut()
     } else {
         &mut (*((*o).value.gc as *mut GCUnion)).th
@@ -1514,7 +1514,7 @@ pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const 
         }
         TAG_VARIANT_USER | TAG_VARIANT_POINTER => return touserdata(o),
         _ => {
-            if is_collectable((*o).tag) {
+            if is_collectable((*o).get_tag()) {
                 return (*o).value.gc as *const libc::c_void;
             } else {
                 return std::ptr::null();
@@ -1536,7 +1536,7 @@ pub unsafe extern "C" fn lua_pushlstring(
     let io: *mut TValue = &mut (*(*state).top.p).val;
     let x_: *mut TString = ts;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).tag));
+    (*io).set_tag (set_collectable((*x_).get_tag()));
     (*state).top.p = (*state).top.p.offset(1);
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
@@ -1552,7 +1552,7 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = ts;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         s = ((*ts).contents).as_mut_ptr();
     }
     (*state).top.p = (*state).top.p.offset(1);
@@ -1608,12 +1608,12 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
                 &mut *((*cl).upvalue).as_mut_ptr().offset(n as isize) as *mut TValue;
             let io2: *const TValue = &mut (*(*state).top.p.offset(n as isize)).val;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
         }
         let io_0: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut CClosure = cl;
         (*io_0).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io_0).tag = COLLECTABLE_TAG_VARIANT_CLOSURE_C;
+        (*io_0).set_tag(COLLECTABLE_TAG_VARIANT_CLOSURE_C);
         (*state).top.p = (*state).top.p.offset(1);
             if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -1644,24 +1644,24 @@ pub unsafe extern "C" fn auxgetstr(
 ) -> i32 { unsafe {
     let slot: *const TValue;
     let str: *mut TString = luas_new(state, k);
-    if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+    if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
         slot = std::ptr::null();
         0
     } else {
         slot = luah_getstr(&mut (*((*t).value.gc as *mut GCUnion)).h, str);
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = slot;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(1);
         } else {
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         (*state).top.p = (*state).top.p.offset(1);
             luav_finishget(
             state,
@@ -1671,7 +1671,7 @@ pub unsafe extern "C" fn auxgetstr(
             slot,
         );
     }
-    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag)) as i32;
+    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag())) as i32;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_getglobal(state: *mut State, name: *const i8) -> i32 { unsafe {
@@ -1685,7 +1685,7 @@ pub unsafe extern "C" fn lua_getglobal(state: *mut State, name: *const i8) -> i3
 pub unsafe extern "C" fn lua_gettable(state: *mut State, index: i32) -> i32 { unsafe {
     let slot;
     let t: *mut TValue = index2value(state, index);
-    if if (*t).tag != COLLECTABLE_TAG_VARIANT_TABLE {
+    if if (*t).get_tag() != COLLECTABLE_TAG_VARIANT_TABLE {
         slot = std::ptr::null();
         0
     } else {
@@ -1693,13 +1693,13 @@ pub unsafe extern "C" fn lua_gettable(state: *mut State, index: i32) -> i32 { un
             &mut (*((*t).value.gc as *mut GCUnion)).h,
             &mut (*(*state).top.p.offset(-(1 as isize))).val,
         );
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         let io2: *const TValue = slot;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
     } else {
         luav_finishget(
             state,
@@ -1709,7 +1709,7 @@ pub unsafe extern "C" fn lua_gettable(state: *mut State, index: i32) -> i32 { un
             slot,
         );
     }
-    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag)) as i32;
+    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag())) as i32;
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_getfield(
@@ -1724,7 +1724,7 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
     let t: *mut TValue;
     let slot: *const TValue;
     t = index2value(state, index);
-    if if (*t).tag != COLLECTABLE_TAG_VARIANT_TABLE {
+    if if (*t).get_tag() != COLLECTABLE_TAG_VARIANT_TABLE {
         slot = std::ptr::null();
         0
     } else {
@@ -1736,13 +1736,13 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
         } else {
             luah_getint(&mut (*((*t).value.gc as *mut GCUnion)).h, n)
         };
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = slot;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
     } else {
         let mut aux: TValue = TValue {
             value: Value {
@@ -1756,20 +1756,20 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
         luav_finishget(state, t, &mut aux, (*state).top.p, slot);
     }
     (*state).top.p = (*state).top.p.offset(1);
-    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag)) as i32;
+    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag())) as i32;
 }}
 #[inline]
 pub unsafe extern "C" fn finishrawget(state: *mut State, val: *const TValue) -> i32 { unsafe {
-    if get_tag_type((*val).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*val).get_tag()) == TAG_TYPE_NIL {
         (*(*state).top.p).val.set_tag (TAG_VARIANT_NIL_NIL);
     } else {
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
     }
     (*state).top.p = (*state).top.p.offset(1);
-    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag)) as i32;
+    return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag())) as i32;
 }}
 pub unsafe extern "C" fn gettable(state: *mut State, index: i32) -> *mut Table { unsafe {
     let t: *mut TValue = index2value(state, index);
@@ -1834,7 +1834,7 @@ pub unsafe extern "C" fn lua_getmetatable(state: *mut State, objindex: i32) -> i
             mt = (*((*obj).value.gc as *mut GCUnion)).u.metatable;
         }
         _ => {
-            mt = (*(*state).global).mt[(get_tag_type((*obj).tag)) as usize];
+            mt = (*(*state).global).mt[(get_tag_type((*obj).get_tag())) as usize];
         }
     }
     if mt.is_null() {
@@ -1861,8 +1861,8 @@ pub unsafe extern "C" fn lua_getiuservalue(state: *mut State, index: i32, n: i32
             .offset((n - 1) as isize))
         .uv;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        t = (get_tag_type((*(*state).top.p).val.tag)) as i32;
+        (*io1).set_tag ((*io2).get_tag());
+        t = (get_tag_type((*(*state).top.p).val.get_tag())) as i32;
     }
     (*state).top.p = (*state).top.p.offset(1);
     return t;
@@ -1870,19 +1870,19 @@ pub unsafe extern "C" fn lua_getiuservalue(state: *mut State, index: i32, n: i32
 pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *const i8) { unsafe {
     let slot: *const TValue;
     let str: *mut TString = luas_new(state, k);
-    if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+    if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
         slot = std::ptr::null();
         0
     } else {
         slot = luah_getstr(&mut (*((*t).value.gc as *mut GCUnion)).h, str);
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = slot as *mut TValue;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+        (*io1).set_tag ((*io2).get_tag());
+        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -1898,7 +1898,7 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
         let io: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         (*state).top.p = (*state).top.p.offset(1);
             luav_finishset(
             state,
@@ -1923,7 +1923,7 @@ pub unsafe extern "C" fn lua_settable(state: *mut State, index: i32) { unsafe {
     let t: *mut TValue;
     let slot: *const TValue;
     t = index2value(state, index);
-    if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+    if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
         slot = std::ptr::null();
         0
     } else {
@@ -1931,14 +1931,14 @@ pub unsafe extern "C" fn lua_settable(state: *mut State, index: i32) { unsafe {
             &mut (*((*t).value.gc as *mut GCUnion)).h,
             &mut (*(*state).top.p.offset(-(2 as isize))).val,
         );
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = slot as *mut TValue;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+        (*io1).set_tag ((*io2).get_tag());
+        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -1969,7 +1969,7 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) { unsaf
     let t: *mut TValue;
     let slot: *const TValue;
     t = index2value(state, index);
-    if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+    if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
         slot = std::ptr::null();
         0
     } else {
@@ -1981,14 +1981,14 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) { unsaf
         } else {
             luah_getint(&mut (*((*t).value.gc as *mut GCUnion)).h, n)
         };
-        (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+        (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
     } != 0
     {
         let io1: *mut TValue = slot as *mut TValue;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+        (*io1).set_tag ((*io2).get_tag());
+        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -2027,7 +2027,7 @@ pub unsafe extern "C" fn aux_rawset(
         &mut (*(*state).top.p.offset(-(1 as isize))).val,
     );
     (*t).flags = ((*t).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
-    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                 & (1 << 3 | 1 << 4)
@@ -2075,7 +2075,7 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) { un
         n,
         &mut (*(*state).top.p.offset(-(1 as isize))).val,
     );
-    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                 & (1 << 3 | 1 << 4)
@@ -2092,12 +2092,12 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) { un
 pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i32 { unsafe {
     let mt: *mut Table;
     let obj: *mut TValue = index2value(state, objindex);
-    if get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag) == TAG_TYPE_NIL {
+    if get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) == TAG_TYPE_NIL {
         mt = std::ptr::null_mut();
     } else {
         mt = &mut (*((*(*state).top.p.offset(-(1 as isize))).val.value.gc as *mut GCUnion)).h;
     }
-    match get_tag_type((*obj).tag) {
+    match get_tag_type((*obj).get_tag()) {
         5 => {
             let ref mut fresh6 = (*((*obj).value.gc as *mut GCUnion)).h.metatable;
             *fresh6 = mt;
@@ -2135,7 +2135,7 @@ pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i
             }
         }
         _ => {
-            (*(*state).global).mt[(get_tag_type((*obj).tag)) as usize] = mt;
+            (*(*state).global).mt[(get_tag_type((*obj).get_tag())) as usize] = mt;
         }
     }
     (*state).top.p = (*state).top.p.offset(-1);
@@ -2154,8 +2154,8 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
         .uv;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.tag) {
+        (*io1).set_tag ((*io2).get_tag());
+        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
             if (*(*o).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -2280,8 +2280,8 @@ pub unsafe extern "C" fn lua_load(
             let io1: *mut TValue = (**((*f).upvalues).as_mut_ptr().offset(0 as isize)).v.p;
             let io2: *const TValue = gt;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
-            if is_collectable((*gt).tag) {
+            (*io1).set_tag ((*io2).get_tag());
+            if is_collectable((*gt).get_tag()) {
                 if (**((*f).upvalues).as_mut_ptr().offset(0 as isize)).marked
                     & 1 << 5
                     != 0
@@ -2311,7 +2311,7 @@ pub unsafe extern "C" fn lua_dump(
 ) -> i32 { unsafe {
     let status: i32;
     let o: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    if (*o).tag == COLLECTABLE_TAG_VARIANT_CLOSURE_L {
+    if (*o).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_L {
         status = luau_dump(
             state,
             (*((*o).value.gc as *mut GCUnion)).lcl.p,
@@ -2432,7 +2432,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_error(state: *mut State) -> i32 { unsafe {
     let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    if (*errobj).tag == COLLECTABLE_TAG_VARIANT_STRING_SHORT
+    if (*errobj).get_tag() == COLLECTABLE_TAG_VARIANT_STRING_SHORT
         && &mut (*((*errobj).value.gc as *mut GCUnion)).ts as *mut TString
             == (*(*state).global).memerrmsg
     {
@@ -2470,7 +2470,7 @@ pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) { unsafe {
         let x_: *mut TString =
             luas_newlstr(state, b"\0" as *const u8 as *const i8, 0u64);
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         (*state).top.p = (*state).top.p.offset(1);
         }
     if (*(*state).global).gc_debt > 0 {
@@ -2580,7 +2580,7 @@ pub unsafe extern "C" fn lua_getupvalue(
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(1);
         }
     return name;
@@ -2600,8 +2600,8 @@ pub unsafe extern "C" fn lua_setupvalue(
             let io1: *mut TValue = val;
         let io2: *const TValue = &mut (*(*state).top.p).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
-        if is_collectable((*val).tag) {
+        (*io1).set_tag ((*io2).get_tag());
+        if is_collectable((*val).get_tag()) {
             if (*owner).marked & 1 << 5 != 0
                 && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
@@ -2842,12 +2842,12 @@ pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) { unsa
         &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
     let x0: *mut State = state;
     (*io_0).value.gc = &mut (*(x0 as *mut GCUnion)).gc;
-    (*io_0).tag = COLLECTABLE_TAG_VARIANT_STATE;
+    (*io_0).set_tag(COLLECTABLE_TAG_VARIANT_STATE);
     let io_1: *mut TValue =
         &mut *((*registry).array).offset((2 - 1) as isize) as *mut TValue;
     let x1: *mut Table = luah_new(state);
     (*io_1).value.gc = &mut (*(x1 as *mut GCUnion)).gc;
-    (*io_1).tag = COLLECTABLE_TAG_VARIANT_TABLE;
+    (*io_1).set_tag(COLLECTABLE_TAG_VARIANT_TABLE);
 }}
 pub unsafe extern "C" fn f_luaopen(state: *mut State, mut _ud: *mut libc::c_void) { unsafe {
     let g: *mut Global = (*state).global;
@@ -2879,7 +2879,7 @@ pub unsafe extern "C" fn preinit_thread(state: *mut State, g: *mut Global) { uns
 }}
 pub unsafe extern "C" fn close_state(state: *mut State) { unsafe {
     let g: *mut Global = (*state).global;
-    if !(get_tag_type((*g).nilvalue.tag) == TAG_TYPE_NIL) {
+    if !(get_tag_type((*g).nilvalue.get_tag()) == TAG_TYPE_NIL) {
         luac_freeallobjects(state);
     } else {
         (*state).call_info = &mut (*state).base_callinfo;
@@ -2991,7 +2991,7 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State { unsafe {
     }
     let mut state: *mut State = &mut (*l).l.l;
     let g: *mut Global = &mut (*l).g;
-    (*state).tag = (TAG_TYPE_STATE) as u8;
+    (*state).set_tag(TAG_TYPE_STATE);
     (*g).current_white = (1 << 3) as u8;
     (*state).marked = ((*g).current_white as i32 & (1 << 3 | 1 << 4)) as u8;
     preinit_thread(state, g);
@@ -3070,7 +3070,7 @@ pub unsafe extern "C" fn luae_warning(state: *mut State, message: *const i8, toc
 }}
 pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) { unsafe {
     let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
-    let message: *const i8 = if get_tag_type((*errobj).tag) == TAG_TYPE_STRING {
+    let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TAG_TYPE_STRING {
         ((*((*errobj).value.gc as *mut GCUnion)).ts.contents).as_mut_ptr() as *const i8
     } else {
         b"error object is not a string\0" as *const u8 as *const i8
@@ -3274,7 +3274,7 @@ pub unsafe extern "C" fn lua_getlocal(
 ) -> *const i8 { unsafe {
     let name;
     if ar.is_null() {
-        if !((*(*state).top.p.offset(-(1 as isize))).val.tag             == COLLECTABLE_TAG_VARIANT_CLOSURE_L)
+        if !((*(*state).top.p.offset(-(1 as isize))).val.get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_L)
         {
             name = std::ptr::null();
         } else {
@@ -3293,7 +3293,7 @@ pub unsafe extern "C" fn lua_getlocal(
             let io1: *mut TValue = &mut (*(*state).top.p).val;
             let io2: *const TValue = &mut (*pos).val;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
             (*state).top.p = (*state).top.p.offset(1);
                 }
     }
@@ -3311,13 +3311,13 @@ pub unsafe extern "C" fn lua_setlocal(
         let io1: *mut TValue = &mut (*pos).val;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(-1);
         }
     return name;
 }}
 pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) { unsafe {
-    if !(!cl.is_null() && (*cl).c.tag == TAG_VARIANT_CLOSURE_L) {
+    if !(!cl.is_null() && (*cl).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
         (*ar).source = b"=[C]\0" as *const u8 as *const i8;
         (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
             .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -3366,7 +3366,7 @@ pub unsafe extern "C" fn nextline(
     };
 }}
 pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) { unsafe {
-    if !(!f.is_null() && (*f).c.tag == TAG_VARIANT_CLOSURE_L) {
+    if !(!f.is_null() && (*f).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
         (*(*state).top.p).val.set_tag (TAG_VARIANT_NIL_NIL);
         (*state).top.p = (*state).top.p.offset(1);
         } else {
@@ -3386,7 +3386,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
                 },
                 tag: 0,
             };
-            v.tag = TAG_VARIANT_BOOLEAN_TRUE;
+            v.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
             if !(*p).is_variable_arguments {
                 i = 0;
             } else {
@@ -3439,7 +3439,7 @@ pub unsafe extern "C" fn auxgetinfo(
                 } else {
                     (*f).c.count_upvalues as i32
                 }) as u8;
-                if !(!f.is_null() && (*f).c.tag == TAG_VARIANT_CLOSURE_L) {
+                if !(!f.is_null() && (*f).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
                     (*ar).is_variable_arguments = true;
                     (*ar).nparams = 0;
                 } else {
@@ -3497,8 +3497,8 @@ pub unsafe extern "C" fn lua_getinfo(
         call_info = (*ar).i_ci;
         function = &mut (*(*call_info).function.p).val;
     }
-    let cl: *mut UClosure = if (*function).tag == COLLECTABLE_TAG_VARIANT_CLOSURE_L
-        || (*function).tag == COLLECTABLE_TAG_VARIANT_CLOSURE_C
+    let cl: *mut UClosure = if (*function).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_L
+        || (*function).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C
     {
         &mut (*((*function).value.gc as *mut GCUnion)).ucl
     } else {
@@ -3509,7 +3509,7 @@ pub unsafe extern "C" fn lua_getinfo(
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = function;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(1);
         }
     if !(strchr(what, 'L' as i32)).is_null() {
@@ -3580,7 +3580,7 @@ pub unsafe extern "C" fn kname(
     name: *mut *const i8,
 ) -> *const i8 { unsafe {
     let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
-    if get_tag_type((*kvalue).tag) == TAG_TYPE_STRING {
+    if get_tag_type((*kvalue).get_tag()) == TAG_TYPE_STRING {
         *name = ((*((*kvalue).value.gc as *mut GCUnion)).ts.contents).as_mut_ptr();
         return b"constant\0" as *const u8 as *const i8;
     } else {
@@ -3922,7 +3922,7 @@ pub unsafe extern "C" fn luag_concaterror(
     mut p1: *const TValue,
     p2: *const TValue,
 ) -> ! { unsafe {
-    if get_tag_type((*p1).tag) == TAG_TYPE_STRING || get_tag_type((*p1).tag) == TAG_TYPE_NUMERIC {
+    if get_tag_type((*p1).get_tag()) == TAG_TYPE_STRING || get_tag_type((*p1).get_tag()) == TAG_TYPE_NUMERIC {
         p1 = p2;
     }
     luag_typeerror(state, p1, b"concatenate\0" as *const u8 as *const i8);
@@ -3933,7 +3933,7 @@ pub unsafe extern "C" fn luag_opinterror(
     mut p2: *const TValue,
     message: *const i8,
 ) -> ! { unsafe {
-    if get_tag_type((*p1).tag) != 3 {
+    if get_tag_type((*p1).get_tag()) != 3 {
         p2 = p1;
     }
     luag_typeerror(state, p2, message);
@@ -4011,11 +4011,11 @@ pub unsafe extern "C" fn luag_errormsg(state: *mut State) -> ! { unsafe {
         let io1: *mut TValue = &mut (*(*state).top.p).val;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         let io1_0: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         let io2_0: *const TValue = &mut (*error_function).val;
         (*io1_0).value = (*io2_0).value;
-        (*io1_0).tag = (*io2_0).tag;
+        (*io1_0).set_tag((*io2_0).get_tag());
         (*state).top.p = (*state).top.p.offset(1);
             luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 1);
     }
@@ -4044,7 +4044,7 @@ pub unsafe extern "C" fn luag_runerror(
         let io1: *mut TValue = &mut (*(*state).top.p.offset(-(2 as isize))).val;
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*state).top.p = (*state).top.p.offset(-1);
         }
     luag_errormsg(state);
@@ -4207,7 +4207,7 @@ pub unsafe extern "C" fn tryagain(
     new_size: u64,
 ) -> *mut libc::c_void { unsafe {
     let g: *mut Global = (*state).global;
-    if get_tag_type((*g).nilvalue.tag) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
+    if get_tag_type((*g).nilvalue.get_tag()) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
         luac_fullgc(state, 1);
         return raw_allocate(block, old_size, new_size);
     } else {
@@ -4332,13 +4332,13 @@ pub unsafe extern "C" fn luao_rawarith(
         7 | 8 | 9 | 10 | 11 | 13 => {
             let mut i1: i64 = 0;
             let mut i2: i64 = 0;
-            if (if (((*p1).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64 != 0 {
+            if (if (((*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64 != 0 {
                 i1 = (*p1).value.i;
                 1
             } else {
                 luav_tointegerns(p1, &mut i1, F2I::Equal)
             }) != 0
-                && (if (((*p2).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64
+                && (if (((*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32 as i64
                     != 0
                 {
                     i2 = (*p2).value.i;
@@ -4348,7 +4348,7 @@ pub unsafe extern "C" fn luao_rawarith(
                 }) != 0
             {
                 (*res).value.i = intarith(state, op, i1, i2);
-                (*res).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                (*res).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return 1;
             } else {
                 return 0;
@@ -4357,22 +4357,22 @@ pub unsafe extern "C" fn luao_rawarith(
         5 | 4 => {
             let mut n1: f64 = 0.0;
             let mut n2: f64 = 0.0;
-            if (if (*p1).tag == TAG_VARIANT_NUMERIC_NUMBER {
+            if (if (*p1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                 n1 = (*p1).value.n;
                 1
             } else {
-                if (*p1).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                     n1 = (*p1).value.i as f64;
                     1
                 } else {
                     0
                 }
             }) != 0
-                && (if (*p2).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                && (if (*p2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                     n2 = (*p2).value.n;
                     1
                 } else {
-                    if (*p2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                    if (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                         n2 = (*p2).value.i as f64;
                         1
                     } else {
@@ -4381,7 +4381,7 @@ pub unsafe extern "C" fn luao_rawarith(
                 }) != 0
             {
                 (*res).value.n = numarith(state, op, n1, n2);
-                (*res).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                (*res).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                 return 1;
             } else {
                 return 0;
@@ -4390,29 +4390,29 @@ pub unsafe extern "C" fn luao_rawarith(
         _ => {
             let mut n1_0: f64 = 0.0;
             let mut n2_0: f64 = 0.0;
-            if (*p1).tag == TAG_VARIANT_NUMERIC_INTEGER
-                && (*p2).tag == TAG_VARIANT_NUMERIC_INTEGER
+            if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                && (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
             {
                 let io_1: *mut TValue = res;
                 (*io_1).value.i = intarith(state, op, (*p1).value.i, (*p2).value.i);
-                (*io_1).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return 1;
-            } else if (if (*p1).tag == TAG_VARIANT_NUMERIC_NUMBER {
+            } else if (if (*p1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                 n1_0 = (*p1).value.n;
                 1
             } else {
-                if (*p1).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                     n1_0 = (*p1).value.i as f64;
                     1
                 } else {
                     0
                 }
             }) != 0
-                && (if (*p2).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                && (if (*p2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                     n2_0 = (*p2).value.n;
                     1
                 } else {
-                    if (*p2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                    if (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                         n2_0 = (*p2).value.i as f64;
                         1
                     } else {
@@ -4422,7 +4422,7 @@ pub unsafe extern "C" fn luao_rawarith(
             {
                 let io_2: *mut TValue = res;
                 (*io_2).value.n = numarith(state, op, n1_0, n2_0);
-                (*io_2).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                (*io_2).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                 return 1;
             } else {
                 return 0;
@@ -4565,11 +4565,11 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 { uns
             return 0u64;
         } else {
             (*o).value.n = n;
-            (*o).tag = TAG_VARIANT_NUMERIC_NUMBER;
+            (*o).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
         }
     } else {
         (*o).value.i = i;
-        (*o).tag = TAG_VARIANT_NUMERIC_INTEGER;
+        (*o).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
     }
     return (e.offset_from(s) as i64 + 1) as u64;
 }}
@@ -4596,7 +4596,7 @@ pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: u64) -> i32 { unsa
 }}
 pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 { unsafe {
     let mut length: u64;
-    if (*obj).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         length = snprintf(
             buffer,
             44 as i32 as u64,
@@ -4630,7 +4630,7 @@ pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) { un
     let io: *mut TValue = obj;
     let x_: *mut TString = luas_newlstr(state, buffer.as_mut_ptr(), length);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).tag));
+    (*io).set_tag (set_collectable((*x_).get_tag()));
 }}
 pub unsafe extern "C" fn luao_pushvfstring(
     state: *mut State,
@@ -4678,7 +4678,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 };
                 let io_0: *mut TValue = &mut num_0;
                 (*io_0).value.i = argp.arg::<i64>();
-                (*io_0).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 buff_fs.add_number(&mut num_0);
             }
             102 => {
@@ -4690,7 +4690,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 };
                 let io_1: *mut TValue = &mut num_1;
                 (*io_1).value.n = argp.arg::<f64>();
-                (*io_1).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                 buff_fs.add_number(&mut num_1);
             }
             112 => {
@@ -4932,7 +4932,7 @@ pub unsafe extern "C" fn luat_gettm(
     ename: *mut TString,
 ) -> *const TValue { unsafe {
     let tm: *const TValue = luah_getshortstr(events, ename);
-    if get_tag_type((*tm).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
         (*events).flags =
             ((*events).flags as i32 | ((1 as u32) << event as u32) as u8 as i32) as u8;
         return std::ptr::null();
@@ -4946,7 +4946,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
     event: u32,
 ) -> *const TValue { unsafe {
     let mt: *mut Table;
-    match get_tag_type((*o).tag) {
+    match get_tag_type((*o).get_tag()) {
         5 => {
             mt = (*((*o).value.gc as *mut GCUnion)).h.metatable;
         }
@@ -4954,7 +4954,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
             mt = (*((*o).value.gc as *mut GCUnion)).u.metatable;
         }
         _ => {
-            mt = (*(*state).global).mt[(get_tag_type((*o).tag)) as usize];
+            mt = (*(*state).global).mt[(get_tag_type((*o).get_tag())) as usize];
         }
     }
     return if mt.is_null() {
@@ -4968,20 +4968,20 @@ pub unsafe extern "C" fn luat_objtypename(
     o: *const TValue,
 ) -> *const i8 { unsafe {
     let mut mt: *mut Table;
-    if (*o).tag == COLLECTABLE_TAG_VARIANT_TABLE && {
+    if (*o).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE && {
         mt = (*((*o).value.gc as *mut GCUnion)).h.metatable;
         !mt.is_null()
-    } || (*o).tag == COLLECTABLE_TAG_VARIANT_USER && {
+    } || (*o).get_tag() == COLLECTABLE_TAG_VARIANT_USER && {
         mt = (*((*o).value.gc as *mut GCUnion)).u.metatable;
         !mt.is_null()
     } {
         let name: *const TValue =
             luah_getshortstr(mt, luas_new(state, b"__name\0" as *const u8 as *const i8));
-        if get_tag_type((*name).tag) == TAG_TYPE_STRING {
+        if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
             return ((*((*name).value.gc as *mut GCUnion)).ts.contents).as_mut_ptr();
         }
     }
-    return TYPE_NAMES[((get_tag_type((*o).tag)) + 1) as usize];
+    return TYPE_NAMES[(((*o).get_tag_type()) + 1) as usize];
 }}
 pub unsafe extern "C" fn luat_calltm(
     state: *mut State,
@@ -4994,19 +4994,19 @@ pub unsafe extern "C" fn luat_calltm(
     let io1: *mut TValue = &mut (*function).val;
     let io2: *const TValue = f;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     let io1_0: *mut TValue = &mut (*function.offset(1 as isize)).val;
     let io2_0: *const TValue = p1;
     (*io1_0).value = (*io2_0).value;
-    (*io1_0).tag = (*io2_0).tag;
+    (*io1_0).set_tag((*io2_0).get_tag());
     let io1_1: *mut TValue = &mut (*function.offset(2 as isize)).val;
     let io2_1: *const TValue = p2;
     (*io1_1).value = (*io2_1).value;
-    (*io1_1).tag = (*io2_1).tag;
+    (*io1_1).set_tag((*io2_1).get_tag());
     let io1_2: *mut TValue = &mut (*function.offset(3 as isize)).val;
     let io2_2: *const TValue = p3;
     (*io1_2).value = (*io2_2).value;
-    (*io1_2).tag = (*io2_2).tag;
+    (*io1_2).set_tag((*io2_2).get_tag());
     (*state).top.p = function.offset(4 as isize);
     if (*(*state).call_info).call_status as i32 & (1 << 1 | 1 << 3) == 0 {
         ccall(state, function, 0, 1);
@@ -5026,15 +5026,15 @@ pub unsafe extern "C" fn luat_calltmres(
     let io1: *mut TValue = &mut (*function).val;
     let io2: *const TValue = f;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     let io1_0: *mut TValue = &mut (*function.offset(1 as isize)).val;
     let io2_0: *const TValue = p1;
     (*io1_0).value = (*io2_0).value;
-    (*io1_0).tag = (*io2_0).tag;
+    (*io1_0).set_tag((*io2_0).get_tag());
     let io1_1: *mut TValue = &mut (*function.offset(2 as isize)).val;
     let io2_1: *const TValue = p2;
     (*io1_1).value = (*io2_1).value;
-    (*io1_1).tag = (*io2_1).tag;
+    (*io1_1).set_tag((*io2_1).get_tag());
     (*state).top.p = (*state).top.p.offset(3 as isize);
     if (*(*state).call_info).call_status as i32 & (1 << 1 | 1 << 3) == 0 {
         ccall(state, function, 1, 1);
@@ -5046,7 +5046,7 @@ pub unsafe extern "C" fn luat_calltmres(
     (*state).top.p = (*state).top.p.offset(-1);
     let io2_2: *const TValue = &mut (*(*state).top.p).val;
     (*io1_2).value = (*io2_2).value;
-    (*io1_2).tag = (*io2_2).tag;
+    (*io1_2).set_tag((*io2_2).get_tag());
 }}
 pub unsafe extern "C" fn callbintm(
     state: *mut State,
@@ -5056,10 +5056,10 @@ pub unsafe extern "C" fn callbintm(
     event: u32,
 ) -> i32 { unsafe {
     let mut tm: *const TValue = luat_gettmbyobj(state, p1, event);
-    if get_tag_type((*tm).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
         tm = luat_gettmbyobj(state, p2, event);
     }
-    if get_tag_type((*tm).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
         return 0;
     }
     luat_calltmres(state, tm, p1, p2, res);
@@ -5075,7 +5075,7 @@ pub unsafe extern "C" fn luat_trybintm(
     if ((callbintm(state, p1, p2, res, event) == 0) as i32 != 0) as i32 as i64 != 0 {
         match event as u32 {
             13 | 14 | 15 | 16 | 17 | 19 => {
-                if get_tag_type((*p1).tag) == TAG_TYPE_NUMERIC && get_tag_type((*p2).tag) == TAG_TYPE_NUMERIC {
+                if get_tag_type((*p1).get_tag()) == TAG_TYPE_NUMERIC && get_tag_type((*p2).get_tag()) == TAG_TYPE_NUMERIC {
                     luag_tointerror(state, p1, p2);
                 } else {
                     luag_opinterror(
@@ -5156,8 +5156,8 @@ pub unsafe extern "C" fn luat_callordertm(
     event: u32,
 ) -> i32 { unsafe {
     if callbintm(state, p1, p2, (*state).top.p, event) != 0 {
-        return !((*(*state).top.p).val.tag == TAG_VARIANT_BOOLEAN_FALSE
-            || get_tag_type((*(*state).top.p).val.tag) == TAG_TYPE_NIL) as i32;
+        return !((*(*state).top.p).val.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+            || get_tag_type((*(*state).top.p).val.get_tag()) == TAG_TYPE_NIL) as i32;
     }
     luag_ordererror(state, p1, p2);
 }}
@@ -5183,7 +5183,7 @@ pub unsafe extern "C" fn luat_callorderitm(
     } else {
         let io_0: *mut TValue = &mut aux;
         (*io_0).value.i = v2 as i64;
-        (*io_0).tag = TAG_VARIANT_NUMERIC_INTEGER;
+        (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
     }
     if flip != 0 {
         p2 = p1;
@@ -5215,7 +5215,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
     let io1: *mut TValue = &mut (*fresh12).val;
     let io2: *const TValue = &mut (*(*call_info).function.p).val;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     i = 1;
     while i <= nfixparams {
         let fresh13 = (*state).top.p;
@@ -5223,7 +5223,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
         let io1_0: *mut TValue = &mut (*fresh13).val;
         let io2_0: *const TValue = &mut (*((*call_info).function.p).offset(i as isize)).val;
         (*io1_0).value = (*io2_0).value;
-        (*io1_0).tag = (*io2_0).tag;
+        (*io1_0).set_tag((*io2_0).get_tag());
         (*((*call_info).function.p).offset(i as isize)).val.set_tag (TAG_VARIANT_NIL_NIL);
         i += 1;
     }
@@ -5261,7 +5261,7 @@ pub unsafe extern "C" fn luat_getvarargs(
             .offset(i as isize))
         .val;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         i += 1;
     }
     while i < wanted {
@@ -6075,7 +6075,7 @@ static mut OPMODES: [u8; 83] = [
         | IAX as i32) as u8,
 ];
 pub unsafe extern "C" fn getgclist(o: *mut Object) -> *mut *mut Object { unsafe {
-    match (*o).tag {
+    match (*o).get_tag() {
         TAG_VARIANT_TABLE => return &mut (*(o as *mut GCUnion)).h.gc_list,
         TAG_VARIANT_CLOSURE_L => return &mut (*(o as *mut GCUnion)).lcl.gc_list,
         TAG_VARIANT_CLOSURE_C => return &mut (*(o as *mut GCUnion)).ccl.gc_list,
@@ -6102,7 +6102,7 @@ pub unsafe extern "C" fn clearkey(n: *mut Node) { unsafe {
 pub unsafe extern "C" fn iscleared(g: *mut Global, o: *const Object) -> i32 { unsafe {
     if o.is_null() {
         return 0;
-    } else if get_tag_type((*o).tag) == TAG_TYPE_STRING {
+    } else if get_tag_type((*o).get_tag()) == TAG_TYPE_STRING {
         if (*o).marked & (1 << 3 | 1 << 4) != 0 {
             reallymarkobject(g, &mut (*(o as *mut GCUnion)).gc);
         }
@@ -6160,7 +6160,7 @@ pub unsafe extern "C" fn luac_newobjdt(
     let p: *mut i8 = luam_malloc_(state, size) as *mut i8;
     let o: *mut Object = p.offset(offset as isize) as *mut Object;
     (*o).marked = ((*g).current_white as i32 & (1 << 3 | 1 << 4)) as u8;
-    (*o).tag = tag as u8;
+    (*o).set_tag(tag);
     (*o).next = (*g).allgc;
     (*g).allgc = o;
     return o;
@@ -6174,7 +6174,7 @@ pub unsafe extern "C" fn luac_newobj(
 }}
 pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsafe {
     let current_block_18: u64;
-    match (*o).tag {
+    match (*o).get_tag() {
         TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
             (*o).marked =
                 ((*o).marked & !(1 << 3 | 1 << 4) | 1 << 5) as u8;
@@ -6188,7 +6188,7 @@ pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsa
                 (*uv).marked = ((*uv).marked & !(1 << 3 | 1 << 4)
                     | 1 << 5) as u8;
             }
-            if is_collectable((*(*uv).v.p).tag)
+            if is_collectable((*(*uv).v.p).get_tag())
                 && (*(*(*uv).v.p).value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 reallymarkobject(g, (*(*uv).v.p).value.gc);
@@ -6271,7 +6271,7 @@ pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 { unsafe {
             while !uv.is_null() {
                 work += 1;
                 if (*uv).marked & (1 << 3 | 1 << 4) == 0 {
-                    if is_collectable((*(*uv).v.p).tag)
+                    if is_collectable((*(*uv).v.p).get_tag())
                         && (*(*(*uv).v.p).value.gc).marked
                             & (1 << 3 | 1 << 4)
                             != 0
@@ -6297,7 +6297,7 @@ pub unsafe extern "C" fn restartcollection(g: *mut Global) { unsafe {
     if (*(*g).mainthread).marked & (1 << 3 | 1 << 4) != 0 {
         reallymarkobject(g, &mut (*((*g).mainthread as *mut GCUnion)).gc);
     }
-    if is_collectable((*g).l_registry.tag)
+    if is_collectable((*g).l_registry.get_tag())
         && (*(*g).l_registry.value.gc).marked & (1 << 3 | 1 << 4) != 0
     {
         reallymarkobject(g, (*g).l_registry.value.gc);
@@ -6322,7 +6322,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) { unsa
     let mut hasclears: i32 = ((*h).array_limit > 0u32) as i32;
     let mut n: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
     while n < limit {
-        if get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL {
+        if get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL {
             clearkey(n);
         } else {
             if is_collectable((*n).u.key_tag)
@@ -6333,7 +6333,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) { unsa
             if hasclears == 0
                 && iscleared(
                     g,
-                    if is_collectable((*n).i_value.tag) {
+                    if is_collectable((*n).i_value.get_tag()) {
                         (*n).i_value.value.gc
                     } else {
                         std::ptr::null_mut()
@@ -6371,7 +6371,7 @@ pub unsafe extern "C" fn traverseephemeron(
     let new_size: u32 = (1 << (*h).log_size_node as i32) as u32;
     let mut i: u32 = 0;
     while i < asize {
-        if is_collectable((*((*h).array).offset(i as isize)).tag)
+        if is_collectable((*((*h).array).offset(i as isize)).get_tag())
             && (*(*((*h).array).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6389,7 +6389,7 @@ pub unsafe extern "C" fn traverseephemeron(
         } else {
             &mut *((*h).node).offset(i as isize) as *mut Node
         };
-        if get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL {
+        if get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL {
             clearkey(n);
         } else if iscleared(
             g,
@@ -6401,12 +6401,12 @@ pub unsafe extern "C" fn traverseephemeron(
         ) != 0
         {
             hasclears = 1;
-            if is_collectable((*n).i_value.tag)
+            if is_collectable((*n).i_value.get_tag())
                 && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 hasww = 1;
             }
-        } else if is_collectable((*n).i_value.tag)
+        } else if is_collectable((*n).i_value.get_tag())
             && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
             marked = 1;
@@ -6443,7 +6443,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { un
     let asize: u32 = luah_realasize(h);
     let mut i: u32 = 0u32;
     while i < asize {
-        if is_collectable((*((*h).array).offset(i as isize)).tag)
+        if is_collectable((*((*h).array).offset(i as isize)).get_tag())
             && (*(*((*h).array).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6454,7 +6454,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { un
     }
     let mut n: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
     while n < limit {
-        if get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL {
+        if get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL {
             clearkey(n);
         } else {
             if is_collectable((*n).u.key_tag)
@@ -6462,7 +6462,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { un
             {
                 reallymarkobject(g, (*n).u.key_value.gc);
             }
-            if is_collectable((*n).i_value.tag)
+            if is_collectable((*n).i_value.get_tag())
                 && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 reallymarkobject(g, (*n).i_value.value.gc);
@@ -6492,7 +6492,7 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 { u
             reallymarkobject(g, &mut (*((*h).metatable as *mut GCUnion)).gc);
         }
     }
-    if !mode.is_null() && (*mode).tag == COLLECTABLE_TAG_VARIANT_STRING_SHORT && {
+    if !mode.is_null() && (*mode).get_tag() == COLLECTABLE_TAG_VARIANT_STRING_SHORT && {
         smode = &mut (*((*mode).value.gc as *mut GCUnion)).ts as *mut TString;
         weakkey = strchr(((*smode).contents).as_mut_ptr(), 'k' as i32);
         weakvalue = strchr(((*smode).contents).as_mut_ptr(), 'v' as i32);
@@ -6530,7 +6530,7 @@ pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut Udata) -> i32 { u
     }
     i = 0;
     while i < (*u).nuvalue as i32 {
-        if is_collectable((*((*u).uv).as_mut_ptr().offset(i as isize)).uv.tag)
+        if is_collectable((*((*u).uv).as_mut_ptr().offset(i as isize)).uv.get_tag())
             && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6551,7 +6551,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
     }
     i = 0;
     while i < (*f).size_k {
-        if is_collectable((*((*f).k).offset(i as isize)).tag)
+        if is_collectable((*((*f).k).offset(i as isize)).get_tag())
             && (*(*((*f).k).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6607,7 +6607,7 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> 
     let mut i: i32;
     i = 0;
     while i < (*cl).count_upvalues as i32 {
-        if is_collectable((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).tag)
+        if is_collectable((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).get_tag())
             && (*(*((*cl).upvalue).as_mut_ptr().offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6653,7 +6653,7 @@ pub unsafe extern "C" fn traversethread(g: *mut Global, th: *mut State) -> i32 {
         return 1;
     }
     while o < (*th).top.p {
-        if is_collectable((*o).val.tag)
+        if is_collectable((*o).val.get_tag())
         && (*(*o).val.value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
             reallymarkobject(g, (*o).val.value.gc);
@@ -6733,9 +6733,9 @@ pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) { unsaf
                 },
             ) != 0
             {
-                (*n).i_value.tag = TAG_VARIANT_NIL_EMPTY;
+                (*n).i_value.set_tag(TAG_VARIANT_NIL_EMPTY);
             }
-            if get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL {
+            if get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL {
                 clearkey(n);
             }
             n = n.offset(1);
@@ -6755,14 +6755,14 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
             let o: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
             if iscleared(
                 g,
-                if is_collectable((*o).tag) {
+                if is_collectable((*o).get_tag()) {
                     (*o).value.gc
                 } else {
                     std::ptr::null_mut()
                 },
             ) != 0
             {
-                (*o).tag = TAG_VARIANT_NIL_EMPTY;
+                (*o).set_tag(TAG_VARIANT_NIL_EMPTY);
             }
             i = i.wrapping_add(1);
         }
@@ -6770,16 +6770,16 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
         while n < limit {
             if iscleared(
                 g,
-                if is_collectable((*n).i_value.tag) {
+                if is_collectable((*n).i_value.get_tag()) {
                     (*n).i_value.value.gc
                 } else {
                     std::ptr::null_mut()
                 },
             ) != 0
             {
-                (*n).i_value.tag = TAG_VARIANT_NIL_EMPTY;
+                (*n).i_value.set_tag(TAG_VARIANT_NIL_EMPTY);
             }
-            if get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL {
+            if get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL {
                 clearkey(n);
             }
             n = n.offset(1);
@@ -6797,7 +6797,7 @@ pub unsafe extern "C" fn freeupval(state: *mut State, uv: *mut UpValue) { unsafe
     );
 }}
 pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
-    match (*o).tag {
+    match (*o).get_tag() {
         TAG_VARIANT_PROTOTYPE => {
             (*(&mut (*(o as *mut GCUnion)).p)).free_prototype(state);
         }
@@ -6920,9 +6920,9 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) { unsafe {
     let io: *mut TValue = &mut v;
     let i_g: *mut Object = udata2finalize(g);
     (*io).value.gc = i_g;
-    (*io).set_tag (set_collectable((*i_g).tag));
+    (*io).set_tag (set_collectable((*i_g).get_tag()));
     tm = luat_gettmbyobj(state, &mut v, TM_GC);
-    if !(get_tag_type((*tm).tag) == TAG_TYPE_NIL) {
+    if !(get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) {
         let status: i32;
         let oldah: u8 = (*state).allow_hook;
         let oldgcstp: i32 = (*g).gcstp as i32;
@@ -6933,13 +6933,13 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) { unsafe {
         let io1: *mut TValue = &mut (*fresh15).val;
         let io2: *const TValue = tm;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         let fresh16 = (*state).top.p;
         (*state).top.p = (*state).top.p.offset(1);
         let io1_0: *mut TValue = &mut (*fresh16).val;
         let io2_0: *const TValue = &mut v;
         (*io1_0).value = (*io2_0).value;
-        (*io1_0).tag = (*io2_0).tag;
+        (*io1_0).set_tag((*io2_0).get_tag());
         (*(*state).call_info).call_status = ((*(*state).call_info).call_status as i32 | 1 << 7) as u16;
         status = luad_pcall(
             state,
@@ -7079,14 +7079,14 @@ pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
             freeobj(state, curr);
         } else {
             (*curr).marked = ((*curr).marked & !(7) | 4) as u8;
-            if (*curr).tag == TAG_TYPE_STATE {
+            if (*curr).get_tag() == TAG_TYPE_STATE {
                 let th: *mut State = &mut (*(curr as *mut GCUnion)).th;
                 linkgclist_(
                     &mut (*(th as *mut GCUnion)).gc,
                     &mut (*th).gc_list,
                     &mut (*g).grayagain,
                 );
-            } else if (*curr).tag == TAG_TYPE_UPVALUE
+            } else if (*curr).get_tag() == TAG_TYPE_UPVALUE
                 && (*(curr as *mut GCUnion)).upv.v.p
                     != &mut (*(curr as *mut GCUnion)).upv.u.value as *mut TValue
             {
@@ -7148,7 +7148,7 @@ pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut O
                 (*curr).marked = ((*curr).marked | 1 << 5) as u8;
                 (*curr).marked = ((*curr).marked ^ (5 ^ 6)) as u8;
                 current_block = 11248371660297272285;
-            } else if (*curr).tag == TAG_TYPE_STATE {
+            } else if (*curr).get_tag() == TAG_TYPE_STATE {
                 current_block = 11248371660297272285;
             } else {
                 if (*curr).marked & 7 == 6 {
@@ -7352,7 +7352,7 @@ pub unsafe extern "C" fn atomic(state: *mut State) -> u64 { unsafe {
     if (*state).marked & (1 << 3 | 1 << 4) != 0 {
         reallymarkobject(g, &mut (*(state as *mut GCUnion)).gc);
     }
-    if is_collectable((*g).l_registry.tag)
+    if is_collectable((*g).l_registry.get_tag())
         && (*(*g).l_registry.value.gc).marked & (1 << 3 | 1 << 4) != 0
     {
         reallymarkobject(g, (*g).l_registry.value.gc);
@@ -7631,15 +7631,15 @@ pub unsafe extern "C" fn callclosemethod(
     let io1: *mut TValue = &mut (*top).val;
     let io2: *const TValue = tm;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     let io1_0: *mut TValue = &mut (*top.offset(1 as isize)).val;
     let io2_0: *const TValue = obj;
     (*io1_0).value = (*io2_0).value;
-    (*io1_0).tag = (*io2_0).tag;
+    (*io1_0).set_tag((*io2_0).get_tag());
     let io1_1: *mut TValue = &mut (*top.offset(2 as isize)).val;
     let io2_1: *const TValue = err;
     (*io1_1).value = (*io2_1).value;
-    (*io1_1).tag = (*io2_1).tag;
+    (*io1_1).set_tag((*io2_1).get_tag());
     (*state).top.p = top.offset(3 as isize);
     if yy != 0 {
         ccall(state, top, 0, 1);
@@ -7649,7 +7649,7 @@ pub unsafe extern "C" fn callclosemethod(
 }}
 pub unsafe extern "C" fn checkclosemth(state: *mut State, level: StkId) { unsafe {
     let tm: *const TValue = luat_gettmbyobj(state, &mut (*level).val, TM_CLOSE);
-    if get_tag_type((*tm).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
         let index: i32 = level.offset_from((*(*state).call_info).function.p) as i64 as i32;
         let mut vname: *const i8 = luag_findlocal(state, (*state).call_info, index, std::ptr::null_mut());
         if vname.is_null() {
@@ -7679,8 +7679,8 @@ pub unsafe extern "C" fn prepcallclosemth(
     callclosemethod(state, uv, errobj, yy);
 }}
 pub unsafe extern "C" fn luaf_newtbcupval(state: *mut State, level: StkId) { unsafe {
-    if (*level).val.tag == TAG_VARIANT_BOOLEAN_FALSE
-        || get_tag_type((*level).val.tag) == TAG_TYPE_NIL
+    if (*level).val.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+        || get_tag_type((*level).val.get_tag()) == TAG_TYPE_NIL
     {
         return;
     }
@@ -7725,11 +7725,11 @@ pub unsafe extern "C" fn luaf_closeupval(state: *mut State, level: StkId) { unsa
         let io1: *mut TValue = slot;
         let io2: *const TValue = (*uv).v.p;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
         (*uv).v.p = slot;
         if (*uv).marked & (1 << 3 | 1 << 4) == 0 {
             (*uv).marked = ((*uv).marked | 1 << 5) as u8;
-            if is_collectable((*slot).tag) {
+            if is_collectable((*slot).get_tag()) {
                 if (*uv).marked & 1 << 5 != 0
                     && (*(*slot).value.gc).marked & (1 << 3 | 1 << 4) != 0
                 {
@@ -8218,7 +8218,7 @@ pub unsafe extern "C" fn load_string_n(load_state: *mut LoadState, p: *mut Proto
             let io: *mut TValue = &mut (*(*state).top.p).val;
             let x_: *mut TString = ts;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).tag));
+            (*io).set_tag (set_collectable((*x_).get_tag()));
             luad_inctop(state);
             load_block(
                 load_state,
@@ -8299,10 +8299,10 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
                 (*o).set_tag (TAG_VARIANT_NIL_NIL);
             }
             1 => {
-                (*o).tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+                (*o).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
             }
             17 => {
-                (*o).tag = TAG_VARIANT_BOOLEAN_TRUE;
+                (*o).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
             }
             19 => {
                 let io: *mut TValue = o;
@@ -8312,13 +8312,13 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
             3 => {
                 let io_0: *mut TValue = o;
                 (*io_0).value.i = load_integer(load_state);
-                (*io_0).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             }
             4 | 20 => {
                 let io_1: *mut TValue = o;
                 let x_: *mut TString = load_string(load_state, f);
                 (*io_1).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                (*io_1).tag = set_collectable((*x_).tag);
+                (*io_1).set_tag(set_collectable((*x_).get_tag()));
             }
             _ => {}
         }
@@ -10974,7 +10974,7 @@ pub unsafe extern "C" fn luay_parser(
     let io_0: *mut TValue = &mut (*(*state).top.p).val;
     let x0: *mut Table = lexstate.h;
     (*io_0).value.gc = &mut (*(x0 as *mut GCUnion)).gc;
-    (*io_0).tag = COLLECTABLE_TAG_VARIANT_TABLE;
+    (*io_0).set_tag(COLLECTABLE_TAG_VARIANT_TABLE);
     luad_inctop(state);
     (*cl).p = luaf_newproto(state);
     funcstate.f = (*cl).p;
@@ -11109,7 +11109,7 @@ pub unsafe extern "C" fn luax_newstring(
     let state: *mut State = (*ls).state;
     let mut ts: *mut TString = luas_newlstr(state, str, l);
     let o: *const TValue = luah_getstr((*ls).h, ts);
-    if !(get_tag_type((*o).tag) == TAG_TYPE_NIL) {
+    if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) {
         ts = &mut (*((*(o as *mut Node)).u.key_value.gc as *mut GCUnion)).ts;
     } else {
         let fresh50 = (*state).top.p;
@@ -11118,7 +11118,7 @@ pub unsafe extern "C" fn luax_newstring(
         let io: *mut TValue = stv;
         let x_: *mut TString = ts;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         luah_finishset(state, (*ls).h, stv, o, stv);
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -11290,7 +11290,7 @@ pub unsafe extern "C" fn read_numeral(
             TK_FLT as i32,
         );
     }
-    if obj.tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if obj.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         (*semantic_info).i = obj.value.i;
         return TK_INT as i32;
     } else {
@@ -11978,7 +11978,7 @@ pub unsafe extern "C" fn llex(ls: *mut LexState, semantic_info: *mut SemanticInf
                     }
                     let ts: *mut TString = luax_newstring(ls, (*(*ls).buffer).pointer, (*(*ls).buffer).length);
                     (*semantic_info).ts = ts;
-                    if (*ts).tag == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
+                    if (*ts).get_tag() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
                         return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
                     } else {
                         return TK_NAME as i32;
@@ -12181,7 +12181,7 @@ pub unsafe extern "C" fn mainpositionfromnode(t: *const Table, nd: *mut Node) ->
     let io_: *mut TValue = &mut key;
     let n_: *const Node = nd;
     (*io_).value = (*n_).u.key_value;
-    (*io_).tag = (*n_).u.key_tag;
+    (*io_).set_tag((*n_).u.key_tag);
     return mainpositiontv(t, &mut key);
 }}
 pub unsafe extern "C" fn equalkey(
@@ -12189,10 +12189,10 @@ pub unsafe extern "C" fn equalkey(
     n2: *const Node,
     deadok: i32,
 ) -> i32 { unsafe {
-    if (*k1).tag != (*n2).u.key_tag
+    if (*k1).get_tag() != (*n2).u.key_tag
         && !(deadok != 0
             && (*n2).u.key_tag == 9 + 2
-            && is_collectable((*k1).tag))
+            && is_collectable((*k1).get_tag()))
     {
         return 0;
     }
@@ -12282,10 +12282,10 @@ pub unsafe extern "C" fn findindex(
     asize: u32,
 ) -> u32 { unsafe {
     let mut i: u32;
-    if get_tag_type((*key).tag) == TAG_TYPE_NIL {
+    if get_tag_type((*key).get_tag()) == TAG_TYPE_NIL {
         return 0u32;
     }
-    i = if (*key).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    i = if (*key).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         arrayindex((*key).value.i)
     } else {
         0u32
@@ -12294,7 +12294,7 @@ pub unsafe extern "C" fn findindex(
         return i;
     } else {
         let n: *const TValue = getgeneric(t, key, 1);
-        if (((*n).tag == TAG_VARIANT_NIL_ABSENTKEY) as i32 != 0) as i32 as i64 != 0 {
+        if (((*n).get_tag() == TAG_VARIANT_NIL_ABSENTKEY) as i32 != 0) as i32 as i64 != 0 {
             luag_runerror(state, b"invalid key to 'next'\0" as *const u8 as *const i8);
         }
         i = (n as *mut Node).offset_from(&mut *((*t).node).offset(0 as isize) as *mut Node)
@@ -12310,30 +12310,30 @@ pub unsafe extern "C" fn luah_next(
     let asize: u32 = luah_realasize(t);
     let mut i: u32 = findindex(state, t, &mut (*key).val, asize);
     while i < asize {
-        if get_tag_type ((*((*t).array).offset(i as isize)).tag) != TAG_TYPE_NIL {
+        if get_tag_type ((*((*t).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
             let io: *mut TValue = &mut (*key).val;
             (*io).value.i = i.wrapping_add(1 as u32) as i64;
             (*io).set_tag (TAG_VARIANT_NUMERIC_INTEGER);
             let io1: *mut TValue = &mut (*key.offset(1 as isize)).val;
             let io2: *const TValue = &mut *((*t).array).offset(i as isize) as *mut TValue;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
             return 1;
         }
         i = i.wrapping_add(1);
     }
     i = i.wrapping_sub(asize);
     while (i as i32) < 1 << (*t).log_size_node as i32 {
-        if !(get_tag_type ((*((*t).node).offset(i as isize)).i_value.tag) == TAG_TYPE_NIL) {
+        if !(get_tag_type ((*((*t).node).offset(i as isize)).i_value.get_tag()) == TAG_TYPE_NIL) {
             let n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             let io_: *mut TValue = &mut (*key).val;
             let n_: *const Node = n;
             (*io_).value = (*n_).u.key_value;
-            (*io_).tag = (*n_).u.key_tag;
+            (*io_).set_tag((*n_).u.key_tag);
             let io1_0: *mut TValue = &mut (*key.offset(1 as isize)).val;
             let io2_0: *const TValue = &mut (*n).i_value;
             (*io1_0).value = (*io2_0).value;
-            (*io1_0).tag = (*io2_0).tag;
+            (*io1_0).set_tag((*io2_0).get_tag());
             return 1;
         }
         i = i.wrapping_add(1);
@@ -12401,7 +12401,7 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 { u
             }
         }
         while i <= lim {
-            if get_tag_type ((*((*t).array).offset(i.wrapping_sub(1 as u32) as isize)).tag)
+            if get_tag_type ((*((*t).array).offset(i.wrapping_sub(1 as u32) as isize)).get_tag())
                 != 0
             {
                 lc = lc.wrapping_add(1);
@@ -12431,7 +12431,7 @@ pub unsafe extern "C" fn numusehash(
             break;
         }
         let n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
-        if !(get_tag_type((*n).i_value.tag) == TAG_TYPE_NIL) {
+        if !(get_tag_type((*n).i_value.get_tag()) == TAG_TYPE_NIL) {
             if (*n).u.key_tag == TAG_VARIANT_NUMERIC_INTEGER {
                 ause += countint((*n).u.key_value.i, nums);
             }
@@ -12483,7 +12483,7 @@ pub unsafe extern "C" fn setnodevector(state: *mut State, t: *mut Table, mut siz
             let n: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             (*n).u.next = 0;
             (*n).u.key_tag = 0;
-            (*n).i_value.tag = TAG_VARIANT_NIL_EMPTY;
+            (*n).i_value.set_tag(TAG_VARIANT_NIL_EMPTY);
             i += 1;
         }
         (*t).log_size_node = lsize as u8;
@@ -12496,7 +12496,7 @@ pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, t: *mut Tab
     j = 0;
     while j < size {
         let old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
-        if !(get_tag_type((*old).i_value.tag) == TAG_TYPE_NIL) {
+        if !(get_tag_type((*old).i_value.get_tag()) == TAG_TYPE_NIL) {
             let mut k: TValue = TValue {
                 value: Value {
                     gc: std::ptr::null_mut(),
@@ -12506,7 +12506,7 @@ pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, t: *mut Tab
             let io_: *mut TValue = &mut k;
             let n_: *const Node = old;
             (*io_).value = (*n_).u.key_value;
-            (*io_).tag = (*n_).u.key_tag;
+            (*io_).set_tag((*n_).u.key_tag);
             luah_set(state, t, &mut k, &mut (*old).i_value);
         }
         j += 1;
@@ -12540,7 +12540,7 @@ pub unsafe extern "C" fn luah_resize(
         Table::exchange_hash_part(t, &mut new_table);
         i = new_array_size;
         while i < old_array_size {
-            if get_tag_type ((*((*t).array).offset(i as isize)).tag) != TAG_TYPE_NIL {
+            if get_tag_type ((*((*t).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
                 luah_setint(
                     state,
                     t,
@@ -12568,7 +12568,7 @@ pub unsafe extern "C" fn luah_resize(
     (*t).array_limit = new_array_size;
     i = old_array_size;
     while i < new_array_size {
-        (*((*t).array).offset(i as isize)).tag = TAG_VARIANT_NIL_EMPTY;
+        (*((*t).array).offset(i as isize)).set_tag(TAG_VARIANT_NIL_EMPTY);
         i = i.wrapping_add(1);
     }
     reinsert(state, &mut new_table, t);
@@ -12605,7 +12605,7 @@ pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const
     na = numusearray(table, nums.as_mut_ptr());
     totaluse = na as i32;
     totaluse += numusehash(table, nums.as_mut_ptr(), &mut na);
-    if (*ek).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*ek).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         na = na.wrapping_add(countint((*ek).value.i, nums.as_mut_ptr()) as u32);
     }
     totaluse += 1;
@@ -12650,9 +12650,9 @@ pub unsafe extern "C" fn luah_newkey(
         },
         tag: 0,
     };
-    if ((get_tag_type((*key).tag) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
+    if ((get_tag_type((*key).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
         luag_runerror(state, b"table index is nil\0" as *const u8 as *const i8);
-    } else if (*key).tag == TAG_VARIANT_NUMERIC_NUMBER {
+    } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
         let f: f64 = (*key).value.n;
         let mut k: i64 = 0;
         if luav_flttointeger(f, &mut k, F2I::Equal) != 0 {
@@ -12664,11 +12664,11 @@ pub unsafe extern "C" fn luah_newkey(
             luag_runerror(state, b"table index is NaN\0" as *const u8 as *const i8);
         }
     }
-    if get_tag_type ((*value).tag) == TAG_TYPE_NIL {
+    if get_tag_type ((*value).get_tag()) == TAG_TYPE_NIL {
         return;
     }
     mp = mainpositiontv(t, key);
-    if (get_tag_type((*mp).i_value.tag) != TAG_TYPE_NIL) || ((*t).last_free).is_null() {
+    if (get_tag_type((*mp).i_value.get_tag()) != TAG_TYPE_NIL) || ((*t).last_free).is_null() {
         let mut othern: *mut Node;
         let f_0: *mut Node = (*t).get_free_position();
         if f_0.is_null() {
@@ -12687,7 +12687,7 @@ pub unsafe extern "C" fn luah_newkey(
                 (*f_0).u.next += mp.offset_from(f_0) as i64 as i32;
                 (*mp).u.next = 0;
             }
-            (*mp).i_value.tag = TAG_VARIANT_NIL_EMPTY;
+            (*mp).i_value.set_tag(TAG_VARIANT_NIL_EMPTY);
         } else {
             if (*mp).u.next != 0 {
                 (*f_0).u.next = mp.offset((*mp).u.next as isize).offset_from(f_0) as i64 as i32;
@@ -12699,8 +12699,8 @@ pub unsafe extern "C" fn luah_newkey(
     let n_: *mut Node = mp;
     let io_: *const TValue = key;
     (*n_).u.key_value = (*io_).value;
-    (*n_).u.key_tag = (*io_).tag;
-    if is_collectable((*key).tag) {
+    (*n_).u.key_tag = (*io_).get_tag();
+    if is_collectable((*key).get_tag()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*key).value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
@@ -12712,7 +12712,7 @@ pub unsafe extern "C" fn luah_newkey(
     let io1: *mut TValue = &mut (*mp).i_value;
     let io2: *const TValue = value;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
 }}
 pub unsafe extern "C" fn luah_getint(t: *mut Table, key: i64) -> *const TValue { unsafe {
     let array_limit: u64 = (*t).array_limit as u64;
@@ -12762,7 +12762,7 @@ pub unsafe extern "C" fn luah_getshortstr(
     }
 }}
 pub unsafe extern "C" fn luah_getstr(t: *mut Table, key: *mut TString) -> *const TValue { unsafe {
-    if (*key).tag == TAG_VARIANT_STRING_SHORT {
+    if (*key).get_tag() == TAG_VARIANT_STRING_SHORT {
         return luah_getshortstr(t, key);
     } else {
         let mut ko: TValue = TValue {
@@ -12774,7 +12774,7 @@ pub unsafe extern "C" fn luah_getstr(t: *mut Table, key: *mut TString) -> *const
         let io: *mut TValue = &mut ko;
         let x_: *mut TString = key;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).tag));
+        (*io).set_tag (set_collectable((*x_).get_tag()));
         return getgeneric(t, &mut ko, 0);
     };
 }}
@@ -12800,13 +12800,13 @@ pub unsafe extern "C" fn luah_finishset(
     slot: *const TValue,
     value: *mut TValue,
 ) { unsafe {
-    if (*slot).tag == TAG_VARIANT_NIL_ABSENTKEY {
+    if (*slot).get_tag() == TAG_VARIANT_NIL_ABSENTKEY {
         luah_newkey(state, t, key, value);
     } else {
         let io1: *mut TValue = slot as *mut TValue;
         let io2: *const TValue = value;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
     };
 }}
 pub unsafe extern "C" fn luah_set(
@@ -12825,7 +12825,7 @@ pub unsafe extern "C" fn luah_setint(
     value: *mut TValue,
 ) { unsafe {
     let p: *const TValue = luah_getint(t, key);
-    if (*p).tag == TAG_VARIANT_NIL_ABSENTKEY {
+    if (*p).get_tag() == TAG_VARIANT_NIL_ABSENTKEY {
         let mut k: TValue = TValue {
             value: Value {
                 gc: std::ptr::null_mut(),
@@ -12840,7 +12840,7 @@ pub unsafe extern "C" fn luah_setint(
         let io1: *mut TValue = p as *mut TValue;
         let io2: *const TValue = value;
         (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).tag);
+        (*io1).set_tag ((*io2).get_tag());
     };
 }}
 pub unsafe extern "C" fn hash_search(t: *mut Table, mut j: u64) -> u64 { unsafe {
@@ -12852,12 +12852,12 @@ pub unsafe extern "C" fn hash_search(t: *mut Table, mut j: u64) -> u64 { unsafe 
         i = j;
         if j <= (9223372036854775807 as i64 as u64).wrapping_div(2 as u64) {
             j = (j as u64).wrapping_mul(2 as u64) as u64 as u64;
-            if get_tag_type((*luah_getint(t, j as i64)).tag) == TAG_TYPE_NIL {
+            if get_tag_type((*luah_getint(t, j as i64)).get_tag()) == TAG_TYPE_NIL {
                 break;
             }
         } else {
             j = 9223372036854775807 as i64 as u64;
-            if get_tag_type((*luah_getint(t, j as i64)).tag) == TAG_TYPE_NIL {
+            if get_tag_type((*luah_getint(t, j as i64)).get_tag()) == TAG_TYPE_NIL {
                 break;
             }
             return j;
@@ -12865,7 +12865,7 @@ pub unsafe extern "C" fn hash_search(t: *mut Table, mut j: u64) -> u64 { unsafe 
     }
     while j.wrapping_sub(i) > 1 as u32 as u64 {
         let m: u64 = i.wrapping_add(j).wrapping_div(2 as u64);
-        if get_tag_type ((*luah_getint(t, m as i64)).tag) == TAG_TYPE_NIL {
+        if get_tag_type ((*luah_getint(t, m as i64)).get_tag()) == TAG_TYPE_NIL {
             j = m;
         } else {
             i = m;
@@ -12876,7 +12876,7 @@ pub unsafe extern "C" fn hash_search(t: *mut Table, mut j: u64) -> u64 { unsafe 
 pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 { unsafe {
     while j.wrapping_sub(i) > 1 as u32 {
         let m: u32 = i.wrapping_add(j).wrapping_div(2 as u32);
-        if get_tag_type ((*array.offset(m.wrapping_sub(1 as u32) as isize)).tag) == TAG_TYPE_NIL {
+        if get_tag_type ((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag()) == TAG_TYPE_NIL {
             j = m;
         } else {
             i = m;
@@ -12887,10 +12887,10 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
 pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
     let mut limit: u32 = (*t).array_limit;
     if limit > 0u32
-        && get_tag_type ((*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).tag) == TAG_TYPE_NIL
+        && get_tag_type ((*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).get_tag()) == TAG_TYPE_NIL
     {
         if limit >= 2 as u32
-            && !get_tag_type ((*((*t).array).offset(limit.wrapping_sub(2 as u32) as isize)).tag) == TAG_TYPE_NIL
+            && !get_tag_type ((*((*t).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag()) == TAG_TYPE_NIL
         {
             if ispow2realasize(t) != 0
                 && !(limit.wrapping_sub(1 as u32)
@@ -12913,11 +12913,11 @@ pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
     if !((*t).flags as i32 & 1 << 7 == 0
         || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32)
     {
-        if get_tag_type ((*((*t).array).offset(limit as isize)).tag) == TAG_TYPE_NIL {
+        if get_tag_type ((*((*t).array).offset(limit as isize)).get_tag()) == TAG_TYPE_NIL {
             return limit as u64;
         }
         limit = luah_realasize(t);
-        if get_tag_type ((*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).tag) == TAG_TYPE_NIL
+        if get_tag_type ((*((*t).array).offset(limit.wrapping_sub(1 as u32) as isize)).get_tag()) == TAG_TYPE_NIL
         {
             let boundary_0: u32 = binsearch((*t).array, (*t).array_limit, limit);
             (*t).array_limit = boundary_0;
@@ -12925,7 +12925,7 @@ pub unsafe extern "C" fn luah_getn(t: *mut Table) -> u64 { unsafe {
         }
     }
     if ((*t).last_free).is_null()
-        || get_tag_type ((*luah_getint(t, limit.wrapping_add(1 as u32) as i64)).tag) == TAG_TYPE_NIL
+        || get_tag_type ((*luah_getint(t, limit.wrapping_add(1 as u32) as i64)).get_tag()) == TAG_TYPE_NIL
     {
         return limit as u64;
     } else {
@@ -12942,14 +12942,14 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
             6 => {
                 if !v.is_null() {
                     (*v).value.i = (*e).u.ival;
-                    (*v).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                    (*v).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 }
                 return 1;
             }
             5 => {
                 if !v.is_null() {
                     (*v).value.n = (*e).u.nval;
-                    (*v).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                    (*v).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                 }
                 return 1;
             }
@@ -12976,11 +12976,11 @@ pub unsafe extern "C" fn luak_exp2const(
     }
     match (*e).k as u32 {
         3 => {
-            (*v).tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+            (*v).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
             return 1;
         }
         2 => {
-            (*v).tag = TAG_VARIANT_BOOLEAN_TRUE;
+            (*v).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
             return 1;
         }
         1 => {
@@ -12991,14 +12991,14 @@ pub unsafe extern "C" fn luak_exp2const(
             let io: *mut TValue = v;
             let x_: *mut TString = (*e).u.strval;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).tag));
+            (*io).set_tag (set_collectable((*x_).get_tag()));
             return 1;
         }
         11 => {
             let io1: *mut TValue = v;
             let io2: *const TValue = const2val(fs, e);
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
             return 1;
         }
         _ => return tonumeral(e, v),
@@ -13424,7 +13424,7 @@ pub unsafe extern "C" fn addk(
     let f: *mut Prototype = (*fs).f;
     let index: *const TValue = luah_get((*(*fs).ls).h, key);
     let mut k: i32;
-    if (*index).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         k = (*index).value.i as i32;
         if k < (*fs).nk
             && (*((*f).k).offset(k as isize)).get_tag_variant() == (*v).get_tag_variant() && luav_equalobj(std::ptr::null_mut(), &mut *((*f).k).offset(k as isize), v) != 0
@@ -13461,10 +13461,10 @@ pub unsafe extern "C" fn addk(
     let io1: *mut TValue = &mut *((*f).k).offset(k as isize) as *mut TValue;
     let io2: *const TValue = v;
     (*io1).value = (*io2).value;
-    (*io1).set_tag ((*io2).tag);
+    (*io1).set_tag ((*io2).get_tag());
     (*fs).nk += 1;
     (*fs).nk;
-    if is_collectable((*v).tag) {
+    if is_collectable((*v).get_tag()) {
         if (*f).marked & 1 << 5 != 0
             && (*(*v).value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
@@ -13489,7 +13489,7 @@ pub unsafe extern "C" fn string_k(fs: *mut FunctionState, s: *mut TString) -> i3
     let io: *mut TValue = &mut o;
     let x_: *mut TString = s;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).tag));
+    (*io).set_tag (set_collectable((*x_).get_tag()));
     return addk(fs, &mut o, &mut o);
 }}
 pub unsafe extern "C" fn luak_int_k(fs: *mut FunctionState, n: i64) -> i32 { unsafe {
@@ -13529,7 +13529,7 @@ pub unsafe extern "C" fn luak_number_k(fs: *mut FunctionState, r: f64) -> i32 { 
         };
         let io_0: *mut TValue = &mut kv;
         (*io_0).value.n = k;
-        (*io_0).tag = TAG_VARIANT_NUMERIC_NUMBER;
+        (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
         return addk(fs, &mut kv, &mut o);
     };
 }}
@@ -13540,7 +13540,7 @@ pub unsafe extern "C" fn bool_false(fs: *mut FunctionState) -> i32 { unsafe {
         },
         tag: 0,
     };
-    o.tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+    o.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
     return addk(fs, &mut o, &mut o);
 }}
 pub unsafe extern "C" fn bool_true(fs: *mut FunctionState) -> i32 { unsafe {
@@ -13550,7 +13550,7 @@ pub unsafe extern "C" fn bool_true(fs: *mut FunctionState) -> i32 { unsafe {
         },
         tag: 0,
     };
-    o.tag = TAG_VARIANT_BOOLEAN_TRUE;
+    o.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
     return addk(fs, &mut o, &mut o);
 }}
 pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 { unsafe {
@@ -14138,7 +14138,7 @@ pub unsafe extern "C" fn is_k_string(
     return ((*e).k as u32 == VK as i32 as u32
         && !((*e).t != (*e).f)
         && (*e).u.info <= (1 << 8) - 1
-        && (*((*(*fs).f).k).offset((*e).u.info as isize)).tag             == COLLECTABLE_TAG_VARIANT_STRING_SHORT) as i32;
+        && (*((*(*fs).f).k).offset((*e).u.info as isize)).get_tag() == COLLECTABLE_TAG_VARIANT_STRING_SHORT) as i32;
 }}
 pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> i32 { unsafe {
     return ((*e).k as u32 == VKINT as i32 as u32 && !((*e).t != (*e).f)) as i32;
@@ -14213,7 +14213,7 @@ pub unsafe extern "C" fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i
                 && luav_tointegerns(v2, &mut i, F2I::Equal) != 0) as i32;
         }
         5 | 6 | 3 => {
-            return ((if (*v2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+            return ((if (*v2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                 (*v2).value.i as f64
             } else {
                 (*v2).value.n
@@ -14253,7 +14253,7 @@ pub unsafe extern "C" fn constfolding(
         return 0;
     }
     luao_rawarith((*(*fs).ls).state, op, &mut v1, &mut v2, &mut res);
-    if res.tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         (*e1).k = VKINT;
         (*e1).u.ival = res.value.i;
     } else {
@@ -14831,7 +14831,7 @@ pub unsafe extern "C" fn luak_finish(fs: *mut FunctionState) { unsafe {
     }
 }}
 pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i32 { unsafe {
-    if !(get_tag_type((*obj).tag) == TAG_TYPE_STRING) {
+    if !(get_tag_type((*obj).get_tag()) == TAG_TYPE_STRING) {
         return 0;
     } else {
         let st: *mut TString = &mut (*((*obj).value.gc as *mut GCUnion)).ts;
@@ -14851,11 +14851,11 @@ pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool
         },
         tag: 0,
     };
-    if (*obj).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         *n = (*obj).value.i as f64;
         return true;
     } else if l_strton(obj, &mut v) != 0 {
-        *n = if v.tag == TAG_VARIANT_NUMERIC_INTEGER {
+        *n = if v.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             v.value.i as f64
         } else {
             v.value.n
@@ -14886,9 +14886,9 @@ pub unsafe extern "C" fn luav_tointegerns(
     p: *mut i64,
     mode: F2I,
 ) -> i32 { unsafe {
-    if (*obj).tag == TAG_VARIANT_NUMERIC_NUMBER {
+    if (*obj).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
         return luav_flttointeger((*obj).value.n, p, mode);
-    } else if (*obj).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    } else if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         *p = (*obj).value.i;
         return 1;
     } else {
@@ -14929,7 +14929,7 @@ pub unsafe extern "C" fn forlimit(
     ) == 0
     {
         let mut flim: f64 = 0.0;
-        if if (*lim).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if if (*lim).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             flim = (*lim).value.n;
             1
         } else {
@@ -14960,7 +14960,7 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
     let pinit: *mut TValue = &mut (*ra).val;
     let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).val;
     let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).val;
-    if (*pinit).tag == TAG_VARIANT_NUMERIC_INTEGER && (*pstep).tag == TAG_VARIANT_NUMERIC_INTEGER
+    if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_INTEGER && (*pstep).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
     {
         let init: i64 = (*pinit).value.i;
         let step: i64 = (*pstep).value.i;
@@ -14988,13 +14988,13 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
             }
             let io_0: *mut TValue = plimit;
             (*io_0).value.i = count as i64;
-            (*io_0).tag = TAG_VARIANT_NUMERIC_INTEGER;
+            (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         }
     } else {
         let mut init_0: f64 = 0.0;
         let mut limit_0: f64 = 0.0;
         let mut step_0: f64 = 0.0;
-        if (((if (*plimit).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if (((if (*plimit).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             limit_0 = (*plimit).value.n;
             1
         } else {
@@ -15005,7 +15005,7 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
         {
             luag_forerror(state, plimit, b"limit\0" as *const u8 as *const i8);
         }
-        if (((if (*pstep).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if (((if (*pstep).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             step_0 = (*pstep).value.n;
             1
         } else {
@@ -15016,7 +15016,7 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
         {
             luag_forerror(state, pstep, b"step\0" as *const u8 as *const i8);
         }
-        if (((if (*pinit).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if (((if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             init_0 = (*pinit).value.n;
             1
         } else {
@@ -15040,16 +15040,16 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 { unsafe {
         } else {
             let io_1: *mut TValue = plimit;
             (*io_1).value.n = limit_0;
-            (*io_1).tag = TAG_VARIANT_NUMERIC_NUMBER;
+            (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             let io_2: *mut TValue = pstep;
             (*io_2).value.n = step_0;
-            (*io_2).tag = TAG_VARIANT_NUMERIC_NUMBER;
+            (*io_2).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             let io_3: *mut TValue = &mut (*ra).val;
             (*io_3).value.n = init_0;
-            (*io_3).tag = TAG_VARIANT_NUMERIC_NUMBER;
+            (*io_3).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             let io_4: *mut TValue = &mut (*ra.offset(3 as isize)).val;
             (*io_4).value.n = init_0;
-            (*io_4).tag = TAG_VARIANT_NUMERIC_NUMBER;
+            (*io_4).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
         }
     }
     return 0;
@@ -15069,7 +15069,7 @@ pub unsafe extern "C" fn floatforloop(ra: StkId) -> i32 { unsafe {
         (*io).value.n = index;
         let io_0: *mut TValue = &mut (*ra.offset(3 as isize)).val;
         (*io_0).value.n = index;
-        (*io_0).tag = TAG_VARIANT_NUMERIC_NUMBER;
+        (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
         return 1;
     } else {
         return 0;
@@ -15087,7 +15087,7 @@ pub unsafe extern "C" fn luav_finishget(
     while loop_0 < 2000 as i32 {
         if slot.is_null() {
             tm = luat_gettmbyobj(state, t, TM_INDEX);
-            if ((get_tag_type((*tm).tag) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
+            if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
                 luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
             }
         } else {
@@ -15110,23 +15110,23 @@ pub unsafe extern "C" fn luav_finishget(
                 return;
             }
         }
-        if get_tag_type((*tm).tag) == TAG_TYPE_CLOSURE {
+        if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
             luat_calltmres(state, tm, t, key, val);
             return;
         }
         t = tm;
-        if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+        if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
             slot = std::ptr::null();
             0
         } else {
             slot = luah_get(&mut (*((*t).value.gc as *mut GCUnion)).h, key);
-            (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*val).val;
             let io2: *const TValue = slot;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
             return;
         }
         loop_0 += 1;
@@ -15168,7 +15168,7 @@ pub unsafe extern "C" fn luav_finishset(
                             luah_finishset(state, h, key, slot, val);
                 (*state).top.p = (*state).top.p.offset(-1);
                             (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
-                if is_collectable((*val).tag) {
+                if is_collectable((*val).get_tag()) {
                     if (*(h as *mut GCUnion)).gc.marked & 1 << 5 != 0
                         && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
                     {
@@ -15181,28 +15181,28 @@ pub unsafe extern "C" fn luav_finishset(
             }
         } else {
             tm = luat_gettmbyobj(state, t, TM_NEWINDEX);
-            if ((get_tag_type((*tm).tag) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
+            if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
                 luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
             }
         }
-        if get_tag_type((*tm).tag) == TAG_TYPE_CLOSURE {
+        if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
             luat_calltm(state, tm, t, key, val);
             return;
         }
         t = tm;
-        if if !((*t).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+        if if !((*t).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
             slot = std::ptr::null();
             0
         } else {
             slot = luah_get(&mut (*((*t).value.gc as *mut GCUnion)).h, key);
-            (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
             let io2: *const TValue = val;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
-            if is_collectable((*val).tag) {
+            (*io1).set_tag ((*io2).get_tag());
+            if is_collectable((*val).get_tag()) {
                 if (*(*t).value.gc).marked & 1 << 5 != 0
                     && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
                 {
@@ -15316,16 +15316,16 @@ pub unsafe extern "C" fn lefloatint(f: f64, i: i64) -> i32 { unsafe {
 }}
 #[inline]
 pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> i32 { unsafe {
-    if (*l).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*l).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         let li: i64 = (*l).value.i;
-        if (*r).tag == TAG_VARIANT_NUMERIC_INTEGER {
+        if (*r).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             return (li < (*r).value.i) as i32;
         } else {
             return ltintfloat(li, (*r).value.n);
         }
     } else {
         let lf: f64 = (*l).value.n;
-        if (*r).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if (*r).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             return (lf < (*r).value.n) as i32;
         } else {
             return ltfloatint(lf, (*r).value.i);
@@ -15334,16 +15334,16 @@ pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> i32 { unsa
 }}
 #[inline]
 pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> i32 { unsafe {
-    if (*l).tag == TAG_VARIANT_NUMERIC_INTEGER {
+    if (*l).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
         let li: i64 = (*l).value.i;
-        if (*r).tag == TAG_VARIANT_NUMERIC_INTEGER {
+        if (*r).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             return (li <= (*r).value.i) as i32;
         } else {
             return leintfloat(li, (*r).value.n);
         }
     } else {
         let lf: f64 = (*l).value.n;
-        if (*r).tag == TAG_VARIANT_NUMERIC_NUMBER {
+        if (*r).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             return (lf <= (*r).value.n) as i32;
         } else {
             return lefloatint(lf, (*r).value.i);
@@ -15355,7 +15355,7 @@ pub unsafe extern "C" fn lessthanothers(
     l: *const TValue,
     r: *const TValue,
 ) -> i32 { unsafe {
-    if get_tag_type ((*l).tag) == TAG_TYPE_STRING && get_tag_type ((*r).tag) == TAG_TYPE_STRING {
+    if get_tag_type ((*l).get_tag()) == TAG_TYPE_STRING && get_tag_type ((*r).get_tag()) == TAG_TYPE_STRING {
         return (l_strcmp(
             &mut (*((*l).value.gc as *mut GCUnion)).ts,
             &mut (*((*r).value.gc as *mut GCUnion)).ts,
@@ -15369,7 +15369,7 @@ pub unsafe extern "C" fn luav_lessthan(
     l: *const TValue,
     r: *const TValue,
 ) -> i32 { unsafe {
-    if get_tag_type ((*l).tag) == TAG_TYPE_NUMERIC && get_tag_type ((*r).tag) == TAG_TYPE_NUMERIC {
+    if get_tag_type ((*l).get_tag()) == TAG_TYPE_NUMERIC && get_tag_type ((*r).get_tag()) == TAG_TYPE_NUMERIC {
         return ltnum(l, r);
     } else {
         return lessthanothers(state, l, r);
@@ -15380,7 +15380,7 @@ pub unsafe extern "C" fn lessequalothers(
     l: *const TValue,
     r: *const TValue,
 ) -> i32 { unsafe {
-    if get_tag_type ((*l).tag) == TAG_TYPE_STRING && get_tag_type ((*r).tag) == TAG_TYPE_STRING {
+    if get_tag_type ((*l).get_tag()) == TAG_TYPE_STRING && get_tag_type ((*r).get_tag()) == TAG_TYPE_STRING {
         return (l_strcmp(
             &mut (*((*l).value.gc as *mut GCUnion)).ts,
             &mut (*((*r).value.gc as *mut GCUnion)).ts,
@@ -15394,7 +15394,7 @@ pub unsafe extern "C" fn luav_lessequal(
     l: *const TValue,
     r: *const TValue,
 ) -> i32 { unsafe {
-    if get_tag_type ((*l).tag) == TAG_TYPE_NUMERIC && get_tag_type ((*r).tag) == TAG_TYPE_NUMERIC {
+    if get_tag_type ((*l).get_tag()) == TAG_TYPE_NUMERIC && get_tag_type ((*r).get_tag()) == TAG_TYPE_NUMERIC {
         return lenum(l, r);
     } else {
         return lessequalothers(state, l, r);
@@ -15407,8 +15407,8 @@ pub unsafe extern "C" fn luav_equalobj(
 ) -> i32 { unsafe {
     let mut tm: *const TValue;
     if (*t1).get_tag_variant() != (*t2).get_tag_variant() {
-        if get_tag_type((*t1).tag) != get_tag_type((*t2).tag)
-            || get_tag_type((*t1).tag) != 3
+        if (*t1).get_tag_type() != (*t2).get_tag_type()
+            || (*t1).get_tag_type() != TAG_TYPE_NUMERIC
         {
             return 0;
         } else {
@@ -15520,8 +15520,8 @@ pub unsafe extern "C" fn luav_equalobj(
         return 0;
     } else {
         luat_calltmres(state, tm, t1, t2, (*state).top.p);
-        return !((*(*state).top.p).val.tag == TAG_VARIANT_BOOLEAN_FALSE
-            || get_tag_type((*(*state).top.p).val.tag) == TAG_TYPE_NIL) as i32;
+        return !((*(*state).top.p).val.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+            || get_tag_type((*(*state).top.p).val.get_tag()) == TAG_TYPE_NIL) as i32;
     };
 }}
 pub unsafe extern "C" fn copy2buff(top: StkId, mut n: i32, buffer: *mut i8) { unsafe {
@@ -15553,27 +15553,27 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
     loop {
         let top: StkId = (*state).top.p;
         let mut n: i32 = 2;
-        if !(get_tag_type ((*top.offset(-(2 as isize))).val.tag) == TAG_TYPE_STRING
-            || get_tag_type ((*top.offset(-(2 as isize))).val.tag) == TAG_TYPE_NUMERIC)
-            || !(get_tag_type ((*top.offset(-(1 as isize))).val.tag) == TAG_TYPE_STRING
-                || get_tag_type ((*top.offset(-(1 as isize))).val.tag) == TAG_TYPE_NUMERIC && {
+        if !(get_tag_type ((*top.offset(-(2 as isize))).val.get_tag()) == TAG_TYPE_STRING
+            || get_tag_type ((*top.offset(-(2 as isize))).val.get_tag()) == TAG_TYPE_NUMERIC)
+            || !(get_tag_type ((*top.offset(-(1 as isize))).val.get_tag()) == TAG_TYPE_STRING
+                || get_tag_type ((*top.offset(-(1 as isize))).val.get_tag()) == TAG_TYPE_NUMERIC && {
                     luao_tostring(state, &mut (*top.offset(-(1 as isize))).val);
                     1 != 0
                 })
         {
             luat_tryconcattm(state);
-        } else if (*top.offset(-(1 as isize))).val.tag             == COLLECTABLE_TAG_VARIANT_STRING_SHORT
+        } else if (*top.offset(-(1 as isize))).val.get_tag()             == COLLECTABLE_TAG_VARIANT_STRING_SHORT
             && (*((*top.offset(-(1 as isize))).val.value.gc as *mut GCUnion))
                 .ts
                 .short_length as i32
                 == 0
         {
-            (get_tag_type((*top.offset(-(2 as isize))).val.tag) == TAG_TYPE_STRING
-                || get_tag_type((*top.offset(-(2 as isize))).val.tag) == TAG_TYPE_NUMERIC && {
+            (get_tag_type((*top.offset(-(2 as isize))).val.get_tag()) == TAG_TYPE_STRING
+                || get_tag_type((*top.offset(-(2 as isize))).val.get_tag()) == TAG_TYPE_NUMERIC && {
                     luao_tostring(state, &mut (*top.offset(-(2 as isize))).val);
                     1 != 0
                 }) as i32;
-        } else if (*top.offset(-(2 as isize))).val.tag             == COLLECTABLE_TAG_VARIANT_STRING_SHORT
+        } else if (*top.offset(-(2 as isize))).val.get_tag()             == COLLECTABLE_TAG_VARIANT_STRING_SHORT
             && (*((*top.offset(-(2 as isize))).val.value.gc as *mut GCUnion))
                 .ts
                 .short_length as i32
@@ -15582,7 +15582,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
             let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).val;
             let io2: *const TValue = &mut (*top.offset(-(1 as isize))).val;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
         } else {
             let mut tl: u64 = if (*((*top.offset(-(1 as isize))).val.value.gc as *mut GCUnion))
                 .ts
@@ -15603,11 +15603,11 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
             while n < total
                 && (get_tag_type((*top.offset(-(n as isize)).offset(-(1 as isize)))
                     .val
-                    .tag)
+                    .get_tag())
                     == 4
                     || get_tag_type((*top.offset(-(n as isize)).offset(-(1 as isize)))
                         .val
-                        .tag)
+                        .get_tag())
                         == 3
                         && {
                             luao_tostring(
@@ -15670,7 +15670,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
             let io: *mut TValue = &mut (*top.offset(-(n as isize))).val;
             let x_: *mut TString = ts;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).tag));
+            (*io).set_tag (set_collectable((*x_).get_tag()));
         }
         total -= n - 1;
         (*state).top.p = (*state).top.p.offset(-((n - 1) as isize));
@@ -15705,18 +15705,18 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
         4 => {
             let io_0: *mut TValue = &mut (*ra).val;
             (*io_0).value.i = (*((*rb).value.gc as *mut GCUnion)).ts.short_length as i64;
-            (*io_0).tag = TAG_VARIANT_NUMERIC_INTEGER;
+            (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             return;
         }
         20 => {
             let io_1: *mut TValue = &mut (*ra).val;
             (*io_1).value.i = (*((*rb).value.gc as *mut GCUnion)).ts.u.long_length as i64;
-            (*io_1).tag = TAG_VARIANT_NUMERIC_INTEGER;
+            (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             return;
         }
         _ => {
             tm = luat_gettmbyobj(state, rb, TM_LEN);
-            if ((get_tag_type((*tm).tag) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
+            if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i32 as i64 != 0 {
                 luag_typeerror(state, rb, b"get length of\0" as *const u8 as *const i8);
             }
         }
@@ -15844,7 +15844,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) { unsafe {
             (*state).top.p = (*state).top.p.offset(-1);
             let io2: *const TValue = &mut (*(*state).top.p).val;
             (*io1).value = (*io2).value;
-            (*io1).set_tag ((*io2).tag);
+            (*io1).set_tag ((*io2).get_tag());
         }
         49 | 50 | 52 | 11 | 12 | 13 | 14 | 20 => {
             let io1_0: *mut TValue = &mut (*base
@@ -15853,11 +15853,11 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) { unsafe {
             (*state).top.p = (*state).top.p.offset(-1);
             let io2_0: *const TValue = &mut (*(*state).top.p).val;
             (*io1_0).value = (*io2_0).value;
-            (*io1_0).tag = (*io2_0).tag;
+            (*io1_0).set_tag((*io2_0).get_tag());
         }
         58 | 59 | 62 | 63 | 64 | 65 | 57 => {
-            let res: i32 = !((*(*state).top.p.offset(-(1 as isize))).val.tag                 == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.tag) == TAG_TYPE_NIL)
+            let res: i32 = !((*(*state).top.p.offset(-(1 as isize))).val.get_tag()                 == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) == TAG_TYPE_NIL)
                 as i32;
             (*state).top.p = (*state).top.p.offset(-1);
                     if res != (inst >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
@@ -15874,7 +15874,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) { unsafe {
             let io1_1: *mut TValue = &mut (*top.offset(-(2 as isize))).val;
             let io2_1: *const TValue = &mut (*top).val;
             (*io1_1).value = (*io2_1).value;
-            (*io1_1).tag = (*io2_1).tag;
+            (*io1_1).set_tag((*io2_1).get_tag());
             (*state).top.p = top.offset(-(1 as isize));
             luav_concat(state, total);
         }
@@ -15934,7 +15934,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         ))
                         .val;
                         (*io1).value = (*io2).value;
-                        (*io1).set_tag ((*io2).tag);
+                        (*io1).set_tag ((*io2).get_tag());
                         continue;
                     }
                     1 => {
@@ -15961,7 +15961,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             - ((1 << 8 + 8 + 1) - 1 >> 1);
                         let io_0: *mut TValue = &mut (*ra_1).val;
                         (*io_0).value.n = b_0 as f64;
-                        (*io_0).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                        (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         continue;
                     }
                     3 => {
@@ -15975,7 +15975,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io1_0: *mut TValue = &mut (*ra_2).val;
                         let io2_0: *const TValue = rb;
                         (*io1_0).value = (*io2_0).value;
-                        (*io1_0).tag = (*io2_0).tag;
+                        (*io1_0).set_tag((*io2_0).get_tag());
                         continue;
                     }
                     4 => {
@@ -15991,21 +15991,21 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io1_1: *mut TValue = &mut (*ra_3).val;
                         let io2_1: *const TValue = rb_0;
                         (*io1_1).value = (*io2_1).value;
-                        (*io1_1).tag = (*io2_1).tag;
+                        (*io1_1).set_tag((*io2_1).get_tag());
                         continue;
                     }
                     5 => {
                         let ra_4: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        (*ra_4).val.tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+                        (*ra_4).val.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
                         continue;
                     }
                     6 => {
                         let ra_5: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        (*ra_5).val.tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+                        (*ra_5).val.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
                         program_counter = program_counter.offset(1);
                         continue;
                     }
@@ -16013,7 +16013,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_6: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        (*ra_6).val.tag = TAG_VARIANT_BOOLEAN_TRUE;
+                        (*ra_6).val.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                         continue;
                     }
                     8 => {
@@ -16044,7 +16044,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io2_2: *const TValue =
                             (**((*cl).upvalues).as_mut_ptr().offset(b_2 as isize)).v.p;
                         (*io1_2).value = (*io2_2).value;
-                        (*io1_2).tag = (*io2_2).tag;
+                        (*io1_2).set_tag((*io2_2).get_tag());
                         continue;
                     }
                     10 => {
@@ -16058,8 +16058,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io1_3: *mut TValue = (*uv).v.p;
                         let io2_3: *const TValue = &mut (*ra_9).val;
                         (*io1_3).value = (*io2_3).value;
-                        (*io1_3).tag = (*io2_3).tag;
-                        if is_collectable((*ra_9).val.tag) {
+                        (*io1_3).set_tag((*io2_3).get_tag());
+                        if is_collectable((*ra_9).val.get_tag()) {
                             if (*uv).marked & 1 << 5 != 0
                                 && (*(*ra_9).val.value.gc).marked
                                     & (1 << 3 | 1 << 4)
@@ -16093,7 +16093,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as i32 as isize,
                         );
                         let key: *mut TString = &mut (*((*rc).value.gc as *mut GCUnion)).ts;
-                        if if !((*count_upvalues).tag == COLLECTABLE_TAG_VARIANT_TABLE)
+                        if if !((*count_upvalues).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE)
                         {
                             slot = std::ptr::null();
                             0
@@ -16102,13 +16102,13 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 &mut (*((*count_upvalues).value.gc as *mut GCUnion)).h,
                                 key,
                             );
-                            (get_tag_type((*slot).tag) != TAG_TYPE_NIL) as i32
+                            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_4: *mut TValue = &mut (*ra_10).val;
                             let io2_4: *const TValue = slot;
                             (*io1_4).value = (*io2_4).value;
-                            (*io1_4).tag = (*io2_4).tag;
+                            (*io1_4).set_tag((*io2_4).get_tag());
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -16133,9 +16133,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         ))
                         .val;
                         let n: u64;
-                        if if (*rc_0).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if if (*rc_0).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             n = (*rc_0).value.i as u64;
-                            if !((*rb_1).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                            if !((*rb_1).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                                 slot_0 = std::ptr::null();
                                 0
                             } else {
@@ -16152,20 +16152,20 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                         n as i64,
                                     )
                                 };
-                                !(get_tag_type ((*slot_0).tag) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type ((*slot_0).get_tag()) == TAG_TYPE_NIL) as i32
                             }
-                        } else if !((*rb_1).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        } else if !((*rb_1).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_0 = std::ptr::null();
                             0
                         } else {
                             slot_0 = luah_get(&mut (*((*rb_1).value.gc as *mut GCUnion)).h, rc_0);
-                            !(get_tag_type ((*slot_0).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_0).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_5: *mut TValue = &mut (*ra_11).val;
                             let io2_5: *const TValue = slot_0;
                             (*io1_5).value = (*io2_5).value;
-                            (*io1_5).tag = (*io2_5).tag;
+                            (*io1_5).set_tag((*io2_5).get_tag());
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -16187,7 +16187,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let c: i32 = (i >> 0 + 7 + 8 + 1 + 8
                             & !(!(0u32) << 8) << 0)
                             as i32;
-                        if if !((*rb_2).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        if if !((*rb_2).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_1 = std::ptr::null();
                             0
                         } else {
@@ -16200,13 +16200,13 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             } else {
                                 luah_getint(&mut (*((*rb_2).value.gc as *mut GCUnion)).h, c as i64)
                             };
-                            !(get_tag_type ((*slot_1).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_1).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_6: *mut TValue = &mut (*ra_12).val;
                             let io2_6: *const TValue = slot_1;
                             (*io1_6).value = (*io2_6).value;
-                            (*io1_6).tag = (*io2_6).tag;
+                            (*io1_6).set_tag((*io2_6).get_tag());
                         } else {
                             let mut key_0: TValue = TValue {
                                 value: Value {
@@ -16216,7 +16216,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             };
                             let io_1: *mut TValue = &mut key_0;
                             (*io_1).value.i = c as i64;
-                            (*io_1).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
                             luav_finishget(state, rb_2, &mut key_0, ra_12, slot_1);
@@ -16239,7 +16239,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as i32 as isize,
                         );
                         let key_1: *mut TString = &mut (*((*rc_1).value.gc as *mut GCUnion)).ts;
-                        if if !((*rb_3).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        if if !((*rb_3).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_2 = std::ptr::null();
                             0
                         } else {
@@ -16247,13 +16247,13 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 &mut (*((*rb_3).value.gc as *mut GCUnion)).h,
                                 key_1,
                             );
-                            !(get_tag_type ((*slot_2).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_2).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_7: *mut TValue = &mut (*ra_13).val;
                             let io2_7: *const TValue = slot_2;
                             (*io1_7).value = (*io2_7).value;
-                            (*io1_7).tag = (*io2_7).tag;
+                            (*io1_7).set_tag((*io2_7).get_tag());
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -16288,7 +16288,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             .val
                         };
                         let key_2: *mut TString = &mut (*((*rb_4).value.gc as *mut GCUnion)).ts;
-                        if if !((*upval_0).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        if if !((*upval_0).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_3 = std::ptr::null();
                             0
                         } else {
@@ -16296,14 +16296,14 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 &mut (*((*upval_0).value.gc as *mut GCUnion)).h,
                                 key_2,
                             );
-                            !(get_tag_type ((*slot_3).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_3).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_8: *mut TValue = slot_3 as *mut TValue;
                             let io2_8: *const TValue = rc_2;
                             (*io1_8).value = (*io2_8).value;
-                            (*io1_8).tag = (*io2_8).tag;
-                            if is_collectable((*rc_2).tag) {
+                            (*io1_8).set_tag((*io2_8).get_tag());
+                            if is_collectable((*rc_2).get_tag()) {
                                 if (*(*upval_0).value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_2).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16347,9 +16347,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             .val
                         };
                         let n_0: u64;
-                        if if (*rb_5).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if if (*rb_5).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             n_0 = (*rb_5).value.i as u64;
-                            if !((*ra_14).val.tag == COLLECTABLE_TAG_VARIANT_TABLE)
+                            if !((*ra_14).val.get_tag() == COLLECTABLE_TAG_VARIANT_TABLE)
                             {
                                 slot_4 = std::ptr::null();
                                 0
@@ -16367,23 +16367,23 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                         n_0 as i64,
                                     )
                                 };
-                                (get_tag_type ((*slot_4).tag) != TAG_TYPE_NIL) as i32
+                                (get_tag_type ((*slot_4).get_tag()) != TAG_TYPE_NIL) as i32
                             }
-                        } else if !((*ra_14).val.tag == COLLECTABLE_TAG_VARIANT_TABLE)
+                        } else if !((*ra_14).val.get_tag() == COLLECTABLE_TAG_VARIANT_TABLE)
                         {
                             slot_4 = std::ptr::null();
                             0
                         } else {
                             slot_4 =
                                 luah_get(&mut (*((*ra_14).val.value.gc as *mut GCUnion)).h, rb_5);
-                            !(get_tag_type ((*slot_4).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_4).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_9: *mut TValue = slot_4 as *mut TValue;
                             let io2_9: *const TValue = rc_3;
                             (*io1_9).value = (*io2_9).value;
-                            (*io1_9).tag = (*io2_9).tag;
-                            if is_collectable((*rc_3).tag) {
+                            (*io1_9).set_tag((*io2_9).get_tag());
+                            if is_collectable((*rc_3).get_tag()) {
                                 if (*(*ra_14).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_3).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16423,7 +16423,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             ))
                             .val
                         };
-                        if if !((*ra_15).val.tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        if if !((*ra_15).val.get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_5 = std::ptr::null();
                             0
                         } else {
@@ -16439,14 +16439,14 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                     c_0 as i64,
                                 )
                             };
-                            !(get_tag_type ((*slot_5).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_5).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_10: *mut TValue = slot_5 as *mut TValue;
                             let io2_10: *const TValue = rc_4;
                             (*io1_10).value = (*io2_10).value;
-                            (*io1_10).tag = (*io2_10).tag;
-                            if is_collectable((*rc_4).tag) {
+                            (*io1_10).set_tag((*io2_10).get_tag());
+                            if is_collectable((*rc_4).get_tag()) {
                                 if (*(*ra_15).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_4).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16466,7 +16466,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             };
                             let io_2: *mut TValue = &mut key_3;
                             (*io_2).value.i = c_0 as i64;
-                            (*io_2).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_2).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
                             luav_finishset(state, &mut (*ra_15).val, &mut key_3, rc_4, slot_5);
@@ -16498,7 +16498,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             .val
                         };
                         let key_4: *mut TString = &mut (*((*rb_6).value.gc as *mut GCUnion)).ts;
-                        if if !((*ra_16).val.tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        if if !((*ra_16).val.get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_6 = std::ptr::null();
                             0
                         } else {
@@ -16506,14 +16506,14 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 &mut (*((*ra_16).val.value.gc as *mut GCUnion)).h,
                                 key_4,
                             );
-                            !(get_tag_type ((*slot_6).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_6).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_11: *mut TValue = slot_6 as *mut TValue;
                             let io2_11: *const TValue = rc_5;
                             (*io1_11).value = (*io2_11).value;
-                            (*io1_11).tag = (*io2_11).tag;
-                            if is_collectable((*rc_5).tag) {
+                            (*io1_11).set_tag((*io2_11).get_tag());
+                            if is_collectable((*rc_5).get_tag()) {
                                 if (*(*ra_16).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_5).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16557,7 +16557,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io_3: *mut TValue = &mut (*ra_17).val;
                         let x_: *mut Table = t;
                         (*io_3).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                        (*io_3).tag = COLLECTABLE_TAG_VARIANT_TABLE;
+                        (*io_3).set_tag(COLLECTABLE_TAG_VARIANT_TABLE);
                         if b_3 != 0 || c_1 != 0 {
                             luah_resize(state, t, c_1 as u32, b_3 as u32);
                         }
@@ -16597,20 +16597,20 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io1_12: *mut TValue = &mut (*ra_18.offset(1 as isize)).val;
                         let io2_12: *const TValue = rb_7;
                         (*io1_12).value = (*io2_12).value;
-                        (*io1_12).tag = (*io2_12).tag;
-                        if if !((*rb_7).tag == COLLECTABLE_TAG_VARIANT_TABLE) {
+                        (*io1_12).set_tag((*io2_12).get_tag());
+                        if if !((*rb_7).get_tag() == COLLECTABLE_TAG_VARIANT_TABLE) {
                             slot_7 = std::ptr::null();
                             0
                         } else {
                             slot_7 =
                                 luah_getstr(&mut (*((*rb_7).value.gc as *mut GCUnion)).h, key_5);
-                            !(get_tag_type ((*slot_7).tag) == TAG_TYPE_NIL) as i32
+                            !(get_tag_type ((*slot_7).get_tag()) == TAG_TYPE_NIL) as i32
                         } != 0
                         {
                             let io1_13: *mut TValue = &mut (*ra_18).val;
                             let io2_13: *const TValue = slot_7;
                             (*io1_13).value = (*io2_13).value;
-                            (*io1_13).tag = (*io2_13).tag;
+                            (*io1_13).set_tag((*io2_13).get_tag());
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -16632,19 +16632,19 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             & !(!(0u32) << 8) << 0)
                             as i32
                             - ((1 << 8) - 1 >> 1);
-                        if (*v1).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*v1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             let iv1: i64 = (*v1).value.i;
                             program_counter = program_counter.offset(1);
                             let io_4: *mut TValue = &mut (*ra_19).val;
                             (*io_4).value.i = (iv1 as u64).wrapping_add(imm as u64) as i64;
-                            (*io_4).tag = TAG_VARIANT_NUMERIC_INTEGER;
-                        } else if (*v1).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            (*io_4).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                        } else if (*v1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             let nb: f64 = (*v1).value.n;
                             let fimm: f64 = imm as f64;
                             program_counter = program_counter.offset(1);
                             let io_5: *mut TValue = &mut (*ra_19).val;
                             (*io_5).value.n = nb + fimm;
-                            (*io_5).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_5).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         }
                         continue;
                     }
@@ -16661,34 +16661,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_20: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_0).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_0).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1: i64 = (*v1_0).value.i;
                             let i2: i64 = (*v2).value.i;
                             program_counter = program_counter.offset(1);
                             let io_6: *mut TValue = &mut (*ra_20).val;
                             (*io_6).value.i = (i1 as u64).wrapping_add(i2 as u64) as i64;
-                            (*io_6).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_6).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1: f64 = 0.0;
                             let mut n2: f64 = 0.0;
-                            if (if (*v1_0).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_0).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1 = (*v1_0).value.n;
                                 1
                             } else {
-                                if (*v1_0).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_0).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1 = (*v1_0).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2 = (*v2).value.n;
                                     1
                                 } else {
-                                    if (*v2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2 = (*v2).value.i as f64;
                                         1
                                     } else {
@@ -16699,7 +16699,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_7: *mut TValue = &mut (*ra_20).val;
                                 (*io_7).value.n = n1 + n2;
-                                (*io_7).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_7).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -16717,34 +16717,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_21: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_1).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_0).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_0).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_0: i64 = (*v1_1).value.i;
                             let i2_0: i64 = (*v2_0).value.i;
                             program_counter = program_counter.offset(1);
                             let io_8: *mut TValue = &mut (*ra_21).val;
                             (*io_8).value.i = (i1_0 as u64).wrapping_sub(i2_0 as u64) as i64;
-                            (*io_8).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_8).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_0: f64 = 0.0;
                             let mut n2_0: f64 = 0.0;
-                            if (if (*v1_1).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_0 = (*v1_1).value.n;
                                 1
                             } else {
-                                if (*v1_1).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_0 = (*v1_1).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_0).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_0).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_0 = (*v2_0).value.n;
                                     1
                                 } else {
-                                    if (*v2_0).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_0).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_0 = (*v2_0).value.i as f64;
                                         1
                                     } else {
@@ -16755,7 +16755,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_9: *mut TValue = &mut (*ra_21).val;
                                 (*io_9).value.n = n1_0 - n2_0;
-                                (*io_9).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_9).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -16773,34 +16773,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_22: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_2).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_1).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_1: i64 = (*v1_2).value.i;
                             let i2_1: i64 = (*v2_1).value.i;
                             program_counter = program_counter.offset(1);
                             let io_10: *mut TValue = &mut (*ra_22).val;
                             (*io_10).value.i = (i1_1 as u64).wrapping_mul(i2_1 as u64) as i64;
-                            (*io_10).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_10).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_1: f64 = 0.0;
                             let mut n2_1: f64 = 0.0;
-                            if (if (*v1_2).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_1 = (*v1_2).value.n;
                                 1
                             } else {
-                                if (*v1_2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_1 = (*v1_2).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_1).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_1 = (*v2_1).value.n;
                                     1
                                 } else {
-                                    if (*v2_1).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_1 = (*v2_1).value.i as f64;
                                         1
                                     } else {
@@ -16811,7 +16811,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_11: *mut TValue = &mut (*ra_22).val;
                                 (*io_11).value.n = n1_1 * n2_1;
-                                (*io_11).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_11).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -16831,34 +16831,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_23: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_3).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_2).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_3).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_2: i64 = (*v1_3).value.i;
                             let i2_2: i64 = (*v2_2).value.i;
                             program_counter = program_counter.offset(1);
                             let io_12: *mut TValue = &mut (*ra_23).val;
                             (*io_12).value.i = luav_mod(state, i1_2, i2_2);
-                            (*io_12).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_12).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_2: f64 = 0.0;
                             let mut n2_2: f64 = 0.0;
-                            if (if (*v1_3).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_3).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_2 = (*v1_3).value.n;
                                 1
                             } else {
-                                if (*v1_3).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_3).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_2 = (*v1_3).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_2).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_2 = (*v2_2).value.n;
                                     1
                                 } else {
-                                    if (*v2_2).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_2 = (*v2_2).value.i as f64;
                                         1
                                     } else {
@@ -16869,7 +16869,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_13: *mut TValue = &mut (*ra_23).val;
                                 (*io_13).value.n = luav_modf(state, n1_2, n2_2);
-                                (*io_13).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_13).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -16889,22 +16889,22 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         );
                         let mut n1_3: f64 = 0.0;
                         let mut n2_3: f64 = 0.0;
-                        if (if (*v1_4).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        if (if (*v1_4).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             n1_3 = (*v1_4).value.n;
                             1
                         } else {
-                            if (*v1_4).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                            if (*v1_4).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                 n1_3 = (*v1_4).value.i as f64;
                                 1
                             } else {
                                 0
                             }
                         }) != 0
-                            && (if (*v2_3).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            && (if (*v2_3).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n2_3 = (*v2_3).value.n;
                                 1
                             } else {
-                                if (*v2_3).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v2_3).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n2_3 = (*v2_3).value.i as f64;
                                     1
                                 } else {
@@ -16919,7 +16919,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             } else {
                                 n1_3.powf(n2_3)
                             };
-                            (*io_14).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_14).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         }
                         continue;
                     }
@@ -16938,22 +16938,22 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         );
                         let mut n1_4: f64 = 0.0;
                         let mut n2_4: f64 = 0.0;
-                        if (if (*v1_5).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        if (if (*v1_5).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             n1_4 = (*v1_5).value.n;
                             1
                         } else {
-                            if (*v1_5).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                            if (*v1_5).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                 n1_4 = (*v1_5).value.i as f64;
                                 1
                             } else {
                                 0
                             }
                         }) != 0
-                            && (if (*v2_4).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            && (if (*v2_4).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n2_4 = (*v2_4).value.n;
                                 1
                             } else {
-                                if (*v2_4).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v2_4).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n2_4 = (*v2_4).value.i as f64;
                                     1
                                 } else {
@@ -16964,7 +16964,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_15: *mut TValue = &mut (*ra_25).val;
                             (*io_15).value.n = n1_4 / n2_4;
-                            (*io_15).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_15).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         }
                         continue;
                     }
@@ -16983,34 +16983,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_26: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_6).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_5).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_6).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_5).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_3: i64 = (*v1_6).value.i;
                             let i2_3: i64 = (*v2_5).value.i;
                             program_counter = program_counter.offset(1);
                             let io_16: *mut TValue = &mut (*ra_26).val;
                             (*io_16).value.i = luav_idiv(state, i1_3, i2_3);
-                            (*io_16).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_16).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_5: f64 = 0.0;
                             let mut n2_5: f64 = 0.0;
-                            if (if (*v1_6).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_6).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_5 = (*v1_6).value.n;
                                 1
                             } else {
-                                if (*v1_6).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_6).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_5 = (*v1_6).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_5).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_5).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_5 = (*v2_5).value.n;
                                     1
                                 } else {
-                                    if (*v2_5).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_5).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_5 = (*v2_5).value.i as f64;
                                         1
                                     } else {
@@ -17021,7 +17021,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_17: *mut TValue = &mut (*ra_26).val;
                                 (*io_17).value.n = (n1_5 / n2_5).floor();
-                                (*io_17).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_17).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17041,7 +17041,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         );
                         let mut i1_4: i64 = 0;
                         let i2_4: i64 = (*v2_6).value.i;
-                        if if (((*v1_7).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*v1_7).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17054,7 +17054,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_18: *mut TValue = &mut (*ra_27).val;
                             (*io_18).value.i = (i1_4 as u64 & i2_4 as u64) as i64;
-                            (*io_18).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_18).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17073,7 +17073,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         );
                         let mut i1_5: i64 = 0;
                         let i2_5: i64 = (*v2_7).value.i;
-                        if if (((*v1_8).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*v1_8).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17086,7 +17086,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_19: *mut TValue = &mut (*ra_28).val;
                             (*io_19).value.i = (i1_5 as u64 | i2_5 as u64) as i64;
-                            (*io_19).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_19).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17105,7 +17105,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         );
                         let mut i1_6: i64 = 0;
                         let i2_6: i64 = (*v2_8).value.i;
-                        if if (((*v1_9).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*v1_9).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17118,7 +17118,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_20: *mut TValue = &mut (*ra_29).val;
                             (*io_20).value.i = (i1_6 as u64 ^ i2_6 as u64) as i64;
-                            (*io_20).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_20).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17136,7 +17136,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             as i32
                             - ((1 << 8) - 1 >> 1);
                         let mut ib: i64 = 0;
-                        if if (((*rb_8).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*rb_8).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17149,7 +17149,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_21: *mut TValue = &mut (*ra_30).val;
                             (*io_21).value.i = luav_shiftl(ib, -ic as i64);
-                            (*io_21).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_21).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17167,7 +17167,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             as i32
                             - ((1 << 8) - 1 >> 1);
                         let mut ib_0: i64 = 0;
-                        if if (((*rb_9).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*rb_9).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17180,7 +17180,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_22: *mut TValue = &mut (*ra_31).val;
                             (*io_22).value.i = luav_shiftl(ic_0 as i64, ib_0);
-                            (*io_22).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_22).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17198,34 +17198,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_32: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_10).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_9).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_10).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_9).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_7: i64 = (*v1_10).value.i;
                             let i2_7: i64 = (*v2_9).value.i;
                             program_counter = program_counter.offset(1);
                             let io_23: *mut TValue = &mut (*ra_32).val;
                             (*io_23).value.i = (i1_7 as u64).wrapping_add(i2_7 as u64) as i64;
-                            (*io_23).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_23).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_6: f64 = 0.0;
                             let mut n2_6: f64 = 0.0;
-                            if (if (*v1_10).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_10).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_6 = (*v1_10).value.n;
                                 1
                             } else {
-                                if (*v1_10).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_10).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_6 = (*v1_10).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_9).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_9).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_6 = (*v2_9).value.n;
                                     1
                                 } else {
-                                    if (*v2_9).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_9).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_6 = (*v2_9).value.i as f64;
                                         1
                                     } else {
@@ -17236,7 +17236,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_24: *mut TValue = &mut (*ra_32).val;
                                 (*io_24).value.n = n1_6 + n2_6;
-                                (*io_24).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_24).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17255,34 +17255,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_33: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_11).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_10).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_10).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_8: i64 = (*v1_11).value.i;
                             let i2_8: i64 = (*v2_10).value.i;
                             program_counter = program_counter.offset(1);
                             let io_25: *mut TValue = &mut (*ra_33).val;
                             (*io_25).value.i = (i1_8 as u64).wrapping_sub(i2_8 as u64) as i64;
-                            (*io_25).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_25).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_7: f64 = 0.0;
                             let mut n2_7: f64 = 0.0;
-                            if (if (*v1_11).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_11).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_7 = (*v1_11).value.n;
                                 1
                             } else {
-                                if (*v1_11).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_7 = (*v1_11).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_10).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_10).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_7 = (*v2_10).value.n;
                                     1
                                 } else {
-                                    if (*v2_10).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_10).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_7 = (*v2_10).value.i as f64;
                                         1
                                     } else {
@@ -17293,7 +17293,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_26: *mut TValue = &mut (*ra_33).val;
                                 (*io_26).value.n = n1_7 - n2_7;
-                                (*io_26).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_26).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17312,34 +17312,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_34: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_12).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_11).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_12).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_9: i64 = (*v1_12).value.i;
                             let i2_9: i64 = (*v2_11).value.i;
                             program_counter = program_counter.offset(1);
                             let io_27: *mut TValue = &mut (*ra_34).val;
                             (*io_27).value.i = (i1_9 as u64).wrapping_mul(i2_9 as u64) as i64;
-                            (*io_27).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_27).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_8: f64 = 0.0;
                             let mut n2_8: f64 = 0.0;
-                            if (if (*v1_12).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_12).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_8 = (*v1_12).value.n;
                                 1
                             } else {
-                                if (*v1_12).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_12).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_8 = (*v1_12).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_11).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_11).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_8 = (*v2_11).value.n;
                                     1
                                 } else {
-                                    if (*v2_11).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_8 = (*v2_11).value.i as f64;
                                         1
                                     } else {
@@ -17350,7 +17350,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_28: *mut TValue = &mut (*ra_34).val;
                                 (*io_28).value.n = n1_8 * n2_8;
-                                (*io_28).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_28).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17371,34 +17371,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_35: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_13).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_12).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_13).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_12).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_10: i64 = (*v1_13).value.i;
                             let i2_10: i64 = (*v2_12).value.i;
                             program_counter = program_counter.offset(1);
                             let io_29: *mut TValue = &mut (*ra_35).val;
                             (*io_29).value.i = luav_mod(state, i1_10, i2_10);
-                            (*io_29).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_29).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_9: f64 = 0.0;
                             let mut n2_9: f64 = 0.0;
-                            if (if (*v1_13).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_13).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_9 = (*v1_13).value.n;
                                 1
                             } else {
-                                if (*v1_13).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_13).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_9 = (*v1_13).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_12).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_12).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_9 = (*v2_12).value.n;
                                     1
                                 } else {
-                                    if (*v2_12).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_12).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_9 = (*v2_12).value.i as f64;
                                         1
                                     } else {
@@ -17409,7 +17409,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_30: *mut TValue = &mut (*ra_35).val;
                                 (*io_30).value.n = luav_modf(state, n1_9, n2_9);
-                                (*io_30).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_30).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17430,22 +17430,22 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut n1_10: f64 = 0.0;
                         let mut n2_10: f64 = 0.0;
-                        if (if (*v1_14).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        if (if (*v1_14).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             n1_10 = (*v1_14).value.n;
                             1
                         } else {
-                            if (*v1_14).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                            if (*v1_14).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                 n1_10 = (*v1_14).value.i as f64;
                                 1
                             } else {
                                 0
                             }
                         }) != 0
-                            && (if (*v2_13).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            && (if (*v2_13).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n2_10 = (*v2_13).value.n;
                                 1
                             } else {
-                                if (*v2_13).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v2_13).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n2_10 = (*v2_13).value.i as f64;
                                     1
                                 } else {
@@ -17460,7 +17460,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             } else {
                                 n1_10.powf(n2_10)
                             };
-                            (*io_31).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_31).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         }
                         continue;
                     }
@@ -17480,22 +17480,22 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut n1_11: f64 = 0.0;
                         let mut n2_11: f64 = 0.0;
-                        if (if (*v1_15).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        if (if (*v1_15).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             n1_11 = (*v1_15).value.n;
                             1
                         } else {
-                            if (*v1_15).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                            if (*v1_15).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                 n1_11 = (*v1_15).value.i as f64;
                                 1
                             } else {
                                 0
                             }
                         }) != 0
-                            && (if (*v2_14).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            && (if (*v2_14).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n2_11 = (*v2_14).value.n;
                                 1
                             } else {
-                                if (*v2_14).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v2_14).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n2_11 = (*v2_14).value.i as f64;
                                     1
                                 } else {
@@ -17506,7 +17506,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_32: *mut TValue = &mut (*ra_37).val;
                             (*io_32).value.n = n1_11 / n2_11;
-                            (*io_32).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_32).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         }
                         continue;
                     }
@@ -17526,34 +17526,34 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_38: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*v1_16).tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*v2_15).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*v1_16).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*v2_15).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let i1_11: i64 = (*v1_16).value.i;
                             let i2_11: i64 = (*v2_15).value.i;
                             program_counter = program_counter.offset(1);
                             let io_33: *mut TValue = &mut (*ra_38).val;
                             (*io_33).value.i = luav_idiv(state, i1_11, i2_11);
-                            (*io_33).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_33).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             let mut n1_12: f64 = 0.0;
                             let mut n2_12: f64 = 0.0;
-                            if (if (*v1_16).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            if (if (*v1_16).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                 n1_12 = (*v1_16).value.n;
                                 1
                             } else {
-                                if (*v1_16).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                if (*v1_16).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                     n1_12 = (*v1_16).value.i as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_15).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                                && (if (*v2_15).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                                     n2_12 = (*v2_15).value.n;
                                     1
                                 } else {
-                                    if (*v2_15).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                                    if (*v2_15).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                                         n2_12 = (*v2_15).value.i as f64;
                                         1
                                     } else {
@@ -17564,7 +17564,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_34: *mut TValue = &mut (*ra_38).val;
                                 (*io_34).value.n = (n1_12 / n2_12).floor();
-                                (*io_34).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                                (*io_34).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             }
                         }
                         continue;
@@ -17585,7 +17585,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut i1_12: i64 = 0;
                         let mut i2_12: i64 = 0;
-                        if (if (((*v1_17).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                        if (if (((*v1_17).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                             as i32 as i64
                             != 0
                         {
@@ -17594,7 +17594,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         } else {
                             luav_tointegerns(v1_17, &mut i1_12, F2I::Equal)
                         }) != 0
-                            && (if (((*v2_16).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                            && (if (((*v2_16).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                                 as i32 as i64
                                 != 0
                             {
@@ -17607,7 +17607,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_35: *mut TValue = &mut (*ra_39).val;
                             (*io_35).value.i = (i1_12 as u64 & i2_12 as u64) as i64;
-                            (*io_35).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_35).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17627,7 +17627,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut i1_13: i64 = 0;
                         let mut i2_13: i64 = 0;
-                        if (if (((*v1_18).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                        if (if (((*v1_18).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                             as i32 as i64
                             != 0
                         {
@@ -17636,7 +17636,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         } else {
                             luav_tointegerns(v1_18, &mut i1_13, F2I::Equal)
                         }) != 0
-                            && (if (((*v2_17).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                            && (if (((*v2_17).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                                 as i32 as i64
                                 != 0
                             {
@@ -17649,7 +17649,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_36: *mut TValue = &mut (*ra_40).val;
                             (*io_36).value.i = (i1_13 as u64 | i2_13 as u64) as i64;
-                            (*io_36).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_36).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17669,7 +17669,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut i1_14: i64 = 0;
                         let mut i2_14: i64 = 0;
-                        if (if (((*v1_19).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                        if (if (((*v1_19).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                             as i32 as i64
                             != 0
                         {
@@ -17678,7 +17678,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         } else {
                             luav_tointegerns(v1_19, &mut i1_14, F2I::Equal)
                         }) != 0
-                            && (if (((*v2_18).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                            && (if (((*v2_18).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                                 as i32 as i64
                                 != 0
                             {
@@ -17691,7 +17691,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_37: *mut TValue = &mut (*ra_41).val;
                             (*io_37).value.i = (i1_14 as u64 ^ i2_14 as u64) as i64;
-                            (*io_37).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_37).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17711,7 +17711,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut i1_15: i64 = 0;
                         let mut i2_15: i64 = 0;
-                        if (if (((*v1_20).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                        if (if (((*v1_20).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                             as i32 as i64
                             != 0
                         {
@@ -17720,7 +17720,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         } else {
                             luav_tointegerns(v1_20, &mut i1_15, F2I::Equal)
                         }) != 0
-                            && (if (((*v2_19).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                            && (if (((*v2_19).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                                 as i32 as i64
                                 != 0
                             {
@@ -17734,7 +17734,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io_38: *mut TValue = &mut (*ra_42).val;
                             (*io_38).value.i =
                                 luav_shiftl(i1_15, (0u64).wrapping_sub(i2_15 as u64) as i64);
-                            (*io_38).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_38).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17754,7 +17754,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         .val;
                         let mut i1_16: i64 = 0;
                         let mut i2_16: i64 = 0;
-                        if (if (((*v1_21).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                        if (if (((*v1_21).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                             as i32 as i64
                             != 0
                         {
@@ -17763,7 +17763,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         } else {
                             luav_tointegerns(v1_21, &mut i1_16, F2I::Equal)
                         }) != 0
-                            && (if (((*v2_20).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
+                            && (if (((*v2_20).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0)
                                 as i32 as i64
                                 != 0
                             {
@@ -17776,7 +17776,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             program_counter = program_counter.offset(1);
                             let io_39: *mut TValue = &mut (*ra_43).val;
                             (*io_39).value.i = luav_shiftl(i1_16, i2_16);
-                            (*io_39).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_39).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         }
                         continue;
                     }
@@ -17864,15 +17864,15 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         ))
                         .val;
                         let mut nb_0: f64 = 0.0;
-                        if (*rb_11).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*rb_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             let ib_1: i64 = (*rb_11).value.i;
                             let io_40: *mut TValue = &mut (*ra_47).val;
                             (*io_40).value.i = (0u64).wrapping_sub(ib_1 as u64) as i64;
-                            (*io_40).tag = TAG_VARIANT_NUMERIC_INTEGER;
-                        } else if if (*rb_11).tag == TAG_VARIANT_NUMERIC_NUMBER {
+                            (*io_40).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                        } else if if (*rb_11).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             nb_0 = (*rb_11).value.n;
                             1
-                        } else if (*rb_11).tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        } else if (*rb_11).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             nb_0 = (*rb_11).value.i as f64;
                             1
                         } else {
@@ -17881,7 +17881,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         {
                             let io_41: *mut TValue = &mut (*ra_47).val;
                             (*io_41).value.n = -nb_0;
-                            (*io_41).tag = TAG_VARIANT_NUMERIC_NUMBER;
+                            (*io_41).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -17900,7 +17900,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         ))
                         .val;
                         let mut ib_2: i64 = 0;
-                        if if (((*rb_12).tag == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        if if (((*rb_12).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
                             as i64
                             != 0
                         {
@@ -17912,7 +17912,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         {
                             let io_42: *mut TValue = &mut (*ra_48).val;
                             (*io_42).value.i = (!(0u64) ^ ib_2 as u64) as i64;
-                            (*io_42).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                            (*io_42).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                         } else {
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
@@ -17930,12 +17930,12 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as isize,
                         ))
                         .val;
-                        if (*rb_13).tag == TAG_VARIANT_BOOLEAN_FALSE
-                            || get_tag_type ((*rb_13).tag) == TAG_TYPE_NIL
+                        if (*rb_13).get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                            || get_tag_type ((*rb_13).get_tag()) == TAG_TYPE_NIL
                         {
-                            (*ra_49).val.tag = TAG_VARIANT_BOOLEAN_TRUE;
+                            (*ra_49).val.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                         } else {
-                            (*ra_49).val.tag = (TAG_VARIANT_BOOLEAN_FALSE) as u8;
+                            (*ra_49).val.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
                         }
                         continue;
                     }
@@ -18043,14 +18043,14 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as isize,
                         ))
                         .val;
-                        if (*ra_55).val.tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*rb_15).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*ra_55).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*rb_15).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let ia: i64 = (*ra_55).val.value.i;
                             let ib_3: i64 = (*rb_15).value.i;
                             cond_1 = (ia < ib_3) as i32;
-                        } else if get_tag_type ((*ra_55).val.tag) == TAG_TYPE_NUMERIC
-                            && get_tag_type ((*rb_15).tag) == TAG_TYPE_NUMERIC
+                        } else if get_tag_type ((*ra_55).val.get_tag()) == TAG_TYPE_NUMERIC
+                            && get_tag_type ((*rb_15).get_tag()) == TAG_TYPE_NUMERIC
                         {
                             cond_1 = ltnum(&mut (*ra_55).val, rb_15);
                         } else {
@@ -18084,14 +18084,14 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as isize,
                         ))
                         .val;
-                        if (*ra_56).val.tag == TAG_VARIANT_NUMERIC_INTEGER
-                            && (*rb_16).tag == TAG_VARIANT_NUMERIC_INTEGER
+                        if (*ra_56).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                            && (*rb_16).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
                         {
                             let ia_0: i64 = (*ra_56).val.value.i;
                             let ib_4: i64 = (*rb_16).value.i;
                             cond_2 = (ia_0 <= ib_4) as i32;
-                        } else if get_tag_type((*ra_56).val.tag) == TAG_TYPE_NUMERIC
-                            && get_tag_type((*rb_16).tag) == TAG_TYPE_NUMERIC
+                        } else if get_tag_type((*ra_56).val.get_tag()) == TAG_TYPE_NUMERIC
+                            && get_tag_type((*rb_16).get_tag()) == TAG_TYPE_NUMERIC
                         {
                             cond_2 = lenum(&mut (*ra_56).val, rb_16);
                         } else {
@@ -18148,9 +18148,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let im: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
-                        if (*ra_58).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_58).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             cond_4 = ((*ra_58).val.value.i == im as i64) as i32;
-                        } else if (*ra_58).val.tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        } else if (*ra_58).val.get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             cond_4 = ((*ra_58).val.value.n == im as f64) as i32;
                         } else {
                             cond_4 = 0;
@@ -18178,9 +18178,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let im_0: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
-                        if (*ra_59).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_59).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             cond_5 = ((*ra_59).val.value.i < im_0 as i64) as i32;
-                        } else if (*ra_59).val.tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        } else if (*ra_59).val.get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             let fa: f64 = (*ra_59).val.value.n;
                             let fim: f64 = im_0 as f64;
                             cond_5 = (fa < fim) as i32;
@@ -18216,9 +18216,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let im_1: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
-                        if (*ra_60).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_60).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             cond_6 = ((*ra_60).val.value.i <= im_1 as i64) as i32;
-                        } else if (*ra_60).val.tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        } else if (*ra_60).val.get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             let fa_0: f64 = (*ra_60).val.value.n;
                             let fim_0: f64 = im_1 as f64;
                             cond_6 = (fa_0 <= fim_0) as i32;
@@ -18254,9 +18254,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let im_2: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
-                        if (*ra_61).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_61).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             cond_7 = ((*ra_61).val.value.i > im_2 as i64) as i32;
-                        } else if (*ra_61).val.tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        } else if (*ra_61).val.get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             let fa_1: f64 = (*ra_61).val.value.n;
                             let fim_1: f64 = im_2 as f64;
                             cond_7 = (fa_1 > fim_1) as i32;
@@ -18298,9 +18298,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let im_3: i32 =
                             (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32
                                 - ((1 << 8) - 1 >> 1);
-                        if (*ra_62).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_62).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             cond_8 = ((*ra_62).val.value.i >= im_3 as i64) as i32;
-                        } else if (*ra_62).val.tag == TAG_VARIANT_NUMERIC_NUMBER {
+                        } else if (*ra_62).val.get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                             let fa_2: f64 = (*ra_62).val.value.n;
                             let fim_2: f64 = im_3 as f64;
                             cond_8 = (fa_2 >= fim_2) as i32;
@@ -18338,8 +18338,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_63: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        let cond_9: i32 = !((*ra_63).val.tag == TAG_VARIANT_BOOLEAN_FALSE
-                            || get_tag_type((*ra_63).val.tag) == TAG_TYPE_NIL)
+                        let cond_9: i32 = !((*ra_63).val.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                            || get_tag_type((*ra_63).val.get_tag()) == TAG_TYPE_NIL)
                             as i32;
                         if cond_9 != (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
                             program_counter = program_counter.offset(1);
@@ -18365,8 +18365,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as isize,
                         ))
                         .val;
-                        if ((*rb_18).tag == TAG_VARIANT_BOOLEAN_FALSE
-                            || get_tag_type ((*rb_18).tag) == TAG_TYPE_NIL)
+                        if ((*rb_18).get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                            || get_tag_type ((*rb_18).get_tag()) == TAG_TYPE_NIL)
                             as i32
                             == (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32
                         {
@@ -18375,7 +18375,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io1_14: *mut TValue = &mut (*ra_64).val;
                             let io2_14: *const TValue = rb_18;
                             (*io1_14).value = (*io2_14).value;
-                            (*io1_14).tag = (*io2_14).tag;
+                            (*io1_14).set_tag((*io2_14).get_tag());
                             let ni_9: u32 = *program_counter;
                             program_counter = program_counter.offset(
                                 ((ni_9 >> 0 + 7
@@ -18523,7 +18523,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                     &mut (*base.offset(-(1 as isize))).val;
                                 let io2_15: *const TValue = &mut (*ra_70).val;
                                 (*io1_15).value = (*io2_15).value;
-                                (*io1_15).tag = (*io2_15).tag;
+                                (*io1_15).set_tag((*io2_15).get_tag());
                                 (*state).top.p = base;
                                 while ((nres_0 > 1) as i32 != 0) as i32 as i64 != 0 {
                                     let fresh142 = (*state).top.p;
@@ -18539,7 +18539,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let ra_71: StkId = base.offset(
                             (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize,
                         );
-                        if (*ra_71.offset(2 as isize)).val.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                        if (*ra_71.offset(2 as isize)).val.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                             let count: u64 = (*ra_71.offset(1 as isize)).val.value.i as u64;
                             if count > 0u64 {
                                 let step: i64 = (*ra_71.offset(2 as isize)).val.value.i;
@@ -18553,7 +18553,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let io_45: *mut TValue =
                                     &mut (*ra_71.offset(3 as isize)).val;
                                 (*io_45).value.i = index;
-                                (*io_45).tag = TAG_VARIANT_NUMERIC_INTEGER;
+                                (*io_45).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                                 program_counter = program_counter.offset(
                                     -((i >> 0 + 7 + 8
                                         & !(!(0u32) << 8 + 8 + 1) << 0)
@@ -18644,9 +18644,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 as *mut TValue;
                             let io2_17: *const TValue = val;
                             (*io1_17).value = (*io2_17).value;
-                            (*io1_17).tag = (*io2_17).tag;
+                            (*io1_17).set_tag((*io2_17).get_tag());
                             last = last.wrapping_sub(1);
-                            if is_collectable((*val).tag) {
+                            if is_collectable((*val).get_tag()) {
                                 if (*(h as *mut GCUnion)).gc.marked & 1 << 5 != 0
                                     && (*(*val).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -18745,11 +18745,11 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                 }
                 let ra_75: StkId =
                     base.offset((i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 as isize);
-                if get_tag_type ((*ra_75.offset(4 as isize)).val.tag) != TAG_TYPE_NIL {
+                if get_tag_type ((*ra_75.offset(4 as isize)).val.get_tag()) != TAG_TYPE_NIL {
                     let io1_16: *mut TValue = &mut (*ra_75.offset(2 as isize)).val;
                     let io2_16: *const TValue = &mut (*ra_75.offset(4 as isize)).val;
                     (*io1_16).value = (*io2_16).value;
-                    (*io1_16).tag = (*io2_16).tag;
+                    (*io1_16).set_tag((*io2_16).get_tag());
                     program_counter = program_counter.offset(
                         -((i >> 0 + 7 + 8 & !(!(0u32) << 8 + 8 + 1) << 0)
                             as i32 as isize),

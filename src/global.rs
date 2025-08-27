@@ -118,7 +118,7 @@ impl Global {
         let o: *mut Object = self.gray;
         (*o).marked = (*o).marked | (1 << 5);
         self.gray = *getgclist(o);
-        match (*o).tag {
+        match (*o).get_tag() {
             TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
             TAG_VARIANT_USER => return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64,
             TAG_VARIANT_CLOSURE_L => return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64,

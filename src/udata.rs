@@ -15,6 +15,9 @@ pub struct Udata {
     pub uv: [UValue; 1],
 }
 impl TObject for Udata {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }

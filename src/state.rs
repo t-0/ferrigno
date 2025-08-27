@@ -41,11 +41,14 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl TObject for State {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
-        return self.tag;
+        self.tag
     }
     fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
+        get_tag_type(self.get_tag())
     }
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
@@ -65,16 +68,16 @@ impl State {
                     let io: *mut TValue = &mut (*old_top).val;
                     let x_: *mut TString = (*(self.global)).memerrmsg;
                     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                    (*io).tag = ((*x_).tag as i32 | (1i32) << 6i32) as u8;
+                    (*io).set_tag(set_collectable((*x_).get_tag()));
                 }
                 0 => {
-                    (*old_top).val.tag = 0;
+                    (*old_top).val.set_tag(TAG_VARIANT_NIL_NIL);
                 }
                 _ => {
                     let io1: *mut TValue = &mut (*old_top).val;
                     let io2: *const TValue = &mut (*(self.top.p).offset(-(1i32 as isize))).val;
                     (*io1).value = (*io2).value;
-                    (*io1).tag = (*io2).tag;
+                    (*io1).set_tag((*io2).get_tag());
                 }
             }
             self.top.p = old_top.offset(1);
@@ -113,9 +116,9 @@ impl State {
     pub unsafe extern "C" fn push_boolean(&mut self, x: bool) {
         unsafe {
             if x {
-                (*self.top.p).val.tag = 1u8 | 1u8 << 4u8;
+                (*self.top.p).val.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
             } else {
-                (*self.top.p).val.tag = 1u8 | 0u8 << 4u8;
+                (*self.top.p).val.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
             }
             self.top.p = self.top.p.offset(1);
         }
@@ -124,13 +127,13 @@ impl State {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.i = x;
-            (*t_value).tag = TAG_VARIANT_NUMERIC_INTEGER;
+            (*t_value).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             self.top.p = self.top.p.offset(1);
         }
     }
     pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
-            (*self.top.p).val.tag = TAG_VARIANT_NIL_NIL;
+            (*self.top.p).val.set_tag(TAG_VARIANT_NIL_NIL);
             self.top.p = self.top.p.offset(1);
         }
     }
@@ -138,7 +141,7 @@ impl State {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.p).val;
             (*t_value).value.n = x;
-            (*t_value).tag = 3u8 | 1u8 << 4u8;
+            (*t_value).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             self.top.p = self.top.p.offset(1);
         }
     }

@@ -14,6 +14,9 @@ pub struct TString {
     pub contents: [i8; 1],
 }
 impl TObject for TString {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }

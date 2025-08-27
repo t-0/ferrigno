@@ -12,6 +12,9 @@ pub struct UpValue {
     pub u: UpValueB,
 }
 impl TObject for UpValue {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }

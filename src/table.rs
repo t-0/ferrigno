@@ -18,11 +18,14 @@ pub struct Table {
     pub gc_list: *mut Object,
 }
 impl TObject for Table {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
-        return self.tag;
+        self.tag
     }
     fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
+        get_tag_type(self.get_tag())
     }
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())

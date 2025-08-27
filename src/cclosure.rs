@@ -15,6 +15,9 @@ pub struct CClosure {
     pub upvalue: [TValue; 1],
 }
 impl TObject for CClosure {
+    fn set_tag(& mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }
