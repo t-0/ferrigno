@@ -25,7 +25,7 @@ pub unsafe extern "C" fn clear(& mut self) { unsafe {
     let io: *mut TValue = &mut (*(*self.state).top.p).val;
     let ts: *mut TString = luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
     (*io).value.gc = &mut (*(ts as *mut GCUnion)).gc;
-    (*io).tag = ((*ts).tag | TAG_COLLECTABLE) as u8;
+    (*io).tag = set_collectable ((*ts).tag);
     (*self.state).top.p = (*self.state).top.p.offset(1);
     if self.is_pushed {
         luav_concat(self.state, 2);
@@ -50,7 +50,7 @@ pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64)
         let io = &mut (*(*self.state).top.p).val;
         let ts = luas_newlstr(self.state, pointer, length);
         (*io).value.gc = &mut (*(ts as *mut GCUnion)).gc;
-        (*io).tag = (*ts).tag | TAG_COLLECTABLE;
+        (*io).tag = set_collectable((*ts).tag);
         (*self.state).top.p = (*self.state).top.p.offset(1);
         if self.is_pushed {
             luav_concat(self.state, 2);

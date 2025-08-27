@@ -18,7 +18,7 @@ impl TObject for TString {
         self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
-        "TString".to_string()
+        "string".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         std::ptr::null_mut()

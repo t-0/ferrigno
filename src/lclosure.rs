@@ -16,10 +16,10 @@ pub struct LClosure {
 }
 impl TObject for LClosure {
     fn get_tag_type(&self) -> u8 {
-        self.tag & TAG_TYPE_MASK_
+        return get_tag_type(self.tag);
     }
     fn get_class_name(& mut self) -> String {
-        "LClosure".to_string()
+        "lclosure".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         std::ptr::null_mut()

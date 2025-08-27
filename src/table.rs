@@ -22,7 +22,7 @@ impl TObject for Table {
         self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
-        "Table".to_string()
+        "table".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         self.metatable

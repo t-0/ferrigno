@@ -16,7 +16,7 @@ impl TObject for UpValue {
         self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
-        "UpValue".to_string()
+        "upvalue".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         std::ptr::null_mut()

@@ -40,7 +40,7 @@ impl TObject for Prototype {
         self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
-        "Prototype".to_string()
+        "prototype".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         std::ptr::null_mut()

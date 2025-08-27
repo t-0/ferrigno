@@ -19,7 +19,7 @@ impl TObject for Udata {
         self.tag & TAG_TYPE_MASK_
     }
     fn get_class_name(& mut self) -> String {
-        "Udata".to_string()
+        "user".to_string()
     }
     fn get_metatable(& mut self) -> *mut Table {
         self.metatable
