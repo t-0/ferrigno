@@ -3,13 +3,13 @@ use crate::new::*;
 #[derive(Copy, Clone)]
 pub struct Token {
     pub token: i32,
-    pub seminfo: SemanticInfo,
+    pub semantic_info: SemanticInfo,
 }
 impl New for Token {
     fn new() -> Self {
         return Token {
             token: 0,
-            seminfo: SemanticInfo::new(),
+            semantic_info: SemanticInfo::new(),
         };
     }
 }

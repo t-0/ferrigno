@@ -22,3 +22,4 @@ pub const TAG_TYPE_STATE: u8 = 0x8;
 pub const TAG_TYPE_UPVALUE: u8 = 0x9;
 pub const TAG_TYPE_PROTOTYPE: u8 = 0xA;
 pub const TAG_TYPE_MASK_: u8 = 0xF;
+pub const TAG_COLLECTABLE: u8 = 0x40;

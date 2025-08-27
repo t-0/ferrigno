@@ -11,10 +11,10 @@ use crate::zio::*;
 #[repr(C)]
 pub struct LexState {
     pub current: i32,
-    pub linenumber: i32,
-    pub lastline: i32,
+    pub line_number: i32,
+    pub last_line: i32,
     pub t: Token,
-    pub lookahead: Token,
+    pub look_ahead: Token,
     pub fs: *mut FunctionState,
     pub state: *mut State,
     pub zio: *mut ZIO,
@@ -28,10 +28,10 @@ impl New for LexState {
     fn new() -> Self {
         return LexState {
             current: 0,
-            linenumber: 0,
-            lastline: 0,
+            line_number: 0,
+            last_line: 0,
             t: Token::new(),
-            lookahead: Token::new(),
+            look_ahead: Token::new(),
             fs: std::ptr::null_mut(),
             state: std::ptr::null_mut(),
             zio: std::ptr::null_mut(),
