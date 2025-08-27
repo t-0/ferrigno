@@ -37,7 +37,7 @@ pub struct Prototype {
 }
 impl TObject for Prototype {
     fn get_tag_type(&self) -> u8 {
-        self.tag & TAG_TYPE_MASK_
+        get_tag_type(self.tag)
     }
     fn get_class_name(& mut self) -> String {
         "prototype".to_string()

@@ -10,6 +10,6 @@ impl TValue {
         self.tag
     }
     pub fn get_tag_type(&self) -> u8 {
-        self.get_tag() & TAG_TYPE_MASK_
+        get_tag_type(self.get_tag())
     }
 }
