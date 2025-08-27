@@ -2490,25 +2490,6 @@ pub unsafe extern "C" fn lua_len(state: *mut State, index: i32) { unsafe {
     (*state).top.p = (*state).top.p.offset(1);
 }}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_getallocf(
-    state: *mut State,
-    ud: *mut *mut libc::c_void,
-) -> AllocationFunction { unsafe {
-    if !ud.is_null() {
-        *ud = (*(*state).global).ud;
-    }
-    return (*(*state).global).frealloc;
-}}
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_setallocf(
-    state: *mut State,
-    f: AllocationFunction,
-    ud: *mut libc::c_void,
-) { unsafe {
-    (*(*state).global).ud = ud;
-    (*(*state).global).frealloc = f;
-}}
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_setwarnf(
     state: *mut State,
     f: WarnFunction,
@@ -2725,10 +2706,10 @@ pub unsafe extern "C" fn luai_makeseed(state: *mut State) -> u32 { unsafe {
     );
     p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32 as i32;
     let mut t_1: u64 = ::core::mem::transmute::<
-        Option<unsafe extern "C" fn(AllocationFunction, *mut libc::c_void) -> *mut State>,
+        Option<unsafe extern "C" fn() -> *mut State>,
         u64,
     >(Some(
-        lua_newstate as unsafe extern "C" fn(AllocationFunction, *mut libc::c_void) -> *mut State,
+        lua_newstate as unsafe extern "C" fn() -> *mut State,
     ));
     memcpy(
         buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
@@ -2920,8 +2901,8 @@ pub unsafe extern "C" fn close_state(state: *mut State) { unsafe {
             .wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
     );
     freestack(state);
-    (Some(((*g).frealloc).expect("non-null function pointer"))).expect("non-null function pointer")(
-        (*g).ud,
+    raw_allocate(
+        std::ptr::null_mut(),
         (state as *mut u8).offset(-(8 as u64 as isize)) as *mut LX as *mut libc::c_void,
         ::core::mem::size_of::<LG>() as u64,
         0u64,
@@ -3006,14 +2987,10 @@ pub unsafe extern "C" fn lua_resetthread(state: *mut State) -> i32 { unsafe {
     return lua_closethread(state, std::ptr::null_mut());
 }}
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_newstate(
-    f: AllocationFunction,
-    ud: *mut libc::c_void,
-) -> *mut State { unsafe {
+pub unsafe extern "C" fn lua_newstate() -> *mut State { unsafe {
     let mut i: i32;
-    let l: *mut LG = (Some(f.expect("non-null function pointer")))
-    .expect("non-null function pointer")(
-        ud,
+    let l: *mut LG = raw_allocate(
+        std::ptr::null_mut(),
         std::ptr::null_mut(),
         8 as u64,
         ::core::mem::size_of::<LG>() as u64,
@@ -3031,8 +3008,6 @@ pub unsafe extern "C" fn lua_newstate(
     (*state).next = std::ptr::null_mut();
     (*state).count_c_calls =
         ((*state).count_c_calls as u32).wrapping_add(0x10000 as i32 as u32) as u32 as u32;
-    (*g).frealloc = f;
-    (*g).ud = ud;
     (*g).warnf = None;
     (*g).ud_warn = std::ptr::null_mut();
     (*g).mainthread = state;
@@ -4243,8 +4218,7 @@ pub unsafe extern "C" fn tryagain(
     let g: *mut Global = (*state).global;
     if get_tag_type((*g).nilvalue.tag) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
         luac_fullgc(state, 1);
-        return (Some(((*g).frealloc).expect("non-null function pointer")))
-            .expect("non-null function pointer")((*g).ud, block, old_size, new_size);
+        return raw_allocate(std::ptr::null_mut(), block, old_size, new_size);
     } else {
         return std::ptr::null_mut();
     };
@@ -4256,8 +4230,7 @@ pub unsafe extern "C" fn luam_realloc_(
     new_size: u64,
 ) -> *mut libc::c_void { unsafe {
     let g: *mut Global = (*state).global;
-    let mut new_block: *mut libc::c_void = (Some(((*g).frealloc).expect("non-null function pointer")))
-        .expect("non-null function pointer")((*g).ud, block, old_size, new_size);
+    let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), block, old_size, new_size);
     if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i32 as i64 != 0 {
         new_block = tryagain(state, block, old_size, new_size);
         if new_block.is_null() {
@@ -4291,9 +4264,8 @@ pub unsafe extern "C" fn luam_malloc_(
     } else {
         let g: *mut Global = (*state).global;
         let mut new_block: *mut libc::c_void =
-            (Some(((*g).frealloc).expect("non-null function pointer")))
-                .expect("non-null function pointer")(
-                (*g).ud,
+            raw_allocate(
+                std::ptr::null_mut(),
                 std::ptr::null_mut(),
                 tag as u64,
                 size,
@@ -19414,11 +19386,10 @@ pub unsafe extern "C" fn resizebox(
     index: i32,
     new_size: u64,
 ) -> *mut libc::c_void { unsafe {
-    let mut ud: *mut libc::c_void = std::ptr::null_mut();
-    let allocf: AllocationFunction = lua_getallocf(state, &mut ud);
+    let ud: *mut libc::c_void = std::ptr::null_mut();
     let box_0: *mut UBox = lua_touserdata(state, index) as *mut UBox;
     let temp: *mut libc::c_void =
-        allocf.expect("non-null function pointer")(ud, (*box_0).box_0, (*box_0).bsize, new_size);
+        raw_allocate(ud, (*box_0).box_0, (*box_0).bsize, new_size);
     if ((temp.is_null() && new_size > 0u64) as i32 != 0) as i32 as i64 != 0 {
         lua_pushstring(state, b"not enough memory\0" as *const u8 as *const i8);
         lua_error(state);
@@ -19901,7 +19872,7 @@ pub unsafe extern "C" fn lual_gsub(
     b.lual_pushresult();
     return lua_tolstring(state, -1, std::ptr::null_mut());
 }}
-pub unsafe extern "C" fn l_alloc(
+pub unsafe extern "C" fn raw_allocate(
     mut _ud: *mut libc::c_void,
     ptr: *mut libc::c_void,
     mut _osize: u64,
@@ -20009,18 +19980,7 @@ pub unsafe extern "C" fn warnfon(
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_newstate() -> *mut State { unsafe {
-    let state: *mut State = lua_newstate(
-        Some(
-            l_alloc
-                as unsafe extern "C" fn(
-                    *mut libc::c_void,
-                    *mut libc::c_void,
-                    u64,
-                    u64,
-                ) -> *mut libc::c_void,
-        ),
-        std::ptr::null_mut(),
-    );
+    let state: *mut State = lua_newstate();
     if (state != std::ptr::null_mut()) as i32 as i64 != 0 {
         lua_atpanic(
             state,

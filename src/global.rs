@@ -7,8 +7,6 @@ use crate::tstring::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
 pub struct Global {
-    pub frealloc: AllocationFunction,
-    pub ud: *mut libc::c_void,
     pub totalbytes: i64,
     pub gc_debt: i64,
     pub gc_estimate: u64,

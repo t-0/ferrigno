@@ -199,8 +199,8 @@ impl State {
         old_size: u64,
     ) { unsafe {
         let g: *mut Global = self.global;
-        (Some(((*g).frealloc).expect("non-null function pointer"))).expect("non-null function pointer")(
-            (*g).ud,
+        raw_allocate(
+            std::ptr::null_mut(),
             block,
             old_size,
             0u64,
