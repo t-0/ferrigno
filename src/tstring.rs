@@ -14,8 +14,14 @@ pub struct TString {
     pub contents: [i8; 1],
 }
 impl TObject for TString {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
     fn get_tag_type(&self) -> u8 {
-        get_tag_type(self.tag)
+        return get_tag_type(self.get_tag());
+    }
+    fn get_tag_variant(&self) -> u8 {
+        get_tag_variant(self.get_tag())
     }
     fn get_class_name(& mut self) -> String {
         "string".to_string()

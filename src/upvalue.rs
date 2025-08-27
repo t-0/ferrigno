@@ -12,8 +12,14 @@ pub struct UpValue {
     pub u: UpValueB,
 }
 impl TObject for UpValue {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
     fn get_tag_type(&self) -> u8 {
-        get_tag_type(self.tag)
+        return get_tag_type(self.get_tag());
+    }
+    fn get_tag_variant(&self) -> u8 {
+        get_tag_variant(self.get_tag())
     }
     fn get_class_name(& mut self) -> String {
         "upvalue".to_string()

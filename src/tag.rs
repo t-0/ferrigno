@@ -44,10 +44,10 @@ pub const fn set_collectable(tag: u8) -> u8 {
 pub const fn is_collectable(tag: u8) -> bool {
     0 != (TAG_COLLECTABLE & tag)
 }
-pub const COLLECTABLE_TAG_TYPE_TABLE: u8 = set_collectable(TAG_TYPE_TABLE);
-pub const COLLECTABLE_TAG_TYPE_CLOSURE_C: u8 = set_collectable(TAG_VARIANT_CLOSURE_C);
-// pub const COLLECTABLE_TAG_TYPE_CLOSURE_CFUNCTION: u8 = set_collectable(TAG_VARIANT_CLOSURE_CFUNCTION);
-pub const COLLECTABLE_TAG_TYPE_CLOSURE_L: u8 = set_collectable(TAG_VARIANT_CLOSURE_L);
-pub const COLLECTABLE_TAG_TYPE_STATE: u8 = set_collectable(TAG_TYPE_STATE);
-pub const COLLECTABLE_TAG_TYPE_STRING_SHORT: u8 = set_collectable(TAG_VARIANT_STRING_SHORT);
-pub const COLLECTABLE_TAG_TYPE_USER: u8 = set_collectable(TAG_TYPE_USER);
+pub const COLLECTABLE_TAG_VARIANT_TABLE: u8 = set_collectable(TAG_VARIANT_TABLE);
+pub const COLLECTABLE_TAG_VARIANT_CLOSURE_C: u8 = set_collectable(TAG_VARIANT_CLOSURE_C);
+pub const COLLECTABLE_TAG_VARIANT_CLOSURE_L: u8 = set_collectable(TAG_VARIANT_CLOSURE_L);
+pub const COLLECTABLE_TAG_VARIANT_STATE: u8 = set_collectable(TAG_VARIANT_STATE);
+pub const COLLECTABLE_TAG_VARIANT_USER: u8 = set_collectable(TAG_VARIANT_USER);
+pub const COLLECTABLE_TAG_VARIANT_STRING_SHORT: u8 = set_collectable(TAG_VARIANT_STRING_SHORT);
+pub const COLLECTABLE_TAG_VARIANT_STRING_LONG: u8 = set_collectable(TAG_VARIANT_STRING_LONG);

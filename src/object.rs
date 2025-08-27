@@ -14,7 +14,9 @@
 use crate::table::*;
 use crate::tag::*;
 pub trait TObject {
+    fn get_tag(&self) -> u8;
     fn get_tag_type(&self) -> u8;
+    fn get_tag_variant(&self) -> u8;
     fn get_class_name(& mut self) -> String;
     fn get_metatable(& mut self) -> *mut Table;
 }
@@ -25,8 +27,14 @@ pub struct Object {
     pub marked: u8,
 }
 impl TObject for Object {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
     fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.tag);
+        return get_tag_type(self.get_tag());
+    }
+    fn get_tag_variant(&self) -> u8 {
+        get_tag_variant(self.get_tag())
     }
     fn get_class_name(& mut self) -> String {
         "object".to_string()

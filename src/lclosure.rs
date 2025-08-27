@@ -15,8 +15,14 @@ pub struct LClosure {
     pub upvalues: [*mut UpValue; 1],
 }
 impl TObject for LClosure {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
     fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.tag);
+        return get_tag_type(self.get_tag());
+    }
+    fn get_tag_variant(&self) -> u8 {
+        get_tag_variant(self.get_tag())
     }
     fn get_class_name(& mut self) -> String {
         "lclosure".to_string()
