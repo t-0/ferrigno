@@ -232,4 +232,12 @@ impl State {
             b"memory allocation error: block too big\0" as *const u8 as *const i8,
         );
     }}
+    pub unsafe extern "C" fn push_state(& mut self) -> bool { unsafe {
+        let io: *mut TValue = &mut (*self.top.p).value;
+        (*io).value.gc = &mut (*(self as *mut State as *mut GCUnion)).gc;
+        (*io).set_tag (TAG_VARIANT_STATE);
+        (*io).set_collectable();
+        self.top.p = self.top.p.offset(1);
+        return (*self.global).mainthread == self;
+    }}
 }

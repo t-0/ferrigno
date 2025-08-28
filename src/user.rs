@@ -8,6 +8,7 @@ pub struct User {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
+    pub collectable: bool,
     pub nuvalue: u16,
     pub length: u64,
     pub metatable: *mut Table,
@@ -22,13 +23,13 @@ impl TObject for User {
         self.marked = marked_;
     }
     fn set_collectable(& mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
+        self.collectable = true;
     }
     fn set_tag(& mut self, tag: u8) {
         self.tag = tag;
     }
     fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
+        return self.collectable;
     }
     fn get_tag(&self) -> u8 {
         return self.tag;

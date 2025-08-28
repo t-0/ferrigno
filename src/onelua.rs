@@ -1637,16 +1637,6 @@ pub unsafe extern "C" fn lua_pushlightuserdata(state: *mut State, p: *mut libc::
     (*io).set_tag (TAG_TYPE_POINTER);
     (*state).top.p = (*state).top.p.offset(1);
 }}
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_pushthread(state: *mut State) -> bool { unsafe {
-    let io: *mut TValue = &mut (*(*state).top.p).value;
-    let x_: *mut State = state;
-    (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (TAG_VARIANT_STATE);
-    (*io).set_collectable();
-    (*state).top.p = (*state).top.p.offset(1);
-    return (*(*state).global).mainthread == state;
-}}
 #[inline]
 pub unsafe extern "C" fn auxgetstr(
     state: *mut State,
@@ -25857,7 +25847,7 @@ pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut Debug) { unsafe {
         b"tail call\0" as *const u8 as *const i8,
     ];
     lua_getfield(state, -(1000000 as i32) - 1000 as i32, HOOKKEY);
-    lua_pushthread(state);
+    (*state).push_state();
     if lua_rawget(state, -(2)) == 6 {
         lua_pushstring(state, HOOK_NAMES[(*ar).event as usize]);
         if (*ar).currentline >= 0 {
@@ -25929,7 +25919,7 @@ pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 { unsafe {
         lua_setmetatable(state, -(2));
     }
     checkstack(state, other_state, 1);
-    lua_pushthread(other_state);
+    (*other_state).push_state();
     lua_xmove(other_state, state, 1);
     lua_pushvalue(state, arg + 1);
     lua_rawset(state, -(3));
@@ -25950,7 +25940,7 @@ pub unsafe extern "C" fn db_gethook(state: *mut State) -> i32 { unsafe {
     } else {
         lua_getfield(state, -(1000000 as i32) - 1000 as i32, HOOKKEY);
         checkstack(state, other_state, 1);
-        lua_pushthread(other_state);
+        (*other_state).push_state();
         lua_xmove(other_state, state, 1);
         lua_rawget(state, -(2));
         lua_rotate(state, -(2), -1);

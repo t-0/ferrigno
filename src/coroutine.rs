@@ -36,7 +36,7 @@ unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 { unsafe {
     };
 }}
 unsafe extern "C" fn luab_corunning(state: *mut State) -> i32 { unsafe {
-    (*state).push_boolean(lua_pushthread(state));
+    (*state).push_boolean((*state).push_state());
     return 2;
 }}
 unsafe extern "C" fn luab_close(state: *mut State) -> i32 { unsafe {

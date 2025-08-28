@@ -7,6 +7,7 @@ use crate::new::*;
 #[repr(C)]
 pub struct Table {
     pub object: Object,
+    pub collectable: bool,
     pub flags: u8,
     pub log_size_node: u8,
     pub array_limit: u32,
@@ -27,10 +28,10 @@ impl TObject for Table {
         self.object.set_tag(tag);
     }
     fn set_collectable(& mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
+        self.collectable = true;
     }
     fn is_collectable(&self) -> bool {
-        self.object.is_collectable()
+        self.collectable
     }
     fn get_tag(&self) -> u8 {
         self.object.get_tag()
@@ -52,6 +53,7 @@ impl New for Table {
     fn new() -> Self {
         Table {
             object: Object::new(),
+            collectable: true,
             flags: 0,
             log_size_node: 0,
             array_limit: 0,
