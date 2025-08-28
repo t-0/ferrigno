@@ -1,5 +1,5 @@
 use crate::blockcontrol::*;
-use crate::lexstate::*;
+use crate::lexicalstate::*;
 use crate::prototype::*;
 use crate::new::*;
 #[derive(Copy, Clone)]
@@ -7,7 +7,7 @@ use crate::new::*;
 pub struct FunctionState {
     pub f: *mut Prototype,
     pub previous: *mut FunctionState,
-    pub ls: *mut LexState,
+    pub lexical_state: *mut LexicalState,
     pub block_control: *mut BlockControl,
     pub program_counter: i32,
     pub lasttarget: i32,
@@ -29,7 +29,7 @@ impl New for FunctionState {
         return FunctionState {
             f: std::ptr::null_mut(),
             previous: std::ptr::null_mut(),
-            ls: std::ptr::null_mut(),
+            lexical_state: std::ptr::null_mut(),
             block_control: std::ptr::null_mut(),
             program_counter: 0,
             lasttarget: 0,

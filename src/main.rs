@@ -25,7 +25,7 @@ mod header;
 mod instruction;
 mod labeldescription;
 mod labellist;
-mod lexstate;
+mod lexicalstate;
 mod lhsassign;
 mod priority;
 mod semanticinfo;

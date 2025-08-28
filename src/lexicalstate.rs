@@ -13,7 +13,7 @@ use crate::new::*;
 use crate::zio::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct LexState {
+pub struct LexicalState {
     pub current: i32,
     pub line_number: i32,
     pub last_line: i32,
@@ -28,9 +28,9 @@ pub struct LexState {
     pub source: *mut TString,
     pub envn: *mut TString,
 }
-impl New for LexState {
+impl New for LexicalState {
     fn new() -> Self {
-        return LexState {
+        return LexicalState {
             current: 0,
             line_number: 0,
             last_line: 0,
@@ -47,15 +47,14 @@ impl New for LexState {
         };
     }
 }
-impl LexState {
+impl LexicalState {
     pub unsafe extern "C" fn add_prototype(& mut self) -> *mut Prototype { unsafe {
-        let state: *mut State = self.state;
         let fs: *mut FunctionState = self.fs;
         let f: *mut Prototype = (*fs).f;
         if (*fs).np >= (*f).size_p {
             let mut old_size: i32 = (*f).size_p;
             (*f).p = luam_growaux_(
-                state,
+                self.state,
                 (*f).p as *mut libc::c_void,
                 (*fs).np,
                 &mut (*f).size_p,
@@ -77,16 +76,16 @@ impl LexState {
                     *fresh46 = std::ptr::null_mut();
                 }
             }
-        let clp: *mut Prototype = luaf_newproto(state);
-        let fresh47 = (*fs).np;
+        let clp: *mut Prototype = luaf_newproto(self.state);
+        let np = (*fs).np;
         (*fs).np = (*fs).np + 1;
-        let ref mut fresh48 = *((*f).p).offset(fresh47 as isize);
-        *fresh48 = clp;
+        let ref mut target = *((*f).p).offset(np as isize);
+        *target = clp;
         if (*f).get_marked() & 1 << 5 != 0
             && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
-                state,
+                self.state,
                 &mut (*(f as *mut GCUnion)).gc,
                 &mut (*(clp as *mut GCUnion)).gc,
             );
