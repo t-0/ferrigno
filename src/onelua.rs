@@ -2361,7 +2361,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
             (*g).gcstp = 0;
         }
         2 => {
-            luac_fullgc(state, 0);
+            luac_fullgc(state, false);
         }
         3 => {
             res = (((*g).totalbytes + (*g).gc_debt) as u64 >> 10 as i32) as i32;
@@ -3033,7 +3033,7 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State { unsafe {
     (*g).gcstate = 8 as u8;
     (*g).gckind = 0;
     (*g).gcstopem = 0;
-    (*g).gcemergency = 0;
+    (*g).is_emergency = false;
     (*g).fixedgc = std::ptr::null_mut();
     (*g).tobefnz = (*g).fixedgc;
     (*g).finobj = (*g).tobefnz;
@@ -4228,7 +4228,7 @@ pub unsafe extern "C" fn tryagain(
 ) -> *mut libc::c_void { unsafe {
     let g: *mut Global = (*state).global;
     if get_tag_type((*g).nilvalue.get_tag()) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
-        luac_fullgc(state, 1);
+        luac_fullgc(state, true);
         return raw_allocate(block, old_size, new_size);
     } else {
         return std::ptr::null_mut();
@@ -6608,14 +6608,14 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
     }
     i = 0;
     while i < (*f).size_local_variables {
-        if !((*((*f).local_variables).offset(i as isize)).varname).is_null() {
-            if (*(*((*f).local_variables).offset(i as isize)).varname).get_marked()
+        if !((*((*f).local_variables).offset(i as isize)).variable_name).is_null() {
+            if (*(*((*f).local_variables).offset(i as isize)).variable_name).get_marked()
                 & (1 << 3 | 1 << 4)
                 != 0
             {
                 reallymarkobject(
                     g,
-                    &mut (*((*((*f).local_variables).offset(i as isize)).varname as *mut GCUnion)).gc,
+                    &mut (*((*((*f).local_variables).offset(i as isize)).variable_name as *mut GCUnion)).gc,
                 );
             }
         }
@@ -6688,7 +6688,7 @@ pub unsafe extern "C" fn traversethread(g: *mut Global, th: *mut State) -> i32 {
         uv = (*uv).u.open.next;
     }
     if (*g).gcstate as i32 == 2 {
-        if (*g).gcemergency == 0 {
+        if !(*g).is_emergency{
             luad_shrinkstack(th);
         }
         o = (*th).top.p;
@@ -6901,7 +6901,7 @@ pub unsafe extern "C" fn sweeptolive(
     return p;
 }}
 pub unsafe extern "C" fn check_sizes(state: *mut State, g: *mut Global) { unsafe {
-    if (*g).gcemergency == 0 {
+    if !(*g).is_emergency {
         if (*g).string_table.length < (*g).string_table.size / 4 {
             let olddebt: i64 = (*g).gc_debt;
             luas_resize(state, (*g).string_table.size / 2);
@@ -7217,7 +7217,7 @@ pub unsafe extern "C" fn finishgencycle(state: *mut State, g: *mut Global) { uns
     correctgraylists(g);
     check_sizes(state, g);
     (*g).gcstate = 0;
-    if (*g).gcemergency == 0 {
+    if !(*g).is_emergency {
         callallpendingfinalizers(state);
     }
 }}
@@ -7457,7 +7457,7 @@ pub unsafe extern "C" fn singlestep(state: *mut State) -> u64 { unsafe {
             work = 0;
         }
         7 => {
-            if !((*g).tobefnz).is_null() && (*g).gcemergency == 0 {
+            if !((*g).tobefnz).is_null() && !(*g).is_emergency {
                 (*g).gcstopem = 0;
                 work = (runafewfinalizers(state, 10 as i32) * 50 as i32) as u64;
             } else {
@@ -7528,15 +7528,14 @@ pub unsafe extern "C" fn fullinc(state: *mut State, g: *mut Global) { unsafe {
     luac_runtilstate(state, 1 << 8);
     setpause(g);
 }}
-pub unsafe extern "C" fn luac_fullgc(state: *mut State, isemergency: i32) { unsafe {
-    let g: *mut Global = (*state).global;
-    (*g).gcemergency = isemergency as u8;
-    if (*g).gckind as i32 == 0 {
-        fullinc(state, g);
+pub unsafe extern "C" fn luac_fullgc(state: *mut State, is_emergency: bool) { unsafe {
+    (*((*state).global)).is_emergency = is_emergency;
+    if (*((*state).global)).gckind as i32 == 0 {
+        fullinc(state, (*state).global);
     } else {
-        fullgen(state, g);
+        fullgen(state, (*state).global);
     }
-    (*g).gcemergency = 0;
+    (*((*state).global)).is_emergency = false;
 }}
 pub unsafe extern "C" fn luaf_newcclosure(
     state: *mut State,
@@ -7831,11 +7830,11 @@ pub unsafe extern "C" fn luaf_getlocalname(
 ) -> *const i8 { unsafe {
     let mut i: i32;
     i = 0;
-    while i < (*f).size_local_variables && (*((*f).local_variables).offset(i as isize)).startpc <= program_counter {
-        if program_counter < (*((*f).local_variables).offset(i as isize)).endpc {
+    while i < (*f).size_local_variables && (*((*f).local_variables).offset(i as isize)).start_program_counter <= program_counter {
+        if program_counter < (*((*f).local_variables).offset(i as isize)).end_program_counter {
             local_number -= 1;
             if local_number == 0 {
-                return ((*(*((*f).local_variables).offset(i as isize)).varname).contents).as_mut_ptr();
+                return ((*(*((*f).local_variables).offset(i as isize)).variable_name).contents).as_mut_ptr();
             }
         }
         i += 1;
@@ -7983,17 +7982,16 @@ pub unsafe extern "C" fn luas_remove(state: *mut State, ts: *mut TString) { unsa
     (*tb).length;
 }}
 pub unsafe extern "C" fn growstrtab(state: *mut State, tb: *mut StringTable) { unsafe {
-    if (((*tb).length == 2147483647 as i32) as i32 != 0) as i32 as i64 != 0 {
-        luac_fullgc(state, 1);
-        if (*tb).length == 2147483647 as i32 {
+    if (*tb).length == 0x7FFFFFF {
+        luac_fullgc(state, true);
+        if (*tb).length == 0x7FFFFFF {
             luad_throw(state, 4);
         }
     }
     if (*tb).size
-        <= (if 2147483647 as i32 as u64
-            <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut TString>() as u64)
+        <= (if 0x7FFFFFF <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut TString>() as u64)
         {
-            2147483647 as i32 as u32
+            0x7FFFFFF
         } else {
             (!(0u64)).wrapping_div(::core::mem::size_of::<*mut TString>() as u64) as u32
         }) as i32
@@ -8472,16 +8470,16 @@ pub unsafe extern "C" fn load_debug(load_state: *mut LoadState, f: *mut Prototyp
     (*f).size_local_variables = n;
     i = 0;
     while i < n {
-        let ref mut fresh30 = (*((*f).local_variables).offset(i as isize)).varname;
+        let ref mut fresh30 = (*((*f).local_variables).offset(i as isize)).variable_name;
         *fresh30 = std::ptr::null_mut();
         i += 1;
     }
     i = 0;
     while i < n {
-        let ref mut fresh31 = (*((*f).local_variables).offset(i as isize)).varname;
+        let ref mut fresh31 = (*((*f).local_variables).offset(i as isize)).variable_name;
         *fresh31 = load_string_n(load_state, f);
-        (*((*f).local_variables).offset(i as isize)).startpc = load_int(load_state);
-        (*((*f).local_variables).offset(i as isize)).endpc = load_int(load_state);
+        (*((*f).local_variables).offset(i as isize)).start_program_counter = load_int(load_state);
+        (*((*f).local_variables).offset(i as isize)).end_program_counter = load_int(load_state);
         i += 1;
     }
     n = load_int(load_state);
@@ -8808,9 +8806,9 @@ pub unsafe extern "C" fn dump_debug(dump_state: *mut DumpState, f: *const Protot
     dump_int(dump_state, n);
     i = 0;
     while i < n {
-        dump_string(dump_state, (*((*f).local_variables).offset(i as isize)).varname);
-        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).startpc);
-        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).endpc);
+        dump_string(dump_state, (*((*f).local_variables).offset(i as isize)).variable_name);
+        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).start_program_counter);
+        dump_int(dump_state, (*((*f).local_variables).offset(i as isize)).end_program_counter);
         i += 1;
     }
     n = if (*dump_state).is_strip {
@@ -9004,7 +9002,7 @@ pub unsafe extern "C" fn codename(lexical_state: *mut LexicalState, e: *mut Expr
 pub unsafe extern "C" fn registerlocalvar(
     lexical_state: *mut LexicalState,
     fs: *mut FunctionState,
-    varname: *mut TString,
+    variable_name: *mut TString,
 ) -> i32 { unsafe {
     let f: *mut Prototype = (*fs).f;
     let mut old_size: i32 = (*f).size_local_variables;
@@ -9026,19 +9024,19 @@ pub unsafe extern "C" fn registerlocalvar(
     while old_size < (*f).size_local_variables {
         let fresh33 = old_size;
         old_size = old_size + 1;
-        let ref mut fresh34 = (*((*f).local_variables).offset(fresh33 as isize)).varname;
+        let ref mut fresh34 = (*((*f).local_variables).offset(fresh33 as isize)).variable_name;
         *fresh34 = std::ptr::null_mut();
     }
-    let ref mut fresh35 = (*((*f).local_variables).offset((*fs).ndebugvars as isize)).varname;
-    *fresh35 = varname;
-    (*((*f).local_variables).offset((*fs).ndebugvars as isize)).startpc = (*fs).program_counter;
+    let ref mut fresh35 = (*((*f).local_variables).offset((*fs).ndebugvars as isize)).variable_name;
+    *fresh35 = variable_name;
+    (*((*f).local_variables).offset((*fs).ndebugvars as isize)).start_program_counter = (*fs).program_counter;
     if (*f).get_marked() & 1 << 5 != 0
-        && (*varname).get_marked() & (1 << 3 | 1 << 4) != 0
+        && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0
     {
         luac_barrier_(
             (*lexical_state).state,
             &mut (*(f as *mut GCUnion)).gc,
-            &mut (*(varname as *mut GCUnion)).gc,
+            &mut (*(variable_name as *mut GCUnion)).gc,
         );
     } else {
     };
@@ -9130,33 +9128,33 @@ pub unsafe extern "C" fn init_var(
 }}
 pub unsafe extern "C" fn check_readonly(lexical_state: *mut LexicalState, e: *mut ExpressionDescription) { unsafe {
     let fs: *mut FunctionState = (*lexical_state).fs;
-    let mut varname: *mut TString = std::ptr::null_mut();
+    let mut variable_name: *mut TString = std::ptr::null_mut();
     match (*e).k as u32 {
         11 => {
-            varname = (*((*(*lexical_state).dynamic_data).active_variable.arr).offset((*e).u.info as isize))
+            variable_name = (*((*(*lexical_state).dynamic_data).active_variable.arr).offset((*e).u.info as isize))
                 .vd
                 .name;
         }
         9 => {
             let vardesc: *mut VariableDescription = getlocalvardesc(fs, (*e).u.var.vidx as i32);
             if (*vardesc).vd.kind as i32 != 0 {
-                varname = (*vardesc).vd.name;
+                variable_name = (*vardesc).vd.name;
             }
         }
         10 => {
             let up: *mut Upvaldesc =
                 &mut *((*(*fs).f).upvalues).offset((*e).u.info as isize) as *mut Upvaldesc;
             if (*up).kind as i32 != 0 {
-                varname = (*up).name;
+                variable_name = (*up).name;
             }
         }
         _ => return,
     }
-    if !varname.is_null() {
+    if !variable_name.is_null() {
         let message: *const i8 = luao_pushfstring(
             (*lexical_state).state,
             b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
-            ((*varname).contents).as_mut_ptr(),
+            ((*variable_name).contents).as_mut_ptr(),
         );
         luak_semerror(lexical_state, message);
     }
@@ -9184,7 +9182,7 @@ pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) { unsa
         (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_sub(1);
         let var: *mut LocalVariable = localdebuginfo(fs, (*fs).count_active_variables as i32);
         if !var.is_null() {
-            (*var).endpc = (*fs).program_counter;
+            (*var).end_program_counter = (*fs).program_counter;
         }
     }
 }}
@@ -9329,9 +9327,9 @@ pub unsafe extern "C" fn singlevaraux(
     };
 }}
 pub unsafe extern "C" fn singlevar(lexical_state: *mut LexicalState, var: *mut ExpressionDescription) { unsafe {
-    let varname: *mut TString = str_checkname(lexical_state);
+    let variable_name: *mut TString = str_checkname(lexical_state);
     let fs: *mut FunctionState = (*lexical_state).fs;
-    singlevaraux(fs, varname, var, 1);
+    singlevaraux(fs, variable_name, var, 1);
     if (*var).k as u32 == VVOID as i32 as u32 {
         let mut key: ExpressionDescription = ExpressionDescription {
             k: VVOID,
@@ -9341,7 +9339,7 @@ pub unsafe extern "C" fn singlevar(lexical_state: *mut LexicalState, var: *mut E
         };
         singlevaraux(fs, (*lexical_state).envn, var, 1);
         luak_exp2anyregup(fs, var);
-        codestring(&mut key, varname);
+        codestring(&mut key, variable_name);
         luak_indexed(fs, var, &mut key);
     }
 }}
@@ -9374,7 +9372,7 @@ pub unsafe extern "C" fn adjust_assign(
     };
 }}
 pub unsafe extern "C" fn jumpscopeerror(lexical_state: *mut LexicalState, gt: *mut LabelDescription) -> ! { unsafe {
-    let varname: *const i8 =
+    let variable_name: *const i8 =
         ((*(*getlocalvardesc((*lexical_state).fs, (*gt).count_active_variables as i32))
             .vd
             .name)
@@ -9387,7 +9385,7 @@ pub unsafe extern "C" fn jumpscopeerror(lexical_state: *mut LexicalState, gt: *m
         message,
         ((*(*gt).name).contents).as_mut_ptr(),
         (*gt).line,
-        varname,
+        variable_name,
     );
     luak_semerror(lexical_state, message);
 }}
@@ -10471,7 +10469,7 @@ pub unsafe extern "C" fn forbody(
     fixforjump(fs, endfor, prep + 1, 1);
     luak_fixline(fs, line);
 }}
-pub unsafe extern "C" fn fornum(lexical_state: *mut LexicalState, varname: *mut TString, line: i32) { unsafe {
+pub unsafe extern "C" fn fornum(lexical_state: *mut LexicalState, variable_name: *mut TString, line: i32) { unsafe {
     let fs: *mut FunctionState = (*lexical_state).fs;
     let base: i32 = (*fs).freereg as i32;
     new_localvar(
@@ -10504,7 +10502,7 @@ pub unsafe extern "C" fn fornum(lexical_state: *mut LexicalState, varname: *mut 
                 .wrapping_sub(1 as u64),
         ),
     );
-    new_localvar(lexical_state, varname);
+    new_localvar(lexical_state, variable_name);
     checknext(lexical_state, '=' as i32);
     exp1(lexical_state);
     checknext(lexical_state, ',' as i32);
@@ -10586,13 +10584,13 @@ pub unsafe extern "C" fn forstat(lexical_state: *mut LexicalState, line: i32) { 
     let mut block_control: BlockControl = BlockControl::new();
     enterblock(fs, &mut block_control, true);
     luax_next(lexical_state);
-    let varname: *mut TString = str_checkname(lexical_state);
+    let variable_name: *mut TString = str_checkname(lexical_state);
     match (*lexical_state).t.token {
         61 => {
-            fornum(lexical_state, varname, line);
+            fornum(lexical_state, variable_name, line);
         }
         44 | 267 => {
-            forlist(lexical_state, varname);
+            forlist(lexical_state, variable_name);
         }
         _ => {
             luax_syntaxerror(lexical_state, b"'=' or 'in' expected\0" as *const u8 as *const i8);
@@ -10675,7 +10673,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) { unsafe {
     new_localvar(lexical_state, str_checkname(lexical_state));
     adjustlocalvars(lexical_state, 1);
     body(lexical_state, &mut b, 0, (*lexical_state).line_number);
-    (*localdebuginfo(fs, fvar)).startpc = (*fs).program_counter;
+    (*localdebuginfo(fs, fvar)).start_program_counter = (*fs).program_counter;
 }}
 pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> i32 { unsafe {
     if testnext(lexical_state, '<' as i32) != 0 {

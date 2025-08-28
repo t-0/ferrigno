@@ -188,10 +188,9 @@ impl State {
         countin: i32,
         countout: *mut i32,
     ) -> *mut *mut Object { unsafe {
-        let g: *mut Global = self.global;
-        let other_white = (*g).current_white ^ (1 << 3 | 1 << 4);
+        let other_white = (*(self.global)).current_white ^ (1 << 3 | 1 << 4);
         let mut i: i32;
-        let white = (*g).current_white & ((1 << 3) | (1 << 4));
+        let white = (*(self.global)).current_white & ((1 << 3) | (1 << 4));
         i = 0;
         while !(*p).is_null() && i < countin {
             let curr: *mut Object = *p;
@@ -220,13 +219,12 @@ impl State {
         block: *mut libc::c_void,
         old_size: u64,
     ) { unsafe {
-        let g: *mut Global = self.global;
         raw_allocate(
             block,
             old_size,
             0u64,
         );
-        (*g).gc_debt = ((*g).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
+        (*(self.global)).gc_debt = ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
     }}
     pub unsafe extern "C" fn too_big(& mut self) -> ! { unsafe {
         luag_runerror(

@@ -26,7 +26,7 @@ pub struct Global {
     pub genminormul: u64,
     pub genmajormul: u64,
     pub gcstp: u8,
-    pub gcemergency: u8,
+    pub is_emergency: bool,
     pub gcpause: u8,
     pub gcstepmul: u8,
     pub gcstepsize: u8,
