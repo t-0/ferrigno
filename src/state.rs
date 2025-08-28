@@ -16,8 +16,6 @@ use crate::upvalue::*;
 #[repr(C)]
 pub struct State {
     pub object: Object,
-    pub tag: u8,
-    pub marked: u8,
     pub status: u8,
     pub allow_hook: u8,
     pub count_call_info: u16,
