@@ -191,13 +191,13 @@ impl State {
         i = 0;
         while !(*p).is_null() && i < countin {
             let curr: *mut Object = *p;
-            let marked = (*curr).marked;
+            let marked = (*curr).get_marked();
             if marked & other_white != 0 {
                 *p = (*curr).next;
                 freeobj(self, curr);
             } else {
-                (*curr).marked = marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
-                    | white;
+                (*curr).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
+                    | white);
                 p = &mut (*curr).next;
             }
             i += 1;
