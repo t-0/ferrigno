@@ -18,7 +18,7 @@ pub struct State {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
-    pub collectable: bool = false,
+    pub dummy0: u8 = 0,
     pub dummy1: u8 = 0,
     pub dummy2: u32 = 0,
     pub status: u8,
