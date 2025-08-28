@@ -80,14 +80,14 @@ use crate::zio::*;
 use libc::{remove, rename, setlocale, system, tolower, toupper};
 pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> ! {
     unsafe {
-        if !((*state).error_jump).is_null() {
-            ::core::ptr::write_volatile(&mut (*(*state).error_jump).status as *mut i32, error_code);
-            _longjmp(((*(*state).error_jump).jbt).as_mut_ptr(), 1);
+        if !((*state).long_jump).is_null() {
+            ::core::ptr::write_volatile(&mut (*(*state).long_jump).status as *mut i32, error_code);
+            _longjmp(((*(*state).long_jump).jbt).as_mut_ptr(), 1);
         } else {
             let g: *mut Global = (*state).global;
             error_code = luae_resetthread(state, error_code);
             (*state).status = error_code as u8;
-            if !((*(*g).mainthread).error_jump).is_null() {
+            if !((*(*g).mainthread).long_jump).is_null() {
                 let fresh0 = (*(*g).mainthread).top.p;
                 (*(*g).mainthread).top.p = ((*(*g).mainthread).top.p).offset(1);
                 let io1: *mut TValue = &mut (*fresh0).value;
@@ -113,14 +113,14 @@ pub unsafe extern "C" fn luad_rawrunprotected(
         let old_count_c_calls: u32 = (*state).count_c_calls;
         let mut long_jump = LongJump::new();
         ::core::ptr::write_volatile(&mut long_jump.status as *mut i32, 0);
-        long_jump.previous = (*state).error_jump;
-        (*state).error_jump = &mut long_jump;
+        long_jump.previous = (*state).long_jump;
+        (*state).long_jump = &mut long_jump;
         if _setjmp((long_jump.jbt).as_mut_ptr()) == 0 {
             (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(
                 state, ud,
             );
         }
-        (*state).error_jump = long_jump.previous;
+        (*state).long_jump = long_jump.previous;
         (*state).count_c_calls = old_count_c_calls;
         return long_jump.status;
     }
@@ -3130,7 +3130,7 @@ pub unsafe extern "C" fn preinit_thread(state: *mut State, g: *mut Global) {
         (*state).count_call_info = 0;
         (*state).twups = state;
         (*state).count_c_calls = 0;
-        (*state).error_jump = std::ptr::null_mut();
+        (*state).long_jump = std::ptr::null_mut();
         ::core::ptr::write_volatile(&mut (*state).hook as *mut HookFunction, None);
         ::core::ptr::write_volatile(&mut (*state).hook_mask as *mut i32, 0);
         (*state).base_hook_count = 0;
@@ -3281,7 +3281,7 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State {
         (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
         preinit_thread(state, g);
         (*g).allgc = &mut (*(state as *mut GCUnion)).object;
-        (*state).next = std::ptr::null_mut();
+        (*state).object.next = std::ptr::null_mut();
         (*state).count_c_calls =
             ((*state).count_c_calls as u32).wrapping_add(0x10000 as i32 as u32) as u32 as u32;
         (*g).warnf = None;

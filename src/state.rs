@@ -15,7 +15,7 @@ use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
-    pub next: *mut Object,
+    pub object: Object,
     pub tag: u8,
     pub marked: u8,
     pub status: u8,
@@ -30,7 +30,7 @@ pub struct State {
     pub tbc_list: StkIdRel,
     pub gc_list: *mut Object,
     pub twups: *mut State,
-    pub error_jump: *mut LongJump,
+    pub long_jump: *mut LongJump,
     pub base_callinfo: CallInfo,
     pub hook: HookFunction,
     pub error_function: i64,
@@ -42,13 +42,13 @@ pub struct State {
 }
 impl TObject for State {
     fn get_marked(&self) -> u8 {
-        self.marked
+        self.object.get_marked()
     }
     fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
+        self.object.set_marked(marked_);
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.set_tag(tag);
     }
     fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
@@ -57,7 +57,7 @@ impl TObject for State {
         return is_collectable(self.get_tag());
     }
     fn get_tag(&self) -> u8 {
-        self.tag
+        self.object.get_tag()
     }
     fn get_tag_type(&self) -> u8 {
         get_tag_type(self.get_tag())
