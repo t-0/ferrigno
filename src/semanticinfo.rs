@@ -1,6 +1,7 @@
 use crate::new::*;
 use crate::tstring::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union SemanticInfo {
     pub r: f64,
     pub i: i64,

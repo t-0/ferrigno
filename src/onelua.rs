@@ -3281,7 +3281,7 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State {
         (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
         preinit_thread(state, g);
         (*g).allgc = &mut (*(state as *mut GCUnion)).object;
-        (*state).object.next = std::ptr::null_mut();
+        (*state).next = std::ptr::null_mut();
         (*state).count_c_calls =
             ((*state).count_c_calls as u32).wrapping_add(0x10000 as i32 as u32) as u32 as u32;
         (*g).warnf = None;

@@ -15,11 +15,16 @@ use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
-    pub object: Object,
+    pub next: *mut Object,
+    pub tag: u8,
+    pub marked: u8,
+    pub collectable: bool = false,
+    pub dummy1: u8 = 0,
+    pub dummy2: u32 = 0,
     pub status: u8,
     pub allow_hook: u8,
     pub count_call_info: u16,
-    pub dummy1: u32 = 0,
+    pub dummy3: u32 = 0,
     pub top: StkIdRel,
     pub global: *mut Global,
     pub call_info: *mut CallInfo,
@@ -41,13 +46,13 @@ pub struct State {
 }
 impl TObject for State {
     fn get_marked(&self) -> u8 {
-        self.object.get_marked()
+        self.marked
     }
-    fn set_marked(&mut self, marked_: u8) {
-        self.object.set_marked(marked_);
+    fn set_marked(&mut self, marked: u8) {
+        self.marked = marked;
     }
     fn set_tag(&mut self, tag: u8) {
-        self.object.set_tag(tag);
+        self.tag = tag;
     }
     fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
@@ -56,7 +61,7 @@ impl TObject for State {
         return is_collectable(self.get_tag());
     }
     fn get_tag(&self) -> u8 {
-        self.object.get_tag()
+        self.tag
     }
     fn get_tag_type(&self) -> u8 {
         get_tag_type(self.get_tag())

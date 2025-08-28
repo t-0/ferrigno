@@ -5,28 +5,33 @@ use crate::tvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
-    pub object: Object,
+    pub next: *mut Object,
+    pub tag: u8,
+    pub marked: u8,
+    pub collectable: bool = false,
+    pub dummy1: u8 = 0,
+    pub dummy2: u32 = 0,
     pub v: UpValueA,
     pub u: UpValueB,
 }
 impl TObject for UpValue {
     fn get_marked(&self) -> u8 {
-        self.object.get_marked()
+        self.marked
     }
-    fn set_marked(&mut self, marked_: u8) {
-        self.object.set_marked(marked_);
+    fn set_marked(&mut self, marked: u8) {
+        self.marked = marked;
     }
     fn set_tag(&mut self, tag: u8) {
-        self.object.set_tag(tag);
+        self.tag = tag;
     }
     fn set_collectable(&mut self) {
-        self.object.set_collectable();
+        self.tag = set_collectable(self.tag);
     }
     fn is_collectable(&self) -> bool {
-        return self.object.is_collectable();
+        return is_collectable(self.tag);
     }
     fn get_tag(&self) -> u8 {
-        return self.object.get_tag();
+        self.tag
     }
     fn get_tag_type(&self) -> u8 {
         return get_tag_type(self.get_tag());
