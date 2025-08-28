@@ -1,11 +1,11 @@
 use crate::functions::*;
-use crate::object::*;
-use crate::tag::*;
-use crate::state::*;
 use crate::gcunion::*;
-use crate::stringtable::*;
+use crate::object::*;
 use crate::onelua::*;
+use crate::state::*;
+use crate::stringtable::*;
 use crate::table::*;
+use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
@@ -64,8 +64,7 @@ impl Global {
             while i < 53 as i32 {
                 let mut j: i32 = 0;
                 while j < 2 {
-                    if (*self.strcache[i as usize][j as usize]).get_marked()
-                        & (1 << 3 | 1 << 4)
+                    if (*self.strcache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                     {
                         self.strcache[i as usize][j as usize] = self.memerrmsg;
@@ -80,8 +79,9 @@ impl Global {
         unsafe {
             let white = self.current_white & ((1 << 3) | (1 << 4));
             while !p.is_null() {
-                (*p).set_marked((*p).get_marked()
-                    & !((1 << 5) | ((1 << 3) | (1 << 4)) | 7) | white);
+                (*p).set_marked(
+                    (*p).get_marked() & !((1 << 5) | ((1 << 3) | (1 << 4)) | 7) | white,
+                );
                 p = (*p).next;
             }
         }
@@ -112,21 +112,35 @@ impl Global {
     }
     pub unsafe extern "C" fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(-((self.totalbytes + self.gc_debt).wrapping_div(100) * self.genminormul as i64));
+            self.set_debt(
+                -((self.totalbytes + self.gc_debt).wrapping_div(100) * self.genminormul as i64),
+            );
         }
     }
-    pub unsafe extern "C" fn propagatemark(& mut self) -> u64 { unsafe {
-        let o: *mut Object = self.gray;
-        (*o).set_marked((*o).get_marked() | 1 << 5);
-        self.gray = *getgclist(o);
-        match (*o).get_tag_variant() {
-            TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
-            TAG_VARIANT_USER => return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64,
-            TAG_VARIANT_CLOSURE_L => return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64,
-            TAG_VARIANT_CLOSURE_C => return traversecclosure(self, &mut (*(o as *mut GCUnion)).ccl) as u64,
-            TAG_VARIANT_PROTOTYPE => return traverseproto(self, &mut (*(o as *mut GCUnion)).p) as u64,
-            TAG_VARIANT_STATE => return traversethread(self, &mut (*(o as *mut GCUnion)).th) as u64,
-            _ => return 0,
-        };
-    }}
+    pub unsafe extern "C" fn propagatemark(&mut self) -> u64 {
+        unsafe {
+            let o: *mut Object = self.gray;
+            (*o).set_marked((*o).get_marked() | 1 << 5);
+            self.gray = *getgclist(o);
+            match (*o).get_tag_variant() {
+                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
+                TAG_VARIANT_USER => {
+                    return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64
+                }
+                TAG_VARIANT_CLOSURE_L => {
+                    return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64
+                }
+                TAG_VARIANT_CLOSURE_C => {
+                    return traversecclosure(self, &mut (*(o as *mut GCUnion)).ccl) as u64
+                }
+                TAG_VARIANT_PROTOTYPE => {
+                    return traverseproto(self, &mut (*(o as *mut GCUnion)).p) as u64
+                }
+                TAG_VARIANT_STATE => {
+                    return traversethread(self, &mut (*(o as *mut GCUnion)).th) as u64
+                }
+                _ => return 0,
+            };
+        }
+    }
 }

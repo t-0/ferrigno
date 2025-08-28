@@ -1,15 +1,15 @@
 use crate::callinfo::*;
-use crate::tag::*;
 use crate::functions::*;
 use crate::gcunion::*;
 use crate::global::*;
 use crate::longjump::*;
 use crate::object::*;
-use crate::table::*;
+use crate::onelua::*;
 use crate::stackvalue::*;
 use crate::stkidrel::*;
+use crate::table::*;
+use crate::tag::*;
 use crate::tstring::*;
-use crate::onelua::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 #[derive(Copy, Clone)]
@@ -41,16 +41,16 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl TObject for State {
-    fn get_marked(& self) -> u8 {
+    fn get_marked(&self) -> u8 {
         self.marked
     }
-    fn set_marked(& mut self, marked_: u8) {
+    fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
     }
-    fn set_tag(& mut self, tag: u8) {
+    fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
     }
-    fn set_collectable(& mut self) {
+    fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
     }
     fn is_collectable(&self) -> bool {
@@ -65,10 +65,10 @@ impl TObject for State {
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
     }
-    fn get_class_name(& mut self) -> String {
+    fn get_class_name(&mut self) -> String {
         "state".to_string()
     }
-    fn get_metatable(& mut self) -> *mut Table {
+    fn get_metatable(&mut self) -> *mut Table {
         std::ptr::null_mut()
     }
 }
@@ -183,61 +183,61 @@ impl State {
         }
     }
     pub unsafe extern "C" fn sweep_list(
-        & mut self,
+        &mut self,
         mut p: *mut *mut Object,
         countin: i32,
         countout: *mut i32,
-    ) -> *mut *mut Object { unsafe {
-        let other_white = (*(self.global)).current_white ^ (1 << 3 | 1 << 4);
-        let mut i: i32;
-        let white = (*(self.global)).current_white & ((1 << 3) | (1 << 4));
-        i = 0;
-        while !(*p).is_null() && i < countin {
-            let curr: *mut Object = *p;
-            let marked = (*curr).get_marked();
-            if marked & other_white != 0 {
-                *p = (*curr).next;
-                freeobj(self, curr);
-            } else {
-                (*curr).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7)
-                    | white);
-                p = &mut (*curr).next;
+    ) -> *mut *mut Object {
+        unsafe {
+            let other_white = (*(self.global)).current_white ^ (1 << 3 | 1 << 4);
+            let mut i: i32;
+            let white = (*(self.global)).current_white & ((1 << 3) | (1 << 4));
+            i = 0;
+            while !(*p).is_null() && i < countin {
+                let curr: *mut Object = *p;
+                let marked = (*curr).get_marked();
+                if marked & other_white != 0 {
+                    *p = (*curr).next;
+                    freeobj(self, curr);
+                } else {
+                    (*curr).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7) | white);
+                    p = &mut (*curr).next;
+                }
+                i += 1;
             }
-            i += 1;
+            if !countout.is_null() {
+                *countout = i;
+            }
+            return if (*p).is_null() {
+                std::ptr::null_mut()
+            } else {
+                p
+            };
         }
-        if !countout.is_null() {
-            *countout = i;
+    }
+    pub unsafe extern "C" fn free_memory(&mut self, block: *mut libc::c_void, old_size: u64) {
+        unsafe {
+            raw_allocate(block, old_size, 0u64);
+            (*(self.global)).gc_debt =
+                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
         }
-        return if (*p).is_null() {
-            std::ptr::null_mut()
-        } else {
-            p
-        };
-    }}
-    pub unsafe extern "C" fn free_memory(
-        & mut self,
-        block: *mut libc::c_void,
-        old_size: u64,
-    ) { unsafe {
-        raw_allocate(
-            block,
-            old_size,
-            0u64,
-        );
-        (*(self.global)).gc_debt = ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
-    }}
-    pub unsafe extern "C" fn too_big(& mut self) -> ! { unsafe {
-        luag_runerror(
-            self,
-            b"memory allocation error: block too big\0" as *const u8 as *const i8,
-        );
-    }}
-    pub unsafe extern "C" fn push_state(& mut self) -> bool { unsafe {
-        let io: *mut TValue = &mut (*self.top.p).value;
-        (*io).value.object = &mut (*(self as *mut State as *mut GCUnion)).object;
-        (*io).set_tag (TAG_VARIANT_STATE);
-        (*io).set_collectable();
-        self.top.p = self.top.p.offset(1);
-        return (*self.global).mainthread == self;
-    }}
+    }
+    pub unsafe extern "C" fn too_big(&mut self) -> ! {
+        unsafe {
+            luag_runerror(
+                self,
+                b"memory allocation error: block too big\0" as *const u8 as *const i8,
+            );
+        }
+    }
+    pub unsafe extern "C" fn push_state(&mut self) -> bool {
+        unsafe {
+            let io: *mut TValue = &mut (*self.top.p).value;
+            (*io).value.object = &mut (*(self as *mut State as *mut GCUnion)).object;
+            (*io).set_tag(TAG_VARIANT_STATE);
+            (*io).set_collectable();
+            self.top.p = self.top.p.offset(1);
+            return (*self.global).mainthread == self;
+        }
+    }
 }

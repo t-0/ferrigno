@@ -1,12 +1,12 @@
+use crate::cclosure::*;
 use crate::closure::*;
+use crate::lclosure::*;
 use crate::object::*;
 use crate::prototype::*;
 use crate::state::*;
-use crate::cclosure::*;
-use crate::lclosure::*;
-use crate::upvalue::*;
 use crate::table::*;
 use crate::tstring::*;
+use crate::upvalue::*;
 use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

@@ -1,5 +1,5 @@
-use crate::state::*;
 use crate::functions::*;
+use crate::state::*;
 #[repr(C)]
 pub struct DumpState {
     pub state: *mut State,

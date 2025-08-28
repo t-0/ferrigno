@@ -1,5 +1,5 @@
-use crate::semanticinfo::*;
 use crate::new::*;
+use crate::semanticinfo::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Token {

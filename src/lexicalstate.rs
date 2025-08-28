@@ -1,15 +1,15 @@
+use crate::buffer::*;
 use crate::dynamicdata::*;
 use crate::functionstate::*;
-use crate::buffer::*;
-use crate::state::*;
-use crate::object::*;
 use crate::gcunion::*;
+use crate::new::*;
+use crate::object::*;
+use crate::onelua::*;
+use crate::prototype::*;
+use crate::state::*;
 use crate::table::*;
 use crate::token::*;
-use crate::prototype::*;
-use crate::onelua::*;
 use crate::tstring::*;
-use crate::new::*;
 use crate::zio::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -48,24 +48,25 @@ impl New for LexicalState {
     }
 }
 impl LexicalState {
-    pub unsafe extern "C" fn add_prototype(& mut self) -> *mut Prototype { unsafe {
-        let fs: *mut FunctionState = self.fs;
-        let f: *mut Prototype = (*fs).f;
-        if (*fs).np >= (*f).size_p {
-            let mut old_size: i32 = (*f).size_p;
-            (*f).p = luam_growaux_(
-                self.state,
-                (*f).p as *mut libc::c_void,
-                (*fs).np,
-                &mut (*f).size_p,
-                ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
-                (if ((1 << 8 + 8 + 1) - 1) as u64
-                    <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
-                {
-                    ((1 << 8 + 8 + 1) - 1) as u32
-                } else {
-                    (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
-                        as u32
+    pub unsafe extern "C" fn add_prototype(&mut self) -> *mut Prototype {
+        unsafe {
+            let fs: *mut FunctionState = self.fs;
+            let f: *mut Prototype = (*fs).f;
+            if (*fs).np >= (*f).size_p {
+                let mut old_size: i32 = (*f).size_p;
+                (*f).p = luam_growaux_(
+                    self.state,
+                    (*f).p as *mut libc::c_void,
+                    (*fs).np,
+                    &mut (*f).size_p,
+                    ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
+                    (if ((1 << 8 + 8 + 1) - 1) as u64
+                        <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
+                    {
+                        ((1 << 8 + 8 + 1) - 1) as u32
+                    } else {
+                        (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
+                            as u32
                     }) as i32,
                     b"functions\0" as *const u8 as *const i8,
                 ) as *mut *mut Prototype;
@@ -76,21 +77,20 @@ impl LexicalState {
                     *fresh46 = std::ptr::null_mut();
                 }
             }
-        let clp: *mut Prototype = luaf_newproto(self.state);
-        let np = (*fs).np;
-        (*fs).np = (*fs).np + 1;
-        let ref mut target = *((*f).p).offset(np as isize);
-        *target = clp;
-        if (*f).get_marked() & 1 << 5 != 0
-            && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0
-        {
-            luac_barrier_(
-                self.state,
-                &mut (*(f as *mut GCUnion)).object,
-                &mut (*(clp as *mut GCUnion)).object,
-            );
-        } else {
-        };
-        return clp;
-    }}
+            let clp: *mut Prototype = luaf_newproto(self.state);
+            let np = (*fs).np;
+            (*fs).np = (*fs).np + 1;
+            let ref mut target = *((*f).p).offset(np as isize);
+            *target = clp;
+            if (*f).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrier_(
+                    self.state,
+                    &mut (*(f as *mut GCUnion)).object,
+                    &mut (*(clp as *mut GCUnion)).object,
+                );
+            } else {
+            };
+            return clp;
+        }
+    }
 }

@@ -7,7 +7,7 @@ pub struct LongJump {
     pub status: i32,
 }
 impl New for LongJump {
-    fn new () -> Self {
+    fn new() -> Self {
         return LongJump {
             previous: std::ptr::null_mut(),
             jbt: [JumpBufferTag {

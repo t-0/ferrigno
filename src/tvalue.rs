@@ -1,6 +1,6 @@
-use crate::value::*;
-use crate::tag::*;
 use crate::new::*;
+use crate::tag::*;
+use crate::value::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TValue {
@@ -19,7 +19,7 @@ impl TValue {
     pub fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
     }
-    pub fn set_collectable(& mut self) {
+    pub fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
     }
     pub fn is_collectable(&self) -> bool {

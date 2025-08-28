@@ -1,7 +1,7 @@
 use crate::object::*;
 use crate::table::*;
-use crate::uvalue::*;
 use crate::tag::*;
+use crate::uvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
@@ -16,16 +16,16 @@ pub struct User {
     pub uv: [UValue; 1],
 }
 impl TObject for User {
-    fn get_marked(& self) -> u8 {
+    fn get_marked(&self) -> u8 {
         self.marked
     }
-    fn set_marked(& mut self, marked_: u8) {
+    fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
     }
-    fn set_collectable(& mut self) {
+    fn set_collectable(&mut self) {
         self.collectable = true;
     }
-    fn set_tag(& mut self, tag: u8) {
+    fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
     }
     fn is_collectable(&self) -> bool {
@@ -40,10 +40,10 @@ impl TObject for User {
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
     }
-    fn get_class_name(& mut self) -> String {
+    fn get_class_name(&mut self) -> String {
         "user".to_string()
     }
-    fn get_metatable(& mut self) -> *mut Table {
+    fn get_metatable(&mut self) -> *mut Table {
         self.metatable
     }
 }

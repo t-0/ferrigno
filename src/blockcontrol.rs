@@ -9,7 +9,7 @@ pub struct BlockControl {
     pub is_loop: bool,
     pub is_inside_tbc: bool,
 }
-impl New for BlockControl{
+impl New for BlockControl {
     fn new() -> Self {
         return BlockControl {
             previous: std::ptr::null_mut(),

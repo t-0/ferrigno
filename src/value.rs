@@ -1,6 +1,6 @@
-use crate::object::*;
 use crate::functions::*;
 use crate::new::*;
+use crate::object::*;
 #[derive(Copy, Clone)]
 pub union Value {
     pub object: *mut Object,

@@ -1,8 +1,8 @@
+use crate::new::*;
 use crate::node::*;
 use crate::object::*;
-use crate::tvalue::*;
 use crate::tag::*;
-use crate::new::*;
+use crate::tvalue::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
@@ -18,16 +18,16 @@ pub struct Table {
     pub gc_list: *mut Object,
 }
 impl TObject for Table {
-    fn get_marked(& self) -> u8 {
+    fn get_marked(&self) -> u8 {
         self.object.marked
     }
-    fn set_marked(& mut self, marked_: u8) {
+    fn set_marked(&mut self, marked_: u8) {
         self.object.marked = marked_;
     }
-    fn set_tag(& mut self, tag: u8) {
+    fn set_tag(&mut self, tag: u8) {
         self.object.set_tag(tag);
     }
-    fn set_collectable(& mut self) {
+    fn set_collectable(&mut self) {
         self.collectable = true;
     }
     fn is_collectable(&self) -> bool {
@@ -42,10 +42,10 @@ impl TObject for Table {
     fn get_tag_variant(&self) -> u8 {
         self.object.get_tag_variant()
     }
-    fn get_class_name(& mut self) -> String {
+    fn get_class_name(&mut self) -> String {
         "table".to_string()
     }
-    fn get_metatable(& mut self) -> *mut Table {
+    fn get_metatable(&mut self) -> *mut Table {
         self.metatable
     }
 }
@@ -66,10 +66,10 @@ impl New for Table {
     }
 }
 impl Table {
-    pub fn get_marked(& self) -> u8 {
+    pub fn get_marked(&self) -> u8 {
         self.object.marked
     }
-    pub fn set_marked(& mut self, marked_: u8) {
+    pub fn set_marked(&mut self, marked_: u8) {
         self.object.marked = marked_;
     }
     pub unsafe extern "C" fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
@@ -85,7 +85,7 @@ impl Table {
             (*t2).last_free = temporary_last_free;
         }
     }
-    pub unsafe extern "C" fn get_free_position(& mut self) -> *mut Node {
+    pub unsafe extern "C" fn get_free_position(&mut self) -> *mut Node {
         unsafe {
             if !self.last_free.is_null() {
                 while self.last_free > self.node {

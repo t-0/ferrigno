@@ -1,7 +1,7 @@
 use crate::blockcontrol::*;
 use crate::lexicalstate::*;
-use crate::prototype::*;
 use crate::new::*;
+use crate::prototype::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct FunctionState {

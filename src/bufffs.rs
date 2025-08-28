@@ -1,10 +1,10 @@
-use crate::state::*;
-use crate::onelua::*;
-use crate::tvalue::*;
-use crate::object::*;
 use crate::c::*;
-use crate::tstring::*;
 use crate::gcunion::*;
+use crate::object::*;
+use crate::onelua::*;
+use crate::state::*;
+use crate::tstring::*;
+use crate::tvalue::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
 pub struct BuffFS {
@@ -14,59 +14,72 @@ pub struct BuffFS {
     block: [i8; BUFFFS_SIZE],
 }
 impl BuffFS {
-    pub fn new(state_: * mut State) -> Self {
+    pub fn new(state_: *mut State) -> Self {
         return BuffFS {
             state: state_,
             is_pushed: false,
             size: 0,
             block: [0; BUFFFS_SIZE],
+        };
+    }
+    pub unsafe extern "C" fn clear(&mut self) {
+        unsafe {
+            let io: *mut TValue = &mut (*(*self.state).top.p).value;
+            let ts: *mut TString =
+                luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
+            (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
+            (*io).set_tag((*ts).get_tag());
+            (*io).set_collectable();
+            (*self.state).top.p = (*self.state).top.p.offset(1);
+            if self.is_pushed {
+                luav_concat(self.state, 2);
+            } else {
+                self.is_pushed = true;
+            };
+            self.size = 0;
         }
     }
-pub unsafe extern "C" fn clear(& mut self) { unsafe {
-    let io: *mut TValue = &mut (*(*self.state).top.p).value;
-    let ts: *mut TString = luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
-    (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
-    (*io).set_tag ((*ts).get_tag());
-    (*io).set_collectable();
-    (*self.state).top.p = (*self.state).top.p.offset(1);
-    if self.is_pushed {
-        luav_concat(self.state, 2);
-    } else {
-        self.is_pushed = true;
-    };
-    self.size = 0;
-}}
-pub unsafe extern "C" fn get_raw(& mut self, size: u64) -> *mut i8 { unsafe {
-    if size > ((60 + 44 + 95) - self.size as u64) {
-        self.clear();
+    pub unsafe extern "C" fn get_raw(&mut self, size: u64) -> *mut i8 {
+        unsafe {
+            if size > ((60 + 44 + 95) - self.size as u64) {
+                self.clear();
+            }
+            return self.block.as_mut_ptr().offset(self.size as isize);
+        }
     }
-    return self.block.as_mut_ptr().offset(self.size as isize);
-}}
-pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64) { unsafe {
-    if length <= (60 + 44 + 95) {
-        let bf = self.get_raw(length);
-        memcpy(bf as *mut libc::c_void, pointer as *const libc::c_void, length);
+    pub unsafe extern "C" fn add_string(&mut self, pointer: *const i8, length: u64) {
+        unsafe {
+            if length <= (60 + 44 + 95) {
+                let bf = self.get_raw(length);
+                memcpy(
+                    bf as *mut libc::c_void,
+                    pointer as *const libc::c_void,
+                    length,
+                );
+                self.size += length;
+            } else {
+                self.clear();
+                let io = &mut (*(*self.state).top.p).value;
+                let ts = luas_newlstr(self.state, pointer, length);
+                (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
+                (*io).set_tag((*ts).get_tag());
+                (*io).set_collectable();
+                (*self.state).top.p = (*self.state).top.p.offset(1);
+                if self.is_pushed {
+                    luav_concat(self.state, 2);
+                } else {
+                    self.is_pushed = true;
+                };
+            };
+        }
+    }
+    pub unsafe extern "C" fn add_number(&mut self, number: *mut TValue) {
+        unsafe {
+            let number_buffer = self.get_raw(44);
+            self.size += tostringbuff(number, number_buffer);
+        }
+    }
+    pub fn add_length(&mut self, length: u64) {
         self.size += length;
-    } else {
-        self.clear();
-        let io = &mut (*(*self.state).top.p).value;
-        let ts = luas_newlstr(self.state, pointer, length);
-        (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
-        (*io).set_tag ((*ts).get_tag());
-        (*io).set_collectable();
-        (*self.state).top.p = (*self.state).top.p.offset(1);
-        if self.is_pushed {
-            luav_concat(self.state, 2);
-        } else {
-            self.is_pushed = true;
-        };
-    };
-}}
-pub unsafe extern "C" fn add_number(& mut self, number: *mut TValue) { unsafe {
-    let number_buffer = self.get_raw(44);
-    self.size += tostringbuff(number, number_buffer);
-}}
-pub fn add_length(& mut self, length: u64) {
-    self.size += length;
-}
+    }
 }

@@ -1,11 +1,11 @@
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
-use crate::tag::*;
 use crate::object::*;
-use crate::tvalue::*;
-use crate::table::*;
-use crate::tstring::*;
 use crate::state::*;
+use crate::table::*;
+use crate::tag::*;
+use crate::tstring::*;
+use crate::tvalue::*;
 use crate::upvaldesc::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -36,16 +36,16 @@ pub struct Prototype {
     pub gc_list: *mut Object,
 }
 impl TObject for Prototype {
-    fn get_marked(& self) -> u8 {
+    fn get_marked(&self) -> u8 {
         self.marked
     }
-    fn set_marked(& mut self, marked_: u8) {
+    fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
     }
-    fn set_tag(& mut self, tag: u8) {
+    fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
     }
-    fn set_collectable(& mut self) {
+    fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
     }
     fn is_collectable(&self) -> bool {
@@ -60,47 +60,51 @@ impl TObject for Prototype {
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
     }
-    fn get_class_name(& mut self) -> String {
+    fn get_class_name(&mut self) -> String {
         "prototype".to_string()
     }
-    fn get_metatable(& mut self) -> *mut Table {
+    fn get_metatable(&mut self) -> *mut Table {
         std::ptr::null_mut()
     }
 }
 impl Prototype {
-pub unsafe extern "C" fn free_prototype(& mut self, state: *mut State) { unsafe {
-(*state).free_memory(
-        self.code as *mut libc::c_void,
-        (self.size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
-    );
-(*state).free_memory(
-        self.p as *mut libc::c_void,
-        (self.size_p as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
-    );
-(*state).free_memory(
-        self.k as *mut libc::c_void,
-        (self.size_k as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
-    );
-(*state).free_memory(
-        self.line_info as *mut libc::c_void,
-        (self.size_line_info as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
-    );
-(*state).free_memory(
-        self.absolute_line_info as *mut libc::c_void,
-        (self.size_absolute_line_info as u64)
-            .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
-    );
-(*state).free_memory(
-        self.local_variables as *mut libc::c_void,
-        (self.size_local_variables as u64).wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
-    );
-(*state).free_memory(
-        self.upvalues as *mut libc::c_void,
-        (self.size_upvalues as u64).wrapping_mul(::core::mem::size_of::<Upvaldesc>() as u64),
-    );
-(*state).free_memory(
-        self as *mut Prototype as *mut libc::c_void,
-        ::core::mem::size_of::<Prototype>() as u64,
-    );
-}}
+    pub unsafe extern "C" fn free_prototype(&mut self, state: *mut State) {
+        unsafe {
+            (*state).free_memory(
+                self.code as *mut libc::c_void,
+                (self.size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
+            );
+            (*state).free_memory(
+                self.p as *mut libc::c_void,
+                (self.size_p as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
+            );
+            (*state).free_memory(
+                self.k as *mut libc::c_void,
+                (self.size_k as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
+            );
+            (*state).free_memory(
+                self.line_info as *mut libc::c_void,
+                (self.size_line_info as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            );
+            (*state).free_memory(
+                self.absolute_line_info as *mut libc::c_void,
+                (self.size_absolute_line_info as u64)
+                    .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
+            );
+            (*state).free_memory(
+                self.local_variables as *mut libc::c_void,
+                (self.size_local_variables as u64)
+                    .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
+            );
+            (*state).free_memory(
+                self.upvalues as *mut libc::c_void,
+                (self.size_upvalues as u64)
+                    .wrapping_mul(::core::mem::size_of::<Upvaldesc>() as u64),
+            );
+            (*state).free_memory(
+                self as *mut Prototype as *mut libc::c_void,
+                ::core::mem::size_of::<Prototype>() as u64,
+            );
+        }
+    }
 }

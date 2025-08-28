@@ -1,5 +1,5 @@
-use crate::tstring::*;
 use crate::new::*;
+use crate::tstring::*;
 #[derive(Copy, Clone)]
 pub union SemanticInfo {
     pub r: f64,
