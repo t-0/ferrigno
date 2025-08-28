@@ -15,6 +15,9 @@ impl TObject for UpValue {
     fn set_tag(& mut self, tag: u8) {
         self.tag = tag;
     }
+    fn is_collectable(&self) -> bool {
+        return is_collectable(self.tag);
+    }
     fn get_tag(&self) -> u8 {
         return self.tag;
     }

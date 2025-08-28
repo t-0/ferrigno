@@ -116,9 +116,9 @@ impl Global {
     }
     pub unsafe extern "C" fn propagatemark(& mut self) -> u64 { unsafe {
         let o: *mut Object = self.gray;
-        (*o).marked = (*o).marked | (1 << 5);
+        (*o).marked |= 1 << 5;
         self.gray = *getgclist(o);
-        match (*o).get_tag() {
+        match (*o).get_tag_variant() {
             TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
             TAG_VARIANT_USER => return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64,
             TAG_VARIANT_CLOSURE_L => return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64,

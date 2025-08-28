@@ -1078,7 +1078,9 @@ pub unsafe extern "C" fn index2value(state: *mut State, mut index: i32) -> *mut 
         return &mut (*(*state).global).l_registry;
     } else {
         index = -(1000000 as i32) - 1000 as i32 - index;
-        if (*(*call_info).function.p).val.get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
+        if (*(*call_info).function.p).val.is_collectable()
+            && ((*(*call_info).function.p).val.get_tag_variant() == TAG_VARIANT_CLOSURE_C)
+        {
             let function: *mut CClosure =
                 &mut (*((*(*call_info).function.p).val.value.gc as *mut GCUnion)).ccl;
             return if index <= (*function).count_upvalues as i32 {
@@ -1230,7 +1232,7 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
     (*io1).value = (*io2).value;
     (*io1).set_tag ((*io2).get_tag());
     if toidx < -(1000000 as i32) - 1000 as i32 {
-        if is_collectable((*fr).get_tag()) {
+        if (*fr).is_collectable() {
             if (*((*(*(*state).call_info).function.p).val.value.gc as *mut GCUnion))
                 .ccl
                 .marked
@@ -1277,7 +1279,11 @@ pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: i32) -> *const 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_iscfunction(state: *mut State, index: i32) -> bool { unsafe {
     let o: *const TValue = index2value(state, index);
-    return (*o).get_tag() == TAG_VARIANT_CLOSURE_CFUNCTION || (*o).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C;
+    match (*o).get_tag_variant() {
+        TAG_VARIANT_CLOSURE_CFUNCTION => return true,
+        TAG_VARIANT_CLOSURE_C => return true,
+        _ => return false,
+    }
 }}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_isinteger(state: *mut State, index: i32) -> bool { unsafe {
@@ -1464,13 +1470,12 @@ pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 { unsa
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunction { unsafe {
     let o: *const TValue = index2value(state, index);
-    if (*o).get_tag() == TAG_VARIANT_CLOSURE_CFUNCTION {
-        return (*o).value.f;
-    } else if (*o).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C {
-        return (*((*o).value.gc as *mut GCUnion)).ccl.f;
-    } else {
-        return None;
-    };
+    match (*o).get_tag_variant() {
+    TAG_VARIANT_CLOSURE_CFUNCTION => (*o).value.f,
+    TAG_VARIANT_CLOSURE_C =>
+        (*((*o).value.gc as *mut GCUnion)).ccl.f,
+        _ => None,
+    }
 }}
 #[inline]
 pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void { unsafe {
@@ -1514,7 +1519,7 @@ pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const 
         }
         TAG_VARIANT_USER | TAG_VARIANT_POINTER => return touserdata(o),
         _ => {
-            if is_collectable((*o).get_tag()) {
+            if (*o).is_collectable() {
                 return (*o).value.gc as *const libc::c_void;
             } else {
                 return std::ptr::null();
@@ -1613,7 +1618,7 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
         let io_0: *mut TValue = &mut (*(*state).top.p).val;
         let x_: *mut CClosure = cl;
         (*io_0).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io_0).set_tag(COLLECTABLE_TAG_VARIANT_CLOSURE_C);
+        (*io_0).set_tag(set_collectable (TAG_VARIANT_CLOSURE_C));
         (*state).top.p = (*state).top.p.offset(1);
             if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -1882,7 +1887,7 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
         (*io1).set_tag ((*io2).get_tag());
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+        if (*(*state).top.p.offset(-(1 as isize))).val.is_collectable() {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -1938,7 +1943,7 @@ pub unsafe extern "C" fn lua_settable(state: *mut State, index: i32) { unsafe {
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
         (*io1).set_tag ((*io2).get_tag());
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+        if (*(*state).top.p.offset(-(1 as isize))).val.is_collectable() {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -1988,7 +1993,7 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) { unsaf
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
         (*io1).set_tag ((*io2).get_tag());
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+        if ((*(*state).top.p.offset(-(1 as isize))).val.is_collectable()) {
             if (*(*t).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -2027,7 +2032,7 @@ pub unsafe extern "C" fn aux_rawset(
         &mut (*(*state).top.p.offset(-(1 as isize))).val,
     );
     (*t).flags = ((*t).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
-    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+    if ((*(*state).top.p.offset(-(1 as isize))).val.is_collectable()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                 & (1 << 3 | 1 << 4)
@@ -2075,7 +2080,7 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) { un
         n,
         &mut (*(*state).top.p.offset(-(1 as isize))).val,
     );
-    if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+    if ((*(*state).top.p.offset(-(1 as isize))).val.is_collectable()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                 & (1 << 3 | 1 << 4)
@@ -2155,7 +2160,7 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
         let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).val;
         (*io1).value = (*io2).value;
         (*io1).set_tag ((*io2).get_tag());
-        if is_collectable((*(*state).top.p.offset(-(1 as isize))).val.get_tag()) {
+        if ((*(*state).top.p.offset(-(1 as isize))).val.is_collectable()) {
             if (*(*o).value.gc).marked & 1 << 5 != 0
                 && (*(*(*state).top.p.offset(-(1 as isize))).val.value.gc).marked
                     & (1 << 3 | 1 << 4)
@@ -2281,7 +2286,7 @@ pub unsafe extern "C" fn lua_load(
             let io2: *const TValue = gt;
             (*io1).value = (*io2).value;
             (*io1).set_tag ((*io2).get_tag());
-            if is_collectable((*gt).get_tag()) {
+            if ((*gt).is_collectable()) {
                 if (**((*f).upvalues).as_mut_ptr().offset(0 as isize)).marked
                     & 1 << 5
                     != 0
@@ -2601,7 +2606,7 @@ pub unsafe extern "C" fn lua_setupvalue(
         let io2: *const TValue = &mut (*(*state).top.p).val;
         (*io1).value = (*io2).value;
         (*io1).set_tag ((*io2).get_tag());
-        if is_collectable((*val).get_tag()) {
+        if ((*val).is_collectable()) {
             if (*owner).marked & 1 << 5 != 0
                 && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
@@ -3497,12 +3502,10 @@ pub unsafe extern "C" fn lua_getinfo(
         call_info = (*ar).i_ci;
         function = &mut (*(*call_info).function.p).val;
     }
-    let cl: *mut UClosure = if (*function).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_L
-        || (*function).get_tag() == COLLECTABLE_TAG_VARIANT_CLOSURE_C
-    {
-        &mut (*((*function).value.gc as *mut GCUnion)).ucl
-    } else {
-        std::ptr::null_mut()
+    let cl: *mut UClosure = match (*function).get_tag_variant() {
+        TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C =>
+        &mut (*((*function).value.gc as *mut GCUnion)).ucl,
+        _ => std::ptr::null_mut(),
     };
     status = auxgetinfo(state, what, ar, cl, call_info);
     if !(strchr(what, 'f' as i32)).is_null() {
@@ -6188,7 +6191,7 @@ pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsa
                 (*uv).marked = ((*uv).marked & !(1 << 3 | 1 << 4)
                     | 1 << 5) as u8;
             }
-            if is_collectable((*(*uv).v.p).get_tag())
+            if ((*(*uv).v.p).is_collectable())
                 && (*(*(*uv).v.p).value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 reallymarkobject(g, (*(*uv).v.p).value.gc);
@@ -6271,7 +6274,7 @@ pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 { unsafe {
             while !uv.is_null() {
                 work += 1;
                 if (*uv).marked & (1 << 3 | 1 << 4) == 0 {
-                    if is_collectable((*(*uv).v.p).get_tag())
+                    if ((*(*uv).v.p).is_collectable())
                         && (*(*(*uv).v.p).value.gc).marked
                             & (1 << 3 | 1 << 4)
                             != 0
@@ -6297,7 +6300,7 @@ pub unsafe extern "C" fn restartcollection(g: *mut Global) { unsafe {
     if (*(*g).mainthread).marked & (1 << 3 | 1 << 4) != 0 {
         reallymarkobject(g, &mut (*((*g).mainthread as *mut GCUnion)).gc);
     }
-    if is_collectable((*g).l_registry.get_tag())
+    if ((*g).l_registry.is_collectable())
         && (*(*g).l_registry.value.gc).marked & (1 << 3 | 1 << 4) != 0
     {
         reallymarkobject(g, (*g).l_registry.value.gc);
@@ -6333,7 +6336,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) { unsa
             if hasclears == 0
                 && iscleared(
                     g,
-                    if is_collectable((*n).i_value.get_tag()) {
+                    if ((*n).i_value.is_collectable()) {
                         (*n).i_value.value.gc
                     } else {
                         std::ptr::null_mut()
@@ -6371,7 +6374,7 @@ pub unsafe extern "C" fn traverseephemeron(
     let new_size: u32 = (1 << (*h).log_size_node as i32) as u32;
     let mut i: u32 = 0;
     while i < asize {
-        if is_collectable((*((*h).array).offset(i as isize)).get_tag())
+        if ((*((*h).array).offset(i as isize)).is_collectable())
             && (*(*((*h).array).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6401,12 +6404,12 @@ pub unsafe extern "C" fn traverseephemeron(
         ) != 0
         {
             hasclears = 1;
-            if is_collectable((*n).i_value.get_tag())
+            if ((*n).i_value.is_collectable())
                 && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 hasww = 1;
             }
-        } else if is_collectable((*n).i_value.get_tag())
+        } else if ((*n).i_value.is_collectable())
             && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
             marked = 1;
@@ -6443,7 +6446,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { un
     let asize: u32 = luah_realasize(h);
     let mut i: u32 = 0u32;
     while i < asize {
-        if is_collectable((*((*h).array).offset(i as isize)).get_tag())
+        if ((*((*h).array).offset(i as isize)).is_collectable())
             && (*(*((*h).array).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6462,7 +6465,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) { un
             {
                 reallymarkobject(g, (*n).u.key_value.gc);
             }
-            if is_collectable((*n).i_value.get_tag())
+            if ((*n).i_value.is_collectable())
                 && (*(*n).i_value.value.gc).marked & (1 << 3 | 1 << 4) != 0
             {
                 reallymarkobject(g, (*n).i_value.value.gc);
@@ -6530,7 +6533,7 @@ pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut Udata) -> i32 { u
     }
     i = 0;
     while i < (*u).nuvalue as i32 {
-        if is_collectable((*((*u).uv).as_mut_ptr().offset(i as isize)).uv.get_tag())
+        if ((*((*u).uv).as_mut_ptr().offset(i as isize)).uv.is_collectable())
             && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6551,7 +6554,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
     }
     i = 0;
     while i < (*f).size_k {
-        if is_collectable((*((*f).k).offset(i as isize)).get_tag())
+        if ((*((*f).k).offset(i as isize)).is_collectable())
             && (*(*((*f).k).offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6607,7 +6610,7 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> 
     let mut i: i32;
     i = 0;
     while i < (*cl).count_upvalues as i32 {
-        if is_collectable((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).get_tag())
+        if ((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).is_collectable())
             && (*(*((*cl).upvalue).as_mut_ptr().offset(i as isize)).value.gc).marked
                 & (1 << 3 | 1 << 4)
                 != 0
@@ -6653,7 +6656,7 @@ pub unsafe extern "C" fn traversethread(g: *mut Global, th: *mut State) -> i32 {
         return 1;
     }
     while o < (*th).top.p {
-        if is_collectable((*o).val.get_tag())
+        if ((*o).val.is_collectable())
         && (*(*o).val.value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
             reallymarkobject(g, (*o).val.value.gc);
@@ -6755,7 +6758,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
             let o: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
             if iscleared(
                 g,
-                if is_collectable((*o).get_tag()) {
+                if (*o).is_collectable() {
                     (*o).value.gc
                 } else {
                     std::ptr::null_mut()
@@ -6770,7 +6773,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
         while n < limit {
             if iscleared(
                 g,
-                if is_collectable((*n).i_value.get_tag()) {
+                if ((*n).i_value.is_collectable()) {
                     (*n).i_value.value.gc
                 } else {
                     std::ptr::null_mut()
@@ -7352,7 +7355,7 @@ pub unsafe extern "C" fn atomic(state: *mut State) -> u64 { unsafe {
     if (*state).marked & (1 << 3 | 1 << 4) != 0 {
         reallymarkobject(g, &mut (*(state as *mut GCUnion)).gc);
     }
-    if is_collectable((*g).l_registry.get_tag())
+    if ((*g).l_registry.is_collectable())
         && (*(*g).l_registry.value.gc).marked & (1 << 3 | 1 << 4) != 0
     {
         reallymarkobject(g, (*g).l_registry.value.gc);
@@ -7729,7 +7732,7 @@ pub unsafe extern "C" fn luaf_closeupval(state: *mut State, level: StkId) { unsa
         (*uv).v.p = slot;
         if (*uv).marked & (1 << 3 | 1 << 4) == 0 {
             (*uv).marked = ((*uv).marked | 1 << 5) as u8;
-            if is_collectable((*slot).get_tag()) {
+            if ((*slot).is_collectable()) {
                 if (*uv).marked & 1 << 5 != 0
                     && (*(*slot).value.gc).marked & (1 << 3 | 1 << 4) != 0
                 {
@@ -12192,7 +12195,7 @@ pub unsafe extern "C" fn equalkey(
     if (*k1).get_tag() != (*n2).u.key_tag
         && !(deadok != 0
             && (*n2).u.key_tag == 9 + 2
-            && is_collectable((*k1).get_tag()))
+            && ((*k1).is_collectable()))
     {
         return 0;
     }
@@ -12700,7 +12703,7 @@ pub unsafe extern "C" fn luah_newkey(
     let io_: *const TValue = key;
     (*n_).u.key_value = (*io_).value;
     (*n_).u.key_tag = (*io_).get_tag();
-    if is_collectable((*key).get_tag()) {
+    if ((*key).is_collectable()) {
         if (*(t as *mut GCUnion)).gc.marked & 1 << 5 != 0
             && (*(*key).value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
@@ -13464,7 +13467,7 @@ pub unsafe extern "C" fn addk(
     (*io1).set_tag ((*io2).get_tag());
     (*fs).nk += 1;
     (*fs).nk;
-    if is_collectable((*v).get_tag()) {
+    if ((*v).is_collectable()) {
         if (*f).marked & 1 << 5 != 0
             && (*(*v).value.gc).marked & (1 << 3 | 1 << 4) != 0
         {
@@ -15168,7 +15171,7 @@ pub unsafe extern "C" fn luav_finishset(
                             luah_finishset(state, h, key, slot, val);
                 (*state).top.p = (*state).top.p.offset(-1);
                             (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
-                if is_collectable((*val).get_tag()) {
+                if ((*val).is_collectable()) {
                     if (*(h as *mut GCUnion)).gc.marked & 1 << 5 != 0
                         && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
                     {
@@ -15202,7 +15205,7 @@ pub unsafe extern "C" fn luav_finishset(
             let io2: *const TValue = val;
             (*io1).value = (*io2).value;
             (*io1).set_tag ((*io2).get_tag());
-            if is_collectable((*val).get_tag()) {
+            if ((*val).is_collectable()) {
                 if (*(*t).value.gc).marked & 1 << 5 != 0
                     && (*(*val).value.gc).marked & (1 << 3 | 1 << 4) != 0
                 {
@@ -16059,7 +16062,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io2_3: *const TValue = &mut (*ra_9).val;
                         (*io1_3).value = (*io2_3).value;
                         (*io1_3).set_tag((*io2_3).get_tag());
-                        if is_collectable((*ra_9).val.get_tag()) {
+                        if ((*ra_9).val.is_collectable()) {
                             if (*uv).marked & 1 << 5 != 0
                                 && (*(*ra_9).val.value.gc).marked
                                     & (1 << 3 | 1 << 4)
@@ -16303,7 +16306,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io2_8: *const TValue = rc_2;
                             (*io1_8).value = (*io2_8).value;
                             (*io1_8).set_tag((*io2_8).get_tag());
-                            if is_collectable((*rc_2).get_tag()) {
+                            if ((*rc_2).is_collectable()) {
                                 if (*(*upval_0).value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_2).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16383,7 +16386,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io2_9: *const TValue = rc_3;
                             (*io1_9).value = (*io2_9).value;
                             (*io1_9).set_tag((*io2_9).get_tag());
-                            if is_collectable((*rc_3).get_tag()) {
+                            if ((*rc_3).is_collectable()) {
                                 if (*(*ra_14).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_3).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16446,7 +16449,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io2_10: *const TValue = rc_4;
                             (*io1_10).value = (*io2_10).value;
                             (*io1_10).set_tag((*io2_10).get_tag());
-                            if is_collectable((*rc_4).get_tag()) {
+                            if ((*rc_4).is_collectable()) {
                                 if (*(*ra_15).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_4).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -16513,7 +16516,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let io2_11: *const TValue = rc_5;
                             (*io1_11).value = (*io2_11).value;
                             (*io1_11).set_tag((*io2_11).get_tag());
-                            if is_collectable((*rc_5).get_tag()) {
+                            if ((*rc_5).is_collectable()) {
                                 if (*(*ra_16).val.value.gc).marked & 1 << 5 != 0
                                     && (*(*rc_5).value.gc).marked
                                         & (1 << 3 | 1 << 4)
@@ -18646,7 +18649,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             (*io1_17).value = (*io2_17).value;
                             (*io1_17).set_tag((*io2_17).get_tag());
                             last = last.wrapping_sub(1);
-                            if is_collectable((*val).get_tag()) {
+                            if ((*val).is_collectable()) {
                                 if (*(h as *mut GCUnion)).gc.marked & 1 << 5 != 0
                                     && (*(*val).value.gc).marked
                                         & (1 << 3 | 1 << 4)

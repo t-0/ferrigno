@@ -18,6 +18,9 @@ impl TValue {
     pub fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
     }
+    pub fn is_collectable(&self) -> bool {
+        return is_collectable(self.tag);
+    }
     pub fn get_tag(&self) -> u8 {
         self.tag
     }

@@ -45,7 +45,6 @@ pub const fn is_collectable(tag: u8) -> bool {
     0 != (TAG_COLLECTABLE & tag)
 }
 pub const COLLECTABLE_TAG_VARIANT_TABLE: u8 = set_collectable(TAG_VARIANT_TABLE);
-pub const COLLECTABLE_TAG_VARIANT_CLOSURE_C: u8 = set_collectable(TAG_VARIANT_CLOSURE_C);
 pub const COLLECTABLE_TAG_VARIANT_CLOSURE_L: u8 = set_collectable(TAG_VARIANT_CLOSURE_L);
 pub const COLLECTABLE_TAG_VARIANT_STATE: u8 = set_collectable(TAG_VARIANT_STATE);
 pub const COLLECTABLE_TAG_VARIANT_USER: u8 = set_collectable(TAG_VARIANT_USER);

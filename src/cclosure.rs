@@ -21,6 +21,9 @@ impl TObject for CClosure {
     fn get_tag(&self) -> u8 {
         return self.tag;
     }
+    fn is_collectable(&self) -> bool {
+        return is_collectable(self.tag);
+    }
     fn get_tag_type(&self) -> u8 {
         return get_tag_type(self.get_tag());
     }
