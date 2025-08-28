@@ -42,6 +42,9 @@ impl New for Object {
             next: std::ptr::null_mut(),
             tag: TAG_VARIANT_NIL_NIL,
             marked: 0,
+            dummy1: 0,
+            dummy2: 0,
+            dummy3: 0,
             ..
         }
     }

@@ -1390,6 +1390,18 @@ pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> i32 {
         };
     }
 }
+pub unsafe extern "C" fn lua_type2(state: *mut State, index: i32) -> Option<u8> {
+    unsafe {
+        let o: *const TValue = index2value(state, index);
+        return if (get_tag_type((*o).get_tag()) != TAG_TYPE_NIL)
+            || o != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue
+        {
+            return Some((*o).get_tag_type())
+        } else {
+            None
+        };
+    }
+}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: i32) -> *const i8 {
     unsafe {
@@ -19436,12 +19448,12 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
 }
 pub unsafe extern "C" fn findfield(state: *mut State, objidx: i32, level: i32) -> bool {
     unsafe {
-        if level == 0 || !(lua_type(state, -1) == 5) {
+        if level == 0 || (lua_type2(state, -1) != Some(TAG_TYPE_TABLE)) {
             return false;
         }
         (*state).push_nil();
         while lua_next(state, -(2)) != 0 {
-            if lua_type(state, -(2)) == 4 {
+            if lua_type2(state, -(2)) == Some(TAG_TYPE_STRING) {
                 if lua_rawequal(state, objidx, -1) {
                     lua_settop(state, -1 - 1);
                     return true;
@@ -19709,7 +19721,7 @@ pub unsafe extern "C" fn lual_typeerror(state: *mut State, arg: i32, tname: *con
         let typearg: *const i8;
         if lual_getmetafield(state, arg, b"__name\0" as *const u8 as *const i8) == 4 {
             typearg = lua_tolstring(state, -1, std::ptr::null_mut());
-        } else if lua_type(state, arg) == 2 {
+        } else if lua_type2(state, arg) == Some(TAG_TYPE_POINTER) {
             typearg = b"light userdata\0" as *const u8 as *const i8;
         } else {
             typearg = lua_typename(state, lua_type(state, arg));
@@ -19930,10 +19942,10 @@ pub unsafe extern "C" fn lual_checkstack(state: *mut State, space: i32, message:
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lual_checktype(state: *mut State, arg: i32, t: i32) {
+pub unsafe extern "C" fn lual_checktype(state: *mut State, arg: i32, t: u8) {
     unsafe {
-        if ((lua_type(state, arg) != t) as i32 != 0) as i32 as i64 != 0 {
-            tag_error(state, arg, t);
+        if lua_type2(state, arg) != Some(t) {
+            tag_error(state, arg, t as i32);
         }
     }
 }
@@ -19967,14 +19979,17 @@ pub unsafe extern "C" fn lual_optlstring(
     length: *mut u64,
 ) -> *const i8 {
     unsafe {
-        if lua_type(state, arg) <= 0 {
-            if !length.is_null() {
-                *length = if !def.is_null() { strlen(def) } else { 0u64 };
-            }
-            return def;
-        } else {
-            return lual_checklstring(state, arg, length);
-        };
+        match lua_type2(state, arg) {
+            None | Some(TAG_TYPE_NIL) => {
+                if !length.is_null() {
+                    *length = if !def.is_null() { strlen(def) } else { 0u64 };
+                }
+                return def;
+            },
+            _ => {
+                return lual_checklstring(state, arg, length);
+            },
+        }
     }
 }
 #[unsafe(no_mangle)]
@@ -19991,11 +20006,14 @@ pub unsafe extern "C" fn lual_checknumber(state: *mut State, arg: i32) -> f64 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_optnumber(state: *mut State, arg: i32, def: f64) -> f64 {
     unsafe {
-        return if lua_type(state, arg) <= 0 {
-            def
-        } else {
-            lual_checknumber(state, arg)
-        };
+        match lua_type2(state, arg) {
+            None | Some(TAG_TYPE_NIL) => {
+                def
+            },
+            _ => {
+                lual_checknumber(state, arg)
+            }
+        }
     }
 }
 pub unsafe extern "C" fn interror(state: *mut State, arg: i32) {
@@ -20025,10 +20043,13 @@ pub unsafe extern "C" fn lual_checkinteger(state: *mut State, arg: i32) -> i64 {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_optinteger(state: *mut State, arg: i32, def: i64) -> i64 {
     unsafe {
-        return if lua_type(state, arg) <= 0 {
-            def
-        } else {
-            lual_checkinteger(state, arg)
+        return match lua_type2(state, arg) {
+            None | Some(TAG_TYPE_NIL) => {
+                def
+            },
+            _ => {
+                lual_checkinteger(state, arg)
+            }
         };
     }
 }
@@ -20096,7 +20117,7 @@ pub unsafe extern "C" fn newbox(state: *mut State) {
 pub unsafe extern "C" fn lual_ref(state: *mut State, mut t: i32) -> i32 {
     unsafe {
         let mut ref_0: i32;
-        if lua_type(state, -1) == 0 {
+        if lua_type2(state, -1) == Some(TAG_TYPE_NIL) {
             lua_settop(state, -1 - 1);
             return -1;
         }
@@ -20576,7 +20597,7 @@ pub unsafe extern "C" fn raw_allocate(
 }
 pub unsafe extern "C" fn panic(state: *mut State) -> i32 {
     unsafe {
-        let message: *const i8 = if lua_type(state, -1) == 4 {
+        let message: *const i8 = if lua_type2(state, -1) == Some(TAG_TYPE_STRING) {
             lua_tolstring(state, -1, std::ptr::null_mut())
         } else {
             b"error object is not a string\0" as *const u8 as *const i8
@@ -20810,33 +20831,36 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
 }
 pub unsafe extern "C" fn luab_tonumber(state: *mut State) -> i32 {
     unsafe {
-        if lua_type(state, 2) <= 0 {
-            if lua_type(state, 1) == 3 {
-                lua_settop(state, 1);
-                return 1;
-            } else {
-                let mut l: u64 = 0;
-                let s: *const i8 = lua_tolstring(state, 1, &mut l);
-                if !s.is_null() && lua_stringtonumber(state, s) == l.wrapping_add(1 as u64) {
+        match lua_type2(state, 2) {
+            None | Some(TAG_TYPE_NIL) => {
+                if lua_type2(state, 1) == Some(TAG_TYPE_NUMERIC) {
+                    lua_settop(state, 1);
+                    return 1;
+                } else {
+                    let mut l: u64 = 0;
+                    let s: *const i8 = lua_tolstring(state, 1, &mut l);
+                    if !s.is_null() && lua_stringtonumber(state, s) == l.wrapping_add(1 as u64) {
+                        return 1;
+                    }
+                    lual_checkany(state, 1);
+                }
+            },
+            _ => {
+                let mut l_0: u64 = 0;
+                let s_0: *const i8;
+                let mut n: i64 = 0;
+                let base: i64 = lual_checkinteger(state, 2);
+                lual_checktype(state, 1, 4);
+                s_0 = lua_tolstring(state, 1, &mut l_0);
+                (((2 as i64 <= base && base <= 36 as i32 as i64) as i32 != 0) as i32 as i64 != 0
+                    || lual_argerror(state, 2, b"base out of range\0" as *const u8 as *const i8) != 0)
+                    as i32;
+                if b_str2int(s_0, base as i32, &mut n) == s_0.offset(l_0 as isize) {
+                    (*state).push_integer(n);
                     return 1;
                 }
-                lual_checkany(state, 1);
             }
-        } else {
-            let mut l_0: u64 = 0;
-            let s_0: *const i8;
-            let mut n: i64 = 0;
-            let base: i64 = lual_checkinteger(state, 2);
-            lual_checktype(state, 1, 4);
-            s_0 = lua_tolstring(state, 1, &mut l_0);
-            (((2 as i64 <= base && base <= 36 as i32 as i64) as i32 != 0) as i32 as i64 != 0
-                || lual_argerror(state, 2, b"base out of range\0" as *const u8 as *const i8) != 0)
-                as i32;
-            if b_str2int(s_0, base as i32, &mut n) == s_0.offset(l_0 as isize) {
-                (*state).push_integer(n);
-                return 1;
-            }
-        }
+        };
         (*state).push_nil();
         return 1;
     }
@@ -20845,7 +20869,7 @@ pub unsafe extern "C" fn luab_error(state: *mut State) -> i32 {
     unsafe {
         let level: i32 = lual_optinteger(state, 2, 1) as i32;
         lua_settop(state, 1);
-        if lua_type(state, 1) == 4 && level > 0 {
+        if lua_type2(state, 1) == Some(TAG_TYPE_STRING) && level > 0 {
             lual_where(state, level);
             lua_pushvalue(state, 1);
             lua_concat(state, 2);
@@ -21151,7 +21175,7 @@ pub unsafe extern "C" fn luab_load(state: *mut State) -> i32 {
             b"bt\0" as *const u8 as *const i8,
             std::ptr::null_mut(),
         );
-        let env: i32 = if !(lua_type(state, 4) == -1) { 4 } else { 0 };
+        let env: i32 = if !(lua_type2(state, 4) == None) { 4 } else { 0 };
         if !s.is_null() {
             let chunkname: *const i8 = lual_optlstring(state, 2, s, std::ptr::null_mut());
             status = lual_loadbufferx(state, s, l, chunkname, mode);
@@ -21221,7 +21245,7 @@ pub unsafe extern "C" fn luab_assert(state: *mut State) -> i32 {
 pub unsafe extern "C" fn luab_select(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
-        if lua_type(state, 1) == 4
+        if lua_type2(state, 1) == Some(TAG_TYPE_STRING)
             && *lua_tolstring(state, 1, std::ptr::null_mut()) as i32 == '#' as i32
         {
             (*state).push_integer((n - 1) as i64);
@@ -21514,7 +21538,7 @@ pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 {
                 stat = lua_closethread(co, state);
                 lua_xmove(co, state, 1);
             }
-            if stat != 4 && lua_type(state, -1) == 4 {
+            if stat != 4 && lua_type2(state, -1) == Some(TAG_TYPE_STRING) {
                 lual_where(state, 1);
                 lua_rotate(state, -(2), 1);
                 lua_concat(state, 2);
@@ -21534,7 +21558,7 @@ pub unsafe extern "C" fn checkfield(state: *mut State, key: *const i8, n: i32) -
 }
 pub unsafe extern "C" fn checktab(state: *mut State, arg: i32, what: i32) {
     unsafe {
-        if lua_type(state, arg) != 5 {
+        if lua_type2(state, arg) != Some(TAG_TYPE_TABLE) {
             let mut n: i32 = 1;
             if lua_getmetatable(state, arg) != 0
                 && (what & 1 == 0 || {
@@ -21794,7 +21818,7 @@ pub unsafe extern "C" fn set2(state: *mut State, i: u32, j: u32) {
 }
 pub unsafe extern "C" fn sort_comp(state: *mut State, a: i32, b: i32) -> i32 {
     unsafe {
-        if lua_type(state, 2) == 0 {
+        if lua_type2(state, 2) == Some(TAG_TYPE_NIL) {
             return lua_compare(state, a, b, 1);
         } else {
             let res: i32;
@@ -22095,7 +22119,7 @@ pub unsafe extern "C" fn f_close(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn io_close(state: *mut State) -> i32 {
     unsafe {
-        if lua_type(state, 1) == -1 {
+        if lua_type2(state, 1) == None {
             lua_getfield(
                 state,
                 -(1000000 as i32) - 1000 as i32,
@@ -22299,10 +22323,10 @@ pub unsafe extern "C" fn f_lines(state: *mut State) -> i32 {
 pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 {
     unsafe {
         let to_close: bool;
-        if lua_type(state, 1) == -1 {
+        if lua_type2(state, 1) == None {
             (*state).push_nil();
         }
-        if lua_type(state, 1) == 0 {
+        if lua_type2(state, 1) == Some(TAG_TYPE_NIL) {
             lua_getfield(
                 state,
                 -(1000000 as i32) - 1000 as i32,
@@ -22556,7 +22580,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
                 if !(fresh155 != 0 && success != 0) {
                     break;
                 }
-                if lua_type(state, n) == 3 {
+                if lua_type2(state, n) == Some(TAG_TYPE_NUMERIC) {
                     let l: u64 = lual_checkinteger(state, n) as u64;
                     success = if l == 0u64 {
                         test_eof(state, f)
@@ -22669,7 +22693,7 @@ pub unsafe extern "C" fn g_write(state: *mut State, f: *mut FILE, mut arg: i32) 
             if !(fresh156 != 0) {
                 break;
             }
-            if lua_type(state, arg) == 3 {
+            if lua_type2(state, arg) == Some(TAG_TYPE_NUMERIC) {
                 let length: i32 = if lua_isinteger(state, arg) {
                     fprintf(
                         f,
@@ -23371,34 +23395,37 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
 pub unsafe extern "C" fn os_time(state: *mut State) -> i32 {
     unsafe {
         let t: i64;
-        if lua_type(state, 1) <= 0 {
-            t = time(std::ptr::null_mut());
-        } else {
-            let mut ts: TM = TM {
-                tm_sec: 0,
-                tm_min: 0,
-                tm_hour: 0,
-                tm_mday: 0,
-                tm_mon: 0,
-                tm_year: 0,
-                tm_wday: 0,
-                tm_yday: 0,
-                tm_isdst: 0,
-                __tm_gmtoff: 0,
-                __tm_zone: std::ptr::null(),
-            };
-            lual_checktype(state, 1, 5);
-            lua_settop(state, 1);
-            ts.tm_year = getfield(state, b"year\0" as *const u8 as *const i8, -1, 1900 as i32);
-            ts.tm_mon = getfield(state, b"month\0" as *const u8 as *const i8, -1, 1);
-            ts.tm_mday = getfield(state, b"day\0" as *const u8 as *const i8, -1, 0);
-            ts.tm_hour = getfield(state, b"hour\0" as *const u8 as *const i8, 12 as i32, 0);
-            ts.tm_min = getfield(state, b"min\0" as *const u8 as *const i8, 0, 0);
-            ts.tm_sec = getfield(state, b"sec\0" as *const u8 as *const i8, 0, 0);
-            ts.tm_isdst = getboolfield(state, b"isdst\0" as *const u8 as *const i8);
-            t = mktime(&mut ts);
-            setallfields(state, &mut ts);
-        }
+        match lua_type2(state, 1) {
+            None | Some(TAG_TYPE_NIL) => {
+                t = time(std::ptr::null_mut());
+            },
+            _ => {
+                let mut ts: TM = TM {
+                    tm_sec: 0,
+                    tm_min: 0,
+                    tm_hour: 0,
+                    tm_mday: 0,
+                    tm_mon: 0,
+                    tm_year: 0,
+                    tm_wday: 0,
+                    tm_yday: 0,
+                    tm_isdst: 0,
+                    __tm_gmtoff: 0,
+                    __tm_zone: std::ptr::null(),
+                };
+                lual_checktype(state, 1, 5);
+                lua_settop(state, 1);
+                ts.tm_year = getfield(state, b"year\0" as *const u8 as *const i8, -1, 1900 as i32);
+                ts.tm_mon = getfield(state, b"month\0" as *const u8 as *const i8, -1, 1);
+                ts.tm_mday = getfield(state, b"day\0" as *const u8 as *const i8, -1, 0);
+                ts.tm_hour = getfield(state, b"hour\0" as *const u8 as *const i8, 12 as i32, 0);
+                ts.tm_min = getfield(state, b"min\0" as *const u8 as *const i8, 0, 0);
+                ts.tm_sec = getfield(state, b"sec\0" as *const u8 as *const i8, 0, 0);
+                ts.tm_isdst = getboolfield(state, b"isdst\0" as *const u8 as *const i8);
+                t = mktime(&mut ts);
+                setallfields(state, &mut ts);
+            }
+        };
         if t != t as i64 as i64 || t == -1 as i64 {
             return lual_error(
                 state,
@@ -23444,7 +23471,7 @@ pub unsafe extern "C" fn os_setlocale(state: *mut State) -> i32 {
 pub unsafe extern "C" fn os_exit(state: *mut State) -> i32 {
     unsafe {
         let status: i32;
-        if lua_type(state, 1) == 1 {
+        if lua_type2(state, 1) == Some(TAG_TYPE_BOOLEAN) {
             status = if lua_toboolean(state, 1) != 0 { 0 } else { 1 };
         } else {
             status = lual_optinteger(state, 1, 0) as i32;
@@ -23833,7 +23860,7 @@ pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn tonum(state: *mut State, arg: i32) -> i32 {
     unsafe {
-        if lua_type(state, arg) == 3 {
+        if lua_type2(state, arg) == Some(TAG_TYPE_NUMERIC) {
             lua_pushvalue(state, arg);
             return 1;
         } else {
@@ -23847,7 +23874,7 @@ pub unsafe extern "C" fn tonum(state: *mut State, arg: i32) -> i32 {
 pub unsafe extern "C" fn trymt(state: *mut State, mtname: *const i8) {
     unsafe {
         lua_settop(state, 2);
-        if ((lua_type(state, 2) == 4 || lual_getmetafield(state, 2, mtname) == 0) as i32 != 0)
+        if ((lua_type2(state, 2) == Some(TAG_TYPE_STRING) || lual_getmetafield(state, 2, mtname) == 0) as i32 != 0)
             as i32 as i64
             != 0
         {
@@ -25104,13 +25131,13 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: 
 }
 pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32) {
     unsafe {
-        match lua_type(state, arg) {
-            4 => {
+        match lua_type2(state, arg) {
+            Some(TAG_TYPE_STRING) => {
                 let mut length: u64 = 0;
                 let s: *const i8 = lua_tolstring(state, arg, &mut length);
                 addquoted(b, s, length);
-            }
-            3 => {
+            },
+            Some(TAG_TYPE_NUMERIC) => {
                 let buffer: *mut i8 = (*b).lual_prepbuffsize(120 as i32 as u64);
                 let nb: i32;
                 if lua_isinteger(state, arg) {
@@ -25129,11 +25156,11 @@ pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32)
                     );
                 }
                 (*b).length = ((*b).length as u64).wrapping_add(nb as u64) as u64 as u64;
-            }
-            0 | 1 => {
+            },
+            Some(TAG_TYPE_NIL) | Some(TAG_TYPE_BOOLEAN) => {
                 lual_tolstring(state, arg, std::ptr::null_mut());
                 (*b).lual_addvalue();
-            }
+            },
             _ => {
                 lual_argerror(
                     state,
@@ -26649,7 +26676,7 @@ pub unsafe extern "C" fn db_setmetatable(state: *mut State) -> i32 {
 pub unsafe extern "C" fn db_getuservalue(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(state, 2, 1) as i32;
-        if lua_type(state, 1) != 7 {
+        if lua_type2(state, 1) != Some(TAG_TYPE_USER) {
             (*state).push_nil();
         } else if lua_getiuservalue(state, 1, n) != -1 {
             (*state).push_boolean(true);
@@ -26672,7 +26699,7 @@ pub unsafe extern "C" fn db_setuservalue(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn getthread(state: *mut State, arg: *mut i32) -> *mut State {
     unsafe {
-        if lua_type(state, 1) == 8 {
+        if lua_type2(state, 1) == Some(TAG_TYPE_STATE) {
             *arg = 1;
             return lua_tothread(state, 1);
         } else {
@@ -26749,7 +26776,7 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
                 arg + 2,
                 b"invalid option '>'\0" as *const u8 as *const i8,
             ) != 0) as i32;
-        if lua_type(state, arg + 1) == 6 {
+        if lua_type2(state, arg + 1) == Some(TAG_TYPE_CLOSURE) {
             options = lua_pushfstring(state, b">%s\0" as *const u8 as *const i8, options);
             lua_pushvalue(state, arg + 1);
             lua_xmove(state, other_state, 1);
@@ -26851,7 +26878,7 @@ pub unsafe extern "C" fn db_getlocal(state: *mut State) -> i32 {
         let mut arg: i32 = 0;
         let other_state: *mut State = getthread(state, &mut arg);
         let nvar: i32 = lual_checkinteger(state, arg + 2) as i32;
-        if lua_type(state, arg + 1) == 6 {
+        if lua_type2(state, arg + 1) == Some(TAG_TYPE_CLOSURE) {
             lua_pushvalue(state, arg + 1);
             lua_pushstring(state, lua_getlocal(state, std::ptr::null(), nvar));
             return 1;
@@ -27845,7 +27872,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
             }
             lua_pushstring(state, name);
             lua_callk(state, 1, 2, 0, None);
-            if lua_type(state, -(2)) == 6 {
+            if lua_type2(state, -(2)) == Some(TAG_TYPE_CLOSURE) {
                 return;
             } else if lua_isstring(state, -(2)) {
                 lua_settop(state, -1 - 1);
@@ -27877,7 +27904,7 @@ pub unsafe extern "C" fn ll_require(state: *mut State) -> i32 {
         lua_pushvalue(state, 1);
         lua_pushvalue(state, -(3));
         lua_callk(state, 2, 1, 0, None);
-        if !(lua_type(state, -1) == 0) {
+        if !(lua_type2(state, -1) == Some(TAG_TYPE_NIL)) {
             lua_setfield(state, 2, name);
         } else {
             lua_settop(state, -1 - 1);
@@ -28250,7 +28277,7 @@ pub unsafe extern "C" fn msghandler(state: *mut State) -> i32 {
         let mut message: *const i8 = lua_tolstring(state, 1, std::ptr::null_mut());
         if message.is_null() {
             if lual_callmeta(state, 1, b"__tostring\0" as *const u8 as *const i8) != 0
-                && lua_type(state, -1) == 4
+                && lua_type2(state, -1) == Some(TAG_TYPE_STRING)
             {
                 return 1;
             } else {

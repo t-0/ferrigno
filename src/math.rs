@@ -2,6 +2,7 @@
 use crate::c::*;
 use crate::onelua::*;
 use crate::randomstate::*;
+use crate::tag::*;
 use crate::registeredfunction::*;
 use crate::state::*;
 const PI: f64 = 3.141592653589793238462643383279502884f64;
@@ -158,16 +159,20 @@ unsafe extern "C" fn math_log(state: *mut State) -> i32 {
     unsafe {
         let x: f64 = lual_checknumber(state, 1);
         let res: f64;
-        if lua_type(state, 2) <= 0 {
-            res = x.ln();
-        } else {
-            let base: f64 = lual_checknumber(state, 2);
-            if base == 2.0f64 {
-                res = x.log2();
-            } else if base == 10.0f64 {
-                res = x.log10();
-            } else {
-                res = x.ln() / base.ln();
+
+        match lua_type2(state, 2) {
+            None | Some(TAG_TYPE_NIL) => {
+                res = x.ln();
+            },
+            _ => {
+                let base: f64 = lual_checknumber(state, 2);
+                if base == 2.0f64 {
+                    res = x.log2();
+                } else if base == 10.0f64 {
+                    res = x.log10();
+                } else {
+                    res = x.ln() / base.ln();
+                }
             }
         }
         (*state).push_number(res);
@@ -232,7 +237,7 @@ unsafe extern "C" fn math_max(state: *mut State) -> i32 {
 }
 unsafe extern "C" fn math_type(state: *mut State) -> i32 {
     unsafe {
-        if lua_type(state, 1) == 3 {
+        if lua_type2(state, 1) == Some(TAG_TYPE_NUMERIC) {
             lua_pushstring(
                 state,
                 if lua_isinteger(state, 1) {
@@ -368,7 +373,7 @@ unsafe extern "C" fn math_randomseed(state: *mut State) -> i32 {
     unsafe {
         let randomstate: *mut RandomState =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-        if lua_type(state, 1) == -1 {
+        if lua_type2(state, 1) == None {
             random_seed(state, randomstate);
         } else {
             let n1: i64 = lual_checkinteger(state, 1);

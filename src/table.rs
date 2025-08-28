@@ -60,6 +60,7 @@ impl New for Table {
             next: std::ptr::null_mut(),
             tag: TAG_VARIANT_TABLE,
             marked: 0,
+            dummy0: 0,
             dummy1: 0,
             dummy2: 0,
             dummy3: 0,
