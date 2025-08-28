@@ -50,8 +50,11 @@ impl TObject for State {
     fn set_tag(& mut self, tag: u8) {
         self.tag = tag;
     }
+    fn set_collectable(& mut self) {
+        self.set_tag(set_collectable(self.get_tag()));
+    }
     fn is_collectable(&self) -> bool {
-        return is_collectable(self.tag);
+        return is_collectable(self.get_tag());
     }
     fn get_tag(&self) -> u8 {
         self.tag
@@ -77,7 +80,8 @@ impl State {
                     let io: *mut TValue = &mut (*old_top).value;
                     let x_: *mut TString = (*(self.global)).memerrmsg;
                     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                    (*io).set_tag(set_collectable((*x_).get_tag()));
+                    (*io).set_tag((*x_).get_tag());
+                    (*io).set_collectable();
                 }
                 0 => {
                     (*old_top).value.set_tag(TAG_VARIANT_NIL_NIL);

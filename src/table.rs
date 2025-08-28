@@ -25,6 +25,9 @@ impl TObject for Table {
     fn set_tag(& mut self, tag: u8) {
         self.object.set_tag(tag);
     }
+    fn set_collectable(& mut self) {
+        self.set_tag(set_collectable(self.get_tag()));
+    }
     fn is_collectable(&self) -> bool {
         self.object.is_collectable()
     }

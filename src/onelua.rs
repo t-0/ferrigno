@@ -150,7 +150,8 @@ pub unsafe extern "C" fn luad_errerr(state: *mut State) -> ! { unsafe {
     );
     let io: *mut TValue = &mut (*(*state).top.p).value;
     (*io).value.gc = &mut (*(message as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*message).get_tag()));
+    (*io).set_tag ((*message).get_tag());
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     luad_throw(state, 5);
 }}
@@ -749,7 +750,8 @@ pub unsafe extern "C" fn resume_error(
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut TString = luas_new(state, message);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).get_tag()));
+    (*io).set_tag ((*x_).get_tag());
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     return 2;
 }}
@@ -1078,11 +1080,11 @@ pub unsafe extern "C" fn index2value(state: *mut State, mut index: i32) -> *mut 
         return &mut (*(*state).global).l_registry;
     } else {
         index = -(1000000 as i32) - 1000 as i32 - index;
-        if (*(*call_info).function.p).value.is_collectable()
-            && ((*(*call_info).function.p).value.get_tag_variant() == TAG_VARIANT_CLOSURE_C)
+        let value = (*(*call_info).function.p).value;
+        if value.is_collectable() && value.get_tag_variant() == TAG_VARIANT_CLOSURE_C
         {
             let function: *mut CClosure =
-                &mut (*((*(*call_info).function.p).value.value.gc as *mut GCUnion)).ccl;
+                &mut (*(value.value.gc as *mut GCUnion)).ccl;
             return if index <= (*function).count_upvalues as i32 {
                 &mut *((*function).upvalue)
                     .as_mut_ptr()
@@ -1541,7 +1543,8 @@ pub unsafe extern "C" fn lua_pushlstring(
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut TString = ts;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).get_tag()));
+    (*io).set_tag ((*x_).get_tag());
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
@@ -1557,7 +1560,8 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
         let io: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut TString = ts;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         s = ((*ts).contents).as_mut_ptr();
     }
     (*state).top.p = (*state).top.p.offset(1);
@@ -1618,7 +1622,8 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
         let io_0: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut CClosure = cl;
         (*io_0).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io_0).set_tag(set_collectable (TAG_VARIANT_CLOSURE_C));
+        (*io_0).set_tag(TAG_VARIANT_CLOSURE_C);
+        (*io_0).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
             if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -1637,7 +1642,8 @@ pub unsafe extern "C" fn lua_pushthread(state: *mut State) -> bool { unsafe {
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut State = state;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_STATE));
+    (*io).set_tag (TAG_VARIANT_STATE);
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     return (*(*state).global).mainthread == state;
 }}
@@ -1666,7 +1672,8 @@ pub unsafe extern "C" fn auxgetstr(
         let io: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
             luav_finishget(
             state,
@@ -1818,7 +1825,8 @@ pub unsafe extern "C" fn lua_createtable(state: *mut State, narray: i32, nrec: i
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut Table = table;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+    (*io).set_tag (TAG_VARIANT_TABLE);
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     if narray > 0 || nrec > 0 {
         luah_resize(state, table, narray as u32, nrec as u32);
@@ -1847,7 +1855,8 @@ pub unsafe extern "C" fn lua_getmetatable(state: *mut State, objindex: i32) -> i
     } else {
         let io: *mut TValue = &mut (*(*state).top.p).value;
         (*io).value.gc = &mut (*(mt as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+        (*io).set_tag (TAG_VARIANT_TABLE);
+        (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
         1
     }
@@ -1903,7 +1912,8 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
         let io: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut TString = str;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
             luav_finishset(
             state,
@@ -2475,7 +2485,8 @@ pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) { unsafe {
         let x_: *mut TString =
             luas_newlstr(state, b"\0" as *const u8 as *const i8, 0u64);
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
         }
     if (*(*state).global).gc_debt > 0 {
@@ -2511,7 +2522,8 @@ pub unsafe extern "C" fn lua_newuserdatauv(
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut User = u;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_USER));
+    (*io).set_tag (TAG_VARIANT_USER);
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
@@ -2841,18 +2853,21 @@ pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) { unsa
     let io: *mut TValue = &mut (*g).l_registry;
     let x_: *mut Table = registry;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+    (*io).set_tag (TAG_VARIANT_TABLE);
+    (*io).set_collectable();
     luah_resize(state, registry, 2 as u32, 0u32);
     let io_0: *mut TValue =
         &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
     let x0: *mut State = state;
     (*io_0).value.gc = &mut (*(x0 as *mut GCUnion)).gc;
-    (*io_0).set_tag(set_collectable(TAG_VARIANT_STATE));
+    (*io_0).set_tag(TAG_VARIANT_STATE);
+    (*io_0).set_collectable();
     let io_1: *mut TValue =
         &mut *((*registry).array).offset((2 - 1) as isize) as *mut TValue;
     let x1: *mut Table = luah_new(state);
     (*io_1).value.gc = &mut (*(x1 as *mut GCUnion)).gc;
-    (*io_1).set_tag(set_collectable(TAG_VARIANT_TABLE));
+    (*io_1).set_tag(TAG_VARIANT_TABLE);
+    (*io_1).set_collectable();
 }}
 pub unsafe extern "C" fn f_luaopen(state: *mut State, mut _ud: *mut libc::c_void) { unsafe {
     let g: *mut Global = (*state).global;
@@ -2916,7 +2931,8 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State { unsafe
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut State = other_state;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_STATE));
+    (*io).set_tag (TAG_VARIANT_STATE);
+    (*io).set_collectable();
     (*state).top.p = (*state).top.p.offset(1);
     preinit_thread(other_state, g);
     ::core::ptr::write_volatile(&mut (*other_state).hook_mask as *mut i32, (*state).hook_mask);
@@ -3381,7 +3397,8 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
         let io: *mut TValue = &mut (*(*state).top.p).value;
         let x_: *mut Table = table;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+        (*io).set_tag (TAG_VARIANT_TABLE);
+        (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
             if !((*p).line_info).is_null() {
             let mut i: i32;
@@ -4633,7 +4650,8 @@ pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) { un
     let io: *mut TValue = obj;
     let x_: *mut TString = luas_newlstr(state, buffer.as_mut_ptr(), length);
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).get_tag()));
+    (*io).set_tag ((*x_).get_tag());
+    (*io).set_collectable();
 }}
 pub unsafe extern "C" fn luao_pushvfstring(
     state: *mut State,
@@ -6922,7 +6940,8 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) { unsafe {
     let io: *mut TValue = &mut v;
     let i_g: *mut Object = udata2finalize(g);
     (*io).value.gc = i_g;
-    (*io).set_tag (set_collectable((*i_g).get_tag()));
+    (*io).set_tag ((*i_g).get_tag());
+    (*io).set_collectable();
     tm = luat_gettmbyobj(state, &mut v, TM_GC);
     if !(get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) {
         let status: i32;
@@ -8219,7 +8238,8 @@ pub unsafe extern "C" fn load_string_n(load_state: *mut LoadState, p: *mut Proto
             let io: *mut TValue = &mut (*(*state).top.p).value;
             let x_: *mut TString = ts;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).get_tag()));
+            (*io).set_tag ((*x_).get_tag());
+            (*io).set_collectable();
             luad_inctop(state);
             load_block(
                 load_state,
@@ -8319,7 +8339,8 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
                 let io_1: *mut TValue = o;
                 let x_: *mut TString = load_string(load_state, f);
                 (*io_1).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                (*io_1).set_tag(set_collectable((*x_).get_tag()));
+                (*io_1).set_tag((*x_).get_tag());
+                (*io_1).set_collectable();
             }
             _ => {}
         }
@@ -8589,7 +8610,8 @@ pub unsafe extern "C" fn luau_undump(
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut LClosure = cl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable (TAG_VARIANT_CLOSURE_L));
+    (*io).set_tag (TAG_VARIANT_CLOSURE_L);
+    (*io).set_collectable ();
     luad_inctop(state);
     (*cl).p = luaf_newproto(state);
     if (*cl).get_marked() & 1 << 5 != 0
@@ -10969,13 +10991,15 @@ pub unsafe extern "C" fn luay_parser(
     let io: *mut TValue = &mut (*(*state).top.p).value;
     let x_: *mut LClosure = cl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable (TAG_VARIANT_CLOSURE_L));
+    (*io).set_tag (TAG_VARIANT_CLOSURE_L);
+    (*io).set_collectable ();
     luad_inctop(state);
     lexstate.h = luah_new(state);
     let io_0: *mut TValue = &mut (*(*state).top.p).value;
     let x0: *mut Table = lexstate.h;
     (*io_0).value.gc = &mut (*(x0 as *mut GCUnion)).gc;
-    (*io_0).set_tag(set_collectable(TAG_VARIANT_TABLE));
+    (*io_0).set_tag(TAG_VARIANT_TABLE);
+    (*io_0).set_collectable();
     luad_inctop(state);
     (*cl).p = luaf_newproto(state);
     funcstate.f = (*cl).p;
@@ -11119,7 +11143,8 @@ pub unsafe extern "C" fn luax_newstring(
         let io: *mut TValue = stv;
         let x_: *mut TString = ts;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         luah_finishset(state, (*ls).h, stv, o, stv);
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -12773,7 +12798,8 @@ pub unsafe extern "C" fn luah_getstr(table: *mut Table, key: *mut TString) -> *c
         let io: *mut TValue = &mut ko;
         let x_: *mut TString = key;
         (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-        (*io).set_tag (set_collectable((*x_).get_tag()));
+        (*io).set_tag ((*x_).get_tag());
+        (*io).set_collectable();
         return getgeneric(table, &mut ko, 0);
     };
 }}
@@ -12990,7 +13016,8 @@ pub unsafe extern "C" fn luak_exp2const(
             let io: *mut TValue = v;
             let x_: *mut TString = (*e).u.strval;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).get_tag()));
+            (*io).set_tag ((*x_).get_tag());
+            (*io).set_collectable();
             return 1;
         }
         11 => {
@@ -13488,7 +13515,8 @@ pub unsafe extern "C" fn string_k(fs: *mut FunctionState, s: *mut TString) -> i3
     let io: *mut TValue = &mut o;
     let x_: *mut TString = s;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable((*x_).get_tag()));
+    (*io).set_tag ((*x_).get_tag());
+    (*io).set_collectable();
     return addk(fs, &mut o, &mut o);
 }}
 pub unsafe extern "C" fn luak_int_k(fs: *mut FunctionState, n: i64) -> i32 { unsafe {
@@ -13569,7 +13597,8 @@ pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 { unsafe {
     let io: *mut TValue = &mut k;
     let x_: *mut Table = (*(*fs).ls).h;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+    (*io).set_tag (TAG_VARIANT_TABLE);
+    (*io).set_collectable();
     return addk(fs, &mut k, &mut v);
 }}
 pub unsafe extern "C" fn fits_c(i: i64) -> i32 {
@@ -15162,7 +15191,8 @@ pub unsafe extern "C" fn luav_finishset(
                 let io: *mut TValue = &mut (*(*state).top.p).value;
                 let x_: *mut Table = h;
                 (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                (*io).set_tag (set_collectable(TAG_VARIANT_TABLE));
+                (*io).set_tag (TAG_VARIANT_TABLE);
+                (*io).set_collectable();
                 (*state).top.p = (*state).top.p.offset(1);
                             luah_finishset(state, h, key, slot, value);
                 (*state).top.p = (*state).top.p.offset(-1);
@@ -15669,7 +15699,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) { unsafe
             let io: *mut TValue = &mut (*top.offset(-(n as isize))).value;
             let x_: *mut TString = ts;
             (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-            (*io).set_tag (set_collectable((*x_).get_tag()));
+            (*io).set_tag ((*x_).get_tag());
+            (*io).set_collectable();
         }
         total -= n - 1;
         (*state).top.p = (*state).top.p.offset(-((n - 1) as isize));
@@ -15800,7 +15831,8 @@ pub unsafe extern "C" fn pushclosure(
     let io: *mut TValue = &mut (*ra).value;
     let x_: *mut LClosure = ncl;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-    (*io).set_tag (set_collectable(TAG_VARIANT_CLOSURE_L));
+    (*io).set_tag (TAG_VARIANT_CLOSURE_L);
+    (*io).set_collectable();
     i = 0;
     while i < nup {
         if (*uv.offset(i as isize)).is_in_stack {
@@ -16556,7 +16588,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         let io_3: *mut TValue = &mut (*ra_17).value;
                         let x_: *mut Table = table;
                         (*io_3).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
-                        (*io_3).set_tag(set_collectable(TAG_VARIANT_TABLE));
+                        (*io_3).set_tag(TAG_VARIANT_TABLE);
+                        (*io_3).set_collectable();
                         if b_3 != 0 || c_1 != 0 {
                             luah_resize(state, table, c_1 as u32, b_3 as u32);
                         }

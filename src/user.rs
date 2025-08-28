@@ -21,11 +21,14 @@ impl TObject for User {
     fn set_marked(& mut self, marked_: u8) {
         self.marked = marked_;
     }
+    fn set_collectable(& mut self) {
+        self.set_tag(set_collectable(self.get_tag()));
+    }
     fn set_tag(& mut self, tag: u8) {
         self.tag = tag;
     }
     fn is_collectable(&self) -> bool {
-        return is_collectable(self.tag);
+        return is_collectable(self.get_tag());
     }
     fn get_tag(&self) -> u8 {
         return self.tag;
