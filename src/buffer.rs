@@ -2,6 +2,7 @@ use crate::c::*;
 use crate::state::*;
 use crate::new::*;
 use crate::onelua::*;
+pub const BUFFER_INITIAL_SIZE: usize = 1024;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Buffer {
@@ -9,12 +10,7 @@ pub struct Buffer {
     pub size: u64,
     pub length: u64,
     pub state: *mut State,
-    pub buffer_initial: BufferInitial,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub union BufferInitial {
-    pub block: [i8; 1024],
+    pub buffer_initial: [i8; BUFFER_INITIAL_SIZE],
 }
 impl New for Buffer {
     fn new() -> Self {
@@ -23,7 +19,7 @@ impl New for Buffer {
             size: 0,
             length: 0,
             state: std::ptr::null_mut(),
-            buffer_initial: BufferInitial { block: [0; 1024] },
+            buffer_initial: [0; BUFFER_INITIAL_SIZE],
         };
     }
 }
@@ -59,7 +55,7 @@ impl Buffer {
             let state: *mut State = self.state;
             let newbuff: *mut i8;
             let new_size: u64 = self.newbuffsize(size);
-            if self.pointer != (self.buffer_initial.block).as_mut_ptr() {
+            if self.pointer != (self.buffer_initial).as_mut_ptr() {
                 newbuff = resizebox(state, boxidx, new_size) as *mut i8;
             } else {
                 lua_rotate(state, boxidx, -1);
@@ -99,7 +95,7 @@ impl Buffer {
     pub unsafe extern "C" fn lual_pushresult(& mut self) { unsafe {
         let state: *mut State = self.state;
         lua_pushlstring(state, self.pointer, self.length);
-        if self.pointer != (self.buffer_initial.block).as_mut_ptr() {
+        if self.pointer != (self.buffer_initial).as_mut_ptr() {
             lua_closeslot(state, -(2));
         }
         lua_rotate(state, -(2), -1);
@@ -120,7 +116,7 @@ impl Buffer {
     }}
     pub unsafe extern "C" fn lual_buffinit(& mut self, state: *mut State) { unsafe {
         self.state = state;
-        self.pointer = (self.buffer_initial.block).as_mut_ptr();
+        self.pointer = (self.buffer_initial).as_mut_ptr();
         self.length = 0;
         self.size = (16 as i32 as u64)
             .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)

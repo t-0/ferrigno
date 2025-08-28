@@ -91,7 +91,7 @@ impl Table {
                 while self.last_free > self.node {
                     self.last_free = self.last_free.offset(-1);
                     self.last_free;
-                    if (*self.last_free).u.key.tag == 0 {
+                    if (*self.last_free).key.tag == TAG_VARIANT_NIL_NIL {
                         return self.last_free;
                     }
                 }
