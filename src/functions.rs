@@ -8,4 +8,4 @@ pub type ContextFunction = Option<unsafe extern "C" fn(*mut State, i32, i64) -> 
 pub type CFunction = Option<unsafe extern "C" fn(*mut State) -> i32>;
 pub type WriteFunction =
     Option<unsafe extern "C" fn(*mut State, *const libc::c_void, u64, *mut libc::c_void) -> i32>;
-pub type Pfunc = Option<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;
+pub type ProtectedFunction = Option<unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()>;

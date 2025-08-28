@@ -106,7 +106,7 @@ pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> !
 }
 pub unsafe extern "C" fn luad_rawrunprotected(
     state: *mut State,
-    f: Pfunc,
+    f: ProtectedFunction,
     ud: *mut libc::c_void,
 ) -> i32 {
     unsafe {
@@ -978,8 +978,8 @@ pub unsafe extern "C" fn lua_yieldk(
 }
 pub unsafe extern "C" fn closepaux(state: *mut State, ud: *mut libc::c_void) {
     unsafe {
-        let pcl: *mut CloseP = ud as *mut CloseP;
-        luaf_close(state, (*pcl).level, (*pcl).status, 0);
+        let closep: *mut CloseP = ud as *mut CloseP;
+        luaf_close(state, (*closep).level, (*closep).status, 0);
     }
 }
 pub unsafe extern "C" fn luad_closeprotected(
@@ -988,21 +988,21 @@ pub unsafe extern "C" fn luad_closeprotected(
     mut status: i32,
 ) -> i32 {
     unsafe {
-        let old_ci: *mut CallInfo = (*state).call_info;
+        let old_call_info: *mut CallInfo = (*state).call_info;
         let old_allowhooks: u8 = (*state).allow_hook;
         loop {
-            let mut pcl = CloseP::new();
-            pcl.level = ((*state).stack.p as *mut i8).offset(level as isize) as StkId;
-            pcl.status = status;
+            let mut closep = CloseP::new();
+            closep.level = ((*state).stack.p as *mut i8).offset(level as isize) as StkId;
+            closep.status = status;
             status = luad_rawrunprotected(
                 state,
                 Some(closepaux as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
-                &mut pcl as *mut CloseP as *mut libc::c_void,
+                &mut closep as *mut CloseP as *mut libc::c_void,
             );
             if ((status == 0) as i32 != 0) as i32 as i64 != 0 {
-                return pcl.status;
+                return closep.status;
             } else {
-                (*state).call_info = old_ci;
+                (*state).call_info = old_call_info;
                 (*state).allow_hook = old_allowhooks;
             }
         }
@@ -1010,20 +1010,20 @@ pub unsafe extern "C" fn luad_closeprotected(
 }
 pub unsafe extern "C" fn luad_pcall(
     state: *mut State,
-    function: Pfunc,
+    function: ProtectedFunction,
     u: *mut libc::c_void,
     old_top: i64,
     ef: i64,
 ) -> i32 {
     unsafe {
         let mut status: i32;
-        let old_ci: *mut CallInfo = (*state).call_info;
+        let old_call_info: *mut CallInfo = (*state).call_info;
         let old_allowhooks: u8 = (*state).allow_hook;
         let old_error_function: i64 = (*state).error_function;
         (*state).error_function = ef;
         status = luad_rawrunprotected(state, function, u);
         if ((status != 0) as i32 != 0) as i32 as i64 != 0 {
-            (*state).call_info = old_ci;
+            (*state).call_info = old_call_info;
             (*state).allow_hook = old_allowhooks;
             status = luad_closeprotected(state, old_top, status);
             (*state).set_error_object(
@@ -16758,7 +16758,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
     unsafe {
         let mut i: u32;
         let mut ra_65: StkId;
-        let mut newci: *mut CallInfo;
+        let mut new_call_info: *mut CallInfo;
         let mut b_4: i32;
         let mut count_results: i32;
         let mut current_block: u64;
@@ -19091,8 +19091,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*state).top.p = ra_65.offset(b_4 as isize);
                             }
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            newci = luad_precall(state, ra_65, count_results);
-                            if !newci.is_null() {
+                            new_call_info = luad_precall(state, ra_65, count_results);
+                            if !new_call_info.is_null() {
                                 break '_returning;
                             }
                             trap = (*call_info).u.l.trap;
@@ -19430,7 +19430,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                 }
                 call_info = (*call_info).previous;
             }
-            call_info = newci;
+            call_info = new_call_info;
         }
     }
 }
