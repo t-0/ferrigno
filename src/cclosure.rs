@@ -10,6 +10,8 @@ pub struct CClosure {
     pub tag: u8,
     pub marked: u8,
     pub count_upvalues: u8,
+    pub dummy1: u8,
+    pub dummy2: u32,
     pub gc_list: *mut Object,
     pub f: CFunction,
     pub upvalue: [TValue; 1],

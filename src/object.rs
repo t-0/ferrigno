@@ -32,6 +32,9 @@ pub struct Object {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
+    pub dummy1: u8 = 0,
+    pub dummy2: u8 = 0,
+    pub dummy3: u32 = 0,
 }
 impl New for Object {
     fn new() -> Self {
@@ -39,6 +42,7 @@ impl New for Object {
             next: std::ptr::null_mut(),
             tag: TAG_VARIANT_NIL_NIL,
             marked: 0,
+            ..
         }
     }
 }

@@ -1,4 +1,4 @@
-#![feature(extern_types, c_variadic)]
+#![feature(default_field_values,extern_types, c_variadic)]
 mod absolutelineinfo;
 mod blockcontrol;
 mod buffer;

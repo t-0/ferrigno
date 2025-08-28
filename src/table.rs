@@ -10,6 +10,7 @@ pub struct Table {
     pub collectable: bool,
     pub flags: u8,
     pub log_size_node: u8,
+    pub dummy1: u8 = 0,
     pub array_limit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -62,6 +63,7 @@ impl New for Table {
             last_free: std::ptr::null_mut(),
             metatable: std::ptr::null_mut(),
             gc_list: std::ptr::null_mut(),
+            ..
         }
     }
 }

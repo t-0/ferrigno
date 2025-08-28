@@ -8347,7 +8347,7 @@ pub unsafe extern "C" fn luas_newudata(state: *mut State, s: u64, nuvalue: i32) 
         );
         let u: *mut User = &mut (*(o as *mut GCUnion)).u;
         (*u).length = s;
-        (*u).nuvalue = nuvalue as u16;
+        (*u).nuvalue = nuvalue;
         (*u).metatable = std::ptr::null_mut();
         i = 0;
         while i < nuvalue {

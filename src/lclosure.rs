@@ -10,6 +10,8 @@ pub struct LClosure {
     pub tag: u8,
     pub marked: u8,
     pub count_upvalues: u8,
+    pub dummy1: u8,
+    pub dumm2: u32,
     pub gc_list: *mut Object,
     pub p: *mut Prototype,
     pub upvalues: [*mut UpValue; 1],
