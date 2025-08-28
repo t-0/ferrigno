@@ -3509,23 +3509,53 @@ pub unsafe extern "C" fn lua_getinfo(
         call_info = (*ar).i_ci;
         function = &mut (*(*call_info).function.p).value;
     }
-    let cl: *mut UClosure = match (*function).get_tag_variant() {
-        TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C =>
-        &mut (*((*function).value.object as *mut GCUnion)).ucl,
-        _ => std::ptr::null_mut(),
-    };
-    status = auxgetinfo(state, what, ar, cl, call_info);
-    if !(strchr(what, 'f' as i32)).is_null() {
-        let io1: *mut TValue = &mut (*(*state).top.p).value;
-        let io2: *const TValue = function;
-        (*io1).value = (*io2).value;
-        (*io1).set_tag ((*io2).get_tag());
-        (*state).top.p = (*state).top.p.offset(1);
+    match (*function).get_tag_variant() {
+        TAG_VARIANT_CLOSURE_L => {
+            let cl: *mut UClosure = &mut (*((*function).value.object as *mut GCUnion)).ucl;
+            status = auxgetinfo(state, what, ar, cl, call_info);
+            if !(strchr(what, 'f' as i32)).is_null() {
+                let io1: *mut TValue = &mut (*(*state).top.p).value;
+                let io2: *const TValue = function;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag ((*io2).get_tag());
+                (*state).top.p = (*state).top.p.offset(1);
+                }
+            if !(strchr(what, 'L' as i32)).is_null() {
+                collectvalidlines(state, cl);
+            }
+            return status;
+        },
+        TAG_VARIANT_CLOSURE_C => {
+            let cl: *mut UClosure = &mut (*((*function).value.object as *mut GCUnion)).ucl;
+            status = auxgetinfo(state, what, ar, cl, call_info);
+            if !(strchr(what, 'f' as i32)).is_null() {
+                let io1: *mut TValue = &mut (*(*state).top.p).value;
+                let io2: *const TValue = function;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag ((*io2).get_tag());
+                (*state).top.p = (*state).top.p.offset(1);
+            }
+            if !(strchr(what, 'L' as i32)).is_null() {
+                collectvalidlines(state, cl);
+            }
+            return status;
+        },
+        _ => {
+            let cl: *mut UClosure = std::ptr::null_mut();
+            status = auxgetinfo(state, what, ar, cl, call_info);
+            if !(strchr(what, 'f' as i32)).is_null() {
+                let io1: *mut TValue = &mut (*(*state).top.p).value;
+                let io2: *const TValue = function;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag ((*io2).get_tag());
+                (*state).top.p = (*state).top.p.offset(1);
+                }
+            if !(strchr(what, 'L' as i32)).is_null() {
+                collectvalidlines(state, cl);
+            }
+            return status;
         }
-    if !(strchr(what, 'L' as i32)).is_null() {
-        collectvalidlines(state, cl);
     }
-    return status;
 }}
 pub unsafe extern "C" fn filterpc(program_counter: i32, jmptarget: i32) -> i32 {
     if program_counter < jmptarget {
