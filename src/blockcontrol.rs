@@ -8,6 +8,7 @@ pub struct BlockControl {
     pub count_upvalues: u8,
     pub is_loop: bool,
     pub is_inside_tbc: bool,
+    pub dummy1: u32 = 0,
 }
 impl New for BlockControl {
     fn new() -> Self {
@@ -19,6 +20,7 @@ impl New for BlockControl {
             count_upvalues: 0,
             is_loop: false,
             is_inside_tbc: false,
+            ..
         };
     }
 }
