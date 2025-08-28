@@ -1,5 +1,4 @@
 use crate::tvalue::*;
-use crate::value::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Node {
@@ -9,9 +8,7 @@ pub union Node {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct NodeKey {
-    pub tag: u8,
-    pub value: Value,
-    pub key_tag: u8,
-    pub key_value: Value,
+    pub value: TValue,
+    pub key: TValue,
     pub next: i32,
 }
