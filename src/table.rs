@@ -5,9 +5,7 @@ use crate::tag::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
+    pub object: Object,
     pub flags: u8,
     pub log_size_node: u8,
     pub array_limit: u32,
@@ -18,20 +16,26 @@ pub struct Table {
     pub gc_list: *mut Object,
 }
 impl TObject for Table {
+    fn get_marked(& self) -> u8 {
+        self.object.marked
+    }
+    fn set_marked(& mut self, marked_: u8) {
+        self.object.marked = marked_;
+    }
     fn set_tag(& mut self, tag: u8) {
-        self.tag = tag;
+        self.object.set_tag(tag);
     }
     fn is_collectable(&self) -> bool {
-        return is_collectable(self.tag);
+        self.object.is_collectable()
     }
     fn get_tag(&self) -> u8 {
-        self.tag
+        self.object.get_tag()
     }
     fn get_tag_type(&self) -> u8 {
         get_tag_type(self.get_tag())
     }
     fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+        self.object.get_tag_variant()
     }
     fn get_class_name(& mut self) -> String {
         "table".to_string()
@@ -41,6 +45,12 @@ impl TObject for Table {
     }
 }
 impl Table {
+    pub fn get_marked(& self) -> u8 {
+        self.object.marked
+    }
+    pub fn set_marked(& mut self, marked_: u8) {
+        self.object.marked = marked_;
+    }
     pub unsafe extern "C" fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
         unsafe {
             let temporary_size_node: u8 = (*t1).log_size_node;

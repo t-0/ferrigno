@@ -12,8 +12,11 @@
 //     }
 // }
 use crate::table::*;
+use crate::new::*;
 use crate::tag::*;
 pub trait TObject {
+    fn get_marked(& self) -> u8;
+    fn set_marked(& mut self, marked_: u8);
     fn set_tag(& mut self, tag: u8);
     fn is_collectable(&self) -> bool;
     fn get_tag(&self) -> u8;
@@ -22,13 +25,28 @@ pub trait TObject {
     fn get_class_name(& mut self) -> String;
     fn get_metatable(& mut self) -> *mut Table;
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Object {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
 }
+impl New for Object {
+    fn new() -> Self {
+        Object {
+            next: std::ptr::null_mut(),
+            tag: TAG_VARIANT_NIL_NIL,
+            marked: 0,
+        }
+    }
+}
 impl TObject for Object {
+    fn get_marked(& self) -> u8 {
+        self.marked
+    }
+    fn set_marked(& mut self, marked_: u8) {
+        self.marked = marked_;
+    }
     fn set_tag(& mut self, tag: u8) {
         self.tag = tag;
     }
