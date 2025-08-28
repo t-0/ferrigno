@@ -7,6 +7,7 @@ use crate::tstring::*;
 use crate::tag::*;
 use crate::gcunion::*;
 const BUFFFS_SIZE: usize = 0x100;
+#[repr(C)]
 pub struct BuffFS {
     state: *mut State,
     is_pushed: bool,

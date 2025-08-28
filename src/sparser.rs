@@ -2,6 +2,7 @@ use crate::dynamicdata::*;
 use crate::buffer::*;
 use crate::zio::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct SParser {
     pub zio: *mut ZIO,
     pub buffer: Buffer,

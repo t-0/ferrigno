@@ -26,6 +26,7 @@ pub trait TObject {
     fn get_metatable(& mut self) -> *mut Table;
 }
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct Object {
     pub next: *mut Object,
     pub tag: u8,

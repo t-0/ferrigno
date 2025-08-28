@@ -3,9 +3,10 @@ use crate::lexstate::*;
 use crate::prototype::*;
 use crate::new::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct FunctionState {
     pub f: *mut Prototype,
-    pub prev: *mut FunctionState,
+    pub previous: *mut FunctionState,
     pub ls: *mut LexState,
     pub blockcontrol: *mut BlockControl,
     pub program_counter: i32,
@@ -27,7 +28,7 @@ impl New for FunctionState {
     fn new() -> Self {
         return FunctionState {
             f: std::ptr::null_mut(),
-            prev: std::ptr::null_mut(),
+            previous: std::ptr::null_mut(),
             ls: std::ptr::null_mut(),
             blockcontrol: std::ptr::null_mut(),
             program_counter: 0,

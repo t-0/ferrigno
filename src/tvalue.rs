@@ -2,6 +2,7 @@ use crate::value::*;
 use crate::tag::*;
 use crate::new::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct TValue {
     pub value: Value,
     pub tag: u8,

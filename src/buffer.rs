@@ -3,6 +3,7 @@ use crate::state::*;
 use crate::new::*;
 use crate::onelua::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Buffer {
     pub pointer: *mut i8,
     pub size: u64,
@@ -11,6 +12,7 @@ pub struct Buffer {
     pub buffer_initial: BufferInitial,
 }
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union BufferInitial {
     pub block: [i8; 1024],
 }

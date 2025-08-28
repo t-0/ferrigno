@@ -1,5 +1,6 @@
 use crate::c::*;
 use crate::new::*;
+#[repr(C)]
 pub struct LongJump {
     pub previous: *mut LongJump,
     pub jbt: [JumpBufferTag; 1],

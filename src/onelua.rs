@@ -7585,7 +7585,7 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut LClosure) {
 pub unsafe extern "C" fn newupval(
     state: *mut State,
     level: StkId,
-    prev: *mut *mut UpValue,
+    previous: *mut *mut UpValue,
 ) -> *mut UpValue { unsafe {
     let o: *mut Object = luac_newobj(
         state,
@@ -7593,14 +7593,14 @@ pub unsafe extern "C" fn newupval(
         ::core::mem::size_of::<UpValue>() as u64,
     );
     let uv: *mut UpValue = &mut (*(o as *mut GCUnion)).upv;
-    let next: *mut UpValue = *prev;
+    let next: *mut UpValue = *previous;
     (*uv).v.p = &mut (*level).val;
     (*uv).u.open.next = next;
-    (*uv).u.open.previous = prev;
+    (*uv).u.open.previous = previous;
     if !next.is_null() {
         (*next).u.open.previous = &mut (*uv).u.open.next;
     }
-    *prev = uv;
+    *previous = uv;
     if !((*state).twups != state) {
         (*state).twups = (*(*state).global).twups;
         (*(*state).global).twups = state;
@@ -9218,15 +9218,15 @@ pub unsafe extern "C" fn newupvalue(
     v: *mut ExpressionDescription,
 ) -> i32 { unsafe {
     let up: *mut Upvaldesc = allocupvalue(fs);
-    let prev: *mut FunctionState = (*fs).prev;
+    let previous: *mut FunctionState = (*fs).previous;
     if (*v).k as u32 == VLOCAL as i32 as u32 {
         (*up).is_in_stack = true;
         (*up).index = (*v).u.var.ridx;
-        (*up).kind = (*getlocalvardesc(prev, (*v).u.var.vidx as i32)).vd.kind;
+        (*up).kind = (*getlocalvardesc(previous, (*v).u.var.vidx as i32)).vd.kind;
     } else {
         (*up).is_in_stack = false;
         (*up).index = (*v).u.info as u8;
-        (*up).kind = (*((*(*prev).f).upvalues).offset((*v).u.info as isize)).kind;
+        (*up).kind = (*((*(*previous).f).upvalues).offset((*v).u.info as isize)).kind;
     }
     (*up).name = name;
     if (*(*fs).f).get_marked() & 1 << 5 != 0
@@ -9293,7 +9293,7 @@ pub unsafe extern "C" fn singlevaraux(
         } else {
             let mut index: i32 = searchupvalue(fs, n);
             if index < 0 {
-                singlevaraux((*fs).prev, n, var, 0);
+                singlevaraux((*fs).previous, n, var, 0);
                 if (*var).k as u32 == VLOCAL as i32 as u32
                     || (*var).k as u32 == VUPVAL as i32 as u32
                 {
@@ -9632,7 +9632,7 @@ pub unsafe extern "C" fn addprototype(ls: *mut LexState) -> *mut Prototype { uns
     return clp;
 }}
 pub unsafe extern "C" fn codeclosure(ls: *mut LexState, v: *mut ExpressionDescription) { unsafe {
-    let fs: *mut FunctionState = (*(*ls).fs).prev;
+    let fs: *mut FunctionState = (*(*ls).fs).previous;
     init_exp(
         v,
         VRELOC,
@@ -9646,7 +9646,7 @@ pub unsafe extern "C" fn open_func(
     blockcontrol: *mut BlockControl,
 ) { unsafe {
     let f: *mut Prototype = (*fs).f;
-    (*fs).prev = (*ls).fs;
+    (*fs).previous = (*ls).fs;
     (*fs).ls = ls;
     (*ls).fs = fs;
     (*fs).program_counter = 0;
@@ -9734,7 +9734,7 @@ pub unsafe extern "C" fn close_func(ls: *mut LexState) { unsafe {
         (*fs).nups as i32,
         ::core::mem::size_of::<Upvaldesc>() as u64 as i32,
     ) as *mut Upvaldesc;
-    (*ls).fs = (*fs).prev;
+    (*ls).fs = (*fs).previous;
     if (*(*state).global).gc_debt > 0 {
         luac_step(state);
     }
@@ -9946,7 +9946,7 @@ pub unsafe extern "C" fn body(
 ) { unsafe {
     let mut new_fs: FunctionState = FunctionState {
         f: std::ptr::null_mut(),
-        prev: std::ptr::null_mut(),
+        previous: std::ptr::null_mut(),
         ls: std::ptr::null_mut(),
         blockcontrol: std::ptr::null_mut(),
         program_counter: 0,
@@ -10272,7 +10272,7 @@ pub unsafe extern "C" fn check_conflict(
                 }
             }
         }
-        lh = (*lh).prev;
+        lh = (*lh).previous;
     }
     if conflict != 0 {
         if (*v).k as u32 == VLOCAL as i32 as u32 {
@@ -10296,7 +10296,7 @@ pub unsafe extern "C" fn restassign(ls: *mut LexState, lh: *mut LHSAssign, nvars
     check_readonly(ls, &mut (*lh).v);
     if testnext(ls, ',' as i32) != 0 {
         let mut nv: LHSAssign = LHSAssign {
-            prev: std::ptr::null_mut(),
+            previous: std::ptr::null_mut(),
             v: ExpressionDescription {
                 k: VVOID,
                 u: RawValue { ival: 0 },
@@ -10304,7 +10304,7 @@ pub unsafe extern "C" fn restassign(ls: *mut LexState, lh: *mut LHSAssign, nvars
                 f: 0,
             },
         };
-        nv.prev = lh;
+        nv.previous = lh;
         suffixedexp(ls, &mut nv.v);
         if !(VINDEXED as i32 as u32 <= nv.v.k as u32 && nv.v.k as u32 <= VINDEXSTR as i32 as u32) {
             check_conflict(ls, lh, &mut nv.v);
@@ -10816,7 +10816,7 @@ pub unsafe extern "C" fn funcstat(ls: *mut LexState, line: i32) { unsafe {
 pub unsafe extern "C" fn exprstat(ls: *mut LexState) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
     let mut v: LHSAssign = LHSAssign {
-        prev: std::ptr::null_mut(),
+        previous: std::ptr::null_mut(),
         v: ExpressionDescription {
             k: VVOID,
             u: RawValue { ival: 0 },
@@ -10826,7 +10826,7 @@ pub unsafe extern "C" fn exprstat(ls: *mut LexState) { unsafe {
     };
     suffixedexp(ls, &mut v.v);
     if (*ls).t.token == '=' as i32 || (*ls).t.token == ',' as i32 {
-        v.prev = std::ptr::null_mut();
+        v.previous = std::ptr::null_mut();
         restassign(ls, &mut v, 1);
     } else {
         if !(v.v.k as u32 == VCALL as i32 as u32) {

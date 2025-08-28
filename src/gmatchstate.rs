@@ -1,5 +1,6 @@
 use crate::matchstate::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct GMatchState {
     pub src: *const i8,
     pub p: *const i8,

@@ -1,6 +1,7 @@
 use crate::value::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union StackValue {
     pub val: TValue,
     pub tbc_list: StackValueExtension,

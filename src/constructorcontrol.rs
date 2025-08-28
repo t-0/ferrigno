@@ -1,4 +1,5 @@
 use crate::expressiondescription::*;
+#[repr(C)]
 pub struct ConstructorControl {
     pub v: ExpressionDescription,
     pub t: *mut ExpressionDescription,

@@ -1,5 +1,6 @@
 use crate::expressiondescription::*;
+#[repr(C)]
 pub struct LHSAssign {
-    pub prev: *mut LHSAssign,
+    pub previous: *mut LHSAssign,
     pub v: ExpressionDescription,
 }

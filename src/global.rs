@@ -9,6 +9,7 @@ use crate::table::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Global {
     pub totalbytes: i64,
     pub gc_debt: i64,

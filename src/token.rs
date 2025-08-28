@@ -1,6 +1,7 @@
 use crate::semanticinfo::*;
 use crate::new::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct Token {
     pub token: i32,
     pub semantic_info: SemanticInfo,

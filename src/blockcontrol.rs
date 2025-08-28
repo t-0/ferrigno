@@ -1,4 +1,5 @@
 use crate::new::*;
+#[repr(C)]
 pub struct BlockControl {
     pub previous: *mut BlockControl,
     pub first_label: i32,

@@ -1,5 +1,6 @@
 use crate::tstring::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub struct LabelDescription {
     pub name: *mut TString,
     pub program_counter: i32,

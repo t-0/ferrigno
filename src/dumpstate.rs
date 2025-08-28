@@ -1,5 +1,6 @@
 use crate::state::*;
 use crate::functions::*;
+#[repr(C)]
 pub struct DumpState {
     pub state: *mut State,
     pub write_function: WriteFunction,
