@@ -1,11 +1,12 @@
 #![allow(static_mut_refs, unsafe_code)]
 use crate::debug::*;
+use crate::tag::*;
 use crate::onelua::*;
 use crate::registeredfunction::*;
 use crate::state::*;
 unsafe extern "C" fn luab_cocreate(state: *mut State) -> i32 {
     unsafe {
-        lual_checktype(state, 1, 6);
+        lual_checktype(state, 1, TAG_TYPE_CLOSURE);
         let nl: *mut State = lua_newthread(state);
         lua_pushvalue(state, 1);
         lua_xmove(state, nl, 1);

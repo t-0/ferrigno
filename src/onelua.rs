@@ -19942,10 +19942,10 @@ pub unsafe extern "C" fn lual_checkstack(state: *mut State, space: i32, message:
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lual_checktype(state: *mut State, arg: i32, t: u8) {
+pub unsafe extern "C" fn lual_checktype(state: *mut State, arg: i32, tag: u8) {
     unsafe {
-        if lua_type2(state, arg) != Some(t) {
-            tag_error(state, arg, t as i32);
+        if lua_type2(state, arg) != Some(tag) {
+            tag_error(state, arg, tag as i32);
         }
     }
 }
@@ -20850,7 +20850,7 @@ pub unsafe extern "C" fn luab_tonumber(state: *mut State) -> i32 {
                 let s_0: *const i8;
                 let mut n: i64 = 0;
                 let base: i64 = lual_checkinteger(state, 2);
-                lual_checktype(state, 1, 4);
+                lual_checktype(state, 1, TAG_TYPE_STRING);
                 s_0 = lua_tolstring(state, 1, &mut l_0);
                 (((2 as i64 <= base && base <= 36 as i32 as i64) as i32 != 0) as i32 as i64 != 0
                     || lual_argerror(state, 2, b"base out of range\0" as *const u8 as *const i8) != 0)
@@ -20891,7 +20891,7 @@ pub unsafe extern "C" fn luab_getmetatable(state: *mut State) -> i32 {
 pub unsafe extern "C" fn luab_setmetatable(state: *mut State) -> i32 {
     unsafe {
         let t: i32 = lua_type(state, 2);
-        lual_checktype(state, 1, 5);
+        lual_checktype(state, 1, TAG_TYPE_TABLE);
         (((t == 0 || t == 5) as i32 != 0) as i32 as i64 != 0
             || lual_typeerror(state, 2, b"nil or table\0" as *const u8 as *const i8) != 0)
             as i32;
@@ -20929,7 +20929,7 @@ pub unsafe extern "C" fn luab_rawlen(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_rawget(state: *mut State) -> i32 {
     unsafe {
-        lual_checktype(state, 1, 5);
+        lual_checktype(state, 1, TAG_TYPE_TABLE);
         lual_checkany(state, 2);
         lua_settop(state, 2);
         lua_rawget(state, 1);
@@ -20938,7 +20938,7 @@ pub unsafe extern "C" fn luab_rawget(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_rawset(state: *mut State) -> i32 {
     unsafe {
-        lual_checktype(state, 1, 5);
+        lual_checktype(state, 1, TAG_TYPE_TABLE);
         lual_checkany(state, 2);
         lual_checkany(state, 3);
         lua_settop(state, 3);
@@ -21052,7 +21052,7 @@ pub unsafe extern "C" fn luab_type(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_next(state: *mut State) -> i32 {
     unsafe {
-        lual_checktype(state, 1, 5);
+        lual_checktype(state, 1, TAG_TYPE_TABLE);
         lua_settop(state, 2);
         if lua_next(state, 1) != 0 {
             return 2;
@@ -21186,7 +21186,7 @@ pub unsafe extern "C" fn luab_load(state: *mut State) -> i32 {
                 b"=(load)\0" as *const u8 as *const i8,
                 std::ptr::null_mut(),
             );
-            lual_checktype(state, 1, 6);
+            lual_checktype(state, 1, TAG_TYPE_CLOSURE);
             lua_settop(state, 5);
             status = lua_load(
                 state,
@@ -21296,7 +21296,7 @@ pub unsafe extern "C" fn luab_xpcall(state: *mut State) -> i32 {
     unsafe {
         let status: i32;
         let n: i32 = (*state).get_top();
-        lual_checktype(state, 2, 6);
+        lual_checktype(state, 2, TAG_TYPE_CLOSURE);
         (*state).push_boolean(true);
         lua_pushvalue(state, 1);
         lua_rotate(state, 3, 2);
@@ -21576,7 +21576,7 @@ pub unsafe extern "C" fn checktab(state: *mut State, arg: i32, what: i32) {
             {
                 lua_settop(state, -n - 1);
             } else {
-                lual_checktype(state, arg, 5);
+                lual_checktype(state, arg, TAG_TYPE_TABLE);
             }
         }
     }
@@ -21946,7 +21946,7 @@ pub unsafe extern "C" fn sort(state: *mut State) -> i32 {
                 || lual_argerror(state, 1, b"array too big\0" as *const u8 as *const i8) != 0)
                 as i32;
             if !(lua_type(state, 2) <= 0) {
-                lual_checktype(state, 2, 6);
+                lual_checktype(state, 2, TAG_TYPE_CLOSURE);
             }
             lua_settop(state, 2);
             auxsort(state, 1 as u32, n as u32, 0u32);
@@ -23413,7 +23413,7 @@ pub unsafe extern "C" fn os_time(state: *mut State) -> i32 {
                     __tm_gmtoff: 0,
                     __tm_zone: std::ptr::null(),
                 };
-                lual_checktype(state, 1, 5);
+                lual_checktype(state, 1, TAG_TYPE_TABLE);
                 lua_settop(state, 1);
                 ts.tm_year = getfield(state, b"year\0" as *const u8 as *const i8, -1, 1900 as i32);
                 ts.tm_mon = getfield(state, b"month\0" as *const u8 as *const i8, -1, 1);
@@ -23829,7 +23829,7 @@ pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 {
             buffer: Buffer::new(),
         };
         let is_strip = 0 != lua_toboolean(state, 2);
-        lual_checktype(state, 1, 6);
+        lual_checktype(state, 1, TAG_TYPE_CLOSURE);
         lua_settop(state, 1);
         stream_writer.init = 0;
         if ((lua_dump(
@@ -26688,7 +26688,7 @@ pub unsafe extern "C" fn db_getuservalue(state: *mut State) -> i32 {
 pub unsafe extern "C" fn db_setuservalue(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(state, 3, 1) as i32;
-        lual_checktype(state, 1, 7);
+        lual_checktype(state, 1, TAG_TYPE_USER);
         lual_checkany(state, 2);
         lua_settop(state, 2);
         if lua_setiuservalue(state, 1, n) == 0 {
@@ -26972,7 +26972,7 @@ pub unsafe extern "C" fn db_setlocal(state: *mut State) -> i32 {
 pub unsafe extern "C" fn auxupvalue(state: *mut State, get: i32) -> i32 {
     unsafe {
         let n: i32 = lual_checkinteger(state, 2) as i32;
-        lual_checktype(state, 1, 6);
+        lual_checktype(state, 1, TAG_TYPE_CLOSURE);
         let name: *const i8 = if get != 0 {
             lua_getupvalue(state, 1, n)
         } else {
@@ -27006,7 +27006,7 @@ pub unsafe extern "C" fn checkupval(
     unsafe {
         let id: *mut libc::c_void;
         let nup: i32 = lual_checkinteger(state, argnup) as i32;
-        lual_checktype(state, argf, 6);
+        lual_checktype(state, argf, TAG_TYPE_CLOSURE);
         id = lua_upvalueid(state, argf, nup);
         if !pnup.is_null() {
             (((id != std::ptr::null_mut()) as i32 != 0) as i32 as i64 != 0
@@ -27129,7 +27129,7 @@ pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 {
             count = 0;
         } else {
             let smask: *const i8 = lual_checklstring(state, arg + 2, std::ptr::null_mut());
-            lual_checktype(state, arg + 1, 6);
+            lual_checktype(state, arg + 1, TAG_TYPE_CLOSURE);
             count = lual_optinteger(state, arg + 3, 0) as i32;
             function = Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ());
             mask = makemask(smask, count);
