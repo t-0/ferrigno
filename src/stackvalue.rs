@@ -3,7 +3,7 @@ use crate::tvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union StackValue {
-    pub val: TValue,
+    pub value: TValue,
     pub tbc_list: StackValueExtension,
 }
 pub type StkId = *mut StackValue;

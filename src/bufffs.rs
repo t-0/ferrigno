@@ -24,7 +24,7 @@ impl BuffFS {
         }
     }
 pub unsafe extern "C" fn clear(& mut self) { unsafe {
-    let io: *mut TValue = &mut (*(*self.state).top.p).val;
+    let io: *mut TValue = &mut (*(*self.state).top.p).value;
     let ts: *mut TString = luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
     (*io).value.gc = &mut (*(ts as *mut GCUnion)).gc;
     (*io).set_tag (set_collectable ((*ts).get_tag()));
@@ -49,7 +49,7 @@ pub unsafe extern "C" fn add_string(& mut self, pointer: *const i8, length: u64)
         self.size += length;
     } else {
         self.clear();
-        let io = &mut (*(*self.state).top.p).val;
+        let io = &mut (*(*self.state).top.p).value;
         let ts = luas_newlstr(self.state, pointer, length);
         (*io).value.gc = &mut (*(ts as *mut GCUnion)).gc;
         (*io).set_tag (set_collectable((*ts).get_tag()));
