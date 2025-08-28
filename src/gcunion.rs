@@ -11,7 +11,7 @@ use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {
-    pub gc: Object,
+    pub object: Object,
     pub ts: TString,
     pub u: User,
     pub ccl: CClosure,

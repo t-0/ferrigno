@@ -86,8 +86,8 @@ impl LexicalState {
         {
             luac_barrier_(
                 self.state,
-                &mut (*(f as *mut GCUnion)).gc,
-                &mut (*(clp as *mut GCUnion)).gc,
+                &mut (*(f as *mut GCUnion)).object,
+                &mut (*(clp as *mut GCUnion)).object,
             );
         } else {
         };

@@ -3,7 +3,7 @@ use crate::functions::*;
 use crate::new::*;
 #[derive(Copy, Clone)]
 pub union Value {
-    pub gc: *mut Object,
+    pub object: *mut Object,
     pub p: *mut libc::c_void,
     pub f: CFunction,
     pub i: i64,
@@ -12,7 +12,7 @@ pub union Value {
 impl New for Value {
     fn new() -> Self {
         Value {
-            gc: std::ptr::null_mut(),
+            object: std::ptr::null_mut(),
         }
     }
 }

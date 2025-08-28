@@ -79,7 +79,7 @@ impl State {
                 4 => {
                     let io: *mut TValue = &mut (*old_top).value;
                     let x_: *mut TString = (*(self.global)).memerrmsg;
-                    (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
+                    (*io).value.object = &mut (*(x_ as *mut GCUnion)).object;
                     (*io).set_tag((*x_).get_tag());
                     (*io).set_collectable();
                 }
@@ -234,7 +234,7 @@ impl State {
     }}
     pub unsafe extern "C" fn push_state(& mut self) -> bool { unsafe {
         let io: *mut TValue = &mut (*self.top.p).value;
-        (*io).value.gc = &mut (*(self as *mut State as *mut GCUnion)).gc;
+        (*io).value.object = &mut (*(self as *mut State as *mut GCUnion)).object;
         (*io).set_tag (TAG_VARIANT_STATE);
         (*io).set_collectable();
         self.top.p = self.top.p.offset(1);
