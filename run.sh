@@ -8,7 +8,7 @@ then
     printf "ERROR\n" 1>&2
     exit 1
 fi
-if ! ../target/debug/rlua -e"_U=true" all.lua
+if ! RUST_BACKTRACE=1 ../target/debug/rlua -e"_U=true" all.lua
 then
     printf "ERROR\n" 1>&2
     exit 1

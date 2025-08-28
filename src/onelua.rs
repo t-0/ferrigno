@@ -67,7 +67,7 @@ use crate::token::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::ubox::*;
-use crate::udata::*;
+use crate::user::*;
 use crate::unary::*;
 use crate::upvaldesc::*;
 use crate::upvalue::*;
@@ -1481,7 +1481,7 @@ pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunc
 pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void { unsafe {
     match get_tag_type((*o).get_tag()) {
         7 => {
-            return (&mut (*((*o).value.gc as *mut GCUnion)).u as *mut Udata as *mut i8).offset(
+            return (&mut (*((*o).value.gc as *mut GCUnion)).u as *mut User as *mut i8).offset(
                 (if (*((*o).value.gc as *mut GCUnion)).u.nuvalue as i32 == 0 {
                     32 as u64
                 } else {
@@ -2129,7 +2129,7 @@ pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i
                 {
                     luac_barrier_(
                         state,
-                        &mut (*(&mut (*((*obj).value.gc as *mut GCUnion)).u as *mut Udata
+                        &mut (*(&mut (*((*obj).value.gc as *mut GCUnion)).u as *mut User
                             as *mut GCUnion))
                             .gc,
                         &mut (*(mt as *mut GCUnion)).gc,
@@ -2507,9 +2507,9 @@ pub unsafe extern "C" fn lua_newuserdatauv(
     size: u64,
     nuvalue: i32,
 ) -> *mut libc::c_void { unsafe {
-    let u: *mut Udata = luas_newudata(state, size, nuvalue);
+    let u: *mut User = luas_newudata(state, size, nuvalue);
     let io: *mut TValue = &mut (*(*state).top.p).val;
-    let x_: *mut Udata = u;
+    let x_: *mut User = u;
     (*io).value.gc = &mut (*(x_ as *mut GCUnion)).gc;
     (*io).set_tag (set_collectable(TAG_VARIANT_USER));
     (*state).top.p = (*state).top.p.offset(1);
@@ -6199,7 +6199,7 @@ pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) { unsa
             current_block_18 = 18317007320854588510;
         }
         TAG_VARIANT_USER => {
-            let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
+            let u: *mut User = &mut (*(o as *mut GCUnion)).u;
             if (*u).nuvalue as i32 == 0 {
                 if !((*u).metatable).is_null() {
                     if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -6523,7 +6523,7 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 { u
             })) as u32,
     ) as u64;
 }}
-pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut Udata) -> i32 { unsafe {
+pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 { unsafe {
     let mut i: i32;
     if !((*u).metatable).is_null() {
         if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -6831,7 +6831,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) { unsafe {
             luae_freethread(state, &mut (*(o as *mut GCUnion)).th);
         }
         TAG_VARIANT_USER => {
-            let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
+            let u: *mut User = &mut (*(o as *mut GCUnion)).u;
             (*state).free_memory(
                 o as *mut libc::c_void,
                 (if (*u).nuvalue as i32 == 0 {
@@ -8087,7 +8087,7 @@ pub unsafe extern "C" fn luas_newudata(
     state: *mut State,
     s: u64,
     nuvalue: i32,
-) -> *mut Udata { unsafe {
+) -> *mut User { unsafe {
     let mut i: i32;
     if ((s
         > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
@@ -8119,7 +8119,7 @@ pub unsafe extern "C" fn luas_newudata(
         })
         .wrapping_add(s),
     );
-    let u: *mut Udata = &mut (*(o as *mut GCUnion)).u;
+    let u: *mut User = &mut (*(o as *mut GCUnion)).u;
     (*u).length = s;
     (*u).nuvalue = nuvalue as u16;
     (*u).metatable = std::ptr::null_mut();
@@ -15436,8 +15436,8 @@ pub unsafe extern "C" fn luav_equalobj(
             );
         }
         TAG_VARIANT_USER => {
-            if &mut (*((*t1).value.gc as *mut GCUnion)).u as *mut Udata
-                == &mut (*((*t2).value.gc as *mut GCUnion)).u as *mut Udata
+            if &mut (*((*t1).value.gc as *mut GCUnion)).u as *mut User
+                == &mut (*((*t2).value.gc as *mut GCUnion)).u as *mut User
             {
                 return 1;
             } else if state.is_null() {

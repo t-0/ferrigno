@@ -7,13 +7,13 @@ use crate::lclosure::*;
 use crate::upvalue::*;
 use crate::table::*;
 use crate::tstring::*;
-use crate::udata::*;
+use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union GCUnion {
     pub gc: Object,
     pub ts: TString,
-    pub u: Udata,
+    pub u: User,
     pub ccl: CClosure,
     pub lcl: LClosure,
     pub ucl: UClosure,

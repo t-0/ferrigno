@@ -4,7 +4,7 @@ use crate::uvalue::*;
 use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Udata {
+pub struct User {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
@@ -14,7 +14,7 @@ pub struct Udata {
     pub gc_list: *mut Object,
     pub uv: [UValue; 1],
 }
-impl TObject for Udata {
+impl TObject for User {
     fn get_marked(& self) -> u8 {
         self.marked
     }
