@@ -2,6 +2,7 @@ use crate::node::*;
 use crate::object::*;
 use crate::tvalue::*;
 use crate::tag::*;
+use crate::new::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
@@ -45,6 +46,21 @@ impl TObject for Table {
     }
     fn get_metatable(& mut self) -> *mut Table {
         self.metatable
+    }
+}
+impl New for Table {
+    fn new() -> Self {
+        Table {
+            object: Object::new(),
+            flags: 0,
+            log_size_node: 0,
+            array_limit: 0,
+            array: std::ptr::null_mut(),
+            node: std::ptr::null_mut(),
+            last_free: std::ptr::null_mut(),
+            metatable: std::ptr::null_mut(),
+            gc_list: std::ptr::null_mut(),
+        }
     }
 }
 impl Table {

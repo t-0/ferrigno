@@ -9285,17 +9285,17 @@ pub unsafe extern "C" fn searchvar(
     return -1;
 }}
 pub unsafe extern "C" fn markupval(fs: *mut FunctionState, level: i32) { unsafe {
-    let mut blockcontrol: *mut BlockControl = (*fs).blockcontrol;
-    while (*blockcontrol).count_active_variables as i32 > level {
-        blockcontrol = (*blockcontrol).previous;
+    let mut block_control: *mut BlockControl = (*fs).block_control;
+    while (*block_control).count_active_variables as i32 > level {
+        block_control = (*block_control).previous;
     }
-    (*blockcontrol).count_upvalues = 1;
+    (*block_control).count_upvalues = 1;
     (*fs).needclose = 1;
 }}
 pub unsafe extern "C" fn marktobeclosed(fs: *mut FunctionState) { unsafe {
-    let blockcontrol: *mut BlockControl = (*fs).blockcontrol;
-    (*blockcontrol).count_upvalues = 1;
-    (*blockcontrol).is_inside_tbc = true;
+    let block_control: *mut BlockControl = (*fs).block_control;
+    (*block_control).count_upvalues = 1;
+    (*block_control).is_inside_tbc = true;
     (*fs).needclose = 1;
 }}
 pub unsafe extern "C" fn singlevaraux(
@@ -9480,7 +9480,7 @@ pub unsafe extern "C" fn newgotoentry(
 }}
 pub unsafe extern "C" fn solvegotos(ls: *mut LexState, lb: *mut LabelDescription) -> bool { unsafe {
     let gl: *mut Labellist = &mut (*(*ls).dynamic_data).gt;
-    let mut i: i32 = (*(*(*ls).fs).blockcontrol).first_goto;
+    let mut i: i32 = (*(*(*ls).fs).block_control).first_goto;
     let mut needsclose = false;
     while i < (*gl).n {
         if (*((*gl).arr).offset(i as isize)).name == (*lb).name {
@@ -9503,7 +9503,7 @@ pub unsafe extern "C" fn createlabel(
     let l: i32 = newlabelentry(ls, ll, name, line, luak_getlabel(fs));
     if last != 0 {
         (*((*ll).arr).offset(l as isize)).count_active_variables =
-            (*(*fs).blockcontrol).count_active_variables;
+            (*(*fs).block_control).count_active_variables;
     }
     if solvegotos(ls, &mut *((*ll).arr).offset(l as isize)) {
         luak_code_abck(fs, OP_CLOSE, luay_nvarstack(fs), 0, 0, 0);
@@ -9513,37 +9513,37 @@ pub unsafe extern "C" fn createlabel(
 }}
 pub unsafe extern "C" fn movegotosout(
     fs: *mut FunctionState,
-    blockcontrol: *mut BlockControl,
+    block_control: *mut BlockControl,
 ) { unsafe {
     let mut i: i32;
     let gl: *mut Labellist = &mut (*(*(*fs).ls).dynamic_data).gt;
-    i = (*blockcontrol).first_goto;
+    i = (*block_control).first_goto;
     while i < (*gl).n {
         let gt: *mut LabelDescription =
             &mut *((*gl).arr).offset(i as isize) as *mut LabelDescription;
         if reglevel(fs, (*gt).count_active_variables as i32)
-            > reglevel(fs, (*blockcontrol).count_active_variables as i32)
+            > reglevel(fs, (*block_control).count_active_variables as i32)
         {
-            (*gt).close = ((*gt).close as i32 | (*blockcontrol).count_upvalues as i32) as u8;
+            (*gt).close = ((*gt).close as i32 | (*block_control).count_upvalues as i32) as u8;
         }
-        (*gt).count_active_variables = (*blockcontrol).count_active_variables;
+        (*gt).count_active_variables = (*block_control).count_active_variables;
         i += 1;
     }
 }}
 pub unsafe extern "C" fn enterblock(
     fs: *mut FunctionState,
-    blockcontrol: *mut BlockControl,
+    block_control: *mut BlockControl,
     is_loop: bool,
 ) { unsafe {
-    (*blockcontrol).is_loop = is_loop;
-    (*blockcontrol).count_active_variables = (*fs).count_active_variables;
-    (*blockcontrol).first_label = (*(*(*fs).ls).dynamic_data).label.n;
-    (*blockcontrol).first_goto = (*(*(*fs).ls).dynamic_data).gt.n;
-    (*blockcontrol).count_upvalues = 0;
-    (*blockcontrol).is_inside_tbc =
-        !((*fs).blockcontrol).is_null() && (*(*fs).blockcontrol).is_inside_tbc as i32 != 0;
-    (*blockcontrol).previous = (*fs).blockcontrol;
-    (*fs).blockcontrol = blockcontrol;
+    (*block_control).is_loop = is_loop;
+    (*block_control).count_active_variables = (*fs).count_active_variables;
+    (*block_control).first_label = (*(*(*fs).ls).dynamic_data).label.n;
+    (*block_control).first_goto = (*(*(*fs).ls).dynamic_data).gt.n;
+    (*block_control).count_upvalues = 0;
+    (*block_control).is_inside_tbc =
+        !((*fs).block_control).is_null() && (*(*fs).block_control).is_inside_tbc as i32 != 0;
+    (*block_control).previous = (*fs).block_control;
+    (*fs).block_control = block_control;
 }}
 pub unsafe extern "C" fn undefgoto(ls: *mut LexState, gt: *mut LabelDescription) -> ! { unsafe {
     let mut message: *const i8;
@@ -9570,12 +9570,12 @@ pub unsafe extern "C" fn undefgoto(ls: *mut LexState, gt: *mut LabelDescription)
     luak_semerror(ls, message);
 }}
 pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) { unsafe {
-    let blockcontrol: *mut BlockControl = (*fs).blockcontrol;
+    let block_control: *mut BlockControl = (*fs).block_control;
     let ls: *mut LexState = (*fs).ls;
     let mut hasclose: i32 = 0;
-    let stklevel: i32 = reglevel(fs, (*blockcontrol).count_active_variables as i32);
-    removevars(fs, (*blockcontrol).count_active_variables as i32);
-    if (*blockcontrol).is_loop {
+    let stklevel: i32 = reglevel(fs, (*block_control).count_active_variables as i32);
+    removevars(fs, (*block_control).count_active_variables as i32);
+    if (*block_control).is_loop {
         hasclose = createlabel(
             ls,
             luas_newlstr(
@@ -9590,68 +9590,22 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) { unsafe {
         );
     }
     if hasclose == 0
-        && !((*blockcontrol).previous).is_null()
-        && (*blockcontrol).count_upvalues as i32 != 0
+        && !((*block_control).previous).is_null()
+        && (*block_control).count_upvalues as i32 != 0
     {
         luak_code_abck(fs, OP_CLOSE, stklevel, 0, 0, 0);
     }
     (*fs).freereg = stklevel as u8;
-    (*(*ls).dynamic_data).label.n = (*blockcontrol).first_label;
-    (*fs).blockcontrol = (*blockcontrol).previous;
-    if !((*blockcontrol).previous).is_null() {
-        movegotosout(fs, blockcontrol);
-    } else if (*blockcontrol).first_goto < (*(*ls).dynamic_data).gt.n {
+    (*(*ls).dynamic_data).label.n = (*block_control).first_label;
+    (*fs).block_control = (*block_control).previous;
+    if !((*block_control).previous).is_null() {
+        movegotosout(fs, block_control);
+    } else if (*block_control).first_goto < (*(*ls).dynamic_data).gt.n {
         undefgoto(
             ls,
-            &mut *((*(*ls).dynamic_data).gt.arr).offset((*blockcontrol).first_goto as isize),
+            &mut *((*(*ls).dynamic_data).gt.arr).offset((*block_control).first_goto as isize),
         );
     }
-}}
-pub unsafe extern "C" fn addprototype(ls: *mut LexState) -> *mut Prototype { unsafe {
-    let state: *mut State = (*ls).state;
-    let fs: *mut FunctionState = (*ls).fs;
-    let f: *mut Prototype = (*fs).f;
-    if (*fs).np >= (*f).size_p {
-        let mut old_size: i32 = (*f).size_p;
-        (*f).p = luam_growaux_(
-            state,
-            (*f).p as *mut libc::c_void,
-            (*fs).np,
-            &mut (*f).size_p,
-            ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
-            (if ((1 << 8 + 8 + 1) - 1) as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
-            {
-                ((1 << 8 + 8 + 1) - 1) as u32
-            } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
-                    as u32
-                }) as i32,
-                b"functions\0" as *const u8 as *const i8,
-            ) as *mut *mut Prototype;
-            while old_size < (*f).size_p {
-                let fresh45 = old_size;
-                old_size = old_size + 1;
-                let ref mut fresh46 = *((*f).p).offset(fresh45 as isize);
-                *fresh46 = std::ptr::null_mut();
-            }
-        }
-    let clp: *mut Prototype = luaf_newproto(state);
-    let fresh47 = (*fs).np;
-    (*fs).np = (*fs).np + 1;
-    let ref mut fresh48 = *((*f).p).offset(fresh47 as isize);
-    *fresh48 = clp;
-    if (*f).get_marked() & 1 << 5 != 0
-        && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0
-    {
-        luac_barrier_(
-            state,
-            &mut (*(f as *mut GCUnion)).gc,
-            &mut (*(clp as *mut GCUnion)).gc,
-        );
-    } else {
-    };
-    return clp;
 }}
 pub unsafe extern "C" fn codeclosure(ls: *mut LexState, v: *mut ExpressionDescription) { unsafe {
     let fs: *mut FunctionState = (*(*ls).fs).previous;
@@ -9665,7 +9619,7 @@ pub unsafe extern "C" fn codeclosure(ls: *mut LexState, v: *mut ExpressionDescri
 pub unsafe extern "C" fn open_func(
     ls: *mut LexState,
     fs: *mut FunctionState,
-    blockcontrol: *mut BlockControl,
+    block_control: *mut BlockControl,
 ) { unsafe {
     let f: *mut Prototype = (*fs).f;
     (*fs).previous = (*ls).fs;
@@ -9685,7 +9639,7 @@ pub unsafe extern "C" fn open_func(
     (*fs).needclose = 0;
     (*fs).firstlocal = (*(*ls).dynamic_data).active_variable.n;
     (*fs).first_label = (*(*ls).dynamic_data).label.n;
-    (*fs).blockcontrol = std::ptr::null_mut();
+    (*fs).block_control = std::ptr::null_mut();
     (*f).source = (*ls).source;
     if (*f).get_marked() & 1 << 5 != 0
         && (*(*f).source).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -9698,7 +9652,7 @@ pub unsafe extern "C" fn open_func(
     } else {
     };
     (*f).maximum_stack_size = 2 as u8;
-    enterblock(fs, blockcontrol, false);
+    enterblock(fs, block_control, false);
 }}
 pub unsafe extern "C" fn close_func(ls: *mut LexState) { unsafe {
     let state: *mut State = (*ls).state;
@@ -9970,7 +9924,7 @@ pub unsafe extern "C" fn body(
         f: std::ptr::null_mut(),
         previous: std::ptr::null_mut(),
         ls: std::ptr::null_mut(),
-        blockcontrol: std::ptr::null_mut(),
+        block_control: std::ptr::null_mut(),
         program_counter: 0,
         lasttarget: 0,
         previousline: 0,
@@ -9986,10 +9940,10 @@ pub unsafe extern "C" fn body(
         iwthabs: 0,
         needclose: 0,
     };
-    let mut blockcontrol: BlockControl = BlockControl::new();
-    new_fs.f = addprototype(ls);
+    let mut block_control = BlockControl::new();
+    new_fs.f = (*ls).add_prototype();
     (*new_fs.f).line_defined = line;
-    open_func(ls, &mut new_fs, &mut blockcontrol);
+    open_func(ls, &mut new_fs, &mut block_control);
     checknext(ls, '(' as i32);
     if ismethod != 0 {
         new_localvar(
@@ -10256,8 +10210,8 @@ pub unsafe extern "C" fn expr(ls: *mut LexState, v: *mut ExpressionDescription) 
 }}
 pub unsafe extern "C" fn block(ls: *mut LexState) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
-    let mut blockcontrol: BlockControl = BlockControl::new();
-    enterblock(fs, &mut blockcontrol, false);
+    let mut block_control: BlockControl = BlockControl::new();
+    enterblock(fs, &mut block_control, false);
     statlist(ls);
     leaveblock(fs);
 }}
@@ -10418,11 +10372,11 @@ pub unsafe extern "C" fn labelstat(ls: *mut LexState, name: *mut TString, line: 
 }}
 pub unsafe extern "C" fn whilestat(ls: *mut LexState, line: i32) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
-    let mut blockcontrol: BlockControl = BlockControl::new();
+    let mut block_control: BlockControl = BlockControl::new();
     luax_next(ls);
     let whileinit: i32 = luak_getlabel(fs);
     let condexit: i32 = cond(ls);
-    enterblock(fs, &mut blockcontrol, true);
+    enterblock(fs, &mut block_control, true);
     checknext(ls, TK_DO as i32);
     block(ls);
     luak_patchlist(fs, luak_jump(fs), whileinit);
@@ -10499,11 +10453,11 @@ pub unsafe extern "C" fn forbody(
 ) { unsafe {
     static mut FOR_PREP: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
     static mut FOR_LOOP: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
-    let mut blockcontrol: BlockControl = BlockControl::new();
+    let mut block_control: BlockControl = BlockControl::new();
     let fs: *mut FunctionState = (*ls).fs;
     checknext(ls, TK_DO as i32);
     let prep: i32 = luak_codeabx(fs, FOR_PREP[isgen as usize], base, 0u32);
-    enterblock(fs, &mut blockcontrol, false);
+    enterblock(fs, &mut block_control, false);
     adjustlocalvars(ls, nvars);
     luak_reserveregs(fs, nvars);
     block(ls);
@@ -10629,8 +10583,8 @@ pub unsafe extern "C" fn forlist(ls: *mut LexState, indexname: *mut TString) { u
 }}
 pub unsafe extern "C" fn forstat(ls: *mut LexState, line: i32) { unsafe {
     let fs: *mut FunctionState = (*ls).fs;
-    let mut blockcontrol: BlockControl = BlockControl::new();
-    enterblock(fs, &mut blockcontrol, true);
+    let mut block_control: BlockControl = BlockControl::new();
+    enterblock(fs, &mut block_control, true);
     luax_next(ls);
     let varname: *mut TString = str_checkname(ls);
     match (*ls).t.token {
@@ -10648,7 +10602,7 @@ pub unsafe extern "C" fn forstat(ls: *mut LexState, line: i32) { unsafe {
     leaveblock(fs);
 }}
 pub unsafe extern "C" fn test_then_block(ls: *mut LexState, escapelist: *mut i32) { unsafe {
-    let mut blockcontrol: BlockControl = BlockControl::new();
+    let mut block_control: BlockControl = BlockControl::new();
     let fs: *mut FunctionState = (*ls).fs;
     let mut v: ExpressionDescription = ExpressionDescription {
         k: VVOID,
@@ -10664,7 +10618,7 @@ pub unsafe extern "C" fn test_then_block(ls: *mut LexState, escapelist: *mut i32
         let line: i32 = (*ls).line_number;
         luak_goiffalse((*ls).fs, &mut v);
         luax_next(ls);
-        enterblock(fs, &mut blockcontrol, false);
+        enterblock(fs, &mut block_control, false);
         newgotoentry(
             ls,
             luas_newlstr(
@@ -10686,7 +10640,7 @@ pub unsafe extern "C" fn test_then_block(ls: *mut LexState, escapelist: *mut i32
         }
     } else {
         luak_goiftrue((*ls).fs, &mut v);
-        enterblock(fs, &mut blockcontrol, false);
+        enterblock(fs, &mut block_control, false);
         jf = v.f;
     }
     statlist(ls);
@@ -10878,7 +10832,7 @@ pub unsafe extern "C" fn retstat(ls: *mut LexState) { unsafe {
             luak_setreturns(fs, &mut e, -1);
             if e.k as u32 == VCALL as i32 as u32
                 && nret == 1
-                && !(*(*fs).blockcontrol).is_inside_tbc
+                && !(*(*fs).block_control).is_inside_tbc
             {
                 *((*(*fs).f).code).offset(e.u.info as isize) =
                     *((*(*fs).f).code).offset(e.u.info as isize) & !(!(!(0u32) << 7) << 0)
@@ -10953,9 +10907,9 @@ pub unsafe extern "C" fn statement(ls: *mut LexState) { unsafe {
     (*(*ls).state).count_c_calls;
 }}
 pub unsafe extern "C" fn mainfunc(ls: *mut LexState, fs: *mut FunctionState) { unsafe {
-    let mut blockcontrol: BlockControl = BlockControl::new();
+    let mut block_control: BlockControl = BlockControl::new();
     let env: *mut Upvaldesc;
-    open_func(ls, fs, &mut blockcontrol);
+    open_func(ls, fs, &mut block_control);
     setvararg(fs, 0);
     env = allocupvalue(fs);
     (*env).is_in_stack = true;
@@ -12545,17 +12499,7 @@ pub unsafe extern "C" fn luah_resize(
     nhsize: u32,
 ) { unsafe {
     let mut i: u32;
-    let mut new_table: Table = Table {
-        object: Object::new(),
-        flags: 0,
-        log_size_node: 0,
-        array_limit: 0,
-        array: std::ptr::null_mut(),
-        node: std::ptr::null_mut(),
-        last_free: std::ptr::null_mut(),
-        metatable: std::ptr::null_mut(),
-        gc_list: std::ptr::null_mut(),
-    };
+    let mut new_table: Table = Table::new();
     let old_array_size: u32 = setlimittosize(table);
     let new_array: *mut TValue;
     setnodevector(state, &mut new_table, nhsize);

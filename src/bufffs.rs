@@ -4,7 +4,6 @@ use crate::tvalue::*;
 use crate::object::*;
 use crate::c::*;
 use crate::tstring::*;
-use crate::tag::*;
 use crate::gcunion::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
