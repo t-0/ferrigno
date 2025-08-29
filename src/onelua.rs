@@ -825,7 +825,7 @@ pub unsafe extern "C" fn resume(state: *mut State, ud: *mut libc::c_void) {
         let first_argument: StkId = (*state).top.p.offset(-(n as isize));
         let call_info: *mut CallInfo = (*state).call_info;
         if (*state).status as i32 == 0 {
-            ccall(state, first_argument.offset(-(1 as isize)), -1, 0u32);
+            ccall(state, first_argument.offset(-(1 as isize)), -1, 0);
         } else {
             (*state).status = 0;
             if (*call_info).call_status as i32 & 1 << 1 == 0 {
@@ -903,7 +903,7 @@ pub unsafe extern "C" fn lua_resume(
         (*state).count_c_calls = if !from.is_null() {
             (*from).count_c_calls & 0xffff as i32 as u32
         } else {
-            0u32
+            0
         };
         if (*state).count_c_calls & 0xffff as i32 as u32 >= 200 as i32 as u32 {
             return resume_error(
@@ -944,7 +944,7 @@ pub unsafe extern "C" fn lua_yieldk(
     unsafe {
         let call_info;
         call_info = (*state).call_info;
-        if (!((*state).count_c_calls & 0xffff0000 as u32 == 0u32) as i32 != 0) as i32 as i64 != 0 {
+        if (!((*state).count_c_calls & 0xffff0000 as u32 == 0) as i32 != 0) as i32 as i64 != 0 {
             if state != (*(*state).global).mainthread {
                 luag_runerror(
                     state,
@@ -1367,19 +1367,6 @@ pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) {
         (*state).top.p = (*state).top.p.offset(1);
     }
 }
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> i32 {
-    unsafe {
-        let o: *const TValue = index2value(state, index);
-        return if (get_tag_type((*o).get_tag()) != TAG_TYPE_NIL)
-            || o != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue
-        {
-            (*o).get_tag_type() as i32
-        } else {
-            TAG_NONE_
-        };
-    }
-}
 pub unsafe extern "C" fn lua_type2(state: *mut State, index: i32) -> Option<u8> {
     unsafe {
         let o: *const TValue = index2value(state, index);
@@ -1396,6 +1383,24 @@ pub unsafe extern "C" fn lua_type2(state: *mut State, index: i32) -> Option<u8> 
 pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: i32) -> *const i8 {
     unsafe {
         return TYPE_NAMES[(t + 1) as usize];
+    }
+}
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn lua_typename2(mut _state: *mut State, t: Option<u8>) -> *const i8 {
+    match t {
+        None => b"no value\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_NIL) => b"nil\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_BOOLEAN) => b"boolean\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_POINTER) => b"userdata\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_NUMERIC) => b"number\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_STRING) => b"string\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_TABLE) => b"table\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_CLOSURE) => b"function\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_USER) => b"userdata\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_STATE) => b"thread\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_UPVALUE) => b"upvalue\0" as *const u8 as *const i8,
+        Some(TAG_TYPE_PROTOTYPE) => b"proto\0" as *const u8 as *const i8,
+        _ => b"unknown\0" as *const u8 as *const i8,
     }
 }
 #[unsafe(no_mangle)]
@@ -1610,34 +1615,11 @@ pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunc
         }
     }
 }
-#[inline]
-pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
-    unsafe {
-        match get_tag_type((*o).get_tag()) {
-            7 => {
-                return (&mut (*((*o).value.object as *mut User)) as *mut User as *mut i8)
-                    .offset(
-                        (if (*((*o).value.object as *mut User)).nuvalue as i32 == 0 {
-                            32 as u64
-                        } else {
-                            (40 as u64).wrapping_add(
-                                (::core::mem::size_of::<UValue>() as u64).wrapping_mul(
-                                    (*((*o).value.object as *mut User)).nuvalue as u64,
-                                ),
-                            )
-                        }) as isize,
-                    ) as *mut libc::c_void;
-            }
-            2 => return (*o).value.p,
-            _ => return std::ptr::null_mut(),
-        };
-    }
-}
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lua_touserdata(state: *mut State, index: i32) -> *mut libc::c_void {
     unsafe {
         let o: *const TValue = index2value(state, index);
-        return touserdata(o);
+        return User::touserdata(o);
     }
 }
 #[unsafe(no_mangle)]
@@ -1648,25 +1630,6 @@ pub unsafe extern "C" fn lua_tothread(state: *mut State, index: i32) -> *mut Sta
             std::ptr::null_mut()
         } else {
             &mut (*((*o).value.object as *mut State))
-        };
-    }
-}
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const libc::c_void {
-    unsafe {
-        let o: *const TValue = index2value(state, index);
-        match (*o).get_tag_variant() {
-            TAG_VARIANT_CLOSURE_CFUNCTION => {
-                return ::core::mem::transmute::<CFunction, u64>((*o).value.f) as *mut libc::c_void;
-            }
-            TAG_VARIANT_USER | TAG_VARIANT_POINTER => return touserdata(o),
-            _ => {
-                if (*o).is_collectable() {
-                    return (*o).value.object as *const libc::c_void;
-                } else {
-                    return std::ptr::null();
-                }
-            }
         };
     }
 }
@@ -2387,7 +2350,7 @@ pub unsafe extern "C" fn lua_callk(
 ) {
     unsafe {
         let function: StkId = (*state).top.p.offset(-((nargs + 1) as isize));
-        if k.is_some() && (*state).count_c_calls & 0xffff0000 as u32 == 0u32 {
+        if k.is_some() && (*state).count_c_calls & 0xffff0000 as u32 == 0 {
             (*(*state).call_info).u.c.k = k;
             (*(*state).call_info).u.c.ctx = ctx;
             ccall(state, function, count_results, 1);
@@ -2428,7 +2391,7 @@ pub unsafe extern "C" fn lua_pcallk(
             function = (o as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
         }
         c.function = (*state).top.p.offset(-((nargs + 1) as isize));
-        if k.is_none() || !((*state).count_c_calls & 0xffff0000 as u32 == 0u32) {
+        if k.is_none() || !((*state).count_c_calls & 0xffff0000 as u32 == 0) {
             c.count_results = count_results;
             status = luad_pcall(
                 state,
@@ -3055,7 +3018,7 @@ pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) {
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_TABLE);
         (*io).set_collectable();
-        luah_resize(state, registry, 2 as u32, 0u32);
+        luah_resize(state, registry, 2 as u32, 0);
         let io_0: *mut TValue = &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
         let x0: *mut State = state;
         (*io_0).value.object = &mut (*(x0 as *mut Object));
@@ -3208,7 +3171,7 @@ pub unsafe extern "C" fn lua_closethread(state: *mut State, from: *mut State) ->
         (*state).count_c_calls = if !from.is_null() {
             (*from).count_c_calls & 0xffff as i32 as u32
         } else {
-            0u32
+            0
         };
         status = luae_resetthread(state, (*state).status as i32);
         return status;
@@ -3841,7 +3804,7 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
         let mut setreg: i32 = -1;
         let mut jmptarget: i32 = 0;
         if OPMODES
-            [(*((*p).code).offset(lastpc as isize) >> 0 & !(!(0u32) << 7) << 0) as u32 as usize]
+            [(*((*p).code).offset(lastpc as isize) >> 0 & !(!(0) << 7) << 0) as u32 as usize]
             as i32
             & 1 << 7
             != 0
@@ -3851,12 +3814,12 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
         let mut program_counter: i32 = 0;
         while program_counter < lastpc {
             let i: u32 = *((*p).code).offset(program_counter as isize);
-            let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
-            let a: i32 = (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32;
+            let op: u32 = (i >> 0 & !(!(0) << 7) << 0) as u32;
+            let a: i32 = (i >> 0 + 7 & !(!(0) << 8) << 0) as i32;
             let change: i32;
             match op as u32 {
                 8 => {
-                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0) << 8) << 0) as i32;
                     change = (a <= reg && reg <= a + b) as i32;
                 }
                 76 => {
@@ -8169,7 +8132,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
 pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TString {
     unsafe {
         let i: u32 = ((str as u64
-            & (2147483647 as i32 as u32)
+            & (0x7FFFFFFF as i32 as u32)
                 .wrapping_mul(2 as u32)
                 .wrapping_add(1 as u32) as u64) as u32)
             .wrapping_rem(53 as i32 as u32);
@@ -8251,7 +8214,7 @@ pub unsafe extern "C" fn load_size(load_state: *mut LoadState) -> u64 {
 }
 pub unsafe extern "C" fn load_int(load_state: *mut LoadState) -> i32 {
     unsafe {
-        return load_unsigned(load_state, 2147483647 as i32 as u64) as i32;
+        return load_unsigned(load_state, 0x7FFFFFFF as i32 as u64) as i32;
     }
 }
 pub unsafe extern "C" fn load_number(load_state: *mut LoadState) -> f64 {
@@ -10023,7 +9986,7 @@ pub unsafe extern "C" fn recfield(lexical_state: *mut LexicalState, cc: *mut Con
         checklimit(
             fs,
             (*cc).nh,
-            2147483647 as i32,
+            0x7FFFFFFF as i32,
             b"items in a constructor\0" as *const u8 as *const i8,
         );
         (*cc).nh += 1;
@@ -11559,7 +11522,7 @@ pub unsafe extern "C" fn inclinenumber(lexical_state: *mut LexicalState) {
             };
         }
         (*lexical_state).line_number += 1;
-        if (*lexical_state).line_number >= 2147483647 as i32 {
+        if (*lexical_state).line_number >= 0x7FFFFFFF as i32 {
             lexerror(
                 lexical_state,
                 b"chunk has too many lines\0" as *const u8 as *const i8,
@@ -12510,7 +12473,7 @@ static mut ABSENT_KEY: TValue = {
 pub unsafe extern "C" fn hashint(t: *const Table, i: i64) -> *mut Node {
     unsafe {
         let ui: u64 = i as u64;
-        if ui <= 2147483647 as i32 as u32 as u64 {
+        if ui <= 0x7FFFFFFF as i32 as u32 as u64 {
             return &mut *((*t).node)
                 .offset((ui as i32 % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize)
                 as *mut Node;
@@ -12555,7 +12518,7 @@ pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
     let i: i32;
     let mut ni: i64 = 0;
     (n, i) = frexp_(n);
-    n = n * -((-(2147483647 as i32) - 1) as f64);
+    n = n * -((-(0x7FFFFFFF as i32) - 1) as f64);
     if !(n >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
         && n < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
         && {
@@ -12566,7 +12529,7 @@ pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
         return 0;
     } else {
         let u: u32 = (i as u32).wrapping_add(ni as u32);
-        return (if u <= 2147483647 as i32 as u32 { u } else { !u }) as i32;
+        return (if u <= 0x7FFFFFFF as i32 as u32 { u } else { !u }) as i32;
     };
 }
 pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
@@ -12609,7 +12572,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                 let p: *mut libc::c_void = (*key).value.p;
                 return &mut *((*t).node).offset(
                     ((p as u64
-                        & (2147483647 as i32 as u32)
+                        & (0x7FFFFFFF as i32 as u32)
                             .wrapping_mul(2 as u32)
                             .wrapping_add(1 as u32) as u64) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
@@ -12620,7 +12583,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                 let f: CFunction = (*key).value.f;
                 return &mut *((*t).node).offset(
                     ((::core::mem::transmute::<CFunction, u64>(f)
-                        & (2147483647 as i32 as u32)
+                        & (0x7FFFFFFF as i32 as u32)
                             .wrapping_mul(2 as u32)
                             .wrapping_add(1 as u32) as u64) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
@@ -12631,7 +12594,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                 let o: *mut Object = (*key).value.object;
                 return &mut *((*t).node).offset(
                     ((o as u64
-                        & (2147483647 as i32 as u32)
+                        & (0x7FFFFFFF as i32 as u32)
                             .wrapping_mul(2 as u32)
                             .wrapping_add(1 as u32) as u64) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
@@ -13749,10 +13712,10 @@ pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype,
                 (*fs).nabslineinfo,
                 &mut (*f).size_absolute_line_info,
                 ::core::mem::size_of::<AbsoluteLineInfo>() as u64 as i32,
-                (if 2147483647 as i32 as u64
+                (if 0x7FFFFFFF as i32 as u64
                     <= (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
                 {
-                    2147483647 as i32 as u32
+                    0x7FFFFFFF as i32 as u32
                 } else {
                     (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64) as u32
                 }) as i32,
@@ -13772,10 +13735,10 @@ pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype,
             program_counter,
             &mut (*f).size_line_info,
             ::core::mem::size_of::<i8>() as u64 as i32,
-            (if 2147483647 as i32 as u64
+            (if 0x7FFFFFFF as i32 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
             {
-                2147483647 as i32 as u32
+                0x7FFFFFFF as i32 as u32
             } else {
                 (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64) as u32
             }) as i32,
@@ -13816,10 +13779,10 @@ pub unsafe extern "C" fn luak_code(fs: *mut FunctionState, i: u32) -> i32 {
             (*fs).program_counter,
             &mut (*f).size_code,
             ::core::mem::size_of::<u32>() as u64 as i32,
-            (if 2147483647 as i32 as u64
+            (if 0x7FFFFFFF as i32 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
             {
-                2147483647 as i32 as u32
+                0x7FFFFFFF as i32 as u32
             } else {
                 (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64) as u32
             }) as i32,
@@ -19486,7 +19449,7 @@ pub unsafe extern "C" fn lual_typeerror(state: *mut State, arg: i32, tname: *con
         } else if lua_type2(state, arg) == Some(TAG_TYPE_POINTER) {
             typearg = b"light userdata\0" as *const u8 as *const i8;
         } else {
-            typearg = lua_typename(state, lua_type(state, arg));
+            typearg = lua_typename2(state, lua_type2(state, arg));
         }
         message = lua_pushfstring(
             state,
@@ -19714,7 +19677,7 @@ pub unsafe extern "C" fn lual_checktype(state: *mut State, arg: i32, tag: u8) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lual_checkany(state: *mut State, arg: i32) {
     unsafe {
-        if ((lua_type(state, arg) == -1) as i32 != 0) as i32 as i64 != 0 {
+        if lua_type2(state, arg) == None {
             lual_argerror(state, arg, b"value expected\0" as *const u8 as *const i8);
         }
     }
@@ -20175,8 +20138,8 @@ pub unsafe extern "C" fn lual_tolstring(
                 );
             }
         } else {
-            match lua_type(state, index) {
-                3 => {
+            match lua_type2(state, index) {
+                Some(TAG_TYPE_NUMERIC) => {
                     if lua_isinteger(state, index) {
                         lua_pushfstring(
                             state,
@@ -20191,10 +20154,10 @@ pub unsafe extern "C" fn lual_tolstring(
                         );
                     }
                 }
-                4 => {
+                Some(TAG_TYPE_STRING) => {
                     lua_pushvalue(state, index);
                 }
-                1 => {
+                Some(TAG_TYPE_BOOLEAN) => {
                     lua_pushstring(
                         state,
                         if lua_toboolean(state, index) != 0 {
@@ -20204,7 +20167,7 @@ pub unsafe extern "C" fn lual_tolstring(
                         },
                     );
                 }
-                0 => {
+                Some(TAG_TYPE_NIL) => {
                     lua_pushstring(state, b"nil\0" as *const u8 as *const i8);
                 }
                 _ => {
@@ -20213,13 +20176,13 @@ pub unsafe extern "C" fn lual_tolstring(
                     let kind: *const i8 = if tag == 4 {
                         lua_tolstring(state, -1, std::ptr::null_mut())
                     } else {
-                        lua_typename(state, lua_type(state, index))
+                        lua_typename2(state, lua_type2(state, index))
                     };
                     lua_pushfstring(
                         state,
                         b"%s: %p\0" as *const u8 as *const i8,
                         kind,
-                        lua_topointer(state, index),
+                        User::lua_topointer(state, index),
                     );
                     if tag != 0 {
                         lua_rotate(state, -(2), -1);
@@ -20652,11 +20615,14 @@ pub unsafe extern "C" fn luab_getmetatable(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_setmetatable(state: *mut State) -> i32 {
     unsafe {
-        let t: i32 = lua_type(state, 2);
         lual_checktype(state, 1, TAG_TYPE_TABLE);
-        (((t == 0 || t == 5) as i32 != 0) as i32 as i64 != 0
-            || lual_typeerror(state, 2, b"nil or table\0" as *const u8 as *const i8) != 0)
-            as i32;
+        match lua_type2(state, 2) {
+            Some(TAG_TYPE_NIL) | Some(TAG_TYPE_TABLE) => {
+            },
+            _ => {
+                lual_typeerror(state, 2, b"nil or table\0" as *const u8 as *const i8);
+            },
+        };
         if ((lual_getmetafield(state, 1, b"__metatable\0" as *const u8 as *const i8) != 0) as i32
             != 0) as i32 as i64
             != 0
@@ -20681,10 +20647,13 @@ pub unsafe extern "C" fn luab_rawequal(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_rawlen(state: *mut State) -> i32 {
     unsafe {
-        let t: i32 = lua_type(state, 1);
-        (((t == 5 || t == 4) as i32 != 0) as i32 as i64 != 0
-            || lual_typeerror(state, 1, b"table or string\0" as *const u8 as *const i8) != 0)
-            as i32;
+        match lua_type2(state, 1) {
+            Some(TAG_TYPE_TABLE) | Some(TAG_TYPE_STRING) => {
+            },
+            _ => {
+                lual_typeerror(state, 1, b"table or string\0" as *const u8 as *const i8);
+            },
+        };
         (*state).push_integer(lua_rawlen(state, 1) as i64);
         return 1;
     }
@@ -20804,11 +20773,15 @@ pub unsafe extern "C" fn luab_collectgarbage(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn luab_type(state: *mut State) -> i32 {
     unsafe {
-        let t: i32 = lua_type(state, 1);
-        (((t != -1) as i32 != 0) as i32 as i64 != 0
-            || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
-            as i32;
-        lua_pushstring(state, lua_typename(state, t));
+        let t = lua_type2(state, 1);
+        match t {
+            None => {
+                lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8);
+            },
+            _  => {
+                lua_pushstring(state, lua_typename2(state, t));
+            },
+        };
         return 1;
     }
 }
@@ -20893,7 +20866,7 @@ pub unsafe extern "C" fn luab_loadfile(state: *mut State) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(state, 1, std::ptr::null(), std::ptr::null_mut());
         let mode: *const i8 = lual_optlstring(state, 2, std::ptr::null(), std::ptr::null_mut());
-        let env: i32 = if !(lua_type(state, 3) == -1) { 3 } else { 0 };
+        let env: i32 = if (lua_type2(state, 3) == None) { 0 } else { 3 };
         let status: i32 = lual_loadfilex(state, fname, mode);
         return load_aux(state, status, env);
     }
@@ -20911,7 +20884,7 @@ pub unsafe extern "C" fn generic_reader(
         );
         lua_pushvalue(state, 1);
         lua_callk(state, 0, 1, 0, None);
-        if lua_type(state, -1) == 0 {
+        if lua_type2(state, -1) == Some(TAG_TYPE_NIL) {
             lua_settop(state, -1 - 1);
             *size = 0;
             return std::ptr::null();
@@ -21413,7 +21386,10 @@ pub unsafe extern "C" fn tmove(state: *mut State) -> i32 {
         let f: i64 = lual_checkinteger(state, 2);
         let e: i64 = lual_checkinteger(state, 3);
         let t: i64 = lual_checkinteger(state, 4);
-        let tag: i32 = if !(lua_type(state, 5) <= 0) { 5 } else { 1 };
+        let tag: i32 = match lua_type2(state, 5) {
+            None | Some(TAG_TYPE_NIL) => 1,
+            _ =>  5,
+        };
         checktab(state, 1, 1);
         checktab(state, tag, 2);
         if e >= f {
@@ -21459,7 +21435,7 @@ pub unsafe extern "C" fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
             lual_error(
                 state,
                 b"invalid value (%s) at index %I in table for 'concat'\0" as *const u8 as *const i8,
-                lua_typename(state, lua_type(state, -1)),
+                lua_typename2(state, lua_type2(state, -1)),
                 i,
             );
         }
@@ -21508,16 +21484,19 @@ pub unsafe extern "C" fn tunpack(state: *mut State) -> i32 {
     unsafe {
         let mut n: u64;
         let mut i: i64 = lual_optinteger(state, 2, 1);
-        let e: i64 = if lua_type(state, 3) <= 0 {
-            lual_len(state, 1)
-        } else {
-            lual_checkinteger(state, 3)
+        let e = match lua_type2(state, 3) {
+            None | Some(TAG_TYPE_NIL) => {
+                lual_len(state, 1)
+            },
+            _ => {
+                lual_checkinteger(state, 3)
+            },
         };
         if i > e {
             return 0;
         }
         n = (e as u64).wrapping_sub(i as u64);
-        if ((n >= 2147483647 as i32 as u32 as u64 || {
+        if ((n >= 0x7FFFFFFF as i32 as u32 as u64 || {
             n = n.wrapping_add(1);
             lua_checkstack(state, n as i32) == 0
         }) as i32
@@ -21704,14 +21683,18 @@ pub unsafe extern "C" fn sort(state: *mut State) -> i32 {
         checktab(state, 1, 1 | 2 | 4);
         let n: i64 = lual_len(state, 1);
         if n > 1 {
-            (((n < 2147483647 as i32 as i64) as i32 != 0) as i32 as i64 != 0
-                || lual_argerror(state, 1, b"array too big\0" as *const u8 as *const i8) != 0)
-                as i32;
-            if !(lua_type(state, 2) <= 0) {
-                lual_checktype(state, 2, TAG_TYPE_CLOSURE);
+            if n >= 0x7FFFFFFF {
+                lual_argerror(state, 1, b"array too big\0" as *const u8 as *const i8);
+            }
+            match lua_type2(state, 2) {
+                None | Some(TAG_TYPE_NIL) => {
+                },
+                _ => {
+                    lual_checktype(state, 2, TAG_TYPE_CLOSURE);
+                },
             }
             lua_settop(state, 2);
-            auxsort(state, 1 as u32, n as u32, 0u32);
+            auxsort(state, 1 as u32, n as u32, 0);
         }
         return 0;
     }
@@ -22023,7 +22006,7 @@ pub unsafe extern "C" fn getiofile(state: *mut State, findex: *const i8) -> *mut
 }
 pub unsafe extern "C" fn g_iofile(state: *mut State, f: *const i8, mode: *const i8) -> i32 {
     unsafe {
-        if !(lua_type(state, 1) <= 0) {
+        if !(is_none_or_nil(lua_type2(state, 1))) {
             let filename: *const i8 = lua_tolstring(state, 1, std::ptr::null_mut());
             if !filename.is_null() {
                 opencheck(state, filename, mode);
@@ -23010,9 +22993,9 @@ pub unsafe extern "C" fn getfield(state: *mut State, key: *const i8, d: i32, del
             res = d as i64;
         } else {
             if if res >= 0 {
-                (res - delta as i64 <= 2147483647 as i32 as i64) as i32
+                (res - delta as i64 <= 0x7FFFFFFF as i32 as i64) as i32
             } else {
-                ((-(2147483647 as i32) - 1 + delta) as i64 <= res) as i32
+                ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
             } == 0
             {
                 return lual_error(
@@ -23086,7 +23069,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
         let mut slen: u64 = 0;
         let mut s: *const i8 =
             lual_optlstring(state, 1, b"%c\0" as *const u8 as *const i8, &mut slen);
-        let mut t: i64 = if lua_type(state, 2) <= 0 {
+        let mut t: i64 = if is_none_or_nil(lua_type2(state, 2)) {
             time(std::ptr::null_mut())
         } else {
             l_checktime(state, 2)
@@ -23469,7 +23452,7 @@ pub unsafe extern "C" fn str_rep(state: *mut State) -> i32 {
             > ((if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i32>() as u64 {
                 !(0u64)
             } else {
-                2147483647 as i32 as u64
+                0x7FFFFFFF as i32 as u64
             }) as u64)
                 .wrapping_div(n as u64)) as i32
         != 0) as i32 as i64
@@ -23528,7 +23511,7 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 {
         if posi > pose {
             return 0;
         }
-        if ((pose.wrapping_sub(posi) >= 2147483647 as i32 as u64) as i32 != 0) as i32 as i64 != 0 {
+        if ((pose.wrapping_sub(posi) >= 0x7FFFFFFF as i32 as u64) as i32 != 0) as i32 as i64 != 0 {
             return lual_error(state, b"string slice too long\0" as *const u8 as *const i8);
         }
         n = pose.wrapping_sub(posi) as i32 + 1;
@@ -23644,8 +23627,8 @@ pub unsafe extern "C" fn trymt(state: *mut State, mtname: *const i8) {
                 state,
                 b"attempt to %s a '%s' with a '%s'\0" as *const u8 as *const i8,
                 mtname.offset(2 as isize),
-                lua_typename(state, lua_type(state, -(2))),
-                lua_typename(state, lua_type(state, -1)),
+                lua_typename2(state, lua_type2(state, -(2))),
+                lua_typename2(state, lua_type2(state, -1)),
             );
         }
         lua_rotate(state, -(3), 1);
@@ -24719,7 +24702,7 @@ pub unsafe extern "C" fn add_value(
             return lual_error(
                 state,
                 b"invalid replacement value (a %s)\0" as *const u8 as *const i8,
-                lua_typename(state, lua_type(state, -1)),
+                lua_typename2(state, lua_type2(state, -1)),
             );
         } else {
             (*b).lual_addvalue();
@@ -24734,7 +24717,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
         let mut src: *const i8 = lual_checklstring(state, 1, &mut srcl);
         let mut p: *const i8 = lual_checklstring(state, 2, &mut lp);
         let mut lastmatch: *const i8 = std::ptr::null();
-        let tr: i32 = lua_type(state, 3);
+        let tr = lua_type2(state, 3);
         let max_s: i64 = lual_optinteger(state, 4, srcl.wrapping_add(1 as u64) as i64);
         let anchor: i32 = (*p as i32 == '^' as i32) as i32;
         let mut n: i64 = 0;
@@ -24752,7 +24735,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
             }; 32],
         };
         let mut b = Buffer::new();
-        (((tr == 3 || tr == 4 || tr == 6 || tr == 5) as i32 != 0) as i32 as i64 != 0
+        (((tr == Some(TAG_TYPE_NUMERIC) || tr == Some(TAG_TYPE_STRING) || tr == Some(TAG_TYPE_CLOSURE) || tr == Some(TAG_TYPE_TABLE)) as i32 != 0) as i32 as i64 != 0
             || lual_typeerror(
                 state,
                 3,
@@ -24770,7 +24753,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
             e = match_0(&mut ms, src, p);
             if !e.is_null() && e != lastmatch {
                 n += 1;
-                changed = add_value(&mut ms, &mut b, src, e, tr) | changed;
+                changed = add_value(&mut ms, &mut b, src, e, tr.unwrap() as i32) | changed;
                 lastmatch = e;
                 src = lastmatch;
             } else {
@@ -25107,7 +25090,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                             current_block = 6669252993407410313;
                         }
                         112 => {
-                            let mut p: *const libc::c_void = lua_topointer(state, arg);
+                            let mut p: *const libc::c_void = User::lua_topointer(state, arg);
                             checkformat(
                                 state,
                                 form.as_mut_ptr(),
@@ -25218,7 +25201,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
                     {
                         !(0u64)
                     } else {
-                        2147483647 as i32 as u64
+                        0x7FFFFFFF as i32 as u64
                     }) as i32
                         - 9 as i32)
                         / 10 as i32)
@@ -25667,7 +25650,7 @@ pub unsafe extern "C" fn str_packsize(state: *mut State) -> i32 {
             <= (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i32>() as u64 {
                 !(0u64)
             } else {
-                2147483647 as i32 as u64
+                0x7FFFFFFF as i32 as u64
             })
             .wrapping_sub(size as u64)) as i32
             != 0) as i32 as i64
@@ -26140,7 +26123,7 @@ pub unsafe extern "C" fn codepoint(state: *mut State) -> i32 {
         if posi > pose {
             return 0;
         }
-        if pose - posi >= 2147483647 as i32 as i64 {
+        if pose - posi >= 0x7FFFFFFF as i32 as i64 {
             return lual_error(state, b"string slice too long\0" as *const u8 as *const i8);
         }
         n = (pose - posi) as i32 + 1;
@@ -26426,8 +26409,8 @@ pub unsafe extern "C" fn db_getmetatable(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn db_setmetatable(state: *mut State) -> i32 {
     unsafe {
-        let t: i32 = lua_type(state, 2);
-        (((t == 0 || t == 5) as i32 != 0) as i32 as i64 != 0
+        let t = lua_type2(state, 2);
+        (((t == Some(TAG_TYPE_NIL) || t == Some(TAG_TYPE_TABLE)) as i32 != 0) as i32 as i64 != 0
             || lual_typeerror(state, 2, b"nil or table\0" as *const u8 as *const i8) != 0)
             as i32;
         lua_settop(state, 2);
@@ -26884,18 +26867,21 @@ pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 {
         let count: i32;
         let function: HookFunction;
         let other_state: *mut State = getthread(state, &mut arg);
-        if lua_type(state, arg + 1) <= 0 {
-            lua_settop(state, arg + 1);
-            function = None;
-            mask = 0;
-            count = 0;
-        } else {
-            let smask: *const i8 = lual_checklstring(state, arg + 2, std::ptr::null_mut());
-            lual_checktype(state, arg + 1, TAG_TYPE_CLOSURE);
-            count = lual_optinteger(state, arg + 3, 0) as i32;
-            function = Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ());
-            mask = makemask(smask, count);
-        }
+        match lua_type2(state, arg + 1) {
+            None | Some(TAG_TYPE_NIL) => {
+                lua_settop(state, arg + 1);
+                function = None;
+                mask = 0;
+                count = 0;
+            },
+            _ => {
+                let smask: *const i8 = lual_checklstring(state, arg + 2, std::ptr::null_mut());
+                lual_checktype(state, arg + 1, TAG_TYPE_CLOSURE);
+                count = lual_optinteger(state, arg + 3, 0) as i32;
+                function = Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ());
+                mask = makemask(smask, count);
+            },
+        };
         if lual_getsubtable(state, -(1000000 as i32) - 1000 as i32, HOOKKEY) == 0 {
             lua_pushstring(state, b"k\0" as *const u8 as *const i8);
             lua_setfield(state, -(2), b"__mode\0" as *const u8 as *const i8);
@@ -26982,7 +26968,7 @@ pub unsafe extern "C" fn db_traceback(state: *mut State) -> i32 {
         let mut arg: i32 = 0;
         let other_state: *mut State = getthread(state, &mut arg);
         let message: *const i8 = lua_tolstring(state, arg + 1, std::ptr::null_mut());
-        if message.is_null() && !(lua_type(state, arg + 1) <= 0) {
+        if message.is_null() && !(is_none_or_nil (lua_type2(state, arg + 1))) {
             lua_pushvalue(state, arg + 1);
         } else {
             let level: i32 = lual_optinteger(
@@ -28046,7 +28032,7 @@ pub unsafe extern "C" fn msghandler(state: *mut State) -> i32 {
                 message = lua_pushfstring(
                     state,
                     b"(error object is a %s value)\0" as *const u8 as *const i8,
-                    lua_typename(state, lua_type(state, 1)),
+                    lua_typename2(state, lua_type2(state, 1)),
                 );
             }
         }

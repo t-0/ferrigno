@@ -1,6 +1,7 @@
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::functions::*;
 use crate::uvalue::*;
 use crate::tvalue::*;
 use crate::state::*;
@@ -122,6 +123,47 @@ impl User {
                     )
                 }) as isize,
             ) as *mut libc::c_void;
+        }
+    }
+    pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
+        unsafe {
+            match get_tag_type((*o).get_tag()) {
+                TAG_VARIANT_USER => {
+                    return (&mut (*((*o).value.object as *mut User)) as *mut User as *mut i8)
+                        .offset(
+                            (if (*((*o).value.object as *mut User)).nuvalue as i32 == 0 {
+                                32 as u64
+                            } else {
+                                (40 as u64).wrapping_add(
+                                    (::core::mem::size_of::<UValue>() as u64).wrapping_mul(
+                                        (*((*o).value.object as *mut User)).nuvalue as u64,
+                                    ),
+                                )
+                            }) as isize,
+                        ) as *mut libc::c_void;
+                }
+                TAG_VARIANT_POINTER => return (*o).value.p,
+                _ => return std::ptr::null_mut(),
+            };
+        }
+    }
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const libc::c_void {
+        unsafe {
+            let o: *const TValue = index2value(state, index);
+            match (*o).get_tag_variant() {
+                TAG_VARIANT_CLOSURE_CFUNCTION => {
+                    return ::core::mem::transmute::<CFunction, u64>((*o).value.f) as *mut libc::c_void;
+                }
+                TAG_VARIANT_USER | TAG_VARIANT_POINTER => return User::touserdata(o),
+                _ => {
+                    if (*o).is_collectable() {
+                        return (*o).value.object as *const libc::c_void;
+                    } else {
+                        return std::ptr::null();
+                    }
+                }
+            };
         }
     }
 }
