@@ -1,7 +1,6 @@
 use crate::buffer::*;
 use crate::dynamicdata::*;
 use crate::functionstate::*;
-use crate::gcunion::*;
 use crate::new::*;
 use crate::object::*;
 use crate::onelua::*;
@@ -85,8 +84,8 @@ impl LexicalState {
             if (*f).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(
                     self.state,
-                    &mut (*(f as *mut GCUnion)).object,
-                    &mut (*(clp as *mut GCUnion)).object,
+                    &mut (*(f as *mut Object)),
+                    &mut (*(clp as *mut Object)),
                 );
             } else {
             };

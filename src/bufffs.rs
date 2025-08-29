@@ -1,5 +1,4 @@
 use crate::c::*;
-use crate::gcunion::*;
 use crate::object::*;
 use crate::onelua::*;
 use crate::state::*;
@@ -27,7 +26,7 @@ impl BuffFS {
             let io: *mut TValue = &mut (*(*self.state).top.p).value;
             let ts: *mut TString =
                 luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
-            (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
+            (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag((*ts).get_tag());
             (*io).set_collectable();
             (*self.state).top.p = (*self.state).top.p.offset(1);
@@ -61,7 +60,7 @@ impl BuffFS {
                 self.clear();
                 let io = &mut (*(*self.state).top.p).value;
                 let ts = luas_newlstr(self.state, pointer, length);
-                (*io).value.object = &mut (*(ts as *mut GCUnion)).object;
+                (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag((*ts).get_tag());
                 (*io).set_collectable();
                 (*self.state).top.p = (*self.state).top.p.offset(1);

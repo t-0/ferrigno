@@ -1,5 +1,4 @@
 use crate::functions::*;
-use crate::gcunion::*;
 use crate::object::*;
 use crate::onelua::*;
 use crate::state::*;
@@ -7,6 +6,10 @@ use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
+use crate::user::*;
+use crate::prototype::*;
+use crate::lclosure::*;
+use crate::cclosure::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -123,21 +126,21 @@ impl Global {
             (*o).set_marked((*o).get_marked() | 1 << 5);
             self.gray = *getgclist(o);
             match (*o).get_tag_variant() {
-                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut GCUnion)).h),
+                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut Table))),
                 TAG_VARIANT_USER => {
-                    return traverseudata(self, &mut (*(o as *mut GCUnion)).u) as u64
+                    return traverseudata(self, &mut (*(o as *mut User))) as u64
                 }
                 TAG_VARIANT_CLOSURE_L => {
-                    return traverselclosure(self, &mut (*(o as *mut GCUnion)).lcl) as u64
+                    return traverselclosure(self, &mut (*(o as *mut LClosure))) as u64
                 }
                 TAG_VARIANT_CLOSURE_C => {
-                    return traversecclosure(self, &mut (*(o as *mut GCUnion)).ccl) as u64
+                    return traversecclosure(self, &mut (*(o as *mut CClosure))) as u64
                 }
                 TAG_VARIANT_PROTOTYPE => {
-                    return traverseproto(self, &mut (*(o as *mut GCUnion)).p) as u64
+                    return traverseproto(self, &mut (*(o as *mut Prototype))) as u64
                 }
                 TAG_VARIANT_STATE => {
-                    return traversethread(self, &mut (*(o as *mut GCUnion)).th) as u64
+                    return traversethread(self, &mut (*(o as *mut State))) as u64
                 }
                 _ => return 0,
             };

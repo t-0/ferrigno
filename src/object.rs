@@ -29,9 +29,9 @@ pub trait TObject {
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Object {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
+    pub next: *mut Object = std::ptr::null_mut(),
+    pub tag: u8 = TAG_VARIANT_NIL_NIL,
+    pub marked: u8 = 0,
     pub dummy1: u8 = 0,
     pub dummy2: u8 = 0,
     pub dummy3: u32 = 0,

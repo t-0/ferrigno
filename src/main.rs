@@ -19,7 +19,6 @@ mod expressiondescription;
 mod f2i;
 mod functions;
 mod functionstate;
-mod gcunion;
 mod global;
 mod gmatchstate;
 mod header;
