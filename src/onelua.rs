@@ -1380,7 +1380,7 @@ pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> Option<u8> {
     }
 }
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lua_typename2(mut _state: *mut State, t: Option<u8>) -> *const i8 {
+pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: Option<u8>) -> *const i8 {
     match t {
         None => b"no value\0" as *const u8 as *const i8,
         Some(TAG_TYPE_NIL) => b"nil\0" as *const u8 as *const i8,
@@ -19443,7 +19443,7 @@ pub unsafe extern "C" fn lual_typeerror(state: *mut State, arg: i32, tname: *con
         } else if lua_type(state, arg) == Some(TAG_TYPE_POINTER) {
             typearg = b"light userdata\0" as *const u8 as *const i8;
         } else {
-            typearg = lua_typename2(state, lua_type(state, arg));
+            typearg = lua_typename(state, lua_type(state, arg));
         }
         message = lua_pushfstring(
             state,
@@ -19456,7 +19456,7 @@ pub unsafe extern "C" fn lual_typeerror(state: *mut State, arg: i32, tname: *con
 }
 pub unsafe extern "C" fn tag_error(state: *mut State, arg: i32, tag: Option<u8>) {
     unsafe {
-        lual_typeerror(state, arg, lua_typename2(state, tag));
+        lual_typeerror(state, arg, lua_typename(state, tag));
     }
 }
 #[unsafe(no_mangle)]
@@ -20170,7 +20170,7 @@ pub unsafe extern "C" fn lual_tolstring(
                     let kind: *const i8 = if tag == 4 {
                         lua_tolstring(state, -1, std::ptr::null_mut())
                     } else {
-                        lua_typename2(state, lua_type(state, index))
+                        lua_typename(state, lua_type(state, index))
                     };
                     lua_pushfstring(
                         state,
@@ -20773,7 +20773,7 @@ pub unsafe extern "C" fn luab_type(state: *mut State) -> i32 {
                 lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8);
             },
             _  => {
-                lua_pushstring(state, lua_typename2(state, t));
+                lua_pushstring(state, lua_typename(state, t));
             },
         };
         return 1;
@@ -21429,7 +21429,7 @@ pub unsafe extern "C" fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
             lual_error(
                 state,
                 b"invalid value (%s) at index %I in table for 'concat'\0" as *const u8 as *const i8,
-                lua_typename2(state, lua_type(state, -1)),
+                lua_typename(state, lua_type(state, -1)),
                 i,
             );
         }
@@ -23621,8 +23621,8 @@ pub unsafe extern "C" fn trymt(state: *mut State, mtname: *const i8) {
                 state,
                 b"attempt to %s a '%s' with a '%s'\0" as *const u8 as *const i8,
                 mtname.offset(2 as isize),
-                lua_typename2(state, lua_type(state, -(2))),
-                lua_typename2(state, lua_type(state, -1)),
+                lua_typename(state, lua_type(state, -(2))),
+                lua_typename(state, lua_type(state, -1)),
             );
         }
         lua_rotate(state, -(3), 1);
@@ -24696,7 +24696,7 @@ pub unsafe extern "C" fn add_value(
             return lual_error(
                 state,
                 b"invalid replacement value (a %s)\0" as *const u8 as *const i8,
-                lua_typename2(state, lua_type(state, -1)),
+                lua_typename(state, lua_type(state, -1)),
             );
         } else {
             (*b).lual_addvalue();
@@ -28026,7 +28026,7 @@ pub unsafe extern "C" fn msghandler(state: *mut State) -> i32 {
                 message = lua_pushfstring(
                     state,
                     b"(error object is a %s value)\0" as *const u8 as *const i8,
-                    lua_typename2(state, lua_type(state, 1)),
+                    lua_typename(state, lua_type(state, 1)),
                 );
             }
         }
