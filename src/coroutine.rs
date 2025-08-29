@@ -80,7 +80,7 @@ unsafe extern "C" fn luab_costatus(state: *mut State) -> i32 {
 }
 unsafe extern "C" fn luab_yieldable(state: *mut State) -> i32 {
     unsafe {
-        let coroutine: *mut State = if lua_type2(state, 1) == None {
+        let coroutine: *mut State = if lua_type(state, 1) == None {
             state
         } else {
             getco(state)

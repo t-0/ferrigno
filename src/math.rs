@@ -161,7 +161,7 @@ unsafe extern "C" fn math_log(state: *mut State) -> i32 {
         let x: f64 = lual_checknumber(state, 1);
         let res: f64;
 
-        match lua_type2(state, 2) {
+        match lua_type(state, 2) {
             None | Some(TAG_TYPE_NIL) => {
                 res = x.ln();
             },
@@ -238,7 +238,7 @@ unsafe extern "C" fn math_max(state: *mut State) -> i32 {
 }
 unsafe extern "C" fn math_type(state: *mut State) -> i32 {
     unsafe {
-        if lua_type2(state, 1) == Some(TAG_TYPE_NUMERIC) {
+        if lua_type(state, 1) == Some(TAG_TYPE_NUMERIC) {
             lua_pushstring(
                 state,
                 if lua_isinteger(state, 1) {
@@ -374,7 +374,7 @@ unsafe extern "C" fn math_randomseed(state: *mut State) -> i32 {
     unsafe {
         let randomstate: *mut RandomState =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-        if lua_type2(state, 1) == None {
+        if lua_type(state, 1) == None {
             random_seed(state, randomstate);
         } else {
             let n1: i64 = lual_checkinteger(state, 1);
