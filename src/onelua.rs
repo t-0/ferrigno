@@ -1580,12 +1580,7 @@ pub unsafe extern "C" fn lua_tolstring(
             o = index2value(state, index);
         }
         if !length.is_null() {
-            *length =
-                if (*((*o).value.object as *mut TString)).short_length as i32 != 0xFF as i32 {
-                    (*((*o).value.object as *mut TString)).short_length as u64
-                } else {
-                    (*((*o).value.object as *mut TString)).u.long_length
-                };
+            *length = (*((*o).value.object as *mut TString)).get_length();
         }
         return ((*((*o).value.object as *mut TString)).contents).as_mut_ptr();
     }
@@ -1595,12 +1590,9 @@ pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 {
     unsafe {
         let o: *const TValue = index2value(state, index);
         match (*o).get_tag_variant() {
-            TAG_VARIANT_STRING_SHORT => {
-                return (*((*o).value.object as *mut TString)).short_length as u64
-            }
-            TAG_VARIANT_STRING_LONG => {
-                return (*((*o).value.object as *mut TString)).u.long_length as u64
-            }
+            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+                return (*((*o).value.object as *mut TString)).get_length();
+            },
             TAG_VARIANT_USER => return (*((*o).value.object as *mut User)).length as u64,
             TAG_VARIANT_TABLE => return luah_getn(&mut (*((*o).value.object as *mut Table))),
             _ => return 0,
@@ -3641,11 +3633,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
             let p: *const Prototype = (*cl).l.p;
             if !((*p).source).is_null() {
                 (*ar).source = ((*(*p).source).contents).as_mut_ptr();
-                (*ar).source_length = if (*(*p).source).short_length as i32 != 0xFF as i32 {
-                    (*(*p).source).short_length as u64
-                } else {
-                    (*(*p).source).u.long_length
-                };
+                (*ar).source_length = (*(*p).source).get_length();
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;
                 (*ar).source_length = (::core::mem::size_of::<[i8; 3]>() as u64)
@@ -4364,11 +4352,7 @@ pub unsafe extern "C" fn luag_addinfo(
             luao_chunkid(
                 buffer.as_mut_ptr(),
                 ((*src).contents).as_mut_ptr(),
-                if (*src).short_length as i32 != 0xFF as i32 {
-                    (*src).short_length as u64
-                } else {
-                    (*src).u.long_length
-                },
+                (*src).get_length(),
             );
         } else {
             buffer[0] = '?' as i8;
@@ -6954,7 +6938,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
                 (*state).free_memory(
                     ts_0 as *mut libc::c_void,
                     (24 as u64).wrapping_add(
-                        ((*ts_0).u.long_length)
+                        ((*ts_0).get_length())
                             .wrapping_add(1 as u64)
                             .wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     ),
@@ -8020,9 +8004,9 @@ pub unsafe extern "C" fn luaf_getlocalname(
 }
 pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> i32 {
     unsafe {
-        let length: u64 = (*a).u.long_length;
+        let length: u64 = (*a).get_length();
         return (a == b
-            || length == (*b).u.long_length
+            || length == (*b).get_length()
                 && memcmp(
                     ((*a).contents).as_mut_ptr() as *const libc::c_void,
                     ((*b).contents).as_mut_ptr() as *const libc::c_void,
@@ -8045,7 +8029,7 @@ pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32
 pub unsafe extern "C" fn luas_hashlongstr(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra as i32 == 0 {
-            let length: u64 = (*ts).u.long_length;
+            let length: u64 = (*ts).get_length();
             (*ts).hash = luas_hash(((*ts).contents).as_mut_ptr(), length, (*ts).hash);
             (*ts).extra = 1;
         }
@@ -8147,19 +8131,6 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         return ts;
     }
 }
-pub unsafe extern "C" fn luas_createlngstrobj(state: *mut State, length: u64) -> *mut TString {
-    unsafe {
-        let ret: *mut TString = createstrobj(
-            state,
-            length,
-            TAG_VARIANT_STRING_LONG,
-            (*(*state).global).seed,
-        );
-        (*ret).u.long_length = length;
-        (*ret).short_length = 0xFF;
-        return ret;
-    }
-}
 pub unsafe extern "C" fn luas_remove(state: *mut State, ts: *mut TString) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
@@ -8256,7 +8227,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
         {
             (*state).too_big();
         }
-            let ts: *mut TString = luas_createlngstrobj(state, l);
+            let ts: *mut TString = TString::create_long(state, l);
             memcpy(
                 ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
                 str as *const libc::c_void,
@@ -8444,7 +8415,7 @@ pub unsafe extern "C" fn load_string_n(
                 );
                 ts = luas_newlstr(state, buffer.as_mut_ptr(), size);
             } else {
-                ts = luas_createlngstrobj(state, size);
+                ts = TString::create_long(state, size);
                 let io: *mut TValue = &mut (*(*state).top.p).value;
                 let x_: *mut TString = ts;
                 (*io).value.object = &mut (*(x_ as *mut Object));
@@ -8965,11 +8936,7 @@ pub unsafe extern "C" fn dump_string(dump_state: *mut DumpState, s: *const TStri
         if s.is_null() {
             dump_size(dump_state, 0u64);
         } else {
-            let size: u64 = if (*s).short_length as i32 != 0xFF as i32 {
-                (*s).short_length as u64
-            } else {
-                (*s).u.long_length
-            };
+            let size: u64 = (*s).get_length();
             let str: *const i8 = ((*s).contents).as_ptr();
             dump_size(dump_state, size.wrapping_add(1 as u64));
             dump_block(
@@ -15591,12 +15558,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
         } else {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
             return (luao_str2num(((*st).contents).as_mut_ptr(), result)
-                == (if (*st).short_length as i32 != 0xFF as i32 {
-                    (*st).short_length as u64
-                } else {
-                    (*st).u.long_length
-                })
-                .wrapping_add(1 as u64)) as i32;
+                == (*st).get_length().wrapping_add(1 as u64)) as i32;
         };
     }
 }
@@ -16000,17 +15962,9 @@ pub unsafe extern "C" fn luav_finishset(
 pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
     unsafe {
         let mut s1: *const i8 = ((*ts1).contents).as_ptr();
-        let mut rl1: u64 = if (*ts1).short_length as i32 != 0xFF as i32 {
-            (*ts1).short_length as u64
-        } else {
-            (*ts1).u.long_length
-        };
+        let mut rl1: u64 = (*ts1).get_length();
         let mut s2: *const i8 = ((*ts2).contents).as_ptr();
-        let mut rl2: u64 = if (*ts2).short_length as i32 != 0xFF as i32 {
-            (*ts2).short_length as u64
-        } else {
-            (*ts2).u.long_length
-        };
+        let mut rl2: u64 = (*ts2).get_length();
         loop {
             let temp: i32 = strcoll(s1, s2);
             if temp != 0 {
@@ -16340,11 +16294,7 @@ pub unsafe extern "C" fn copy2buff(top: StkId, mut n: i32, buffer: *mut i8) {
         loop {
             let st: *mut TString =
                 &mut (*((*top.offset(-(n as isize))).value.value.object as *mut TString));
-            let l: u64 = if (*st).short_length as i32 != 0xFF as i32 {
-                (*st).short_length as u64
-            } else {
-                (*st).u.long_length
-            };
+            let l: u64 = (*st).get_length();
             memcpy(
                 buffer.offset(tl as isize) as *mut libc::c_void,
                 ((*st).contents).as_mut_ptr() as *const libc::c_void,
@@ -16401,18 +16351,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
             } else {
-                let mut tl: u64 = if (*((*top.offset(-(1 as isize))).value.value.object
-                    as *mut TString))
-                    .short_length as i32
-                    != 0xFF as i32
-                {
-                    (*((*top.offset(-(1 as isize))).value.value.object as *mut TString))
-                        .short_length as u64
-                } else {
-                    (*((*top.offset(-(1 as isize))).value.value.object as *mut TString))
-                        .u
-                        .long_length
-                };
+                let mut tl: u64 = (*((*top.offset(-(1 as isize))).value.value.object
+                    as *mut TString)).get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
@@ -16434,26 +16374,10 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                                 1 != 0
                             })
                 {
-                    let l: u64 = if (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
+                    let l: u64 = (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
                         .value
                         .value
-                        .object as *mut TString))
-                        .short_length as i32
-                        != 0xFF as i32
-                    {
-                        (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                            .value
-                            .value
-                            .object as *mut TString))
-                            .short_length as u64
-                    } else {
-                        (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                            .value
-                            .value
-                            .object as *mut TString))
-                            .u
-                            .long_length
-                    };
+                        .object as *mut TString)).get_length();
                     if ((l
                         >= (if (::core::mem::size_of::<u64>() as u64)
                             < ::core::mem::size_of::<i64>() as u64
@@ -16478,7 +16402,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                     copy2buff(top, n, buffer.as_mut_ptr());
                     ts = luas_newlstr(state, buffer.as_mut_ptr(), tl);
                 } else {
-                    ts = luas_createlngstrobj(state, tl);
+                    ts = TString::create_long(state, tl);
                     copy2buff(top, n, ((*ts).contents).as_mut_ptr());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize))).value;
@@ -16499,7 +16423,7 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
     unsafe {
         let tm: *const TValue;
         match (*rb).get_tag_variant() {
-            5 => {
+            TAG_VARIANT_TABLE => {
                 let h: *mut Table = &mut (*((*rb).value.object as *mut Table));
                 tm = if ((*h).metatable).is_null() {
                     std::ptr::null()
@@ -16519,15 +16443,15 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
                     return;
                 }
             }
-            4 => {
+            TAG_VARIANT_STRING_SHORT => {
                 let io_0: *mut TValue = &mut (*ra).value;
                 (*io_0).value.i = (*((*rb).value.object as *mut TString)).short_length as i64;
                 (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }
-            20 => {
+            TAG_VARIANT_STRING_LONG => {
                 let io_1: *mut TValue = &mut (*ra).value;
-                (*io_1).value.i = (*((*rb).value.object as *mut TString)).u.long_length as i64;
+                (*io_1).value.i = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }

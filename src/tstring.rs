@@ -1,6 +1,8 @@
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::onelua::*;
+use crate::state::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
@@ -49,4 +51,29 @@ impl TObject for TString {
 pub union TStringExtension {
     pub long_length: u64,
     pub hash_next: *mut TString,
+}
+impl TString {
+    pub fn get_contents(&self) -> *const i8 {
+        return &self.contents as *const i8;
+    }
+    pub fn get_length(&self) -> u64 {
+        if self.short_length < 0xFF {
+            return self.short_length as u64;
+        } else {
+            unsafe { return self.u.long_length as u64; }
+        }
+    }
+    pub unsafe extern "C" fn create_long(state: *mut State, length: u64) -> *mut TString {
+        unsafe {
+            let ret: *mut TString = createstrobj(
+                state,
+                length,
+                TAG_VARIANT_STRING_LONG,
+                (*(*state).global).seed,
+            );
+            (*ret).u.long_length = length;
+            (*ret).short_length = 0xFF;
+            return ret;
+        }
+    }
 }
