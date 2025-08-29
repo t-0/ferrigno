@@ -2,6 +2,9 @@ use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::uvalue::*;
+use crate::tvalue::*;
+use crate::state::*;
+use crate::onelua::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
@@ -46,5 +49,79 @@ impl TObject for User {
     }
     fn get_metatable(&mut self) -> *mut Table {
         self.metatable
+    }
+}
+impl User {
+    pub fn get_size(s: u64, nuvalue: u64) -> u64 {
+        return (core::mem::size_of::<User>().wrapping_add(
+            ::core::mem::size_of::<UValue>().wrapping_mul(nuvalue as usize).wrapping_add(s as usize))) as u64;
+    }
+    pub unsafe extern "C" fn luas_newudata(state: *mut State, s: u64, nuvalue: i32) -> *mut User {
+        unsafe {
+            let mut i: i32;
+            if ((s
+                > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
+                    !(0u64)
+                } else {
+                    0x7FFFFFFFFFFFFFFF as i64 as u64
+                })
+                .wrapping_sub(if nuvalue == 0 {
+                    32 as u64
+                } else {
+                    (40 as u64).wrapping_add(
+                        (::core::mem::size_of::<UValue>() as u64).wrapping_mul(nuvalue as u64),
+                    )
+                })) as i32
+                != 0) as i32 as i64
+                != 0
+            {
+                (*state).too_big();
+            }
+            let o: *mut Object = luac_newobj(
+                state,
+                TAG_TYPE_USER,
+                User::get_size(s, nuvalue as u64),
+            );
+            let u: *mut User = &mut (*(o as *mut User));
+            (*u).length = s;
+            (*u).nuvalue = nuvalue;
+            (*u).metatable = std::ptr::null_mut();
+            i = 0;
+            while i < nuvalue {
+                (*((*u).uv).as_mut_ptr().offset(i as isize))
+                    .uv
+                    .set_tag(TAG_VARIANT_NIL_NIL);
+                i += 1;
+            }
+            return u;
+        }
+    }
+    #[unsafe(no_mangle)]
+    pub unsafe extern "C" fn lua_newuserdatauv(
+        state: *mut State,
+        size: u64,
+        nuvalue: i32,
+    ) -> *mut libc::c_void {
+        unsafe {
+            let u: *mut User = User::luas_newudata(state, size, nuvalue);
+            let io: *mut TValue = &mut (*(*state).top.p).value;
+            let x_: *mut User = u;
+            (*io).value.object = &mut (*(x_ as *mut Object));
+            (*io).set_tag(TAG_VARIANT_USER);
+            (*io).set_collectable();
+            (*state).top.p = (*state).top.p.offset(1);
+            if (*(*state).global).gc_debt > 0 {
+                luac_step(state);
+            }
+            return (u as *mut i8).offset(
+                (if (*u).nuvalue as i32 == 0 {
+                    32 as u64
+                } else {
+                    (40 as u64).wrapping_add(
+                        (::core::mem::size_of::<UValue>() as u64).wrapping_mul((*u).nuvalue as u64),
+                    )
+                }) as isize,
+            ) as *mut libc::c_void;
+        }
     }
 }

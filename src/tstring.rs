@@ -1,8 +1,12 @@
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::c::*;
 use crate::onelua::*;
+use crate::global::*;
+use crate::stringtable::*;
 use crate::state::*;
+pub const STRING_SHORT_MAX: u64 = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
@@ -74,6 +78,49 @@ impl TString {
             (*ret).u.long_length = length;
             (*ret).short_length = 0xFF;
             return ret;
+        }
+    }
+    pub unsafe extern "C" fn intern(state: *mut State, str: *const i8, l: u64) -> *mut TString {
+        unsafe {
+            let g: *mut Global = (*state).global;
+            let tb: *mut StringTable = &mut (*g).string_table;
+            let h: u32 = luas_hash(str, l, (*g).seed);
+            let mut list: *mut *mut TString = &mut *((*tb).hash)
+                .offset((h & ((*tb).size - 1) as u32) as i32 as isize)
+                as *mut *mut TString;
+            let mut ts: *mut TString = *list;
+            while !ts.is_null() {
+                if l == (*ts).get_length() as u64
+                    && memcmp(
+                        str as *const libc::c_void,
+                        ((*ts).contents).as_mut_ptr() as *const libc::c_void,
+                        l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                    ) == 0
+                {
+                    if (*ts).get_marked() & ((*g).current_white ^ (1 << 3 | 1 << 4)) != 0 {
+                        (*ts).set_marked((*ts).get_marked() ^ (1 << 3 | 1 << 4));
+                    }
+                    return ts;
+                }
+                ts = (*ts).u.hash_next;
+            }
+            if (*tb).length >= (*tb).size {
+                growstrtab(state, tb);
+                list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as i32 as isize)
+                    as *mut *mut TString;
+            }
+            ts = createstrobj(state, l, TAG_VARIANT_STRING_SHORT, h);
+            (*ts).short_length = l as u8;
+            memcpy(
+                ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
+                str as *const libc::c_void,
+                l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            );
+            (*ts).u.hash_next = *list;
+            *list = ts;
+            (*tb).length += 1;
+            (*tb).length;
+            return ts;
         }
     }
 }

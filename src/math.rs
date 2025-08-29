@@ -3,6 +3,7 @@ use crate::c::*;
 use crate::onelua::*;
 use crate::randomstate::*;
 use crate::tag::*;
+use crate::user::*;
 use crate::registeredfunction::*;
 use crate::state::*;
 const PI: f64 = 3.141592653589793238462643383279502884f64;
@@ -74,8 +75,8 @@ unsafe extern "C" fn math_toint(state: *mut State) -> i32 {
 unsafe extern "C" fn push_numericcc(state: *mut State, d: f64) {
     unsafe {
         let mut n: i64 = 0;
-        if d >= (-(9223372036854775807 as i64) - 1 as i64) as f64
-            && d < -((-(9223372036854775807 as i64) - 1 as i64) as f64)
+        if d >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
+            && d < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
             && {
                 n = d as i64;
                 1 != 0
@@ -408,7 +409,7 @@ static mut MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
 unsafe extern "C" fn set_random_function(state: *mut State) {
     unsafe {
         let ranstate: *mut RandomState =
-            lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>() as u64, 0)
+            User::lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>() as u64, 0)
                 as *mut RandomState;
         random_seed(state, ranstate);
         lua_settop(state, -3);
