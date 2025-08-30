@@ -140,7 +140,7 @@ impl Global {
                     return traverseproto(self, &mut (*(o as *mut Prototype)))
                 }
                 TAG_VARIANT_STATE => {
-                    return traversethread(self, &mut (*(o as *mut State))) as u64
+                    return traverse_state(self, &mut (*(o as *mut State))) as u64
                 }
                 _ => return 0,
             };

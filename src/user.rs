@@ -97,7 +97,6 @@ impl User {
             return u;
         }
     }
-    #[unsafe(no_mangle)]
     pub unsafe extern "C" fn lua_newuserdatauv(
         state: *mut State,
         size: u64,
@@ -147,7 +146,6 @@ impl User {
             };
         }
     }
-    #[unsafe(no_mangle)]
     pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const libc::c_void {
         unsafe {
             let o: *const TValue = index2value(state, index);

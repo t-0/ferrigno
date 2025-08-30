@@ -588,7 +588,6 @@ static mut MATH_FUNCTIONS: [RegisteredFunction; 28] = {
         },
     ]
 };
-#[unsafe(no_mangle)]
 pub unsafe extern "C" fn luaopen_math(state: *mut State) -> i32 {
     unsafe {
         lua_createtable(state, 0, 0);

@@ -161,7 +161,6 @@ impl State {
             self.top.p = self.top.p.offset(1);
         }
     }
-    #[unsafe(no_mangle)]
     pub unsafe extern "C" fn get_top(&mut self) -> i32 {
         unsafe {
             return self
@@ -241,6 +240,118 @@ impl State {
             (*io).set_collectable();
             self.top.p = self.top.p.offset(1);
             return (*self.global).mainthread == self;
+        }
+    }
+    pub unsafe extern "C" fn relstack(& mut self) {
+        unsafe {
+            self.top.offset =
+                (self.top.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+            self.tbc_list.offset =
+                (self.tbc_list.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+            let mut up: *mut UpValue = self.open_upvalue;
+            while !up.is_null() {
+                (*up).v.offset =
+                    ((*up).v.p as StkId as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+                up = (*up).u.open.next;
+            }
+            let mut call_info: *mut CallInfo = self.call_info;
+            while !call_info.is_null() {
+                (*call_info).top.offset =
+                    ((*call_info).top.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+                (*call_info).function.offset = ((*call_info).function.p as *mut i8)
+                    .offset_from(self.stack.p as *mut i8)
+                    as i64;
+                call_info = (*call_info).previous;
+            }
+        }
+    }
+    pub unsafe extern "C" fn luad_errerr(& mut self) -> ! {
+        unsafe {
+            let message: *mut TString = luas_newlstr(
+                self,
+                b"error in error handling\0" as *const u8 as *const i8,
+                (::core::mem::size_of::<[i8; 24]>() as u64)
+                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
+                    .wrapping_sub(1 as u64),
+            );
+            let io: *mut TValue = &mut (*self.top.p).value;
+            (*io).value.object = &mut (*(message as *mut Object));
+            (*io).set_tag((*message).get_tag());
+            (*io).set_collectable();
+            self.top.p = self.top.p.offset(1);
+            luad_throw(self, 5);
+        }
+    }
+    pub unsafe extern "C" fn luae_checkcstack(& mut self) {
+        unsafe {
+            if self.count_c_calls & 0xffff as i32 as u32 == 200 as i32 as u32 {
+                luag_runerror(self, b"C stack overflow\0" as *const u8 as *const i8);
+            } else if self.count_c_calls & 0xffff as i32 as u32
+                >= (200 as i32 / 10 as i32 * 11 as i32) as u32
+            {
+                self.luad_errerr();
+            }
+        }
+    }
+    pub unsafe extern "C" fn luae_inccstack(& mut self) {
+        unsafe {
+            self.count_c_calls = (self.count_c_calls).wrapping_add(1);
+            self.count_c_calls;
+            if ((self.count_c_calls & 0xffff as i32 as u32 >= 200 as i32 as u32) as i32 != 0) as i32
+                as i64
+                != 0
+            {
+                self.luae_checkcstack();
+            }
+        }
+    }
+    pub unsafe extern "C" fn stackinuse(& mut self) -> i32 {
+        unsafe {
+            let mut lim: StkId = self.top.p;
+            let mut call_info: *mut CallInfo = self.call_info;
+            while !call_info.is_null() {
+                if lim < (*call_info).top.p {
+                    lim = (*call_info).top.p;
+                }
+                call_info = (*call_info).previous;
+            }
+            let mut res: i32 = lim.offset_from(self.stack.p) as i64 as i32 + 1;
+            if res < 20 as i32 {
+                res = 20 as i32;
+            }
+            return res;
+        }
+    }
+    pub unsafe extern "C" fn luad_shrinkstack(& mut self) {
+        unsafe {
+            let inuse: i32 = self.stackinuse();
+            let max: i32 = if inuse > 1000000 / 3 {
+                1000000
+            } else {
+                inuse * 3
+            };
+            if inuse <= 1000000
+                && (self.stack_last.p).offset_from(self.stack.p) as i64 as i32 > max
+            {
+                let new_size: i32 = if inuse > 1000000 / 2 {
+                    1000000
+                } else {
+                    inuse * 2
+                };
+                luad_reallocstack(self, new_size, false);
+            }
+            luae_shrinkci(self);
+        }
+    }
+    pub unsafe extern "C" fn luad_inctop(& mut self) {
+        unsafe {
+            if (((self.stack_last.p).offset_from(self.top.p) as i64 <= 1) as i32 != 0) as i32
+                as i64
+                != 0
+            {
+                luad_growstack(self, 1, true);
+            }
+            self.top.p = self.top.p.offset(1);
         }
     }
 }
