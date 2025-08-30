@@ -590,7 +590,7 @@ static mut MATH_FUNCTIONS: [RegisteredFunction; 28] = {
 };
 pub unsafe extern "C" fn luaopen_math(state: *mut State) -> i32 {
     unsafe {
-        lua_createtable(state, 0, 0);
+        lua_createtable(state);
         lual_setfuncs(state, MATH_FUNCTIONS.as_ptr(), 0);
         (*state).push_number(PI);
         lua_setfield(state, -2, b"pi\0" as *const u8 as *const i8);

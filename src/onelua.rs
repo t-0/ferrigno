@@ -1797,7 +1797,7 @@ pub unsafe extern "C" fn lua_rawgetp(state: *mut State, index: i32, p: *const li
         return finishrawget(state, luah_get(table, &mut k));
     }
 }
-pub unsafe extern "C" fn lua_createtable(state: *mut State, narray: i32, nrec: i32) {
+pub unsafe extern "C" fn lua_createtable(state: *mut State) {
     unsafe {
         let table: *mut Table;
         table = luah_new(state);
@@ -1807,9 +1807,6 @@ pub unsafe extern "C" fn lua_createtable(state: *mut State, narray: i32, nrec: i
         (*io).set_tag(TAG_VARIANT_TABLE);
         (*io).set_collectable();
         (*state).top.p = (*state).top.p.offset(1);
-        if narray > 0 || nrec > 0 {
-            luah_resize(state, table, narray as u32, nrec as u32);
-        }
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
@@ -19350,7 +19347,7 @@ pub unsafe extern "C" fn lual_newmetatable(state: *mut State, tname: *const i8) 
             return 0;
         }
         lua_settop(state, -1 - 1);
-        lua_createtable(state, 0, 2);
+        lua_createtable(state);
         lua_pushstring(state, tname);
         lua_setfield(state, -(2), b"__name\0" as *const u8 as *const i8);
         lua_pushvalue(state, -1);
@@ -19989,7 +19986,7 @@ pub unsafe extern "C" fn lual_getsubtable(
         } else {
             lua_settop(state, -1 - 1);
             index = lua_absindex(state, index);
-            lua_createtable(state, 0, 0);
+            lua_createtable(state);
             lua_pushvalue(state, -1);
             lua_setfield(state, index, fname);
             return 0;
@@ -21218,7 +21215,7 @@ pub unsafe extern "C" fn tpack(state: *mut State) -> i32 {
     unsafe {
         let mut i: i32;
         let n: i32 = (*state).get_top();
-        lua_createtable(state, n, 1);
+        lua_createtable(state);
         lua_rotate(state, 1, 1);
         i = n;
         while i >= 1 {
@@ -21518,13 +21515,7 @@ pub unsafe extern "C" fn luaopen_table(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, TABLE_FUNCTIONS.as_ptr(), 0);
         return 1;
     }
@@ -22501,13 +22492,7 @@ pub unsafe extern "C" fn createmeta(state: *mut State) {
     unsafe {
         lual_newmetatable(state, b"FILE*\0" as *const u8 as *const i8);
         lual_setfuncs(state, IO_METAMETHODS.as_ptr(), 0);
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, IO_METHODS.as_ptr(), 0);
         lua_setfield(state, -(2), b"__index\0" as *const u8 as *const i8);
         lua_settop(state, -1 - 1);
@@ -22552,13 +22537,7 @@ pub unsafe extern "C" fn luaopen_io(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 12]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, IO_FUNCTIONS.as_ptr(), 0);
         createmeta(state);
         createstdfile(
@@ -22851,7 +22830,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
             );
         }
         if strcmp(s, b"*t\0" as *const u8 as *const i8) == 0 {
-            lua_createtable(state, 0, 9 as i32);
+            lua_createtable(state);
             setallfields(state, stm);
         } else {
             let mut cc: [i8; 4] = [0; 4];
@@ -23075,13 +23054,7 @@ pub unsafe extern "C" fn luaopen_os(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 12]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, SYSTEM_FUNCTIONS.as_ptr(), 0);
         return 1;
     }
@@ -25718,13 +25691,7 @@ static mut STRING_FUNCTIONS: [RegisteredFunction; 18] = {
 };
 pub unsafe extern "C" fn createmetatable(state: *mut State) {
     unsafe {
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 10]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, STRING_METAMETHODS.as_ptr(), 0);
         lua_pushstring(state, b"\0" as *const u8 as *const i8);
         lua_pushvalue(state, -(2));
@@ -25744,13 +25711,7 @@ pub unsafe extern "C" fn luaopen_string(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 18]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, STRING_FUNCTIONS.as_ptr(), 0);
         createmetatable(state);
         return 1;
@@ -26108,13 +26069,7 @@ pub unsafe extern "C" fn luaopen_utf8(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 7]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, UTF8_FUNCTIONS.as_ptr(), 0);
         lua_pushlstring(
             state,
@@ -26286,7 +26241,7 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
                 b"invalid option\0" as *const u8 as *const i8,
             );
         }
-        lua_createtable(state, 0, 0);
+        lua_createtable(state);
         if !(strchr(options, 'S' as i32)).is_null() {
             lua_pushlstring(state, ar.source, ar.source_length);
             lua_setfield(state, -(2), b"source\0" as *const u8 as *const i8);
@@ -26470,10 +26425,11 @@ pub unsafe extern "C" fn auxupvalue(state: *mut State, get: i32) -> i32 {
         };
         if name.is_null() {
             return 0;
+        } else {
+            lua_pushstring(state, name);
+            lua_rotate(state, -(get + 1), 1);
+            return get + 1;
         }
-        lua_pushstring(state, name);
-        lua_rotate(state, -(get + 1), 1);
-        return get + 1;
     }
 }
 pub unsafe extern "C" fn db_getupvalue(state: *mut State) -> i32 {
@@ -26858,13 +26814,7 @@ pub unsafe extern "C" fn luaopen_debug(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 18]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, DEBUG_FUNCTIONS.as_ptr(), 0);
         return 1;
     }
@@ -27485,13 +27435,7 @@ pub unsafe extern "C" fn createsearcherstable(state: *mut State) {
             ]
         };
         let mut i: i32;
-        lua_createtable(
-            state,
-            (::core::mem::size_of::<[CFunction; 5]>() as u64)
-                .wrapping_div(::core::mem::size_of::<CFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-            0,
-        );
+        lua_createtable(state);
         i = 0;
         while (SEARCHERS[i as usize]).is_some() {
             lua_pushvalue(state, -(2));
@@ -27505,7 +27449,7 @@ pub unsafe extern "C" fn createsearcherstable(state: *mut State) {
 pub unsafe extern "C" fn createclibstable(state: *mut State) {
     unsafe {
         lual_getsubtable(state, -(1000000 as i32) - 1000 as i32, CLIBS);
-        lua_createtable(state, 0, 1);
+        lua_createtable(state);
         lua_pushcclosure(
             state,
             Some(gctm as unsafe extern "C" fn(*mut State) -> i32),
@@ -27525,13 +27469,7 @@ pub unsafe extern "C" fn luaopen_package(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(
-            state,
-            0,
-            (::core::mem::size_of::<[RegisteredFunction; 8]>() as u64)
-                .wrapping_div(::core::mem::size_of::<RegisteredFunction>() as u64)
-                .wrapping_sub(1 as u64) as i32,
-        );
+        lua_createtable(state);
         lual_setfuncs(state, PACKAGE_FUNCTIONS.as_ptr(), 0);
         createsearcherstable(state);
         setpath(
@@ -27815,7 +27753,7 @@ pub unsafe extern "C" fn createargtable(
     unsafe {
         let mut i: i32;
         let narg: i32 = argc - (script + 1);
-        lua_createtable(state, narg, script + 1);
+        lua_createtable(state);
         i = 0;
         while i < argc {
             lua_pushstring(state, *argv.offset(i as isize));
