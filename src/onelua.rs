@@ -2712,20 +2712,16 @@ pub unsafe extern "C" fn luai_makeseed(state: *mut State) -> u32 {
         return luas_hash(buffer.as_mut_ptr(), p as u64, h);
     }
 }
-pub unsafe extern "C" fn lua_setcstacklimit(mut _state: *mut State, mut _limit: u32) -> i32 {
-    return 200 as i32;
-}
 pub unsafe extern "C" fn luae_extendci(state: *mut State) -> *mut CallInfo {
     unsafe {
-        let call_info;
-        call_info = luam_malloc_(state, ::core::mem::size_of::<CallInfo>() as u64) as *mut CallInfo;
-        (*(*state).call_info).next = call_info;
-        (*call_info).previous = (*state).call_info;
-        (*call_info).next = std::ptr::null_mut();
-        ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 0);
+        let ret = luam_malloc_(state, ::core::mem::size_of::<CallInfo>() as u64) as *mut CallInfo;
+        (*(*state).call_info).next = ret;
+        (*ret).previous = (*state).call_info;
+        (*ret).next = std::ptr::null_mut();
+        ::core::ptr::write_volatile(&mut (*ret).u.l.trap as *mut i32, 0);
         (*state).count_call_info = ((*state).count_call_info).wrapping_add(1);
         (*state).count_call_info;
-        return call_info;
+        return ret;
     }
 }
 pub unsafe extern "C" fn freeci(state: *mut State) {
@@ -26730,15 +26726,7 @@ pub unsafe extern "C" fn db_traceback(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_setcstacklimit(state: *mut State) -> i32 {
-    unsafe {
-        let limit: i32 = lual_checkinteger(state, 1) as i32;
-        let res: i32 = lua_setcstacklimit(state, limit as u32);
-        (*state).push_integer(res as i64);
-        return 1;
-    }
-}
-static mut DEBUG_FUNCTIONS: [RegisteredFunction; 18] = {
+static mut DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
     [
         {
             let init = RegisteredFunction {
@@ -26849,13 +26837,6 @@ static mut DEBUG_FUNCTIONS: [RegisteredFunction; 18] = {
             let init = RegisteredFunction {
                 name: b"traceback\0" as *const u8 as *const i8,
                 function: Some(db_traceback as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
-        },
-        {
-            let init = RegisteredFunction {
-                name: b"setcstacklimit\0" as *const u8 as *const i8,
-                function: Some(db_setcstacklimit as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
