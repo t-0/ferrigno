@@ -131,13 +131,13 @@ impl Global {
                     return traverseudata(self, &mut (*(o as *mut User))) as u64
                 }
                 TAG_VARIANT_CLOSURE_L => {
-                    return traverselclosure(self, &mut (*(o as *mut LClosure))) as u64
+                    return traverselclosure(self, &mut (*(o as *mut LClosure)))
                 }
                 TAG_VARIANT_CLOSURE_C => {
-                    return traversecclosure(self, &mut (*(o as *mut CClosure))) as u64
+                    return traversecclosure(self, &mut (*(o as *mut CClosure)))
                 }
                 TAG_VARIANT_PROTOTYPE => {
-                    return traverseproto(self, &mut (*(o as *mut Prototype))) as u64
+                    return traverseproto(self, &mut (*(o as *mut Prototype)))
                 }
                 TAG_VARIANT_STATE => {
                     return traversethread(self, &mut (*(o as *mut State))) as u64

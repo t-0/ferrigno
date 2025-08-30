@@ -60,6 +60,9 @@ impl TString {
     pub fn get_contents(&self) -> *const i8 {
         return &self.contents as *const i8;
     }
+    pub fn get_contents2(&mut self) -> *mut i8 {
+        return & mut self.contents as *mut i8;
+    }
     pub fn get_length(&self) -> u64 {
         if self.short_length < 0xFF {
             return self.short_length as u64;
@@ -93,7 +96,7 @@ impl TString {
                 if l == (*ts).get_length() as u64
                     && memcmp(
                         str as *const libc::c_void,
-                        ((*ts).contents).as_mut_ptr() as *const libc::c_void,
+                        (*ts).get_contents2() as *const libc::c_void,
                         l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     ) == 0
                 {
@@ -112,7 +115,7 @@ impl TString {
             ts = createstrobj(state, l, TAG_VARIANT_STRING_SHORT, h);
             (*ts).short_length = l as u8;
             memcpy(
-                ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
+                (*ts).get_contents2() as *mut libc::c_void,
                 str as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );

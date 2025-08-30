@@ -1581,7 +1581,7 @@ pub unsafe extern "C" fn lua_tolstring(
         if !length.is_null() {
             *length = (*((*o).value.object as *mut TString)).get_length();
         }
-        return ((*((*o).value.object as *mut TString)).contents).as_mut_ptr();
+        return ((*((*o).value.object as *mut TString)).get_contents());
     }
 }
 #[unsafe(no_mangle)]
@@ -1648,7 +1648,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        return ((*ts).contents).as_mut_ptr();
+        return ((*ts).get_contents());
     }
 }
 #[unsafe(no_mangle)]
@@ -1663,7 +1663,7 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            s = ((*ts).contents).as_mut_ptr();
+            s = ((*ts).get_contents());
         }
         (*state).top.p = (*state).top.p.offset(1);
         if (*(*state).global).gc_debt > 0 {
@@ -2717,7 +2717,7 @@ pub unsafe extern "C" fn aux_upvalue(
                 return if name.is_null() {
                     b"(no name)\0" as *const u8 as *const i8
                 } else {
-                    ((*name).contents).as_mut_ptr() as *const i8
+                    ((*name).get_contents()) as *const i8
                 };
             }
             _ => return std::ptr::null(),
@@ -3277,7 +3277,7 @@ pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
         let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TAG_TYPE_STRING {
-            ((*((*errobj).value.object as *mut TString)).contents).as_mut_ptr() as *const i8
+            ((*((*errobj).value.object as *mut TString)).get_contents()) as *const i8
         } else {
             b"error object is not a string\0" as *const u8 as *const i8
         };
@@ -3315,8 +3315,8 @@ pub unsafe extern "C" fn getbaseline(
             return (*f).line_defined;
         } else {
             let mut i: i32 = (program_counter as u32)
-                .wrapping_div(128 as i32 as u32)
-                .wrapping_sub(1 as u32) as i32;
+                .wrapping_div(128u32)
+                .wrapping_sub(1u32) as i32;
             while (i + 1) < (*f).size_absolute_line_info
                 && program_counter
                     >= (*((*f).absolute_line_info).offset((i + 1) as isize)).program_counter
@@ -3433,7 +3433,7 @@ pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         if s.is_null() {
             return b"?\0" as *const u8 as *const i8;
         } else {
-            return ((*s).contents).as_mut_ptr();
+            return ((*s).get_contents());
         };
     }
 }
@@ -3561,7 +3561,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
         } else {
             let p: *const Prototype = (*cl).l.p;
             if !((*p).source).is_null() {
-                (*ar).source = ((*(*p).source).contents).as_mut_ptr();
+                (*ar).source = ((*(*p).source).get_contents());
                 (*ar).source_length = (*(*p).source).get_length();
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;
@@ -3847,7 +3847,7 @@ pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *cons
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
         if get_tag_type((*kvalue).get_tag()) == TAG_TYPE_STRING {
-            *name = ((*((*kvalue).value.object as *mut TString)).contents).as_mut_ptr();
+            *name = ((*((*kvalue).value.object as *mut TString)).get_contents());
             return b"constant\0" as *const u8 as *const i8;
         } else {
             *name = b"?\0" as *const u8 as *const i8;
@@ -4056,8 +4056,7 @@ pub unsafe extern "C" fn funcnamefromcode(
             }
             _ => return std::ptr::null(),
         }
-        *name = ((*(*(*state).global).tmname[tm as usize]).contents)
-            .as_mut_ptr()
+        *name = ((*(*(*state).global).tmname[tm as usize]).get_contents2())
             .offset(2 as isize);
         return b"metamethod\0" as *const u8 as *const i8;
     }
@@ -4280,7 +4279,7 @@ pub unsafe extern "C" fn luag_addinfo(
         if !src.is_null() {
             luao_chunkid(
                 buffer.as_mut_ptr(),
-                ((*src).contents).as_mut_ptr(),
+                ((*src).get_contents()),
                 (*src).get_length(),
             );
         } else {
@@ -4556,18 +4555,18 @@ pub unsafe extern "C" fn luam_saferealloc_(
 }
 pub unsafe extern "C" fn luam_malloc_(state: *mut State, size: u64) -> *mut libc::c_void {
     unsafe {
-        if size == 0u64 {
+        if size == 0 {
             return std::ptr::null_mut();
         } else {
             let g: *mut Global = (*state).global;
             let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), 0, size);
-            if ((new_block == std::ptr::null_mut()) as i32 != 0) as i32 as i64 != 0 {
+            if new_block.is_null() {
                 new_block = tryagain(state, std::ptr::null_mut(), 0, size);
                 if new_block.is_null() {
                     luad_throw(state, 4);
                 }
             }
-            (*g).gc_debt = ((*g).gc_debt as u64).wrapping_add(size) as i64 as i64;
+            (*g).gc_debt = ((*g).gc_debt as u64).wrapping_add(size) as i64;
             return new_block;
         };
     }
@@ -5045,9 +5044,8 @@ pub unsafe extern "C" fn luao_pushvfstring(
         }
         buff_fs.add_string(fmt, strlen(fmt));
         buff_fs.clear();
-        return ((*((*(*state).top.p.offset(-(1 as isize))).value.value.object as *mut TString))
-            .contents)
-            .as_mut_ptr();
+        return (*((*(*state).top.p.offset(-(1 as isize))).value.value.object as *mut TString))
+            .get_contents();
     }
 }
 pub unsafe extern "C" fn luao_pushfstring(
@@ -5300,7 +5298,7 @@ pub unsafe extern "C" fn luat_objtypename(state: *mut State, o: *const TValue) -
             let name: *const TValue =
                 luah_getshortstr(mt, luas_new(state, b"__name\0" as *const u8 as *const i8));
             if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
-                return ((*((*name).value.object as *mut TString)).contents).as_mut_ptr();
+                return ((*((*name).value.object as *mut TString)).get_contents());
             }
         }
         return TYPE_NAMES[(((*o).get_tag_type()) + 1) as usize];
@@ -6471,8 +6469,8 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
             smode = &mut (*((*mode).value.object as *mut TString)) as *mut TString;
-            weakkey = strchr(((*smode).contents).as_mut_ptr(), 'k' as i32);
-            weakvalue = strchr(((*smode).contents).as_mut_ptr(), 'v' as i32);
+            weakkey = strchr(((*smode).get_contents()), 'k' as i32);
+            weakvalue = strchr(((*smode).get_contents()), 'v' as i32);
             !weakkey.is_null() || !weakvalue.is_null()
         } {
             if weakkey.is_null() {
@@ -6526,16 +6524,15 @@ pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
         return 1 + (*u).nuvalue as i32;
     }
 }
-pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32 {
+pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> u64 {
     unsafe {
-        let mut i: i32;
         if !((*f).source).is_null() {
             if (*(*f).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 reallymarkobject(g, &mut (*((*f).source as *mut Object)));
             }
         }
-        i = 0;
-        while i < (*f).size_k {
+        let mut i: u64 = 0;
+        while i < (*f).size_k as u64 {
             if ((*((*f).k).offset(i as isize)).is_collectable())
                 && (*(*((*f).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
                     != 0
@@ -6545,7 +6542,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
             i += 1;
         }
         i = 0;
-        while i < (*f).size_upvalues {
+        while i < (*f).size_upvalues as u64 {
             if !((*((*f).upvalues).offset(i as isize)).name).is_null() {
                 if (*(*((*f).upvalues).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4)
                     != 0
@@ -6559,7 +6556,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
             i += 1;
         }
         i = 0;
-        while i < (*f).size_p {
+        while i < (*f).size_p as u64 {
             if !(*((*f).p).offset(i as isize)).is_null() {
                 if (**((*f).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     reallymarkobject(
@@ -6571,7 +6568,7 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
             i += 1;
         }
         i = 0;
-        while i < (*f).size_local_variables {
+        while i < (*f).size_local_variables as u64 {
             if !((*((*f).local_variables).offset(i as isize)).variable_name).is_null() {
                 if (*(*((*f).local_variables).offset(i as isize)).variable_name).get_marked()
                     & (1 << 3 | 1 << 4)
@@ -6586,14 +6583,14 @@ pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> i32
             }
             i += 1;
         }
-        return 1 + (*f).size_k + (*f).size_upvalues + (*f).size_p + (*f).size_local_variables;
+        return (1 + (*f).size_k + (*f).size_upvalues + (*f).size_p + (*f).size_local_variables) as u64
     }
 }
-pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> i32 {
+pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> u64 {
     unsafe {
-        let mut i: i32;
+        let mut i: u64;
         i = 0;
-        while i < (*cl).count_upvalues as i32 {
+        while i < (*cl).count_upvalues as u64 {
             if ((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).is_collectable())
                 && (*(*((*cl).upvalue).as_mut_ptr().offset(i as isize))
                     .value
@@ -6611,19 +6608,18 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> 
             }
             i += 1;
         }
-        return 1 + (*cl).count_upvalues as i32;
+        return 1 + (*cl).count_upvalues as u64;
     }
 }
-pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut LClosure) -> i32 {
+pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut LClosure) -> u64 {
     unsafe {
-        let mut i: i32;
         if !((*cl).p).is_null() {
             if (*(*cl).p).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 reallymarkobject(g, &mut (*((*cl).p as *mut Object)));
             }
         }
-        i = 0;
-        while i < (*cl).count_upvalues as i32 {
+        let mut i: u64 = 0;
+        while i < (*cl).count_upvalues as u64 {
             let uv: *mut UpValue = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
             if !uv.is_null() {
                 if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -6632,7 +6628,7 @@ pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut LClosure) -> 
             }
             i += 1;
         }
-        return 1 + (*cl).count_upvalues as i32;
+        return 1 + (*cl).count_upvalues as u64;
     }
 }
 pub unsafe extern "C" fn traversethread(g: *mut Global, th: *mut State) -> i32 {
@@ -7554,7 +7550,7 @@ pub unsafe extern "C" fn incstep(state: *mut State, g: *mut Global) {
         }) as i64;
         loop {
             let work: u64 = singlestep(state);
-            debt = (debt as u64).wrapping_sub(work) as i64 as i64;
+            debt = (debt as u64).wrapping_sub(work) as i64;
             if !(debt > -stepsize && (*g).gcstate as i32 != 8) {
                 break;
             }
@@ -7921,9 +7917,8 @@ pub unsafe extern "C" fn luaf_getlocalname(
             if program_counter < (*((*f).local_variables).offset(i as isize)).end_program_counter {
                 local_number -= 1;
                 if local_number == 0 {
-                    return ((*(*((*f).local_variables).offset(i as isize)).variable_name)
-                        .contents)
-                        .as_mut_ptr();
+                    return (*(*((*f).local_variables).offset(i as isize)).variable_name)
+                        .get_contents();
                 }
             }
             i += 1;
@@ -7937,8 +7932,8 @@ pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> i32 
         return (a == b
             || length == (*b).get_length()
                 && memcmp(
-                    ((*a).contents).as_mut_ptr() as *const libc::c_void,
-                    ((*b).contents).as_mut_ptr() as *const libc::c_void,
+                    ((*a).get_contents()) as *const libc::c_void,
+                    ((*b).get_contents()) as *const libc::c_void,
                     length,
                 ) == 0) as i32;
     }
@@ -7959,7 +7954,7 @@ pub unsafe extern "C" fn luas_hashlongstr(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra as i32 == 0 {
             let length: u64 = (*ts).get_length();
-            (*ts).hash = luas_hash(((*ts).contents).as_mut_ptr(), length, (*ts).hash);
+            (*ts).hash = luas_hash(((*ts).get_contents()), length, (*ts).hash);
             (*ts).extra = 1;
         }
         return (*ts).hash;
@@ -8017,16 +8012,17 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
         };
     }
 }
+pub const STRINGTABLE_INITIAL_SIZE: u64 = 128;
 pub unsafe extern "C" fn luas_init(state: *mut State) {
     unsafe {
         let g: *mut Global = (*state).global;
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
         (*tb).hash = luam_malloc_(
             state,
-            (128 as i32 as u64).wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
+            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
         ) as *mut *mut TString;
-        tablerehash((*tb).hash, 0, 128 as i32);
-        (*tb).size = 128 as i32;
+        tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE as i32);
+        (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*g).memerrmsg = luas_newlstr(
             state,
             b"not enough memory\0" as *const u8 as *const i8,
@@ -8056,7 +8052,7 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
-        *((*ts).contents).as_mut_ptr().offset(l as isize) = '\0' as i8;
+        *((*ts).get_contents2()).offset(l as isize) = '\0' as i8;
         return ts;
     }
 }
@@ -8115,7 +8111,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
         }
             let ts: *mut TString = TString::create_long(state, l);
             memcpy(
-                ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
+                ((*ts).get_contents()) as *mut libc::c_void,
                 str as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
@@ -8133,7 +8129,7 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
         let p: *mut *mut TString = ((*(*state).global).strcache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
-            if strcmp(str, ((**p.offset(j as isize)).contents).as_mut_ptr()) == 0 {
+            if strcmp(str, ((**p.offset(j as isize)).get_contents())) == 0 {
                 return *p.offset(j as isize);
             }
             j += 1;
@@ -8263,7 +8259,7 @@ pub unsafe extern "C" fn load_string_n(
                 luad_inctop(state);
                 load_block(
                     load_state,
-                    ((*ts).contents).as_mut_ptr() as *mut libc::c_void,
+                    ((*ts).get_contents()) as *mut libc::c_void,
                     size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                 );
                 (*state).top.p = (*state).top.p.offset(-1);
@@ -8776,7 +8772,7 @@ pub unsafe extern "C" fn dump_string(dump_state: *mut DumpState, s: *const TStri
             dump_size(dump_state, 0u64);
         } else {
             let size: u64 = (*s).get_length();
-            let str: *const i8 = ((*s).contents).as_ptr();
+            let str: *const i8 = (*s).get_contents();
             dump_size(dump_state, size.wrapping_add(1 as u64));
             dump_block(
                 dump_state,
@@ -9288,7 +9284,7 @@ pub unsafe extern "C" fn check_readonly(
             let message: *const i8 = luao_pushfstring(
                 (*lexical_state).state,
                 b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
-                ((*variable_name).contents).as_mut_ptr(),
+                ((*variable_name).get_contents()),
             );
             luak_semerror(lexical_state, message);
         }
@@ -9539,14 +9535,13 @@ pub unsafe extern "C" fn jumpscopeerror(
             ((*(*getlocalvardesc((*lexical_state).fs, (*gt).count_active_variables as i32))
                 .vd
                 .name)
-                .contents)
-                .as_mut_ptr();
+                .get_contents());
         let mut message: *const i8 =
             b"<goto %s> at line %d jumps into the scope of local '%s'\0" as *const u8 as *const i8;
         message = luao_pushfstring(
             (*lexical_state).state,
             message,
-            ((*(*gt).name).contents).as_mut_ptr(),
+            ((*(*gt).name).get_contents()),
             (*gt).line,
             variable_name,
         );
@@ -9750,7 +9745,7 @@ pub unsafe extern "C" fn undefgoto(
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                ((*(*gt).name).contents).as_mut_ptr(),
+                ((*(*gt).name).get_contents()),
                 (*gt).line,
             );
         }
@@ -10639,7 +10634,7 @@ pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                ((*name).contents).as_mut_ptr(),
+                ((*name).get_contents()),
                 (*lb).line,
             );
             luak_semerror(lexical_state, message);
@@ -11002,7 +10997,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         if testnext(lexical_state, '<' as i32) != 0 {
-            let attr: *const i8 = ((*str_checkname(lexical_state)).contents).as_mut_ptr();
+            let attr: *const i8 = ((*str_checkname(lexical_state)).get_contents());
             checknext(lexical_state, '>' as i32);
             if strcmp(attr, b"const\0" as *const u8 as *const i8) == 0 {
                 return 1;
@@ -15396,7 +15391,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
             return 0;
         } else {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
-            return (luao_str2num(((*st).contents).as_mut_ptr(), result)
+            return (luao_str2num(((*st).get_contents()), result)
                 == (*st).get_length().wrapping_add(1 as u64)) as i32;
         };
     }
@@ -15800,9 +15795,9 @@ pub unsafe extern "C" fn luav_finishset(
 }
 pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
     unsafe {
-        let mut s1: *const i8 = ((*ts1).contents).as_ptr();
+        let mut s1: *const i8 = (*ts1).get_contents();
         let mut rl1: u64 = (*ts1).get_length();
-        let mut s2: *const i8 = ((*ts2).contents).as_ptr();
+        let mut s2: *const i8 = (*ts2).get_contents();
         let mut rl2: u64 = (*ts2).get_length();
         loop {
             let temp: i32 = strcoll(s1, s2);
@@ -16136,7 +16131,7 @@ pub unsafe extern "C" fn copy2buff(top: StkId, mut n: i32, buffer: *mut i8) {
             let l: u64 = (*st).get_length();
             memcpy(
                 buffer.offset(tl as isize) as *mut libc::c_void,
-                ((*st).contents).as_mut_ptr() as *const libc::c_void,
+                ((*st).get_contents()) as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
             tl = (tl as u64).wrapping_add(l) as u64 as u64;
@@ -16242,7 +16237,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                     ts = luas_newlstr(state, buffer.as_mut_ptr(), tl);
                 } else {
                     ts = TString::create_long(state, tl);
-                    copy2buff(top, n, ((*ts).contents).as_mut_ptr());
+                    copy2buff(top, n, (*ts).get_contents2());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize))).value;
                 let x_: *mut TString = ts;
@@ -20860,7 +20855,7 @@ pub unsafe extern "C" fn luab_loadfile(state: *mut State) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(state, 1, std::ptr::null(), std::ptr::null_mut());
         let mode: *const i8 = lual_optlstring(state, 2, std::ptr::null(), std::ptr::null_mut());
-        let env: i32 = if (lua_type(state, 3) == None) { 0 } else { 3 };
+        let env: i32 = if lua_type(state, 3) == None { 0 } else { 3 };
         let status: i32 = lual_loadfilex(state, fname, mode);
         return load_aux(state, status, env);
     }
@@ -23049,7 +23044,7 @@ pub unsafe extern "C" fn checkoption(
 pub unsafe extern "C" fn l_checktime(state: *mut State, arg: i32) -> i64 {
     unsafe {
         let t: i64 = lual_checkinteger(state, arg);
-        (((t as i64 as i64 == t) as i32 != 0) as i32 as i64 != 0
+        (((t as i64 == t) as i32 != 0) as i32 as i64 != 0
             || lual_argerror(
                 state,
                 arg,
@@ -23165,7 +23160,7 @@ pub unsafe extern "C" fn os_time(state: *mut State) -> i32 {
                 setallfields(state, &mut ts);
             }
         };
-        if t != t as i64 as i64 || t == -1 as i64 {
+        if t != t as i64 || t == -1 as i64 {
             return lual_error(
                 state,
                 b"time result cannot be represented in this installation\0" as *const u8
@@ -24543,7 +24538,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
                 if !res.is_null() {
                     if find != 0 {
                         (*state).push_integer((s1.offset_from(s) as i64 + 1) as i64);
-                        (*state).push_integer(res.offset_from(s) as i64 as i64);
+                        (*state).push_integer(res.offset_from(s) as i64);
                         return push_captures(&mut ms, std::ptr::null(), std::ptr::null()) + 2;
                     } else {
                         return push_captures(&mut ms, s1, res);
@@ -26092,7 +26087,7 @@ pub unsafe extern "C" fn utflen(state: *mut State) -> i32 {
                 (*state).push_integer(posi + 1);
                 return 2;
             }
-            posi = s1.offset_from(s) as i64 as i64;
+            posi = s1.offset_from(s) as i64;
             n += 1;
         }
         (*state).push_integer(n);

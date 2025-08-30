@@ -222,7 +222,7 @@ impl State {
         unsafe {
             raw_allocate(block, old_size, 0u64);
             (*(self.global)).gc_debt =
-                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64 as i64;
+                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64;
         }
     }
     pub unsafe extern "C" fn too_big(&mut self) -> ! {

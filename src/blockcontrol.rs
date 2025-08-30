@@ -20,6 +20,7 @@ impl New for BlockControl {
             count_upvalues: 0,
             is_loop: false,
             is_inside_tbc: false,
+            dummy1: 0,
             ..
         };
     }
