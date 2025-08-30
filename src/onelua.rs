@@ -1581,7 +1581,7 @@ pub unsafe extern "C" fn lua_tolstring(
         if !length.is_null() {
             *length = (*((*o).value.object as *mut TString)).get_length();
         }
-        return ((*((*o).value.object as *mut TString)).get_contents());
+        return (*((*o).value.object as *mut TString)).get_contents();
     }
 }
 #[unsafe(no_mangle)]
@@ -1648,7 +1648,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        return ((*ts).get_contents());
+        return (*ts).get_contents();
     }
 }
 #[unsafe(no_mangle)]
@@ -1663,7 +1663,7 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            s = ((*ts).get_contents());
+            s = (*ts).get_contents();
         }
         (*state).top.p = (*state).top.p.offset(1);
         if (*(*state).global).gc_debt > 0 {
@@ -3433,7 +3433,7 @@ pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         if s.is_null() {
             return b"?\0" as *const u8 as *const i8;
         } else {
-            return ((*s).get_contents());
+            return (*s).get_contents();
         };
     }
 }
@@ -3561,7 +3561,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
         } else {
             let p: *const Prototype = (*cl).l.p;
             if !((*p).source).is_null() {
-                (*ar).source = ((*(*p).source).get_contents());
+                (*ar).source = (*(*p).source).get_contents();
                 (*ar).source_length = (*(*p).source).get_length();
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;
@@ -3847,7 +3847,7 @@ pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *cons
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
         if get_tag_type((*kvalue).get_tag()) == TAG_TYPE_STRING {
-            *name = ((*((*kvalue).value.object as *mut TString)).get_contents());
+            *name = (*((*kvalue).value.object as *mut TString)).get_contents();
             return b"constant\0" as *const u8 as *const i8;
         } else {
             *name = b"?\0" as *const u8 as *const i8;
@@ -4279,7 +4279,7 @@ pub unsafe extern "C" fn luag_addinfo(
         if !src.is_null() {
             luao_chunkid(
                 buffer.as_mut_ptr(),
-                ((*src).get_contents()),
+                (*src).get_contents(),
                 (*src).get_length(),
             );
         } else {
@@ -5298,7 +5298,7 @@ pub unsafe extern "C" fn luat_objtypename(state: *mut State, o: *const TValue) -
             let name: *const TValue =
                 luah_getshortstr(mt, luas_new(state, b"__name\0" as *const u8 as *const i8));
             if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
-                return ((*((*name).value.object as *mut TString)).get_contents());
+                return (*((*name).value.object as *mut TString)).get_contents();
             }
         }
         return TYPE_NAMES[(((*o).get_tag_type()) + 1) as usize];
@@ -6469,8 +6469,8 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
             smode = &mut (*((*mode).value.object as *mut TString)) as *mut TString;
-            weakkey = strchr(((*smode).get_contents()), 'k' as i32);
-            weakvalue = strchr(((*smode).get_contents()), 'v' as i32);
+            weakkey = strchr((*smode).get_contents(), 'k' as i32);
+            weakvalue = strchr((*smode).get_contents(), 'v' as i32);
             !weakkey.is_null() || !weakvalue.is_null()
         } {
             if weakkey.is_null() {
@@ -7954,7 +7954,7 @@ pub unsafe extern "C" fn luas_hashlongstr(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra as i32 == 0 {
             let length: u64 = (*ts).get_length();
-            (*ts).hash = luas_hash(((*ts).get_contents()), length, (*ts).hash);
+            (*ts).hash = luas_hash((*ts).get_contents(), length, (*ts).hash);
             (*ts).extra = 1;
         }
         return (*ts).hash;
@@ -8129,7 +8129,7 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
         let p: *mut *mut TString = ((*(*state).global).strcache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
-            if strcmp(str, ((**p.offset(j as isize)).get_contents())) == 0 {
+            if strcmp(str, (**p.offset(j as isize)).get_contents()) == 0 {
                 return *p.offset(j as isize);
             }
             j += 1;
@@ -9284,7 +9284,7 @@ pub unsafe extern "C" fn check_readonly(
             let message: *const i8 = luao_pushfstring(
                 (*lexical_state).state,
                 b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
-                ((*variable_name).get_contents()),
+                (*variable_name).get_contents(),
             );
             luak_semerror(lexical_state, message);
         }
@@ -9532,16 +9532,16 @@ pub unsafe extern "C" fn jumpscopeerror(
 ) -> ! {
     unsafe {
         let variable_name: *const i8 =
-            ((*(*getlocalvardesc((*lexical_state).fs, (*gt).count_active_variables as i32))
+            (*(*getlocalvardesc((*lexical_state).fs, (*gt).count_active_variables as i32))
                 .vd
                 .name)
-                .get_contents());
+                .get_contents();
         let mut message: *const i8 =
             b"<goto %s> at line %d jumps into the scope of local '%s'\0" as *const u8 as *const i8;
         message = luao_pushfstring(
             (*lexical_state).state,
             message,
-            ((*(*gt).name).get_contents()),
+            (*(*gt).name).get_contents(),
             (*gt).line,
             variable_name,
         );
@@ -9745,7 +9745,7 @@ pub unsafe extern "C" fn undefgoto(
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                ((*(*gt).name).get_contents()),
+                (*(*gt).name).get_contents(),
                 (*gt).line,
             );
         }
@@ -10634,7 +10634,7 @@ pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                ((*name).get_contents()),
+                (*name).get_contents(),
                 (*lb).line,
             );
             luak_semerror(lexical_state, message);
@@ -10997,7 +10997,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         if testnext(lexical_state, '<' as i32) != 0 {
-            let attr: *const i8 = ((*str_checkname(lexical_state)).get_contents());
+            let attr: *const i8 = (*str_checkname(lexical_state)).get_contents();
             checknext(lexical_state, '>' as i32);
             if strcmp(attr, b"const\0" as *const u8 as *const i8) == 0 {
                 return 1;
@@ -15391,7 +15391,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
             return 0;
         } else {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
-            return (luao_str2num(((*st).get_contents()), result)
+            return (luao_str2num((*st).get_contents(), result)
                 == (*st).get_length().wrapping_add(1 as u64)) as i32;
         };
     }
