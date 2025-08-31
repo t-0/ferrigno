@@ -21869,54 +21869,6 @@ pub unsafe extern "C" fn str_match(state: *mut State) -> i32 {
         return str_find_aux(state, 0);
     }
 }
-pub unsafe extern "C" fn gmatch_aux(state: *mut State) -> i32 {
-    unsafe {
-        let gm: *mut GMatchState =
-            lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
-        let mut src: *const i8;
-        (*gm).match_state.state = state;
-        src = (*gm).src;
-        while src <= (*gm).match_state.src_end {
-            let e: *const i8;
-            (*gm).match_state.reprepstate();
-            e = (*gm).match_state.match_0(src, (*gm).p);
-            if !e.is_null() && e != (*gm).lastmatch {
-                (*gm).lastmatch = e;
-                (*gm).src = (*gm).lastmatch;
-                return (*gm).match_state.push_captures(src, e);
-            }
-            src = src.offset(1);
-        }
-        return 0;
-    }
-}
-pub unsafe extern "C" fn gmatch(state: *mut State) -> i32 {
-    unsafe {
-        let mut lexical_state: u64 = 0;
-        let mut lp: u64 = 0;
-        let s: *const i8 = lual_checklstring(state, 1, &mut lexical_state);
-        let p: *const i8 = lual_checklstring(state, 2, &mut lp);
-        let mut init: u64 =
-            (posrelati(lual_optinteger(state, 3, 1 as i64), lexical_state)).wrapping_sub(1 as u64);
-        let gm: *mut GMatchState;
-        lua_settop(state, 2);
-        gm = User::lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>() as u64, 0)
-            as *mut GMatchState;
-        if init > lexical_state {
-            init = lexical_state.wrapping_add(1 as u64);
-        }
-        (*gm).match_state.prepstate(state, s, lexical_state, p, lp);
-        (*gm).src = s.offset(init as isize);
-        (*gm).p = p;
-        (*gm).lastmatch = std::ptr::null();
-        lua_pushcclosure(
-            state,
-            Some(gmatch_aux as unsafe extern "C" fn(*mut State) -> i32),
-            3,
-        );
-        return 1;
-    }
-}
 pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
     unsafe {
         let mut srcl: u64 = 0;
@@ -23086,7 +23038,7 @@ static mut STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         {
             let init = RegisteredFunction {
                 name: b"gmatch\0" as *const u8 as *const i8,
-                function: Some(gmatch as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(GMatchState::gmatch as unsafe extern "C" fn(*mut State) -> i32),
             };
             init
         },
