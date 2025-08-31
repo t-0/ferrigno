@@ -1,6 +1,7 @@
 use crate::callinfo::*;
 use crate::functions::*;
 use crate::debug::*;
+use crate::loadstate::*;
 use crate::c::*;
 use crate::dynamicdata::*;
 use crate::tm::*;
@@ -96,7 +97,10 @@ impl TObject for State {
     }
 }
 impl State {
-    pub unsafe extern "C" fn set_error_object(&mut self, error_code: i32, old_top: StkId) {
+    pub fn get_status(& mut self) -> i32 {
+        return self.status as i32;
+    }
+    pub unsafe fn set_error_object(&mut self, error_code: i32, old_top: StkId) {
         unsafe {
             match error_code {
                 4 => {

@@ -105,7 +105,7 @@ unsafe extern "C" fn auxstatus(state: *mut State, co: *mut State) -> i32 {
         if state == co {
             return 0;
         } else {
-            match lua_status(co) {
+            match (*co).get_status() {
                 1 => return 2,
                 0 => {
                     let mut ar: Debug = Debug {
