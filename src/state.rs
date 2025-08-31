@@ -1818,7 +1818,7 @@ pub unsafe extern "C" fn lua_rawequal(state: *mut State, index1: i32, index2: i3
             && (!(get_tag_type((*o2).get_tag()) == TAG_TYPE_NIL)
                 || o2 != &mut (*(*state).global).nilvalue as *mut TValue as *const TValue)
         {
-            0 != luav_equalobj(std::ptr::null_mut(), o1, o2)
+            luav_equalobj(std::ptr::null_mut(), o1, o2)
         } else {
             false
         };
@@ -1855,13 +1855,13 @@ pub unsafe extern "C" fn lua_compare(state: *mut State, index1: i32, index2: i32
         {
             match op {
                 0 => {
-                    i = luav_equalobj(state, o1, o2);
+                    i = if luav_equalobj(state, o1, o2) { 1 } else { 0 };
                 }
                 1 => {
-                    i = luav_lessthan(state, o1, o2);
+                    i = if luav_lessthan(state, o1, o2) { 1 } else { 0 };
                 }
                 2 => {
-                    i = luav_lessequal(state, o1, o2);
+                    i = if luav_lessequal(state, o1, o2) { 1 } else { 0 };
                 }
                 _ => {}
             }

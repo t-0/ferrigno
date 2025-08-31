@@ -11940,7 +11940,7 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
             k = (*index).value.i as i32;
             if k < (*fs).nk
                 && (*((*f).k).offset(k as isize)).get_tag_variant() == (*v).get_tag_variant()
-                && luav_equalobj(std::ptr::null_mut(), &mut *((*f).k).offset(k as isize), v) != 0
+                && luav_equalobj(std::ptr::null_mut(), &mut *((*f).k).offset(k as isize), v)
             {
                 return k;
             }
@@ -13857,18 +13857,18 @@ pub unsafe extern "C" fn ltintfloat(i: i64, f: f64) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn leintfloat(i: i64, f: f64) -> i32 {
+pub unsafe extern "C" fn leintfloat(i: i64, f: f64) -> bool {
     unsafe {
         if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
             <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
         {
-            return (i as f64 <= f) as i32;
+            return i as f64 <= f;
         } else {
             let mut fi: i64 = 0;
             if luav_flttointeger(f, &mut fi, F2I::Floor) != 0 {
-                return (i <= fi) as i32;
+                return i <= fi;
             } else {
-                return (f > 0.0) as i32;
+                return f > 0.0;
             }
         };
     }
@@ -13889,18 +13889,18 @@ pub unsafe extern "C" fn ltfloatint(f: f64, i: i64) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn lefloatint(f: f64, i: i64) -> i32 {
+pub unsafe extern "C" fn lefloatint(f: f64, i: i64) -> bool {
     unsafe {
         if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
             <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
         {
-            return (f <= i as f64) as i32;
+            return f <= i as f64;
         } else {
             let mut fi: i64 = 0;
             if luav_flttointeger(f, &mut fi, F2I::Ceiling) != 0 {
-                return (fi <= i) as i32;
+                return fi <= i;
             } else {
-                return (f < 0.0) as i32;
+                return f < 0.0;
             }
         };
     }
@@ -13924,19 +13924,19 @@ pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> i32 {
+pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             let li: i64 = (*l).value.i;
             if (*r).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-                return (li <= (*r).value.i) as i32;
+                return li <= (*r).value.i;
             } else {
                 return leintfloat(li, (*r).value.n);
             }
         } else {
             let lf: f64 = (*l).value.n;
             if (*r).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
-                return (lf <= (*r).value.n) as i32;
+                return lf <= (*r).value.n;
             } else {
                 return lefloatint(lf, (*r).value.i);
             }
@@ -13965,14 +13965,14 @@ pub unsafe extern "C" fn luav_lessthan(
     state: *mut State,
     l: *const TValue,
     r: *const TValue,
-) -> i32 {
+) -> bool {
     unsafe {
         if get_tag_type((*l).get_tag()) == TAG_TYPE_NUMERIC
             && get_tag_type((*r).get_tag()) == TAG_TYPE_NUMERIC
         {
-            return ltnum(l, r);
+            return 0 != ltnum(l, r);
         } else {
-            return lessthanothers(state, l, r);
+            return 0 != lessthanothers(state, l, r);
         };
     }
 }
@@ -13980,17 +13980,17 @@ pub unsafe extern "C" fn lessequalothers(
     state: *mut State,
     l: *const TValue,
     r: *const TValue,
-) -> i32 {
+) -> bool {
     unsafe {
         if get_tag_type((*l).get_tag()) == TAG_TYPE_STRING
             && get_tag_type((*r).get_tag()) == TAG_TYPE_STRING
         {
-            return (l_strcmp(
+            return l_strcmp(
                 &mut (*((*l).value.object as *mut TString)),
                 &mut (*((*r).value.object as *mut TString)),
-            ) <= 0) as i32;
+            ) <= 0;
         } else {
-            return luat_callordertm(state, l, r, TM_LE);
+            return 0 != luat_callordertm(state, l, r, TM_LE);
         }
     }
 }
@@ -13998,7 +13998,7 @@ pub unsafe extern "C" fn luav_lessequal(
     state: *mut State,
     l: *const TValue,
     r: *const TValue,
-) -> i32 {
+) -> bool {
     unsafe {
         if get_tag_type((*l).get_tag()) == TAG_TYPE_NUMERIC
             && get_tag_type((*r).get_tag()) == TAG_TYPE_NUMERIC
@@ -14013,35 +14013,34 @@ pub unsafe extern "C" fn luav_equalobj(
     state: *mut State,
     t1: *const TValue,
     t2: *const TValue,
-) -> i32 {
+) -> bool {
     unsafe {
         let mut tm: *const TValue;
         if (*t1).get_tag_variant() != (*t2).get_tag_variant() {
             if (*t1).get_tag_type() != (*t2).get_tag_type()
                 || (*t1).get_tag_type() != TAG_TYPE_NUMERIC
             {
-                return 0;
+                return false;
             } else {
                 let mut i1: i64 = 0;
                 let mut i2: i64 = 0;
-                return (luav_tointegerns(t1, &mut i1, F2I::Equal) != 0
+                return luav_tointegerns(t1, &mut i1, F2I::Equal) != 0
                     && luav_tointegerns(t2, &mut i2, F2I::Equal) != 0
-                    && i1 == i2) as i32;
+                    && i1 == i2;
             }
         }
         match (*t1).get_tag_variant() {
-            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return 1,
-            TAG_VARIANT_NUMERIC_INTEGER => return ((*t1).value.i == (*t2).value.i) as i32,
-            TAG_VARIANT_NUMERIC_NUMBER => return ((*t1).value.n == (*t2).value.n) as i32,
-            TAG_VARIANT_POINTER => return ((*t1).value.p == (*t2).value.p) as i32,
-            TAG_VARIANT_CLOSURE_CFUNCTION => return ((*t1).value.f == (*t2).value.f) as i32,
+            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return true,
+            TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.i == (*t2).value.i,
+            TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.n == (*t2).value.n,
+            TAG_VARIANT_POINTER => return (*t1).value.p == (*t2).value.p,
+            TAG_VARIANT_CLOSURE_CFUNCTION => return (*t1).value.f == (*t2).value.f,
             TAG_VARIANT_STRING_SHORT => {
-                return (&mut (*((*t1).value.object as *mut TString)) as *mut TString
-                    == &mut (*((*t2).value.object as *mut TString)) as *mut TString)
-                    as i32;
+                return &mut (*((*t1).value.object as *mut TString)) as *mut TString
+                    == &mut (*((*t2).value.object as *mut TString)) as *mut TString;
             }
             TAG_VARIANT_STRING_LONG => {
-                return luas_eqlngstr(
+                return 0 != luas_eqlngstr(
                     &mut (*((*t1).value.object as *mut TString)),
                     &mut (*((*t2).value.object as *mut TString)),
                 );
@@ -14050,9 +14049,9 @@ pub unsafe extern "C" fn luav_equalobj(
                 if &mut (*((*t1).value.object as *mut User)) as *mut User
                     == &mut (*((*t2).value.object as *mut User)) as *mut User
                 {
-                    return 1;
+                    return true;
                 } else if state.is_null() {
-                    return 0;
+                    return false;
                 }
                 tm = if ((*((*t1).value.object as *mut User)).metatable).is_null() {
                     std::ptr::null()
@@ -14089,9 +14088,9 @@ pub unsafe extern "C" fn luav_equalobj(
                 if &mut (*((*t1).value.object as *mut Table)) as *mut Table
                     == &mut (*((*t2).value.object as *mut Table)) as *mut Table
                 {
-                    return 1;
+                    return true;
                 } else if state.is_null() {
-                    return 0;
+                    return false;
                 }
                 tm = if ((*((*t1).value.object as *mut Table)).metatable).is_null() {
                     std::ptr::null()
@@ -14124,15 +14123,14 @@ pub unsafe extern "C" fn luav_equalobj(
                     };
                 }
             }
-            _ => return ((*t1).value.object == (*t2).value.object) as i32,
+            _ => return (*t1).value.object == (*t2).value.object,
         }
         if tm.is_null() {
-            return 0;
+            return false;
         } else {
             luat_calltmres(state, tm, t1, t2, (*state).top.p);
             return !((*(*state).top.p).value.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.p).value.get_tag()) == TAG_TYPE_NIL)
-                as i32;
+                || get_tag_type((*(*state).top.p).value.get_tag()) == TAG_TYPE_NIL);
         };
     }
 }
@@ -16477,7 +16475,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             .value;
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*state).top.p = (*call_info).top.p;
-                            cond_0 = luav_equalobj(state, &mut (*ra_54).value, rb_14);
+                            cond_0 = if luav_equalobj(state, &mut (*ra_54).value, rb_14) { 1 } else { 0 };
                             trap = (*call_info).u.l.trap;
                             if cond_0 != (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
@@ -16546,11 +16544,11 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             } else if get_tag_type((*ra_56).value.get_tag()) == TAG_TYPE_NUMERIC
                                 && get_tag_type((*rb_16).get_tag()) == TAG_TYPE_NUMERIC
                             {
-                                cond_2 = lenum(&mut (*ra_56).value, rb_16);
+                                cond_2 = if lenum(&mut (*ra_56).value, rb_16) { 1 } else { 0 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 (*state).top.p = (*call_info).top.p;
-                                cond_2 = lessequalothers(state, &mut (*ra_56).value, rb_16);
+                                cond_2 = if lessequalothers(state, &mut (*ra_56).value, rb_16) { 1 } else { 0 };
                                 trap = (*call_info).u.l.trap;
                             }
                             if cond_2 != (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
@@ -16573,7 +16571,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as isize,
                             );
                             let cond_3: i32 =
-                                luav_equalobj(std::ptr::null_mut(), &mut (*ra_57).value, rb_17);
+                                if luav_equalobj(std::ptr::null_mut(), &mut (*ra_57).value, rb_17) { 1 } else { 0 };
                             if cond_3 != (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
@@ -21654,79 +21652,6 @@ static mut STRING_METAMETHODS: [RegisteredFunction; 10] = {
         },
     ]
 };
-pub unsafe extern "C" fn check_capture(ms: *mut MatchState, mut l: i32) -> i32 {
-    unsafe {
-        l -= '1' as i32;
-        if ((l < 0 || l >= (*ms).level as i32 || (*ms).capture[l as usize].length == -1 as i64)
-            as i32
-            != 0) as i64
-            != 0
-        {
-            return lual_error(
-                (*ms).state,
-                b"invalid capture index %%%d\0" as *const u8 as *const i8,
-                l + 1,
-            );
-        }
-        return l;
-    }
-}
-pub unsafe extern "C" fn capture_to_close(ms: *mut MatchState) -> i32 {
-    unsafe {
-        let mut level: i32 = (*ms).level as i32;
-        level -= 1;
-        while level >= 0 {
-            if (*ms).capture[level as usize].length == -1 as i64 {
-                return level;
-            }
-            level -= 1;
-        }
-        return lual_error(
-            (*ms).state,
-            b"invalid pattern capture\0" as *const u8 as *const i8,
-        );
-    }
-}
-pub unsafe extern "C" fn classend(ms: *mut MatchState, mut p: *const i8) -> *const i8 {
-    unsafe {
-        let fresh160 = p;
-        p = p.offset(1);
-        match *fresh160 as i32 {
-            37 => {
-                if ((p == (*ms).p_end) as i32 != 0) as i64 != 0 {
-                    lual_error(
-                        (*ms).state,
-                        b"malformed pattern (ends with '%%')\0" as *const u8 as *const i8,
-                    );
-                }
-                return p.offset(1 as isize);
-            }
-            91 => {
-                if *p as i32 == '^' as i32 {
-                    p = p.offset(1);
-                }
-                loop {
-                    if ((p == (*ms).p_end) as i32 != 0) as i64 != 0 {
-                        lual_error(
-                            (*ms).state,
-                            b"malformed pattern (missing ']')\0" as *const u8 as *const i8,
-                        );
-                    }
-                    let fresh161 = p;
-                    p = p.offset(1);
-                    if *fresh161 as i32 == '%' as i32 && p < (*ms).p_end {
-                        p = p.offset(1);
-                    }
-                    if !(*p as i32 != ']' as i32) {
-                        break;
-                    }
-                }
-                return p.offset(1 as isize);
-            }
-            _ => return p,
-        };
-    }
-}
 pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
     unsafe {
         let res: i32;
@@ -21808,446 +21733,6 @@ pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const 
         return (sig == 0) as i32;
     }
 }
-pub unsafe extern "C" fn singlematch(
-    ms: *mut MatchState,
-    s: *const i8,
-    p: *const i8,
-    ep: *const i8,
-) -> i32 {
-    unsafe {
-        if s >= (*ms).src_end {
-            return 0;
-        } else {
-            let c: i32 = *s as u8 as i32;
-            match *p as i32 {
-                46 => return 1,
-                37 => {
-                    return match_class(c, *p.offset(1 as isize) as u8 as i32);
-                }
-                91 => return matchbracketclass(c, p, ep.offset(-(1 as isize))),
-                _ => return (*p as u8 as i32 == c) as i32,
-            }
-        };
-    }
-}
-pub unsafe extern "C" fn matchbalance(
-    ms: *mut MatchState,
-    mut s: *const i8,
-    p: *const i8,
-) -> *const i8 {
-    unsafe {
-        if ((p >= ((*ms).p_end).offset(-(1 as isize))) as i32 != 0) as i64 != 0 {
-            lual_error(
-                (*ms).state,
-                b"malformed pattern (missing arguments to '%%b')\0" as *const u8 as *const i8,
-            );
-        }
-        if *s as i32 != *p as i32 {
-            return std::ptr::null();
-        } else {
-            let b: i32 = *p as i32;
-            let e: i32 = *p.offset(1 as isize) as i32;
-            let mut cont: i32 = 1;
-            loop {
-                s = s.offset(1);
-                if !(s < (*ms).src_end) {
-                    break;
-                }
-                if *s as i32 == e {
-                    cont -= 1;
-                    if cont == 0 {
-                        return s.offset(1 as isize);
-                    }
-                } else if *s as i32 == b {
-                    cont += 1;
-                }
-            }
-        }
-        return std::ptr::null();
-    }
-}
-pub unsafe extern "C" fn max_expand(
-    ms: *mut MatchState,
-    s: *const i8,
-    p: *const i8,
-    ep: *const i8,
-) -> *const i8 {
-    unsafe {
-        let mut i: i64 = 0;
-        while singlematch(ms, s.offset(i as isize), p, ep) != 0 {
-            i += 1;
-        }
-        while i >= 0 {
-            let res: *const i8 = match_0(ms, s.offset(i as isize), ep.offset(1 as isize));
-            if !res.is_null() {
-                return res;
-            }
-            i -= 1;
-        }
-        return std::ptr::null();
-    }
-}
-pub unsafe extern "C" fn min_expand(
-    ms: *mut MatchState,
-    mut s: *const i8,
-    p: *const i8,
-    ep: *const i8,
-) -> *const i8 {
-    unsafe {
-        loop {
-            let res: *const i8 = match_0(ms, s, ep.offset(1 as isize));
-            if !res.is_null() {
-                return res;
-            } else if singlematch(ms, s, p, ep) != 0 {
-                s = s.offset(1);
-            } else {
-                return std::ptr::null();
-            }
-        }
-    }
-}
-pub unsafe extern "C" fn start_capture(
-    ms: *mut MatchState,
-    s: *const i8,
-    p: *const i8,
-    what: i32,
-) -> *const i8 {
-    unsafe {
-        let res: *const i8;
-        let level: usize = (*ms).level;
-        if level >= MAX_CAPTURES {
-            lual_error(
-                (*ms).state,
-                b"too many captures\0" as *const u8 as *const i8,
-            );
-        }
-        (*ms).capture[level].init = s;
-        (*ms).capture[level].length = what as i64;
-        (*ms).level = level + 1;
-        res = match_0(ms, s, p);
-        if res.is_null() {
-            (*ms).level = ((*ms).level).wrapping_sub(1);
-            (*ms).level;
-        }
-        return res;
-    }
-}
-pub unsafe extern "C" fn end_capture(ms: *mut MatchState, s: *const i8, p: *const i8) -> *const i8 {
-    unsafe {
-        let l: i32 = capture_to_close(ms);
-        let res: *const i8;
-        (*ms).capture[l as usize].length = s.offset_from((*ms).capture[l as usize].init) as i64;
-        res = match_0(ms, s, p);
-        if res.is_null() {
-            (*ms).capture[l as usize].length = -1 as i64;
-        }
-        return res;
-    }
-}
-pub unsafe extern "C" fn match_capture(ms: *mut MatchState, s: *const i8, mut l: i32) -> *const i8 {
-    unsafe {
-        let length: u64;
-        l = check_capture(ms, l);
-        length = (*ms).capture[l as usize].length as u64;
-        if ((*ms).src_end).offset_from(s) as u64 >= length
-            && memcmp(
-                (*ms).capture[l as usize].init as *const libc::c_void,
-                s as *const libc::c_void,
-                length,
-            ) == 0
-        {
-            return s.offset(length as isize);
-        } else {
-            return std::ptr::null();
-        };
-    }
-}
-pub unsafe extern "C" fn match_0(
-    ms: *mut MatchState,
-    mut s: *const i8,
-    mut p: *const i8,
-) -> *const i8 {
-    unsafe {
-        let mut ep_0: *const i8 = std::ptr::null();
-        let mut current_block: u64;
-        let fresh162 = (*ms).matchdepth;
-        (*ms).matchdepth = (*ms).matchdepth - 1;
-        if ((fresh162 == 0) as i32 != 0) as i64 != 0 {
-            lual_error(
-                (*ms).state,
-                b"pattern too complex\0" as *const u8 as *const i8,
-            );
-        }
-        loop {
-            if !(p != (*ms).p_end) {
-                current_block = 6476622998065200121;
-                break;
-            }
-            match *p as i32 {
-                CHARACTER_PARENTHESIS_LEFT => {
-                    if *p.offset(1 as isize) as i32 == ')' as i32 {
-                        s = start_capture(ms, s, p.offset(2 as isize), -2);
-                    } else {
-                        s = start_capture(ms, s, p.offset(1 as isize), -1);
-                    }
-                    current_block = 6476622998065200121;
-                    break;
-                }
-                CHARACTER_PARENTHESIS_RIGHT => {
-                    s = end_capture(ms, s, p.offset(1 as isize));
-                    current_block = 6476622998065200121;
-                    break;
-                }
-                36 => {
-                    if !(p.offset(1 as isize) != (*ms).p_end) {
-                        s = if s == (*ms).src_end {
-                            s
-                        } else {
-                            std::ptr::null()
-                        };
-                        current_block = 6476622998065200121;
-                        break;
-                    }
-                }
-                37 => match *p.offset(1 as isize) as i32 {
-                    98 => {
-                        current_block = 17965632435239708295;
-                        match current_block {
-                            17965632435239708295 => {
-                                s = matchbalance(ms, s, p.offset(2 as isize));
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(4 as isize);
-                                continue;
-                            }
-                            8236137900636309791 => {
-                                let ep: *const i8;
-                                let previous: i8;
-                                p = p.offset(2 as isize);
-                                if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
-                                    lual_error(
-                                        (*ms).state,
-                                        b"missing '[' after '%%f' in pattern\0" as *const u8
-                                            as *const i8,
-                                    );
-                                }
-                                ep = classend(ms, p);
-                                previous = (if s == (*ms).src_init {
-                                    '\0' as i32
-                                } else {
-                                    *s.offset(-(1 as isize)) as i32
-                                }) as i8;
-                                if matchbracketclass(
-                                    previous as u8 as i32,
-                                    p,
-                                    ep.offset(-(1 as isize)),
-                                ) == 0
-                                    && matchbracketclass(
-                                        *s as u8 as i32,
-                                        p,
-                                        ep.offset(-(1 as isize)),
-                                    ) != 0
-                                {
-                                    p = ep;
-                                    continue;
-                                } else {
-                                    s = std::ptr::null();
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                            }
-                            _ => {
-                                s = match_capture(ms, s, *p.offset(1 as isize) as u8 as i32);
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(2 as isize);
-                                continue;
-                            }
-                        }
-                    }
-                    102 => {
-                        current_block = 8236137900636309791;
-                        match current_block {
-                            17965632435239708295 => {
-                                s = matchbalance(ms, s, p.offset(2 as isize));
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(4 as isize);
-                                continue;
-                            }
-                            8236137900636309791 => {
-                                let ep: *const i8;
-                                let previous: i8;
-                                p = p.offset(2 as isize);
-                                if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
-                                    lual_error(
-                                        (*ms).state,
-                                        b"missing '[' after '%%f' in pattern\0" as *const u8
-                                            as *const i8,
-                                    );
-                                }
-                                ep = classend(ms, p);
-                                previous = (if s == (*ms).src_init {
-                                    '\0' as i32
-                                } else {
-                                    *s.offset(-(1 as isize)) as i32
-                                }) as i8;
-                                if matchbracketclass(
-                                    previous as u8 as i32,
-                                    p,
-                                    ep.offset(-(1 as isize)),
-                                ) == 0
-                                    && matchbracketclass(
-                                        *s as u8 as i32,
-                                        p,
-                                        ep.offset(-(1 as isize)),
-                                    ) != 0
-                                {
-                                    p = ep;
-                                    continue;
-                                } else {
-                                    s = std::ptr::null();
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                            }
-                            _ => {
-                                s = match_capture(ms, s, *p.offset(1 as isize) as u8 as i32);
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(2 as isize);
-                                continue;
-                            }
-                        }
-                    }
-                    48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 => {
-                        current_block = 14576567515993809846;
-                        match current_block {
-                            17965632435239708295 => {
-                                s = matchbalance(ms, s, p.offset(2 as isize));
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(4 as isize);
-                                continue;
-                            }
-                            8236137900636309791 => {
-                                let ep: *const i8;
-                                let previous: i8;
-                                p = p.offset(2 as isize);
-                                if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
-                                    lual_error(
-                                        (*ms).state,
-                                        b"missing '[' after '%%f' in pattern\0" as *const u8
-                                            as *const i8,
-                                    );
-                                }
-                                ep = classend(ms, p);
-                                previous = (if s == (*ms).src_init {
-                                    '\0' as i32
-                                } else {
-                                    *s.offset(-(1 as isize)) as i32
-                                }) as i8;
-                                if matchbracketclass(
-                                    previous as u8 as i32,
-                                    p,
-                                    ep.offset(-(1 as isize)),
-                                ) == 0
-                                    && matchbracketclass(
-                                        *s as u8 as i32,
-                                        p,
-                                        ep.offset(-(1 as isize)),
-                                    ) != 0
-                                {
-                                    p = ep;
-                                    continue;
-                                } else {
-                                    s = std::ptr::null();
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                            }
-                            _ => {
-                                s = match_capture(ms, s, *p.offset(1 as isize) as u8 as i32);
-                                if s.is_null() {
-                                    current_block = 6476622998065200121;
-                                    break;
-                                }
-                                p = p.offset(2 as isize);
-                                continue;
-                            }
-                        }
-                    }
-                    _ => {}
-                },
-                _ => {}
-            }
-            ep_0 = classend(ms, p);
-            if singlematch(ms, s, p, ep_0) == 0 {
-                if *ep_0 as i32 == '*' as i32
-                    || *ep_0 as i32 == '?' as i32
-                    || *ep_0 as i32 == '-' as i32
-                {
-                    p = ep_0.offset(1 as isize);
-                } else {
-                    s = std::ptr::null();
-                    current_block = 6476622998065200121;
-                    break;
-                }
-            } else {
-                match *ep_0 as i32 {
-                    63 => {
-                        let res: *const i8;
-                        res = match_0(ms, s.offset(1 as isize), ep_0.offset(1 as isize));
-                        if !res.is_null() {
-                            s = res;
-                            current_block = 6476622998065200121;
-                            break;
-                        } else {
-                            p = ep_0.offset(1 as isize);
-                        }
-                    }
-                    43 => {
-                        s = s.offset(1);
-                        current_block = 13376797365003376294;
-                        break;
-                    }
-                    42 => {
-                        current_block = 13376797365003376294;
-                        break;
-                    }
-                    45 => {
-                        s = min_expand(ms, s, p, ep_0);
-                        current_block = 6476622998065200121;
-                        break;
-                    }
-                    _ => {
-                        s = s.offset(1);
-                        p = ep_0;
-                    }
-                }
-            }
-        }
-        match current_block {
-            13376797365003376294 => {
-                s = max_expand(ms, s, p, ep_0);
-            }
-            _ => {}
-        }
-        (*ms).matchdepth += 1;
-        (*ms).matchdepth;
-        return s;
-    }
-}
 pub unsafe extern "C" fn lmemfind(
     mut s1: *const i8,
     mut l1: u64,
@@ -22284,72 +21769,6 @@ pub unsafe extern "C" fn lmemfind(
         };
     }
 }
-pub unsafe extern "C" fn get_onecapture(
-    ms: *mut MatchState,
-    i: i32,
-    s: *const i8,
-    e: *const i8,
-    cap: *mut *const i8,
-) -> u64 {
-    unsafe {
-        if i >= (*ms).level as i32 {
-            if ((i != 0) as i32 != 0) as i64 != 0 {
-                lual_error(
-                    (*ms).state,
-                    b"invalid capture index %%%d\0" as *const u8 as *const i8,
-                    i + 1,
-                );
-            }
-            *cap = s;
-            return e.offset_from(s) as u64;
-        } else {
-            let capl: i64 = (*ms).capture[i as usize].length;
-            *cap = (*ms).capture[i as usize].init;
-            if ((capl == -1 as i64) as i32 != 0) as i64 != 0 {
-                lual_error(
-                    (*ms).state,
-                    b"unfinished capture\0" as *const u8 as *const i8,
-                );
-            } else if capl == -2 as i64 {
-                (*((*ms).state)).push_integer(
-                    (((*ms).capture[i as usize].init).offset_from((*ms).src_init) as i64 + 1)
-                        as i64,
-                );
-            }
-            return capl as u64;
-        };
-    }
-}
-pub unsafe extern "C" fn push_onecapture(ms: *mut MatchState, i: i32, s: *const i8, e: *const i8) {
-    unsafe {
-        let mut cap: *const i8 = std::ptr::null();
-        let l: i64 = get_onecapture(ms, i, s, e, &mut cap) as i64;
-        if l != -2 as i64 {
-            lua_pushlstring((*ms).state, cap, l as u64);
-        }
-    }
-}
-pub unsafe extern "C" fn push_captures(ms: *mut MatchState, s: *const i8, e: *const i8) -> i32 {
-    unsafe {
-        let mut i: i32;
-        let nlevels: i32 = if (*ms).level as i32 == 0 && !s.is_null() {
-            1
-        } else {
-            (*ms).level as i32
-        };
-        lual_checkstack(
-            (*ms).state,
-            nlevels,
-            b"too many captures\0" as *const u8 as *const i8,
-        );
-        i = 0;
-        while i < nlevels {
-            push_onecapture(ms, i, s, e);
-            i += 1;
-        }
-        return nlevels;
-    }
-}
 pub unsafe extern "C" fn nospecials(p: *const i8, l: u64) -> i32 {
     unsafe {
         let mut upto: u64 = 0;
@@ -22370,27 +21789,6 @@ pub unsafe extern "C" fn nospecials(p: *const i8, l: u64) -> i32 {
             }
         }
         return 1;
-    }
-}
-pub unsafe extern "C" fn prepstate(
-    ms: *mut MatchState,
-    state: *mut State,
-    s: *const i8,
-    lexical_state: u64,
-    p: *const i8,
-    lp: u64,
-) {
-    unsafe {
-        (*ms).state = state;
-        (*ms).matchdepth = 200 as i32;
-        (*ms).src_init = s;
-        (*ms).src_end = s.offset(lexical_state as isize);
-        (*ms).p_end = p.offset(lp as isize);
-    }
-}
-pub unsafe extern "C" fn reprepstate(ms: *mut MatchState) {
-    unsafe {
-        (*ms).level = 0;
     }
 }
 pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
@@ -22418,7 +21816,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
                 return 2;
             }
         } else {
-            let mut ms: MatchState = MatchState {
+            let mut match_state: MatchState = MatchState {
                 src_init: std::ptr::null(),
                 src_end: std::ptr::null(),
                 p_end: std::ptr::null(),
@@ -22436,23 +21834,23 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
                 p = p.offset(1);
                 lp = lp.wrapping_sub(1);
             }
-            prepstate(&mut ms, state, s, lexical_state, p, lp);
+            match_state.prepstate(state, s, lexical_state, p, lp);
             loop {
                 let res: *const i8;
-                reprepstate(&mut ms);
-                res = match_0(&mut ms, s1, p);
+                match_state.reprepstate();
+                res = match_state.match_0(s1, p);
                 if !res.is_null() {
                     if find != 0 {
                         (*state).push_integer((s1.offset_from(s) as i64 + 1) as i64);
                         (*state).push_integer(res.offset_from(s) as i64);
-                        return push_captures(&mut ms, std::ptr::null(), std::ptr::null()) + 2;
+                        return match_state.push_captures(std::ptr::null(), std::ptr::null()) + 2;
                     } else {
-                        return push_captures(&mut ms, s1, res);
+                        return match_state.push_captures(s1, res);
                     }
                 }
                 let fresh163 = s1;
                 s1 = s1.offset(1);
-                if !(fresh163 < ms.src_end && anchor == 0) {
+                if !(fresh163 < match_state.src_end && anchor == 0) {
                     break;
                 }
             }
@@ -22476,16 +21874,16 @@ pub unsafe extern "C" fn gmatch_aux(state: *mut State) -> i32 {
         let gm: *mut GMatchState =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
         let mut src: *const i8;
-        (*gm).ms.state = state;
+        (*gm).match_state.state = state;
         src = (*gm).src;
-        while src <= (*gm).ms.src_end {
+        while src <= (*gm).match_state.src_end {
             let e: *const i8;
-            reprepstate(&mut (*gm).ms);
-            e = match_0(&mut (*gm).ms, src, (*gm).p);
+            (*gm).match_state.reprepstate();
+            e = (*gm).match_state.match_0(src, (*gm).p);
             if !e.is_null() && e != (*gm).lastmatch {
                 (*gm).lastmatch = e;
                 (*gm).src = (*gm).lastmatch;
-                return push_captures(&mut (*gm).ms, src, e);
+                return (*gm).match_state.push_captures(src, e);
             }
             src = src.offset(1);
         }
@@ -22507,7 +21905,7 @@ pub unsafe extern "C" fn gmatch(state: *mut State) -> i32 {
         if init > lexical_state {
             init = lexical_state.wrapping_add(1 as u64);
         }
-        prepstate(&mut (*gm).ms, state, s, lexical_state, p, lp);
+        (*gm).match_state.prepstate(state, s, lexical_state, p, lp);
         (*gm).src = s.offset(init as isize);
         (*gm).p = p;
         (*gm).lastmatch = std::ptr::null();
@@ -22517,92 +21915,6 @@ pub unsafe extern "C" fn gmatch(state: *mut State) -> i32 {
             3,
         );
         return 1;
-    }
-}
-pub unsafe extern "C" fn add_s(ms: *mut MatchState, b: *mut Buffer, s: *const i8, e: *const i8) {
-    unsafe {
-        let mut l: u64 = 0;
-        let state: *mut State = (*ms).state;
-        let mut news: *const i8 = lua_tolstring(state, 3, &mut l);
-        let mut p: *const i8;
-        loop {
-            p = memchr(news as *const libc::c_void, '%' as i32, l) as *mut i8;
-            if p.is_null() {
-                break;
-            }
-            (*b).lual_addlstring(news, p.offset_from(news) as u64);
-            p = p.offset(1);
-            if *p as i32 == '%' as i32 {
-                ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
-                let fresh164 = (*b).length;
-                (*b).length = ((*b).length).wrapping_add(1);
-                *((*b).pointer).offset(fresh164 as isize) = *p;
-            } else if *p as i32 == '0' as i32 {
-                (*b).lual_addlstring(s, e.offset_from(s) as u64);
-            } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32
-                & _ISDIGIT as i32
-                != 0
-            {
-                let mut cap: *const i8 = std::ptr::null();
-                let resl: i64 = get_onecapture(ms, *p as i32 - '1' as i32, s, e, &mut cap) as i64;
-                if resl == -2 as i64 {
-                    (*b).lual_addvalue();
-                } else {
-                    (*b).lual_addlstring(cap, resl as u64);
-                }
-            } else {
-                lual_error(
-                    state,
-                    b"invalid use of '%c' in replacement string\0" as *const u8 as *const i8,
-                    '%' as i32,
-                );
-            }
-            l = (l as u64).wrapping_sub(p.offset(1 as isize).offset_from(news) as u64) as u64
-                as u64;
-            news = p.offset(1 as isize);
-        }
-        (*b).lual_addlstring(news, l);
-    }
-}
-pub unsafe extern "C" fn add_value(
-    ms: *mut MatchState,
-    b: *mut Buffer,
-    s: *const i8,
-    e: *const i8,
-    tr: i32,
-) -> i32 {
-    unsafe {
-        let state: *mut State = (*ms).state;
-        match tr {
-            6 => {
-                let n: i32;
-                lua_pushvalue(state, 3);
-                n = push_captures(ms, s, e);
-                lua_callk(state, n, 1, 0, None);
-            }
-            5 => {
-                push_onecapture(ms, 0, s, e);
-                lua_gettable(state, 3);
-            }
-            _ => {
-                add_s(ms, b, s, e);
-                return 1;
-            }
-        }
-        if lua_toboolean(state, -1) == 0 {
-            lua_settop(state, -1 - 1);
-            (*b).lual_addlstring(s, e.offset_from(s) as u64);
-            return 0;
-        } else if ((!lua_isstring(state, -1)) as i32 != 0) as i64 != 0 {
-            return lual_error(
-                state,
-                b"invalid replacement value (a %s)\0" as *const u8 as *const i8,
-                lua_typename(state, lua_type(state, -1)),
-            );
-        } else {
-            (*b).lual_addvalue();
-            return 1;
-        };
     }
 }
 pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
@@ -22617,7 +21929,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
         let anchor: i32 = (*p as i32 == '^' as i32) as i32;
         let mut n: i64 = 0;
         let mut changed: i32 = 0;
-        let mut ms: MatchState = MatchState {
+        let mut match_state: MatchState = MatchState {
             src_init: std::ptr::null(),
             src_end: std::ptr::null(),
             p_end: std::ptr::null(),
@@ -22641,18 +21953,18 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
             p = p.offset(1);
             lp = lp.wrapping_sub(1);
         }
-        prepstate(&mut ms, state, src, srcl, p, lp);
+        match_state.prepstate(state, src, srcl, p, lp);
         while n < max_s {
             let e: *const i8;
-            reprepstate(&mut ms);
-            e = match_0(&mut ms, src, p);
+            match_state.reprepstate();
+            e = match_state.match_0(src, p);
             if !e.is_null() && e != lastmatch {
                 n += 1;
-                changed = add_value(&mut ms, &mut b, src, e, tr.unwrap() as i32) | changed;
+                changed = match_state.add_value(&mut b, src, e, tr.unwrap()) | changed;
                 lastmatch = e;
                 src = lastmatch;
             } else {
-                if !(src < ms.src_end) {
+                if !(src < match_state.src_end) {
                     break;
                 }
                 (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
@@ -22669,7 +21981,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
         if changed == 0 {
             lua_pushvalue(state, 1);
         } else {
-            b.lual_addlstring(src, (ms.src_end).offset_from(src) as u64);
+            b.lual_addlstring(src, (match_state.src_end).offset_from(src) as u64);
             b.lual_pushresult();
         }
         (*state).push_integer(n);
