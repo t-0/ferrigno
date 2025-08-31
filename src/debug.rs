@@ -6,6 +6,7 @@ use crate::onelua::*;
 use crate::c::*;
 use crate::state::*;
 use crate::functions::*;
+use crate::utility::*;
 use crate::lclosure::*;
 use crate::closure::*;
 use crate::prototype::*;

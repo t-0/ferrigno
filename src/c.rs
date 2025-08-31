@@ -8,7 +8,7 @@ unsafe extern "C" {
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
     pub unsafe fn sigemptyset(__set: *mut SIgnalSet) -> i32;
-    pub unsafe fn sigaction(__sig: i32, __act: *const sigaction, __oact: *mut sigaction) -> i32;
+    pub unsafe fn sigaction(__sig: i32, __act: *const SignalAction, __oact: *mut SignalAction) -> i32;
     pub static mut stdin: *mut FILE;
     pub static mut stdout: *mut FILE;
     pub static mut stderr: *mut FILE;
@@ -36,7 +36,6 @@ unsafe extern "C" {
     pub fn popen(__command: *const i8, __modes: *const i8) -> *mut FILE;
     pub fn flockfile(__stream: *mut FILE);
     pub fn funlockfile(__stream: *mut FILE);
-    pub fn strtod(_: *const i8, _: *mut *mut i8) -> f64;
     pub fn realloc(_: *mut libc::c_void, _: u64) -> *mut libc::c_void;
     pub fn free(_: *mut libc::c_void);
     pub fn abort() -> !;
@@ -184,7 +183,7 @@ pub struct SigInfoAA {
 pub type SignalHandler = Option<unsafe extern "C" fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct sigaction {
+pub struct SignalAction {
     pub __sigaction_handler: SigActionA,
     pub sa_mask: SIgnalSet,
     pub sa_flags: i32,

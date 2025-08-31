@@ -4,6 +4,7 @@ use crate::debug::*;
 use crate::lx::*;
 use crate::lg::*;
 use crate::loadstate::*;
+use crate::bufffs::*;
 use crate::c::*;
 use crate::calls::*;
 use crate::dumpstate::*;
@@ -17,6 +18,8 @@ use crate::prototype::*;
 use crate::cclosure::*;
 use crate::zio::*;
 use crate::buffer::*;
+use crate::character::*;
+use crate::utility::*;
 use crate::sparser::*;
 use crate::closep::*;
 use crate::new::*;
@@ -4039,5 +4042,119 @@ pub unsafe extern "C" fn luao_arith(
         if luao_rawarith(state, op, p1, p2, &mut (*res).value) == 0 {
             luat_trybintm(state, p1, p2, res, (op - 0 + TM_ADD as i32) as u32);
         }
+    }
+}
+pub unsafe extern "C" fn luao_pushvfstring(
+    state: *mut State,
+    mut fmt: *const i8,
+    mut argp: ::core::ffi::VaList,
+) -> *const i8 {
+    unsafe {
+        let mut buff_fs = BuffFS::new(state);
+        let mut e: *const i8;
+        loop {
+            e = strchr(fmt, '%' as i32);
+            if e.is_null() {
+                break;
+            }
+            buff_fs.add_string(fmt, e.offset_from(fmt) as u64);
+            match *e.offset(1 as isize) as i32 {
+                115 => {
+                    let mut s: *const i8 = argp.arg::<*mut i8>();
+                    if s.is_null() {
+                        s = b"(null)\0" as *const u8 as *const i8;
+                    }
+                    buff_fs.add_string(s, strlen(s));
+                }
+                99 => {
+                    let mut c: i8 = argp.arg::<i32>() as u8 as i8;
+                    buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as u64);
+                }
+                100 => {
+                    let mut num: TValue = TValue {
+                        value: Value {
+                            object: std::ptr::null_mut(),
+                        },
+                        tag: 0,
+                    };
+                    let io: *mut TValue = &mut num;
+                    (*io).value.i = argp.arg::<i32>() as i64;
+                    (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    buff_fs.add_number(&mut num);
+                }
+                73 => {
+                    let mut num_0: TValue = TValue {
+                        value: Value {
+                            object: std::ptr::null_mut(),
+                        },
+                        tag: 0,
+                    };
+                    let io_0: *mut TValue = &mut num_0;
+                    (*io_0).value.i = argp.arg::<i64>();
+                    (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    buff_fs.add_number(&mut num_0);
+                }
+                102 => {
+                    let mut num_1: TValue = TValue {
+                        value: Value {
+                            object: std::ptr::null_mut(),
+                        },
+                        tag: 0,
+                    };
+                    let io_1: *mut TValue = &mut num_1;
+                    (*io_1).value.n = argp.arg::<f64>();
+                    (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                    buff_fs.add_number(&mut num_1);
+                }
+                112 => {
+                    let size = (3 as u64)
+                        .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
+                        .wrapping_add(8 as u64);
+                    let bf: *mut i8 = buff_fs.get_raw(size);
+                    let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
+                    let length =
+                        snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p) as u64;
+                    buff_fs.add_length(length);
+                }
+                85 => {
+                    let mut bf_0: [i8; 8] = [0; 8];
+                    let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as u64);
+                    buff_fs.add_string(
+                        bf_0.as_mut_ptr()
+                            .offset(8 as isize)
+                            .offset(-(length_0 as isize)),
+                        length_0 as u64,
+                    );
+                }
+                37 => {
+                    buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as u64);
+                }
+                _ => {
+                    luag_runerror(
+                        state,
+                        b"invalid option '%%%c' to 'lua_pushfstring'\0" as *const u8 as *const i8,
+                        *e.offset(1 as isize) as i32,
+                    );
+                }
+            }
+            fmt = e.offset(2 as isize);
+        }
+        buff_fs.add_string(fmt, strlen(fmt));
+        buff_fs.clear();
+        return (*((*(*state).top.p.offset(-(1 as isize))).value.value.object as *mut TString))
+            .get_contents();
+    }
+}
+pub unsafe extern "C" fn luao_pushfstring(
+    state: *mut State,
+    fmt: *const i8,
+    args: ...
+) -> *const i8 {
+    unsafe {
+        let message: *const i8;
+        let mut argp: ::core::ffi::VaListImpl;
+        argp = args.clone();
+        message = luao_pushvfstring(state, fmt, argp.as_va_list());
+        return message;
     }
 }

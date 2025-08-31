@@ -338,3 +338,26 @@ pub const CHARACTER_TYPE: [u8; 257] = [
     0,
     0,
 ];
+pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: u64) -> i32 {
+    unsafe {
+        let mut n: i32 = 1;
+        if x < 0x80 as u64 {
+            *buffer.offset((8 - 1) as isize) = x as i8;
+        } else {
+            let mut mfb: u32 = 0x3f as u32;
+            loop {
+                let fresh9 = n;
+                n = n + 1;
+                *buffer.offset((8 - fresh9) as isize) =
+                    (0x80 as u64 | x & 0x3f as u64) as i8;
+                x >>= 6;
+                mfb >>= 1;
+                if !(x > mfb as u64) {
+                    break;
+                }
+            }
+            *buffer.offset((8 - n) as isize) = ((!mfb << 1) as u64 | x) as i8;
+        }
+        return n;
+    }
+}
