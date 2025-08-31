@@ -2627,7 +2627,7 @@ pub unsafe extern "C" fn read_string(
                             utf8esc(lexical_state);
                             continue;
                         }
-                        10 | 13 => {
+                        CHARACTER_CR | CHARACTER_LF => {
                             inclinenumber(lexical_state);
                             c = '\n' as i32;
                             current_block = 7010296663004816197;
@@ -2639,6 +2639,7 @@ pub unsafe extern "C" fn read_string(
                         -1 => {
                             continue;
                         }
+                        //TODO
                         122 => {
                             (*(*lexical_state).buffer).length =
                                 ((*(*lexical_state).buffer).length as u64).wrapping_sub(1 as u64)
