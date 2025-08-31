@@ -1984,7 +1984,7 @@ pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
 pub unsafe extern "C" fn luax_token2str(lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         if token < 127 as i32 * 2 + 1 + 1 {
-            if CHARACTER_TYPE[(token + 1) as usize] as i32 & 1 << 2 != 0 {
+            if is_printable(token + 1) {
                 return luao_pushfstring(
                     (*lexical_state).state,
                     b"'%c'\0" as *const u8 as *const i8,
@@ -2224,7 +2224,7 @@ pub unsafe extern "C" fn read_numeral(
             if check_next2(lexical_state, expo) != 0 {
                 check_next2(lexical_state, b"-+\0" as *const u8 as *const i8);
             } else {
-                if !(CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 4 != 0
+                if !(is_digit_hexadecimal((*lexical_state).current + 1)
                     || (*lexical_state).current == '.' as i32)
                 {
                     break;
@@ -2241,7 +2241,7 @@ pub unsafe extern "C" fn read_numeral(
                 };
             }
         }
-        if CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 0 != 0 {
+        if is_identifier((*lexical_state).current + 1) {
             save(lexical_state, (*lexical_state).current);
             let fresh63 = (*(*lexical_state).zio).n;
             (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
@@ -2398,9 +2398,9 @@ pub unsafe extern "C" fn read_long_string(
         }
     }
 }
-pub unsafe extern "C" fn esccheck(lexical_state: *mut LexicalState, c: i32, message: *const i8) {
+pub unsafe extern "C" fn esccheck(lexical_state: *mut LexicalState, condition: bool, message: *const i8) {
     unsafe {
-        if c == 0 {
+        if !condition {
             if (*lexical_state).current != -1 {
                 save(lexical_state, (*lexical_state).current);
                 let fresh77 = (*(*lexical_state).zio).n;
@@ -2431,7 +2431,7 @@ pub unsafe extern "C" fn gethexa(lexical_state: *mut LexicalState) -> i32 {
         };
         esccheck(
             lexical_state,
-            CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 4,
+            is_digit_hexadecimal((*lexical_state).current + 1),
             b"hexadecimal digit expected\0" as *const u8 as *const i8,
         );
         return get_hexadecimal_digit_value((*lexical_state).current);
@@ -2461,7 +2461,7 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
         };
         esccheck(
             lexical_state,
-            ((*lexical_state).current == '{' as i32) as i32,
+            (*lexical_state).current == CHARACTER_BRACE_LEFT,
             b"missing '{'\0" as *const u8 as *const i8,
         );
         let mut r: u64 = gethexa(lexical_state) as u64;
@@ -2476,20 +2476,20 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
             } else {
                 luaz_fill((*lexical_state).zio)
             };
-            if !(CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 4 != 0) {
+            if !is_digit_hexadecimal((*lexical_state).current + 1) {
                 break;
             }
             i += 1;
             esccheck(
                 lexical_state,
-                (r <= (0x7fffffff as u32 >> 4) as u64) as i32,
+                r <= (0x7fffffff as u64 >> 4),
                 b"UTF-8 value too large\0" as *const u8 as *const i8,
             );
             r = (r << 4).wrapping_add(get_hexadecimal_digit_value((*lexical_state).current) as u64);
         }
         esccheck(
             lexical_state,
-            ((*lexical_state).current == '}' as i32) as i32,
+            (*lexical_state).current == CHARACTER_BRACE_RIGHT,
             b"missing '}'\0" as *const u8 as *const i8,
         );
         let fresh85 = (*(*lexical_state).zio).n;
@@ -2521,8 +2521,7 @@ pub unsafe extern "C" fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
         let mut i: i32;
         let mut r: i32 = 0;
         i = 0;
-        while i < 3 && CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 1 != 0
-        {
+        while i < 3 && is_digit_decimal((*lexical_state).current + 1) {
             r = 10 as i32 * r + (*lexical_state).current - '0' as i32;
             save(lexical_state, (*lexical_state).current);
             let fresh87 = (*(*lexical_state).zio).n;
@@ -2538,7 +2537,7 @@ pub unsafe extern "C" fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
         }
         esccheck(
             lexical_state,
-            (r <= 127 as i32 * 2 + 1) as i32,
+            r <= 127 * 2 + 1,
             b"decimal escape too large\0" as *const u8 as *const i8,
         );
         (*(*lexical_state).buffer).length =
@@ -2653,10 +2652,7 @@ pub unsafe extern "C" fn read_string(
                             } else {
                                 luaz_fill((*lexical_state).zio)
                             };
-                            while CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32
-                                & 1 << 3
-                                != 0
-                            {
+                            while is_whitespace((*lexical_state).current + 1) {
                                 if (*lexical_state).current == '\n' as i32
                                     || (*lexical_state).current == '\r' as i32
                                 {
@@ -2680,8 +2676,7 @@ pub unsafe extern "C" fn read_string(
                         _ => {
                             esccheck(
                                 lexical_state,
-                                CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32
-                                    & 1 << 1,
+                                is_digit_decimal((*lexical_state).current + 1),
                                 b"invalid escape sequence\0" as *const u8 as *const i8,
                             );
                             c = readdecesc(lexical_state);
@@ -2953,10 +2948,7 @@ pub unsafe extern "C" fn llex(
                         } else {
                             return TK_CONCAT as i32;
                         }
-                    } else if CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32
-                        & 1 << 1
-                        == 0
-                    {
+                    } else if !is_digit_decimal((*lexical_state).current + 1) {
                         return CHARACTER_PERIOD as i32;
                     } else {
                         return read_numeral(lexical_state, semantic_info);
@@ -2967,8 +2959,7 @@ pub unsafe extern "C" fn llex(
                 }
                 -1 => return TK_EOS as i32,
                 _ => {
-                    if CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 0 != 0
-                    {
+                    if is_identifier((*lexical_state).current + 1) {
                         loop {
                             save(lexical_state, (*lexical_state).current);
                             let fresh125 = (*(*lexical_state).zio).n;
@@ -2980,9 +2971,7 @@ pub unsafe extern "C" fn llex(
                             } else {
                                 luaz_fill((*lexical_state).zio)
                             };
-                            if !(CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32
-                                & (1 << 0 | 1 << 1)
-                                != 0)
+                            if !is_alphanumeric((*lexical_state).current + 1)
                             {
                                 break;
                             }

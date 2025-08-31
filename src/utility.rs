@@ -45,7 +45,7 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
         if endptr == s as *mut i8 {
             return std::ptr::null();
         }
-        while CHARACTER_TYPE[(*endptr as u8 as i32 + 1) as usize] as i32 & 1 << 3 != 0 {
+        while is_whitespace(*endptr as i32 + 1) {
             endptr = endptr.offset(1);
         }
         return if *endptr as i32 == '\0' as i32 {
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
     unsafe {
         let mut a: u64 = 0;
         let mut empty: i32 = 1;
-        while CHARACTER_TYPE[(*s as u8 as i32 + 1) as usize] as i32 & 1 << 3 != 0 {
+        while is_whitespace(*s as i32 + 1) {
             s = s.offset(1);
         }
         let is_negative_: bool = is_negative(&mut s);
@@ -96,7 +96,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
                 || *s.offset(1 as isize) as i32 == 'X' as i32)
         {
             s = s.offset(2 as isize);
-            while CHARACTER_TYPE[(*s as u8 as i32 + 1) as usize] as i32 & 1 << 4 != 0 {
+            while is_digit_hexadecimal(*s as i32 + 1) {
                 a = a
                     .wrapping_mul(16 as u64)
                     .wrapping_add(get_hexadecimal_digit_value(*s as i32) as u64);
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
                 s = s.offset(1);
             }
         } else {
-            while CHARACTER_TYPE[(*s as u8 as i32 + 1) as usize] as i32 & 1 << 1 != 0 {
+            while is_digit_decimal(*s as i32 + 1) {
                 let d: i32 = *s as i32 - '0' as i32;
                 if a >= (0x7FFFFFFFFFFFFFFF as i64 / 10 as i64) as u64
                     && (a > (0x7FFFFFFFFFFFFFFF as i64 / 10 as i64) as u64
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
                 s = s.offset(1);
             }
         }
-        while CHARACTER_TYPE[(*s as u8 as i32 + 1) as usize] as i32 & 1 << 3 != 0 {
+        while is_whitespace(*s as i32 + 1) {
             s = s.offset(1);
         }
         if empty != 0 || *s as i32 != '\0' as i32 {
