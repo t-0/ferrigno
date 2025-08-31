@@ -1,6 +1,7 @@
 use crate::functions::*;
 use crate::stkidrel::*;
 use crate::prototype::*;
+use crate::tvalue::*;
 use crate::lclosure::*;
 use crate::onelua::*;
 use crate::state::*;
@@ -139,6 +140,77 @@ pub unsafe extern "C" fn findvararg(
                     .offset(-((n + 1) as isize));
                 return b"(vararg)\0" as *const u8 as *const i8;
             }
+        }
+        return std::ptr::null();
+    }
+}
+pub unsafe extern "C" fn getfuncname(
+    state: *mut State,
+    call_info: *mut CallInfo,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 5 == 0 {
+            return funcnamefromcall(state, (*call_info).previous, name);
+        } else {
+            return std::ptr::null();
+        };
+    }
+}
+pub unsafe extern "C" fn funcnamefromcall(
+    state: *mut State,
+    call_info: *mut CallInfo,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        if (*call_info).call_status as i32 & 1 << 3 != 0 {
+            *name = b"?\0" as *const u8 as *const i8;
+            return b"hook\0" as *const u8 as *const i8;
+        } else if (*call_info).call_status as i32 & 1 << 7 != 0 {
+            *name = b"__gc\0" as *const u8 as *const i8;
+            return b"metamethod\0" as *const u8 as *const i8;
+        } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
+            return funcnamefromcode(
+                state,
+                (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                    .p,
+                currentpc(call_info),
+                name,
+            );
+        } else {
+            return std::ptr::null();
+        };
+    }
+}
+pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, o: *const TValue) -> i32 {
+    unsafe {
+        let base: StkId = ((*call_info).function.p).offset(1 as isize);
+        let mut pos: i32 = 0;
+        while base.offset(pos as isize) < (*call_info).top.p {
+            if o == &mut (*base.offset(pos as isize)).value as *mut TValue as *const TValue {
+                return pos;
+            }
+            pos += 1;
+        }
+        return -1;
+    }
+}
+pub unsafe extern "C" fn getupvalname(
+    call_info: *mut CallInfo,
+    o: *const TValue,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        let c: *mut LClosure =
+            &mut (*((*(*call_info).function.p).value.value.object as *mut LClosure));
+        let mut i: i32;
+        i = 0;
+        while i < (*c).count_upvalues as i32 {
+            if (**((*c).upvalues).as_mut_ptr().offset(i as isize)).v.p == o as *mut TValue {
+                *name = upvalname((*c).p, i);
+                return STRING_UPVALUE.as_ptr();
+            }
+            i += 1;
         }
         return std::ptr::null();
     }

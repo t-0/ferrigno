@@ -86,3 +86,10 @@ pub const IABC: u32 = 0;
 pub const IABX: u32 = 1;
 pub const ISJ: u32 = 4;
 pub const IASBX: u32 = 2;
+pub unsafe extern "C" fn filterpc(program_counter: i32, jmptarget: i32) -> i32 {
+    if program_counter < jmptarget {
+        return -1;
+    } else {
+        return program_counter;
+    };
+}

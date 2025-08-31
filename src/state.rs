@@ -3447,3 +3447,597 @@ pub unsafe extern "C" fn lua_getstack(state: *mut State, mut level: i32, ar: *mu
         return status;
     }
 }
+pub unsafe extern "C" fn formatvarinfo(
+    state: *mut State,
+    kind: *const i8,
+    name: *const i8,
+) -> *const i8 {
+    unsafe {
+        if kind.is_null() {
+            return b"\0" as *const u8 as *const i8;
+        } else {
+            return luao_pushfstring(state, b" (%s '%s')\0" as *const u8 as *const i8, kind, name);
+        };
+    }
+}
+pub unsafe extern "C" fn varinfo(state: *mut State, o: *const TValue) -> *const i8 {
+    unsafe {
+        let call_info: *mut CallInfo = (*state).call_info;
+        let mut name: *const i8 = std::ptr::null();
+        let mut kind: *const i8 = std::ptr::null();
+        if (*call_info).call_status as i32 & 1 << 1 == 0 {
+            kind = getupvalname(call_info, o, &mut name);
+            if kind.is_null() {
+                let reg: i32 = in_stack(call_info, o);
+                if reg >= 0 {
+                    kind = getobjname(
+                        (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                            .p,
+                        currentpc(call_info),
+                        reg,
+                        &mut name,
+                    );
+                }
+            }
+        }
+        return formatvarinfo(state, kind, name);
+    }
+}
+pub unsafe extern "C" fn typeerror(
+    state: *mut State,
+    o: *const TValue,
+    op: *const i8,
+    extra: *const i8,
+) -> ! {
+    unsafe {
+        let t: *const i8 = luat_objtypename(state, o);
+        luag_runerror(
+            state,
+            b"attempt to %s a %s value%s\0" as *const u8 as *const i8,
+            op,
+            t,
+            extra,
+        );
+    }
+}
+pub unsafe extern "C" fn luag_typeerror(state: *mut State, o: *const TValue, op: *const i8) -> ! {
+    unsafe {
+        typeerror(state, o, op, varinfo(state, o));
+    }
+}
+pub unsafe extern "C" fn luag_callerror(state: *mut State, o: *const TValue) -> ! {
+    unsafe {
+        let call_info: *mut CallInfo = (*state).call_info;
+        let mut name: *const i8 = std::ptr::null();
+        let kind: *const i8 = funcnamefromcall(state, call_info, &mut name);
+        let extra: *const i8 = if !kind.is_null() {
+            formatvarinfo(state, kind, name)
+        } else {
+            varinfo(state, o)
+        };
+        typeerror(state, o, b"call\0" as *const u8 as *const i8, extra);
+    }
+}
+pub unsafe extern "C" fn luag_forerror(state: *mut State, o: *const TValue, what: *const i8) -> ! {
+    unsafe {
+        luag_runerror(
+            state,
+            b"bad 'for' %s (number expected, got %s)\0" as *const u8 as *const i8,
+            what,
+            luat_objtypename(state, o),
+        );
+    }
+}
+pub unsafe extern "C" fn luag_concaterror(
+    state: *mut State,
+    mut p1: *const TValue,
+    p2: *const TValue,
+) -> ! {
+    unsafe {
+        if get_tag_type((*p1).get_tag()) == TAG_TYPE_STRING
+            || get_tag_type((*p1).get_tag()) == TAG_TYPE_NUMERIC
+        {
+            p1 = p2;
+        }
+        luag_typeerror(state, p1, b"concatenate\0" as *const u8 as *const i8);
+    }
+}
+pub unsafe extern "C" fn luag_opinterror(
+    state: *mut State,
+    p1: *const TValue,
+    mut p2: *const TValue,
+    message: *const i8,
+) -> ! {
+    unsafe {
+        if get_tag_type((*p1).get_tag()) != 3 {
+            p2 = p1;
+        }
+        luag_typeerror(state, p2, message);
+    }
+}
+pub unsafe extern "C" fn luag_tointerror(
+    state: *mut State,
+    p1: *const TValue,
+    mut p2: *const TValue,
+) -> ! {
+    unsafe {
+        let mut temp: i64 = 0;
+        if luav_tointegerns(p1, &mut temp, F2I::Equal) == 0 {
+            p2 = p1;
+        }
+        luag_runerror(
+            state,
+            b"number%s has no integer representation\0" as *const u8 as *const i8,
+            varinfo(state, p2),
+        );
+    }
+}
+pub unsafe extern "C" fn luag_ordererror(
+    state: *mut State,
+    p1: *const TValue,
+    p2: *const TValue,
+) -> ! {
+    unsafe {
+        let t1: *const i8 = luat_objtypename(state, p1);
+        let t2: *const i8 = luat_objtypename(state, p2);
+        if strcmp(t1, t2) == 0 {
+            luag_runerror(
+                state,
+                b"attempt to compare two %s values\0" as *const u8 as *const i8,
+                t1,
+            );
+        } else {
+            luag_runerror(
+                state,
+                b"attempt to compare %s with %s\0" as *const u8 as *const i8,
+                t1,
+                t2,
+            );
+        };
+    }
+}
+pub unsafe extern "C" fn luag_addinfo(
+    state: *mut State,
+    message: *const i8,
+    src: *mut TString,
+    line: i32,
+) -> *const i8 {
+    unsafe {
+        let mut buffer: [i8; 60] = [0; 60];
+        if !src.is_null() {
+            luao_chunkid(
+                buffer.as_mut_ptr(),
+                (*src).get_contents(),
+                (*src).get_length(),
+            );
+        } else {
+            buffer[0] = '?' as i8;
+            buffer[1] = '\0' as i8;
+        }
+        return luao_pushfstring(
+            state,
+            b"%s:%d: %s\0" as *const u8 as *const i8,
+            buffer.as_mut_ptr(),
+            line,
+            message,
+        );
+    }
+}
+pub unsafe extern "C" fn luag_errormsg(state: *mut State) -> ! {
+    unsafe {
+        if (*state).error_function != 0 {
+            let error_function: StkId =
+                ((*state).stack.p as *mut i8).offset((*state).error_function as isize) as StkId;
+            let io1: *mut TValue = &mut (*(*state).top.p).value;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            let io1_0: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            let io2_0: *const TValue = &mut (*error_function).value;
+            (*io1_0).value = (*io2_0).value;
+            (*io1_0).set_tag((*io2_0).get_tag());
+            (*state).top.p = (*state).top.p.offset(1);
+            luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 1);
+        }
+        luad_throw(state, 2);
+    }
+}
+pub unsafe extern "C" fn luag_runerror(state: *mut State, fmt: *const i8, args: ...) -> ! {
+    unsafe {
+        let call_info: *mut CallInfo = (*state).call_info;
+        let message: *const i8;
+        let mut argp: ::core::ffi::VaListImpl;
+        if (*(*state).global).gc_debt > 0 {
+            luac_step(state);
+        }
+        argp = args.clone();
+        message = luao_pushvfstring(state, fmt, argp.as_va_list());
+        if (*call_info).call_status as i32 & 1 << 1 == 0 {
+            luag_addinfo(
+                state,
+                message,
+                (*(*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                    .p)
+                    .source,
+                getcurrentline(call_info),
+            );
+            let io1: *mut TValue = &mut (*(*state).top.p.offset(-(2 as isize))).value;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            (*state).top.p = (*state).top.p.offset(-1);
+        }
+        luag_errormsg(state);
+    }
+}
+pub unsafe extern "C" fn luag_tracecall(state: *mut State) -> i32 {
+    unsafe {
+        let call_info: *mut CallInfo = (*state).call_info;
+        let p: *mut Prototype = (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+            .p;
+        ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
+        if (*call_info).u.l.saved_program_counter == (*p).code as *const u32 {
+            if (*p).is_variable_arguments {
+                return 0;
+            } else if (*call_info).call_status as i32 & 1 << 6 == 0 {
+                luad_hookcall(state, call_info);
+            }
+        }
+        return 1;
+    }
+}
+pub unsafe extern "C" fn luag_traceexec(state: *mut State, mut program_counter: *const u32) -> i32 {
+    unsafe {
+        let call_info: *mut CallInfo = (*state).call_info;
+        let mask: u8 = (*state).hook_mask as u8;
+        let p: *const Prototype = (*((*(*call_info).function.p).value.value.object
+            as *mut LClosure))
+            .p;
+        if mask as i32 & (1 << 2 | 1 << 3) == 0 {
+            ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 0);
+            return 0;
+        }
+        program_counter = program_counter.offset(1);
+        (*call_info).u.l.saved_program_counter = program_counter;
+        let counthook: i32 = (mask as i32 & 1 << 3 != 0 && {
+            (*state).hook_count -= 1;
+            (*state).hook_count == 0
+        }) as i32;
+        if counthook != 0 {
+            (*state).hook_count = (*state).base_hook_count;
+        } else if mask as i32 & 1 << 2 == 0 {
+            return 1;
+        }
+        if (*call_info).call_status as i32 & 1 << 6 != 0 {
+            (*call_info).call_status = ((*call_info).call_status as i32 & !(1 << 6)) as u16;
+            return 1;
+        }
+        if !(OPMODES[(*((*call_info).u.l.saved_program_counter).offset(-(1 as isize)) >> 0
+            & !(!(0u32) << 7) << 0) as usize] as i32
+            & 1 << 5
+            != 0
+            && (*((*call_info).u.l.saved_program_counter).offset(-(1 as isize)) >> 0 + 7 + 8 + 1
+                & !(!(0u32) << 8) << 0) as i32
+                == 0)
+        {
+            (*state).top.p = (*call_info).top.p;
+        }
+        if counthook != 0 {
+            luad_hook(state, 3, -1, 0, 0);
+        }
+        if mask as i32 & 1 << 2 != 0 {
+            let old_program_counter: i32 = if (*state).old_program_counter < (*p).size_code {
+                (*state).old_program_counter
+            } else {
+                0
+            };
+            let npci: i32 = program_counter.offset_from((*p).code) as i32 - 1;
+            if npci <= old_program_counter || changedline(p, old_program_counter, npci) != 0 {
+                let newline: i32 = luag_getfuncline(p, npci);
+                luad_hook(state, 2, newline, 0, 0);
+            }
+            (*state).old_program_counter = npci;
+        }
+        if (*state).status as i32 == 1 {
+            if counthook != 0 {
+                (*state).hook_count = 1;
+            }
+            (*call_info).call_status = ((*call_info).call_status as i32 | 1 << 6) as u16;
+            luad_throw(state, 1);
+        }
+        return 1;
+    }
+}
+pub unsafe extern "C" fn luam_growaux_(
+    state: *mut State,
+    block: *mut libc::c_void,
+    count_elements: i32,
+    total_size: *mut i32,
+    element_size: i32,
+    limit: i32,
+    what: *const i8,
+) -> *mut libc::c_void {
+    unsafe {
+        let mut size: i32 = *total_size;
+        if count_elements + 1 <= size {
+            return block;
+        }
+        if size >= limit / 2 {
+            if ((size >= limit) as i32 != 0) as i64 != 0 {
+                luag_runerror(
+                    state,
+                    b"too many %s (limit is %d)\0" as *const u8 as *const i8,
+                    what,
+                    limit,
+                );
+            }
+            size = limit;
+        } else {
+            size *= 2;
+            if size < 4 {
+                size = 4;
+            }
+        }
+        let new_block: *mut libc::c_void = luam_saferealloc_(
+            state,
+            block,
+            (*total_size as u64).wrapping_mul(element_size as u64),
+            (size as u64).wrapping_mul(element_size as u64),
+        );
+        *total_size = size;
+        return new_block;
+    }
+}
+pub unsafe extern "C" fn luam_shrinkvector_(
+    state: *mut State,
+    block: *mut libc::c_void,
+    size: *mut i32,
+    count_elements: i32,
+    element_size: i32,
+) -> *mut libc::c_void {
+    unsafe {
+        let old_size: u64 = (*size * element_size) as u64;
+        let new_size: u64 = (count_elements * element_size) as u64;
+        let new_block: *mut libc::c_void = luam_saferealloc_(state, block, old_size, new_size);
+        *size = count_elements;
+        return new_block;
+    }
+}
+pub unsafe extern "C" fn tryagain(
+    state: *mut State,
+    block: *mut libc::c_void,
+    old_size: u64,
+    new_size: u64,
+) -> *mut libc::c_void {
+    unsafe {
+        let g: *mut Global = (*state).global;
+        if get_tag_type((*g).nilvalue.get_tag()) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
+            luac_fullgc(state, true);
+            return raw_allocate(block, old_size, new_size);
+        } else {
+            return std::ptr::null_mut();
+        };
+    }
+}
+pub unsafe extern "C" fn luam_realloc_(
+    state: *mut State,
+    block: *mut libc::c_void,
+    old_size: u64,
+    new_size: u64,
+) -> *mut libc::c_void {
+    unsafe {
+        let g: *mut Global = (*state).global;
+        let mut new_block: *mut libc::c_void = raw_allocate(block, old_size, new_size);
+        if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i64 != 0 {
+            new_block = tryagain(state, block, old_size, new_size);
+            if new_block.is_null() {
+                return std::ptr::null_mut();
+            }
+        }
+        (*g).gc_debt = ((*g).gc_debt as u64)
+            .wrapping_add(new_size)
+            .wrapping_sub(old_size) as i64;
+        return new_block;
+    }
+}
+pub unsafe extern "C" fn luam_saferealloc_(
+    state: *mut State,
+    block: *mut libc::c_void,
+    old_size: u64,
+    new_size: u64,
+) -> *mut libc::c_void {
+    unsafe {
+        let new_block: *mut libc::c_void = luam_realloc_(state, block, old_size, new_size);
+        if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i64 != 0 {
+            luad_throw(state, 4);
+        }
+        return new_block;
+    }
+}
+pub unsafe extern "C" fn luam_malloc_(state: *mut State, size: u64) -> *mut libc::c_void {
+    unsafe {
+        if size == 0 {
+            return std::ptr::null_mut();
+        } else {
+            let g: *mut Global = (*state).global;
+            let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), 0, size);
+            if new_block.is_null() {
+                new_block = tryagain(state, std::ptr::null_mut(), 0, size);
+                if new_block.is_null() {
+                    luad_throw(state, 4);
+                }
+            }
+            (*g).gc_debt = ((*g).gc_debt as u64).wrapping_add(size) as i64;
+            return new_block;
+        };
+    }
+}
+pub unsafe extern "C" fn intarith(state: *mut State, op: i32, v1: i64, v2: i64) -> i64 {
+    unsafe {
+        match op {
+            0 => return (v1 as u64).wrapping_add(v2 as u64) as i64,
+            1 => return (v1 as u64).wrapping_sub(v2 as u64) as i64,
+            2 => return (v1 as u64).wrapping_mul(v2 as u64) as i64,
+            3 => return luav_mod(state, v1, v2),
+            6 => return luav_idiv(state, v1, v2),
+            7 => return (v1 as u64 & v2 as u64) as i64,
+            8 => return (v1 as u64 | v2 as u64) as i64,
+            9 => return (v1 as u64 ^ v2 as u64) as i64,
+            10 => return luav_shiftl(v1, v2),
+            11 => {
+                return luav_shiftl(v1, (0u64).wrapping_sub(v2 as u64) as i64);
+            }
+            12 => {
+                return (0u64).wrapping_sub(v1 as u64) as i64;
+            }
+            13 => {
+                return (!(0u64) ^ v1 as u64) as i64;
+            }
+            _ => return 0,
+        };
+    }
+}
+pub unsafe extern "C" fn numarith(state: *mut State, op: i32, v1: f64, v2: f64) -> f64 {
+    unsafe {
+        match op {
+            0 => return v1 + v2,
+            1 => return v1 - v2,
+            2 => return v1 * v2,
+            5 => return v1 / v2,
+            4 => {
+                return if v2 == 2.0 { v1 * v1 } else { v1.powf(v2) };
+            }
+            6 => return (v1 / v2).floor(),
+            12 => return -v1,
+            3 => return luav_modf(state, v1, v2),
+            _ => return 0.0,
+        };
+    }
+}
+pub unsafe extern "C" fn luao_rawarith(
+    state: *mut State,
+    op: i32,
+    p1: *const TValue,
+    p2: *const TValue,
+    res: *mut TValue,
+) -> i32 {
+    unsafe {
+        match op {
+            7 | 8 | 9 | 10 | 11 | 13 => {
+                let mut i1: i64 = 0;
+                let mut i2: i64 = 0;
+                if (if (((*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i64
+                    != 0
+                {
+                    i1 = (*p1).value.i;
+                    1
+                } else {
+                    luav_tointegerns(p1, &mut i1, F2I::Equal)
+                }) != 0
+                    && (if (((*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i32
+                        as i64
+                        != 0
+                    {
+                        i2 = (*p2).value.i;
+                        1
+                    } else {
+                        luav_tointegerns(p2, &mut i2, F2I::Equal)
+                    }) != 0
+                {
+                    (*res).value.i = intarith(state, op, i1, i2);
+                    (*res).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+            5 | 4 => {
+                let mut n1: f64 = 0.0;
+                let mut n2: f64 = 0.0;
+                if (if (*p1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+                    n1 = (*p1).value.n;
+                    1
+                } else {
+                    if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                        n1 = (*p1).value.i as f64;
+                        1
+                    } else {
+                        0
+                    }
+                }) != 0
+                    && (if (*p2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+                        n2 = (*p2).value.n;
+                        1
+                    } else {
+                        if (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                            n2 = (*p2).value.i as f64;
+                            1
+                        } else {
+                            0
+                        }
+                    }) != 0
+                {
+                    (*res).value.n = numarith(state, op, n1, n2);
+                    (*res).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+            _ => {
+                let mut n1_0: f64 = 0.0;
+                let mut n2_0: f64 = 0.0;
+                if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                    && (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+                {
+                    let io_1: *mut TValue = res;
+                    (*io_1).value.i = intarith(state, op, (*p1).value.i, (*p2).value.i);
+                    (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    return 1;
+                } else if (if (*p1).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+                    n1_0 = (*p1).value.n;
+                    1
+                } else {
+                    if (*p1).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                        n1_0 = (*p1).value.i as f64;
+                        1
+                    } else {
+                        0
+                    }
+                }) != 0
+                    && (if (*p2).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+                        n2_0 = (*p2).value.n;
+                        1
+                    } else {
+                        if (*p2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                            n2_0 = (*p2).value.i as f64;
+                            1
+                        } else {
+                            0
+                        }
+                    }) != 0
+                {
+                    let io_2: *mut TValue = res;
+                    (*io_2).value.n = numarith(state, op, n1_0, n2_0);
+                    (*io_2).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                    return 1;
+                } else {
+                    return 0;
+                }
+            }
+        };
+    }
+}
+pub unsafe extern "C" fn luao_arith(
+    state: *mut State,
+    op: i32,
+    p1: *const TValue,
+    p2: *const TValue,
+    res: StkId,
+) {
+    unsafe {
+        if luao_rawarith(state, op, p1, p2, &mut (*res).value) == 0 {
+            luat_trybintm(state, p1, p2, res, (op - 0 + TM_ADD as i32) as u32);
+        }
+    }
+}

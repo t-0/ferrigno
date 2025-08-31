@@ -6,6 +6,10 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
+use crate::tm::*;
+use crate::c::*;
+use crate::instruction::*;
+use crate::onelua::*;
 use crate::upvaldesc::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -164,5 +168,313 @@ pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         } else {
             return (*s).get_contents();
         };
+    }
+}
+pub unsafe extern "C" fn nextline(
+    p: *const Prototype,
+    currentline: i32,
+    program_counter: i32,
+) -> i32 {
+    unsafe {
+        if *((*p).line_info).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+            return currentline + *((*p).line_info).offset(program_counter as isize) as i32;
+        } else {
+            return luag_getfuncline(p, program_counter);
+        };
+    }
+}
+pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 {
+    unsafe {
+        let mut setreg: i32 = -1;
+        let mut jmptarget: i32 = 0;
+        if OPMODES
+            [(*((*p).code).offset(lastpc as isize) >> 0 & !(!(0) << 7) << 0) as usize]
+            as i32
+            & 1 << 7
+            != 0
+        {
+            lastpc -= 1;
+        }
+        let mut program_counter: i32 = 0;
+        while program_counter < lastpc {
+            let i: u32 = *((*p).code).offset(program_counter as isize);
+            let op: u32 = (i >> 0 & !(!(0) << 7) << 0) as u32;
+            let a: i32 = (i >> 0 + 7 & !(!(0) << 8) << 0) as i32;
+            let change: i32;
+            match op as u32 {
+                8 => {
+                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0) << 8) << 0) as i32;
+                    change = (a <= reg && reg <= a + b) as i32;
+                }
+                76 => {
+                    change = (reg >= a + 2) as i32;
+                }
+                68 | 69 => {
+                    change = (reg >= a) as i32;
+                }
+                56 => {
+                    let b_0: i32 = (i >> 0 + 7 & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                        - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
+                    let dest: i32 = program_counter + 1 + b_0;
+                    if dest <= lastpc && dest > jmptarget {
+                        jmptarget = dest;
+                    }
+                    change = 0;
+                }
+                _ => {
+                    change = (OPMODES[op as usize] as i32 & 1 << 3 != 0 && reg == a) as i32;
+                }
+            }
+            if change != 0 {
+                setreg = filterpc(program_counter, jmptarget);
+            }
+            program_counter += 1;
+        }
+        return setreg;
+    }
+}
+pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
+    unsafe {
+        let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
+        if get_tag_type((*kvalue).get_tag()) == TAG_TYPE_STRING {
+            *name = (*((*kvalue).value.object as *mut TString)).get_contents();
+            return b"constant\0" as *const u8 as *const i8;
+        } else {
+            *name = b"?\0" as *const u8 as *const i8;
+            return std::ptr::null();
+        };
+    }
+}
+pub unsafe extern "C" fn basicgetobjname(
+    p: *const Prototype,
+    ppc: *mut i32,
+    reg: i32,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        let mut program_counter: i32 = *ppc;
+        *name = luaf_getlocalname(p, reg + 1, program_counter);
+        if !(*name).is_null() {
+            return STRING_LOCAL.as_ptr();
+        }
+        program_counter = findsetreg(p, program_counter, reg);
+        *ppc = program_counter;
+        if program_counter != -1 {
+            let i: u32 = *((*p).code).offset(program_counter as isize);
+            let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
+            match op as u32 {
+                0 => {
+                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+                    if b < (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 {
+                        return basicgetobjname(p, ppc, b, name);
+                    }
+                }
+                9 => {
+                    *name = upvalname(p, (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32);
+                    return STRING_UPVALUE.as_ptr();
+                }
+                3 => {
+                    return kname(
+                        p,
+                        (i >> 0 + 7 + 8 & !(!(0u32) << 8 + 8 + 1) << 0) as i32,
+                        name,
+                    );
+                }
+                4 => {
+                    return kname(
+                        p,
+                        (*((*p).code).offset((program_counter + 1) as isize) >> 0 + 7
+                            & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32,
+                        name,
+                    );
+                }
+                _ => {}
+            }
+        }
+        return std::ptr::null();
+    }
+}
+pub unsafe extern "C" fn rname(
+    p: *const Prototype,
+    mut program_counter: i32,
+    c: i32,
+    name: *mut *const i8,
+) {
+    unsafe {
+        let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
+        if !(!what.is_null() && *what as i32 == 'c' as i32) {
+            *name = b"?\0" as *const u8 as *const i8;
+        }
+    }
+}
+pub unsafe extern "C" fn rkname(
+    p: *const Prototype,
+    program_counter: i32,
+    i: u32,
+    name: *mut *const i8,
+) {
+    unsafe {
+        let c: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+        if (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 != 0 {
+            kname(p, c, name);
+        } else {
+            rname(p, program_counter, c, name);
+        };
+    }
+}
+pub unsafe extern "C" fn is_environment(
+    p: *const Prototype,
+    mut program_counter: i32,
+    i: u32,
+    isup: i32,
+) -> *const i8 {
+    unsafe {
+        let t: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+        let mut name: *const i8 = std::ptr::null();
+        if isup != 0 {
+            name = upvalname(p, t);
+        } else {
+            let what: *const i8 = basicgetobjname(p, &mut program_counter, t, &mut name);
+            if what != STRING_LOCAL.as_ptr() && what != STRING_UPVALUE.as_ptr() {
+                name = std::ptr::null();
+            }
+        }
+        return if !name.is_null() && strcmp(name, b"_ENV\0" as *const u8 as *const i8) == 0 {
+            b"global\0" as *const u8 as *const i8
+        } else {
+            b"field\0" as *const u8 as *const i8
+        };
+    }
+}
+pub unsafe extern "C" fn getobjname(
+    p: *const Prototype,
+    mut lastpc: i32,
+    reg: i32,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        let kind: *const i8 = basicgetobjname(p, &mut lastpc, reg, name);
+        if !kind.is_null() {
+            return kind;
+        } else if lastpc != -1 {
+            let i: u32 = *((*p).code).offset(lastpc as isize);
+            let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
+            match op as u32 {
+                11 => {
+                    let k: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    kname(p, k, name);
+                    return is_environment(p, lastpc, i, 1);
+                }
+                12 => {
+                    let k_0: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    rname(p, lastpc, k_0, name);
+                    return is_environment(p, lastpc, i, 0);
+                }
+                13 => {
+                    *name = b"integer index\0" as *const u8 as *const i8;
+                    return b"field\0" as *const u8 as *const i8;
+                }
+                14 => {
+                    let k_1: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    kname(p, k_1, name);
+                    return is_environment(p, lastpc, i, 0);
+                }
+                20 => {
+                    rkname(p, lastpc, i, name);
+                    return b"method\0" as *const u8 as *const i8;
+                }
+                _ => {}
+            }
+        }
+        return std::ptr::null();
+    }
+}
+pub unsafe extern "C" fn funcnamefromcode(
+    state: *mut State,
+    p: *const Prototype,
+    program_counter: i32,
+    name: *mut *const i8,
+) -> *const i8 {
+    unsafe {
+        let tm: u32;
+        let i: u32 = *((*p).code).offset(program_counter as isize);
+        match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
+            68 | 69 => {
+                return getobjname(
+                    p,
+                    program_counter,
+                    (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32,
+                    name,
+                );
+            }
+            76 => {
+                *name = b"for iterator\0" as *const u8 as *const i8;
+                return b"for iterator\0" as *const u8 as *const i8;
+            }
+            20 | 11 | 12 | 13 | 14 => {
+                tm = TM_INDEX;
+            }
+            15 | 16 | 17 | 18 => {
+                tm = TM_NEWINDEX;
+            }
+            46 | 47 | 48 => {
+                tm = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as u32;
+            }
+            49 => {
+                tm = TM_UNM;
+            }
+            OP_BNOT => {
+                tm = TM_BNOT;
+            }
+            52 => {
+                tm = TM_LEN;
+            }
+            53 => {
+                tm = TM_CONCAT;
+            }
+            57 => {
+                tm = TM_EQ;
+            }
+            58 | 62 | 64 => {
+                tm = TM_LT;
+            }
+            59 | 63 | 65 => {
+                tm = TM_LE;
+            }
+            54 | 70 => {
+                tm = TM_CLOSE;
+            }
+            _ => return std::ptr::null(),
+        }
+        *name = ((*(*(*state).global).tmname[tm as usize]).get_contents2())
+            .offset(2 as isize);
+        return b"metamethod\0" as *const u8 as *const i8;
+    }
+}
+pub unsafe extern "C" fn changedline(
+    p: *const Prototype,
+    old_program_counter: i32,
+    newpc: i32,
+) -> i32 {
+    unsafe {
+        if ((*p).line_info).is_null() {
+            return 0;
+        }
+        if newpc - old_program_counter < 128 as i32 / 2 {
+            let mut delta: i32 = 0;
+            let mut program_counter: i32 = old_program_counter;
+            loop {
+                program_counter += 1;
+                let line_info: i32 = *((*p).line_info).offset(program_counter as isize) as i32;
+                if line_info == -(0x80 as i32) {
+                    break;
+                }
+                delta += line_info;
+                if program_counter == newpc {
+                    return (delta != 0) as i32;
+                }
+            }
+        }
+        return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
     }
 }
