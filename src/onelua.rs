@@ -13841,18 +13841,18 @@ pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i
         }
     }
 }
-pub unsafe extern "C" fn ltintfloat(i: i64, f: f64) -> i32 {
+pub unsafe extern "C" fn ltintfloat(i: i64, f: f64) -> bool {
     unsafe {
         if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
             <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
         {
-            return ((i as f64) < f) as i32;
+            return (i as f64) < f;
         } else {
             let mut fi: i64 = 0;
             if luav_flttointeger(f, &mut fi, F2I::Ceiling) != 0 {
-                return (i < fi) as i32;
+                return i < fi;
             } else {
-                return (f > 0.0) as i32;
+                return f > 0.0;
             }
         };
     }
@@ -13873,18 +13873,18 @@ pub unsafe extern "C" fn leintfloat(i: i64, f: f64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn ltfloatint(f: f64, i: i64) -> i32 {
+pub unsafe extern "C" fn ltfloatint(f: f64, i: i64) -> bool {
     unsafe {
         if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
             <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
         {
-            return (f < i as f64) as i32;
+            return f < i as f64;
         } else {
             let mut fi: i64 = 0;
             if luav_flttointeger(f, &mut fi, F2I::Floor) != 0 {
-                return (fi < i) as i32;
+                return fi < i;
             } else {
-                return (f < 0.0) as i32;
+                return f < 0.0;
             }
         };
     }
@@ -13905,19 +13905,19 @@ pub unsafe extern "C" fn lefloatint(f: f64, i: i64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> i32 {
+pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             let li: i64 = (*l).value.i;
             if (*r).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-                return (li < (*r).value.i) as i32;
+                return (li < (*r).value.i);
             } else {
                 return ltintfloat(li, (*r).value.n);
             }
         } else {
             let lf: f64 = (*l).value.n;
             if (*r).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
-                return (lf < (*r).value.n) as i32;
+                return lf < (*r).value.n;
             } else {
                 return ltfloatint(lf, (*r).value.i);
             }
@@ -13970,7 +13970,7 @@ pub unsafe extern "C" fn luav_lessthan(
         if get_tag_type((*l).get_tag()) == TAG_TYPE_NUMERIC
             && get_tag_type((*r).get_tag()) == TAG_TYPE_NUMERIC
         {
-            return 0 != ltnum(l, r);
+            return ltnum(l, r);
         } else {
             return 0 != lessthanothers(state, l, r);
         };
@@ -16507,7 +16507,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             } else if get_tag_type((*ra_55).value.get_tag()) == TAG_TYPE_NUMERIC
                                 && get_tag_type((*rb_15).get_tag()) == TAG_TYPE_NUMERIC
                             {
-                                cond_1 = ltnum(&mut (*ra_55).value, rb_15);
+                                cond_1 = if ltnum(&mut (*ra_55).value, rb_15) { 1 } else { 0 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 (*state).top.p = (*call_info).top.p;
