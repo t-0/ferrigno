@@ -6,14 +6,14 @@ use crate::labeldescription::*;
 use crate::character::*;
 use crate::labellist::*;
 use crate::instruction::*;
-use crate::unary::*;
+use crate::operatorunary::*;
 use crate::operator_::*;
 use crate::functionstate::*;
 use crate::semanticinfo::*;
 use crate::tag::*;
 use crate::value::*;
 use crate::priority::*;
-use crate::binary::*;
+use crate::operatorbinary::*;
 use crate::lhsassign::*;
 use crate::new::*;
 use crate::variabledescription::*;
@@ -1135,7 +1135,7 @@ pub unsafe extern "C" fn subexpr(
     unsafe {
         (*((*lexical_state).state)).luae_inccstack();
         let uop = getunopr((*lexical_state).t.token);
-        if uop as u32 != Unary::None_ as u32 {
+        if uop as u32 != OperatorUnary::None_ as u32 {
             let line: i32 = (*lexical_state).line_number;
             luax_next(lexical_state);
             subexpr(lexical_state, v, 12 as i32);
@@ -1682,9 +1682,9 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
 }
 pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
-        if testnext(lexical_state, '<' as i32) != 0 {
+        if testnext(lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
             let attr: *const i8 = (*str_checkname(lexical_state)).get_contents();
-            checknext(lexical_state, '>' as i32);
+            checknext(lexical_state, CHARACTER_ANGLE_RIGHT);
             if strcmp(attr, b"const\0" as *const u8 as *const i8) == 0 {
                 return 1;
             } else if strcmp(attr, b"close\0" as *const u8 as *const i8) == 0 {
@@ -2434,7 +2434,7 @@ pub unsafe extern "C" fn gethexa(lexical_state: *mut LexicalState) -> i32 {
             CHARACTER_TYPE[((*lexical_state).current + 1) as usize] as i32 & 1 << 4,
             b"hexadecimal digit expected\0" as *const u8 as *const i8,
         );
-        return luao_hexavalue((*lexical_state).current);
+        return get_hexadecimal_digit_value((*lexical_state).current);
     }
 }
 pub unsafe extern "C" fn readhexaesc(lexical_state: *mut LexicalState) -> i32 {
@@ -2485,7 +2485,7 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
                 (r <= (0x7fffffff as u32 >> 4) as u64) as i32,
                 b"UTF-8 value too large\0" as *const u8 as *const i8,
             );
-            r = (r << 4).wrapping_add(luao_hexavalue((*lexical_state).current) as u64);
+            r = (r << 4).wrapping_add(get_hexadecimal_digit_value((*lexical_state).current) as u64);
         }
         esccheck(
             lexical_state,
@@ -2750,7 +2750,7 @@ pub unsafe extern "C" fn llex(
                 10 | 13 => {
                     inclinenumber(lexical_state);
                 }
-                32 | 12 | 9 | 11 => {
+                CHARACTER_SPACE | 12 | 9 | 11 => {
                     let fresh103 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh103 > 0u64 {
@@ -2761,7 +2761,7 @@ pub unsafe extern "C" fn llex(
                         luaz_fill((*lexical_state).zio)
                     };
                 }
-                45 => {
+                CHARACTER_HYPHEN => {
                     let fresh105 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh105 > 0u64 {
@@ -2818,7 +2818,7 @@ pub unsafe extern "C" fn llex(
                         }
                     }
                 }
-                91 => {
+                CHARACTER_BRACKET_LEFT => {
                     let sep_0: u64 = skip_sep(lexical_state);
                     if sep_0 >= 2 as u64 {
                         read_long_string(lexical_state, semantic_info, sep_0);
@@ -2832,7 +2832,7 @@ pub unsafe extern "C" fn llex(
                     }
                     return '[' as i32;
                 }
-                61 => {
+                CHARACTER_EQUAL => {
                     let fresh111 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh111 > 0u64 {
@@ -2848,7 +2848,7 @@ pub unsafe extern "C" fn llex(
                         return '=' as i32;
                     }
                 }
-                60 => {
+                CHARACTER_ANGLE_LEFT => {
                     let fresh113 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh113 > 0u64 {
@@ -2860,13 +2860,13 @@ pub unsafe extern "C" fn llex(
                     };
                     if check_next1(lexical_state, '=' as i32) != 0 {
                         return TK_LE as i32;
-                    } else if check_next1(lexical_state, '<' as i32) != 0 {
+                    } else if check_next1(lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
                         return TK_SHL as i32;
                     } else {
-                        return '<' as i32;
+                        return CHARACTER_ANGLE_LEFT;
                     }
                 }
-                62 => {
+                CHARACTER_ANGLE_RIGHT => {
                     let fresh115 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh115 > 0u64 {
@@ -2876,15 +2876,15 @@ pub unsafe extern "C" fn llex(
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, '=' as i32) != 0 {
+                    if check_next1(lexical_state, CHARACTER_EQUAL) != 0 {
                         return TK_GE as i32;
-                    } else if check_next1(lexical_state, '>' as i32) != 0 {
+                    } else if check_next1(lexical_state, CHARACTER_ANGLE_RIGHT) != 0 {
                         return TK_SHR as i32;
                     } else {
-                        return '>' as i32;
+                        return CHARACTER_ANGLE_RIGHT;
                     }
                 }
-                47 => {
+                CHARACTER_SOLIDUS => {
                     let fresh117 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh117 > 0u64 {
@@ -2894,13 +2894,13 @@ pub unsafe extern "C" fn llex(
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, '/' as i32) != 0 {
+                    if check_next1(lexical_state, CHARACTER_SOLIDUS) != 0 {
                         return TK_IDIV as i32;
                     } else {
-                        return '/' as i32;
+                        return CHARACTER_SOLIDUS;
                     }
                 }
-                126 => {
+                CHARACTER_TILDE => {
                     let fresh119 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh119 > 0u64 {
@@ -2910,10 +2910,10 @@ pub unsafe extern "C" fn llex(
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, '=' as i32) != 0 {
+                    if check_next1(lexical_state, CHARACTER_EQUAL) != 0 {
                         return TK_NE as i32;
                     } else {
-                        return '~' as i32;
+                        return CHARACTER_TILDE;
                     }
                 }
                 CHARACTER_COLON => {
@@ -2929,14 +2929,14 @@ pub unsafe extern "C" fn llex(
                     if check_next1(lexical_state, ':' as i32) != 0 {
                         return TK_DBCOLON as i32;
                     } else {
-                        return ':' as i32;
+                        return CHARACTER_COLON as i32;
                     }
                 }
-                34 | 39 => {
+                CHARACTER_QUOTE | CHARACTER_DOUBLEQUOTE => {
                     read_string(lexical_state, (*lexical_state).current, semantic_info);
                     return TK_STRING as i32;
                 }
-                46 => {
+                CHARACTER_PERIOD => {
                     save(lexical_state, (*lexical_state).current);
                     let fresh123 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
@@ -2957,12 +2957,12 @@ pub unsafe extern "C" fn llex(
                         & 1 << 1
                         == 0
                     {
-                        return '.' as i32;
+                        return CHARACTER_PERIOD as i32;
                     } else {
                         return read_numeral(lexical_state, semantic_info);
                     }
                 }
-                48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 => {
+                CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => {
                     return read_numeral(lexical_state, semantic_info);
                 }
                 -1 => return TK_EOS as i32,

@@ -99,7 +99,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
             while CHARACTER_TYPE[(*s as u8 as i32 + 1) as usize] as i32 & 1 << 4 != 0 {
                 a = a
                     .wrapping_mul(16 as u64)
-                    .wrapping_add(luao_hexavalue(*s as i32) as u64);
+                    .wrapping_add(get_hexadecimal_digit_value(*s as i32) as u64);
                 empty = 0;
                 s = s.offset(1);
             }

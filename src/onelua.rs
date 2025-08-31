@@ -40,7 +40,7 @@ use crate::tm::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::ubox::*;
-use crate::unary::*;
+use crate::operatorunary::*;
 use crate::upvaluedescription::*;
 use crate::upvalue::*;
 use crate::user::*;
@@ -2508,8 +2508,8 @@ pub unsafe extern "C" fn constfolding(
 pub unsafe extern "C" fn binopr2op(opr: u32, baser: u32, base: u32) -> u32 {
     return (opr as i32 - baser as i32 + base as i32) as u32;
 }
-pub unsafe extern "C" fn unopr2op(unary: Unary) -> u32 {
-    return (unary as i32 - Unary::Minus as i32 + OP_UNM as i32) as u32;
+pub unsafe extern "C" fn unopr2op(unary: OperatorUnary) -> u32 {
+    return (unary as i32 - OperatorUnary::Minus as i32 + OP_UNM as i32) as u32;
 }
 pub unsafe extern "C" fn binopr2tm(opr: u32) -> u32 {
     return (opr as i32 - OPR_ADD as i32 + TM_ADD as i32) as u32;
@@ -2778,7 +2778,7 @@ pub unsafe extern "C" fn codeeq(
 }
 pub unsafe extern "C" fn luak_prefix(
     fs: *mut FunctionState,
-    opr: Unary,
+    opr: OperatorUnary,
     e: *mut ExpressionDescription,
     line: i32,
 ) {

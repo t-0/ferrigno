@@ -2,7 +2,7 @@
 mod absolutelineinfo;
 mod blockcontrol;
 mod buffer;
-mod binary;
+mod operatorbinary;
 mod bufffs;
 mod c;
 mod callinfo;
@@ -67,7 +67,7 @@ mod token;
 mod tstring;
 mod tvalue;
 mod ubox;
-mod unary;
+mod operatorunary;
 mod upvaluedescription;
 mod upvalue;
 mod user;

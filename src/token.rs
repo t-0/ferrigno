@@ -1,5 +1,6 @@
 use crate::new::*;
 use crate::semanticinfo::*;
+use crate::character::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Token {
@@ -14,6 +15,17 @@ impl New for Token {
         };
     }
 }
+pub const TK_CHARACTER_AMPERSAND: i32 = CHARACTER_AMPERSAND;
+pub const TK_CHARACTER_BAR: i32 = CHARACTER_BAR;
+pub const TK_CHARACTER_TILDE: i32 = CHARACTER_TILDE;
+pub const TK_CHARACTER_ANGLE_LEFT: i32 = CHARACTER_ANGLE_LEFT;
+pub const TK_CHARACTER_ANGLE_RIGHT: i32 = CHARACTER_ANGLE_RIGHT;
+pub const TK_CHARACTER_PLUS: i32 = CHARACTER_PLUS;
+pub const TK_CHARACTER_HYPHEN: i32 = CHARACTER_HYPHEN;
+pub const TK_CHARACTER_ASTERISK: i32 = CHARACTER_ASTERISK;
+pub const TK_CHARACTER_PERCENT: i32 = CHARACTER_PERCENT;
+pub const TK_CHARACTER_CARET: i32 = CHARACTER_CARET;
+pub const TK_CHARACTER_SOLIDUS: i32 = CHARACTER_SOLIDUS;
 pub const TK_WHILE: i32 = 277;
 pub const TK_EOS: i32 = 288;
 pub const TK_INT: i32 = 290;
