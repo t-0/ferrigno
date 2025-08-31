@@ -7,7 +7,7 @@ use crate::object::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::localvariable::*;
-use crate::upvaldesc::*;
+use crate::upvaluedescription::*;
 use crate::absolutelineinfo::*;
 use crate::c::*;
 #[derive(Copy, Clone)]
@@ -291,15 +291,15 @@ pub unsafe extern "C" fn load_upvalues(load_state: *mut LoadState, f: *mut Proto
         n = load_int(load_state);
         if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
             && (n as u64).wrapping_add(1 as u64)
-                > (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64)
+                > (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
         {
             (*((*load_state).state)).too_big();
         } else {
         };
         (*f).upvalues = luam_malloc_(
             (*load_state).state,
-            (n as u64).wrapping_mul(::core::mem::size_of::<Upvaldesc>() as u64),
-        ) as *mut Upvaldesc;
+            (n as u64).wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64),
+        ) as *mut UpValueDescription;
         (*f).size_upvalues = n;
         i = 0;
         while i < n {

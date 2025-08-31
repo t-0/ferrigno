@@ -68,7 +68,7 @@ mod tstring;
 mod tvalue;
 mod ubox;
 mod unary;
-mod upvaldesc;
+mod upvaluedescription;
 mod upvalue;
 mod user;
 mod utility;

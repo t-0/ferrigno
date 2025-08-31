@@ -11,7 +11,7 @@ use crate::tm::*;
 use crate::c::*;
 use crate::instruction::*;
 use crate::onelua::*;
-use crate::upvaldesc::*;
+use crate::upvaluedescription::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Prototype {
@@ -36,7 +36,7 @@ pub struct Prototype {
     pub k: *mut TValue,
     pub code: *mut u32,
     pub p: *mut *mut Prototype,
-    pub upvalues: *mut Upvaldesc,
+    pub upvalues: *mut UpValueDescription,
     pub line_info: *mut i8,
     pub absolute_line_info: *mut AbsoluteLineInfo,
     pub local_variables: *mut LocalVariable,
@@ -107,7 +107,7 @@ impl Prototype {
             (*state).free_memory(
                 self.upvalues as *mut libc::c_void,
                 (self.size_upvalues as u64)
-                    .wrapping_mul(::core::mem::size_of::<Upvaldesc>() as u64),
+                    .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64),
             );
             (*state).free_memory(
                 self as *mut Prototype as *mut libc::c_void,

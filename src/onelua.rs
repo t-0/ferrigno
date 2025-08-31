@@ -41,7 +41,7 @@ use crate::tstring::*;
 use crate::tvalue::*;
 use crate::ubox::*;
 use crate::unary::*;
-use crate::upvaldesc::*;
+use crate::upvaluedescription::*;
 use crate::upvalue::*;
 use crate::user::*;
 use crate::utility::*;
@@ -4084,7 +4084,7 @@ pub unsafe extern "C" fn pushclosure(
 ) {
     unsafe {
         let nup: i32 = (*p).size_upvalues;
-        let uv: *mut Upvaldesc = (*p).upvalues;
+        let uv: *mut UpValueDescription = (*p).upvalues;
         let mut i: i32;
         let ncl: *mut LClosure = luaf_newlclosure(state, nup);
         (*ncl).p = p;

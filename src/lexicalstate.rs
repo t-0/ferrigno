@@ -28,7 +28,7 @@ use crate::expressiondescription::*;
 use crate::rawvalue::*;
 use crate::v::*;
 use crate::constructorcontrol::*;
-use crate::upvaldesc::*;
+use crate::upvaluedescription::*;
 use crate::localvariable::*;
 use crate::table::*;
 use crate::token::*;
@@ -363,8 +363,8 @@ pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
             (*f).upvalues as *mut libc::c_void,
             &mut (*f).size_upvalues,
             (*fs).nups as i32,
-            ::core::mem::size_of::<Upvaldesc>() as i32,
-        ) as *mut Upvaldesc;
+            ::core::mem::size_of::<UpValueDescription>() as i32,
+        ) as *mut UpValueDescription;
         (*lexical_state).fs = (*fs).previous;
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -986,8 +986,8 @@ pub unsafe extern "C" fn check_readonly(
                 }
             }
             10 => {
-                let up: *mut Upvaldesc =
-                    &mut *((*(*fs).f).upvalues).offset((*e).u.info as isize) as *mut Upvaldesc;
+                let up: *mut UpValueDescription =
+                    &mut *((*(*fs).f).upvalues).offset((*e).u.info as isize) as *mut UpValueDescription;
                 if (*up).kind as i32 != 0 {
                     variable_name = (*up).name;
                 }
@@ -1924,7 +1924,7 @@ pub unsafe extern "C" fn statement(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn mainfunc(lexical_state: *mut LexicalState, fs: *mut FunctionState) {
     unsafe {
         let mut block_control: BlockControl = BlockControl::new();
-        let env: *mut Upvaldesc;
+        let env: *mut UpValueDescription;
         open_func(lexical_state, fs, &mut block_control);
         setvararg(fs, 0);
         env = allocupvalue(fs);

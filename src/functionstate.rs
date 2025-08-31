@@ -10,7 +10,7 @@ use crate::state::*;
 use crate::variabledescription::*;
 use crate::localvariable::*;
 use crate::expressiondescription::*;
-use crate::upvaldesc::*;
+use crate::upvaluedescription::*;
 use crate::object::*;
 use crate::onelua::*;
 use crate::new::*;
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) {
 pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TString) -> i32 {
     unsafe {
         let mut i: i32;
-        let up: *mut Upvaldesc = (*(*fs).f).upvalues;
+        let up: *mut UpValueDescription = (*(*fs).f).upvalues;
         i = 0;
         while i < (*fs).nups as i32 {
             if (*up.offset(i as isize)).name == name {
@@ -290,7 +290,7 @@ pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TStrin
         return -1;
     }
 }
-pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc {
+pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut UpValueDescription {
     unsafe {
         let f: *mut Prototype = (*fs).f;
         let mut old_size: i32 = (*f).size_upvalues;
@@ -305,16 +305,16 @@ pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc 
             (*f).upvalues as *mut libc::c_void,
             (*fs).nups as i32,
             &mut (*f).size_upvalues,
-            ::core::mem::size_of::<Upvaldesc>() as i32,
+            ::core::mem::size_of::<UpValueDescription>() as i32,
             (if 255 as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64)
+                <= (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
             {
                 255 as u32
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64) as u32
+                (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64) as u32
             }) as i32,
             b"upvalues\0" as *const u8 as *const i8,
-        ) as *mut Upvaldesc;
+        ) as *mut UpValueDescription;
         while old_size < (*f).size_upvalues {
             let fresh41 = old_size;
             old_size = old_size + 1;
@@ -323,7 +323,7 @@ pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc 
         }
         let fresh43 = (*fs).nups;
         (*fs).nups = ((*fs).nups).wrapping_add(1);
-        return &mut *((*f).upvalues).offset(fresh43 as isize) as *mut Upvaldesc;
+        return &mut *((*f).upvalues).offset(fresh43 as isize) as *mut UpValueDescription;
     }
 }
 pub unsafe extern "C" fn newupvalue(
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn newupvalue(
     v: *mut ExpressionDescription,
 ) -> i32 {
     unsafe {
-        let up: *mut Upvaldesc = allocupvalue(fs);
+        let up: *mut UpValueDescription = allocupvalue(fs);
         let previous: *mut FunctionState = (*fs).previous;
         if (*v).k as u32 == VLOCAL as u32 {
             (*up).is_in_stack = true;
