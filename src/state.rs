@@ -3,6 +3,8 @@ use crate::functions::*;
 use crate::debug::*;
 use crate::loadstate::*;
 use crate::c::*;
+use crate::calls::*;
+use crate::dumpstate::*;
 use crate::dynamicdata::*;
 use crate::tm::*;
 use crate::global::*;
@@ -393,7 +395,7 @@ impl State {
             }
         }
     }
-    pub unsafe extern "C" fn lua_getmetatable(& mut self, object_index: i32) -> i32 {
+    pub unsafe extern "C" fn lua_getmetatable(& mut self, object_index: i32) -> bool {
         unsafe {
             let object: *const TValue = self.index2value(object_index);
             let metatable: *mut Table;
@@ -409,14 +411,14 @@ impl State {
                 }
             }
             if metatable.is_null() {
-                0
+                false
             } else {
                 let io: *mut TValue = &mut (*self.top.p).value;
                 (*io).value.object = &mut (*(metatable as *mut Object));
                 (*io).set_tag(TAG_VARIANT_TABLE);
                 (*io).set_collectable();
                 self.top.p = self.top.p.offset(1);
-                1
+                true
             }
         }
     }
@@ -2185,5 +2187,683 @@ pub unsafe extern "C" fn handle_luainit(state: *mut State) -> i32 {
         } else {
             return dostring(state, init, name);
         };
+    }
+}
+pub unsafe extern "C" fn lua_getfield(state: *mut State, index: i32, k: *const i8) -> i32 {
+    unsafe {
+        return auxgetstr(state, (*state).index2value(index), k);
+    }
+}
+pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 {
+    unsafe {
+        let t: *mut TValue;
+        let slot: *const TValue;
+        t = (*state).index2value(index);
+        if if (*t).get_tag_variant() != TAG_VARIANT_TABLE {
+            slot = std::ptr::null();
+            0
+        } else {
+            slot = if (n as u64).wrapping_sub(1 as u64)
+                < (*((*t).value.object as *mut Table)).array_limit as u64
+            {
+                &mut *((*((*t).value.object as *mut Table)).array).offset((n - 1) as isize)
+                    as *mut TValue as *const TValue
+            } else {
+                luah_getint(&mut (*((*t).value.object as *mut Table)), n)
+            };
+            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+        } != 0
+        {
+            let io1: *mut TValue = &mut (*(*state).top.p).value;
+            let io2: *const TValue = slot;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+        } else {
+            let mut aux: TValue = TValue {
+                value: Value {
+                    object: std::ptr::null_mut(),
+                },
+                tag: 0,
+            };
+            let io: *mut TValue = &mut aux;
+            (*io).value.i = n;
+            (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+            luav_finishget(state, t, &mut aux, (*state).top.p, slot);
+        }
+        (*state).top.p = (*state).top.p.offset(1);
+        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).value.get_tag())) as i32;
+    }
+}
+pub unsafe extern "C" fn finishrawget(state: *mut State, value: *const TValue) -> i32 {
+    unsafe {
+        if get_tag_type((*value).get_tag()) == TAG_TYPE_NIL {
+            (*(*state).top.p).value.set_tag(TAG_VARIANT_NIL_NIL);
+        } else {
+            let io1: *mut TValue = &mut (*(*state).top.p).value;
+            let io2: *const TValue = value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+        }
+        (*state).top.p = (*state).top.p.offset(1);
+        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).value.get_tag())) as i32;
+    }
+}
+pub unsafe extern "C" fn gettable(state: *mut State, index: i32) -> *mut Table {
+    unsafe {
+        let t: *mut TValue = (*state).index2value(index);
+        return &mut (*((*t).value.object as *mut Table));
+    }
+}
+pub unsafe extern "C" fn lua_rawget(state: *mut State, index: i32) -> i32 {
+    unsafe {
+        let table: *mut Table = gettable(state, index);
+        let value: *const TValue =
+            luah_get(table, &mut (*(*state).top.p.offset(-(1 as isize))).value);
+        (*state).top.p = (*state).top.p.offset(-1);
+        return finishrawget(state, value);
+    }
+}
+pub unsafe extern "C" fn lua_rawgeti(state: *mut State, index: i32, n: i64) -> i32 {
+    unsafe {
+        let table: *mut Table = gettable(state, index);
+        return finishrawget(state, luah_getint(table, n));
+    }
+}
+pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *const i8) {
+    unsafe {
+        let slot: *const TValue;
+        let str: *mut TString = luas_new(state, k);
+        if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
+            slot = std::ptr::null();
+            0
+        } else {
+            slot = luah_getstr(&mut (*((*t).value.object as *mut Table)), str);
+            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+        } != 0
+        {
+            let io1: *mut TValue = slot as *mut TValue;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            if (*(*state).top.p.offset(-(1 as isize)))
+                .value
+                .is_collectable()
+            {
+                if (*(*t).value.object).get_marked() & 1 << 5 != 0
+                    && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    luac_barrierback_(state, (*t).value.object);
+                } else {
+                };
+            } else {
+            };
+            (*state).top.p = (*state).top.p.offset(-1);
+        } else {
+            let io: *mut TValue = &mut (*(*state).top.p).value;
+            let x_: *mut TString = str;
+            (*io).value.object = &mut (*(x_ as *mut Object));
+            (*io).set_tag((*x_).get_tag());
+            (*io).set_collectable();
+            (*state).top.p = (*state).top.p.offset(1);
+            luav_finishset(
+                state,
+                t,
+                &mut (*(*state).top.p.offset(-(1 as isize))).value,
+                &mut (*(*state).top.p.offset(-(2 as isize))).value,
+                slot,
+            );
+            (*state).top.p = (*state).top.p.offset(-(2 as isize));
+        };
+    }
+}
+pub unsafe extern "C" fn lua_setglobal(state: *mut State, name: *const i8) {
+    unsafe {
+        let global_table: *const TValue = &mut *((*((*(*state).global).l_registry.value.object
+            as *mut Table))
+            .array)
+            .offset((2 - 1) as isize) as *mut TValue;
+        auxsetstr(state, global_table, name);
+    }
+}
+pub unsafe extern "C" fn lua_setfield(state: *mut State, index: i32, k: *const i8) {
+    unsafe {
+        auxsetstr(state, (*state).index2value(index), k);
+    }
+}
+pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) {
+    unsafe {
+        let t: *mut TValue;
+        let slot: *const TValue;
+        t = (*state).index2value(index);
+        if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
+            slot = std::ptr::null();
+            0
+        } else {
+            slot = if (n as u64).wrapping_sub(1 as u64)
+                < (*((*t).value.object as *mut Table)).array_limit as u64
+            {
+                &mut *((*((*t).value.object as *mut Table)).array).offset((n - 1) as isize)
+                    as *mut TValue as *const TValue
+            } else {
+                luah_getint(&mut (*((*t).value.object as *mut Table)), n)
+            };
+            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+        } != 0
+        {
+            let io1: *mut TValue = slot as *mut TValue;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            if (*(*state).top.p.offset(-(1 as isize)))
+                .value
+                .is_collectable()
+            {
+                if (*(*t).value.object).get_marked() & 1 << 5 != 0
+                    && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    luac_barrierback_(state, (*t).value.object);
+                } else {
+                };
+            } else {
+            };
+        } else {
+            let mut aux: TValue = TValue::new();
+            aux.value.i = n;
+            aux.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+            luav_finishset(
+                state,
+                t,
+                &mut aux,
+                &mut (*(*state).top.p.offset(-(1 as isize))).value,
+                slot,
+            );
+        }
+        (*state).top.p = (*state).top.p.offset(-1);
+    }
+}
+pub unsafe extern "C" fn aux_rawset(state: *mut State, index: i32, key: *mut TValue, n: i32) {
+    unsafe {
+        let table: *mut Table = gettable(state, index);
+        luah_set(
+            state,
+            table,
+            key,
+            &mut (*(*state).top.p.offset(-(1 as isize))).value,
+        );
+        (*table).flags = ((*table).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
+        if (*(*state).top.p.offset(-(1 as isize)))
+            .value
+            .is_collectable()
+        {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
+                && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
+                    & (1 << 3 | 1 << 4)
+                    != 0
+            {
+                luac_barrierback_(state, &mut (*(table as *mut Object)));
+            } else {
+            };
+        } else {
+        };
+        (*state).top.p = (*state).top.p.offset(-(n as isize));
+    }
+}
+pub unsafe extern "C" fn lua_rawset(state: *mut State, index: i32) {
+    unsafe {
+        aux_rawset(
+            state,
+            index,
+            &mut (*(*state).top.p.offset(-(2 as isize))).value,
+            2,
+        );
+    }
+}
+pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) {
+    unsafe {
+        let table: *mut Table = gettable(state, index);
+        luah_setint(
+            state,
+            table,
+            n,
+            &mut (*(*state).top.p.offset(-(1 as isize))).value,
+        );
+        if (*(*state).top.p.offset(-(1 as isize)))
+            .value
+            .is_collectable()
+        {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
+                && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
+                    & (1 << 3 | 1 << 4)
+                    != 0
+            {
+                luac_barrierback_(state, &mut (*(table as *mut Object)));
+            } else {
+            };
+        } else {
+        };
+        (*state).top.p = (*state).top.p.offset(-1);
+    }
+}
+pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i32 {
+    unsafe {
+        let mt: *mut Table;
+        let obj: *mut TValue = (*state).index2value(objindex);
+        if get_tag_type((*(*state).top.p.offset(-(1 as isize))).value.get_tag()) == TAG_TYPE_NIL {
+            mt = std::ptr::null_mut();
+        } else {
+            mt = &mut (*((*(*state).top.p.offset(-(1 as isize))).value.value.object
+                as *mut Table))
+        }
+        match get_tag_type((*obj).get_tag()) {
+            5 => {
+                let ref mut fresh6 = (*((*obj).value.object as *mut Table)).metatable;
+                *fresh6 = mt;
+                if !mt.is_null() {
+                    if (*(*obj).value.object).get_marked() & 1 << 5 != 0
+                        && (*mt).get_marked() & (1 << 3 | 1 << 4) != 0
+                    {
+                        luac_barrier_(
+                            state,
+                            &mut (*((*obj).value.object as *mut Object)),
+                            &mut (*(mt as *mut Object)),
+                        );
+                    } else {
+                    };
+                    luac_checkfinalizer(state, (*obj).value.object, mt);
+                }
+            }
+            7 => {
+                let ref mut fresh7 = (*((*obj).value.object as *mut User)).metatable;
+                *fresh7 = mt;
+                if !mt.is_null() {
+                    if (*((*obj).value.object as *mut User)).get_marked() & 1 << 5 != 0
+                        && (*mt).get_marked() & (1 << 3 | 1 << 4) != 0
+                    {
+                        luac_barrier_(
+                            state,
+                            &mut (*(&mut (*((*obj).value.object as *mut User)) as *mut User
+                                as *mut Object)),
+                            &mut (*(mt as *mut Object)),
+                        );
+                    } else {
+                    };
+                    luac_checkfinalizer(state, (*obj).value.object, mt);
+                }
+            }
+            _ => {
+                (*(*state).global).mt[(get_tag_type((*obj).get_tag())) as usize] = mt;
+            }
+        }
+        (*state).top.p = (*state).top.p.offset(-1);
+        return 1;
+    }
+}
+pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32) -> i32 {
+    unsafe {
+        let res: i32;
+        let o: *mut TValue = (*state).index2value(index);
+        if !((n as u32).wrapping_sub(1 as u32)
+            < (*((*o).value.object as *mut User)).nuvalue as u32)
+        {
+            res = 0;
+        } else {
+            let io1: *mut TValue = &mut (*((*((*o).value.object as *mut User)).uv)
+                .as_mut_ptr()
+                .offset((n - 1) as isize))
+            .uv;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            if (*(*state).top.p.offset(-(1 as isize)))
+                .value
+                .is_collectable()
+            {
+                if (*(*o).value.object).get_marked() & 1 << 5 != 0
+                    && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    luac_barrierback_(state, (*o).value.object);
+                } else {
+                };
+            } else {
+            };
+            res = 1;
+        }
+        (*state).top.p = (*state).top.p.offset(-1);
+        return res;
+    }
+}
+pub unsafe extern "C" fn lua_callk(
+    state: *mut State,
+    nargs: i32,
+    count_results: i32,
+    ctx: i64,
+    k: ContextFunction,
+) {
+    unsafe {
+        let function: StkId = (*state).top.p.offset(-((nargs + 1) as isize));
+        if k.is_some() && (*state).count_c_calls & 0xffff0000 as u32 == 0 {
+            (*(*state).call_info).u.c.k = k;
+            (*(*state).call_info).u.c.ctx = ctx;
+            ccall(state, function, count_results, 1);
+        } else {
+            luad_callnoyield(state, function, count_results);
+        }
+        if count_results <= -1 && (*(*state).call_info).top.p < (*state).top.p {
+            (*(*state).call_info).top.p = (*state).top.p;
+        }
+    }
+}
+pub unsafe extern "C" fn f_call(state: *mut State, arbitrary_data: *mut libc::c_void) {
+    unsafe {
+        let calls: *mut CallS = arbitrary_data as *mut CallS;
+        luad_callnoyield(state, (*calls).function, (*calls).count_results);
+    }
+}
+pub unsafe extern "C" fn lua_pcallk(
+    state: *mut State,
+    nargs: i32,
+    count_results: i32,
+    error_function: i32,
+    ctx: i64,
+    k: ContextFunction,
+) -> i32 {
+    unsafe {
+        let mut calls: CallS = CallS {
+            function: std::ptr::null_mut(),
+            count_results: 0,
+        };
+        let status: i32;
+        let function: i64;
+        if error_function == 0 {
+            function = 0;
+        } else {
+            let o: StkId = index2stack(state, error_function);
+            function = (o as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+        }
+        calls.function = (*state).top.p.offset(-((nargs + 1) as isize));
+        if k.is_none() || !((*state).count_c_calls & 0xffff0000 as u32 == 0) {
+            calls.count_results = count_results;
+            status = luad_pcall(
+                state,
+                Some(f_call as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
+                &mut calls as *mut CallS as *mut libc::c_void,
+                (calls.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
+                function,
+            );
+        } else {
+            let call_info: *mut CallInfo = (*state).call_info;
+            (*call_info).u.c.k = k;
+            (*call_info).u.c.ctx = ctx;
+            (*call_info).u2.funcidx =
+                (calls.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i32;
+            (*call_info).u.c.old_error_function = (*state).error_function;
+            (*state).error_function = function;
+            (*call_info).call_status =
+                ((*call_info).call_status as i32 & !(1 << 0) | (*state).allow_hook as i32) as u16;
+            (*call_info).call_status = ((*call_info).call_status as i32 | 1 << 4) as u16;
+            ccall(state, calls.function, count_results, 1);
+            (*call_info).call_status = ((*call_info).call_status as i32 & !(1 << 4)) as u16;
+            (*state).error_function = (*call_info).u.c.old_error_function;
+            status = 0;
+        }
+        if count_results <= -1 && (*(*state).call_info).top.p < (*state).top.p {
+            (*(*state).call_info).top.p = (*state).top.p;
+        }
+        return status;
+    }
+}
+pub unsafe extern "C" fn lua_load(
+    state: *mut State,
+    reader: ReadFunction,
+    data: *mut libc::c_void,
+    mut chunkname: *const i8,
+    mode: *const i8,
+) -> i32 {
+    unsafe {
+        let mut zio: ZIO = ZIO {
+            n: 0,
+            p: std::ptr::null(),
+            reader: None,
+            data: std::ptr::null_mut(),
+            state: std::ptr::null_mut(),
+        };
+        let status: i32;
+        if chunkname.is_null() {
+            chunkname = b"?\0" as *const u8 as *const i8;
+        }
+        luaz_init(state, &mut zio, reader, data);
+        status = luad_protectedparser(state, &mut zio, chunkname, mode);
+        if status == 0 {
+            let f: *mut LClosure =
+                &mut (*((*(*state).top.p.offset(-(1 as isize))).value.value.object
+                    as *mut LClosure));
+            if (*f).count_upvalues as i32 >= 1 {
+                let gt: *const TValue =
+                    &mut *((*((*(*state).global).l_registry.value.object as *mut Table))
+                        .array)
+                        .offset((2 - 1) as isize) as *mut TValue;
+                let io1: *mut TValue = (**((*f).upvalues).as_mut_ptr().offset(0 as isize)).v.p;
+                let io2: *const TValue = gt;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+                if (*gt).is_collectable() {
+                    if (**((*f).upvalues).as_mut_ptr().offset(0 as isize)).get_marked() & 1 << 5
+                        != 0
+                        && (*(*gt).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+                    {
+                        luac_barrier_(
+                            state,
+                            &mut (*(*((*f).upvalues).as_mut_ptr().offset(0 as isize)
+                                as *mut Object)),
+                            &mut (*((*gt).value.object as *mut Object)),
+                        );
+                    } else {
+                    };
+                } else {
+                };
+            }
+        }
+        return status;
+    }
+}
+pub unsafe extern "C" fn lua_dump(
+    state: *mut State,
+    writer_0: WriteFunction,
+    data: *mut libc::c_void,
+    is_strip: bool,
+) -> i32 {
+    unsafe {
+        let status: i32;
+        let o: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+        if (*o).get_tag_variant() == TAG_VARIANT_CLOSURE_L {
+            status = DumpState::dump(
+                state,
+                (*((*o).value.object as *mut LClosure)).p,
+                writer_0,
+                data,
+                is_strip,
+            );
+        } else {
+            status = 1;
+        }
+        return status;
+    }
+}
+pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 {
+    unsafe {
+        let mut argp: ::core::ffi::VaListImpl;
+        let mut res: i32 = 0;
+        let g: *mut Global = (*state).global;
+        if (*g).gcstp as i32 & 2 != 0 {
+            return -1;
+        }
+        argp = args.clone();
+        match what {
+            0 => {
+                (*g).gcstp = 1;
+            }
+            1 => {
+                (*g).set_debt(0);
+                (*g).gcstp = 0;
+            }
+            2 => {
+                luac_fullgc(state, false);
+            }
+            3 => {
+                res = (((*g).totalbytes + (*g).gc_debt) as u64 >> 10 as i32) as i32;
+            }
+            4 => {
+                res = (((*g).totalbytes + (*g).gc_debt) as u64 & 0x3ff as u64) as i32;
+            }
+            5 => {
+                let data: i32 = argp.arg::<i32>();
+                let mut debt: i64 = 1;
+                let oldstp: u8 = (*g).gcstp;
+                (*g).gcstp = 0;
+                if data == 0 {
+                    (*g).set_debt(0);
+                    luac_step(state);
+                } else {
+                    debt = data as i64 * 1024 as i64 + (*g).gc_debt;
+                    (*g).set_debt(debt);
+                    if (*(*state).global).gc_debt > 0 {
+                        luac_step(state);
+                    }
+                }
+                (*g).gcstp = oldstp;
+                if debt > 0 && (*g).gcstate as i32 == 8 {
+                    res = 1;
+                }
+            }
+            6 => {
+                let data_0: i32 = argp.arg::<i32>();
+                res = (*g).gcpause as i32 * 4;
+                (*g).gcpause = (data_0 / 4) as u8;
+            }
+            7 => {
+                let data_1: i32 = argp.arg::<i32>();
+                res = (*g).gcstepmul as i32 * 4;
+                (*g).gcstepmul = (data_1 / 4) as u8;
+            }
+            9 => {
+                res = ((*g).gcstp as i32 == 0) as i32;
+            }
+            10 => {
+                let minormul: i32 = argp.arg::<i32>();
+                let majormul: i32 = argp.arg::<i32>();
+                res = if (*g).gckind as i32 == 1 || (*g).lastatomic != 0u64 {
+                    10 as i32
+                } else {
+                    11 as i32
+                };
+                if minormul != 0 {
+                    (*g).genminormul = minormul as u64;
+                }
+                if majormul != 0 {
+                    (*g).genmajormul = (majormul / 4) as u64;
+                }
+                luac_changemode(state, 1);
+            }
+            11 => {
+                let pause: i32 = argp.arg::<i32>();
+                let stepmul: i32 = argp.arg::<i32>();
+                let stepsize: i32 = argp.arg::<i32>();
+                res = if (*g).gckind as i32 == 1 || (*g).lastatomic != 0u64 {
+                    10 as i32
+                } else {
+                    11 as i32
+                };
+                if pause != 0 {
+                    (*g).gcpause = (pause / 4) as u8;
+                }
+                if stepmul != 0 {
+                    (*g).gcstepmul = (stepmul / 4) as u8;
+                }
+                if stepsize != 0 {
+                    (*g).gcstepsize = stepsize as u8;
+                }
+                luac_changemode(state, 0);
+            }
+            _ => {
+                res = -1;
+            }
+        }
+        return res;
+    }
+}
+pub unsafe extern "C" fn lua_error(state: *mut State) -> i32 {
+    unsafe {
+        let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+        if (*errobj).get_tag_variant() == TAG_VARIANT_STRING_SHORT
+            && &mut (*((*errobj).value.object as *mut TString)) as *mut TString
+                == (*(*state).global).memerrmsg
+        {
+            luad_throw(state, 4);
+        } else {
+            luag_errormsg(state);
+        };
+    }
+}
+pub unsafe extern "C" fn lua_next(state: *mut State, index: i32) -> i32 {
+    unsafe {
+        let table: *mut Table = gettable(state, index);
+        let more: i32 = luah_next(state, table, (*state).top.p.offset(-(1 as isize)));
+        if more != 0 {
+            (*state).top.p = (*state).top.p.offset(1);
+        } else {
+            (*state).top.p = (*state).top.p.offset(-(1 as isize));
+        }
+        return more;
+    }
+}
+pub unsafe extern "C" fn lua_toclose(state: *mut State, index: i32) {
+    unsafe {
+        let o: StkId = index2stack(state, index);
+        let count_results: i32 = (*(*state).call_info).count_results as i32;
+        luaf_newtbcupval(state, o);
+        if !(count_results < -1) {
+            (*(*state).call_info).count_results = (-count_results - 3) as i16;
+        }
+    }
+}
+pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) {
+    unsafe {
+        if n > 0 {
+            luav_concat(state, n);
+        } else {
+            let io: *mut TValue = &mut (*(*state).top.p).value;
+            let x_: *mut TString = luas_newlstr(state, b"\0" as *const u8 as *const i8, 0u64);
+            (*io).value.object = &mut (*(x_ as *mut Object));
+            (*io).set_tag((*x_).get_tag());
+            (*io).set_collectable();
+            (*state).top.p = (*state).top.p.offset(1);
+        }
+        if (*(*state).global).gc_debt > 0 {
+            luac_step(state);
+        }
+    }
+}
+pub unsafe extern "C" fn lua_len(state: *mut State, index: i32) {
+    unsafe {
+        let t: *mut TValue = (*state).index2value(index);
+        luav_objlen(state, (*state).top.p, t);
+        (*state).top.p = (*state).top.p.offset(1);
+    }
+}
+pub unsafe extern "C" fn lua_setwarnf(state: *mut State, f: WarnFunction, arbitrary_data: *mut libc::c_void) {
+    unsafe {
+        (*(*state).global).ud_warn = arbitrary_data;
+        (*(*state).global).warnf = f;
+    }
+}
+pub unsafe extern "C" fn lua_warning(state: *mut State, message: *const i8, tocont: i32) {
+    unsafe {
+        luae_warning(state, message, tocont);
     }
 }

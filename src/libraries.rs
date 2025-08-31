@@ -2,6 +2,7 @@ use crate::onelua::*;
 use crate::registeredfunction::*;
 use crate::state::*;
 use crate::coroutine::*;
+use crate::debug::*;
 use crate::math::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [

@@ -2,6 +2,7 @@
 mod absolutelineinfo;
 mod blockcontrol;
 mod buffer;
+mod binary;
 mod bufffs;
 mod c;
 mod callinfo;
