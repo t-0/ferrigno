@@ -58,7 +58,7 @@ impl LexicalState {
                     (*f).p as *mut libc::c_void,
                     (*fs).np,
                     &mut (*f).size_p,
-                    ::core::mem::size_of::<*mut Prototype>() as u64 as i32,
+                    ::core::mem::size_of::<*mut Prototype>() as i32,
                     (if ((1 << 8 + 8 + 1) - 1) as u64
                         <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
                     {

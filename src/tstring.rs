@@ -89,7 +89,7 @@ impl TString {
             let tb: *mut StringTable = &mut (*g).string_table;
             let h: u32 = luas_hash(str, l, (*g).seed);
             let mut list: *mut *mut TString = &mut *((*tb).hash)
-                .offset((h & ((*tb).size - 1) as u32) as i32 as isize)
+                .offset((h & ((*tb).size - 1) as u32) as isize)
                 as *mut *mut TString;
             let mut ts: *mut TString = *list;
             while !ts.is_null() {
@@ -109,7 +109,7 @@ impl TString {
             }
             if (*tb).length >= (*tb).size {
                 growstrtab(state, tb);
-                list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as i32 as isize)
+                list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as isize)
                     as *mut *mut TString;
             }
             ts = createstrobj(state, l, TAG_VARIANT_STRING_SHORT, h);

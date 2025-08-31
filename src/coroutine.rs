@@ -28,7 +28,7 @@ unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 {
     unsafe {
         let co: *mut State = getco(state);
         let r: i32 = auxresume(state, co, (*state).get_top() - 1);
-        if ((r < 0) as i32 != 0) as i32 as i64 != 0 {
+        if ((r < 0) as i32 != 0) as i64 != 0 {
             (*state).push_boolean(false);
             lua_rotate(state, -(2), 1);
             return 2;
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn luaopen_coroutine(state: *mut State) -> i32 {
             state,
             504.0,
             (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as i32 as u64)
+                .wrapping_mul(16 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
         (*state).lua_createtable();

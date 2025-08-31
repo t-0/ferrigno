@@ -106,7 +106,7 @@ impl Global {
         }
     }
     pub unsafe extern "C" fn set_debt(&mut self, mut debt: i64) {
-        let tb: i64 = (self.totalbytes + self.gc_debt) as u64 as i64;
+        let tb: i64 = (self.totalbytes + self.gc_debt) as i64;
         if debt < tb - (!(0i32 as u64) >> 1i32) as i64 {
             debt = tb - (!(0i32 as u64) >> 1i32) as i64;
         }

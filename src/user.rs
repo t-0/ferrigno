@@ -64,7 +64,7 @@ impl User {
                 > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                     !(0u64)
                 } else {
-                    0x7FFFFFFFFFFFFFFF as i64 as u64
+                    0x7FFFFFFFFFFFFFFF as u64
                 })
                 .wrapping_sub(if nuvalue == 0 {
                     32 as u64
@@ -73,7 +73,7 @@ impl User {
                         (::core::mem::size_of::<UValue>() as u64).wrapping_mul(nuvalue as u64),
                     )
                 })) as i32
-                != 0) as i32 as i64
+                != 0) as i64
                 != 0
             {
                 (*state).too_big();
@@ -148,7 +148,7 @@ impl User {
     }
     pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const libc::c_void {
         unsafe {
-            let o: *const TValue = index2value(state, index);
+            let o: *const TValue = (*state).index2value(index);
             match (*o).get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
                     return ::core::mem::transmute::<CFunction, u64>((*o).value.f) as *mut libc::c_void;

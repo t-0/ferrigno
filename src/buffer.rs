@@ -32,14 +32,14 @@ impl Buffer {
     }
     pub unsafe extern "C" fn lual_pushresultsize(&mut self, size: u64) {
         unsafe {
-            self.length = (self.length as u64).wrapping_add(size) as u64 as u64;
+            self.length = (self.length as u64).wrapping_add(size) as u64;
             self.lual_pushresult();
         }
     }
     pub unsafe extern "C" fn newbuffsize(&mut self, size: u64) -> u64 {
         unsafe {
             let mut new_size: u64 = (self.size).wrapping_div(2 as u64).wrapping_mul(3 as u64);
-            if (((!(0u64)).wrapping_sub(size) < self.length) as i32 != 0) as i32 as i64 != 0 {
+            if (((!(0u64)).wrapping_sub(size) < self.length) as i32 != 0) as i64 != 0 {
                 return lual_error(self.state, b"buffer too large\0" as *const u8 as *const i8)
                     as u64;
             }
@@ -92,7 +92,7 @@ impl Buffer {
                     s as *const libc::c_void,
                     l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                 );
-                self.length = (self.length as u64).wrapping_add(l) as u64 as u64;
+                self.length = (self.length as u64).wrapping_add(l) as u64;
             }
         }
     }
@@ -123,7 +123,7 @@ impl Buffer {
                 s as *const libc::c_void,
                 length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
-            self.length = (self.length as u64).wrapping_add(length) as u64 as u64;
+            self.length = (self.length as u64).wrapping_add(length) as u64;
             lua_settop(state, -1 - 1);
         }
     }
@@ -132,7 +132,7 @@ impl Buffer {
             self.state = state;
             self.pointer = (self.buffer_initial).as_mut_ptr();
             self.length = 0;
-            self.size = (16 as i32 as u64)
+            self.size = (16 as u64)
                 .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
                 .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
                 as u64;

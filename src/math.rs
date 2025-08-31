@@ -114,8 +114,8 @@ unsafe extern "C" fn math_fmod(state: *mut State) -> i32 {
     unsafe {
         if lua_isinteger(state, 1) && lua_isinteger(state, 2) {
             let d: i64 = lua_tointegerx(state, 2, std::ptr::null_mut());
-            if (d as u64).wrapping_add(1 as u32 as u64) <= 1 as u32 as u64 {
-                (((d != 0) as i32 != 0) as i32 as i64 != 0
+            if (d as u64).wrapping_add(1 as u64) <= 1 as u64 {
+                (((d != 0) as i32 != 0) as i64 != 0
                     || lual_argerror(state, 2, b"zero\0" as *const u8 as *const i8) != 0)
                     as i32;
                 (*state).push_integer(0);
@@ -203,7 +203,7 @@ unsafe extern "C" fn math_min(state: *mut State) -> i32 {
         let n: i32 = (*state).get_top();
         let mut imin: i32 = 1;
         let mut i: i32;
-        (((n >= 1) as i32 != 0) as i32 as i64 != 0
+        (((n >= 1) as i32 != 0) as i64 != 0
             || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
         i = 2;
@@ -222,7 +222,7 @@ unsafe extern "C" fn math_max(state: *mut State) -> i32 {
         let n: i32 = (*state).get_top();
         let mut imax: i32 = 1;
         let mut i: i32;
-        (((n >= 1) as i32 != 0) as i32 as i64 != 0
+        (((n >= 1) as i32 != 0) as i64 != 0
             || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
         i = 2;
@@ -264,7 +264,7 @@ unsafe extern "C" fn next_random(randomstate: *mut u64) -> u64 {
         let state2: u64 = *randomstate.offset(2 as isize) ^ state0;
         let state3: u64 = *randomstate.offset(3 as isize) ^ state1;
         let res: u64 =
-            (rotate_left(state1.wrapping_mul(5 as u64), 7)).wrapping_mul(9 as i32 as u64);
+            (rotate_left(state1.wrapping_mul(5 as u64), 7)).wrapping_mul(9 as u64);
         *randomstate.offset(0 as isize) = state0 ^ state3;
         *randomstate.offset(1 as isize) = state1 ^ state2;
         *randomstate.offset(2 as isize) = state2 ^ state1 << 17 as i32;
@@ -320,7 +320,7 @@ unsafe extern "C" fn math_random(state: *mut State) -> i32 {
                 low = 1;
                 up = lual_checkinteger(state, 1);
                 if up == 0 {
-                    (*state).push_integer((rv & 0xffffffffffffffff as u64) as u64 as i64);
+                    (*state).push_integer((rv & 0xffffffffffffffff as u64) as i64);
                     return 1;
                 }
             }
@@ -335,7 +335,7 @@ unsafe extern "C" fn math_random(state: *mut State) -> i32 {
                 );
             }
         }
-        (((low <= up) as i32 != 0) as i32 as i64 != 0
+        (((low <= up) as i32 != 0) as i64 != 0
             || lual_argerror(state, 1, b"interval is empty\0" as *const u8 as *const i8) != 0)
             as i32;
         p = project(
@@ -351,7 +351,7 @@ unsafe extern "C" fn set_seed(state: *mut State, randomstate: *mut u64, n1: u64,
     unsafe {
         let mut i: i32;
         *randomstate.offset(0 as isize) = n1 as u64;
-        *randomstate.offset(1 as isize) = 0xFF as i32 as u64;
+        *randomstate.offset(1 as isize) = 0xFF as u64;
         *randomstate.offset(2 as isize) = n2 as u64;
         *randomstate.offset(3 as isize) = 0;
         i = 0;
@@ -366,7 +366,7 @@ unsafe extern "C" fn set_seed(state: *mut State, randomstate: *mut u64, n1: u64,
 unsafe extern "C" fn random_seed(state: *mut State, randomstate: *mut RandomState) {
     unsafe {
         let seed1: u64 = time(std::ptr::null_mut()) as u64;
-        let seed2: u64 = state as u64 as u64;
+        let seed2: u64 = state as u64;
         set_seed(state, ((*randomstate).s).as_mut_ptr(), seed1, seed2);
     }
 }
