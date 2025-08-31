@@ -1750,7 +1750,7 @@ pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) {
         (*state).top.p = (*state).top.p.offset(1);
     }
 }
-pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> Option<u8> {
+pub unsafe fn lua_type(state: *mut State, index: i32) -> Option<u8> {
     unsafe {
         let o: *const TValue = (*state).index2value(index);
         return if (get_tag_type((*o).get_tag()) != TAG_TYPE_NIL)
@@ -1762,7 +1762,7 @@ pub unsafe extern "C" fn lua_type(state: *mut State, index: i32) -> Option<u8> {
         };
     }
 }
-pub unsafe extern "C" fn lua_typename(mut _state: *mut State, t: Option<u8>) -> *const i8 {
+pub unsafe fn lua_typename(mut _state: *mut State, t: Option<u8>) -> *const i8 {
     match t {
         None => b"no value\0" as *const u8 as *const i8,
         Some(TAG_TYPE_NIL) => b"nil\0" as *const u8 as *const i8,

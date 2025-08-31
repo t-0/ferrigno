@@ -15085,7 +15085,7 @@ pub unsafe extern "C" fn lual_typeerror(state: *mut State, arg: i32, tname: *con
         return lual_argerror(state, arg, message);
     }
 }
-pub unsafe extern "C" fn tag_error(state: *mut State, arg: i32, tag: Option<u8>) {
+pub unsafe fn tag_error(state: *mut State, arg: i32, tag: Option<u8>) {
     unsafe {
         lual_typeerror(state, arg, lua_typename(state, tag));
     }

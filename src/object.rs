@@ -1,4 +1,4 @@
-#[allow(dead_code, unused)]
+#![allow(dead_code, unused)]
 // #[macro_export]
 // macro_rules! ObjectBase {
 //     (#[derive($($derive:meta),*)] $pub:vis struct $name:ident { $($fpub:vis $field:ident : $type:ty,)* }) => {
