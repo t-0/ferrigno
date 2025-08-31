@@ -1,7 +1,6 @@
 use crate::state::*;
 use crate::zio::*;
 use crate::lclosure::*;
-use crate::onelua::*;
 use crate::prototype::*;
 use crate::tstring::*;
 use crate::object::*;

@@ -6,7 +6,6 @@ use crate::tstring::*;
 use crate::cclosure::*;
 use crate::lclosure::*;
 use crate::state::*;
-use crate::onelua::*;
 use crate::prototype::*;
 use crate::utility::*;
 use libc::*;

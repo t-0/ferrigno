@@ -1,6 +1,7 @@
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
 use crate::object::*;
+use crate::global::*;
 use crate::state::*;
 use crate::table::*;
 use crate::tag::*;
@@ -476,5 +477,121 @@ pub unsafe extern "C" fn changedline(
             }
         }
         return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
+    }
+}
+pub unsafe extern "C" fn traverseproto(g: *mut Global, f: *mut Prototype) -> u64 {
+    unsafe {
+        if !((*f).source).is_null() {
+            if (*(*f).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                reallymarkobject(g, &mut (*((*f).source as *mut Object)));
+            }
+        }
+        let mut i: u64 = 0;
+        while i < (*f).size_k as u64 {
+            if ((*((*f).k).offset(i as isize)).is_collectable())
+                && (*(*((*f).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
+                    != 0
+            {
+                reallymarkobject(g, (*((*f).k).offset(i as isize)).value.object);
+            }
+            i += 1;
+        }
+        i = 0;
+        while i < (*f).size_upvalues as u64 {
+            if !((*((*f).upvalues).offset(i as isize)).name).is_null() {
+                if (*(*((*f).upvalues).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4)
+                    != 0
+                {
+                    reallymarkobject(
+                        g,
+                        &mut (*((*((*f).upvalues).offset(i as isize)).name as *mut Object)),
+                    );
+                }
+            }
+            i += 1;
+        }
+        i = 0;
+        while i < (*f).size_p as u64 {
+            if !(*((*f).p).offset(i as isize)).is_null() {
+                if (**((*f).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    reallymarkobject(
+                        g,
+                        &mut (*(*((*f).p).offset(i as isize) as *mut Object)),
+                    );
+                }
+            }
+            i += 1;
+        }
+        i = 0;
+        while i < (*f).size_local_variables as u64 {
+            if !((*((*f).local_variables).offset(i as isize)).variable_name).is_null() {
+                if (*(*((*f).local_variables).offset(i as isize)).variable_name).get_marked()
+                    & (1 << 3 | 1 << 4)
+                    != 0
+                {
+                    reallymarkobject(
+                        g,
+                        &mut (*((*((*f).local_variables).offset(i as isize)).variable_name
+                            as *mut Object)),
+                    );
+                }
+            }
+            i += 1;
+        }
+        return (1 + (*f).size_k + (*f).size_upvalues + (*f).size_p + (*f).size_local_variables) as u64
+    }
+}
+pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype {
+    unsafe {
+        let o: *mut Object = luac_newobj(
+            state,
+            TAG_TYPE_PROTOTYPE,
+            ::core::mem::size_of::<Prototype>() as u64,
+        );
+        let f: *mut Prototype = &mut (*(o as *mut Prototype));
+        (*f).k = std::ptr::null_mut();
+        (*f).size_k = 0;
+        (*f).p = std::ptr::null_mut();
+        (*f).size_p = 0;
+        (*f).code = std::ptr::null_mut();
+        (*f).size_code = 0;
+        (*f).line_info = std::ptr::null_mut();
+        (*f).size_line_info = 0;
+        (*f).absolute_line_info = std::ptr::null_mut();
+        (*f).size_absolute_line_info = 0;
+        (*f).upvalues = std::ptr::null_mut();
+        (*f).size_upvalues = 0;
+        (*f).count_parameters = 0;
+        (*f).is_variable_arguments = false;
+        (*f).maximum_stack_size = 0;
+        (*f).local_variables = std::ptr::null_mut();
+        (*f).size_local_variables = 0;
+        (*f).line_defined = 0;
+        (*f).last_line_defined = 0;
+        (*f).source = std::ptr::null_mut();
+        return f;
+    }
+}
+pub unsafe extern "C" fn luaf_getlocalname(
+    f: *const Prototype,
+    mut local_number: i32,
+    program_counter: i32,
+) -> *const i8 {
+    unsafe {
+        let mut i: i32;
+        i = 0;
+        while i < (*f).size_local_variables
+            && (*((*f).local_variables).offset(i as isize)).start_program_counter <= program_counter
+        {
+            if program_counter < (*((*f).local_variables).offset(i as isize)).end_program_counter {
+                local_number -= 1;
+                if local_number == 0 {
+                    return (*(*((*f).local_variables).offset(i as isize)).variable_name)
+                        .get_contents();
+                }
+            }
+            i += 1;
+        }
+        return std::ptr::null();
     }
 }

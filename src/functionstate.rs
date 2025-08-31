@@ -5,6 +5,13 @@ use crate::instruction::*;
 use crate::constructorcontrol::*;
 use crate::v::*;
 use crate::labellist::*;
+use crate::tstring::*;
+use crate::state::*;
+use crate::variabledescription::*;
+use crate::localvariable::*;
+use crate::expressiondescription::*;
+use crate::upvaldesc::*;
+use crate::object::*;
 use crate::onelua::*;
 use crate::new::*;
 use crate::prototype::*;
@@ -167,5 +174,287 @@ pub unsafe extern "C" fn setvararg(fs: *mut FunctionState, nparams: i32) {
     unsafe {
         (*(*fs).f).is_variable_arguments = true;
         luak_code_abck(fs, OP_VARARGPREP, nparams, 0, 0, 0);
+    }
+}
+pub unsafe extern "C" fn errorlimit(fs: *mut FunctionState, limit: i32, what: *const i8) -> ! {
+    unsafe {
+        let state: *mut State = (*(*fs).lexical_state).state;
+        let message: *const i8;
+        let line: i32 = (*(*fs).f).line_defined;
+        let where_0: *const i8 = if line == 0 {
+            b"main function\0" as *const u8 as *const i8
+        } else {
+            luao_pushfstring(
+                state,
+                b"function at line %d\0" as *const u8 as *const i8,
+                line,
+            )
+        };
+        message = luao_pushfstring(
+            state,
+            b"too many %s (limit is %d) in %s\0" as *const u8 as *const i8,
+            what,
+            limit,
+            where_0,
+        );
+        luax_syntaxerror((*fs).lexical_state, message);
+    }
+}
+pub unsafe extern "C" fn checklimit(fs: *mut FunctionState, v: i32, l: i32, what: *const i8) {
+    unsafe {
+        if v > l {
+            errorlimit(fs, l, what);
+        }
+    }
+}
+pub unsafe extern "C" fn getlocalvardesc(
+    fs: *mut FunctionState,
+    vidx: i32,
+) -> *mut VariableDescription {
+    unsafe {
+        return &mut *((*(*(*fs).lexical_state).dynamic_data)
+            .active_variable
+            .pointer)
+            .offset(((*fs).firstlocal + vidx) as isize) as *mut VariableDescription;
+    }
+}
+pub unsafe extern "C" fn reglevel(fs: *mut FunctionState, mut nvar: i32) -> i32 {
+    unsafe {
+        loop {
+            let fresh38 = nvar;
+            nvar = nvar - 1;
+            if !(fresh38 > 0) {
+                break;
+            }
+            let vd: *mut VariableDescription = getlocalvardesc(fs, nvar);
+            if (*vd).vd.kind as i32 != 3 {
+                return (*vd).vd.ridx as i32 + 1;
+            }
+        }
+        return 0;
+    }
+}
+pub unsafe extern "C" fn luay_nvarstack(fs: *mut FunctionState) -> i32 {
+    unsafe {
+        return reglevel(fs, (*fs).count_active_variables as i32);
+    }
+}
+pub unsafe extern "C" fn localdebuginfo(fs: *mut FunctionState, vidx: i32) -> *mut LocalVariable {
+    unsafe {
+        let vd: *mut VariableDescription = getlocalvardesc(fs, vidx);
+        if (*vd).vd.kind as i32 == 3 {
+            return std::ptr::null_mut();
+        } else {
+            let index: i32 = (*vd).vd.pidx as i32;
+            return &mut *((*(*fs).f).local_variables).offset(index as isize) as *mut LocalVariable;
+        };
+    }
+}
+pub unsafe extern "C" fn init_var(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+    vidx: i32,
+) {
+    unsafe {
+        (*e).t = -1;
+        (*e).f = (*e).t;
+        (*e).k = VLOCAL;
+        (*e).u.var.vidx = vidx as u16;
+        (*e).u.var.ridx = (*getlocalvardesc(fs, vidx)).vd.ridx;
+    }
+}
+pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) {
+    unsafe {
+        (*(*(*fs).lexical_state).dynamic_data).active_variable.n -=
+            (*fs).count_active_variables as i32 - tolevel;
+        while (*fs).count_active_variables as i32 > tolevel {
+            (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_sub(1);
+            let var: *mut LocalVariable = localdebuginfo(fs, (*fs).count_active_variables as i32);
+            if !var.is_null() {
+                (*var).end_program_counter = (*fs).program_counter;
+            }
+        }
+    }
+}
+pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TString) -> i32 {
+    unsafe {
+        let mut i: i32;
+        let up: *mut Upvaldesc = (*(*fs).f).upvalues;
+        i = 0;
+        while i < (*fs).nups as i32 {
+            if (*up.offset(i as isize)).name == name {
+                return i;
+            }
+            i += 1;
+        }
+        return -1;
+    }
+}
+pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut Upvaldesc {
+    unsafe {
+        let f: *mut Prototype = (*fs).f;
+        let mut old_size: i32 = (*f).size_upvalues;
+        checklimit(
+            fs,
+            (*fs).nups as i32 + 1,
+            255 as i32,
+            b"upvalues\0" as *const u8 as *const i8,
+        );
+        (*f).upvalues = luam_growaux_(
+            (*(*fs).lexical_state).state,
+            (*f).upvalues as *mut libc::c_void,
+            (*fs).nups as i32,
+            &mut (*f).size_upvalues,
+            ::core::mem::size_of::<Upvaldesc>() as i32,
+            (if 255 as u64
+                <= (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64)
+            {
+                255 as u32
+            } else {
+                (!(0u64)).wrapping_div(::core::mem::size_of::<Upvaldesc>() as u64) as u32
+            }) as i32,
+            b"upvalues\0" as *const u8 as *const i8,
+        ) as *mut Upvaldesc;
+        while old_size < (*f).size_upvalues {
+            let fresh41 = old_size;
+            old_size = old_size + 1;
+            let ref mut fresh42 = (*((*f).upvalues).offset(fresh41 as isize)).name;
+            *fresh42 = std::ptr::null_mut();
+        }
+        let fresh43 = (*fs).nups;
+        (*fs).nups = ((*fs).nups).wrapping_add(1);
+        return &mut *((*f).upvalues).offset(fresh43 as isize) as *mut Upvaldesc;
+    }
+}
+pub unsafe extern "C" fn newupvalue(
+    fs: *mut FunctionState,
+    name: *mut TString,
+    v: *mut ExpressionDescription,
+) -> i32 {
+    unsafe {
+        let up: *mut Upvaldesc = allocupvalue(fs);
+        let previous: *mut FunctionState = (*fs).previous;
+        if (*v).k as u32 == VLOCAL as u32 {
+            (*up).is_in_stack = true;
+            (*up).index = (*v).u.var.ridx;
+            (*up).kind = (*getlocalvardesc(previous, (*v).u.var.vidx as i32)).vd.kind;
+        } else {
+            (*up).is_in_stack = false;
+            (*up).index = (*v).u.info as u8;
+            (*up).kind = (*((*(*previous).f).upvalues).offset((*v).u.info as isize)).kind;
+        }
+        (*up).name = name;
+        if (*(*fs).f).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            luac_barrier_(
+                (*(*fs).lexical_state).state,
+                &mut (*((*fs).f as *mut Object)),
+                &mut (*(name as *mut Object)),
+            );
+        } else {
+        };
+        return (*fs).nups as i32 - 1;
+    }
+}
+pub unsafe extern "C" fn searchvar(
+    fs: *mut FunctionState,
+    n: *mut TString,
+    var: *mut ExpressionDescription,
+) -> i32 {
+    unsafe {
+        let mut i: i32;
+        i = (*fs).count_active_variables as i32 - 1;
+        while i >= 0 {
+            let vd: *mut VariableDescription = getlocalvardesc(fs, i);
+            if n == (*vd).vd.name {
+                if (*vd).vd.kind as i32 == 3 {
+                    init_exp(var, VCONST, (*fs).firstlocal + i);
+                } else {
+                    init_var(fs, var, i);
+                }
+                return (*var).k as i32;
+            }
+            i -= 1;
+        }
+        return -1;
+    }
+}
+pub unsafe extern "C" fn markupval(fs: *mut FunctionState, level: i32) {
+    unsafe {
+        let mut block_control: *mut BlockControl = (*fs).block_control;
+        while (*block_control).count_active_variables as i32 > level {
+            block_control = (*block_control).previous;
+        }
+        (*block_control).count_upvalues = 1;
+        (*fs).needclose = 1;
+    }
+}
+pub unsafe extern "C" fn marktobeclosed(fs: *mut FunctionState) {
+    unsafe {
+        let block_control: *mut BlockControl = (*fs).block_control;
+        (*block_control).count_upvalues = 1;
+        (*block_control).is_inside_tbc = true;
+        (*fs).needclose = 1;
+    }
+}
+pub unsafe extern "C" fn singlevaraux(
+    fs: *mut FunctionState,
+    n: *mut TString,
+    var: *mut ExpressionDescription,
+    base: i32,
+) {
+    unsafe {
+        if fs.is_null() {
+            init_exp(var, VVOID, 0);
+        } else {
+            let v: i32 = searchvar(fs, n, var);
+            if v >= 0 {
+                if v == VLOCAL as i32 && base == 0 {
+                    markupval(fs, (*var).u.var.vidx as i32);
+                }
+            } else {
+                let mut index: i32 = searchupvalue(fs, n);
+                if index < 0 {
+                    singlevaraux((*fs).previous, n, var, 0);
+                    if (*var).k as u32 == VLOCAL as u32
+                        || (*var).k as u32 == VUPVAL as u32
+                    {
+                        index = newupvalue(fs, n, var);
+                    } else {
+                        return;
+                    }
+                }
+                init_exp(var, VUPVAL, index);
+            }
+        };
+    }
+}
+pub unsafe extern "C" fn fixforjump(
+    fs: *mut FunctionState,
+    program_counter: i32,
+    dest: i32,
+    back: i32,
+) {
+    unsafe {
+        let jmp: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let mut offset: i32 = dest - (program_counter + 1);
+        if back != 0 {
+            offset = -offset;
+        }
+        if ((offset > (1 << 8 + 8 + 1) - 1) as i32 != 0) as i64 != 0 {
+            luax_syntaxerror(
+                (*fs).lexical_state,
+                b"control structure too long\0" as *const u8 as *const i8,
+            );
+        }
+        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1) << 0 + 7 + 8)
+            | (offset as u32) << 0 + 7 + 8 & !(!(0u32) << 8 + 8 + 1) << 0 + 7 + 8;
+    }
+}
+pub unsafe extern "C" fn checktoclose(fs: *mut FunctionState, level: i32) {
+    unsafe {
+        if level != -1 {
+            marktobeclosed(fs);
+            luak_code_abck(fs, OP_TBC, reglevel(fs, level), 0, 0, 0);
+        }
     }
 }

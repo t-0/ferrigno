@@ -5,7 +5,7 @@ use crate::functions::*;
 use crate::uvalue::*;
 use crate::tvalue::*;
 use crate::state::*;
-use crate::onelua::*;
+use crate::global::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
@@ -163,5 +163,33 @@ impl User {
                 }
             };
         }
+    }
+}
+pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
+    unsafe {
+        let mut i: i32;
+        if !((*u).metatable).is_null() {
+            if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                reallymarkobject(g, &mut (*((*u).metatable as *mut Object)));
+            }
+        }
+        i = 0;
+        while i < (*u).nuvalue as i32 {
+            if ((*((*u).uv).as_mut_ptr().offset(i as isize))
+                .uv
+                .is_collectable())
+                && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.object).get_marked()
+                    & (1 << 3 | 1 << 4)
+                    != 0
+            {
+                reallymarkobject(
+                    g,
+                    (*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.object,
+                );
+            }
+            i += 1;
+        }
+        genlink(g, &mut (*(u as *mut Object)));
+        return 1 + (*u).nuvalue as i32;
     }
 }
