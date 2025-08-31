@@ -17181,22 +17181,22 @@ pub unsafe extern "C" fn findfield(state: *mut State, objidx: i32, level: i32) -
         while lua_next(state, -2) != 0 {
             if lua_type(state, -2) == Some(TAG_TYPE_STRING) {
                 if lua_rawequal(state, objidx, -1) {
-                    lua_settop(state, -1 - 1);
+                    lua_settop(state, -2);
                     return true;
                 } else if findfield(state, objidx, level - 1) {
                     lua_pushstring(state, b".\0" as *const u8 as *const i8);
-                    lua_copy(state, -1, -(3));
-                    lua_settop(state, -1 - 1);
+                    lua_copy(state, -1, -3);
+                    lua_settop(state, -2);
                     lua_concat(state, 3);
                     return true;
                 }
             }
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         }
         return false;
     }
 }
-pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -> i32 {
+pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -> bool {
     unsafe {
         let top: i32 = (*state).get_top();
         lua_getinfo(state, b"f\0" as *const u8 as *const i8, ar);
@@ -17211,27 +17211,27 @@ pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -
             if strncmp(name, b"_G.\0" as *const u8 as *const i8, 3 as u64) == 0 {
                 lua_pushstring(state, name.offset(3 as isize));
                 lua_rotate(state, -2, -1);
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
             }
             lua_copy(state, -1, top + 1);
             lua_settop(state, top + 1);
-            return 1;
+            return true;
         } else {
             lua_settop(state, top);
-            return 0;
+            return false;
         };
     }
 }
 pub unsafe extern "C" fn pushfuncname(state: *mut State, ar: *mut Debug) {
     unsafe {
-        if pushglobalfuncname(state, ar) != 0 {
+        if pushglobalfuncname(state, ar) {
             lua_pushfstring(
                 state,
                 b"function '%s'\0" as *const u8 as *const i8,
                 lua_tolstring(state, -1, std::ptr::null_mut()),
             );
             lua_rotate(state, -2, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         } else if *(*ar).namewhat as i32 != '\0' as i32 {
             lua_pushfstring(
                 state,
@@ -17422,8 +17422,8 @@ pub unsafe extern "C" fn lual_argerror(
                 );
             }
         }
-        if (ar.name).is_null() {
-            ar.name = if pushglobalfuncname(state, &mut ar) != 0 {
+        if ar.name.is_null() {
+            ar.name = if pushglobalfuncname(state, &mut ar) {
                 lua_tolstring(state, -1, std::ptr::null_mut())
             } else {
                 b"?\0" as *const u8 as *const i8
@@ -17864,7 +17864,7 @@ pub unsafe extern "C" fn errfile(state: *mut State, what: *const i8, fnameindex:
             );
         }
         lua_rotate(state, fnameindex, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return 5 + 1;
     }
 }
@@ -17963,7 +17963,7 @@ pub unsafe extern "C" fn lual_loadfilex(
             return errfile(state, b"read\0" as *const u8 as *const i8, fnameindex);
         }
         lua_rotate(state, fnameindex, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return status;
     }
 }
@@ -18019,7 +18019,7 @@ pub unsafe extern "C" fn lual_getmetafield(state: *mut State, obj: i32, event: *
                 lua_settop(state, -2 - 1);
             } else {
                 lua_rotate(state, -2, -1);
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
             }
             return tag;
         };
@@ -18048,7 +18048,7 @@ pub unsafe extern "C" fn lual_len(state: *mut State, index: i32) -> i64 {
                 b"object length is not an integer\0" as *const u8 as *const i8,
             );
         }
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return l;
     }
 }
@@ -18115,7 +18115,7 @@ pub unsafe extern "C" fn lual_tolstring(
                     );
                     if tag != 0 {
                         lua_rotate(state, -2, -1);
-                        lua_settop(state, -1 - 1);
+                        lua_settop(state, -2);
                     }
                 }
             }
@@ -18157,7 +18157,7 @@ pub unsafe extern "C" fn lual_getsubtable(
         if lua_getfield(state, index, fname) == 5 {
             return 1;
         } else {
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             index = lua_absindex(state, index);
             (*state).lua_createtable();
             lua_pushvalue(state, -1);
@@ -18180,15 +18180,15 @@ pub unsafe extern "C" fn lual_requiref(
         );
         lua_getfield(state, -1, modname);
         if lua_toboolean(state, -1) == 0 {
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             lua_pushcclosure(state, openf, 0);
             lua_pushstring(state, modname);
             lua_callk(state, 1, 1, 0, None);
             lua_pushvalue(state, -1);
-            lua_setfield(state, -(3), modname);
+            lua_setfield(state, -3, modname);
         }
         lua_rotate(state, -2, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         if glb != 0 {
             lua_pushvalue(state, -1);
             lua_setglobal(state, modname);
@@ -18397,7 +18397,7 @@ pub unsafe extern "C" fn luab_print(state: *mut State) -> i32 {
                 l,
                 stdout,
             );
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             i += 1;
         }
         fwrite(
@@ -18773,7 +18773,7 @@ pub unsafe extern "C" fn load_aux(state: *mut State, status: i32, envidx: i32) -
             if envidx != 0 {
                 lua_pushvalue(state, envidx);
                 if (lua_setupvalue(state, -2, 1)).is_null() {
-                    lua_settop(state, -1 - 1);
+                    lua_settop(state, -2);
                 }
             }
             return 1;
@@ -18807,7 +18807,7 @@ pub unsafe extern "C" fn generic_reader(
         lua_pushvalue(state, 1);
         lua_callk(state, 0, 1, 0, None);
         if lua_type(state, -1) == Some(TAG_TYPE_NIL) {
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             *size = 0;
             return std::ptr::null();
         } else if !lua_isstring(state, -1) {
@@ -18817,7 +18817,7 @@ pub unsafe extern "C" fn generic_reader(
             );
         }
         lua_copy(state, -1, 5);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return lua_tolstring(state, 5, size);
     }
 }
@@ -18892,7 +18892,7 @@ pub unsafe extern "C" fn luab_assert(state: *mut State) -> i32 {
         } else {
             lual_checkany(state, 1);
             lua_rotate(state, 1, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             lua_pushstring(state, b"assertion failed!\0" as *const u8 as *const i8);
             lua_settop(state, 1);
             return luab_error(state);
@@ -19488,7 +19488,7 @@ pub unsafe extern "C" fn sort_comp(state: *mut State, a: i32, b: i32) -> i32 {
             lua_pushvalue(state, b - 2);
             lua_callk(state, 2, 1, 0, None);
             res = lua_toboolean(state, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             return res;
         };
     }
@@ -19510,12 +19510,12 @@ pub unsafe extern "C" fn partition(state: *mut State, lo: u32, up: u32) -> u32 {
                         b"invalid order function for sorting\0" as *const u8 as *const i8,
                     );
                 }
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
             }
             loop {
                 j = j.wrapping_sub(1);
                 lua_geti(state, 1, j as i64);
-                if !(sort_comp(state, -(3), -1) != 0) {
+                if !(sort_comp(state, -3, -1) != 0) {
                     break;
                 }
                 if ((j < i) as i32 != 0) as i64 != 0 {
@@ -19524,10 +19524,10 @@ pub unsafe extern "C" fn partition(state: *mut State, lo: u32, up: u32) -> u32 {
                         b"invalid order function for sorting\0" as *const u8 as *const i8,
                     );
                 }
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
             }
             if j < i {
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
                 set2(state, up.wrapping_sub(1 as u32), i);
                 return i;
             }
@@ -19567,7 +19567,7 @@ pub unsafe extern "C" fn auxsort(state: *mut State, mut lo: u32, mut up: u32, mu
             if sort_comp(state, -2, -1) != 0 {
                 set2(state, p, lo);
             } else {
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
                 lua_geti(state, 1, up as i64);
                 if sort_comp(state, -1, -2) != 0 {
                     set2(state, p, up);
@@ -19991,14 +19991,14 @@ pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 {
                 b"_IO_input\0" as *const u8 as *const i8,
             );
             lua_copy(state, -1, 1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             tofile(state);
             to_close = false;
         } else {
             let filename: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
             opencheck(state, filename, b"r\0" as *const u8 as *const i8);
             lua_copy(state, -1, 1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             to_close = true;
         }
         aux_lines(state, to_close);
@@ -20280,7 +20280,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
             return lual_fileresult(state, 0, std::ptr::null());
         }
         if success == 0 {
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             (*state).push_nil();
         }
         return n - first;
@@ -20668,7 +20668,7 @@ pub unsafe extern "C" fn createmeta(state: *mut State) {
         (*state).lua_createtable();
         lual_setfuncs(state, IO_METHODS.as_ptr(), 0);
         lua_setfield(state, -2, b"__index\0" as *const u8 as *const i8);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
     }
 }
 pub unsafe extern "C" fn io_noclose(state: *mut State) -> i32 {
@@ -20867,7 +20867,7 @@ pub unsafe extern "C" fn getboolfield(state: *mut State, key: *const i8) -> i32 
         } else {
             lua_toboolean(state, -1)
         };
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return res;
     }
 }
@@ -20906,7 +20906,7 @@ pub unsafe extern "C" fn getfield(state: *mut State, key: *const i8, d: i32, del
             }
             res -= delta as i64;
         }
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return res as i32;
     }
 }
@@ -21524,7 +21524,7 @@ pub unsafe extern "C" fn trymt(state: *mut State, mtname: *const i8) {
                 lua_typename(state, lua_type(state, -1)),
             );
         }
-        lua_rotate(state, -(3), 1);
+        lua_rotate(state, -3, 1);
         lua_callk(state, 2, 1, 0, None);
     }
 }
@@ -22347,7 +22347,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                                     b.lual_addvalue();
                                 } else {
                                     nb = snprintf(buffer, maxitem as u64, form.as_mut_ptr(), s);
-                                    lua_settop(state, -1 - 1);
+                                    lua_settop(state, -2);
                                 }
                             }
                             current_block = 11793792312832361944;
@@ -23183,10 +23183,10 @@ pub unsafe extern "C" fn createmetatable(state: *mut State) {
         lua_pushstring(state, b"\0" as *const u8 as *const i8);
         lua_pushvalue(state, -2);
         lua_setmetatable(state, -2);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         lua_pushvalue(state, -2);
         lua_setfield(state, -2, b"__index\0" as *const u8 as *const i8);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
     }
 }
 pub unsafe extern "C" fn luaopen_string(state: *mut State) -> i32 {
@@ -23895,7 +23895,7 @@ pub unsafe extern "C" fn db_setlocal(state: *mut State) -> i32 {
         lua_xmove(state, other_state, 1);
         name = lua_setlocal(other_state, &mut ar, nvar);
         if name.is_null() {
-            lua_settop(other_state, -1 - 1);
+            lua_settop(other_state, -2);
         }
         lua_pushstring(state, name);
         return 1;
@@ -24080,7 +24080,7 @@ pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 {
         (*other_state).push_state();
         lua_xmove(other_state, state, 1);
         lua_pushvalue(state, arg + 1);
-        lua_rawset(state, -(3));
+        lua_rawset(state, -3);
         lua_sethook(other_state, function, mask, count);
         return 0;
     }
@@ -24104,7 +24104,7 @@ pub unsafe extern "C" fn db_gethook(state: *mut State) -> i32 {
             lua_xmove(other_state, state, 1);
             lua_rawget(state, -2);
             lua_rotate(state, -2, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         }
         lua_pushstring(state, unmakemask(mask, buffer.as_mut_ptr()));
         (*state).push_integer(lua_gethookcount(other_state) as i64);
@@ -24350,7 +24350,7 @@ pub unsafe extern "C" fn noenv(state: *mut State) -> i32 {
             b"LUA_NOENV\0" as *const u8 as *const i8,
         );
         b = lua_toboolean(state, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return b;
     }
 }
@@ -24405,8 +24405,8 @@ pub unsafe extern "C" fn setpath(
                 b.lual_pushresult();
             }
         }
-        lua_setfield(state, -(3), fieldname);
-        lua_settop(state, -1 - 1);
+        lua_setfield(state, -3, fieldname);
+        lua_settop(state, -2);
     }
 }
 pub unsafe extern "C" fn checkclib(state: *mut State, path: *const i8) -> *mut libc::c_void {
@@ -24424,9 +24424,9 @@ pub unsafe extern "C" fn addtoclib(state: *mut State, path: *const i8, plib: *mu
         lua_getfield(state, -(1000000 as i32) - 1000 as i32, CLIBS);
         lua_pushlightuserdata(state, plib);
         lua_pushvalue(state, -1);
-        lua_setfield(state, -(3), path);
+        lua_setfield(state, -3, path);
         lua_rawseti(state, -2, lual_len(state, -2) + 1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
     }
 }
 pub unsafe extern "C" fn gctm(state: *mut State) -> i32 {
@@ -24435,7 +24435,7 @@ pub unsafe extern "C" fn gctm(state: *mut State) -> i32 {
         while n >= 1 {
             lua_rawgeti(state, 1, n);
             lsys_unloadlib(lua_touserdata(state, -1));
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             n -= 1;
         }
         return 0;
@@ -24774,7 +24774,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
         loop {
             message.lual_addstring(b"\n\t\0" as *const u8 as *const i8);
             if ((lua_rawgeti(state, 3, i as i64) == 0) as i32 != 0) as i64 != 0 {
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
                 message.length = (message.length as u64).wrapping_sub(2 as u64) as u64;
                 message.lual_pushresult();
                 lual_error(
@@ -24789,7 +24789,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
             if lua_type(state, -2) == Some(TAG_TYPE_CLOSURE) {
                 return;
             } else if lua_isstring(state, -2) {
-                lua_settop(state, -1 - 1);
+                lua_settop(state, -2);
                 message.lual_addvalue();
             } else {
                 lua_settop(state, -2 - 1);
@@ -24812,16 +24812,16 @@ pub unsafe extern "C" fn ll_require(state: *mut State) -> i32 {
         if lua_toboolean(state, -1) != 0 {
             return 1;
         }
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         findloader(state, name);
         lua_rotate(state, -2, 1);
         lua_pushvalue(state, 1);
-        lua_pushvalue(state, -(3));
+        lua_pushvalue(state, -3);
         lua_callk(state, 2, 1, 0, None);
         if !(lua_type(state, -1) == Some(TAG_TYPE_NIL)) {
             lua_setfield(state, 2, name);
         } else {
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         }
         if lua_getfield(state, 2, name) == 0 {
             (*state).push_boolean(true);
@@ -24990,7 +24990,7 @@ pub unsafe extern "C" fn luaopen_package(state: *mut State) -> i32 {
         lua_rawgeti(state, -(1000000 as i32) - 1000 as i32, 2 as i64);
         lua_pushvalue(state, -2);
         lual_setfuncs(state, LL_FUNCTIONS.as_ptr(), 1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return 1;
     }
 }
@@ -25076,7 +25076,7 @@ pub unsafe extern "C" fn report(state: *mut State, status: i32) -> i32 {
                 message = b"(error message not a string)\0" as *const u8 as *const i8;
             }
             l_message(PROGRAM_NAME, message);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         }
         return status;
     }
@@ -25116,7 +25116,7 @@ pub unsafe extern "C" fn docall(state: *mut State, narg: i32, nres: i32) -> i32 
         status = lua_pcallk(state, narg, nres, base, 0, None);
         setsignal(2, None);
         lua_rotate(state, base, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return status;
     }
 }
@@ -25201,7 +25201,7 @@ pub unsafe extern "C" fn pushargs(state: *mut State) -> i32 {
             i += 1;
         }
         lua_rotate(state, -i, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return n;
     }
 }
@@ -25356,7 +25356,7 @@ pub unsafe extern "C" fn get_prompt(state: *mut State, firstline: i32) -> *const
         } else {
             let p: *const i8 = lual_tolstring(state, -1, std::ptr::null_mut());
             lua_rotate(state, -2, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             return p;
         };
     }
@@ -25429,7 +25429,7 @@ pub unsafe extern "C" fn addreturn(state: *mut State) -> i32 {
         );
         if status == 0 {
             lua_rotate(state, -2, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
         } else {
             lua_settop(state, -2 - 1);
         }
@@ -25452,7 +25452,7 @@ pub unsafe extern "C" fn multiline(state: *mut State) -> i32 {
                 return status;
             }
             lua_rotate(state, -2, -1);
-            lua_settop(state, -1 - 1);
+            lua_settop(state, -2);
             lua_pushstring(state, b"\n\0" as *const u8 as *const i8);
             lua_rotate(state, -2, 1);
             lua_concat(state, 3);
@@ -25470,7 +25470,7 @@ pub unsafe extern "C" fn loadline(state: *mut State) -> i32 {
             status = multiline(state);
         }
         lua_rotate(state, 1, -1);
-        lua_settop(state, -1 - 1);
+        lua_settop(state, -2);
         return status;
     }
 }
