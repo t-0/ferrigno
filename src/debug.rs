@@ -6,8 +6,14 @@ use crate::onelua::*;
 use crate::c::*;
 use crate::state::*;
 use crate::functions::*;
-use crate::registeredfunction::*;
+use crate::lclosure::*;
+use crate::closure::*;
+use crate::prototype::*;
 use crate::tag::*;
+use crate::object::*;
+use crate::stackvalue::*;
+use crate::tvalue::*;
+use crate::registeredfunction::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Debug {
@@ -608,5 +614,87 @@ pub unsafe extern "C" fn luaopen_debug(state: *mut State) -> i32 {
         (*state).lua_createtable();
         lual_setfuncs(state, DEBUG_FUNCTIONS.as_ptr(), 0);
         return 1;
+    }
+}
+pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const Debug, n: i32) -> *const i8 {
+    unsafe {
+        let name;
+        if ar.is_null() {
+            if !((*(*state).top.p.offset(-(1 as isize)))
+                .value
+                .get_tag_variant()
+                == TAG_VARIANT_CLOSURE_L)
+            {
+                name = std::ptr::null();
+            } else {
+                name = luaf_getlocalname(
+                    (*((*(*state).top.p.offset(-(1 as isize))).value.value.object as *mut LClosure))
+                        .p,
+                    n,
+                    0,
+                );
+            }
+        } else {
+            let mut pos: StkId = std::ptr::null_mut();
+            name = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
+            if !name.is_null() {
+                let io1: *mut TValue = &mut (*(*state).top.p).value;
+                let io2: *const TValue = &mut (*pos).value;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+                (*state).top.p = (*state).top.p.offset(1);
+            }
+        }
+        return name;
+    }
+}
+pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const Debug, n: i32) -> *const i8 {
+    unsafe {
+        let mut pos: StkId = std::ptr::null_mut();
+        let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
+        if !name.is_null() {
+            let io1: *mut TValue = &mut (*pos).value;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            (*io1).value = (*io2).value;
+            (*io1).set_tag((*io2).get_tag());
+            (*state).top.p = (*state).top.p.offset(-1);
+        }
+        return name;
+    }
+}
+pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
+    unsafe {
+        if !(!cl.is_null() && (*cl).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
+            (*ar).source = b"=[C]\0" as *const u8 as *const i8;
+            (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
+                .wrapping_div(::core::mem::size_of::<i8>() as u64)
+                .wrapping_sub(1 as u64);
+            (*ar).line_defined = -1;
+            (*ar).last_line_defined = -1;
+            (*ar).what = b"C\0" as *const u8 as *const i8;
+        } else {
+            let p: *const Prototype = (*cl).l.p;
+            if !((*p).source).is_null() {
+                (*ar).source = (*(*p).source).get_contents();
+                (*ar).source_length = (*(*p).source).get_length();
+            } else {
+                (*ar).source = b"=?\0" as *const u8 as *const i8;
+                (*ar).source_length = (::core::mem::size_of::<[i8; 3]>() as u64)
+                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
+                    .wrapping_sub(1 as u64);
+            }
+            (*ar).line_defined = (*p).line_defined;
+            (*ar).last_line_defined = (*p).last_line_defined;
+            (*ar).what = if (*ar).line_defined == 0 {
+                b"main\0" as *const u8 as *const i8
+            } else {
+                b"Lua\0" as *const u8 as *const i8
+            };
+        }
+        luao_chunkid(
+            ((*ar).short_src).as_mut_ptr(),
+            (*ar).source,
+            (*ar).source_length,
+        );
     }
 }

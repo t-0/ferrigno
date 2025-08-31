@@ -111,3 +111,58 @@ impl Prototype {
         }
     }
 }
+pub unsafe extern "C" fn getbaseline(
+    f: *const Prototype,
+    program_counter: i32,
+    basepc: *mut i32,
+) -> i32 {
+    unsafe {
+        if (*f).size_absolute_line_info == 0
+            || program_counter < (*((*f).absolute_line_info).offset(0 as isize)).program_counter
+        {
+            *basepc = -1;
+            return (*f).line_defined;
+        } else {
+            let mut i: i32 = (program_counter as u32)
+                .wrapping_div(128u32)
+                .wrapping_sub(1u32) as i32;
+            while (i + 1) < (*f).size_absolute_line_info
+                && program_counter
+                    >= (*((*f).absolute_line_info).offset((i + 1) as isize)).program_counter
+            {
+                i += 1;
+            }
+            *basepc = (*((*f).absolute_line_info).offset(i as isize)).program_counter;
+            return (*((*f).absolute_line_info).offset(i as isize)).line;
+        };
+    }
+}
+pub unsafe extern "C" fn luag_getfuncline(f: *const Prototype, program_counter: i32) -> i32 {
+    unsafe {
+        if ((*f).line_info).is_null() {
+            return -1;
+        } else {
+            let mut basepc: i32 = 0;
+            let mut baseline: i32 = getbaseline(f, program_counter, &mut basepc);
+            loop {
+                let fresh8 = basepc;
+                basepc = basepc + 1;
+                if !(fresh8 < program_counter) {
+                    break;
+                }
+                baseline += *((*f).line_info).offset(basepc as isize) as i32;
+            }
+            return baseline;
+        };
+    }
+}
+pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
+    unsafe {
+        let s: *mut TString = (*((*p).upvalues).offset(uv as isize)).name;
+        if s.is_null() {
+            return b"?\0" as *const u8 as *const i8;
+        } else {
+            return (*s).get_contents();
+        };
+    }
+}

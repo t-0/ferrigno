@@ -1,5 +1,10 @@
 use crate::functions::*;
 use crate::stkidrel::*;
+use crate::prototype::*;
+use crate::lclosure::*;
+use crate::onelua::*;
+use crate::state::*;
+use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallInfo {
@@ -45,4 +50,96 @@ pub union CallInfoConsistuentB {
 pub struct CallInfoConsistuentBTransferInfo {
     pub ftransfer: u16,
     pub ntransfer: u16,
+}
+pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
+    unsafe {
+        return ((*call_info).u.l.saved_program_counter).offset_from(
+            (*(*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                .p)
+                .code,
+        ) as i32
+            - 1;
+    }
+}
+pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
+    unsafe {
+        return luag_getfuncline(
+            (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                .p,
+            currentpc(call_info),
+        );
+    }
+}
+pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
+    unsafe {
+        while !call_info.is_null() {
+            if (*call_info).call_status as i32 & 1 << 1 == 0 {
+                ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
+            }
+            call_info = (*call_info).previous;
+        }
+    }
+}
+pub unsafe extern "C" fn luag_findlocal(
+    state: *mut State,
+    call_info: *mut CallInfo,
+    n: i32,
+    pos: *mut StkId,
+) -> *const i8 {
+    unsafe {
+        let base: StkId = ((*call_info).function.p).offset(1 as isize);
+        let mut name: *const i8 = std::ptr::null();
+        if (*call_info).call_status as i32 & 1 << 1 == 0 {
+            if n < 0 {
+                return findvararg(call_info, n, pos);
+            } else {
+                name = luaf_getlocalname(
+                    (*((*(*call_info).function.p).value.value.object as *mut LClosure)).p,
+                    n,
+                    currentpc(call_info),
+                );
+            }
+        }
+        if name.is_null() {
+            let limit: StkId = if call_info == (*state).call_info {
+                (*state).top.p
+            } else {
+                (*(*call_info).next).function.p
+            };
+            if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
+                name = if (*call_info).call_status as i32 & 1 << 1 == 0 {
+                    b"(temporary)\0" as *const u8 as *const i8
+                } else {
+                    b"(C temporary)\0" as *const u8 as *const i8
+                };
+            } else {
+                return std::ptr::null();
+            }
+        }
+        if !pos.is_null() {
+            *pos = base.offset((n - 1) as isize);
+        }
+        return name;
+    }
+}
+pub unsafe extern "C" fn findvararg(
+    call_info: *mut CallInfo,
+    n: i32,
+    pos: *mut StkId,
+) -> *const i8 {
+    unsafe {
+        if (*(*((*(*call_info).function.p).value.value.object as *mut LClosure))
+            .p)
+            .is_variable_arguments
+        {
+            let nextra: i32 = (*call_info).u.l.count_extra_arguments;
+            if n >= -nextra {
+                *pos = ((*call_info).function.p)
+                    .offset(-(nextra as isize))
+                    .offset(-((n + 1) as isize));
+                return b"(vararg)\0" as *const u8 as *const i8;
+            }
+        }
+        return std::ptr::null();
+    }
 }
