@@ -7,7 +7,7 @@ use crate::absolutelineinfo::*;
 use crate::buffer::*;
 use crate::c::*;
 use crate::callinfo::*;
-use crate::debug::*;
+use crate::debuginfo::*;
 use crate::expressiondescription::*;
 use crate::f2i::*;
 use crate::functions::*;
@@ -6890,7 +6890,7 @@ pub unsafe extern "C" fn findfield(state: *mut State, objidx: i32, level: i32) -
         return false;
     }
 }
-pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -> bool {
+pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut DebugInfo) -> bool {
     unsafe {
         let top: i32 = (*state).get_top();
         lua_getinfo(state, b"f\0" as *const u8 as *const i8, ar);
@@ -6916,7 +6916,7 @@ pub unsafe extern "C" fn pushglobalfuncname(state: *mut State, ar: *mut Debug) -
         };
     }
 }
-pub unsafe extern "C" fn pushfuncname(state: *mut State, ar: *mut Debug) {
+pub unsafe extern "C" fn pushfuncname(state: *mut State, ar: *mut DebugInfo) {
     unsafe {
         if pushglobalfuncname(state, ar) {
             lua_pushfstring(
@@ -6949,7 +6949,7 @@ pub unsafe extern "C" fn pushfuncname(state: *mut State, ar: *mut Debug) {
 }
 pub unsafe extern "C" fn lastlevel(state: *mut State) -> i32 {
     unsafe {
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -6993,7 +6993,7 @@ pub unsafe extern "C" fn lual_traceback(
 ) {
     unsafe {
         let mut b = Buffer::new();
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -7077,7 +7077,7 @@ pub unsafe extern "C" fn lual_argerror(
     extramsg: *const i8,
 ) -> i32 {
     unsafe {
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -7159,7 +7159,7 @@ pub unsafe fn tag_error(state: *mut State, arg: i32, tag: Option<u8>) {
 }
 pub unsafe extern "C" fn lual_where(state: *mut State, level: i32) {
     unsafe {
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -7478,25 +7478,22 @@ pub unsafe extern "C" fn boxgc(state: *mut State) -> i32 {
 pub const BOX_METATABLE: [RegisteredFunction; 3] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__gc\0" as *const u8 as *const i8,
                 function: Some(boxgc as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__close\0" as *const u8 as *const i8,
                 function: Some(boxgc as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -9317,60 +9314,52 @@ pub unsafe extern "C" fn sort(state: *mut State) -> i32 {
 pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"concat\0" as *const u8 as *const i8,
                 function: Some(tconcat as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"insert\0" as *const u8 as *const i8,
                 function: Some(tinsert as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"pack\0" as *const u8 as *const i8,
                 function: Some(tpack as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"unpack\0" as *const u8 as *const i8,
                 function: Some(tunpack as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
                 function: Some(tremove as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"move\0" as *const u8 as *const i8,
                 function: Some(tmove as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"sort\0" as *const u8 as *const i8,
                 function: Some(sort as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -10172,187 +10161,162 @@ pub unsafe extern "C" fn f_flush(state: *mut State) -> i32 {
 pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
                 function: Some(io_close as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
                 function: Some(io_flush as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"input\0" as *const u8 as *const i8,
                 function: Some(io_input as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
                 function: Some(io_lines as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"open\0" as *const u8 as *const i8,
                 function: Some(io_open as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"output\0" as *const u8 as *const i8,
                 function: Some(io_output as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"popen\0" as *const u8 as *const i8,
                 function: Some(io_popen as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
                 function: Some(io_read as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"tmpfile\0" as *const u8 as *const i8,
                 function: Some(io_tmpfile as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"type\0" as *const u8 as *const i8,
                 function: Some(io_type as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
                 function: Some(io_write as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
 pub const IO_METHODS: [RegisteredFunction; 8] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
                 function: Some(f_read as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
                 function: Some(f_write as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
                 function: Some(f_lines as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
                 function: Some(f_flush as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"seek\0" as *const u8 as *const i8,
                 function: Some(f_seek as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
                 function: Some(f_close as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setvbuf\0" as *const u8 as *const i8,
                 function: Some(f_setvbuf as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
 pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__index\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__gc\0" as *const u8 as *const i8,
                 function: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__close\0" as *const u8 as *const i8,
                 function: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__tostring\0" as *const u8 as *const i8,
                 function: Some(f_tostring as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -10828,88 +10792,76 @@ pub unsafe extern "C" fn os_exit(state: *mut State) -> i32 {
 pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"clock\0" as *const u8 as *const i8,
                 function: Some(os_clock as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"date\0" as *const u8 as *const i8,
                 function: Some(os_date as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"difftime\0" as *const u8 as *const i8,
                 function: Some(os_difftime as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"execute\0" as *const u8 as *const i8,
                 function: Some(os_execute as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"exit\0" as *const u8 as *const i8,
                 function: Some(os_exit as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getenv\0" as *const u8 as *const i8,
                 function: Some(os_getenv as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
                 function: Some(os_remove as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"rename\0" as *const u8 as *const i8,
                 function: Some(os_rename as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setlocale\0" as *const u8 as *const i8,
                 function: Some(os_setlocale as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"time\0" as *const u8 as *const i8,
                 function: Some(os_time as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"tmpname\0" as *const u8 as *const i8,
                 function: Some(os_tmpname as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -11276,74 +11228,64 @@ pub unsafe extern "C" fn arith_unm(state: *mut State) -> i32 {
 pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__add\0" as *const u8 as *const i8,
                 function: Some(arith_add as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__sub\0" as *const u8 as *const i8,
                 function: Some(arith_sub as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__mul\0" as *const u8 as *const i8,
                 function: Some(arith_mul as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__mod\0" as *const u8 as *const i8,
                 function: Some(arith_mod as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__pow\0" as *const u8 as *const i8,
                 function: Some(arith_pow as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__div\0" as *const u8 as *const i8,
                 function: Some(arith_div as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__idiv\0" as *const u8 as *const i8,
                 function: Some(arith_idiv as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__unm\0" as *const u8 as *const i8,
                 function: Some(arith_unm as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"__index\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -12696,130 +12638,112 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
 pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"byte\0" as *const u8 as *const i8,
                 function: Some(str_byte as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"char\0" as *const u8 as *const i8,
                 function: Some(str_char as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"dump\0" as *const u8 as *const i8,
                 function: Some(str_dump as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"find\0" as *const u8 as *const i8,
                 function: Some(str_find as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"format\0" as *const u8 as *const i8,
                 function: Some(str_format as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"gmatch\0" as *const u8 as *const i8,
                 function: Some(GMatchState::gmatch as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"gsub\0" as *const u8 as *const i8,
                 function: Some(str_gsub as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"len\0" as *const u8 as *const i8,
                 function: Some(str_len as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"lower\0" as *const u8 as *const i8,
                 function: Some(str_lower as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"match\0" as *const u8 as *const i8,
                 function: Some(str_match as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"rep\0" as *const u8 as *const i8,
                 function: Some(str_rep as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"reverse\0" as *const u8 as *const i8,
                 function: Some(str_reverse as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"sub\0" as *const u8 as *const i8,
                 function: Some(str_sub as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"upper\0" as *const u8 as *const i8,
                 function: Some(str_upper as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"pack\0" as *const u8 as *const i8,
                 function: Some(str_pack as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"packsize\0" as *const u8 as *const i8,
                 function: Some(str_packsize as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"unpack\0" as *const u8 as *const i8,
                 function: Some(str_unpack as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -13144,53 +13068,46 @@ pub unsafe extern "C" fn iter_codes(state: *mut State) -> i32 {
 pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"offset\0" as *const u8 as *const i8,
                 function: Some(byteoffset as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"codepoint\0" as *const u8 as *const i8,
                 function: Some(codepoint as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"char\0" as *const u8 as *const i8,
                 function: Some(utfchar as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"len\0" as *const u8 as *const i8,
                 function: Some(utflen as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"codes\0" as *const u8 as *const i8,
                 function: Some(iter_codes as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"charpattern\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -13310,7 +13227,7 @@ pub unsafe extern "C" fn checkupval(
         return id;
     }
 }
-pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut Debug) {
+pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut DebugInfo) {
     unsafe {
         pub const HOOK_NAMES: [*const i8; 5] = [
             b"call\0" as *const u8 as *const i8,
@@ -13901,78 +13818,68 @@ pub unsafe extern "C" fn ll_require(state: *mut State) -> i32 {
 pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"loadlib\0" as *const u8 as *const i8,
                 function: Some(ll_loadlib as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"searchpath\0" as *const u8 as *const i8,
                 function: Some(ll_searchpath as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"preload\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"cpath\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"path\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"searchers\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"loaded\0" as *const u8 as *const i8,
                 function: None,
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
 pub const LL_FUNCTIONS: [RegisteredFunction; 2] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"require\0" as *const u8 as *const i8,
                 function: Some(ll_require as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -14076,7 +13983,7 @@ pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" f
         sigaction(sig, &mut sa, std::ptr::null_mut());
     }
 }
-pub unsafe extern "C" fn lstop(state: *mut State, mut _ar: *mut Debug) {
+pub unsafe extern "C" fn lstop(state: *mut State, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(state, None, 0, 0);
         lual_error(state, b"interrupted!\0" as *const u8 as *const i8);
@@ -14088,7 +13995,7 @@ pub unsafe extern "C" fn laction(i: i32) {
         setsignal(i, None);
         lua_sethook(
             GLOBAL_STATE,
-            Some(lstop as unsafe extern "C" fn(*mut State, *mut Debug) -> ()),
+            Some(lstop as unsafe extern "C" fn(*mut State, *mut DebugInfo) -> ()),
             flag,
             1,
         );

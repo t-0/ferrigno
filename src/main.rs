@@ -13,7 +13,7 @@ mod closep;
 mod closure;
 mod constructorcontrol;
 mod coroutine;
-mod debug;
+mod debuginfo;
 mod dumpstate;
 mod dynamicdata;
 mod expressiondescription;

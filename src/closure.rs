@@ -3,7 +3,7 @@ use crate::lclosure::*;
 use crate::tag::*;
 use crate::object::*;
 use crate::state::*;
-use crate::debug::*;
+use crate::debuginfo::*;
 use crate::value::*;
 use crate::table::*;
 use crate::callinfo::*;
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
 pub unsafe extern "C" fn auxgetinfo(
     state: *mut State,
     mut what: *const i8,
-    ar: *mut Debug,
+    ar: *mut DebugInfo,
     f: *mut UClosure,
     call_info: *mut CallInfo,
 ) -> i32 {

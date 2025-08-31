@@ -17,7 +17,7 @@ use crate::tvalue::*;
 use crate::registeredfunction::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct Debug {
+pub struct DebugInfo {
     pub event: i32,
     pub name: *const i8,
     pub namewhat: *const i8,
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn db_setupvalue(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
     unsafe {
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -240,7 +240,7 @@ pub unsafe extern "C" fn db_getlocal(state: *mut State) -> i32 {
             lua_pushstring(state, lua_getlocal(state, std::ptr::null(), nvar));
             return 1;
         } else {
-            let mut ar: Debug = Debug {
+            let mut ar: DebugInfo = DebugInfo {
                 event: 0,
                 name: std::ptr::null(),
                 namewhat: std::ptr::null(),
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn db_setlocal(state: *mut State) -> i32 {
         let mut arg: i32 = 0;
         let name: *const i8;
         let other_state: *mut State = getthread(state, &mut arg);
-        let mut ar: Debug = Debug {
+        let mut ar: DebugInfo = DebugInfo {
             event: 0,
             name: std::ptr::null(),
             namewhat: std::ptr::null(),
@@ -377,7 +377,7 @@ pub unsafe extern "C" fn db_sethook(state: *mut State) -> i32 {
                 let smask: *const i8 = lual_checklstring(state, arg + 2, std::ptr::null_mut());
                 lual_checktype(state, arg + 1, TAG_TYPE_CLOSURE);
                 count = lual_optinteger(state, arg + 3, 0) as i32;
-                function = Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ());
+                function = Some(hookf as unsafe extern "C" fn(*mut State, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);
             },
         };
@@ -406,7 +406,7 @@ pub unsafe extern "C" fn db_gethook(state: *mut State) -> i32 {
         if hook.is_none() {
             (*state).push_nil();
             return 1;
-        } else if hook != Some(hookf as unsafe extern "C" fn(*mut State, *mut Debug) -> ()) {
+        } else if hook != Some(hookf as unsafe extern "C" fn(*mut State, *mut DebugInfo) -> ()) {
             lua_pushstring(state, b"external hook\0" as *const u8 as *const i8);
         } else {
             lua_getfield(state, -(1000000 as i32) - 1000 as i32, HOOKKEY);
@@ -483,123 +483,106 @@ pub unsafe extern "C" fn db_traceback(state: *mut State) -> i32 {
 pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
     [
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"debug\0" as *const u8 as *const i8,
                 function: Some(db_debug as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getuservalue\0" as *const u8 as *const i8,
                 function: Some(db_getuservalue as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"gethook\0" as *const u8 as *const i8,
                 function: Some(db_gethook as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getinfo\0" as *const u8 as *const i8,
                 function: Some(db_getinfo as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getlocal\0" as *const u8 as *const i8,
                 function: Some(db_getlocal as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getregistry\0" as *const u8 as *const i8,
                 function: Some(db_getregistry as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getmetatable\0" as *const u8 as *const i8,
                 function: Some(db_getmetatable as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"getupvalue\0" as *const u8 as *const i8,
                 function: Some(db_getupvalue as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"upvaluejoin\0" as *const u8 as *const i8,
                 function: Some(db_upvaluejoin as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"upvalueid\0" as *const u8 as *const i8,
                 function: Some(db_upvalueid as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setuservalue\0" as *const u8 as *const i8,
                 function: Some(db_setuservalue as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"sethook\0" as *const u8 as *const i8,
                 function: Some(db_sethook as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setlocal\0" as *const u8 as *const i8,
                 function: Some(db_setlocal as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setmetatable\0" as *const u8 as *const i8,
                 function: Some(db_setmetatable as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"setupvalue\0" as *const u8 as *const i8,
                 function: Some(db_setupvalue as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: b"traceback\0" as *const u8 as *const i8,
                 function: Some(db_traceback as unsafe extern "C" fn(*mut State) -> i32),
-            };
-            init
+            }
         },
         {
-            let init = RegisteredFunction {
+            RegisteredFunction {
                 name: std::ptr::null(),
                 function: None,
-            };
-            init
+            }
         },
     ]
 };
@@ -617,7 +600,7 @@ pub unsafe extern "C" fn luaopen_debug(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const Debug, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let name;
         if ar.is_null() {
@@ -649,7 +632,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const Debug, n: i3
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const Debug, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut pos: StkId = std::ptr::null_mut();
         let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
@@ -663,7 +646,7 @@ pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const Debug, n: i3
         return name;
     }
 }
-pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
+pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut UClosure) {
     unsafe {
         if !(!cl.is_null() && (*cl).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = b"=[C]\0" as *const u8 as *const i8;
@@ -702,7 +685,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut Debug, cl: *mut UClosure) {
 pub unsafe extern "C" fn lua_getinfo(
     state: *mut State,
     mut what: *const i8,
-    ar: *mut Debug,
+    ar: *mut DebugInfo,
 ) -> i32 {
     unsafe {
         let status: i32;

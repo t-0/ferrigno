@@ -1,5 +1,5 @@
 #![allow(static_mut_refs, unsafe_code)]
-use crate::debug::*;
+use crate::debuginfo::*;
 use crate::tag::*;
 use crate::onelua::*;
 use crate::registeredfunction::*;
@@ -108,7 +108,7 @@ unsafe extern "C" fn auxstatus(state: *mut State, co: *mut State) -> i32 {
             match (*co).get_status() {
                 1 => return 2,
                 0 => {
-                    let mut ar: Debug = Debug {
+                    let mut ar: DebugInfo = DebugInfo {
                         event: 0,
                         name: std::ptr::null(),
                         namewhat: std::ptr::null(),

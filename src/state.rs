@@ -1,6 +1,6 @@
 use crate::callinfo::*;
 use crate::functions::*;
-use crate::debug::*;
+use crate::debuginfo::*;
 use crate::lx::*;
 use crate::lg::*;
 use crate::loadstate::*;
@@ -740,7 +740,7 @@ pub unsafe extern "C" fn luad_hook(
                 ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
             let ci_top: i64 =
                 ((*call_info).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
-            let mut ar: Debug = Debug {
+            let mut ar: DebugInfo = DebugInfo {
                 event: 0,
                 name: std::ptr::null(),
                 namewhat: std::ptr::null(),
@@ -3433,7 +3433,7 @@ pub unsafe extern "C" fn lua_gethookcount(state: *mut State) -> i32 {
         return (*state).base_hook_count;
     }
 }
-pub unsafe extern "C" fn lua_getstack(state: *mut State, mut level: i32, ar: *mut Debug) -> i32 {
+pub unsafe extern "C" fn lua_getstack(state: *mut State, mut level: i32, ar: *mut DebugInfo) -> i32 {
     unsafe {
         let status: i32;
         let mut call_info;
