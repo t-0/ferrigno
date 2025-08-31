@@ -207,7 +207,7 @@ pub unsafe extern "C" fn luaopen_coroutine(state: *mut State) -> i32 {
                 .wrapping_mul(16 as i32 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        lua_createtable(state);
+        (*state).lua_createtable();
         lual_setfuncs(state, COROUTINE_FUNCTIONS.as_ptr(), 0);
         return 1;
     }

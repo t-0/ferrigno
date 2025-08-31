@@ -18,6 +18,7 @@ mod dynamicdata;
 mod expressiondescription;
 mod f2i;
 mod functions;
+mod libraries;
 mod functionstate;
 mod global;
 mod gmatchstate;
@@ -86,7 +87,7 @@ pub fn main() {
     }
     args.push(::core::ptr::null_mut());
     unsafe {
-        ::std::process::exit(crate::onelua::main_0(
+        ::std::process::exit(crate::state::main_0(
             (args.len() - 1) as i32,
             args.as_mut_ptr() as *mut *mut libc::c_char,
         ) as i32)
