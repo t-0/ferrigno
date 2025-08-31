@@ -1484,16 +1484,6 @@ pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 {
         };
     }
 }
-pub unsafe extern "C" fn lua_tocfunction(state: *mut State, index: i32) -> CFunction {
-    unsafe {
-        let o: *const TValue = index2value(state, index);
-        match (*o).get_tag_variant() {
-            TAG_VARIANT_CLOSURE_CFUNCTION => (*o).value.f,
-            TAG_VARIANT_CLOSURE_C => (*((*o).value.object as *mut CClosure)).f,
-            _ => None,
-        }
-    }
-}
 pub unsafe extern "C" fn lua_touserdata(state: *mut State, index: i32) -> *mut libc::c_void {
     unsafe {
         let o: *const TValue = index2value(state, index);
@@ -1781,22 +1771,6 @@ pub unsafe extern "C" fn lua_rawgeti(state: *mut State, index: i32, n: i64) -> i
         return finishrawget(state, luah_getint(table, n));
     }
 }
-pub unsafe extern "C" fn lua_rawgetp(state: *mut State, index: i32, p: *const libc::c_void) -> i32 {
-    unsafe {
-        let table: *mut Table;
-        let mut k: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        table = gettable(state, index);
-        let io: *mut TValue = &mut k;
-        (*io).value.p = p as *mut libc::c_void;
-        (*io).set_tag(TAG_TYPE_POINTER);
-        return finishrawget(state, luah_get(table, &mut k));
-    }
-}
 pub unsafe extern "C" fn lua_createtable(state: *mut State) {
     unsafe {
         let table: *mut Table;
@@ -1918,52 +1892,6 @@ pub unsafe extern "C" fn lua_setglobal(state: *mut State, name: *const i8) {
         auxsetstr(state, global_table, name);
     }
 }
-pub unsafe extern "C" fn lua_settable(state: *mut State, index: i32) {
-    unsafe {
-        let t: *mut TValue;
-        let slot: *const TValue;
-        t = index2value(state, index);
-        if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
-            slot = std::ptr::null();
-            0
-        } else {
-            slot = luah_get(
-                &mut (*((*t).value.object as *mut Table)),
-                &mut (*(*state).top.p.offset(-(2 as isize))).value,
-            );
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
-        } != 0
-        {
-            let io1: *mut TValue = slot as *mut TValue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
-            (*io1).value = (*io2).value;
-            (*io1).set_tag((*io2).get_tag());
-            if (*(*state).top.p.offset(-(1 as isize)))
-                .value
-                .is_collectable()
-            {
-                if (*(*t).value.object).get_marked() & 1 << 5 != 0
-                    && (*(*(*state).top.p.offset(-(1 as isize))).value.value.object).get_marked()
-                        & (1 << 3 | 1 << 4)
-                        != 0
-                {
-                    luac_barrierback_(state, (*t).value.object);
-                } else {
-                };
-            } else {
-            };
-        } else {
-            luav_finishset(
-                state,
-                t,
-                &mut (*(*state).top.p.offset(-(2 as isize))).value,
-                &mut (*(*state).top.p.offset(-(1 as isize))).value,
-                slot,
-            );
-        }
-        (*state).top.p = (*state).top.p.offset(-(2 as isize));
-    }
-}
 pub unsafe extern "C" fn lua_setfield(state: *mut State, index: i32, k: *const i8) {
     unsafe {
         auxsetstr(state, index2value(state, index), k);
@@ -2057,20 +1985,6 @@ pub unsafe extern "C" fn lua_rawset(state: *mut State, index: i32) {
             &mut (*(*state).top.p.offset(-(2 as isize))).value,
             2,
         );
-    }
-}
-pub unsafe extern "C" fn lua_rawsetp(state: *mut State, index: i32, p: *const libc::c_void) {
-    unsafe {
-        let mut k: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        let io: *mut TValue = &mut k;
-        (*io).value.p = p as *mut libc::c_void;
-        (*io).set_tag(TAG_TYPE_POINTER);
-        aux_rawset(state, index, &mut k, 1);
     }
 }
 pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) {
@@ -2977,11 +2891,6 @@ pub unsafe extern "C" fn lua_closethread(state: *mut State, from: *mut State) ->
         };
         status = luae_resetthread(state, (*state).status as i32);
         return status;
-    }
-}
-pub unsafe extern "C" fn lua_resetthread(state: *mut State) -> i32 {
-    unsafe {
-        return lua_closethread(state, std::ptr::null_mut());
     }
 }
 pub unsafe extern "C" fn lua_newstate() -> *mut State {
@@ -19603,43 +19512,6 @@ pub unsafe extern "C" fn newbox(state: *mut State) {
         lua_setmetatable(state, -2);
     }
 }
-pub unsafe extern "C" fn lual_ref(state: *mut State, mut t: i32) -> i32 {
-    unsafe {
-        let mut ref_0: i32;
-        if lua_type(state, -1) == Some(TAG_TYPE_NIL) {
-            lua_settop(state, -1 - 1);
-            return -1;
-        }
-        t = lua_absindex(state, t);
-        if lua_rawgeti(state, t, (2 + 1) as i64) == 0 {
-            ref_0 = 0;
-            (*state).push_integer(0);
-            lua_rawseti(state, t, (2 + 1) as i64);
-        } else {
-            ref_0 = lua_tointegerx(state, -1, std::ptr::null_mut()) as i32;
-        }
-        lua_settop(state, -1 - 1);
-        if ref_0 != 0 {
-            lua_rawgeti(state, t, ref_0 as i64);
-            lua_rawseti(state, t, (2 + 1) as i64);
-        } else {
-            ref_0 = lua_rawlen(state, t) as i32 + 1;
-        }
-        lua_rawseti(state, t, ref_0 as i64);
-        return ref_0;
-    }
-}
-pub unsafe extern "C" fn lual_unref(state: *mut State, mut t: i32, ref_0: i32) {
-    unsafe {
-        if ref_0 >= 0 {
-            t = lua_absindex(state, t);
-            lua_rawgeti(state, t, (2 + 1) as i64);
-            lua_rawseti(state, t, ref_0 as i64);
-            (*state).push_integer(ref_0 as i64);
-            lua_rawseti(state, t, (2 + 1) as i64);
-        }
-    }
-}
 pub unsafe extern "C" fn get_f(
     mut _state: *mut State,
     arbitrary_data: *mut libc::c_void,
@@ -19827,11 +19699,6 @@ pub unsafe extern "C" fn lual_loadbufferx(
             name,
             mode,
         );
-    }
-}
-pub unsafe extern "C" fn lual_loadstring(state: *mut State, s: *const i8) -> i32 {
-    unsafe {
-        return lual_loadbufferx(state, s, strlen(s), s, std::ptr::null());
     }
 }
 pub unsafe extern "C" fn lual_getmetafield(state: *mut State, obj: i32, event: *const i8) -> i32 {
@@ -27751,10 +27618,8 @@ pub unsafe extern "C" fn createargtable(
     script: i32,
 ) {
     unsafe {
-        let mut i: i32;
-        let narg: i32 = argc - (script + 1);
         lua_createtable(state);
-        i = 0;
+        let mut i: i32 = 0;
         while i < argc {
             lua_pushstring(state, *argv.offset(i as isize));
             lua_rawseti(state, -2, (i - script) as i64);
