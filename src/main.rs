@@ -41,6 +41,7 @@ mod lx;
 mod matchstate;
 mod nativeendian;
 mod new;
+mod repl;
 mod node;
 mod object;
 mod operator_;
@@ -88,7 +89,7 @@ pub fn main() {
     }
     args.push(::core::ptr::null_mut());
     unsafe {
-        ::std::process::exit(crate::state::main_0(
+        ::std::process::exit(crate::repl::main_0(
             (args.len() - 1) as i32,
             args.as_mut_ptr() as *mut *mut libc::c_char,
         ) as i32)

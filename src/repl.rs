@@ -1,0 +1,85 @@
+use crate::state::*;
+use crate::library::*;
+use libc::{isatty,};
+pub unsafe extern "C" fn pmain(state: *mut State) -> i32 {
+    unsafe {
+        let argc: i32 = lua_tointegerx(state, 1, std::ptr::null_mut()) as i32;
+        let argv: *mut *mut i8 = lua_touserdata(state, 2) as *mut *mut i8;
+        let mut script: i32 = 0;
+        let args: i32 = collectargs(argv, &mut script);
+        let optlim: i32 = if script > 0 { script } else { argc };
+        lual_checkversion_(
+            state,
+            504.0,
+            (::core::mem::size_of::<i64>() as u64)
+                .wrapping_mul(16 as u64)
+                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+        );
+        if args == 1 {
+            print_usage(*argv.offset(script as isize));
+            return 0;
+        }
+        if args & 16 as i32 != 0 {
+            (*state).push_boolean(true);
+            lua_setfield(
+                state,
+                -(1000000 as i32) - 1000 as i32,
+                b"LUA_NOENV\0" as *const u8 as *const i8,
+            );
+        }
+        lual_openlibs(state);
+        createargtable(state, argv, argc, script);
+        lua_gc(state, 1);
+        lua_gc(state, 10 as i32, 0, 0);
+        if args & 16 as i32 == 0 {
+            if handle_luainit(state) != 0 {
+                return 0;
+            }
+        }
+        if runargs(state, argv, optlim) == 0 {
+            return 0;
+        }
+        if script > 0 {
+            if handle_script(state, argv.offset(script as isize)) != 0 {
+                return 0;
+            }
+        }
+        if args & 2 != 0 {
+            do_repl(state);
+        } else if script < 1 && args & (8 | 4) == 0 {
+            if isatty(0) != 0 {
+                do_repl(state);
+            } else {
+                dofile(state, std::ptr::null());
+            }
+        }
+        (*state).push_boolean(true);
+        return 1;
+    }
+}
+pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
+    unsafe {
+        let state: *mut State = lual_newstate();
+        if state.is_null() {
+            l_message(
+                *argv.offset(0),
+                b"cannot create state: not enough memory\0" as *const u8 as *const i8,
+            );
+            return 1;
+        } else {
+            lua_gc(state, 0);
+            lua_pushcclosure(
+                state,
+                Some(pmain as unsafe extern "C" fn(*mut State) -> i32),
+                0,
+            );
+            (*state).push_integer(argc as i64);
+            lua_pushlightuserdata(state, argv as *mut libc::c_void);
+            let status: i32 = lua_pcallk(state, 2, 1, 0, 0, None);
+            let result: i32 = lua_toboolean(state, -1);
+            report(state, status);
+            lua_close(state);
+            return if result != 0 && status == 0 { 0 } else { 1 };
+        }
+    }
+}

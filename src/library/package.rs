@@ -5,6 +5,7 @@ use crate::tag::*;
 use crate::registeredfunction::*;
 use crate::buffer::*;
 use crate::functions::*;
+use libc::{dlopen, dlclose, dlsym, dlerror,};
 pub const CLIBS: *const i8 = b"_CLIBS\0" as *const u8 as *const i8;
 pub unsafe extern "C" fn lsys_unloadlib(lib: *mut libc::c_void) {
     unsafe {

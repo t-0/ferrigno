@@ -62,12 +62,7 @@ unsafe extern "C" {
     pub fn strftime(s: *mut i8, __maxsize: u64, __format: *const i8, tp: *const TM) -> u64;
     pub fn gmtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
     pub fn localtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
-    pub fn dlopen(file: *const i8, __mode: i32) -> *mut libc::c_void;
-    pub fn dlclose(handle: *mut libc::c_void) -> i32;
-    pub fn dlsym(handle: *mut libc::c_void, __name: *const i8) -> *mut libc::c_void;
-    pub fn dlerror() -> *mut i8;
     pub fn close(fd: i32) -> i32;
-    pub fn isatty(fd: i32) -> i32;
 }
 pub const _ISALPHANUMERIC: u32 = 8;
 pub const _ISPUNCTUATION: u32 = 4;

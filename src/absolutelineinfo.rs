@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub struct AbsoluteLineInfo {
     pub program_counter: i32,
