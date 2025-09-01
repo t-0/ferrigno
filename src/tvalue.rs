@@ -194,3 +194,37 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
         return i;
     }
 }
+pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i32 {
+    unsafe {
+        if !(get_tag_type((*obj).get_tag()) == TAG_TYPE_STRING) {
+            return 0;
+        } else {
+            let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
+            return (luao_str2num((*st).get_contents(), result)
+                == (*st).get_length().wrapping_add(1 as u64)) as i32;
+        };
+    }
+}
+pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool {
+    unsafe {
+        let mut v: TValue = TValue {
+            value: Value {
+                object: std::ptr::null_mut(),
+            },
+            tag: 0,
+        };
+        if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+            *n = (*obj).value.i as f64;
+            return true;
+        } else if l_strton(obj, &mut v) != 0 {
+            *n = if v.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                v.value.i as f64
+            } else {
+                v.value.n
+            };
+            return true;
+        } else {
+            return false;
+        };
+    }
+}

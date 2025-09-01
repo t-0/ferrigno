@@ -178,3 +178,19 @@ pub const OPMODES: [u8; 83] = [
     (0 << 7 | 0 << 6 | 1 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
     (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IAX as i32) as u8,
 ];
+pub unsafe extern "C" fn finaltarget(code: *mut u32, mut i: i32) -> i32 {
+    unsafe {
+        let mut count: i32 = 0;
+        while count < 100 as i32 {
+            let program_counter: u32 = *code.offset(i as isize);
+            if (program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_JMP as u32 {
+                break;
+            }
+            i += (program_counter >> 0 + 7 & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
+                + 1;
+            count += 1;
+        }
+        return i;
+    }
+}

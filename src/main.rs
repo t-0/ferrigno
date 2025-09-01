@@ -63,6 +63,7 @@ mod stringtable;
 mod table;
 mod tag;
 mod tm;
+mod for_;
 mod token;
 mod tstring;
 mod tvalue;

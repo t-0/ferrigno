@@ -2151,3 +2151,52 @@ pub unsafe extern "C" fn luak_setlist(
         (*fs).freereg = (base + 1) as u8;
     }
 }
+pub unsafe extern "C" fn luak_finish(fs: *mut FunctionState) {
+    unsafe {
+        let mut i: i32;
+        let p: *mut Prototype = (*fs).f;
+        i = 0;
+        while i < (*fs).program_counter {
+            let program_counter: *mut u32 = &mut *((*p).code).offset(i as isize) as *mut u32;
+            let current_block_7: u64;
+            match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
+                71 | 72 => {
+                    if !((*fs).needclose as i32 != 0 || (*p).is_variable_arguments as i32 != 0) {
+                        current_block_7 = 12599329904712511516;
+                    } else {
+                        *program_counter = *program_counter & !(!(!(0u32) << 7) << 0)
+                            | (OP_RETURN as u32) << 0 & !(!(0u32) << 7) << 0;
+                        current_block_7 = 11006700562992250127;
+                    }
+                }
+                70 | 69 => {
+                    current_block_7 = 11006700562992250127;
+                }
+                56 => {
+                    let target: i32 = finaltarget((*p).code, i);
+                    fixjump(fs, i, target);
+                    current_block_7 = 12599329904712511516;
+                }
+                _ => {
+                    current_block_7 = 12599329904712511516;
+                }
+            }
+            match current_block_7 {
+                11006700562992250127 => {
+                    if (*fs).needclose != 0 {
+                        *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
+                            | (1 as u32) << 0 + 7 + 8 & !(!(0u32) << 1) << 0 + 7 + 8;
+                    }
+                    if (*p).is_variable_arguments {
+                        *program_counter = *program_counter
+                            & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
+                            | (((*p).count_parameters as i32 + 1) as u32) << 0 + 7 + 8 + 1 + 8
+                                & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+                    }
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+    }
+}

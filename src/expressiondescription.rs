@@ -3,7 +3,6 @@ use crate::tstring::*;
 use crate::v::*;
 use crate::tvalue::*;
 use crate::object::*;
-use crate::onelua::*;
 use crate::functionstate::*;
 use crate::tag::*;
 use crate::utility::*;
