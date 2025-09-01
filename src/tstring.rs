@@ -3,6 +3,8 @@ use crate::table::*;
 use crate::tag::*;
 use crate::c::*;
 use crate::global::*;
+use crate::tvalue::*;
+use crate::stackvalue::*;
 use crate::stringtable::*;
 use crate::state::*;
 pub const STRING_SHORT_MAX: u64 = 40;
@@ -239,5 +241,164 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
         let ref mut fresh24 = *p.offset(0 as isize);
         *fresh24 = luas_newlstr(state, str, strlen(str));
         return *p.offset(0 as isize);
+    }
+}
+pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
+    unsafe {
+        let mut s1: *const i8 = (*ts1).get_contents();
+        let mut rl1: u64 = (*ts1).get_length();
+        let mut s2: *const i8 = (*ts2).get_contents();
+        let mut rl2: u64 = (*ts2).get_length();
+        loop {
+            let temp: i32 = strcoll(s1, s2);
+            if temp != 0 {
+                return temp;
+            } else {
+                let mut zl1: u64 = strlen(s1);
+                let mut zl2: u64 = strlen(s2);
+                if zl2 == rl2 {
+                    return if zl1 == rl1 { 0 } else { 1 };
+                } else if zl1 == rl1 {
+                    return -1;
+                }
+                zl1 = zl1.wrapping_add(1);
+                zl2 = zl2.wrapping_add(1);
+                s1 = s1.offset(zl1 as isize);
+                rl1 = (rl1 as u64).wrapping_sub(zl1) as u64;
+                s2 = s2.offset(zl2 as isize);
+                rl2 = (rl2 as u64).wrapping_sub(zl2) as u64;
+            }
+        }
+    }
+}
+pub unsafe extern "C" fn copy2buff(top: StkId, mut n: i32, buffer: *mut i8) {
+    unsafe {
+        let mut tl: u64 = 0;
+        loop {
+            let st: *mut TString =
+                &mut (*((*top.offset(-(n as isize))).value.value.object as *mut TString));
+            let l: u64 = (*st).get_length();
+            memcpy(
+                buffer.offset(tl as isize) as *mut libc::c_void,
+                ((*st).get_contents()) as *const libc::c_void,
+                l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            );
+            tl = (tl as u64).wrapping_add(l) as u64;
+            n -= 1;
+            if !(n > 0) {
+                break;
+            }
+        }
+    }
+}
+pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
+    unsafe {
+        if total == 1 {
+            return;
+        }
+        loop {
+            let top: StkId = (*state).top.p;
+            let mut n: i32 = 2;
+            if !(get_tag_type((*top.offset(-(2 as isize))).value.get_tag()) == TAG_TYPE_STRING
+                || get_tag_type((*top.offset(-(2 as isize))).value.get_tag()) == TAG_TYPE_NUMERIC)
+                || !(get_tag_type((*top.offset(-(1 as isize))).value.get_tag()) == TAG_TYPE_STRING
+                    || get_tag_type((*top.offset(-(1 as isize))).value.get_tag())
+                        == TAG_TYPE_NUMERIC
+                        && {
+                            luao_tostring(state, &mut (*top.offset(-(1 as isize))).value);
+                            1 != 0
+                        })
+            {
+                luat_tryconcattm(state);
+            } else if (*top.offset(-(1 as isize))).value.get_tag_variant()
+                == TAG_VARIANT_STRING_SHORT
+                && (*((*top.offset(-(1 as isize))).value.value.object as *mut TString))
+                    .get_length() as i32
+                    == 0
+            {
+                (get_tag_type((*top.offset(-(2 as isize))).value.get_tag()) == TAG_TYPE_STRING
+                    || get_tag_type((*top.offset(-(2 as isize))).value.get_tag())
+                        == TAG_TYPE_NUMERIC
+                        && {
+                            luao_tostring(state, &mut (*top.offset(-(2 as isize))).value);
+                            1 != 0
+                        }) as i32;
+            } else if (*top.offset(-(2 as isize))).value.get_tag_variant()
+                == TAG_VARIANT_STRING_SHORT
+                && (*((*top.offset(-(2 as isize))).value.value.object as *mut TString))
+                    .get_length() as i32
+                    == 0
+            {
+                let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).value;
+                let io2: *const TValue = &mut (*top.offset(-(1 as isize))).value;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+            } else {
+                let mut tl: u64 = (*((*top.offset(-(1 as isize))).value.value.object
+                    as *mut TString)).get_length();
+                let ts: *mut TString;
+                n = 1;
+                while n < total
+                    && (get_tag_type(
+                        (*top.offset(-(n as isize)).offset(-(1 as isize)))
+                            .value
+                            .get_tag(),
+                    ) == 4
+                        || get_tag_type(
+                            (*top.offset(-(n as isize)).offset(-(1 as isize)))
+                                .value
+                                .get_tag(),
+                        ) == 3
+                            && {
+                                luao_tostring(
+                                    state,
+                                    &mut (*top.offset(-(n as isize)).offset(-(1 as isize))).value,
+                                );
+                                1 != 0
+                            })
+                {
+                    let l: u64 = (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
+                        .value
+                        .value
+                        .object as *mut TString)).get_length();
+                    if ((l
+                        >= (if (::core::mem::size_of::<u64>() as u64)
+                            < ::core::mem::size_of::<i64>() as u64
+                        {
+                            !(0u64)
+                        } else {
+                            0x7FFFFFFFFFFFFFFF as u64
+                        })
+                        .wrapping_sub(::core::mem::size_of::<TString>() as u64)
+                        .wrapping_sub(tl)) as i32
+                        != 0) as i64
+                        != 0
+                    {
+                        (*state).top.p = top.offset(-(total as isize));
+                        luag_runerror(state, b"string length overflow\0" as *const u8 as *const i8);
+                    }
+                    tl = (tl as u64).wrapping_add(l) as u64;
+                    n += 1;
+                }
+                if tl <= 40 as u64 {
+                    let mut buffer: [i8; 40] = [0; 40];
+                    copy2buff(top, n, buffer.as_mut_ptr());
+                    ts = luas_newlstr(state, buffer.as_mut_ptr(), tl);
+                } else {
+                    ts = TString::create_long(state, tl);
+                    copy2buff(top, n, (*ts).get_contents2());
+                }
+                let io: *mut TValue = &mut (*top.offset(-(n as isize))).value;
+                let x_: *mut TString = ts;
+                (*io).value.object = &mut (*(x_ as *mut Object));
+                (*io).set_tag((*x_).get_tag());
+                (*io).set_collectable();
+            }
+            total -= n - 1;
+            (*state).top.p = (*state).top.p.offset(-((n - 1) as isize));
+            if !(total > 1) {
+                break;
+            }
+        }
     }
 }

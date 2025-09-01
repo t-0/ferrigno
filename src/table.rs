@@ -1203,3 +1203,155 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
         };
     }
 }
+pub unsafe extern "C" fn luav_finishget(
+    state: *mut State,
+    mut t: *const TValue,
+    key: *mut TValue,
+    value: StkId,
+    mut slot: *const TValue,
+) {
+    unsafe {
+        let mut loop_0: i32 = 0;
+        let mut tm: *const TValue;
+        while loop_0 < 2000 as i32 {
+            if slot.is_null() {
+                tm = luat_gettmbyobj(state, t, TM_INDEX);
+                if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
+                {
+                    luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
+                }
+            } else {
+                tm = if ((*((*t).value.object as *mut Table)).metatable).is_null() {
+                    std::ptr::null()
+                } else if (*(*((*t).value.object as *mut Table)).metatable).flags as u32
+                    & (1 as u32) << TM_INDEX as i32
+                    != 0
+                {
+                    std::ptr::null()
+                } else {
+                    luat_gettm(
+                        (*((*t).value.object as *mut Table)).metatable,
+                        TM_INDEX,
+                        (*(*state).global).tmname[TM_INDEX as usize],
+                    )
+                };
+                if tm.is_null() {
+                    (*value).value.set_tag(TAG_VARIANT_NIL_NIL);
+                    return;
+                }
+            }
+            if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
+                luat_calltmres(state, tm, t, key, value);
+                return;
+            }
+            t = tm;
+            if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
+                slot = std::ptr::null();
+                0
+            } else {
+                slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);
+                (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            } != 0
+            {
+                let io1: *mut TValue = &mut (*value).value;
+                let io2: *const TValue = slot;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+                return;
+            }
+            loop_0 += 1;
+        }
+        luag_runerror(
+            state,
+            b"'__index' chain too long; possible loop\0" as *const u8 as *const i8,
+        );
+    }
+}
+pub unsafe extern "C" fn luav_finishset(
+    state: *mut State,
+    mut t: *const TValue,
+    key: *mut TValue,
+    value: *mut TValue,
+    mut slot: *const TValue,
+) {
+    unsafe {
+        let mut loop_0: i32 = 0;
+        while loop_0 < 2000 as i32 {
+            let tm: *const TValue;
+            if !slot.is_null() {
+                let h: *mut Table = &mut (*((*t).value.object as *mut Table));
+                tm = if ((*h).metatable).is_null() {
+                    std::ptr::null()
+                } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_NEWINDEX as i32 != 0 {
+                    std::ptr::null()
+                } else {
+                    luat_gettm(
+                        (*h).metatable,
+                        TM_NEWINDEX,
+                        (*(*state).global).tmname[TM_NEWINDEX as usize],
+                    )
+                };
+                if tm.is_null() {
+                    let io: *mut TValue = &mut (*(*state).top.p).value;
+                    let x_: *mut Table = h;
+                    (*io).value.object = &mut (*(x_ as *mut Object));
+                    (*io).set_tag(TAG_VARIANT_TABLE);
+                    (*io).set_collectable();
+                    (*state).top.p = (*state).top.p.offset(1);
+                    luah_finishset(state, h, key, slot, value);
+                    (*state).top.p = (*state).top.p.offset(-1);
+                    (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
+                    if (*value).is_collectable() {
+                        if (*(h as *mut Object)).get_marked() & 1 << 5 != 0
+                            && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+                        {
+                            luac_barrierback_(state, &mut (*(h as *mut Object)));
+                        } else {
+                        };
+                    } else {
+                    };
+                    return;
+                }
+            } else {
+                tm = luat_gettmbyobj(state, t, TM_NEWINDEX);
+                if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
+                {
+                    luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
+                }
+            }
+            if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
+                luat_calltm(state, tm, t, key, value);
+                return;
+            }
+            t = tm;
+            if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
+                slot = std::ptr::null();
+                0
+            } else {
+                slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);
+                (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            } != 0
+            {
+                let io1: *mut TValue = slot as *mut TValue;
+                let io2: *const TValue = value;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+                if (*value).is_collectable() {
+                    if (*(*t).value.object).get_marked() & 1 << 5 != 0
+                        && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+                    {
+                        luac_barrierback_(state, (*t).value.object);
+                    } else {
+                    };
+                } else {
+                };
+                return;
+            }
+            loop_0 += 1;
+        }
+        luag_runerror(
+            state,
+            b"'__newindex' chain too long; possible loop\0" as *const u8 as *const i8,
+        );
+    }
+}

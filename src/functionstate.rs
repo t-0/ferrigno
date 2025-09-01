@@ -21,7 +21,6 @@ use crate::utility::*;
 use crate::f2i::*;
 use crate::tag::*;
 use crate::object::*;
-use crate::onelua::*;
 use crate::new::*;
 use crate::table::*;
 use crate::prototype::*;

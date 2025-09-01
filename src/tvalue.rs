@@ -1,3 +1,6 @@
+#![allow(
+    unpredictable_function_pointer_comparisons,
+)]
 use crate::new::*;
 use crate::tag::*;
 use crate::value::*;
@@ -5,8 +8,13 @@ use crate::object::*;
 use crate::tstring::*;
 use crate::cclosure::*;
 use crate::lclosure::*;
+use crate::stackvalue::*;
 use crate::state::*;
 use crate::prototype::*;
+use crate::tm::*;
+use crate::table::*;
+use crate::user::*;
+use crate::f2i::*;
 use crate::utility::*;
 use libc::*;
 #[derive(Copy, Clone)]
@@ -226,5 +234,243 @@ pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool
         } else {
             return false;
         };
+    }
+}
+pub unsafe extern "C" fn lessthanothers(
+    state: *mut State,
+    l: *const TValue,
+    r: *const TValue,
+) -> i32 {
+    unsafe {
+        if get_tag_type((*l).get_tag()) == TAG_TYPE_STRING
+            && get_tag_type((*r).get_tag()) == TAG_TYPE_STRING
+        {
+            return (l_strcmp(
+                &mut (*((*l).value.object as *mut TString)),
+                &mut (*((*r).value.object as *mut TString)),
+            ) < 0) as i32;
+        } else {
+            return luat_callordertm(state, l, r, TM_LT);
+        };
+    }
+}
+pub unsafe extern "C" fn luav_lessthan(
+    state: *mut State,
+    l: *const TValue,
+    r: *const TValue,
+) -> bool {
+    unsafe {
+        if get_tag_type((*l).get_tag()) == TAG_TYPE_NUMERIC
+            && get_tag_type((*r).get_tag()) == TAG_TYPE_NUMERIC
+        {
+            return ltnum(l, r);
+        } else {
+            return 0 != lessthanothers(state, l, r);
+        };
+    }
+}
+pub unsafe extern "C" fn lessequalothers(
+    state: *mut State,
+    l: *const TValue,
+    r: *const TValue,
+) -> bool {
+    unsafe {
+        if get_tag_type((*l).get_tag()) == TAG_TYPE_STRING
+            && get_tag_type((*r).get_tag()) == TAG_TYPE_STRING
+        {
+            return l_strcmp(
+                &mut (*((*l).value.object as *mut TString)),
+                &mut (*((*r).value.object as *mut TString)),
+            ) <= 0;
+        } else {
+            return 0 != luat_callordertm(state, l, r, TM_LE);
+        }
+    }
+}
+pub unsafe extern "C" fn luav_lessequal(
+    state: *mut State,
+    l: *const TValue,
+    r: *const TValue,
+) -> bool {
+    unsafe {
+        if get_tag_type((*l).get_tag()) == TAG_TYPE_NUMERIC
+            && get_tag_type((*r).get_tag()) == TAG_TYPE_NUMERIC
+        {
+            return lenum(l, r);
+        } else {
+            return lessequalothers(state, l, r);
+        };
+    }
+}
+pub unsafe extern "C" fn luav_equalobj(
+    state: *mut State,
+    t1: *const TValue,
+    t2: *const TValue,
+) -> bool {
+    unsafe {
+        let mut tm: *const TValue;
+        if (*t1).get_tag_variant() != (*t2).get_tag_variant() {
+            if (*t1).get_tag_type() != (*t2).get_tag_type()
+                || (*t1).get_tag_type() != TAG_TYPE_NUMERIC
+            {
+                return false;
+            } else {
+                let mut i1: i64 = 0;
+                let mut i2: i64 = 0;
+                return luav_tointegerns(t1, &mut i1, F2I::Equal) != 0
+                    && luav_tointegerns(t2, &mut i2, F2I::Equal) != 0
+                    && i1 == i2;
+            }
+        }
+        match (*t1).get_tag_variant() {
+            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return true,
+            TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.i == (*t2).value.i,
+            TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.n == (*t2).value.n,
+            TAG_VARIANT_POINTER => return (*t1).value.p == (*t2).value.p,
+            TAG_VARIANT_CLOSURE_CFUNCTION => return (*t1).value.f == (*t2).value.f,
+            TAG_VARIANT_STRING_SHORT => {
+                return &mut (*((*t1).value.object as *mut TString)) as *mut TString
+                    == &mut (*((*t2).value.object as *mut TString)) as *mut TString;
+            }
+            TAG_VARIANT_STRING_LONG => {
+                return 0 != luas_eqlngstr(
+                    &mut (*((*t1).value.object as *mut TString)),
+                    &mut (*((*t2).value.object as *mut TString)),
+                );
+            }
+            TAG_VARIANT_USER => {
+                if &mut (*((*t1).value.object as *mut User)) as *mut User
+                    == &mut (*((*t2).value.object as *mut User)) as *mut User
+                {
+                    return true;
+                } else if state.is_null() {
+                    return false;
+                }
+                tm = if ((*((*t1).value.object as *mut User)).metatable).is_null() {
+                    std::ptr::null()
+                } else if (*(*((*t1).value.object as *mut User)).metatable).flags as u32
+                    & (1 as u32) << TM_EQ as i32
+                    != 0
+                {
+                    std::ptr::null()
+                } else {
+                    luat_gettm(
+                        (*((*t1).value.object as *mut User)).metatable,
+                        TM_EQ,
+                        (*(*state).global).tmname[TM_EQ as usize],
+                    )
+                };
+                if tm.is_null() {
+                    tm = if ((*((*t2).value.object as *mut User)).metatable).is_null() {
+                        std::ptr::null()
+                    } else if (*(*((*t2).value.object as *mut User)).metatable).flags as u32
+                        & (1 as u32) << TM_EQ as i32
+                        != 0
+                    {
+                        std::ptr::null()
+                    } else {
+                        luat_gettm(
+                            (*((*t2).value.object as *mut User)).metatable,
+                            TM_EQ,
+                            (*(*state).global).tmname[TM_EQ as usize],
+                        )
+                    };
+                }
+            }
+            TAG_VARIANT_TABLE => {
+                if &mut (*((*t1).value.object as *mut Table)) as *mut Table
+                    == &mut (*((*t2).value.object as *mut Table)) as *mut Table
+                {
+                    return true;
+                } else if state.is_null() {
+                    return false;
+                }
+                tm = if ((*((*t1).value.object as *mut Table)).metatable).is_null() {
+                    std::ptr::null()
+                } else if (*(*((*t1).value.object as *mut Table)).metatable).flags as u32
+                    & (1 as u32) << TM_EQ as i32
+                    != 0
+                {
+                    std::ptr::null()
+                } else {
+                    luat_gettm(
+                        (*((*t1).value.object as *mut Table)).metatable,
+                        TM_EQ,
+                        (*(*state).global).tmname[TM_EQ as usize],
+                    )
+                };
+                if tm.is_null() {
+                    tm = if ((*((*t2).value.object as *mut Table)).metatable).is_null() {
+                        std::ptr::null()
+                    } else if (*(*((*t2).value.object as *mut Table)).metatable).flags as u32
+                        & (1 as u32) << TM_EQ as i32
+                        != 0
+                    {
+                        std::ptr::null()
+                    } else {
+                        luat_gettm(
+                            (*((*t2).value.object as *mut Table)).metatable,
+                            TM_EQ,
+                            (*(*state).global).tmname[TM_EQ as usize],
+                        )
+                    };
+                }
+            }
+            _ => return (*t1).value.object == (*t2).value.object,
+        }
+        if tm.is_null() {
+            return false;
+        } else {
+            luat_calltmres(state, tm, t1, t2, (*state).top.p);
+            return !((*(*state).top.p).value.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*state).top.p).value.get_tag()) == TAG_TYPE_NIL);
+        };
+    }
+}
+pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TValue) {
+    unsafe {
+        let tm: *const TValue;
+        match (*rb).get_tag_variant() {
+            TAG_VARIANT_TABLE => {
+                let h: *mut Table = &mut (*((*rb).value.object as *mut Table));
+                tm = if ((*h).metatable).is_null() {
+                    std::ptr::null()
+                } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
+                    std::ptr::null()
+                } else {
+                    luat_gettm(
+                        (*h).metatable,
+                        TM_LEN,
+                        (*(*state).global).tmname[TM_LEN as usize],
+                    )
+                };
+                if tm.is_null() {
+                    let io: *mut TValue = &mut (*ra).value;
+                    (*io).value.i = luah_getn(h) as i64;
+                    (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    return;
+                }
+            }
+            TAG_VARIANT_STRING_SHORT => {
+                let io_0: *mut TValue = &mut (*ra).value;
+                (*io_0).value.i = (*((*rb).value.object as *mut TString)).get_length() as i64;
+                (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                return;
+            }
+            TAG_VARIANT_STRING_LONG => {
+                let io_1: *mut TValue = &mut (*ra).value;
+                (*io_1).value.i = (*((*rb).value.object as *mut TString)).get_length() as i64;
+                (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                return;
+            }
+            _ => {
+                tm = luat_gettmbyobj(state, rb, TM_LEN);
+                if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
+                {
+                    luag_typeerror(state, rb, b"get length of\0" as *const u8 as *const i8);
+                }
+            }
+        }
+        luat_calltmres(state, tm, rb, rb, ra);
     }
 }

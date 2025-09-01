@@ -3,7 +3,8 @@ use crate::registeredfunction::*;
 use crate::state::*;
 use crate::coroutine::*;
 use crate::debuginfo::*;
-use crate::math::*;
+use crate::librarymath::*;
+use crate::librarybase::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {

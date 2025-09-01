@@ -1,6 +1,5 @@
 use crate::c::*;
 use crate::object::*;
-use crate::onelua::*;
 use crate::state::*;
 use crate::tstring::*;
 use crate::tvalue::*;
