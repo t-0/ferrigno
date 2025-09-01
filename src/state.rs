@@ -13,7 +13,7 @@ use crate::bufffs::*;
 use crate::utility::c::*;
 use crate::calls::*;
 use crate::dumpstate::*;
-use crate::instruction::*;
+use crate::vm::instruction::*;
 use crate::stringtable::*;
 use crate::dynamicdata::*;
 use crate::functionstate::*;
@@ -45,7 +45,7 @@ use crate::user::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
-use crate::lexicalstate::*;
+use crate::lexical::lexicalstate::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {

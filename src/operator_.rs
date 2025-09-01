@@ -2,7 +2,7 @@ use crate::tvalue::*;
 use crate::tag::*;
 use crate::f2i::*;
 use crate::tm::*;
-use crate::instruction::*;
+use crate::vm::instruction::*;
 use crate::operatorunary::*;
 pub const OPR_NOBINOPR: u32 = 21;
 pub const OPR_OR: u32 = 20;

@@ -9,7 +9,7 @@ use crate::tstring::*;
 use crate::tvalue::*;
 use crate::tm::*;
 use crate::utility::c::*;
-use crate::instruction::*;
+use crate::vm::instruction::*;
 use crate::upvaluedescription::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]

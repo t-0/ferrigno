@@ -1,8 +1,8 @@
 use crate::lexical::blockcontrol::*;
-use crate::lexicalstate::*;
+use crate::lexical::lexicalstate::*;
 use crate::operator_::*;
 use crate::labeldescription::*;
-use crate::instruction::*;
+use crate::vm::instruction::*;
 use crate::lexical::constructorcontrol::*;
 use crate::v::*;
 use crate::labellist::*;
