@@ -1,10 +1,18 @@
+mod debug;
+mod math;
+mod base;
+mod coroutine;
+mod table;
+mod io;
 use crate::onelua::*;
 use crate::registeredfunction::*;
 use crate::state::*;
-use crate::librarycoroutine::*;
-use crate::librarydebug::*;
-use crate::librarymath::*;
-use crate::librarybase::*;
+use crate::library::coroutine::*;
+use crate::library::debug::*;
+use crate::library::math::*;
+use crate::library::base::*;
+use crate::library::table::*;
+use crate::library::io::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {

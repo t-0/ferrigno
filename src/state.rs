@@ -40,7 +40,7 @@ use crate::labellist::*;
 use crate::stackvalue::*;
 use crate::variabledescription::*;
 use crate::stkidrel::*;
-use crate::libraries::*;
+use crate::library::*;
 use crate::table::*;
 use crate::user::*;
 use crate::tstring::*;
