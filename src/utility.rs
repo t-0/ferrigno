@@ -304,3 +304,11 @@ pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
         return (if u <= 0x7FFFFFFF as u32 { u } else { !u }) as i32;
     };
 }
+pub unsafe extern "C" fn fits_c(i: i64) -> i32 {
+    return ((i as u64).wrapping_add(((1 << 8) - 1 >> 1) as u64) <= ((1 << 8) - 1) as u64)
+        as i32;
+}
+pub unsafe extern "C" fn fits_bx(i: i64) -> i32 {
+    return (-((1 << 8 + 8 + 1) - 1 >> 1) as i64 <= i
+        && i <= ((1 << 8 + 8 + 1) - 1 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64) as i32;
+}

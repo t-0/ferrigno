@@ -1,13 +1,17 @@
 use crate::blockcontrol::*;
 use crate::lexicalstate::*;
+use crate::operator_::*;
 use crate::labeldescription::*;
 use crate::instruction::*;
 use crate::constructorcontrol::*;
 use crate::v::*;
 use crate::labellist::*;
-use crate::tstring::*;
 use crate::tvalue::*;
+use crate::rawvalue::*;
+use crate::tm::*;
 use crate::state::*;
+use crate::operatorunary::*;
+use crate::tstring::*;
 use crate::variabledescription::*;
 use crate::absolutelineinfo::*;
 use crate::localvariable::*;
@@ -1053,5 +1057,1097 @@ pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 {
         (*io).set_tag(TAG_VARIANT_TABLE);
         (*io).set_collectable();
         return addk(fs, &mut k, &mut v);
+    }
+}
+pub unsafe extern "C" fn luak_int(fs: *mut FunctionState, reg: i32, i: i64) {
+    unsafe {
+        if fits_bx(i) != 0 {
+            codeasbx(fs, OP_LOADI, reg, i as i32);
+        } else {
+            luak_codek(fs, reg, luak_int_k(fs, i));
+        };
+    }
+}
+pub unsafe extern "C" fn luak_float(fs: *mut FunctionState, reg: i32, f: f64) {
+    unsafe {
+        let mut fi: i64 = 0;
+        if luav_flttointeger(f, &mut fi, F2I::Equal) != 0 && fits_bx(fi) != 0 {
+            codeasbx(fs, OP_LOADF, reg, fi as i32);
+        } else {
+            luak_codek(fs, reg, luak_number_k(fs, f));
+        };
+    }
+}
+pub unsafe extern "C" fn luak_setreturns(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+    count_results: i32,
+) {
+    unsafe {
+        let program_counter: *mut u32 =
+            &mut *((*(*fs).f).code).offset((*e).u.info as isize) as *mut u32;
+        if (*e).k as u32 == VCALL as u32 {
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
+                | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
+                    & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+        } else {
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
+                | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
+                    & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7)
+                | ((*fs).freereg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+            luak_reserveregs(fs, 1);
+        };
+    }
+}
+pub unsafe extern "C" fn str_to_k(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        (*e).u.info = string_k(fs, (*e).u.strval);
+        (*e).k = VK;
+    }
+}
+pub unsafe extern "C" fn luak_setoneret(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        if (*e).k as u32 == VCALL as u32 {
+            (*e).k = VNONRELOC;
+            (*e).u.info = (*((*(*fs).f).code).offset((*e).u.info as isize) >> 0 + 7
+                & !(!(0u32) << 8) << 0) as i32;
+        } else if (*e).k as u32 == VVARARG as u32 {
+            *((*(*fs).f).code).offset((*e).u.info as isize) = *((*(*fs).f).code)
+                .offset((*e).u.info as isize)
+                & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
+                | (2 as u32) << 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+            (*e).k = VRELOC;
+        }
+    }
+}
+pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        match (*e).k as u32 {
+            11 => {
+                const2exp(const2val(fs, e), e);
+            }
+            9 => {
+                let temp: i32 = (*e).u.var.ridx as i32;
+                (*e).u.info = temp;
+                (*e).k = VNONRELOC;
+            }
+            10 => {
+                (*e).u.info = luak_code_abck(fs, OP_GETUPVAL, 0, (*e).u.info, 0, 0);
+                (*e).k = VRELOC;
+            }
+            13 => {
+                (*e).u.info = luak_code_abck(
+                    fs,
+                    OP_GETTABUP,
+                    0,
+                    (*e).u.ind.t as i32,
+                    (*e).u.ind.index as i32,
+                    0,
+                );
+                (*e).k = VRELOC;
+            }
+            14 => {
+                freereg(fs, (*e).u.ind.t as i32);
+                (*e).u.info = luak_code_abck(
+                    fs,
+                    OP_GETI,
+                    0,
+                    (*e).u.ind.t as i32,
+                    (*e).u.ind.index as i32,
+                    0,
+                );
+                (*e).k = VRELOC;
+            }
+            15 => {
+                freereg(fs, (*e).u.ind.t as i32);
+                (*e).u.info = luak_code_abck(
+                    fs,
+                    OP_GETFIELD,
+                    0,
+                    (*e).u.ind.t as i32,
+                    (*e).u.ind.index as i32,
+                    0,
+                );
+                (*e).k = VRELOC;
+            }
+            12 => {
+                freeregs(fs, (*e).u.ind.t as i32, (*e).u.ind.index as i32);
+                (*e).u.info = luak_code_abck(
+                    fs,
+                    OP_GETTABLE,
+                    0,
+                    (*e).u.ind.t as i32,
+                    (*e).u.ind.index as i32,
+                    0,
+                );
+                (*e).k = VRELOC;
+            }
+            19 | 18 => {
+                luak_setoneret(fs, e);
+            }
+            _ => {}
+        };
+    }
+}
+pub unsafe extern "C" fn discharge2reg(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+    reg: i32,
+) {
+    unsafe {
+        luak_dischargevars(fs, e);
+        let current_block_14: u64;
+        match (*e).k as u32 {
+            1 => {
+                luak_nil(fs, reg, 1);
+                current_block_14 = 13242334135786603907;
+            }
+            3 => {
+                luak_code_abck(fs, OP_LOADFALSE, reg, 0, 0, 0);
+                current_block_14 = 13242334135786603907;
+            }
+            2 => {
+                luak_code_abck(fs, OP_LOADTRUE, reg, 0, 0, 0);
+                current_block_14 = 13242334135786603907;
+            }
+            7 => {
+                str_to_k(fs, e);
+                current_block_14 = 6937071982253665452;
+            }
+            4 => {
+                current_block_14 = 6937071982253665452;
+            }
+            5 => {
+                luak_float(fs, reg, (*e).u.nval);
+                current_block_14 = 13242334135786603907;
+            }
+            6 => {
+                luak_int(fs, reg, (*e).u.ival);
+                current_block_14 = 13242334135786603907;
+            }
+            17 => {
+                let program_counter: *mut u32 =
+                    &mut *((*(*fs).f).code).offset((*e).u.info as isize) as *mut u32;
+                *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7)
+                    | (reg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+                current_block_14 = 13242334135786603907;
+            }
+            8 => {
+                if reg != (*e).u.info {
+                    luak_code_abck(fs, OP_MOVE, reg, (*e).u.info, 0, 0);
+                }
+                current_block_14 = 13242334135786603907;
+            }
+            _ => return,
+        }
+        match current_block_14 {
+            6937071982253665452 => {
+                luak_codek(fs, reg, (*e).u.info);
+            }
+            _ => {}
+        }
+        (*e).u.info = reg;
+        (*e).k = VNONRELOC;
+    }
+}
+pub unsafe extern "C" fn discharge2anyreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        if (*e).k as u32 != VNONRELOC as u32 {
+            luak_reserveregs(fs, 1);
+            discharge2reg(fs, e, (*fs).freereg as i32 - 1);
+        }
+    }
+}
+pub unsafe extern "C" fn code_loadbool(fs: *mut FunctionState, a: i32, op: u32) -> i32 {
+    unsafe {
+        luak_getlabel(fs);
+        return luak_code_abck(fs, op, a, 0, 0, 0);
+    }
+}
+pub unsafe extern "C" fn need_value(fs: *mut FunctionState, mut list: i32) -> i32 {
+    unsafe {
+        while list != -1 {
+            let i: u32 = *getjumpcontrol(fs, list);
+            if (i >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_TESTSET as u32 {
+                return 1;
+            }
+            list = getjump(fs, list);
+        }
+        return 0;
+    }
+}
+pub unsafe extern "C" fn exp2reg(fs: *mut FunctionState, e: *mut ExpressionDescription, reg: i32) {
+    unsafe {
+        discharge2reg(fs, e, reg);
+        if (*e).k as u32 == VJMP as u32 {
+            luak_concat(fs, &mut (*e).t, (*e).u.info);
+        }
+        if (*e).t != (*e).f {
+            let mut p_f: i32 = -1;
+            let mut p_t: i32 = -1;
+            if need_value(fs, (*e).t) != 0 || need_value(fs, (*e).f) != 0 {
+                let fj: i32 = if (*e).k as u32 == VJMP as u32 {
+                    -1
+                } else {
+                    luak_jump(fs)
+                };
+                p_f = code_loadbool(fs, reg, OP_LFALSESKIP);
+                p_t = code_loadbool(fs, reg, OP_LOADTRUE);
+                luak_patchtohere(fs, fj);
+            }
+            let final_0: i32 = luak_getlabel(fs);
+            patchlistaux(fs, (*e).f, final_0, reg, p_f);
+            patchlistaux(fs, (*e).t, final_0, reg, p_t);
+        }
+        (*e).t = -1;
+        (*e).f = (*e).t;
+        (*e).u.info = reg;
+        (*e).k = VNONRELOC;
+    }
+}
+pub unsafe extern "C" fn luak_exp2nextreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        luak_dischargevars(fs, e);
+        freeexp(fs, e);
+        luak_reserveregs(fs, 1);
+        exp2reg(fs, e, (*fs).freereg as i32 - 1);
+    }
+}
+pub unsafe extern "C" fn luak_exp2anyreg(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+) -> i32 {
+    unsafe {
+        luak_dischargevars(fs, e);
+        if (*e).k as u32 == VNONRELOC as u32 {
+            if !((*e).t != (*e).f) {
+                return (*e).u.info;
+            }
+            if (*e).u.info >= luay_nvarstack(fs) {
+                exp2reg(fs, e, (*e).u.info);
+                return (*e).u.info;
+            }
+        }
+        luak_exp2nextreg(fs, e);
+        return (*e).u.info;
+    }
+}
+pub unsafe extern "C" fn luak_exp2anyregup(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        if (*e).k as u32 != VUPVAL as u32 || (*e).t != (*e).f {
+            luak_exp2anyreg(fs, e);
+        }
+    }
+}
+pub unsafe extern "C" fn luak_exp2val(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        if (*e).k as u32 == VJMP as u32 || (*e).t != (*e).f {
+            luak_exp2anyreg(fs, e);
+        } else {
+            luak_dischargevars(fs, e);
+        };
+    }
+}
+pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDescription) -> i32 {
+    unsafe {
+        if !((*e).t != (*e).f) {
+            let info: i32;
+            match (*e).k as u32 {
+                2 => {
+                    info = bool_true(fs);
+                }
+                3 => {
+                    info = bool_false(fs);
+                }
+                1 => {
+                    info = nil_k(fs);
+                }
+                6 => {
+                    info = luak_int_k(fs, (*e).u.ival);
+                }
+                5 => {
+                    info = luak_number_k(fs, (*e).u.nval);
+                }
+                7 => {
+                    info = string_k(fs, (*e).u.strval);
+                }
+                4 => {
+                    info = (*e).u.info;
+                }
+                _ => return 0,
+            }
+            if info <= (1 << 8) - 1 {
+                (*e).k = VK;
+                (*e).u.info = info;
+                return 1;
+            }
+        }
+        return 0;
+    }
+}
+pub unsafe extern "C" fn exp2rk(fs: *mut FunctionState, e: *mut ExpressionDescription) -> i32 {
+    unsafe {
+        if luak_exp2k(fs, e) != 0 {
+            return 1;
+        } else {
+            luak_exp2anyreg(fs, e);
+            return 0;
+        };
+    }
+}
+pub unsafe extern "C" fn codeabrk(
+    fs: *mut FunctionState,
+    o: u32,
+    a: i32,
+    b: i32,
+    ec: *mut ExpressionDescription,
+) {
+    unsafe {
+        let k: i32 = exp2rk(fs, ec);
+        luak_code_abck(fs, o, a, b, (*ec).u.info, k);
+    }
+}
+pub unsafe extern "C" fn luak_storevar(
+    fs: *mut FunctionState,
+    var: *mut ExpressionDescription,
+    ex: *mut ExpressionDescription,
+) {
+    unsafe {
+        match (*var).k as u32 {
+            9 => {
+                freeexp(fs, ex);
+                exp2reg(fs, ex, (*var).u.var.ridx as i32);
+                return;
+            }
+            10 => {
+                let e: i32 = luak_exp2anyreg(fs, ex);
+                luak_code_abck(fs, OP_SETUPVAL, e, (*var).u.info, 0, 0);
+            }
+            13 => {
+                codeabrk(
+                    fs,
+                    OP_SETTABUP,
+                    (*var).u.ind.t as i32,
+                    (*var).u.ind.index as i32,
+                    ex,
+                );
+            }
+            14 => {
+                codeabrk(
+                    fs,
+                    OP_SETI,
+                    (*var).u.ind.t as i32,
+                    (*var).u.ind.index as i32,
+                    ex,
+                );
+            }
+            15 => {
+                codeabrk(
+                    fs,
+                    OP_SETFIELD,
+                    (*var).u.ind.t as i32,
+                    (*var).u.ind.index as i32,
+                    ex,
+                );
+            }
+            12 => {
+                codeabrk(
+                    fs,
+                    OP_SETTABLE,
+                    (*var).u.ind.t as i32,
+                    (*var).u.ind.index as i32,
+                    ex,
+                );
+            }
+            _ => {}
+        }
+        freeexp(fs, ex);
+    }
+}
+pub unsafe extern "C" fn luak_self(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+    key: *mut ExpressionDescription,
+) {
+    unsafe {
+        luak_exp2anyreg(fs, e);
+        let ereg: i32 = (*e).u.info;
+        freeexp(fs, e);
+        (*e).u.info = (*fs).freereg as i32;
+        (*e).k = VNONRELOC;
+        luak_reserveregs(fs, 2);
+        codeabrk(fs, OP_SELF, (*e).u.info, ereg, key);
+        freeexp(fs, key);
+    }
+}
+pub unsafe extern "C" fn negatecondition(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        let program_counter: *mut u32 = getjumpcontrol(fs, (*e).u.info);
+        *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
+            | (((*program_counter >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 ^ 1) as u32)
+                << 0 + 7 + 8
+                & !(!(0u32) << 1) << 0 + 7 + 8;
+    }
+}
+pub unsafe extern "C" fn jumponcond(
+    fs: *mut FunctionState,
+    e: *mut ExpressionDescription,
+    cond_0: i32,
+) -> i32 {
+    unsafe {
+        if (*e).k as u32 == VRELOC as u32 {
+            let ie: u32 = *((*(*fs).f).code).offset((*e).u.info as isize);
+            if (ie >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_NOT as u32 {
+                removelastinstruction(fs);
+                return condjump(
+                    fs,
+                    OP_TEST,
+                    (ie >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32,
+                    0,
+                    0,
+                    (cond_0 == 0) as i32,
+                );
+            }
+        }
+        discharge2anyreg(fs, e);
+        freeexp(fs, e);
+        return condjump(fs, OP_TESTSET, (1 << 8) - 1, (*e).u.info, 0, cond_0);
+    }
+}
+pub unsafe extern "C" fn luak_goiftrue(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        let program_counter: i32;
+        luak_dischargevars(fs, e);
+        match (*e).k as u32 {
+            16 => {
+                negatecondition(fs, e);
+                program_counter = (*e).u.info;
+            }
+            4 | 5 | 6 | 7 | 2 => {
+                program_counter = -1;
+            }
+            _ => {
+                program_counter = jumponcond(fs, e, 0);
+            }
+        }
+        luak_concat(fs, &mut (*e).f, program_counter);
+        luak_patchtohere(fs, (*e).t);
+        (*e).t = -1;
+    }
+}
+pub unsafe extern "C" fn luak_goiffalse(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        let program_counter: i32;
+        luak_dischargevars(fs, e);
+        match (*e).k as u32 {
+            16 => {
+                program_counter = (*e).u.info;
+            }
+            1 | 3 => {
+                program_counter = -1;
+            }
+            _ => {
+                program_counter = jumponcond(fs, e, 1);
+            }
+        }
+        luak_concat(fs, &mut (*e).t, program_counter);
+        luak_patchtohere(fs, (*e).f);
+        (*e).f = -1;
+    }
+}
+pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescription) {
+    unsafe {
+        match (*e).k as u32 {
+            1 | 3 => {
+                (*e).k = VTRUE;
+            }
+            4 | 5 | 6 | 7 | 2 => {
+                (*e).k = VFALSE;
+            }
+            16 => {
+                negatecondition(fs, e);
+            }
+            17 | 8 => {
+                discharge2anyreg(fs, e);
+                freeexp(fs, e);
+                (*e).u.info = luak_code_abck(fs, OP_NOT, 0, (*e).u.info, 0, 0);
+                (*e).k = VRELOC;
+            }
+            _ => {}
+        }
+        let temp: i32 = (*e).f;
+        (*e).f = (*e).t;
+        (*e).t = temp;
+        removevalues(fs, (*e).f);
+        removevalues(fs, (*e).t);
+    }
+}
+pub unsafe extern "C" fn is_k_string(fs: *mut FunctionState, e: *mut ExpressionDescription) -> i32 {
+    unsafe {
+        return ((*e).k as u32 == VK as u32
+            && !((*e).t != (*e).f)
+            && (*e).u.info <= (1 << 8) - 1
+            && (*((*(*fs).f).k).offset((*e).u.info as isize)).get_tag_variant()
+                == TAG_VARIANT_STRING_SHORT) as i32;
+    }
+}
+pub unsafe extern "C" fn constfolding(
+    fs: *mut FunctionState,
+    op: i32,
+    e1: *mut ExpressionDescription,
+    e2: *const ExpressionDescription,
+) -> i32 {
+    unsafe {
+        let mut v1: TValue = TValue {
+            value: Value {
+                object: std::ptr::null_mut(),
+            },
+            tag: 0,
+        };
+        let mut v2: TValue = TValue {
+            value: Value {
+                object: std::ptr::null_mut(),
+            },
+            tag: 0,
+        };
+        let mut res: TValue = TValue {
+            value: Value {
+                object: std::ptr::null_mut(),
+            },
+            tag: 0,
+        };
+        if tonumeral(e1, &mut v1) == 0
+            || tonumeral(e2, &mut v2) == 0
+            || validop(op, &mut v1, &mut v2) == 0
+        {
+            return 0;
+        }
+        luao_rawarith((*(*fs).lexical_state).state, op, &mut v1, &mut v2, &mut res);
+        if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+            (*e1).k = VKINT;
+            (*e1).u.ival = res.value.i;
+        } else {
+            let n: f64 = res.value.n;
+            if !(n == n) || n == 0.0 {
+                return 0;
+            }
+            (*e1).k = VKFLT;
+            (*e1).u.nval = n;
+        }
+        return 1;
+    }
+}
+pub unsafe extern "C" fn codeunexpval(
+    fs: *mut FunctionState,
+    op: u32,
+    e: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        let r: i32 = luak_exp2anyreg(fs, e);
+        freeexp(fs, e);
+        (*e).u.info = luak_code_abck(fs, op, 0, r, 0, 0);
+        (*e).k = VRELOC;
+        luak_fixline(fs, line);
+    }
+}
+pub unsafe extern "C" fn finishbinexpval(
+    fs: *mut FunctionState,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    op: u32,
+    v2: i32,
+    flip: i32,
+    line: i32,
+    mmop: u32,
+    event: u32,
+) {
+    unsafe {
+        let v1: i32 = luak_exp2anyreg(fs, e1);
+        let program_counter: i32 = luak_code_abck(fs, op, 0, v1, v2, 0);
+        freeexps(fs, e1, e2);
+        (*e1).u.info = program_counter;
+        (*e1).k = VRELOC;
+        luak_fixline(fs, line);
+        luak_code_abck(fs, mmop, v1, v2, event as i32, flip);
+        luak_fixline(fs, line);
+    }
+}
+pub unsafe extern "C" fn codebinexpval(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        let op: u32 = binopr2op(opr, OPR_ADD, OP_ADD);
+        let v2: i32 = luak_exp2anyreg(fs, e2);
+        finishbinexpval(fs, e1, e2, op, v2, 0, line, OP_MMBIN, binopr2tm(opr));
+    }
+}
+pub unsafe extern "C" fn codebini(
+    fs: *mut FunctionState,
+    op: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    flip: i32,
+    line: i32,
+    event: u32,
+) {
+    unsafe {
+        let v2: i32 = (*e2).u.ival as i32 + ((1 << 8) - 1 >> 1);
+        finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
+    }
+}
+pub unsafe extern "C" fn codebink(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    flip: i32,
+    line: i32,
+) {
+    unsafe {
+        let event: u32 = binopr2tm(opr);
+        let v2: i32 = (*e2).u.info;
+        let op: u32 = binopr2op(opr, OPR_ADD, OP_ADDK);
+        finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
+    }
+}
+pub unsafe extern "C" fn finishbinexpneg(
+    fs: *mut FunctionState,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    op: u32,
+    line: i32,
+    event: u32,
+) -> i32 {
+    unsafe {
+        if is_k_int(e2) == 0 {
+            return 0;
+        } else {
+            let i2: i64 = (*e2).u.ival;
+            if !(fits_c(i2) != 0 && fits_c(-i2) != 0) {
+                return 0;
+            } else {
+                let v2: i32 = i2 as i32;
+                finishbinexpval(
+                    fs,
+                    e1,
+                    e2,
+                    op,
+                    -v2 + ((1 << 8) - 1 >> 1),
+                    0,
+                    line,
+                    OP_MMBINI,
+                    event,
+                );
+                *((*(*fs).f).code).offset(((*fs).program_counter - 1) as isize) =
+                    *((*(*fs).f).code).offset(((*fs).program_counter - 1) as isize)
+                        & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
+                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << 0 + 7 + 8 + 1
+                            & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
+                return 1;
+            }
+        };
+    }
+}
+pub unsafe extern "C" fn codebinnok(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    flip: i32,
+    line: i32,
+) {
+    unsafe {
+        if flip != 0 {
+            swapexps(e1, e2);
+        }
+        codebinexpval(fs, opr, e1, e2, line);
+    }
+}
+pub unsafe extern "C" fn codearith(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    flip: i32,
+    line: i32,
+) {
+    unsafe {
+        if tonumeral(e2, std::ptr::null_mut()) != 0 && luak_exp2k(fs, e2) != 0 {
+            codebink(fs, opr, e1, e2, flip, line);
+        } else {
+            codebinnok(fs, opr, e1, e2, flip, line);
+        };
+    }
+}
+pub unsafe extern "C" fn codecommutative(
+    fs: *mut FunctionState,
+    op: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        let mut flip: i32 = 0;
+        if tonumeral(e1, std::ptr::null_mut()) != 0 {
+            swapexps(e1, e2);
+            flip = 1;
+        }
+        if op as u32 == OPR_ADD as u32 && is_sc_int(e2) != 0 {
+            codebini(fs, OP_ADDI, e1, e2, flip, line, TM_ADD);
+        } else {
+            codearith(fs, op, e1, e2, flip, line);
+        };
+    }
+}
+pub unsafe extern "C" fn codebitwise(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        let mut flip: i32 = 0;
+        if (*e1).k as u32 == VKINT as u32 {
+            swapexps(e1, e2);
+            flip = 1;
+        }
+        if (*e2).k as u32 == VKINT as u32 && luak_exp2k(fs, e2) != 0 {
+            codebink(fs, opr, e1, e2, flip, line);
+        } else {
+            codebinnok(fs, opr, e1, e2, flip, line);
+        };
+    }
+}
+pub unsafe extern "C" fn codeorder(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+) {
+    unsafe {
+        let r1: i32;
+        let r2: i32;
+        let mut im: i32 = 0;
+        let mut is_float: bool = false;
+        let op: u32;
+        if is_sc_number(e2, &mut im, &mut is_float) != 0 {
+            r1 = luak_exp2anyreg(fs, e1);
+            r2 = im;
+            op = binopr2op(opr, OPR_LT, OP_LTI);
+        } else if is_sc_number(e1, &mut im, &mut is_float) != 0 {
+            r1 = luak_exp2anyreg(fs, e2);
+            r2 = im;
+            op = binopr2op(opr, OPR_LT, OP_GTI);
+        } else {
+            r1 = luak_exp2anyreg(fs, e1);
+            r2 = luak_exp2anyreg(fs, e2);
+            op = binopr2op(opr, OPR_LT, OP_LT);
+        }
+        freeexps(fs, e1, e2);
+        (*e1).u.info = condjump(fs, op, r1, r2, is_float as i32, 1);
+        (*e1).k = VJMP;
+    }
+}
+pub unsafe extern "C" fn codeeq(
+    fs: *mut FunctionState,
+    opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+) {
+    unsafe {
+        let r1: i32;
+        let r2: i32;
+        let mut im: i32 = 0;
+        let mut is_float: bool = false;
+        let op: u32;
+        if (*e1).k as u32 != VNONRELOC as u32 {
+            swapexps(e1, e2);
+        }
+        r1 = luak_exp2anyreg(fs, e1);
+        if is_sc_number(e2, &mut im, &mut is_float) != 0 {
+            op = OP_EQI;
+            r2 = im;
+        } else if exp2rk(fs, e2) != 0 {
+            op = OP_EQK;
+            r2 = (*e2).u.info;
+        } else {
+            op = OP_EQ;
+            r2 = luak_exp2anyreg(fs, e2);
+        }
+        freeexps(fs, e1, e2);
+        (*e1).u.info = condjump(
+            fs,
+            op,
+            r1,
+            r2,
+            is_float as i32,
+            (opr as u32 == OPR_EQ as u32) as i32,
+        );
+        (*e1).k = VJMP;
+    }
+}
+pub unsafe extern "C" fn luak_prefix(
+    fs: *mut FunctionState,
+    opr: OperatorUnary,
+    e: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        pub const EF: ExpressionDescription = {
+            let init = ExpressionDescription {
+                k: VKINT,
+                u: RawValue { ival: 0 },
+                t: -1,
+                f: -1,
+            };
+            init
+        };
+        luak_dischargevars(fs, e);
+        let current_block_3: u64;
+        match opr as u32 {
+            0 | 1 => {
+                if constfolding(
+                    fs,
+                    (opr as u32).wrapping_add(12 as u32) as i32,
+                    e,
+                    &EF,
+                ) != 0
+                {
+                    current_block_3 = 7815301370352969686;
+                } else {
+                    current_block_3 = 4051245927518328098;
+                }
+            }
+            3 => {
+                current_block_3 = 4051245927518328098;
+            }
+            2 => {
+                codenot(fs, e);
+                current_block_3 = 7815301370352969686;
+            }
+            _ => {
+                current_block_3 = 7815301370352969686;
+            }
+        }
+        match current_block_3 {
+            4051245927518328098 => {
+                codeunexpval(fs, unopr2op(opr), e, line);
+            }
+            _ => {}
+        };
+    }
+}
+pub unsafe extern "C" fn luak_infix(
+    fs: *mut FunctionState,
+    op: u32,
+    v: *mut ExpressionDescription,
+) {
+    unsafe {
+        luak_dischargevars(fs, v);
+        match op as u32 {
+            19 => {
+                luak_goiftrue(fs, v);
+            }
+            20 => {
+                luak_goiffalse(fs, v);
+            }
+            12 => {
+                luak_exp2nextreg(fs, v);
+            }
+            0 | 1 | 2 | 5 | 6 | 3 | 4 | 7 | 8 | 9 | 10 | 11 => {
+                if tonumeral(v, std::ptr::null_mut()) == 0 {
+                    luak_exp2anyreg(fs, v);
+                }
+            }
+            13 | 16 => {
+                if tonumeral(v, std::ptr::null_mut()) == 0 {
+                    exp2rk(fs, v);
+                }
+            }
+            14 | 15 | 17 | 18 => {
+                let mut dummy: i32 = 0;
+                let mut dummy2: bool = false;
+                if is_sc_number(v, &mut dummy, &mut dummy2) == 0 {
+                    luak_exp2anyreg(fs, v);
+                }
+            }
+            _ => {}
+        };
+    }
+}
+pub unsafe extern "C" fn codeconcat(
+    fs: *mut FunctionState,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        let ie2: *mut u32 = previousinstruction(fs);
+        if (*ie2 >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_CONCAT as u32 {
+            let n: i32 = (*ie2 >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+            freeexp(fs, e2);
+            *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7)
+                | ((*e1).u.info as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+            *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
+                | ((n + 1) as u32) << 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
+        } else {
+            luak_code_abck(fs, OP_CONCAT, (*e1).u.info, 2, 0, 0);
+            freeexp(fs, e2);
+            luak_fixline(fs, line);
+        };
+    }
+}
+pub unsafe extern "C" fn luak_posfix(
+    fs: *mut FunctionState,
+    mut opr: u32,
+    e1: *mut ExpressionDescription,
+    e2: *mut ExpressionDescription,
+    line: i32,
+) {
+    unsafe {
+        luak_dischargevars(fs, e2);
+        if opr as u32 <= OPR_SHR as u32
+            && constfolding(fs, (opr as u32).wrapping_add(0u32) as i32, e1, e2) != 0
+        {
+            return;
+        }
+        let current_block_30: u64;
+        match opr as u32 {
+            19 => {
+                luak_concat(fs, &mut (*e2).f, (*e1).f);
+                *e1 = *e2;
+                current_block_30 = 8180496224585318153;
+            }
+            20 => {
+                luak_concat(fs, &mut (*e2).t, (*e1).t);
+                *e1 = *e2;
+                current_block_30 = 8180496224585318153;
+            }
+            12 => {
+                luak_exp2nextreg(fs, e2);
+                codeconcat(fs, e1, e2, line);
+                current_block_30 = 8180496224585318153;
+            }
+            0 | 2 => {
+                codecommutative(fs, opr, e1, e2, line);
+                current_block_30 = 8180496224585318153;
+            }
+            1 => {
+                if finishbinexpneg(fs, e1, e2, OP_ADDI, line, TM_SUB) != 0 {
+                    current_block_30 = 8180496224585318153;
+                } else {
+                    current_block_30 = 12599329904712511516;
+                }
+            }
+            5 | 6 | 3 | 4 => {
+                current_block_30 = 12599329904712511516;
+            }
+            7 | 8 | 9 => {
+                codebitwise(fs, opr, e1, e2, line);
+                current_block_30 = 8180496224585318153;
+            }
+            10 => {
+                if is_sc_int(e1) != 0 {
+                    swapexps(e1, e2);
+                    codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);
+                } else if !(finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL) != 0) {
+                    codebinexpval(fs, opr, e1, e2, line);
+                }
+                current_block_30 = 8180496224585318153;
+            }
+            11 => {
+                if is_sc_int(e2) != 0 {
+                    codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);
+                } else {
+                    codebinexpval(fs, opr, e1, e2, line);
+                }
+                current_block_30 = 8180496224585318153;
+            }
+            13 | 16 => {
+                codeeq(fs, opr, e1, e2);
+                current_block_30 = 8180496224585318153;
+            }
+            17 | 18 => {
+                swapexps(e1, e2);
+                opr = (opr as u32)
+                    .wrapping_sub(OPR_GT as u32)
+                    .wrapping_add(OPR_LT as u32) as u32;
+                current_block_30 = 1118134448028020070;
+            }
+            14 | 15 => {
+                current_block_30 = 1118134448028020070;
+            }
+            _ => {
+                current_block_30 = 8180496224585318153;
+            }
+        }
+        match current_block_30 {
+            12599329904712511516 => {
+                codearith(fs, opr, e1, e2, 0, line);
+            }
+            1118134448028020070 => {
+                codeorder(fs, opr, e1, e2);
+            }
+            _ => {}
+        };
+    }
+}
+pub unsafe extern "C" fn luak_fixline(fs: *mut FunctionState, line: i32) {
+    unsafe {
+        removelastlineinfo(fs);
+        savelineinfo(fs, (*fs).f, line);
+    }
+}
+pub unsafe extern "C" fn luak_settablesize(
+    fs: *mut FunctionState,
+    program_counter: i32,
+    ra: i32,
+    asize: i32,
+    hsize: i32,
+) {
+    unsafe {
+        let inst: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let rb: i32 = if hsize != 0 {
+            ceiling_log2(hsize as u64) as i32 + 1
+        } else {
+            0
+        };
+        let extra: i32 = asize / ((1 << 8) - 1 + 1);
+        let rc: i32 = asize % ((1 << 8) - 1 + 1);
+        let k: i32 = (extra > 0) as i32;
+        *inst = (OP_NEWTABLE as u32) << 0
+            | (ra as u32) << 0 + 7
+            | (rb as u32) << 0 + 7 + 8 + 1
+            | (rc as u32) << 0 + 7 + 8 + 1 + 8
+            | (k as u32) << 0 + 7 + 8;
+        *inst.offset(1 as isize) = (OP_EXTRAARG as u32) << 0 | (extra as u32) << 0 + 7;
+    }
+}
+pub unsafe extern "C" fn luak_setlist(
+    fs: *mut FunctionState,
+    base: i32,
+    mut count_elements: i32,
+    mut tostore: i32,
+) {
+    unsafe {
+        if tostore == -1 {
+            tostore = 0;
+        }
+        if count_elements <= (1 << 8) - 1 {
+            luak_code_abck(fs, OP_SETLIST, base, tostore, count_elements, 0);
+        } else {
+            let extra: i32 = count_elements / ((1 << 8) - 1 + 1);
+            count_elements %= (1 << 8) - 1 + 1;
+            luak_code_abck(fs, OP_SETLIST, base, tostore, count_elements, 1);
+            codeextraarg(fs, extra);
+        }
+        (*fs).freereg = (base + 1) as u8;
     }
 }

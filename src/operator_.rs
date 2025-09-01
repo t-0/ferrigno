@@ -1,3 +1,10 @@
+use crate::onelua::*;
+use crate::tvalue::*;
+use crate::tag::*;
+use crate::f2i::*;
+use crate::tm::*;
+use crate::instruction::*;
+use crate::operatorunary::*;
 pub const OPR_NOBINOPR: u32 = 21;
 pub const OPR_OR: u32 = 20;
 pub const OPR_AND: u32 = 19;
@@ -20,3 +27,32 @@ pub const OPR_MOD: u32 = 3;
 pub const OPR_MUL: u32 = 2;
 pub const OPR_SUB: u32 = 1;
 pub const OPR_ADD: u32 = 0;
+pub unsafe extern "C" fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
+    unsafe {
+        match op {
+            7 | 8 | 9 | 10 | 11 | 13 => {
+                let mut i: i64 = 0;
+                return (luav_tointegerns(v1, &mut i, F2I::Equal) != 0
+                    && luav_tointegerns(v2, &mut i, F2I::Equal) != 0)
+                    as i32;
+            }
+            5 | 6 | 3 => {
+                return ((if (*v2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+                    (*v2).value.i as f64
+                } else {
+                    (*v2).value.n
+                }) != 0.0) as i32;
+            }
+            _ => return 1,
+        };
+    }
+}
+pub unsafe extern "C" fn binopr2op(opr: u32, baser: u32, base: u32) -> u32 {
+    return (opr as i32 - baser as i32 + base as i32) as u32;
+}
+pub unsafe extern "C" fn unopr2op(unary: OperatorUnary) -> u32 {
+    return (unary as i32 - OperatorUnary::Minus as i32 + OP_UNM as i32) as u32;
+}
+pub unsafe extern "C" fn binopr2tm(opr: u32) -> u32 {
+    return (opr as i32 - OPR_ADD as i32 + TM_ADD as i32) as u32;
+}
