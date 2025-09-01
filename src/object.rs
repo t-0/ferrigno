@@ -295,7 +295,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
             }
             TAG_VARIANT_STRING_SHORT => {
                 let ts: *mut TString = &mut (*(o as *mut TString));
-                luas_remove(state, ts);
+                (*ts).remove_from_state(state);
                 (*state).free_memory(
                     ts as *mut libc::c_void,
                     (24 as u64).wrapping_add(

@@ -1,4 +1,3 @@
-#![allow(static_mut_refs, unsafe_code)]
 use crate::coroutine::*;
 use crate::tag::*;
 use crate::registeredfunction::*;
@@ -93,7 +92,7 @@ unsafe extern "C" fn luab_yield(state: *mut State) -> i32 {
         return lua_yieldk(state, (*state).get_top(), 0, None);
     }
 }
-static mut COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
+const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
     [
         {
             RegisteredFunction {

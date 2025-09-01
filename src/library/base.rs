@@ -1,8 +1,4 @@
-#![allow(
-    static_mut_refs,
-    unpredictable_function_pointer_comparisons,
-    unsafe_code
-)]
+#![allow(unpredictable_function_pointer_comparisons,unsafe_code)]
 use crate::f2i::*;
 use crate::registeredfunction::*;
 use crate::state::*;

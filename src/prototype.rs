@@ -399,7 +399,7 @@ pub unsafe extern "C" fn funcnamefromcode(
         let tm: u32;
         let i: u32 = *((*p).code).offset(program_counter as isize);
         match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
-            68 | 69 => {
+            OP_CALL | OP_TAILCALL => {
                 return getobjname(
                     p,
                     program_counter,
@@ -407,41 +407,41 @@ pub unsafe extern "C" fn funcnamefromcode(
                     name,
                 );
             }
-            76 => {
+            OP_TFORCALL => {
                 *name = b"for iterator\0" as *const u8 as *const i8;
                 return b"for iterator\0" as *const u8 as *const i8;
             }
-            20 | 11 | 12 | 13 | 14 => {
+            OP_SELF | OP_GETTABUP | OP_GETTABLE | OP_GETI | OP_GETFIELD => {
                 tm = TM_INDEX;
             }
-            15 | 16 | 17 | 18 => {
+            OP_SETTABUP | OP_SETTABLE | OP_SETI | OP_SETFIELD => {
                 tm = TM_NEWINDEX;
             }
-            46 | 47 | 48 => {
+            OP_MMBIN | OP_MMBINI | OP_MMBINK => {
                 tm = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as u32;
             }
-            49 => {
+            OP_UNM => {
                 tm = TM_UNM;
             }
             OP_BNOT => {
                 tm = TM_BNOT;
             }
-            52 => {
+            OP_LEN => {
                 tm = TM_LEN;
             }
-            53 => {
+            OP_CONCAT => {
                 tm = TM_CONCAT;
             }
-            57 => {
+            OP_EQ => {
                 tm = TM_EQ;
             }
-            58 | 62 | 64 => {
+            OP_LT | OP_LTI | OP_GTI => {
                 tm = TM_LT;
             }
-            59 | 63 | 65 => {
+            OP_LE | OP_LEI | OP_GEI => {
                 tm = TM_LE;
             }
-            54 | 70 => {
+            OP_CLOSE | OP_RETURN => {
                 tm = TM_CLOSE;
             }
             _ => return std::ptr::null(),

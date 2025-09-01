@@ -1,8 +1,4 @@
-#![allow(
-    static_mut_refs,
-    unpredictable_function_pointer_comparisons,
-    unsafe_code
-)]
+#![allow(unpredictable_function_pointer_comparisons,unsafe_code)]
 #[repr(C)]
 pub struct UBox {
     pub box_0: *mut libc::c_void,

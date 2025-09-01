@@ -58,6 +58,18 @@ pub union TStringExtension {
     pub hash_next: *mut TString,
 }
 impl TString {
+    pub unsafe fn remove_from_global(& mut self, global: *mut Global) {
+        unsafe {
+            let stringtable: *mut StringTable = &mut (*global).string_table;
+            (*stringtable).remove (self);
+        }
+    }
+    pub unsafe fn remove_from_state(& mut self, state: *mut State) {
+        unsafe {
+            let global: *mut Global = &mut (*(*state).global);
+            self.remove_from_global(global);
+        }
+    }
     pub fn get_contents(&self) -> *const i8 {
         return &self.contents as *const i8;
     }
@@ -73,7 +85,7 @@ impl TString {
             }
         }
     }
-    pub unsafe extern "C" fn create_long(state: *mut State, length: u64) -> *mut TString {
+    pub unsafe fn create_long(state: *mut State, length: u64) -> *mut TString {
         unsafe {
             let ret: *mut TString = createstrobj(
                 state,
@@ -86,7 +98,7 @@ impl TString {
             return ret;
         }
     }
-    pub unsafe extern "C" fn intern(state: *mut State, str: *const i8, l: u64) -> *mut TString {
+    pub unsafe fn intern(state: *mut State, str: *const i8, l: u64) -> *mut TString {
         unsafe {
             let g: *mut Global = (*state).global;
             let tb: *mut StringTable = &mut (*g).string_table;
@@ -183,20 +195,6 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         (*ts).extra = 0;
         *((*ts).get_contents2()).offset(l as isize) = '\0' as i8;
         return ts;
-    }
-}
-pub unsafe extern "C" fn luas_remove(state: *mut State, ts: *mut TString) {
-    unsafe {
-        let tb: *mut StringTable = &mut (*(*state).global).string_table;
-        let mut p: *mut *mut TString = &mut *((*tb).hash)
-            .offset(((*ts).hash & ((*tb).size - 1) as u32) as isize)
-            as *mut *mut TString;
-        while *p != ts {
-            p = &mut (**p).u.hash_next;
-        }
-        *p = (**p).u.hash_next;
-        (*tb).length -= 1;
-        (*tb).length;
     }
 }
 pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64) -> *mut TString {

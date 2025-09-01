@@ -1,4 +1,3 @@
-#![allow(static_mut_refs, unsafe_code)]
 use crate::utility::c::*;
 use crate::randomstate::*;
 use crate::tag::*;
@@ -383,7 +382,7 @@ unsafe extern "C" fn math_randomseed(state: *mut State) -> i32 {
         return 2;
     }
 }
-static mut MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
+const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
     [
         {
             RegisteredFunction {
@@ -415,7 +414,7 @@ unsafe extern "C" fn set_random_function(state: *mut State) {
         lual_setfuncs(state, MATH_RANDOM_FUNCTIONS.as_ptr(), 1);
     }
 }
-static mut MATH_FUNCTIONS: [RegisteredFunction; 28] = {
+const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
     [
         {
             RegisteredFunction {

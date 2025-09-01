@@ -1122,20 +1122,20 @@ pub unsafe extern "C" fn luak_setoneret(fs: *mut FunctionState, e: *mut Expressi
 }
 pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        match (*e).k as u32 {
-            11 => {
+        match (*e).k {
+            V::VCONST => {
                 const2exp(const2val(fs, e), e);
             }
-            9 => {
+            V::VLOCAL => {
                 let temp: i32 = (*e).u.var.ridx as i32;
                 (*e).u.info = temp;
                 (*e).k = V::VNONRELOC;
             }
-            10 => {
+            V::VUPVAL => {
                 (*e).u.info = luak_code_abck(fs, OP_GETUPVAL, 0, (*e).u.info, 0, 0);
                 (*e).k = V::VRELOC;
             }
-            13 => {
+            V::VINDEXUP => {
                 (*e).u.info = luak_code_abck(
                     fs,
                     OP_GETTABUP,
@@ -1146,7 +1146,7 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                 );
                 (*e).k = V::VRELOC;
             }
-            14 => {
+            V::VINDEXI => {
                 freereg(fs, (*e).u.ind.t as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
@@ -1158,7 +1158,7 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                 );
                 (*e).k = V::VRELOC;
             }
-            15 => {
+            V::VINDEXSTR => {
                 freereg(fs, (*e).u.ind.t as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
@@ -1170,7 +1170,7 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                 );
                 (*e).k = V::VRELOC;
             }
-            12 => {
+            V::VINDEXED => {
                 freeregs(fs, (*e).u.ind.t as i32, (*e).u.ind.index as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
@@ -1182,7 +1182,7 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                 );
                 (*e).k = V::VRELOC;
             }
-            19 | 18 => {
+            V::VVARARG | V::VCALL => {
                 luak_setoneret(fs, e);
             }
             _ => {}
@@ -1413,17 +1413,17 @@ pub unsafe extern "C" fn luak_storevar(
     ex: *mut ExpressionDescription,
 ) {
     unsafe {
-        match (*var).k as u32 {
-            9 => {
+        match (*var).k {
+            V::VLOCAL => {
                 freeexp(fs, ex);
                 exp2reg(fs, ex, (*var).u.var.ridx as i32);
                 return;
             }
-            10 => {
+            V::VUPVAL => {
                 let e: i32 = luak_exp2anyreg(fs, ex);
                 luak_code_abck(fs, OP_SETUPVAL, e, (*var).u.info, 0, 0);
             }
-            13 => {
+            V::VINDEXUP => {
                 codeabrk(
                     fs,
                     OP_SETTABUP,
@@ -1432,7 +1432,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            14 => {
+            V::VINDEXI => {
                 codeabrk(
                     fs,
                     OP_SETI,
@@ -1441,7 +1441,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            15 => {
+            V::VINDEXSTR => {
                 codeabrk(
                     fs,
                     OP_SETFIELD,
@@ -1450,7 +1450,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            12 => {
+            V::VINDEXED => {
                 codeabrk(
                     fs,
                     OP_SETTABLE,

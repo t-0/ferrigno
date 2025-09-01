@@ -1,4 +1,3 @@
-#![allow(unused)]
 enum TagType {
     Nil = 0x00,
     Boolean = 0x01,

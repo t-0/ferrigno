@@ -10,6 +10,20 @@ pub struct StringTable {
     pub length: i32,
     pub size: i32,
 }
+impl StringTable {
+    pub unsafe fn remove(& mut self, tstring: *mut TString) {
+        unsafe {
+            let mut p: *mut *mut TString = &mut *(self.hash)
+                .offset(((*tstring).hash & (self.size - 1) as u32) as isize)
+                as *mut *mut TString;
+            while *p != tstring {
+                p = &mut (**p).u.hash_next;
+            }
+            *p = (**p).u.hash_next;
+            self.length -= 1;
+        }
+    }
+}
 pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*state).global).string_table;

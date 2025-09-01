@@ -1,6 +1,4 @@
-#![allow(
-    unpredictable_function_pointer_comparisons,
-)]
+#![allow(unpredictable_function_pointer_comparisons)]
 use crate::callinfo::*;
 use crate::utility::c::*;
 use crate::state::*;

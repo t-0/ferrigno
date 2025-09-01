@@ -25,19 +25,19 @@ impl New for Buffer {
     }
 }
 impl Buffer {
-    pub unsafe extern "C" fn lual_buffinitsize(&mut self, state: *mut State, size: u64) -> *mut i8 {
+    pub unsafe fn lual_buffinitsize(&mut self, state: *mut State, size: u64) -> *mut i8 {
         unsafe {
             self.lual_buffinit(state);
             return self.prepbuffsize(size, -1);
         }
     }
-    pub unsafe extern "C" fn lual_pushresultsize(&mut self, size: u64) {
+    pub unsafe fn lual_pushresultsize(&mut self, size: u64) {
         unsafe {
             self.length = (self.length as u64).wrapping_add(size) as u64;
             self.lual_pushresult();
         }
     }
-    pub unsafe extern "C" fn newbuffsize(&mut self, size: u64) -> u64 {
+    pub unsafe fn newbuffsize(&mut self, size: u64) -> u64 {
         unsafe {
             let mut new_size: u64 = (self.size).wrapping_div(2 as u64).wrapping_mul(3 as u64);
             if (((!(0u64)).wrapping_sub(size) < self.length) as i32 != 0) as i64 != 0 {
@@ -50,7 +50,7 @@ impl Buffer {
             return new_size;
         }
     }
-    pub unsafe extern "C" fn prepbuffsize(&mut self, size: u64, boxidx: i32) -> *mut i8 {
+    pub unsafe fn prepbuffsize(&mut self, size: u64, boxidx: i32) -> *mut i8 {
         unsafe {
             if (self.size).wrapping_sub(self.length) >= size {
                 return (self.pointer).offset(self.length as isize);
@@ -79,12 +79,12 @@ impl Buffer {
             };
         }
     }
-    pub unsafe extern "C" fn lual_prepbuffsize(&mut self, size: u64) -> *mut i8 {
+    pub unsafe fn lual_prepbuffsize(&mut self, size: u64) -> *mut i8 {
         unsafe {
             return self.prepbuffsize(size, -1);
         }
     }
-    pub unsafe extern "C" fn lual_addlstring(&mut self, s: *const i8, l: u64) {
+    pub unsafe fn lual_addlstring(&mut self, s: *const i8, l: u64) {
         unsafe {
             if l > 0u64 {
                 let raw: *mut i8 = self.prepbuffsize(l, -1);
@@ -97,12 +97,12 @@ impl Buffer {
             }
         }
     }
-    pub unsafe extern "C" fn lual_addstring(&mut self, s: *const i8) {
+    pub unsafe fn lual_addstring(&mut self, s: *const i8) {
         unsafe {
             self.lual_addlstring(s, strlen(s));
         }
     }
-    pub unsafe extern "C" fn lual_pushresult(&mut self) {
+    pub unsafe fn lual_pushresult(&mut self) {
         unsafe {
             let state: *mut State = self.state;
             lua_pushlstring(state, self.pointer, self.length);
@@ -113,7 +113,7 @@ impl Buffer {
             lua_settop(state, -1 - 1);
         }
     }
-    pub unsafe extern "C" fn lual_addvalue(&mut self) {
+    pub unsafe fn lual_addvalue(&mut self) {
         unsafe {
             let state: *mut State = self.state;
             let mut length: u64 = 0;
@@ -128,7 +128,7 @@ impl Buffer {
             lua_settop(state, -1 - 1);
         }
     }
-    pub unsafe extern "C" fn lual_buffinit(&mut self, state: *mut State) {
+    pub unsafe fn lual_buffinit(&mut self, state: *mut State) {
         unsafe {
             self.state = state;
             self.pointer = (self.buffer_initial).as_mut_ptr();

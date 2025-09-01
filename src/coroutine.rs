@@ -1,7 +1,3 @@
-#![allow(
-    static_mut_refs,
-    unsafe_code,
-)]
 use crate::debuginfo::*;
 use crate::state::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
