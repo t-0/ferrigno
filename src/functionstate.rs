@@ -992,7 +992,7 @@ pub unsafe extern "C" fn luak_number_k(fs: *mut FunctionState, r: f64) -> i32 {
         let io: *mut TValue = &mut o;
         (*io).value.n = r;
         (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-        if luav_flttointeger(r, &mut ik, F2I::Equal) == 0 {
+        if !luav_flttointeger(r, &mut ik, F2I::Equal) {
             return addk(fs, &mut o, &mut o);
         } else {
             let nbm: i32 = 53 as i32;
@@ -1060,7 +1060,7 @@ pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 {
 }
 pub unsafe extern "C" fn luak_int(fs: *mut FunctionState, reg: i32, i: i64) {
     unsafe {
-        if fits_bx(i) != 0 {
+        if fits_bx(i) {
             codeasbx(fs, OP_LOADI, reg, i as i32);
         } else {
             luak_codek(fs, reg, luak_int_k(fs, i));
@@ -1070,7 +1070,7 @@ pub unsafe extern "C" fn luak_int(fs: *mut FunctionState, reg: i32, i: i64) {
 pub unsafe extern "C" fn luak_float(fs: *mut FunctionState, reg: i32, f: f64) {
     unsafe {
         let mut fi: i64 = 0;
-        if luav_flttointeger(f, &mut fi, F2I::Equal) != 0 && fits_bx(fi) != 0 {
+        if luav_flttointeger(f, &mut fi, F2I::Equal) && fits_bx(fi) {
             codeasbx(fs, OP_LOADF, reg, fi as i32);
         } else {
             luak_codek(fs, reg, luak_number_k(fs, f));
@@ -1582,13 +1582,13 @@ pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescr
         removevalues(fs, (*e).t);
     }
 }
-pub unsafe extern "C" fn is_k_string(fs: *mut FunctionState, e: *mut ExpressionDescription) -> i32 {
+pub unsafe extern "C" fn is_k_string(fs: *mut FunctionState, e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return ((*e).k as u32 == VK as u32
+        return (*e).k == VK
             && !((*e).t != (*e).f)
-            && (*e).u.info <= (1 << 8) - 1
+            && (*e).u.info <= ((1 << 8) - 1)
             && (*((*(*fs).f).k).offset((*e).u.info as isize)).get_tag_variant()
-                == TAG_VARIANT_STRING_SHORT) as i32;
+                == TAG_VARIANT_STRING_SHORT;
     }
 }
 pub unsafe extern "C" fn constfolding(
@@ -1616,8 +1616,8 @@ pub unsafe extern "C" fn constfolding(
             },
             tag: 0,
         };
-        if tonumeral(e1, &mut v1) == 0
-            || tonumeral(e2, &mut v2) == 0
+        if !tonumeral(e1, &mut v1)
+            || !tonumeral(e2, &mut v2)
             || validop(op, &mut v1, &mut v2) == 0
         {
             return 0;
@@ -1724,11 +1724,11 @@ pub unsafe extern "C" fn finishbinexpneg(
     event: u32,
 ) -> i32 {
     unsafe {
-        if is_k_int(e2) == 0 {
+        if !is_k_int(e2) {
             return 0;
         } else {
             let i2: i64 = (*e2).u.ival;
-            if !(fits_c(i2) != 0 && fits_c(-i2) != 0) {
+            if !(fits_c(i2) && fits_c(-i2)) {
                 return 0;
             } else {
                 let v2: i32 = i2 as i32;
@@ -1777,7 +1777,7 @@ pub unsafe extern "C" fn codearith(
     line: i32,
 ) {
     unsafe {
-        if tonumeral(e2, std::ptr::null_mut()) != 0 && luak_exp2k(fs, e2) != 0 {
+        if tonumeral(e2, std::ptr::null_mut()) && luak_exp2k(fs, e2) != 0{
             codebink(fs, opr, e1, e2, flip, line);
         } else {
             codebinnok(fs, opr, e1, e2, flip, line);
@@ -1793,11 +1793,11 @@ pub unsafe extern "C" fn codecommutative(
 ) {
     unsafe {
         let mut flip: i32 = 0;
-        if tonumeral(e1, std::ptr::null_mut()) != 0 {
+        if tonumeral(e1, std::ptr::null_mut()) {
             swapexps(e1, e2);
             flip = 1;
         }
-        if op as u32 == OPR_ADD as u32 && is_sc_int(e2) != 0 {
+        if op as u32 == OPR_ADD as u32 && is_sc_int(e2) {
             codebini(fs, OP_ADDI, e1, e2, flip, line, TM_ADD);
         } else {
             codearith(fs, op, e1, e2, flip, line);
@@ -1961,12 +1961,12 @@ pub unsafe extern "C" fn luak_infix(
                 luak_exp2nextreg(fs, v);
             }
             0 | 1 | 2 | 5 | 6 | 3 | 4 | 7 | 8 | 9 | 10 | 11 => {
-                if tonumeral(v, std::ptr::null_mut()) == 0 {
+                if !tonumeral(v, std::ptr::null_mut()) {
                     luak_exp2anyreg(fs, v);
                 }
             }
             13 | 16 => {
-                if tonumeral(v, std::ptr::null_mut()) == 0 {
+                if !tonumeral(v, std::ptr::null_mut()) {
                     exp2rk(fs, v);
                 }
             }
@@ -2053,7 +2053,7 @@ pub unsafe extern "C" fn luak_posfix(
                 current_block_30 = 8180496224585318153;
             }
             10 => {
-                if is_sc_int(e1) != 0 {
+                if is_sc_int(e1) {
                     swapexps(e1, e2);
                     codebini(fs, OP_SHLI, e1, e2, 1, line, TM_SHL);
                 } else if !(finishbinexpneg(fs, e1, e2, OP_SHRI, line, TM_SHL) != 0) {
@@ -2062,7 +2062,7 @@ pub unsafe extern "C" fn luak_posfix(
                 current_block_30 = 8180496224585318153;
             }
             11 => {
-                if is_sc_int(e2) != 0 {
+                if is_sc_int(e2) {
                     codebini(fs, OP_SHRI, e1, e2, 0, line, TM_SHR);
                 } else {
                     codebinexpval(fs, opr, e1, e2, line);

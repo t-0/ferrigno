@@ -11,6 +11,7 @@ enum TagType {
     State = 0x08,
     UpValue = 0x09,
     Prototype = 0x0A,
+    DeadKey = 0x0B,
 }
 pub const TAG_TYPE_NIL: u8 = TagType::Nil as u8;
 pub const TAG_VARIANT_NIL_NIL: u8 = TAG_TYPE_NIL | (0x00 << 0x04);
@@ -41,6 +42,8 @@ pub const TAG_TYPE_UPVALUE: u8 = TagType::UpValue as u8;
 pub const TAG_VARIANT_UPVALUE: u8 = TAG_TYPE_UPVALUE;
 pub const TAG_TYPE_PROTOTYPE: u8 = TagType::Prototype as u8;
 pub const TAG_VARIANT_PROTOTYPE: u8 = TAG_TYPE_PROTOTYPE;
+pub const TAG_TYPE_DEADKEY: u8 = TagType::DeadKey as u8;
+pub const TAG_VARIANT_DEADKEY: u8 = TAG_TYPE_DEADKEY;
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
 pub const fn get_tag_type(tag: u8) -> u8 {

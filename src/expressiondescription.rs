@@ -31,7 +31,7 @@ pub unsafe extern "C" fn codestring(e: *mut ExpressionDescription, s: *mut TStri
         (*e).u.strval = s;
     }
 }
-pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> i32 {
+pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> bool {
     unsafe {
         if (*e).t == (*e).f {
             match (*e).k as u32 {
@@ -40,19 +40,19 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
                         (*v).value.i = (*e).u.ival;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     }
-                    return 1;
+                    return true;
                 }
                 5 => {
                     if !v.is_null() {
                         (*v).value.n = (*e).u.nval;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                     }
-                    return 1;
+                    return true;
                 }
-                _ => return 0,
+                _ => return false,
             };
         } else {
-            return 0;
+            return false;
         }
     }
 }
@@ -72,23 +72,23 @@ pub unsafe extern "C" fn luak_exp2const(
     fs: *mut FunctionState,
     e: *const ExpressionDescription,
     v: *mut TValue,
-) -> i32 {
+) -> bool {
     unsafe {
         if (*e).t != (*e).f {
-            return 0;
+            return false;
         }
         match (*e).k as u32 {
             3 => {
                 (*v).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
-                return 1;
+                return true;
             }
             2 => {
                 (*v).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
-                return 1;
+                return true;
             }
             1 => {
                 (*v).set_tag(TAG_VARIANT_NIL_NIL);
-                return 1;
+                return true;
             }
             7 => {
                 let io: *mut TValue = v;
@@ -96,14 +96,14 @@ pub unsafe extern "C" fn luak_exp2const(
                 (*io).value.object = &mut (*(x_ as *mut Object));
                 (*io).set_tag((*x_).get_tag());
                 (*io).set_collectable();
-                return 1;
+                return true;
             }
             11 => {
                 let io1: *mut TValue = v;
                 let io2: *const TValue = const2val(fs, e);
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                return 1;
+                return true;
             }
             _ => return tonumeral(e, v),
         };
@@ -137,19 +137,19 @@ pub unsafe extern "C" fn const2exp(v: *mut TValue, e: *mut ExpressionDescription
         };
     }
 }
-pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> i32 {
+pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
-        return ((*e).k as u32 == VKINT as u32 && !((*e).t != (*e).f)) as i32;
+        return (*e).k as u32 == VKINT as u32 && !((*e).t != (*e).f);
     }
 }
-pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> i32 {
+pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return (is_k_int(e) != 0 && (*e).u.ival as u64 <= ((1 << 8) - 1) as u64) as i32;
+        return is_k_int(e) && (*e).u.ival as u64 <= ((1 << 8) - 1) as u64;
     }
 }
-pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> i32 {
+pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
-        return (is_k_int(e) != 0 && fits_c((*e).u.ival) != 0) as i32;
+        return is_k_int(e) && fits_c((*e).u.ival);
     }
 }
 pub unsafe extern "C" fn is_sc_number(
@@ -162,13 +162,13 @@ pub unsafe extern "C" fn is_sc_number(
         if (*e).k as u32 == VKINT as u32 {
             i = (*e).u.ival;
         } else if (*e).k as u32 == VKFLT as u32
-            && luav_flttointeger((*e).u.nval, &mut i, F2I::Equal) != 0
+            && luav_flttointeger((*e).u.nval, &mut i, F2I::Equal)
         {
             *is_float = true;
         } else {
             return 0;
         }
-        if !((*e).t != (*e).f) && fits_c(i) != 0 {
+        if !((*e).t != (*e).f) && fits_c(i) {
             *pi = i as i32 + ((1 << 8) - 1 >> 1);
             return 1;
         } else {
@@ -185,7 +185,7 @@ pub unsafe extern "C" fn luak_indexed(
         if (*k).k as u32 == VKSTR as u32 {
             str_to_k(fs, k);
         }
-        if (*t).k as u32 == VUPVAL as u32 && is_k_string(fs, k) == 0 {
+        if (*t).k as u32 == VUPVAL as u32 && !is_k_string(fs, k) {
             luak_exp2anyreg(fs, t);
         }
         if (*t).k as u32 == VUPVAL as u32 {
@@ -199,10 +199,10 @@ pub unsafe extern "C" fn luak_indexed(
             } else {
                 (*t).u.info
             }) as u8;
-            if is_k_string(fs, k) != 0 {
+            if is_k_string(fs, k) {
                 (*t).u.ind.index = (*k).u.info as i16;
                 (*t).k = VINDEXSTR;
-            } else if is_c_int(k) != 0 {
+            } else if is_c_int(k) {
                 (*t).u.ind.index = (*k).u.ival as i16;
                 (*t).k = VINDEXI;
             } else {

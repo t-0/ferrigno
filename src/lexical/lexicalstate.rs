@@ -559,7 +559,7 @@ pub unsafe extern "C" fn parlist(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn body(
     lexical_state: *mut LexicalState,
     e: *mut ExpressionDescription,
-    ismethod: i32,
+    is_method: bool,
     line: i32,
 ) {
     unsafe {
@@ -588,7 +588,7 @@ pub unsafe extern "C" fn body(
         (*new_fs.f).line_defined = line;
         open_func(lexical_state, &mut new_fs, &mut block_control);
         checknext(lexical_state, '(' as i32);
-        if ismethod != 0 {
+        if is_method {
             new_localvar(
                 lexical_state,
                 luax_newstring(
@@ -796,7 +796,7 @@ pub unsafe extern "C" fn simpleexp(
             }
             TK_FUNCTION => {
                 luax_next(lexical_state);
-                body(lexical_state, v, 0, (*lexical_state).line_number);
+                body(lexical_state, v, false, (*lexical_state).line_number);
                 return;
             }
             _ => {
@@ -1675,7 +1675,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
         let fvar: i32 = (*fs).count_active_variables as i32;
         new_localvar(lexical_state, str_checkname(lexical_state));
         adjustlocalvars(lexical_state, 1);
-        body(lexical_state, &mut b, 0, (*lexical_state).line_number);
+        body(lexical_state, &mut b, false, (*lexical_state).line_number);
         (*localdebuginfo(fs, fvar)).start_program_counter = (*fs).program_counter;
     }
 }
@@ -1745,7 +1745,7 @@ pub unsafe extern "C" fn localstat(lexical_state: *mut LexicalState) {
         var = getlocalvardesc(fs, vidx);
         if nvars == nexps
             && (*var).vd.kind as i32 == 1
-            && luak_exp2const(fs, &mut e, &mut (*var).k) != 0
+            && luak_exp2const(fs, &mut e, &mut (*var).k)
         {
             (*var).vd.kind = 3 as u8;
             adjustlocalvars(lexical_state, nvars - 1);
@@ -1761,18 +1761,18 @@ pub unsafe extern "C" fn localstat(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn funcname(
     lexical_state: *mut LexicalState,
     v: *mut ExpressionDescription,
-) -> i32 {
+) -> bool {
     unsafe {
-        let mut ismethod: i32 = 0;
+        let mut is_method: bool = false;
         singlevar(lexical_state, v);
         while (*lexical_state).t.token == '.' as i32 {
             fieldsel(lexical_state, v);
         }
         if (*lexical_state).t.token == ':' as i32 {
-            ismethod = 1;
+            is_method = true;
             fieldsel(lexical_state, v);
         }
-        return ismethod;
+        return is_method;
     }
 }
 pub unsafe extern "C" fn funcstat(lexical_state: *mut LexicalState, line: i32) {
@@ -1790,8 +1790,8 @@ pub unsafe extern "C" fn funcstat(lexical_state: *mut LexicalState, line: i32) {
             f: 0,
         };
         luax_next(lexical_state);
-        let ismethod: i32 = funcname(lexical_state, &mut v);
-        body(lexical_state, &mut b, ismethod, line);
+        let is_method = funcname(lexical_state, &mut v);
+        body(lexical_state, &mut b, is_method, line);
         check_readonly(lexical_state, &mut v);
         luak_storevar((*lexical_state).fs, &mut v, &mut b);
         luak_fixline((*lexical_state).fs, line);

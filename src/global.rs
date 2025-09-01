@@ -295,7 +295,7 @@ pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) {
                     (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
                 }
                 if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
-                    clearkey(node);
+                    (*node).clearkey();
                 }
                 node = node.offset(1);
             }
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
                     (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
                 }
                 if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
-                    clearkey(node);
+                    (*node).clearkey();
                 }
                 node = node.offset(1);
             }

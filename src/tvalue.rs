@@ -333,7 +333,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     == &mut (*((*t2).value.object as *mut TString)) as *mut TString;
             }
             TAG_VARIANT_STRING_LONG => {
-                return 0 != luas_eqlngstr(
+                return luas_eqlngstr(
                     &mut (*((*t1).value.object as *mut TString)),
                     &mut (*((*t2).value.object as *mut TString)),
                 );

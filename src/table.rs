@@ -139,7 +139,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
         while node < limit {
             if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
-                clearkey(node);
+                (*node).clearkey();
             } else {
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
                 &mut *((*h).node).offset(i as isize) as *mut Node
             };
             if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
-                clearkey(node);
+                (*node).clearkey();
             } else if iscleared(
                 g,
                 if is_collectable((*node).key.tag) {
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) {
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
         while node < limit {
             if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
-                clearkey(node);
+                (*node).clearkey();
             } else {
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -506,7 +506,7 @@ pub unsafe extern "C" fn getgeneric(
     unsafe {
         let mut node: *mut Node = mainpositiontv(table, key);
         loop {
-            if equalkey(key, node, deadok) != 0 {
+            if equal_key(key, node, deadok) {
                 return &mut (*node).value;
             } else {
                 let nx: i32 = (*node).next;
@@ -910,7 +910,7 @@ pub unsafe extern "C" fn luah_newkey(
         } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             let f: f64 = (*key).value.n;
             let mut k: i64 = 0;
-            if luav_flttointeger(f, &mut k, F2I::Equal) != 0 {
+            if luav_flttointeger(f, &mut k, F2I::Equal) {
                 let io: *mut TValue = &mut aux;
                 (*io).value.i = k;
                 (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
@@ -1047,7 +1047,7 @@ pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *con
             0 => return &ABSENT_KEY,
             19 => {
                 let mut k: i64 = 0;
-                if luav_flttointeger((*key).value.n, &mut k, F2I::Equal) != 0 {
+                if luav_flttointeger((*key).value.n, &mut k, F2I::Equal) {
                     return luah_getint(table, k);
                 }
             }

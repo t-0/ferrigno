@@ -11,28 +11,28 @@ pub enum F2I {
     Floor,
     Ceiling,
 }
-pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> i32 {
+pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
     unsafe {
         let mut f: f64 = n.floor();
         if n != f {
             if mode == F2I::Equal {
-                return 0;
+                return false;
             } else if mode == F2I::Ceiling {
                 f += 1.0;
             }
         }
-        return (f >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
+        return f >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
             && f < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
             && {
                 *p = f as i64;
-                1 != 0
-            }) as i32;
+                true
+            };
     }
 }
 pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
-            return luav_flttointeger((*obj).value.n, p, mode);
+            return if luav_flttointeger((*obj).value.n, p, mode) { 1 } else { 0 };
         } else if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             *p = (*obj).value.i;
             return 1;
@@ -63,7 +63,7 @@ pub unsafe extern "C" fn ltintfloat(i: i64, f: f64) -> bool {
             return (i as f64) < f;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(f, &mut fi, F2I::Ceiling) != 0 {
+            if luav_flttointeger(f, &mut fi, F2I::Ceiling) {
                 return i < fi;
             } else {
                 return f > 0.0;
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn leintfloat(i: i64, f: f64) -> bool {
             return i as f64 <= f;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(f, &mut fi, F2I::Floor) != 0 {
+            if luav_flttointeger(f, &mut fi, F2I::Floor) {
                 return i <= fi;
             } else {
                 return f > 0.0;
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn ltfloatint(f: f64, i: i64) -> bool {
             return f < i as f64;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(f, &mut fi, F2I::Floor) != 0 {
+            if luav_flttointeger(f, &mut fi, F2I::Floor) {
                 return fi < i;
             } else {
                 return f < 0.0;
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn lefloatint(f: f64, i: i64) -> bool {
             return f <= i as f64;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(f, &mut fi, F2I::Ceiling) != 0 {
+            if luav_flttointeger(f, &mut fi, F2I::Ceiling) {
                 return fi <= i;
             } else {
                 return f < 0.0;

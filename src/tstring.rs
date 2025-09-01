@@ -128,16 +128,16 @@ impl TString {
         }
     }
 }
-pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> i32 {
+pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool {
     unsafe {
         let length: u64 = (*a).get_length();
-        return (a == b
-            || length == (*b).get_length()
+        return (a == b)
+            || (length == (*b).get_length()
                 && memcmp(
                     ((*a).get_contents()) as *const libc::c_void,
                     ((*b).get_contents()) as *const libc::c_void,
                     length,
-                ) == 0) as i32;
+                ) == 0);
     }
 }
 pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32 {
