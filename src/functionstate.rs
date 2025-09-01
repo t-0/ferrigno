@@ -46,7 +46,7 @@ pub struct FunctionState {
     pub nups: u8,
     pub freereg: u8,
     pub iwthabs: u8,
-    pub needclose: u8,
+    pub needs_close: bool,
 }
 impl New for FunctionState {
     fn new() -> Self {
@@ -68,7 +68,7 @@ impl New for FunctionState {
             nups: 0,
             freereg: 0,
             iwthabs: 0,
-            needclose: 0,
+            needs_close: false,
         };
     }
 }
@@ -111,12 +111,11 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) {
     unsafe {
         let block_control: *mut BlockControl = (*fs).block_control;
         let lexical_state: *mut LexicalState = (*fs).lexical_state;
-        let mut hasclose: i32 = 0;
+        let mut has_close = false;
         let stklevel: i32 = reglevel(fs, (*block_control).count_active_variables as i32);
         removevars(fs, (*block_control).count_active_variables as i32);
         if (*block_control).is_loop {
-            hasclose = createlabel(
-                lexical_state,
+            has_close = (*lexical_state).create_label(
                 luas_newlstr(
                     (*lexical_state).state,
                     b"break\0" as *const u8 as *const i8,
@@ -125,10 +124,10 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) {
                         .wrapping_sub(1 as u64),
                 ),
                 0,
-                0,
+                false,
             );
         }
-        if hasclose == 0
+        if !has_close
             && !((*block_control).previous).is_null()
             && (*block_control).count_upvalues as i32 != 0
         {
@@ -396,7 +395,7 @@ pub unsafe extern "C" fn markupval(fs: *mut FunctionState, level: i32) {
             block_control = (*block_control).previous;
         }
         (*block_control).count_upvalues = 1;
-        (*fs).needclose = 1;
+        (*fs).needs_close = true;
     }
 }
 pub unsafe extern "C" fn marktobeclosed(fs: *mut FunctionState) {
@@ -404,7 +403,7 @@ pub unsafe extern "C" fn marktobeclosed(fs: *mut FunctionState) {
         let block_control: *mut BlockControl = (*fs).block_control;
         (*block_control).count_upvalues = 1;
         (*block_control).is_inside_tbc = true;
-        (*fs).needclose = 1;
+        (*fs).needs_close = true;
     }
 }
 pub unsafe extern "C" fn singlevaraux(
@@ -2160,7 +2159,7 @@ pub unsafe extern "C" fn luak_finish(fs: *mut FunctionState) {
             let current_block_7: u64;
             match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
                 71 | 72 => {
-                    if !((*fs).needclose as i32 != 0 || (*p).is_variable_arguments as i32 != 0) {
+                    if !((*fs).needs_close || (*p).is_variable_arguments as i32 != 0) {
                         current_block_7 = 12599329904712511516;
                     } else {
                         *program_counter = *program_counter & !(!(!(0u32) << 7) << 0)
@@ -2182,7 +2181,7 @@ pub unsafe extern "C" fn luak_finish(fs: *mut FunctionState) {
             }
             match current_block_7 {
                 11006700562992250127 => {
-                    if (*fs).needclose != 0 {
+                    if (*fs).needs_close {
                         *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
                             | (1 as u32) << 0 + 7 + 8 & !(!(0u32) << 1) << 0 + 7 + 8;
                     }
