@@ -1,5 +1,5 @@
 #![allow(static_mut_refs, unsafe_code)]
-use crate::c::*;
+use crate::utility::c::*;
 use crate::randomstate::*;
 use crate::state::*;
 pub const PI: f64 = 3.141592653589793238462643383279502884f64;

@@ -1,4 +1,4 @@
-use crate::absolutelineinfo::*;
+use crate::debugger::absolutelineinfo::*;
 use crate::localvariable::*;
 use crate::object::*;
 use crate::global::*;
@@ -8,7 +8,7 @@ use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::tm::*;
-use crate::c::*;
+use crate::utility::c::*;
 use crate::instruction::*;
 use crate::upvaluedescription::*;
 #[derive(Debug, Copy, Clone)]

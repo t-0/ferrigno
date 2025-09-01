@@ -3,7 +3,7 @@ use crate::buffer::*;
 use crate::gmatchstate::*;
 use crate::registeredfunction::*;
 use crate::new::*;
-use crate::c::*;
+use crate::utility::c::*;
 use crate::matchstate::*;
 use crate::k::*;
 use crate::header::*;

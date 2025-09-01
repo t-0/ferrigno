@@ -1,4 +1,4 @@
-use crate::c::*;
+use crate::utility::c::*;
 use crate::new::*;
 #[repr(C)]
 pub struct LongJump {

@@ -8,8 +8,8 @@ use crate::tag::*;
 use crate::tvalue::*;
 use crate::localvariable::*;
 use crate::upvaluedescription::*;
-use crate::absolutelineinfo::*;
-use crate::c::*;
+use crate::debugger::absolutelineinfo::*;
+use crate::utility::c::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LoadState {

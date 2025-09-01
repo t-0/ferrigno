@@ -1,7 +1,7 @@
 #![allow(
     unpredictable_function_pointer_comparisons,
 )]
-use crate::c::*;
+use crate::utility::c::*;
 use crate::state::*;
 use crate::functions::*;
 use crate::debuginfo::*;

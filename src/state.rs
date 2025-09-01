@@ -10,7 +10,7 @@ use crate::token::*;
 use crate::upvaluedescription::*;
 use crate::forloop::*;
 use crate::bufffs::*;
-use crate::c::*;
+use crate::utility::c::*;
 use crate::calls::*;
 use crate::dumpstate::*;
 use crate::instruction::*;

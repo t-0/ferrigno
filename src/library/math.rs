@@ -1,5 +1,5 @@
 #![allow(static_mut_refs, unsafe_code)]
-use crate::c::*;
+use crate::utility::c::*;
 use crate::randomstate::*;
 use crate::tag::*;
 use crate::user::*;

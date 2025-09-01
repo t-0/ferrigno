@@ -1,6 +1,6 @@
 use crate::state::*;
 use crate::registeredfunction::*;
-use crate::c::*;
+use crate::utility::c::*;
 use crate::tag::*;
 use crate::new::*;
 use crate::buffer::*;

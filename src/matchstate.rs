@@ -2,7 +2,7 @@ use crate::state::*;
 use crate::buffer::*;
 use crate::tag::*;
 use crate::character::*;
-use crate::c::*;
+use crate::utility::c::*;
 use libc::{tolower,};
 pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]

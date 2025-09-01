@@ -1,5 +1,6 @@
 use crate::character::*;
 use libc::*;
+pub mod c;
 pub fn ceiling_log2(input: u64) -> u64 {
     const BITS: u64 = 8;
     const LOG2: [u8; 256] = [

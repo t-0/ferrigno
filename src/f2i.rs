@@ -2,7 +2,7 @@ use crate::tvalue::*;
 use crate::tag::*;
 use crate::value::*;
 use crate::state::*;
-use crate::c::*;
+use crate::utility::c::*;
 use libc::{toupper};
 #[derive(PartialEq)]
 #[repr(C)]

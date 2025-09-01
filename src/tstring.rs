@@ -1,7 +1,7 @@
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::c::*;
+use crate::utility::c::*;
 use crate::global::*;
 use crate::tvalue::*;
 use crate::stackvalue::*;

@@ -1,4 +1,4 @@
-use crate::c::*;
+use crate::utility::c::*;
 use crate::stream::*;
 use crate::state::*;
 use crate::functions::*;

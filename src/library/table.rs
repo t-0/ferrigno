@@ -3,7 +3,7 @@ use crate::state::*;
 use crate::tag::*;
 use crate::buffer::*;
 use crate::new::*;
-use crate::c::*;
+use crate::utility::c::*;
 pub unsafe extern "C" fn checkfield(state: *mut State, key: *const i8, n: i32) -> i32 {
     unsafe {
         lua_pushstring(state, key);
