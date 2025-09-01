@@ -3,7 +3,7 @@ use crate::tag::*;
 use crate::f2i::*;
 use crate::tm::*;
 use crate::vm::instruction::*;
-use crate::operatorunary::*;
+use crate::lexical::operatorunary::*;
 pub const OPR_NOBINOPR: u32 = 21;
 pub const OPR_OR: u32 = 20;
 pub const OPR_AND: u32 = 19;

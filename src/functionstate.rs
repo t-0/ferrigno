@@ -10,7 +10,7 @@ use crate::tvalue::*;
 use crate::rawvalue::*;
 use crate::tm::*;
 use crate::state::*;
-use crate::operatorunary::*;
+use crate::lexical::operatorunary::*;
 use crate::tstring::*;
 use crate::variabledescription::*;
 use crate::debugger::absolutelineinfo::*;

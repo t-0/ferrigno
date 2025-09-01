@@ -2,7 +2,6 @@
 mod lexical;
 mod debugger;
 mod buffer;
-mod operatorbinary;
 mod bufffs;
 mod utility;
 mod callinfo;
@@ -62,8 +61,6 @@ mod token;
 mod vm;
 mod tstring;
 mod tvalue;
-mod ubox;
-mod operatorunary;
 mod upvaluedescription;
 mod upvalue;
 mod user;

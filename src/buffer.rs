@@ -1,6 +1,7 @@
+pub mod ubox;
 use crate::utility::c::*;
 use crate::new::*;
-use crate::ubox::*;
+use crate::buffer::ubox::*;
 use crate::state::*;
 pub const BUFFER_INITIAL_SIZE: usize = 1024;
 #[derive(Copy, Clone)]
