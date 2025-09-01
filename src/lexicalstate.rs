@@ -1579,10 +1579,10 @@ pub unsafe extern "C" fn forstat(lexical_state: *mut LexicalState, line: i32) {
         luax_next(lexical_state);
         let variable_name: *mut TString = str_checkname(lexical_state);
         match (*lexical_state).t.token {
-            61 => {
+            CHARACTER_EQUAL => {
                 fornum(lexical_state, variable_name, line);
             }
-            44 | 267 => {
+            CHARACTER_COMMA | TK_IN => {
                 forlist(lexical_state, variable_name);
             }
             _ => {
@@ -2014,7 +2014,7 @@ pub unsafe extern "C" fn luax_token2str(lexical_state: *mut LexicalState, token:
 pub unsafe extern "C" fn text_token(lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         match token {
-            291 | 292 | 289 | 290 => {
+            TK_NAME | TK_STRING | TK_FLT | TK_INT => {
                 save(lexical_state, '\0' as i32);
                 return luao_pushfstring(
                     (*lexical_state).state,
@@ -2340,7 +2340,7 @@ pub unsafe extern "C" fn read_long_string(
                     );
                     lexerror(lexical_state, message, TK_EOS as i32);
                 }
-                93 => {
+                CHARACTER_BRACKET_RIGHT => {
                     if !(skip_sep(lexical_state) == sep) {
                         continue;
                     }
@@ -2356,7 +2356,7 @@ pub unsafe extern "C" fn read_long_string(
                     };
                     break;
                 }
-                10 | 13 => {
+                CHARACTER_LF | CHARACTER_CR => {
                     save(lexical_state, '\n' as i32);
                     inclinenumber(lexical_state);
                     if semantic_info.is_null() {
@@ -2571,14 +2571,14 @@ pub unsafe extern "C" fn read_string(
                         TK_EOS as i32,
                     );
                 }
-                10 | 13 => {
+                CHARACTER_LF | CHARACTER_CR => {
                     lexerror(
                         lexical_state,
                         b"unfinished string\0" as *const u8 as *const i8,
                         TK_STRING as i32,
                     );
                 }
-                92 => {
+                CHARACTER_BACKSLASH => {
                     let c: i32;
                     save(lexical_state, (*lexical_state).current);
                     let fresh91 = (*(*lexical_state).zio).n;
@@ -2591,39 +2591,39 @@ pub unsafe extern "C" fn read_string(
                         luaz_fill((*lexical_state).zio)
                     };
                     match (*lexical_state).current {
-                        97 => {
+                        CHARACTER_LOWER_A => {
                             c = '\u{7}' as i32;
                             current_block = 15029063370732930705;
                         }
-                        98 => {
+                        CHARACTER_LOWER_B => {
                             c = '\u{8}' as i32;
                             current_block = 15029063370732930705;
                         }
-                        102 => {
+                        CHARACTER_LOWER_F => {
                             c = '\u{c}' as i32;
                             current_block = 15029063370732930705;
                         }
-                        110 => {
+                        CHARACTER_LOWER_N => {
                             c = '\n' as i32;
                             current_block = 15029063370732930705;
                         }
-                        114 => {
+                        CHARACTER_LOWER_R => {
                             c = '\r' as i32;
                             current_block = 15029063370732930705;
                         }
-                        116 => {
+                        CHARACTER_LOWER_T => {
                             c = '\t' as i32;
                             current_block = 15029063370732930705;
                         }
-                        118 => {
+                        CHARACTER_LOWER_V => {
                             c = '\u{b}' as i32;
                             current_block = 15029063370732930705;
                         }
-                        120 => {
+                        CHARACTER_LOWER_X => {
                             c = readhexaesc(lexical_state);
                             current_block = 15029063370732930705;
                         }
-                        117 => {
+                        CHARACTER_LOWER_U => {
                             utf8esc(lexical_state);
                             continue;
                         }
@@ -2632,15 +2632,14 @@ pub unsafe extern "C" fn read_string(
                             c = '\n' as i32;
                             current_block = 7010296663004816197;
                         }
-                        92 | 34 | 39 => {
+                        CHARACTER_BACKSLASH | CHARACTER_DOUBLEQUOTE | CHARACTER_QUOTE => {
                             c = (*lexical_state).current;
                             current_block = 15029063370732930705;
                         }
                         -1 => {
                             continue;
                         }
-                        //TODO
-                        122 => {
+                        CHARACTER_LOWER_Z => {
                             (*(*lexical_state).buffer).length =
                                 ((*(*lexical_state).buffer).length as u64).wrapping_sub(1 as u64)
                                     as u64;
@@ -2743,10 +2742,10 @@ pub unsafe extern "C" fn llex(
         loop {
             let current_block_85: u64;
             match (*lexical_state).current {
-                10 | 13 => {
+                CHARACTER_LF | CHARACTER_CR => {
                     inclinenumber(lexical_state);
                 }
-                CHARACTER_SPACE | 12 | 9 | 11 => {
+                CHARACTER_SPACE | CHARACTER_FF | CHARACTER_HT | CHARACTER_VT => {
                     let fresh103 = (*(*lexical_state).zio).n;
                     (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
                     (*lexical_state).current = if fresh103 > 0u64 {
