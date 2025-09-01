@@ -3,7 +3,7 @@ use crate::stkidrel::*;
 use crate::prototype::*;
 use crate::tvalue::*;
 use crate::lclosure::*;
-use crate::onelua::*;
+use crate::tag::*;
 use crate::state::*;
 use crate::stackvalue::*;
 #[derive(Copy, Clone)]

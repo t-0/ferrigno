@@ -256,3 +256,51 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
         };
     }
 }
+pub fn frexp_(x: f64) -> (f64, i32) {
+    if x == 0.0 {
+        return (0.0, 0);
+    } else {
+        let bits = x.to_bits();
+        let sign = if (bits >> 63) != 0 { -1.0 } else { 1.0 };
+        let exponent = ((bits >> 52) & 0x7ff) as i32 - 1023;
+        let mantissa = sign * f64::from_bits((bits & 0xfffffffffffff) | 0x3fe0000000000000);
+        return (mantissa, exponent + 1);
+    }
+}
+pub fn ldexp_(x: f64, exp: i32) -> f64 {
+    if x == 0.0 || exp == 0 {
+        return x;
+    } else {
+        let bits = x.to_bits();
+        let exponent = ((bits >> 52) & 0x7ff) as i32;
+        let new_exponent = exponent + exp;
+        if !(0..=0x7ff).contains(&new_exponent) {
+            return if (bits >> 63) != 0 {
+                f64::NEG_INFINITY
+            } else {
+                f64::INFINITY
+            };
+        } else {
+            let result_bits = (bits & 0x800fffffffffffff) | ((new_exponent as u64) << 52);
+            return f64::from_bits(result_bits);
+        }
+    }
+}
+pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
+    let i: i32;
+    let mut ni: i64 = 0;
+    (n, i) = frexp_(n);
+    n = n * -((-(0x7FFFFFFF as i32) - 1) as f64);
+    if !(n >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
+        && n < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
+        && {
+            ni = n as i64;
+            1 != 0
+        })
+    {
+        return 0;
+    } else {
+        let u: u32 = (i as u32).wrapping_add(ni as u32);
+        return (if u <= 0x7FFFFFFF as u32 { u } else { !u }) as i32;
+    };
+}

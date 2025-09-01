@@ -3025,3 +3025,9 @@ pub unsafe extern "C" fn luax_lookahead(lexical_state: *mut LexicalState) -> i32
         return (*lexical_state).look_ahead.token;
     }
 }
+pub unsafe extern "C" fn luak_semerror(lexical_state: *mut LexicalState, message: *const i8) -> ! {
+    unsafe {
+        (*lexical_state).t.token = 0;
+        luax_syntaxerror(lexical_state, message);
+    }
+}

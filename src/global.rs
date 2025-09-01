@@ -6,7 +6,6 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::node::*;
-use crate::onelua::*;
 use crate::upvalue::*;
 use crate::user::*;
 use crate::prototype::*;

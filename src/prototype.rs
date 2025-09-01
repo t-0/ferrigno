@@ -10,7 +10,6 @@ use crate::tvalue::*;
 use crate::tm::*;
 use crate::c::*;
 use crate::instruction::*;
-use crate::onelua::*;
 use crate::upvaluedescription::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]

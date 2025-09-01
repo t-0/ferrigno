@@ -42,7 +42,6 @@ unsafe extern "C" {
     pub fn exit(_: i32) -> !;
     pub fn getenv(__name: *const i8) -> *mut i8;
     pub fn mkstemp(__template: *mut i8) -> i32;
-    pub fn abs(_: i32) -> i32;
     pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: u64) -> *mut libc::c_void;
     pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void, _: u64) -> i32;
     pub fn memchr(_: *const libc::c_void, _: i32, _: u64) -> *mut libc::c_void;

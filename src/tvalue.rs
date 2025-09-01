@@ -149,3 +149,48 @@ pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) {
         (*io).set_collectable();
     }
 }
+pub const ABSENT_KEY: TValue = {
+    let init = TValue {
+        value: Value {
+            object: std::ptr::null_mut(),
+        },
+        tag: TAG_VARIANT_NIL_ABSENTKEY,
+    };
+    init
+};
+pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
+    if (k as u64).wrapping_sub(1 as u64)
+        < (if ((1 as u32)
+            << (::core::mem::size_of::<i32>() as u64)
+                .wrapping_mul(8 as u64)
+                .wrapping_sub(1 as u64) as i32) as u64
+            <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
+        {
+            (1 as u32)
+                << (::core::mem::size_of::<i32>() as u64)
+                    .wrapping_mul(8 as u64)
+                    .wrapping_sub(1 as u64) as i32
+        } else {
+            (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64) as u32
+        }) as u64
+    {
+        return k as u32;
+    } else {
+        return 0u32;
+    };
+}
+pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
+    unsafe {
+        while j.wrapping_sub(i) > 1 as u32 {
+            let m: u32 = i.wrapping_add(j).wrapping_div(2 as u32);
+            if get_tag_type((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag())
+                == TAG_TYPE_NIL
+            {
+                j = m;
+            } else {
+                i = m;
+            }
+        }
+        return i;
+    }
+}

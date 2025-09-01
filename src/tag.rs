@@ -62,3 +62,23 @@ pub const fn set_collectable(tag: u8) -> u8 {
 pub const fn is_collectable(tag: u8) -> bool {
     0 != (TAG_COLLECTABLE & tag)
 }
+pub const STRING_LOCAL: [i8; 6] =
+    unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
+pub const STRING_UPVALUE: [i8; 8] =
+    unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
+pub const UDATA_TYPE_NAME: [i8; 9] =
+    unsafe { *::core::mem::transmute::<&[u8; 9], &[i8; 9]>(b"userdata\0") };
+pub const TYPE_NAMES: [*const i8; 12] = [
+    b"no value\0" as *const u8 as *const i8,
+    b"nil\0" as *const u8 as *const i8,
+    b"boolean\0" as *const u8 as *const i8,
+    UDATA_TYPE_NAME.as_ptr(),
+    b"number\0" as *const u8 as *const i8,
+    b"string\0" as *const u8 as *const i8,
+    b"table\0" as *const u8 as *const i8,
+    b"function\0" as *const u8 as *const i8,
+    UDATA_TYPE_NAME.as_ptr(),
+    b"thread\0" as *const u8 as *const i8,
+    b"upvalue\0" as *const u8 as *const i8,
+    b"proto\0" as *const u8 as *const i8,
+];

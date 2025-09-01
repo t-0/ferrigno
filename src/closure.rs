@@ -9,7 +9,6 @@ use crate::table::*;
 use crate::callinfo::*;
 use crate::tvalue::*;
 use crate::prototype::*;
-use crate::onelua::*;
 #[derive(Copy, Clone)]
 pub union UClosure {
     pub c: CClosure,
