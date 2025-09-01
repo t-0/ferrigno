@@ -1,9 +1,9 @@
 use crate::state::*;
-use crate::onelua::*;
 use crate::buffer::*;
 use crate::tag::*;
 use crate::character::*;
 use crate::c::*;
+use libc::{tolower,};
 pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -705,5 +705,86 @@ impl MatchState {
             }
             (*b).lual_addlstring(news, l);
         }
+    }
+}
+pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
+    unsafe {
+        let res: i32;
+        match tolower(cl) {
+            97 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA as i32;
+            }
+            99 => {
+                res =
+                    *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL as i32;
+            }
+            100 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISDIGIT as i32;
+            }
+            103 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH as i32;
+            }
+            108 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISLOWER as i32;
+            }
+            112 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32
+                    & _ISPUNCTUATION as i32;
+            }
+            115 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISSPACE as i32;
+            }
+            117 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISUPPER as i32;
+            }
+            119 => {
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32
+                    & _ISALPHANUMERIC as i32;
+            }
+            120 => {
+                res =
+                    *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT as i32;
+            }
+            122 => {
+                res = (c == 0) as i32;
+            }
+            _ => return (cl == c) as i32,
+        }
+        return if *(*__ctype_b_loc()).offset(cl as isize) as i32 & _ISLOWER as i32
+            != 0
+        {
+            res
+        } else {
+            (res == 0) as i32
+        };
+    }
+}
+pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
+    unsafe {
+        let mut sig: i32 = 1;
+        if *p.offset(1 as isize) as i32 == '^' as i32 {
+            sig = 0;
+            p = p.offset(1);
+        }
+        loop {
+            p = p.offset(1);
+            if !(p < ec) {
+                break;
+            }
+            if *p as i32 == '%' as i32 {
+                p = p.offset(1);
+                if match_class(c, *p as u8 as i32) != 0 {
+                    return sig;
+                }
+            } else if *p.offset(1 as isize) as i32 == '-' as i32 && p.offset(2 as isize) < ec {
+                p = p.offset(2 as isize);
+                if *p.offset(-(2 as isize)) as u8 as i32 <= c && c <= *p as u8 as i32 {
+                    return sig;
+                }
+            } else if *p as u8 as i32 == c {
+                return sig;
+            }
+        }
+        return (sig == 0) as i32;
     }
 }

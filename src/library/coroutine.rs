@@ -1,7 +1,6 @@
 #![allow(static_mut_refs, unsafe_code)]
 use crate::coroutine::*;
 use crate::tag::*;
-use crate::onelua::*;
 use crate::registeredfunction::*;
 use crate::state::*;
 unsafe extern "C" fn luab_cocreate(state: *mut State) -> i32 {
@@ -164,5 +163,63 @@ pub unsafe extern "C" fn luaopen_coroutine(state: *mut State) -> i32 {
         (*state).lua_createtable();
         lual_setfuncs(state, COROUTINE_FUNCTIONS.as_ptr(), 0);
         return 1;
+    }
+}
+pub unsafe extern "C" fn getco(state: *mut State) -> *mut State {
+    unsafe {
+        let co: *mut State = lua_tothread(state, 1);
+        ((co != std::ptr::null_mut()) as i64 != 0
+            || lual_typeerror(state, 1, b"thread\0" as *const u8 as *const i8) != 0) as i32;
+        return co;
+    }
+}
+pub unsafe extern "C" fn auxresume(state: *mut State, co: *mut State, narg: i32) -> i32 {
+    unsafe {
+        let status: i32;
+        let mut nres: i32 = 0;
+        if ((lua_checkstack(co, narg) == 0) as i32 != 0) as i64 != 0 {
+            lua_pushstring(
+                state,
+                b"too many arguments to resume\0" as *const u8 as *const i8,
+            );
+            return -1;
+        }
+        lua_xmove(state, co, narg);
+        status = lua_resume(co, state, narg, &mut nres);
+        if ((status == 0 || status == 1) as i32 != 0) as i64 != 0 {
+            if ((lua_checkstack(state, nres + 1) == 0) as i32 != 0) as i64 != 0 {
+                lua_settop(co, -nres - 1);
+                lua_pushstring(
+                    state,
+                    b"too many results to resume\0" as *const u8 as *const i8,
+                );
+                return -1;
+            }
+            lua_xmove(co, state, nres);
+            return nres;
+        } else {
+            lua_xmove(co, state, 1);
+            return -1;
+        };
+    }
+}
+pub unsafe extern "C" fn luab_auxwrap(state: *mut State) -> i32 {
+    unsafe {
+        let co: *mut State = lua_tothread(state, -(1000000 as i32) - 1000 as i32 - 1);
+        let r: i32 = auxresume(state, co, (*state).get_top());
+        if ((r < 0) as i32 != 0) as i64 != 0 {
+            let mut stat: i32 = (*co).get_status();
+            if stat != 0 && stat != 1 {
+                stat = lua_closethread(co, state);
+                lua_xmove(co, state, 1);
+            }
+            if stat != 4 && lua_type(state, -1) == Some(TAG_TYPE_STRING) {
+                lual_where(state, 1);
+                lua_rotate(state, -2, 1);
+                lua_concat(state, 2);
+            }
+            return lua_error(state);
+        }
+        return r;
     }
 }

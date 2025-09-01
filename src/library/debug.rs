@@ -1,7 +1,6 @@
 #![allow(
     unpredictable_function_pointer_comparisons,
 )]
-use crate::onelua::*;
 use crate::c::*;
 use crate::state::*;
 use crate::functions::*;

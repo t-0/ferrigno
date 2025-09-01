@@ -9954,3 +9954,159 @@ pub unsafe extern "C" fn luab_pcall(state: *mut State) -> i32 {
         return finishpcall(state, status, 0);
     }
 }
+pub unsafe extern "C" fn checkstack(state: *mut State, other_state: *mut State, n: i32) {
+    unsafe {
+        if ((state != other_state && lua_checkstack(other_state, n) == 0) as i32 != 0) as i64
+            != 0
+        {
+            lual_error(state, b"stack overflow\0" as *const u8 as *const i8);
+        }
+    }
+}
+pub unsafe extern "C" fn getthread(state: *mut State, arg: *mut i32) -> *mut State {
+    unsafe {
+        if lua_type(state, 1) == Some(TAG_TYPE_STATE) {
+            *arg = 1;
+            return lua_tothread(state, 1);
+        } else {
+            *arg = 0;
+            return state;
+        };
+    }
+}
+pub unsafe extern "C" fn settabss(state: *mut State, k: *const i8, v: *const i8) {
+    unsafe {
+        lua_pushstring(state, v);
+        lua_setfield(state, -2, k);
+    }
+}
+pub unsafe extern "C" fn settabsi(state: *mut State, k: *const i8, v: i32) {
+    unsafe {
+        (*state).push_integer(v as i64);
+        lua_setfield(state, -2, k);
+    }
+}
+pub unsafe extern "C" fn settabsb(state: *mut State, k: *const i8, v: i32) {
+    unsafe {
+        (*state).push_boolean(v != 0);
+        lua_setfield(state, -2, k);
+    }
+}
+pub unsafe extern "C" fn treatstackoption(
+    state: *mut State,
+    other_state: *mut State,
+    fname: *const i8,
+) {
+    unsafe {
+        if state == other_state {
+            lua_rotate(state, -2, 1);
+        } else {
+            lua_xmove(other_state, state, 1);
+        }
+        lua_setfield(state, -2, fname);
+    }
+}
+pub unsafe extern "C" fn auxupvalue(state: *mut State, get: i32) -> i32 {
+    unsafe {
+        let n: i32 = lual_checkinteger(state, 2) as i32;
+        lual_checktype(state, 1, TAG_TYPE_CLOSURE);
+        let name: *const i8 = if get != 0 {
+            lua_getupvalue(state, 1, n)
+        } else {
+            lua_setupvalue(state, 1, n)
+        };
+        if name.is_null() {
+            return 0;
+        } else {
+            lua_pushstring(state, name);
+            lua_rotate(state, -(get + 1), 1);
+            return get + 1;
+        }
+    }
+}
+pub unsafe extern "C" fn checkupval(
+    state: *mut State,
+    argf: i32,
+    argnup: i32,
+    pnup: *mut i32,
+) -> *mut libc::c_void {
+    unsafe {
+        let id: *mut libc::c_void;
+        let nup: i32 = lual_checkinteger(state, argnup) as i32;
+        lual_checktype(state, argf, TAG_TYPE_CLOSURE);
+        id = lua_upvalueid(state, argf, nup);
+        if !pnup.is_null() {
+            (((id != std::ptr::null_mut()) as i32 != 0) as i64 != 0
+                || lual_argerror(
+                    state,
+                    argnup,
+                    b"invalid upvalue index\0" as *const u8 as *const i8,
+                ) != 0) as i32;
+            *pnup = nup;
+        }
+        return id;
+    }
+}
+pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut DebugInfo) {
+    unsafe {
+        pub const HOOK_NAMES: [*const i8; 5] = [
+            b"call\0" as *const u8 as *const i8,
+            b"return\0" as *const u8 as *const i8,
+            b"line\0" as *const u8 as *const i8,
+            b"count\0" as *const u8 as *const i8,
+            b"tail call\0" as *const u8 as *const i8,
+        ];
+        lua_getfield(state, -(1000000 as i32) - 1000 as i32, HOOKKEY);
+        (*state).push_state();
+        if lua_rawget(state, -2) == 6 {
+            lua_pushstring(state, HOOK_NAMES[(*ar).event as usize]);
+            if (*ar).currentline >= 0 {
+                (*state).push_integer((*ar).currentline as i64);
+            } else {
+                (*state).push_nil();
+            }
+            lua_callk(state, 2, 0, 0, None);
+        }
+    }
+}
+pub unsafe extern "C" fn makemask(smask: *const i8, count: i32) -> i32 {
+    unsafe {
+        let mut mask: i32 = 0;
+        if !(strchr(smask, 'c' as i32)).is_null() {
+            mask |= 1 << 0;
+        }
+        if !(strchr(smask, 'r' as i32)).is_null() {
+            mask |= 1 << 1;
+        }
+        if !(strchr(smask, 'l' as i32)).is_null() {
+            mask |= 1 << 2;
+        }
+        if count > 0 {
+            mask |= 1 << 3;
+        }
+        return mask;
+    }
+}
+pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
+    unsafe {
+        let mut i: i32 = 0;
+        if mask & 1 << 0 != 0 {
+            let fresh190 = i;
+            i = i + 1;
+            *smask.offset(fresh190 as isize) = 'c' as i8;
+        }
+        if mask & 1 << 1 != 0 {
+            let fresh191 = i;
+            i = i + 1;
+            *smask.offset(fresh191 as isize) = 'r' as i8;
+        }
+        if mask & 1 << 2 != 0 {
+            let fresh192 = i;
+            i = i + 1;
+            *smask.offset(fresh192 as isize) = 'l' as i8;
+        }
+        *smask.offset(i as isize) = '\0' as i8;
+        return smask;
+    }
+}
+pub const HOOKKEY: *const i8 = b"_HOOKKEY\0" as *const u8 as *const i8;

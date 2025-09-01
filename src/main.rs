@@ -43,7 +43,6 @@ mod nativeendian;
 mod new;
 mod node;
 mod object;
-mod onelua;
 mod operator_;
 mod priority;
 mod prototype;

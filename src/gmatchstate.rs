@@ -1,6 +1,6 @@
 use crate::matchstate::*;
 use crate::state::*;
-use crate::onelua::*;
+use crate::tstring::*;
 use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

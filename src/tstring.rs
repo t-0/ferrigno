@@ -402,3 +402,28 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
         }
     }
 }
+pub unsafe extern "C" fn posrelati(pos: i64, length: u64) -> u64 {
+    if pos > 0 {
+        return pos as u64;
+    } else if pos == 0 {
+        return 1 as u64;
+    } else if pos < -(length as i64) {
+        return 1 as u64;
+    } else {
+        return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
+    };
+}
+pub unsafe extern "C" fn getendpos(state: *mut State, arg: i32, def: i64, length: u64) -> u64 {
+    unsafe {
+        let pos: i64 = lual_optinteger(state, arg, def);
+        if pos > length as i64 {
+            return length;
+        } else if pos >= 0 {
+            return pos as u64;
+        } else if pos < -(length as i64) {
+            return 0u64;
+        } else {
+            return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
+        };
+    }
+}

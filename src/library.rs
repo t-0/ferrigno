@@ -4,15 +4,22 @@ mod base;
 mod coroutine;
 mod table;
 mod io;
-use crate::onelua::*;
+mod os;
+mod string;
+mod utf8;
+mod package;
 use crate::registeredfunction::*;
 use crate::state::*;
 use crate::library::coroutine::*;
 use crate::library::debug::*;
+use crate::library::package::*;
 use crate::library::math::*;
 use crate::library::base::*;
 use crate::library::table::*;
 use crate::library::io::*;
+use crate::library::utf8::*;
+use crate::library::os::*;
+use crate::library::string::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {
