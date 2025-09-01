@@ -601,16 +601,6 @@ pub unsafe extern "C" fn do_repl(state: *mut State) {
         PROGRAM_NAME = oldprogname;
     }
 }
-pub unsafe extern "C" fn lual_openlibs(state: *mut State) {
-    unsafe {
-        let mut lib: *const RegisteredFunction = LOADED_FUNCTIONS.as_ptr();
-        while ((*lib).function).is_some() {
-            lual_requiref(state, (*lib).name, (*lib).function, 1);
-            lua_settop(state, -1 - 1);
-            lib = lib.offset(1);
-        }
-    }
-}
 pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> ! {
     unsafe {
         if !((*state).long_jump).is_null() {

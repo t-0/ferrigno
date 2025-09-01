@@ -1,8 +1,8 @@
 use crate::onelua::*;
 use crate::registeredfunction::*;
 use crate::state::*;
-use crate::coroutine::*;
-use crate::debuginfo::*;
+use crate::librarycoroutine::*;
+use crate::librarydebug::*;
 use crate::librarymath::*;
 use crate::librarybase::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
@@ -75,3 +75,13 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
         },
     ]
 };
+pub unsafe extern "C" fn lual_openlibs(state: *mut State) {
+    unsafe {
+        let mut lib: *const RegisteredFunction = LOADED_FUNCTIONS.as_ptr();
+        while ((*lib).function).is_some() {
+            lual_requiref(state, (*lib).name, (*lib).function, 1);
+            lua_settop(state, -1 - 1);
+            lib = lib.offset(1);
+        }
+    }
+}
