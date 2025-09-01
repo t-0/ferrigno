@@ -30,7 +30,7 @@ impl BuffFS {
             (*io).set_collectable();
             (*self.state).top.p = (*self.state).top.p.offset(1);
             if self.is_pushed {
-                luav_concat(self.state, 2);
+                concatenate(self.state, 2);
             } else {
                 self.is_pushed = true;
             };
@@ -64,7 +64,7 @@ impl BuffFS {
                 (*io).set_collectable();
                 (*self.state).top.p = (*self.state).top.p.offset(1);
                 if self.is_pushed {
-                    luav_concat(self.state, 2);
+                    concatenate(self.state, 2);
                 } else {
                     self.is_pushed = true;
                 };

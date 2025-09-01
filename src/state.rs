@@ -2755,7 +2755,7 @@ pub unsafe extern "C" fn lua_toclose(state: *mut State, index: i32) {
 pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) {
     unsafe {
         if n > 0 {
-            luav_concat(state, n);
+            concatenate(state, n);
         } else {
             let io: *mut TValue = &mut (*(*state).top.p).value;
             let x_: *mut TString = luas_newlstr(state, b"\0" as *const u8 as *const i8, 0u64);
@@ -5447,7 +5447,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
                 (*io1_1).value = (*io2_1).value;
                 (*io1_1).set_tag((*io2_1).get_tag());
                 (*state).top.p = top.offset(-(1 as isize));
-                luav_concat(state, total);
+                concatenate(state, total);
             }
             54 => {
                 (*call_info).u.l.saved_program_counter =
@@ -7399,7 +7399,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let n_1: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
                             (*state).top.p = ra_51.offset(n_1 as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            luav_concat(state, n_1);
+                            concatenate(state, n_1);
                             trap = (*call_info).u.l.trap;
                             if (*(*state).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;

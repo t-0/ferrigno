@@ -1,12 +1,12 @@
+use crate::global::*;
 use crate::object::*;
+use crate::stackvalue::*;
+use crate::state::*;
+use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::utility::c::*;
-use crate::global::*;
 use crate::tvalue::*;
-use crate::stackvalue::*;
-use crate::stringtable::*;
-use crate::state::*;
+use crate::utility::c::*;
 pub const STRING_SHORT_MAX: u64 = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -62,13 +62,15 @@ impl TString {
         return &self.contents as *const i8;
     }
     pub fn get_contents2(&mut self) -> *mut i8 {
-        return & mut self.contents as *mut i8;
+        return &mut self.contents as *mut i8;
     }
     pub fn get_length(&self) -> u64 {
         if self.short_length < 0xFF {
             return self.short_length as u64;
         } else {
-            unsafe { return self.u.long_length as u64; }
+            unsafe {
+                return self.u.long_length as u64;
+            }
         }
     }
     pub unsafe extern "C" fn create_long(state: *mut State, length: u64) -> *mut TString {
@@ -130,14 +132,21 @@ impl TString {
 }
 pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool {
     unsafe {
-        let length: u64 = (*a).get_length();
-        return (a == b)
-            || (length == (*b).get_length()
-                && memcmp(
-                    ((*a).get_contents()) as *const libc::c_void,
-                    ((*b).get_contents()) as *const libc::c_void,
-                    length,
-                ) == 0);
+        if a == b {
+            return true;
+        } else {
+            let length: u64 = (*a).get_length();
+            if length != (*b).get_length() {
+                return false;
+            } else {
+                return 0
+                    == memcmp(
+                        ((*a).get_contents()) as *const libc::c_void,
+                        ((*b).get_contents()) as *const libc::c_void,
+                        length,
+                    );
+            }
+        }
     }
 }
 pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32 {
@@ -152,10 +161,10 @@ pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32
         return h;
     }
 }
-pub unsafe extern "C" fn luas_hashlongstr(ts: *mut TString) -> u32 {
+pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
     unsafe {
-        if (*ts).extra as i32 == 0 {
-            let length: u64 = (*ts).get_length();
+        if (*ts).extra == 0 {
+            let length = (*ts).get_length();
             (*ts).hash = luas_hash((*ts).get_contents(), length, (*ts).hash);
             (*ts).extra = 1;
         }
@@ -192,14 +201,14 @@ pub unsafe extern "C" fn luas_remove(state: *mut State, ts: *mut TString) {
 }
 pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64) -> *mut TString {
     unsafe {
-        if l <= STRING_SHORT_MAX as u64 {
+        if l <= STRING_SHORT_MAX {
             return TString::intern(state, str, l);
         } else {
             if ((l.wrapping_mul(::core::mem::size_of::<i8>() as u64)
         >= (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                 !(0u64)
             } else {
-                0x7FFFFFFFFFFFFFFF as u64
+                0x7FFFFFFFFFFFFFFF
             })
             .wrapping_sub(::core::mem::size_of::<TString>() as u64)) as i32
             != 0) as i64
@@ -291,7 +300,7 @@ pub unsafe extern "C" fn copy2buff(top: StkId, mut n: i32, buffer: *mut i8) {
         }
     }
 }
-pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
+pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
     unsafe {
         if total == 1 {
             return;
@@ -312,8 +321,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                 luat_tryconcattm(state);
             } else if (*top.offset(-(1 as isize))).value.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(1 as isize))).value.value.object as *mut TString))
-                    .get_length() as i32
+                && (*((*top.offset(-(1 as isize))).value.value.object as *mut TString)).get_length()
+                    as i32
                     == 0
             {
                 (get_tag_type((*top.offset(-(2 as isize))).value.get_tag()) == TAG_TYPE_STRING
@@ -325,8 +334,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                         }) as i32;
             } else if (*top.offset(-(2 as isize))).value.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(2 as isize))).value.value.object as *mut TString))
-                    .get_length() as i32
+                && (*((*top.offset(-(2 as isize))).value.value.object as *mut TString)).get_length()
+                    as i32
                     == 0
             {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).value;
@@ -335,7 +344,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                 (*io1).set_tag((*io2).get_tag());
             } else {
                 let mut tl: u64 = (*((*top.offset(-(1 as isize))).value.value.object
-                    as *mut TString)).get_length();
+                    as *mut TString))
+                    .get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
@@ -360,7 +370,8 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
                     let l: u64 = (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
                         .value
                         .value
-                        .object as *mut TString)).get_length();
+                        .object as *mut TString))
+                        .get_length();
                     if ((l
                         >= (if (::core::mem::size_of::<u64>() as u64)
                             < ::core::mem::size_of::<i64>() as u64
@@ -402,7 +413,7 @@ pub unsafe extern "C" fn luav_concat(state: *mut State, mut total: i32) {
         }
     }
 }
-pub unsafe extern "C" fn posrelati(pos: i64, length: u64) -> u64 {
+pub unsafe extern "C" fn get_position_relative(pos: i64, length: u64) -> u64 {
     if pos > 0 {
         return pos as u64;
     } else if pos == 0 {
@@ -413,7 +424,7 @@ pub unsafe extern "C" fn posrelati(pos: i64, length: u64) -> u64 {
         return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
     };
 }
-pub unsafe extern "C" fn getendpos(state: *mut State, arg: i32, def: i64, length: u64) -> u64 {
+pub unsafe extern "C" fn get_position_end(state: *mut State, arg: i32, def: i64, length: u64) -> u64 {
     unsafe {
         let pos: i64 = lual_optinteger(state, arg, def);
         if pos > length as i64 {

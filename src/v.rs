@@ -1,20 +1,24 @@
-pub const VVARARG: u32 = 19;
-pub const VCALL: u32 = 18;
-pub const VRELOC: u32 = 17;
-pub const VJMP: u32 = 16;
-pub const VINDEXSTR: u32 = 15;
-pub const VINDEXI: u32 = 14;
-pub const VINDEXUP: u32 = 13;
-pub const VINDEXED: u32 = 12;
-pub const VCONST: u32 = 11;
-pub const VUPVAL: u32 = 10;
-pub const VLOCAL: u32 = 9;
-pub const VNONRELOC: u32 = 8;
-pub const VKSTR: u32 = 7;
-pub const VKINT: u32 = 6;
-pub const VKFLT: u32 = 5;
-pub const VK: u32 = 4;
-pub const VFALSE: u32 = 3;
-pub const VTRUE: u32 = 2;
-pub const VNIL: u32 = 1;
-pub const VVOID: u32 = 0;
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C)]
+pub enum V{
+    VVARARG = 19,
+    VCALL = 18,
+    VRELOC = 17,
+    VJMP = 16,
+    VINDEXSTR = 15,
+    VINDEXI = 14,
+    VINDEXUP = 13,
+    VINDEXED = 12,
+    VCONST = 11,
+    VUPVAL = 10,
+    VLOCAL = 9,
+    VNONRELOC = 8,
+    VKSTR = 7,
+    VKINT = 6,
+    VKFLT = 5,
+    VK = 4,
+    VFALSE = 3,
+    VTRUE = 2,
+    VNIL = 1,
+    VVOID = 0,
+}

@@ -25,8 +25,8 @@ pub unsafe extern "C" fn str_sub(state: *mut State) -> i32 {
     unsafe {
         let mut l: u64 = 0;
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
-        let start: u64 = posrelati(lual_checkinteger(state, 2), l);
-        let end: u64 = getendpos(state, 3, -1 as i64, l);
+        let start: u64 = get_position_relative(lual_checkinteger(state, 2), l);
+        let end: u64 = get_position_end(state, 3, -1 as i64, l);
         if start <= end {
             lua_pushlstring(
                 state,
@@ -153,8 +153,8 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 {
         let mut l: u64 = 0;
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
         let pi: i64 = lual_optinteger(state, 2, 1);
-        let posi: u64 = posrelati(pi, l);
-        let pose: u64 = getendpos(state, 3, pi, l);
+        let posi: u64 = get_position_relative(pi, l);
+        let pose: u64 = get_position_end(state, 3, pi, l);
         let n: i32;
         let mut i: i32;
         if posi > pose {
@@ -463,7 +463,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
         let s: *const i8 = lual_checklstring(state, 1, &mut lexical_state);
         let mut p: *const i8 = lual_checklstring(state, 2, &mut lp);
         let init: u64 =
-            (posrelati(lual_optinteger(state, 3, 1 as i64), lexical_state)).wrapping_sub(1 as u64);
+            (get_position_relative(lual_optinteger(state, 3, 1 as i64), lexical_state)).wrapping_sub(1 as u64);
         if init > lexical_state {
             (*state).push_nil();
             return 1;
@@ -1555,7 +1555,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
         let mut ld: u64 = 0;
         let data: *const i8 = lual_checklstring(state, 2, &mut ld);
         let mut pos: u64 =
-            (posrelati(lual_optinteger(state, 3, 1 as i64), ld)).wrapping_sub(1 as u64);
+            (get_position_relative(lual_optinteger(state, 3, 1 as i64), ld)).wrapping_sub(1 as u64);
         let mut n: i32 = 0;
         (((pos <= ld) as i32 != 0) as i64 != 0
             || lual_argerror(

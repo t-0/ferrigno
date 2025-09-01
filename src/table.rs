@@ -402,7 +402,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             TAG_VARIANT_STRING_LONG => {
                 let ts_0: *mut TString = &mut (*((*key).value.object as *mut TString));
                 return &mut *((*t).node).offset(
-                    ((luas_hashlongstr as unsafe extern "C" fn(*mut TString) -> u32)(ts_0)
+                    ((hash_string_long as unsafe extern "C" fn(*mut TString) -> u32)(ts_0)
                         & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32
                         as isize,
                 ) as *mut Node;
