@@ -1,6 +1,6 @@
 use crate::state::*;
 use crate::zio::*;
-use crate::lclosure::*;
+use crate::closure::*;
 use crate::prototype::*;
 use crate::tstring::*;
 use crate::object::*;
@@ -509,14 +509,14 @@ pub unsafe extern "C" fn luau_undump(
     state: *mut State,
     zio: *mut ZIO,
     name: *const i8,
-) -> *mut LClosure {
+) -> *mut Closure {
     unsafe {
         let mut load_state: LoadState = LoadState {
             state: std::ptr::null_mut(),
             zio: std::ptr::null_mut(),
             name: std::ptr::null(),
         };
-        let cl: *mut LClosure;
+        let cl: *mut Closure;
         if *name as i32 == '@' as i32 || *name as i32 == '=' as i32 {
             load_state.name = name.offset(1 as isize);
         } else if *name as i32
@@ -531,7 +531,7 @@ pub unsafe extern "C" fn luau_undump(
         check_header(&mut load_state);
         cl = luaf_newlclosure(state, load_byte(&mut load_state) as i32);
         let io: *mut TValue = &mut (*(*state).top.p).tvalue;
-        let x_: *mut LClosure = cl;
+        let x_: *mut Closure = cl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();

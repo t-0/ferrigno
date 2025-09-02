@@ -2,7 +2,7 @@ use crate::functions::*;
 use crate::stkidrel::*;
 use crate::prototype::*;
 use crate::tvalue::*;
-use crate::lclosure::*;
+use crate::closure::*;
 use crate::tag::*;
 use crate::state::*;
 use crate::stackvalue::*;
@@ -55,7 +55,7 @@ pub struct CallInfoConsistuentBTransferInfo {
 pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).u.l.saved_program_counter).offset_from(
-            (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+            (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                 .payload.l_prototype)
                 .code,
         ) as i32
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
 pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
-            (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+            (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                 .payload.l_prototype,
             currentpc(call_info),
         );
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn luag_findlocal(
                 return findvararg(call_info, n, pos);
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure)).payload.l_prototype,
+                    (*((*(*call_info).function.p).tvalue.value.object as *mut Closure)).payload.l_prototype,
                     n,
                     currentpc(call_info),
                 );
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn findvararg(
     pos: *mut StackValuePointer,
 ) -> *const i8 {
     unsafe {
-        if (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+        if (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
             .payload.l_prototype)
             .is_variable_arguments
         {
@@ -172,7 +172,7 @@ pub unsafe extern "C" fn funcnamefromcall(
         } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
                 state,
-                (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+                (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                     .payload.l_prototype,
                 currentpc(call_info),
                 name,
@@ -201,8 +201,8 @@ pub unsafe extern "C" fn getupvalname(
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
-        let c: *mut LClosure =
-            &mut (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure));
+        let c: *mut Closure =
+            &mut (*((*(*call_info).function.p).tvalue.value.object as *mut Closure));
         let mut i: i32;
         i = 0;
         while i < (*c).count_upvalues as i32 {

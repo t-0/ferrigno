@@ -17,10 +17,10 @@ use crate::new::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
-use crate::lclosure::*;
+use crate::closure::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
-use crate::cclosure::*;
+use crate::closure::*;
 use crate::state::*;
 use crate::prototype::*;
 use crate::user::*;
@@ -95,8 +95,8 @@ pub unsafe extern "C" fn getgclist(o: *mut Object) -> *mut *mut Object {
     unsafe {
         match (*o).get_tag() {
             TAG_VARIANT_TABLE => return &mut (*(o as *mut Table)).gc_list,
-            TAG_VARIANT_CLOSURE_L => return &mut (*(o as *mut LClosure)).gc_list,
-            TAG_VARIANT_CLOSURE_C => return &mut (*(o as *mut CClosure)).gc_list,
+            TAG_VARIANT_CLOSURE_L => return &mut (*(o as *mut Closure)).gc_list,
+            TAG_VARIANT_CLOSURE_C => return &mut (*(o as *mut Closure)).gc_list,
             TAG_VARIANT_STATE => return &mut (*(o as *mut State)).gc_list,
             TAG_VARIANT_PROTOTYPE => return &mut (*(o as *mut Prototype)).gc_list,
             TAG_VARIANT_USER => return &mut (*(o as *mut User)).gc_list,
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
                 freeupval(state, &mut (*(o as *mut UpValue)));
             }
             TAG_VARIANT_CLOSURE_L => {
-                let cl: *mut LClosure = &mut (*(o as *mut LClosure));
+                let cl: *mut Closure = &mut (*(o as *mut Closure));
                 (*state).free_memory(
                     cl as *mut libc::c_void,
                     (32 as i32
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
                 );
             }
             TAG_VARIANT_CLOSURE_C => {
-                let cl_0: *mut CClosure = &mut (*(o as *mut CClosure));
+                let cl_0: *mut Closure = &mut (*(o as *mut Closure));
                 (*state).free_memory(
                     cl_0 as *mut libc::c_void,
                     (32 as i32

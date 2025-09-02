@@ -9,8 +9,7 @@ use crate::node::*;
 use crate::upvalue::*;
 use crate::user::*;
 use crate::prototype::*;
-use crate::lclosure::*;
-use crate::cclosure::*;
+use crate::closure::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -132,10 +131,10 @@ impl Global {
                     return traverseudata(self, &mut (*(o as *mut User))) as u64
                 }
                 TAG_VARIANT_CLOSURE_L => {
-                    return traverselclosure(self, &mut (*(o as *mut LClosure)))
+                    return traverselclosure(self, &mut (*(o as *mut Closure)))
                 }
                 TAG_VARIANT_CLOSURE_C => {
-                    return traversecclosure(self, &mut (*(o as *mut CClosure)))
+                    return traversecclosure(self, &mut (*(o as *mut Closure)))
                 }
                 TAG_VARIANT_PROTOTYPE => {
                     return traverseproto(self, &mut (*(o as *mut Prototype)))

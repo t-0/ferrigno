@@ -22,7 +22,7 @@ use crate::global::*;
 use crate::longjump::*;
 use crate::object::*;
 use crate::prototype::*;
-use crate::cclosure::*;
+use crate::closure::*;
 use crate::zio::*;
 use crate::tag::*;
 use crate::buffer::*;
@@ -31,7 +31,6 @@ use crate::utility::*;
 use crate::sparser::*;
 use crate::closep::*;
 use crate::new::*;
-use crate::lclosure::*;
 use crate::f2i::*;
 use crate::value::*;
 use crate::labeldescription::*;
@@ -472,7 +471,7 @@ impl State {
                 index = -(1000000 as i32) - 1000 as i32 - index;
                 let value = (*(*call_info).function.p).tvalue;
                 if value.is_collectable() && value.get_tag_variant() == TAG_VARIANT_CLOSURE_C {
-                    let function: *mut CClosure = &mut (*(value.value.object as *mut CClosure));
+                    let function: *mut Closure = &mut (*(value.value.object as *mut Closure));
                     return if index <= (*function).count_upvalues as i32 {
                         &mut *((*function).upvalues).
                             c_tvalues.as_mut_ptr()
@@ -713,7 +712,7 @@ pub unsafe extern "C" fn luad_hookcall(state: *mut State, call_info: *mut CallIn
                 0
             };
             let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object
-                as *mut LClosure)).payload.l_prototype;
+                as *mut Closure)).payload.l_prototype;
             (*call_info).u.l.saved_program_counter =
                 ((*call_info).u.l.saved_program_counter).offset(1);
             (*call_info).u.l.saved_program_counter;
@@ -731,7 +730,7 @@ pub unsafe extern "C" fn rethook(state: *mut State, mut call_info: *mut CallInfo
             let mut delta: i32 = 0;
             if (*call_info).call_status as i32 & 1 << 1 == 0 {
                 let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object
-                    as *mut LClosure)).payload.l_prototype;
+                    as *mut Closure)).payload.l_prototype;
                 if (*p).is_variable_arguments {
                     delta =
                         (*call_info).u.l.count_extra_arguments + (*p).count_parameters as i32 + 1;
@@ -745,7 +744,7 @@ pub unsafe extern "C" fn rethook(state: *mut State, mut call_info: *mut CallInfo
         call_info = (*call_info).previous;
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             (*state).old_program_counter = ((*call_info).u.l.saved_program_counter).offset_from(
-                (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+                (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
                     .code,
             ) as i32
@@ -938,7 +937,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                         state,
                         function,
                         -1,
-                        (*((*function).tvalue.value.object as *mut CClosure)).function,
+                        (*((*function).tvalue.value.object as *mut Closure)).payload.c_cfunction,
                     );
                 }
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
@@ -946,7 +945,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                 }
                 TAG_VARIANT_CLOSURE_L => {
                     let p: *mut Prototype =
-                        (*((*function).tvalue.value.object as *mut LClosure)).payload.l_prototype;
+                        (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
                     let fsize: i32 = (*p).maximum_stack_size as i32;
                     let nfixparams: i32 = (*p).count_parameters as i32;
                     let mut i: i32;
@@ -1007,7 +1006,7 @@ pub unsafe extern "C" fn luad_precall(
                         state,
                         function,
                         count_results,
-                        (*((*function).tvalue.value.object as *mut CClosure)).function,
+                        (*((*function).tvalue.value.object as *mut Closure)).payload.c_cfunction,
                     );
                     return std::ptr::null_mut();
                 }
@@ -1018,7 +1017,7 @@ pub unsafe extern "C" fn luad_precall(
                 TAG_VARIANT_CLOSURE_L => {
                     let call_info;
                     let p: *mut Prototype =
-                        (*((*function).tvalue.value.object as *mut LClosure)).payload.l_prototype;
+                        (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
                     let mut narg: i32 = ((*state).top.p).offset_from(function) as i32 - 1;
                     let nfixparams: i32 = (*p).count_parameters as i32;
                     let fsize: i32 = (*p).maximum_stack_size as i32;
@@ -1390,7 +1389,7 @@ pub unsafe extern "C" fn checkmode(state: *mut State, mode: *const i8, x: *const
 }
 pub unsafe extern "C" fn f_parser(state: *mut State, arbitrary_data: *mut libc::c_void) {
     unsafe {
-        let cl: *mut LClosure;
+        let cl: *mut Closure;
         let p: *mut SParser = arbitrary_data as *mut SParser;
         let fresh2 = (*(*p).zio).n;
         (*(*p).zio).n = ((*(*p).zio).n).wrapping_sub(1);
@@ -1642,7 +1641,7 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
         (*io1).set_tag((*io2).get_tag());
         if toidx < -(1000000 as i32) - 1000 as i32 {
             if (*fr).is_collectable() {
-                if (*((*(*(*state).call_info).function.p).tvalue.value.object as *mut CClosure))
+                if (*((*(*(*state).call_info).function.p).tvalue.value.object as *mut Closure))
                     .get_marked()
                     & 1 << 5
                     != 0
@@ -1981,8 +1980,8 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
             (*io).set_tag(TAG_VARIANT_CLOSURE_CFUNCTION);
             (*state).top.p = (*state).top.p.offset(1);
         } else {
-            let cl: *mut CClosure = luaf_newcclosure(state, n);
-            (*cl).function = fn_0;
+            let cl: *mut Closure = luaf_newcclosure(state, n);
+            (*cl).payload.c_cfunction = fn_0;
             (*state).top.p = (*state).top.p.offset(-(n as isize));
             loop {
                 let fresh5 = n;
@@ -1997,7 +1996,7 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
                 (*io1).set_tag((*io2).get_tag());
             }
             let io_0: *mut TValue = &mut (*(*state).top.p).tvalue;
-            let x_: *mut CClosure = cl;
+            let x_: *mut Closure = cl;
             (*io_0).value.object = &mut (*(x_ as *mut Object));
             (*io_0).set_tag(TAG_VARIANT_CLOSURE_C);
             (*io_0).set_collectable();
@@ -2558,9 +2557,9 @@ pub unsafe extern "C" fn lua_load(
         luaz_init(state, &mut zio, reader, data);
         status = luad_protectedparser(state, &mut zio, chunkname, mode);
         if status == 0 {
-            let f: *mut LClosure =
+            let f: *mut Closure =
                 &mut (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object
-                    as *mut LClosure));
+                    as *mut Closure));
             if (*f).count_upvalues as i32 >= 1 {
                 let gt: *const TValue =
                     &mut *((*((*(*state).global).l_registry.value.object as *mut Table))
@@ -2602,7 +2601,7 @@ pub unsafe extern "C" fn lua_dump(
         if (*o).get_tag_variant() == TAG_VARIANT_CLOSURE_L {
             status = DumpState::dump(
                 state,
-                (*((*o).value.object as *mut LClosure)).payload.l_prototype,
+                (*((*o).value.object as *mut Closure)).payload.l_prototype,
                 writer_0,
                 data,
                 is_strip,
@@ -2838,11 +2837,11 @@ pub unsafe extern "C" fn getupvalref(
     state: *mut State,
     fidx: i32,
     n: i32,
-    pf: *mut *mut LClosure,
+    pf: *mut *mut Closure,
 ) -> *mut *mut UpValue {
     unsafe {
         let fi: *mut TValue = (*state).index2value(fidx);
-        let f: *mut LClosure = &mut (*((*fi).value.object as *mut LClosure));
+        let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
         if !pf.is_null() {
             *pf = f;
         }
@@ -2862,7 +2861,7 @@ pub unsafe extern "C" fn lua_upvalueid(state: *mut State, fidx: i32, n: i32) -> 
                 return *getupvalref(state, fidx, n, std::ptr::null_mut()) as *mut libc::c_void;
             }
             TAG_VARIANT_CLOSURE_C => {
-                let f: *mut CClosure = &mut (*((*fi).value.object as *mut CClosure));
+                let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 if 1 <= n && n <= (*f).count_upvalues as i32 {
                     return &mut *((*f).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue
                         as *mut libc::c_void;
@@ -2882,7 +2881,7 @@ pub unsafe extern "C" fn lua_upvaluejoin(
     n2: i32,
 ) {
     unsafe {
-        let mut f1: *mut LClosure = std::ptr::null_mut();
+        let mut f1: *mut Closure = std::ptr::null_mut();
         let up1: *mut *mut UpValue = getupvalref(state, fidx1, n1, &mut f1);
         let up2: *mut *mut UpValue = getupvalref(state, fidx2, n2, std::ptr::null_mut());
         *up1 = *up2;
@@ -3387,7 +3386,7 @@ pub unsafe extern "C" fn varinfo(state: *mut State, o: *const TValue) -> *const 
                 let reg: i32 = in_stack(call_info, o);
                 if reg >= 0 {
                     kind = getobjname(
-                        (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+                        (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                             .payload.l_prototype,
                         currentpc(call_info),
                         reg,
@@ -3572,7 +3571,7 @@ pub unsafe extern "C" fn luag_runerror(state: *mut State, fmt: *const i8, args: 
             luag_addinfo(
                 state,
                 message,
-                (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+                (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
                     .source,
                 getcurrentline(call_info),
@@ -3589,7 +3588,7 @@ pub unsafe extern "C" fn luag_runerror(state: *mut State, fmt: *const i8, args: 
 pub unsafe extern "C" fn luag_tracecall(state: *mut State) -> i32 {
     unsafe {
         let call_info: *mut CallInfo = (*state).call_info;
-        let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
+        let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
             .payload.l_prototype;
         ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
         if (*call_info).u.l.saved_program_counter == (*p).code as *const u32 {
@@ -3607,7 +3606,7 @@ pub unsafe extern "C" fn luag_traceexec(state: *mut State, mut program_counter: 
         let call_info: *mut CallInfo = (*state).call_info;
         let mask: u8 = (*state).hook_mask as u8;
         let p: *const Prototype = (*((*(*call_info).function.p).tvalue.value.object
-            as *mut LClosure))
+            as *mut Closure))
             .payload.l_prototype;
         if mask as i32 & (1 << 2 | 1 << 3) == 0 {
             ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 0);
@@ -5279,13 +5278,13 @@ pub unsafe extern "C" fn luay_parser(
     dynamic_data: *mut DynamicData,
     name: *const i8,
     firstchar: i32,
-) -> *mut LClosure {
+) -> *mut Closure {
     unsafe {
         let mut lexstate: LexicalState = LexicalState::new();
         let mut funcstate: FunctionState = FunctionState::new();
-        let cl: *mut LClosure = luaf_newlclosure(state, 1);
+        let cl: *mut Closure = luaf_newlclosure(state, 1);
         let io: *mut TValue = &mut (*(*state).top.p).tvalue;
-        let x_: *mut LClosure = cl;
+        let x_: *mut Closure = cl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
@@ -5360,10 +5359,10 @@ pub unsafe extern "C" fn pushclosure(
         let nup: i32 = (*p).size_upvalues;
         let uv: *mut UpValueDescription = (*p).upvalues;
         let mut i: i32;
-        let ncl: *mut LClosure = luaf_newlclosure(state, nup);
+        let ncl: *mut Closure = luaf_newlclosure(state, nup);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra).tvalue;
-        let x_: *mut LClosure = ncl;
+        let x_: *mut Closure = ncl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
@@ -5471,7 +5470,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
         let mut b_4: i32;
         let mut count_results: i32;
         let mut current_block: u64;
-        let mut cl: *mut LClosure;
+        let mut cl: *mut Closure;
         let mut k: *mut TValue;
         let mut base: StackValuePointer;
         let mut program_counter: *const u32;
@@ -5479,7 +5478,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
         '_startfunc: loop {
             trap = (*state).hook_mask;
             '_returning: loop {
-                cl = &mut (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure));
+                cl = &mut (*((*(*call_info).function.p).tvalue.value.object as *mut Closure));
                 k = (*(*cl).payload.l_prototype).k;
                 program_counter = (*call_info).u.l.saved_program_counter;
                 if (trap != 0) as i64 != 0 {

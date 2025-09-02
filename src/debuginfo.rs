@@ -3,7 +3,6 @@ use crate::callinfo::*;
 use crate::utility::c::*;
 use crate::state::*;
 use crate::utility::*;
-use crate::lclosure::*;
 use crate::closure::*;
 use crate::prototype::*;
 use crate::tag::*;
@@ -43,7 +42,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
                 name = std::ptr::null();
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut LClosure))
+                    (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
                         .payload.l_prototype,
                     n,
                     0,
@@ -77,9 +76,9 @@ pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const DebugInfo, n
         return name;
     }
 }
-pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut UClosure) {
+pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
-        if !(!cl.is_null() && (*cl).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
+        if !(!cl.is_null() && (*cl).get_tag() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = b"=[C]\0" as *const u8 as *const i8;
             (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -88,7 +87,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut UClosure) {
             (*ar).last_line_defined = -1;
             (*ar).what = b"C\0" as *const u8 as *const i8;
         } else {
-            let p: *const Prototype = (*cl).l.payload.l_prototype;
+            let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).source).is_null() {
                 (*ar).source = (*(*p).source).get_contents();
                 (*ar).source_length = (*(*p).source).get_length();
@@ -133,7 +132,7 @@ pub unsafe extern "C" fn lua_getinfo(
         }
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
-                let cl: *mut UClosure = &mut (*((*function).value.object as *mut UClosure));
+                let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
@@ -148,7 +147,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 return status;
             }
             TAG_VARIANT_CLOSURE_C => {
-                let cl: *mut UClosure = &mut (*((*function).value.object as *mut UClosure));
+                let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
@@ -163,7 +162,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 return status;
             }
             _ => {
-                let cl: *mut UClosure = std::ptr::null_mut();
+                let cl: *mut Closure = std::ptr::null_mut();
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;

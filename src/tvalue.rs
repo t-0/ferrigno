@@ -4,8 +4,7 @@ use crate::tag::*;
 use crate::value::*;
 use crate::object::*;
 use crate::tstring::*;
-use crate::cclosure::*;
-use crate::lclosure::*;
+use crate::closure::*;
 use crate::stackvalue::*;
 use crate::state::*;
 use crate::prototype::*;
@@ -58,7 +57,7 @@ pub unsafe extern "C" fn aux_upvalue(
     unsafe {
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_C => {
-                let f: *mut CClosure = &mut (*((*fi).value.object as *mut CClosure));
+                let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 if !((n as u32).wrapping_sub(1 as u32) < (*f).count_upvalues as u32) {
                     return std::ptr::null();
                 }
@@ -69,7 +68,7 @@ pub unsafe extern "C" fn aux_upvalue(
                 return b"\0" as *const u8 as *const i8;
             }
             TAG_VARIANT_CLOSURE_L => {
-                let f_0: *mut LClosure = &mut (*((*fi).value.object as *mut LClosure));
+                let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
                 if !((n as u32).wrapping_sub(1 as u32) < (*p).size_upvalues as u32) {
                     return std::ptr::null();
