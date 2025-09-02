@@ -8292,15 +8292,15 @@ pub unsafe extern "C" fn lual_traceback(
         } else {
             -1
         };
-        b.lual_buffinit(state);
+        b.initialize(state);
         if !message.is_null() {
-            b.lual_addstring(message);
-            (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+            b.add_string(message);
+            (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
             let fresh145 = b.length;
             b.length = (b.length).wrapping_add(1);
             *(b.pointer).offset(fresh145 as isize) = '\n' as i8;
         }
-        b.lual_addstring(b"stack traceback:\0" as *const u8 as *const i8);
+        b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
         loop {
             let fresh146 = level;
             level = level + 1;
@@ -8316,7 +8316,7 @@ pub unsafe extern "C" fn lual_traceback(
                     b"\n\t...\t(skipping %d levels)\0" as *const u8 as *const i8,
                     n,
                 );
-                b.lual_addvalue();
+                b.add_value();
                 level += n;
             } else {
                 lua_getinfo(other_state, b"Slnt\0" as *const u8 as *const i8, &mut ar);
@@ -8334,15 +8334,15 @@ pub unsafe extern "C" fn lual_traceback(
                         ar.currentline,
                     );
                 }
-                b.lual_addvalue();
+                b.add_value();
                 pushfuncname(state, &mut ar);
-                b.lual_addvalue();
+                b.add_value();
                 if ar.is_tail_call {
-                    b.lual_addstring(b"\n\t(...tail calls...)\0" as *const u8 as *const i8);
+                    b.add_string(b"\n\t(...tail calls...)\0" as *const u8 as *const i8);
                 }
             }
         }
-        b.lual_pushresult();
+        b.push_result();
     }
 }
 pub unsafe extern "C" fn lual_argerror(
@@ -9117,11 +9117,11 @@ pub unsafe extern "C" fn lual_addgsub(
             if wild.is_null() {
                 break;
             }
-            (*b).lual_addlstring(s, wild.offset_from(s) as u64);
-            (*b).lual_addstring(r);
+            (*b).add_string_with_length(s, wild.offset_from(s) as u64);
+            (*b).add_string(r);
             s = wild.offset(l as isize);
         }
-        (*b).lual_addstring(s);
+        (*b).add_string(s);
     }
 }
 pub unsafe extern "C" fn lual_gsub(
@@ -9132,9 +9132,9 @@ pub unsafe extern "C" fn lual_gsub(
 ) -> *const i8 {
     unsafe {
         let mut b = Buffer::new();
-        b.lual_buffinit(state);
+        b.initialize(state);
         lual_addgsub(&mut b, s, p, r);
-        b.lual_pushresult();
+        b.push_result();
         return lua_tolstring(state, -1, std::ptr::null_mut());
     }
 }

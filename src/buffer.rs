@@ -1,9 +1,11 @@
-pub mod ubox;
+pub mod userbox;
 use crate::utility::c::*;
 use crate::new::*;
-use crate::buffer::ubox::*;
+use crate::buffer::userbox::*;
 use crate::state::*;
-pub const BUFFER_INITIAL_SIZE: usize = 1024;
+impl Buffer {
+    pub const INITIAL_SIZE: usize = 1024;
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Buffer {
@@ -11,7 +13,7 @@ pub struct Buffer {
     pub size: u64,
     pub length: u64,
     pub state: *mut State,
-    pub buffer_initial: [i8; BUFFER_INITIAL_SIZE],
+    pub initial_data: [i8; Buffer::INITIAL_SIZE],
 }
 impl New for Buffer {
     fn new() -> Self {
@@ -20,57 +22,55 @@ impl New for Buffer {
             size: 0,
             length: 0,
             state: std::ptr::null_mut(),
-            buffer_initial: [0; BUFFER_INITIAL_SIZE],
+            initial_data: [0; Buffer::INITIAL_SIZE],
         };
     }
 }
 impl Buffer {
-    pub unsafe fn lual_buffinitsize(&mut self, state: *mut State, size: u64) -> *mut i8 {
+    pub unsafe fn initialize_with_size(&mut self, state: *mut State, size: u64) -> *mut i8 {
         unsafe {
-            self.lual_buffinit(state);
-            return self.prepbuffsize(size, -1);
+            self.initialize(state);
+            return self.prepare_with_size_and_index(size, -1);
         }
     }
-    pub unsafe fn lual_pushresultsize(&mut self, size: u64) {
+    pub unsafe fn push_result_with_size(&mut self, size: u64) {
         unsafe {
-            self.length = (self.length as u64).wrapping_add(size) as u64;
-            self.lual_pushresult();
+            self.length += size;
+            self.push_result();
         }
     }
-    pub unsafe fn newbuffsize(&mut self, size: u64) -> u64 {
+    pub unsafe fn new_with_size(&mut self, size: u64) -> u64 {
         unsafe {
-            let mut new_size: u64 = (self.size).wrapping_div(2 as u64).wrapping_mul(3 as u64);
-            if (((!(0u64)).wrapping_sub(size) < self.length) as i32 != 0) as i64 != 0 {
+            let mut new_size = 3 * (self.size / 2);
+            if (!0u64).wrapping_sub(size) < self.length {
                 return lual_error(self.state, b"buffer too large\0" as *const u8 as *const i8)
                     as u64;
             }
-            if new_size < (self.length).wrapping_add(size) {
-                new_size = (self.length).wrapping_add(size);
-            }
+            new_size = new_size.max(self.length + size);
             return new_size;
         }
     }
-    pub unsafe fn prepbuffsize(&mut self, size: u64, boxidx: i32) -> *mut i8 {
+    pub unsafe fn prepare_with_size_and_index(&mut self, size: u64, boxidx: i32) -> *mut i8 {
         unsafe {
             if (self.size).wrapping_sub(self.length) >= size {
                 return (self.pointer).offset(self.length as isize);
             } else {
                 let state: *mut State = self.state;
                 let newbuff: *mut i8;
-                let new_size: u64 = self.newbuffsize(size);
-                if self.pointer != (self.buffer_initial).as_mut_ptr() {
-                    newbuff = resizebox(state, boxidx, new_size) as *mut i8;
+                let new_size: u64 = self.new_with_size(size);
+                if self.pointer != (self.initial_data).as_mut_ptr() {
+                    newbuff = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
                 } else {
                     lua_rotate(state, boxidx, -1);
                     lua_settop(state, -1 - 1);
-                    newbox(state);
+                    UserBox::new_userbox(state);
                     lua_rotate(state, boxidx, 1);
                     lua_toclose(state, boxidx);
-                    newbuff = resizebox(state, boxidx, new_size) as *mut i8;
+                    newbuff = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
                     memcpy(
                         newbuff as *mut libc::c_void,
                         self.pointer as *const libc::c_void,
-                        (self.length).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                        self.length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
                 }
                 self.pointer = newbuff;
@@ -79,15 +79,15 @@ impl Buffer {
             };
         }
     }
-    pub unsafe fn lual_prepbuffsize(&mut self, size: u64) -> *mut i8 {
+    pub unsafe fn prepare_with_size(&mut self, size: u64) -> *mut i8 {
         unsafe {
-            return self.prepbuffsize(size, -1);
+            return self.prepare_with_size_and_index(size, -1);
         }
     }
-    pub unsafe fn lual_addlstring(&mut self, s: *const i8, l: u64) {
+    pub unsafe fn add_string_with_length(&mut self, s: *const i8, l: u64) {
         unsafe {
             if l > 0u64 {
-                let raw: *mut i8 = self.prepbuffsize(l, -1);
+                let raw: *mut i8 = self.prepare_with_size_and_index(l, -1);
                 memcpy(
                     raw as *mut libc::c_void,
                     s as *const libc::c_void,
@@ -97,28 +97,28 @@ impl Buffer {
             }
         }
     }
-    pub unsafe fn lual_addstring(&mut self, s: *const i8) {
+    pub unsafe fn add_string(&mut self, s: *const i8) {
         unsafe {
-            self.lual_addlstring(s, strlen(s));
+            self.add_string_with_length(s, strlen(s));
         }
     }
-    pub unsafe fn lual_pushresult(&mut self) {
+    pub unsafe fn push_result(&mut self) {
         unsafe {
             let state: *mut State = self.state;
             lua_pushlstring(state, self.pointer, self.length);
-            if self.pointer != (self.buffer_initial).as_mut_ptr() {
-                lua_closeslot(state, -(2));
+            if self.pointer != (self.initial_data).as_mut_ptr() {
+                lua_closeslot(state, -2);
             }
-            lua_rotate(state, -(2), -1);
+            lua_rotate(state, -2, -1);
             lua_settop(state, -1 - 1);
         }
     }
-    pub unsafe fn lual_addvalue(&mut self) {
+    pub unsafe fn add_value(&mut self) {
         unsafe {
             let state: *mut State = self.state;
             let mut length: u64 = 0;
             let s: *const i8 = lua_tolstring(state, -1, &mut length);
-            let b: *mut i8 = self.prepbuffsize(length, -(2));
+            let b: *mut i8 = self.prepare_with_size_and_index(length, -2);
             memcpy(
                 b as *mut libc::c_void,
                 s as *const libc::c_void,
@@ -128,14 +128,14 @@ impl Buffer {
             lua_settop(state, -1 - 1);
         }
     }
-    pub unsafe fn lual_buffinit(&mut self, state: *mut State) {
+    pub unsafe fn initialize(&mut self, state: *mut State) {
         unsafe {
             self.state = state;
-            self.pointer = (self.buffer_initial).as_mut_ptr();
+            self.pointer = self.initial_data.as_mut_ptr();
             self.length = 0;
-            self.size = (16 as u64)
-                .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
+            self.size = 16usize
+                .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                .wrapping_mul(::core::mem::size_of::<f64>())
                 as u64;
             lua_pushlightuserdata(state, self as *mut Buffer as *mut libc::c_void);
         }

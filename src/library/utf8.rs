@@ -159,14 +159,14 @@ pub unsafe extern "C" fn utfchar(state: *mut State) -> i32 {
         } else {
             let mut i: i32;
             let mut b = Buffer::new();
-            b.lual_buffinit(state);
+            b.initialize(state);
             i = 1;
             while i <= n {
                 pushutfchar(state, i);
-                b.lual_addvalue();
+                b.add_value();
                 i += 1;
             }
-            b.lual_pushresult();
+            b.push_result();
         }
         return 1;
     }

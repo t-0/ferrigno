@@ -45,13 +45,13 @@ pub unsafe extern "C" fn str_reverse(state: *mut State) -> i32 {
         let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
-        let p: *mut i8 = b.lual_buffinitsize(state, l);
+        let p: *mut i8 = b.initialize_with_size(state, l);
         i = 0;
         while i < l {
             *p.offset(i as isize) = *s.offset(l.wrapping_sub(i).wrapping_sub(1 as u64) as isize);
             i = i.wrapping_add(1);
         }
-        b.lual_pushresultsize(l);
+        b.push_result_with_size(l);
         return 1;
     }
 }
@@ -61,13 +61,13 @@ pub unsafe extern "C" fn str_lower(state: *mut State) -> i32 {
         let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
-        let p: *mut i8 = b.lual_buffinitsize(state, l);
+        let p: *mut i8 = b.initialize_with_size(state, l);
         i = 0;
         while i < l {
             *p.offset(i as isize) = tolower(*s.offset(i as isize) as u8 as i32) as i8;
             i = i.wrapping_add(1);
         }
-        b.lual_pushresultsize(l);
+        b.push_result_with_size(l);
         return 1;
     }
 }
@@ -77,13 +77,13 @@ pub unsafe extern "C" fn str_upper(state: *mut State) -> i32 {
         let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
-        let p: *mut i8 = b.lual_buffinitsize(state, l);
+        let p: *mut i8 = b.initialize_with_size(state, l);
         i = 0;
         while i < l {
             *p.offset(i as isize) = toupper(*s.offset(i as isize) as u8 as i32) as i8;
             i = i.wrapping_add(1);
         }
-        b.lual_pushresultsize(l);
+        b.push_result_with_size(l);
         return 1;
     }
 }
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn str_rep(state: *mut State) -> i32 {
             .wrapping_mul(l)
             .wrapping_add(((n - 1) as u64).wrapping_mul(lsep));
         let mut b = Buffer::new();
-        let mut p: *mut i8 = b.lual_buffinitsize(state, totallen);
+        let mut p: *mut i8 = b.initialize_with_size(state, totallen);
         loop {
             let fresh159 = n;
             n = n - 1;
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn str_rep(state: *mut State) -> i32 {
             s as *const libc::c_void,
             (l as usize).wrapping_mul(::core::mem::size_of::<i8>()),
         );
-        b.lual_pushresultsize(totallen);
+        b.push_result_with_size(totallen);
     }
         return 1;
     }
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn str_char(state: *mut State) -> i32 {
         let n: i32 = (*state).get_top();
         let mut i: i32;
         let mut b = Buffer::new();
-        let p: *mut i8 = b.lual_buffinitsize(state, n as u64);
+        let p: *mut i8 = b.initialize_with_size(state, n as u64);
         i = 1;
         while i <= n {
             let c: u64 = lual_checkinteger(state, i) as u64;
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn str_char(state: *mut State) -> i32 {
             *p.offset((i - 1) as isize) = c as u8 as i8;
             i += 1;
         }
-        b.lual_pushresultsize(n as u64);
+        b.push_result_with_size(n as u64);
         return 1;
     }
 }
@@ -208,11 +208,11 @@ pub unsafe extern "C" fn writer(
         let stream_writer: *mut StreamWriter = arbitrary_data as *mut StreamWriter;
         if !(*stream_writer).is_initialized {
             (*stream_writer).is_initialized = true;
-            (*stream_writer).buffer.lual_buffinit(state);
+            (*stream_writer).buffer.initialize(state);
         }
         (*stream_writer)
             .buffer
-            .lual_addlstring(b as *const i8, size);
+            .add_string_with_length(b as *const i8, size);
         return 0;
     }
 }
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 {
                 b"unable to dump given function\0" as *const u8 as *const i8,
             );
         }
-        stream_writer.buffer.lual_pushresult();
+        stream_writer.buffer.push_result();
         return 1;
     }
 }
@@ -565,7 +565,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
                 3,
                 b"string/function/table\0" as *const u8 as *const i8,
             ) != 0) as i32;
-        b.lual_buffinit(state);
+        b.initialize(state);
         if anchor != 0 {
             p = p.offset(1);
             lp = lp.wrapping_sub(1);
@@ -584,7 +584,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
                 if !(src < match_state.src_end) {
                     break;
                 }
-                (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh165 = src;
                 src = src.offset(1);
                 let fresh166 = b.length;
@@ -598,8 +598,8 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
         if changed == 0 {
             lua_pushvalue(state, 1);
         } else {
-            b.lual_addlstring(src, (match_state.src_end).offset_from(src) as u64);
-            b.lual_pushresult();
+            b.add_string_with_length(src, (match_state.src_end).offset_from(src) as u64);
+            b.push_result();
         }
         (*state).push_integer(n);
         return 2;
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: u64) {
     unsafe {
-        ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+        ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
         let fresh167 = (*b).length;
         (*b).length = ((*b).length).wrapping_add(1);
         *((*b).pointer).offset(fresh167 as isize) = '"' as i8;
@@ -618,11 +618,11 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                 break;
             }
             if *s as i32 == '"' as i32 || *s as i32 == '\\' as i32 || *s as i32 == '\n' as i32 {
-                ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh169 = (*b).length;
                 (*b).length = ((*b).length).wrapping_add(1);
                 *((*b).pointer).offset(fresh169 as isize) = '\\' as i8;
-                ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh170 = (*b).length;
                 (*b).length = ((*b).length).wrapping_add(1);
                 *((*b).pointer).offset(fresh170 as isize) = *s;
@@ -649,16 +649,16 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                         *s as u8 as i32,
                     );
                 }
-                (*b).lual_addstring(buffer.as_mut_ptr());
+                (*b).add_string(buffer.as_mut_ptr());
             } else {
-                ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh171 = (*b).length;
                 (*b).length = ((*b).length).wrapping_add(1);
                 *((*b).pointer).offset(fresh171 as isize) = *s;
             }
             s = s.offset(1);
         }
-        ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+        ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
         let fresh172 = (*b).length;
         (*b).length = ((*b).length).wrapping_add(1);
         *((*b).pointer).offset(fresh172 as isize) = '"' as i8;
@@ -707,7 +707,7 @@ pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32)
                 addquoted(b, s, length);
             },
             Some(TAG_TYPE_NUMERIC) => {
-                let buffer: *mut i8 = (*b).lual_prepbuffsize(120 as u64);
+                let buffer: *mut i8 = (*b).prepare_with_size(120 as u64);
                 let nb: i32;
                 if lua_isinteger(state, arg) {
                     let n: i64 = lua_tointegerx(state, arg, std::ptr::null_mut());
@@ -728,7 +728,7 @@ pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32)
             },
             Some(TAG_TYPE_NIL) | Some(TAG_TYPE_BOOLEAN) => {
                 lual_tolstring(state, arg, std::ptr::null_mut());
-                (*b).lual_addvalue();
+                (*b).add_value();
             },
             _ => {
                 lual_argerror(
@@ -831,10 +831,10 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
         let strfrmt_end: *const i8 = strfrmt.offset(sfl as isize);
         let mut flags: *const i8 = std::ptr::null();
         let mut b = Buffer::new();
-        b.lual_buffinit(state);
+        b.initialize(state);
         while strfrmt < strfrmt_end {
             if *strfrmt as i32 != '%' as i32 {
-                (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
                 let fresh175 = b.length;
@@ -843,7 +843,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
             } else {
                 strfrmt = strfrmt.offset(1);
                 if *strfrmt as i32 == '%' as i32 {
-                    (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
                     let fresh177 = b.length;
@@ -852,7 +852,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                 } else {
                     let mut form: [i8; 32] = [0; 32];
                     let mut maxitem: i32 = 120 as i32;
-                    let mut buffer: *mut i8 = b.lual_prepbuffsize(maxitem as u64);
+                    let mut buffer: *mut i8 = b.prepare_with_size(maxitem as u64);
                     let mut nb: i32 = 0;
                     arg += 1;
                     if arg > top {
@@ -907,7 +907,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                         }
                         102 => {
                             maxitem = 110 as i32 + 308 as i32;
-                            buffer = b.lual_prepbuffsize(maxitem as u64);
+                            buffer = b.prepare_with_size(maxitem as u64);
                             current_block = 6669252993407410313;
                         }
                         101 | 69 | 103 | 71 => {
@@ -944,7 +944,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                             let mut l: u64 = 0;
                             let s: *const i8 = lual_tolstring(state, arg, &mut l);
                             if form[2 as usize] as i32 == '\0' as i32 {
-                                b.lual_addvalue();
+                                b.add_value();
                             } else {
                                 (((l == strlen(s)) as i32 != 0) as i64 != 0
                                     || lual_argerror(
@@ -961,7 +961,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                                 if (strchr(form.as_mut_ptr(), '.' as i32)).is_null()
                                     && l >= 100 as u64
                                 {
-                                    b.lual_addvalue();
+                                    b.add_value();
                                 } else {
                                     nb = snprintf(buffer, maxitem as u64, form.as_mut_ptr(), s);
                                     lua_settop(state, -2);
@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                 }
             }
         }
-        b.lual_pushresult();
+        b.push_result();
         return 1;
     }
 }
@@ -1214,7 +1214,7 @@ pub unsafe extern "C" fn packint(
     is_negative_: i32,
 ) {
     unsafe {
-        let buffer: *mut i8 = (*b).lual_prepbuffsize(size as u64);
+        let buffer: *mut i8 = (*b).prepare_with_size(size as u64);
         let mut i: i32;
         *buffer.offset((if islittle != 0 { 0 } else { size - 1 }) as isize) =
             (n & ((1 << 8) - 1) as u64) as i8;
@@ -1279,7 +1279,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
         let mut totalsize: u64 = 0;
         initheader(state, &mut h);
         (*state).push_nil();
-        b.lual_buffinit(state);
+        b.initialize(state);
         while *fmt as i32 != '\0' as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
@@ -1291,7 +1291,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                 if !(fresh184 > 0) {
                     break;
                 }
-                (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh185 = b.length;
                 b.length = (b.length).wrapping_add(1);
                 *(b.pointer).offset(fresh185 as isize) = 0 as i8;
@@ -1329,7 +1329,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                 2 => {
                     let mut f: libc::c_float = lual_checknumber(state, arg) as libc::c_float;
                     let buffer: *mut i8 =
-                        b.lual_prepbuffsize(::core::mem::size_of::<libc::c_float>() as u64);
+                        b.prepare_with_size(::core::mem::size_of::<libc::c_float>() as u64);
                     copywithendian(
                         buffer,
                         &mut f as *mut libc::c_float as *mut i8,
@@ -1341,7 +1341,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                 }
                 3 => {
                     let mut f_0: f64 = lual_checknumber(state, arg);
-                    let buff_0: *mut i8 = b.lual_prepbuffsize(::core::mem::size_of::<f64>() as u64);
+                    let buff_0: *mut i8 = b.prepare_with_size(::core::mem::size_of::<f64>() as u64);
                     copywithendian(
                         buff_0,
                         &mut f_0 as *mut f64 as *mut i8,
@@ -1353,7 +1353,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                 }
                 4 => {
                     let mut f_1: f64 = lual_checknumber(state, arg);
-                    let buff_1: *mut i8 = b.lual_prepbuffsize(::core::mem::size_of::<f64>() as u64);
+                    let buff_1: *mut i8 = b.prepare_with_size(::core::mem::size_of::<f64>() as u64);
                     copywithendian(
                         buff_1,
                         &mut f_1 as *mut f64 as *mut i8,
@@ -1372,14 +1372,14 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                             arg,
                             b"string longer than given size\0" as *const u8 as *const i8,
                         ) != 0) as i32;
-                    b.lual_addlstring(s, length);
+                    b.add_string_with_length(s, length);
                     loop {
                         let fresh186 = length;
                         length = length.wrapping_add(1);
                         if !(fresh186 < size as u64) {
                             break;
                         }
-                        (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                        (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                         let fresh187 = b.length;
                         b.length = (b.length).wrapping_add(1);
                         *(b.pointer).offset(fresh187 as isize) = 0 as i8;
@@ -1399,7 +1399,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                             b"string length does not fit in given size\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     packint(&mut b, length_0 as u64, h.is_little_endian, size, 0);
-                    b.lual_addlstring(s_0, length_0);
+                    b.add_string_with_length(s_0, length_0);
                     totalsize = (totalsize as u64).wrapping_add(length_0) as u64;
                     current_block_33 = 3222590281903869779;
                 }
@@ -1412,8 +1412,8 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                             arg,
                             b"string contains zeros\0" as *const u8 as *const i8,
                         ) != 0) as i32;
-                    b.lual_addlstring(s_1, length_1);
-                    (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    b.add_string_with_length(s_1, length_1);
+                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh188 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh188 as isize) = '\0' as i8;
@@ -1422,7 +1422,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                     current_block_33 = 3222590281903869779;
                 }
                 8 => {
-                    (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh189 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh189 as isize) = 0 as i8;
@@ -1442,7 +1442,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                 _ => {}
             }
         }
-        b.lual_pushresult();
+        b.push_result();
         return 1;
     }
 }

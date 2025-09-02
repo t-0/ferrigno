@@ -81,28 +81,28 @@ pub unsafe extern "C" fn setpath(
             } else {
                 let length: u64 = strlen(path);
                 let mut b = Buffer::new();
-                b.lual_buffinit(state);
+                b.initialize(state);
                 if path < dftmark {
-                    b.lual_addlstring(path, dftmark.offset_from(path) as u64);
-                    (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    b.add_string_with_length(path, dftmark.offset_from(path) as u64);
+                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh193 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh193 as isize) = *(b";\0" as *const u8 as *const i8);
                 }
-                b.lual_addstring(dft);
+                b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
-                    (b.length < b.size || !(b.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh194 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh194 as isize) = *(b";\0" as *const u8 as *const i8);
-                    b.lual_addlstring(
+                    b.add_string_with_length(
                         dftmark.offset(2 as isize),
                         path.offset(length as isize)
                             .offset(-(2 as isize))
                             .offset_from(dftmark) as u64,
                     );
                 }
-                b.lual_pushresult();
+                b.push_result();
             }
         }
         lua_setfield(state, -3, fieldname);
@@ -217,16 +217,16 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
 pub unsafe extern "C" fn pusherrornotfound(state: *mut State, path: *const i8) {
     unsafe {
         let mut b = Buffer::new();
-        b.lual_buffinit(state);
-        b.lual_addstring(b"no file '\0" as *const u8 as *const i8);
+        b.initialize(state);
+        b.add_string(b"no file '\0" as *const u8 as *const i8);
         lual_addgsub(
             &mut b,
             path,
             b";\0" as *const u8 as *const i8,
             b"'\n\tno file '\0" as *const u8 as *const i8,
         );
-        b.lual_addstring(b"'\0" as *const u8 as *const i8);
-        b.lual_pushresult();
+        b.add_string(b"'\0" as *const u8 as *const i8);
+        b.push_result();
     }
 }
 pub unsafe extern "C" fn searchpath(
@@ -244,9 +244,9 @@ pub unsafe extern "C" fn searchpath(
             name = lual_gsub(state, name, sep, dirsep);
         }
         let mut buffer = Buffer::new();
-        buffer.lual_buffinit(state);
+        buffer.initialize(state);
         lual_addgsub(&mut buffer, path, b"?\0" as *const u8 as *const i8, name);
-        (buffer.length < buffer.size || !(buffer.lual_prepbuffsize(1 as u64)).is_null()) as i32;
+        (buffer.length < buffer.size || !(buffer.prepare_with_size(1 as u64)).is_null()) as i32;
         let fresh195 = buffer.length;
         buffer.length = (buffer.length).wrapping_add(1);
         *(buffer.pointer).offset(fresh195 as isize) = '\0' as i8;
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn searchpath(
                 return lua_pushstring(state, filename);
             }
         }
-        buffer.lual_pushresult();
+        buffer.push_result();
         pusherrornotfound(state, lua_tolstring(state, -1, std::ptr::null_mut()));
         return std::ptr::null();
     }
@@ -469,14 +469,14 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
                 b"'package.searchers' must be a table\0" as *const u8 as *const i8,
             );
         }
-        message.lual_buffinit(state);
+        message.initialize(state);
         i = 1;
         loop {
-            message.lual_addstring(b"\n\t\0" as *const u8 as *const i8);
+            message.add_string(b"\n\t\0" as *const u8 as *const i8);
             if ((lua_rawgeti(state, 3, i as i64) == 0) as i32 != 0) as i64 != 0 {
                 lua_settop(state, -2);
                 message.length = (message.length as u64).wrapping_sub(2 as u64) as u64;
-                message.lual_pushresult();
+                message.push_result();
                 lual_error(
                     state,
                     b"module '%s' not found:%s\0" as *const u8 as *const i8,
@@ -490,7 +490,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
                 return;
             } else if lua_isstring(state, -2) {
                 lua_settop(state, -2);
-                message.lual_addvalue();
+                message.add_value();
             } else {
                 lua_settop(state, -2 - 1);
                 message.length = (message.length as u64).wrapping_sub(2 as u64) as u64;

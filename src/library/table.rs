@@ -158,7 +158,7 @@ pub unsafe extern "C" fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
                 i,
             );
         }
-        (*b).lual_addvalue();
+        (*b).add_value();
     }
 }
 pub unsafe extern "C" fn table_concat(state: *mut State) -> i32 {
@@ -170,16 +170,16 @@ pub unsafe extern "C" fn table_concat(state: *mut State) -> i32 {
         let sep: *const i8 = lual_optlstring(state, 2, b"\0" as *const u8 as *const i8, &mut lsep);
         let mut i: i64 = lual_optinteger(state, 3, 1);
         last = lual_optinteger(state, 4, last);
-        b.lual_buffinit(state);
+        b.initialize(state);
         while i < last {
             addfield(state, &mut b, i);
-            b.lual_addlstring(sep, lsep);
+            b.add_string_with_length(sep, lsep);
             i += 1;
         }
         if i == last {
             addfield(state, &mut b, i);
         }
-        b.lual_pushresult();
+        b.push_result();
         return 1;
     }
 }

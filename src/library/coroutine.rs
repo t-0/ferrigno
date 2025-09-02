@@ -28,7 +28,7 @@ unsafe extern "C" fn luab_coresume(state: *mut State) -> i32 {
         let r: i32 = auxresume(state, co, (*state).get_top() - 1);
         if ((r < 0) as i32 != 0) as i64 != 0 {
             (*state).push_boolean(false);
-            lua_rotate(state, -(2), 1);
+            lua_rotate(state, -2, 1);
             return 2;
         } else {
             (*state).push_boolean(true);

@@ -50,7 +50,7 @@ impl MatchState {
             }
             if lua_toboolean(state, -1) == 0 {
                 lua_settop(state, -1 - 1);
-                (*b).lual_addlstring(s, e.offset_from(s) as u64);
+                (*b).add_string_with_length(s, e.offset_from(s) as u64);
                 return 0;
             } else if ((!lua_isstring(state, -1)) as i32 != 0) as i64 != 0 {
                 return lual_error(
@@ -59,7 +59,7 @@ impl MatchState {
                     lua_typename(state, lua_type(state, -1)),
                 );
             } else {
-                (*b).lual_addvalue();
+                (*b).add_value();
                 return 1;
             };
         }
@@ -672,15 +672,15 @@ impl MatchState {
                 if p.is_null() {
                     break;
                 }
-                (*b).lual_addlstring(news, p.offset_from(news) as u64);
+                (*b).add_string_with_length(news, p.offset_from(news) as u64);
                 p = p.offset(1);
                 if *p as i32 == '%' as i32 {
-                    ((*b).length < (*b).size || !((*b).lual_prepbuffsize(1 as u64)).is_null()) as i32;
+                    ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh164 = (*b).length;
                     (*b).length = ((*b).length).wrapping_add(1);
                     *((*b).pointer).offset(fresh164 as isize) = *p;
                 } else if *p as i32 == '0' as i32 {
-                    (*b).lual_addlstring(s, e.offset_from(s) as u64);
+                    (*b).add_string_with_length(s, e.offset_from(s) as u64);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32
                     & _ISDIGIT as i32
                     != 0
@@ -688,9 +688,9 @@ impl MatchState {
                     let mut cap: *const i8 = std::ptr::null();
                     let resl: i64 = self.get_onecapture(*p as i32 - '1' as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
-                        (*b).lual_addvalue();
+                        (*b).add_value();
                     } else {
-                        (*b).lual_addlstring(cap, resl as u64);
+                        (*b).add_string_with_length(cap, resl as u64);
                     }
                 } else {
                     lual_error(
@@ -703,7 +703,7 @@ impl MatchState {
                     as u64;
                 news = p.offset(1 as isize);
             }
-            (*b).lual_addlstring(news, l);
+            (*b).add_string_with_length(news, l);
         }
     }
 }

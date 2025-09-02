@@ -4,5 +4,5 @@ use crate::functions::*;
 #[repr(C)]
 pub struct Stream {
     pub f: *mut FILE,
-    pub closef: CFunction,
+    pub close_function: CFunction,
 }
