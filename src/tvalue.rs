@@ -62,7 +62,7 @@ pub unsafe extern "C" fn aux_upvalue(
                 if !((n as u32).wrapping_sub(1 as u32) < (*f).count_upvalues as u32) {
                     return std::ptr::null();
                 }
-                *value = &mut *((*f).upvalue).as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
+                *value = &mut *((*f).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
                 if !owner.is_null() {
                     *owner = &mut (*(f as *mut Object));
                 }
@@ -70,15 +70,15 @@ pub unsafe extern "C" fn aux_upvalue(
             }
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut LClosure = &mut (*((*fi).value.object as *mut LClosure));
-                let p: *mut Prototype = (*f_0).p;
+                let p: *mut Prototype = (*f_0).payload.l_prototype;
                 if !((n as u32).wrapping_sub(1 as u32) < (*p).size_upvalues as u32) {
                     return std::ptr::null();
                 }
-                *value = (**((*f_0).upvalues).as_mut_ptr().offset((n - 1) as isize))
+                *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize))
                     .v
                     .p;
                 if !owner.is_null() {
-                    *owner = &mut (*(*((*f_0).upvalues).as_mut_ptr().offset((n - 1) as isize)
+                    *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
                         as *mut Object));
                 }
                 let name: *mut TString = (*((*p).upvalues).offset((n - 1) as isize)).name;

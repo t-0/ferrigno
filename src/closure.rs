@@ -9,7 +9,22 @@ use crate::table::*;
 use crate::callinfo::*;
 use crate::tvalue::*;
 use crate::prototype::*;
+use crate::functions::*;
+use crate::upvalue::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
+pub union ClosureUpValue{
+    pub c_tvalues: [TValue; 1],
+    pub l_upvalues: [*mut UpValue; 1],
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub union ClosurePayload {
+    pub c_cfunction: CFunction,
+    pub l_prototype: *mut Prototype,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
 pub union UClosure {
     pub c: CClosure,
     pub l: LClosure,
@@ -20,7 +35,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) 
             (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
             (*state).top.p = (*state).top.p.offset(1);
         } else {
-            let p: *const Prototype = (*f).l.p;
+            let p: *const Prototype = (*f).l.payload.l_prototype;
             let mut currentline: i32 = (*p).line_defined;
             let table: *mut Table = luah_new(state);
             let io: *mut TValue = &mut (*(*state).top.p).tvalue;
@@ -85,8 +100,8 @@ pub unsafe extern "C" fn auxgetinfo(
                         (*ar).is_variable_arguments = true;
                         (*ar).nparams = 0;
                     } else {
-                        (*ar).is_variable_arguments = (*(*f).l.p).is_variable_arguments;
-                        (*ar).nparams = (*(*f).l.p).count_parameters;
+                        (*ar).is_variable_arguments = (*(*f).l.payload.l_prototype).is_variable_arguments;
+                        (*ar).nparams = (*(*f).l.payload.l_prototype).count_parameters;
                     }
                 }
                 116 => {

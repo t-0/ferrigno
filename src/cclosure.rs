@@ -5,6 +5,7 @@ use crate::tag::*;
 use crate::global::*;
 use crate::state::*;
 use crate::tvalue::*;
+use crate::closure::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CClosure {
@@ -15,8 +16,8 @@ pub struct CClosure {
     pub dummy1: u8,
     pub dummy2: u32,
     pub gc_list: *mut Object,
-    pub f: CFunction,
-    pub upvalue: [TValue; 1],
+    pub function: CFunction,
+    pub upvalues: ClosureUpValue,
 }
 impl TObject for CClosure {
     fn get_marked(&self) -> u8 {
@@ -55,8 +56,8 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> 
         let mut i: u64;
         i = 0;
         while i < (*cl).count_upvalues as u64 {
-            if ((*((*cl).upvalue).as_mut_ptr().offset(i as isize)).is_collectable())
-                && (*(*((*cl).upvalue).as_mut_ptr().offset(i as isize))
+            if ((*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
+                && (*(*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
                     .value
                     .object)
                     .get_marked()
@@ -65,7 +66,7 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut CClosure) -> 
             {
                 reallymarkobject(
                     g,
-                    (*((*cl).upvalue).as_mut_ptr().offset(i as isize))
+                    (*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
                         .value
                         .object,
                 );

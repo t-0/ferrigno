@@ -536,16 +536,16 @@ pub unsafe extern "C" fn luau_undump(
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
         (*state).luad_inctop();
-        (*cl).p = luaf_newproto(state);
-        if (*cl).get_marked() & 1 << 5 != 0 && (*(*cl).p).get_marked() & (1 << 3 | 1 << 4) != 0 {
+        (*cl).payload.l_prototype = luaf_newproto(state);
+        if (*cl).get_marked() & 1 << 5 != 0 && (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
                 state,
                 &mut (*(cl as *mut Object)),
-                &mut (*((*cl).p as *mut Object)),
+                &mut (*((*cl).payload.l_prototype as *mut Object)),
             );
         } else {
         };
-        load_function(&mut load_state, (*cl).p, std::ptr::null_mut());
+        load_function(&mut load_state, (*cl).payload.l_prototype, std::ptr::null_mut());
         return cl;
     }
 }

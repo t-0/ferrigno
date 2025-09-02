@@ -1,9 +1,9 @@
 use crate::object::*;
-use crate::prototype::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::state::*;
 use crate::tvalue::*;
+use crate::closure::*;
 use crate::global::*;
 use crate::upvalue::*;
 #[derive(Copy, Clone)]
@@ -16,8 +16,8 @@ pub struct LClosure {
     pub dummy1: u8,
     pub dummy2: u32,
     pub gc_list: *mut Object,
-    pub p: *mut Prototype,
-    pub upvalues: [*mut UpValue; 1],
+    pub payload: ClosurePayload,
+    pub upvalues: ClosureUpValue,
 }
 impl TObject for LClosure {
     fn get_marked(&self) -> u8 {
@@ -53,14 +53,14 @@ impl TObject for LClosure {
 }
 pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut LClosure) -> u64 {
     unsafe {
-        if !((*cl).p).is_null() {
-            if (*(*cl).p).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*((*cl).p as *mut Object)));
+        if !((*cl).payload.l_prototype).is_null() {
+            if (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                reallymarkobject(g, &mut (*((*cl).payload.l_prototype as *mut Object)));
             }
         }
         let mut i: u64 = 0;
         while i < (*cl).count_upvalues as u64 {
-            let uv: *mut UpValue = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
+            let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             if !uv.is_null() {
                 if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     reallymarkobject(g, &mut (*(uv as *mut Object)));
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut nupvals: i32) -
                 as u64,
         );
         let c: *mut LClosure = &mut (*(o as *mut LClosure));
-        (*c).p = std::ptr::null_mut();
+        (*c).payload.l_prototype = std::ptr::null_mut();
         (*c).count_upvalues = nupvals as u8;
         loop {
             let fresh17 = nupvals;
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut nupvals: i32) -
             if !(fresh17 != 0) {
                 break;
             }
-            let ref mut fresh18 = *((*c).upvalues).as_mut_ptr().offset(nupvals as isize);
+            let ref mut fresh18 = *((*c).upvalues).l_upvalues.as_mut_ptr().offset(nupvals as isize);
             *fresh18 = std::ptr::null_mut();
         }
         return c;
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut LClosure) {
             let uv: *mut UpValue = &mut (*(o as *mut UpValue));
             (*uv).v.p = &mut (*uv).u.value;
             (*(*uv).v.p).set_tag(TAG_VARIANT_NIL_NIL);
-            let ref mut fresh19 = *((*cl).upvalues).as_mut_ptr().offset(i as isize);
+            let ref mut fresh19 = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh19 = uv;
             if (*cl).get_marked() & 1 << 5 != 0 && (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(

@@ -44,7 +44,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
             } else {
                 name = luaf_getlocalname(
                     (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut LClosure))
-                        .p,
+                        .payload.l_prototype,
                     n,
                     0,
                 );
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut UClosure) {
             (*ar).last_line_defined = -1;
             (*ar).what = b"C\0" as *const u8 as *const i8;
         } else {
-            let p: *const Prototype = (*cl).l.p;
+            let p: *const Prototype = (*cl).l.payload.l_prototype;
             if !((*p).source).is_null() {
                 (*ar).source = (*(*p).source).get_contents();
                 (*ar).source_length = (*(*p).source).get_length();

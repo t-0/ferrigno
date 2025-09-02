@@ -56,7 +56,7 @@ pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).u.l.saved_program_counter).offset_from(
             (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
-                .p)
+                .payload.l_prototype)
                 .code,
         ) as i32
             - 1;
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
             (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
-                .p,
+                .payload.l_prototype,
             currentpc(call_info),
         );
     }
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn luag_findlocal(
                 return findvararg(call_info, n, pos);
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure)).p,
+                    (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure)).payload.l_prototype,
                     n,
                     currentpc(call_info),
                 );
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn findvararg(
 ) -> *const i8 {
     unsafe {
         if (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
-            .p)
+            .payload.l_prototype)
             .is_variable_arguments
         {
             let nextra: i32 = (*call_info).u.l.count_extra_arguments;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn funcnamefromcall(
             return funcnamefromcode(
                 state,
                 (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
-                    .p,
+                    .payload.l_prototype,
                 currentpc(call_info),
                 name,
             );
@@ -206,8 +206,8 @@ pub unsafe extern "C" fn getupvalname(
         let mut i: i32;
         i = 0;
         while i < (*c).count_upvalues as i32 {
-            if (**((*c).upvalues).as_mut_ptr().offset(i as isize)).v.p == o as *mut TValue {
-                *name = upvalname((*c).p, i);
+            if (**((*c).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).v.p == o as *mut TValue {
+                *name = upvalname((*c).payload.l_prototype, i);
                 return STRING_UPVALUE.as_ptr();
             }
             i += 1;
