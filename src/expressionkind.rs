@@ -1,6 +1,6 @@
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
-pub enum V{
+pub enum ExpressionKind {
     VVOID = 0,
     VNIL = 1,
     VTRUE = 2,

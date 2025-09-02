@@ -5,9 +5,9 @@ use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GMatchState {
-    pub src: *const i8,
-    pub p: *const i8,
-    pub lastmatch: *const i8,
+    pub source: *const i8,
+    pub pointer: *const i8,
+    pub last_match: *const i8,
     pub match_state: MatchState,
 }
 impl GMatchState {
@@ -22,13 +22,13 @@ impl GMatchState {
     pub unsafe fn auxiliary(& mut self, state: *mut State) -> i32{
         unsafe {
             self.match_state.state = state;
-            let mut src = self.src;
+            let mut src = self.source;
             while src <= self.match_state.src_end {
                 self.match_state.reprepstate();
-                let e = self.match_state.match_0(src, self.p);
-                if !e.is_null() && e != self.lastmatch {
-                    self.lastmatch = e;
-                    self.src = self.lastmatch;
+                let e = self.match_state.match_0(src, self.pointer);
+                if !e.is_null() && e != self.last_match {
+                    self.last_match = e;
+                    self.source = self.last_match;
                     return self.match_state.push_captures(src, e);
                 }
                 src = src.offset(1);
@@ -51,9 +51,9 @@ impl GMatchState {
             let gm: *mut GMatchState = User::lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>() as u64, 0)
                 as *mut GMatchState;
             (*gm).match_state.prepstate(state, s, lexical_state, p, lp);
-            (*gm).src = s.offset(init as isize);
-            (*gm).p = p;
-            (*gm).lastmatch = std::ptr::null();
+            (*gm).source = s.offset(init as isize);
+            (*gm).pointer = p;
+            (*gm).last_match = std::ptr::null();
             lua_pushcclosure(
                 state,
                 Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut State) -> i32),

@@ -1,17 +1,17 @@
 use crate::new::*;
-use crate::semanticinfo::*;
 use crate::character::*;
+use crate::value::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Token {
     pub token: i32,
-    pub semantic_info: SemanticInfo,
+    pub semantic_info: Value,
 }
 impl New for Token {
     fn new() -> Self {
         return Token {
             token: 0,
-            semantic_info: SemanticInfo::new(),
+            semantic_info: Value::new(),
         };
     }
 }

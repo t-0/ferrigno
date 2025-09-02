@@ -4,7 +4,7 @@ use crate::operator_::*;
 use crate::labeldescription::*;
 use crate::vm::instruction::*;
 use crate::lexical::constructorcontrol::*;
-use crate::v::*;
+use crate::expressionkind::*;
 use crate::labellist::*;
 use crate::tvalue::*;
 use crate::tm::*;
@@ -148,11 +148,11 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) {
 }
 pub unsafe extern "C" fn closelistfield(fs: *mut FunctionState, cc: *mut ConstructorControl) {
     unsafe {
-        if (*cc).expression_description.kind == V::VVOID {
+        if (*cc).expression_description.expression_kind == ExpressionKind::VVOID {
             return;
         }
         luak_exp2nextreg(fs, &mut (*cc).expression_description);
-        (*cc).expression_description.kind = V::VVOID;
+        (*cc).expression_description.expression_kind = ExpressionKind::VVOID;
         if (*cc).to_store == 50 as i32 {
             luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
             (*cc).na += (*cc).to_store;
@@ -165,13 +165,13 @@ pub unsafe extern "C" fn lastlistfield(fs: *mut FunctionState, cc: *mut Construc
         if (*cc).to_store == 0 {
             return;
         }
-        if (*cc).expression_description.kind as u32 == V::VCALL as u32 || (*cc).expression_description.kind as u32 == V::VVARARG as u32 {
+        if (*cc).expression_description.expression_kind as u32 == ExpressionKind::VCALL as u32 || (*cc).expression_description.expression_kind as u32 == ExpressionKind::VVARARG as u32 {
             luak_setreturns(fs, &mut (*cc).expression_description, -1);
             luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, -1);
             (*cc).na -= 1;
             (*cc).na;
         } else {
-            if (*cc).expression_description.kind != V::VVOID {
+            if (*cc).expression_description.expression_kind != ExpressionKind::VVOID {
                 luak_exp2nextreg(fs, &mut (*cc).expression_description);
             }
             luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn init_var(
     unsafe {
         (*e).t = -1;
         (*e).f = (*e).t;
-        (*e).kind = V::VLOCAL;
+        (*e).expression_kind = ExpressionKind::VLOCAL;
         (*e).value.variable.value_index = vidx as u16;
         (*e).value.variable.register_index = (*getlocalvardesc(fs, vidx)).content.ridx;
     }
@@ -343,7 +343,7 @@ pub unsafe extern "C" fn newupvalue(
     unsafe {
         let up: *mut UpValueDescription = allocupvalue(fs);
         let previous: *mut FunctionState = (*fs).previous;
-        if (*v).kind as u32 == V::VLOCAL as u32 {
+        if (*v).expression_kind as u32 == ExpressionKind::VLOCAL as u32 {
             (*up).is_in_stack = true;
             (*up).index = (*v).value.variable.register_index;
             (*up).kind = (*getlocalvardesc(previous, (*v).value.variable.value_index as i32)).content.kind;
@@ -376,11 +376,11 @@ pub unsafe extern "C" fn searchvar(
             let vd: *mut VariableDescription = getlocalvardesc(fs, i);
             if n == (*vd).content.name {
                 if (*vd).content.kind as i32 == 3 {
-                    init_exp(var, V::VCONST, (*fs).first_local + i);
+                    init_exp(var, ExpressionKind::VCONST, (*fs).first_local + i);
                 } else {
                     init_var(fs, var, i);
                 }
-                return (*var).kind as i32;
+                return (*var).expression_kind as i32;
             }
             i -= 1;
         }
@@ -413,26 +413,26 @@ pub unsafe extern "C" fn singlevaraux(
 ) {
     unsafe {
         if fs.is_null() {
-            init_exp(var, V::VVOID, 0);
+            init_exp(var, ExpressionKind::VVOID, 0);
         } else {
             let v: i32 = searchvar(fs, n, var);
             if v >= 0 {
-                if v == V::VLOCAL as i32 && base == 0 {
+                if v == ExpressionKind::VLOCAL as i32 && base == 0 {
                     markupval(fs, (*var).value.variable.value_index as i32);
                 }
             } else {
                 let mut index: i32 = searchupvalue(fs, n);
                 if index < 0 {
                     singlevaraux((*fs).previous, n, var, 0);
-                    if (*var).kind == V::VLOCAL
-                        || (*var).kind == V::VUPVAL
+                    if (*var).expression_kind == ExpressionKind::VLOCAL
+                        || (*var).expression_kind == ExpressionKind::VUPVAL
                     {
                         index = newupvalue(fs, n, var);
                     } else {
                         return;
                     }
                 }
-                init_exp(var, V::VUPVAL, index);
+                init_exp(var, ExpressionKind::VUPVAL, index);
             }
         };
     }
@@ -855,7 +855,7 @@ pub unsafe extern "C" fn freeregs(fs: *mut FunctionState, r1: i32, r2: i32) {
 }
 pub unsafe extern "C" fn freeexp(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).kind as u32 == V::VNONRELOC as u32 {
+        if (*e).expression_kind as u32 == ExpressionKind::VNONRELOC as u32 {
             freereg(fs, (*e).value.info);
         }
     }
@@ -866,12 +866,12 @@ pub unsafe extern "C" fn freeexps(
     e2: *mut ExpressionDescription,
 ) {
     unsafe {
-        let r1: i32 = if (*e1).kind as u32 == V::VNONRELOC as u32 {
+        let r1: i32 = if (*e1).expression_kind as u32 == ExpressionKind::VNONRELOC as u32 {
             (*e1).value.info
         } else {
             -1
         };
-        let r2: i32 = if (*e2).kind as u32 == V::VNONRELOC as u32 {
+        let r2: i32 = if (*e2).expression_kind as u32 == ExpressionKind::VNONRELOC as u32 {
             (*e2).value.info
         } else {
             -1
@@ -1083,7 +1083,7 @@ pub unsafe extern "C" fn luak_setreturns(
     unsafe {
         let program_counter: *mut u32 =
             &mut *((*(*fs).prototype).code).offset((*e).value.info as isize) as *mut u32;
-        if (*e).kind as u32 == V::VCALL as u32 {
+        if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
             *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
                 | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
                     & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
@@ -1100,40 +1100,40 @@ pub unsafe extern "C" fn luak_setreturns(
 pub unsafe extern "C" fn str_to_k(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
         (*e).value.info = string_k(fs, (*e).value.tstring);
-        (*e).kind = V::VK;
+        (*e).expression_kind = ExpressionKind::VK;
     }
 }
 pub unsafe extern "C" fn luak_setoneret(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).kind as u32 == V::VCALL as u32 {
-            (*e).kind = V::VNONRELOC;
+        if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
+            (*e).expression_kind = ExpressionKind::VNONRELOC;
             (*e).value.info = (*((*(*fs).prototype).code).offset((*e).value.info as isize) >> 0 + 7
                 & !(!(0u32) << 8) << 0) as i32;
-        } else if (*e).kind as u32 == V::VVARARG as u32 {
+        } else if (*e).expression_kind as u32 == ExpressionKind::VVARARG as u32 {
             *((*(*fs).prototype).code).offset((*e).value.info as isize) = *((*(*fs).prototype).code)
                 .offset((*e).value.info as isize)
                 & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
                 | (2 as u32) << 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
-            (*e).kind = V::VRELOC;
+            (*e).expression_kind = ExpressionKind::VRELOC;
         }
     }
 }
 pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        match (*e).kind {
-            V::VCONST => {
+        match (*e).expression_kind {
+            ExpressionKind::VCONST => {
                 const2exp(const2val(fs, e), e);
             }
-            V::VLOCAL => {
+            ExpressionKind::VLOCAL => {
                 let temp: i32 = (*e).value.variable.register_index as i32;
                 (*e).value.info = temp;
-                (*e).kind = V::VNONRELOC;
+                (*e).expression_kind = ExpressionKind::VNONRELOC;
             }
-            V::VUPVAL => {
+            ExpressionKind::VUPVAL => {
                 (*e).value.info = luak_code_abck(fs, OP_GETUPVAL, 0, (*e).value.info, 0, 0);
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
-            V::VINDEXUP => {
+            ExpressionKind::VINDEXUP => {
                 (*e).value.info = luak_code_abck(
                     fs,
                     OP_GETTABUP,
@@ -1142,9 +1142,9 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                     (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
-            V::VINDEXI => {
+            ExpressionKind::VINDEXI => {
                 freereg(fs, (*e).value.index.reference_tag as i32);
                 (*e).value.info = luak_code_abck(
                     fs,
@@ -1154,9 +1154,9 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                     (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
-            V::VINDEXSTR => {
+            ExpressionKind::VINDEXSTR => {
                 freereg(fs, (*e).value.index.reference_tag as i32);
                 (*e).value.info = luak_code_abck(
                     fs,
@@ -1166,9 +1166,9 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                     (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
-            V::VINDEXED => {
+            ExpressionKind::VINDEXED => {
                 freeregs(fs, (*e).value.index.reference_tag as i32, (*e).value.index.reference_index as i32);
                 (*e).value.info = luak_code_abck(
                     fs,
@@ -1178,9 +1178,9 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                     (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
-            V::VVARARG | V::VCALL => {
+            ExpressionKind::VVARARG | ExpressionKind::VCALL => {
                 luak_setoneret(fs, e);
             }
             _ => {}
@@ -1195,7 +1195,7 @@ pub unsafe extern "C" fn discharge2reg(
     unsafe {
         luak_dischargevars(fs, e);
         let current_block_14: u64;
-        match (*e).kind as u32 {
+        match (*e).expression_kind as u32 {
             1 => {
                 luak_nil(fs, reg, 1);
                 current_block_14 = 13242334135786603907;
@@ -1245,12 +1245,12 @@ pub unsafe extern "C" fn discharge2reg(
             _ => {}
         }
         (*e).value.info = reg;
-        (*e).kind = V::VNONRELOC;
+        (*e).expression_kind = ExpressionKind::VNONRELOC;
     }
 }
 pub unsafe extern "C" fn discharge2anyreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).kind as u32 != V::VNONRELOC as u32 {
+        if (*e).expression_kind as u32 != ExpressionKind::VNONRELOC as u32 {
             luak_reserveregs(fs, 1);
             discharge2reg(fs, e, (*fs).freereg as i32 - 1);
         }
@@ -1277,14 +1277,14 @@ pub unsafe extern "C" fn need_value(fs: *mut FunctionState, mut list: i32) -> i3
 pub unsafe extern "C" fn exp2reg(fs: *mut FunctionState, e: *mut ExpressionDescription, reg: i32) {
     unsafe {
         discharge2reg(fs, e, reg);
-        if (*e).kind as u32 == V::VJMP as u32 {
+        if (*e).expression_kind as u32 == ExpressionKind::VJMP as u32 {
             luak_concat(fs, &mut (*e).t, (*e).value.info);
         }
         if (*e).t != (*e).f {
             let mut p_f: i32 = -1;
             let mut p_t: i32 = -1;
             if need_value(fs, (*e).t) != 0 || need_value(fs, (*e).f) != 0 {
-                let fj: i32 = if (*e).kind as u32 == V::VJMP as u32 {
+                let fj: i32 = if (*e).expression_kind as u32 == ExpressionKind::VJMP as u32 {
                     -1
                 } else {
                     luak_jump(fs)
@@ -1300,7 +1300,7 @@ pub unsafe extern "C" fn exp2reg(fs: *mut FunctionState, e: *mut ExpressionDescr
         (*e).t = -1;
         (*e).f = (*e).t;
         (*e).value.info = reg;
-        (*e).kind = V::VNONRELOC;
+        (*e).expression_kind = ExpressionKind::VNONRELOC;
     }
 }
 pub unsafe extern "C" fn luak_exp2nextreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
@@ -1317,7 +1317,7 @@ pub unsafe extern "C" fn luak_exp2anyreg(
 ) -> i32 {
     unsafe {
         luak_dischargevars(fs, e);
-        if (*e).kind as u32 == V::VNONRELOC as u32 {
+        if (*e).expression_kind as u32 == ExpressionKind::VNONRELOC as u32 {
             if !((*e).t != (*e).f) {
                 return (*e).value.info;
             }
@@ -1332,14 +1332,14 @@ pub unsafe extern "C" fn luak_exp2anyreg(
 }
 pub unsafe extern "C" fn luak_exp2anyregup(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).kind as u32 != V::VUPVAL as u32 || (*e).t != (*e).f {
+        if (*e).expression_kind as u32 != ExpressionKind::VUPVAL as u32 || (*e).t != (*e).f {
             luak_exp2anyreg(fs, e);
         }
     }
 }
 pub unsafe extern "C" fn luak_exp2val(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).kind as u32 == V::VJMP as u32 || (*e).t != (*e).f {
+        if (*e).expression_kind as u32 == ExpressionKind::VJMP as u32 || (*e).t != (*e).f {
             luak_exp2anyreg(fs, e);
         } else {
             luak_dischargevars(fs, e);
@@ -1350,7 +1350,7 @@ pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDe
     unsafe {
         if !((*e).t != (*e).f) {
             let info: i32;
-            match (*e).kind as u32 {
+            match (*e).expression_kind as u32 {
                 2 => {
                     info = bool_true(fs);
                 }
@@ -1375,7 +1375,7 @@ pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDe
                 _ => return 0,
             }
             if info <= (1 << 8) - 1 {
-                (*e).kind = V::VK;
+                (*e).expression_kind = ExpressionKind::VK;
                 (*e).value.info = info;
                 return 1;
             }
@@ -1411,17 +1411,17 @@ pub unsafe extern "C" fn luak_storevar(
     ex: *mut ExpressionDescription,
 ) {
     unsafe {
-        match (*var).kind {
-            V::VLOCAL => {
+        match (*var).expression_kind {
+            ExpressionKind::VLOCAL => {
                 freeexp(fs, ex);
                 exp2reg(fs, ex, (*var).value.variable.register_index as i32);
                 return;
             }
-            V::VUPVAL => {
+            ExpressionKind::VUPVAL => {
                 let e: i32 = luak_exp2anyreg(fs, ex);
                 luak_code_abck(fs, OP_SETUPVAL, e, (*var).value.info, 0, 0);
             }
-            V::VINDEXUP => {
+            ExpressionKind::VINDEXUP => {
                 codeabrk(
                     fs,
                     OP_SETTABUP,
@@ -1430,7 +1430,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            V::VINDEXI => {
+            ExpressionKind::VINDEXI => {
                 codeabrk(
                     fs,
                     OP_SETI,
@@ -1439,7 +1439,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            V::VINDEXSTR => {
+            ExpressionKind::VINDEXSTR => {
                 codeabrk(
                     fs,
                     OP_SETFIELD,
@@ -1448,7 +1448,7 @@ pub unsafe extern "C" fn luak_storevar(
                     ex,
                 );
             }
-            V::VINDEXED => {
+            ExpressionKind::VINDEXED => {
                 codeabrk(
                     fs,
                     OP_SETTABLE,
@@ -1472,7 +1472,7 @@ pub unsafe extern "C" fn luak_self(
         let ereg: i32 = (*e).value.info;
         freeexp(fs, e);
         (*e).value.info = (*fs).freereg as i32;
-        (*e).kind = V::VNONRELOC;
+        (*e).expression_kind = ExpressionKind::VNONRELOC;
         luak_reserveregs(fs, 2);
         codeabrk(fs, OP_SELF, (*e).value.info, ereg, key);
         freeexp(fs, key);
@@ -1493,7 +1493,7 @@ pub unsafe extern "C" fn jumponcond(
     cond_0: i32,
 ) -> i32 {
     unsafe {
-        if (*e).kind as u32 == V::VRELOC as u32 {
+        if (*e).expression_kind as u32 == ExpressionKind::VRELOC as u32 {
             let ie: u32 = *((*(*fs).prototype).code).offset((*e).value.info as isize);
             if (ie >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_NOT as u32 {
                 removelastinstruction(fs);
@@ -1516,7 +1516,7 @@ pub unsafe extern "C" fn luak_goiftrue(fs: *mut FunctionState, e: *mut Expressio
     unsafe {
         let program_counter: i32;
         luak_dischargevars(fs, e);
-        match (*e).kind as u32 {
+        match (*e).expression_kind as u32 {
             16 => {
                 negatecondition(fs, e);
                 program_counter = (*e).value.info;
@@ -1537,7 +1537,7 @@ pub unsafe extern "C" fn luak_goiffalse(fs: *mut FunctionState, e: *mut Expressi
     unsafe {
         let program_counter: i32;
         luak_dischargevars(fs, e);
-        match (*e).kind as u32 {
+        match (*e).expression_kind as u32 {
             16 => {
                 program_counter = (*e).value.info;
             }
@@ -1555,12 +1555,12 @@ pub unsafe extern "C" fn luak_goiffalse(fs: *mut FunctionState, e: *mut Expressi
 }
 pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        match (*e).kind as u32 {
+        match (*e).expression_kind as u32 {
             1 | 3 => {
-                (*e).kind = V::VTRUE;
+                (*e).expression_kind = ExpressionKind::VTRUE;
             }
             4 | 5 | 6 | 7 | 2 => {
-                (*e).kind = V::VFALSE;
+                (*e).expression_kind = ExpressionKind::VFALSE;
             }
             16 => {
                 negatecondition(fs, e);
@@ -1569,7 +1569,7 @@ pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescr
                 discharge2anyreg(fs, e);
                 freeexp(fs, e);
                 (*e).value.info = luak_code_abck(fs, OP_NOT, 0, (*e).value.info, 0, 0);
-                (*e).kind = V::VRELOC;
+                (*e).expression_kind = ExpressionKind::VRELOC;
             }
             _ => {}
         }
@@ -1582,7 +1582,7 @@ pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescr
 }
 pub unsafe extern "C" fn is_k_string(fs: *mut FunctionState, e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return (*e).kind == V::VK
+        return (*e).expression_kind == ExpressionKind::VK
             && !((*e).t != (*e).f)
             && (*e).value.info <= ((1 << 8) - 1)
             && (*((*(*fs).prototype).k).offset((*e).value.info as isize)).get_tag_variant()
@@ -1622,14 +1622,14 @@ pub unsafe extern "C" fn constfolding(
         }
         luao_rawarith((*(*fs).lexical_state).state, op, &mut v1, &mut v2, &mut res);
         if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            (*e1).kind = V::VKINT;
+            (*e1).expression_kind = ExpressionKind::VKINT;
             (*e1).value.integer = res.value.integer;
         } else {
             let n: f64 = res.value.number;
             if !(n == n) || n == 0.0 {
                 return 0;
             }
-            (*e1).kind = V::VKFLT;
+            (*e1).expression_kind = ExpressionKind::VKFLT;
             (*e1).value.number = n;
         }
         return 1;
@@ -1645,7 +1645,7 @@ pub unsafe extern "C" fn codeunexpval(
         let r: i32 = luak_exp2anyreg(fs, e);
         freeexp(fs, e);
         (*e).value.info = luak_code_abck(fs, op, 0, r, 0, 0);
-        (*e).kind = V::VRELOC;
+        (*e).expression_kind = ExpressionKind::VRELOC;
         luak_fixline(fs, line);
     }
 }
@@ -1665,7 +1665,7 @@ pub unsafe extern "C" fn finishbinexpval(
         let program_counter: i32 = luak_code_abck(fs, op, 0, v1, v2, 0);
         freeexps(fs, e1, e2);
         (*e1).value.info = program_counter;
-        (*e1).kind = V::VRELOC;
+        (*e1).expression_kind = ExpressionKind::VRELOC;
         luak_fixline(fs, line);
         luak_code_abck(fs, mmop, v1, v2, event as i32, flip);
         luak_fixline(fs, line);
@@ -1811,11 +1811,11 @@ pub unsafe extern "C" fn codebitwise(
 ) {
     unsafe {
         let mut flip: i32 = 0;
-        if (*e1).kind == V::VKINT {
+        if (*e1).expression_kind == ExpressionKind::VKINT {
             swapexps(e1, e2);
             flip = 1;
         }
-        if (*e2).kind == V::VKINT && luak_exp2k(fs, e2) != 0 {
+        if (*e2).expression_kind == ExpressionKind::VKINT && luak_exp2k(fs, e2) != 0 {
             codebink(fs, opr, e1, e2, flip, line);
         } else {
             codebinnok(fs, opr, e1, e2, flip, line);
@@ -1849,7 +1849,7 @@ pub unsafe extern "C" fn codeorder(
         }
         freeexps(fs, e1, e2);
         (*e1).value.info = condjump(fs, op, r1, r2, is_float as i32, 1);
-        (*e1).kind = V::VJMP;
+        (*e1).expression_kind = ExpressionKind::VJMP;
     }
 }
 pub unsafe extern "C" fn codeeq(
@@ -1864,7 +1864,7 @@ pub unsafe extern "C" fn codeeq(
         let mut im: i32 = 0;
         let mut is_float: bool = false;
         let op: u32;
-        if (*e1).kind as u32 != V::VNONRELOC as u32 {
+        if (*e1).expression_kind as u32 != ExpressionKind::VNONRELOC as u32 {
             swapexps(e1, e2);
         }
         r1 = luak_exp2anyreg(fs, e1);
@@ -1887,7 +1887,7 @@ pub unsafe extern "C" fn codeeq(
             is_float as i32,
             (opr as u32 == OPR_EQ as u32) as i32,
         );
-        (*e1).kind = V::VJMP;
+        (*e1).expression_kind = ExpressionKind::VJMP;
     }
 }
 pub unsafe extern "C" fn luak_prefix(
@@ -1899,7 +1899,7 @@ pub unsafe extern "C" fn luak_prefix(
     unsafe {
         pub const EF: ExpressionDescription = {
             let init = ExpressionDescription {
-                kind: V::VKINT,
+                expression_kind: ExpressionKind::VKINT,
                 value: Value { integer: 0 },
                 t: -1,
                 f: -1,
