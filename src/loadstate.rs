@@ -222,12 +222,12 @@ pub unsafe extern "C" fn load_constants(load_state: *mut LoadState, f: *mut Prot
                 }
                 19 => {
                     let io: *mut TValue = o;
-                    (*io).value.n = load_number(load_state);
+                    (*io).value.number = load_number(load_state);
                     (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                 }
                 3 => {
                     let io_0: *mut TValue = o;
-                    (*io_0).value.i = load_integer(load_state);
+                    (*io_0).value.integer = load_integer(load_state);
                     (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 }
                 4 | 20 => {

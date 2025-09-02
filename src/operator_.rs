@@ -37,9 +37,9 @@ pub unsafe extern "C" fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i
             }
             5 | 6 | 3 => {
                 return ((if (*v2).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-                    (*v2).value.i as f64
+                    (*v2).value.integer as f64
                 } else {
-                    (*v2).value.n
+                    (*v2).value.number
                 }) != 0.0) as i32;
             }
             _ => return 1,

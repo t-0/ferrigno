@@ -41,10 +41,10 @@ pub unsafe extern "C" fn equal_key(k1: *const TValue, node: *const Node, deadok:
         } else {
             match get_tag_variant((*node).key.tag) {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
-                TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.i == (*node).key.value.i,
-                TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.n == (*node).key.value.n,
-                TAG_VARIANT_POINTER => return (*k1).value.p == (*node).key.value.p,
-                TAG_VARIANT_CLOSURE_CFUNCTION => return (*k1).value.f == (*node).key.value.f,
+                TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.integer == (*node).key.value.integer,
+                TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.number == (*node).key.value.number,
+                TAG_VARIANT_POINTER => return (*k1).value.pointer == (*node).key.value.pointer,
+                TAG_VARIANT_CLOSURE_CFUNCTION => return (*k1).value.function == (*node).key.value.function,
                 TAG_VARIANT_STRING_LONG => {
                     luas_eqlngstr(
                         &mut (*((*k1).value.object as *mut TString)),

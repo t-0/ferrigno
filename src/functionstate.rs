@@ -7,7 +7,6 @@ use crate::lexical::constructorcontrol::*;
 use crate::v::*;
 use crate::labellist::*;
 use crate::tvalue::*;
-use crate::rawvalue::*;
 use crate::tm::*;
 use crate::state::*;
 use crate::lexical::operatorunary::*;
@@ -269,8 +268,8 @@ pub unsafe extern "C" fn init_var(
         (*e).t = -1;
         (*e).f = (*e).t;
         (*e).k = V::VLOCAL;
-        (*e).u.var.vidx = vidx as u16;
-        (*e).u.var.ridx = (*getlocalvardesc(fs, vidx)).vd.ridx;
+        (*e).u.variable.value_index = vidx as u16;
+        (*e).u.variable.register_index = (*getlocalvardesc(fs, vidx)).vd.ridx;
     }
 }
 pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) {
@@ -346,8 +345,8 @@ pub unsafe extern "C" fn newupvalue(
         let previous: *mut FunctionState = (*fs).previous;
         if (*v).k as u32 == V::VLOCAL as u32 {
             (*up).is_in_stack = true;
-            (*up).index = (*v).u.var.ridx;
-            (*up).kind = (*getlocalvardesc(previous, (*v).u.var.vidx as i32)).vd.kind;
+            (*up).index = (*v).u.variable.register_index;
+            (*up).kind = (*getlocalvardesc(previous, (*v).u.variable.value_index as i32)).vd.kind;
         } else {
             (*up).is_in_stack = false;
             (*up).index = (*v).u.info as u8;
@@ -419,7 +418,7 @@ pub unsafe extern "C" fn singlevaraux(
             let v: i32 = searchvar(fs, n, var);
             if v >= 0 {
                 if v == V::VLOCAL as i32 && base == 0 {
-                    markupval(fs, (*var).u.var.vidx as i32);
+                    markupval(fs, (*var).u.variable.value_index as i32);
                 }
             } else {
                 let mut index: i32 = searchupvalue(fs, n);
@@ -893,7 +892,7 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
         let index: *const TValue = luah_get((*(*fs).lexical_state).h, key);
         let mut k: i32;
         if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            k = (*index).value.i as i32;
+            k = (*index).value.integer as i32;
             if k < (*fs).nk
                 && (*((*f).k).offset(k as isize)).get_tag_variant() == (*v).get_tag_variant()
                 && luav_equalobj(std::ptr::null_mut(), &mut *((*f).k).offset(k as isize), v)
@@ -904,7 +903,7 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
         let mut old_size: i32 = (*f).size_k;
         k = (*fs).nk;
         let io: *mut TValue = &mut value;
-        (*io).value.i = k as i64;
+        (*io).value.integer = k as i64;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(state, (*(*fs).lexical_state).h, key, index, &mut value);
         (*f).k = luam_growaux_(
@@ -974,7 +973,7 @@ pub unsafe extern "C" fn luak_int_k(fs: *mut FunctionState, n: i64) -> i32 {
             tag: 0,
         };
         let io: *mut TValue = &mut o;
-        (*io).value.i = n;
+        (*io).value.integer = n;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         return addk(fs, &mut o, &mut o);
     }
@@ -989,7 +988,7 @@ pub unsafe extern "C" fn luak_number_k(fs: *mut FunctionState, r: f64) -> i32 {
         };
         let mut ik: i64 = 0;
         let io: *mut TValue = &mut o;
-        (*io).value.n = r;
+        (*io).value.number = r;
         (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
         if !luav_flttointeger(r, &mut ik, F2I::Equal) {
             return addk(fs, &mut o, &mut o);
@@ -1004,7 +1003,7 @@ pub unsafe extern "C" fn luak_number_k(fs: *mut FunctionState, r: f64) -> i32 {
                 tag: 0,
             };
             let io_0: *mut TValue = &mut kv;
-            (*io_0).value.n = k;
+            (*io_0).value.number = k;
             (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             return addk(fs, &mut kv, &mut o);
         };
@@ -1100,7 +1099,7 @@ pub unsafe extern "C" fn luak_setreturns(
 }
 pub unsafe extern "C" fn str_to_k(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        (*e).u.info = string_k(fs, (*e).u.strval);
+        (*e).u.info = string_k(fs, (*e).u.tstring);
         (*e).k = V::VK;
     }
 }
@@ -1126,7 +1125,7 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                 const2exp(const2val(fs, e), e);
             }
             V::VLOCAL => {
-                let temp: i32 = (*e).u.var.ridx as i32;
+                let temp: i32 = (*e).u.variable.register_index as i32;
                 (*e).u.info = temp;
                 (*e).k = V::VNONRELOC;
             }
@@ -1139,44 +1138,44 @@ pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut Expr
                     fs,
                     OP_GETTABUP,
                     0,
-                    (*e).u.ind.t as i32,
-                    (*e).u.ind.index as i32,
+                    (*e).u.index.reference_tag as i32,
+                    (*e).u.index.reference_index as i32,
                     0,
                 );
                 (*e).k = V::VRELOC;
             }
             V::VINDEXI => {
-                freereg(fs, (*e).u.ind.t as i32);
+                freereg(fs, (*e).u.index.reference_tag as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
                     OP_GETI,
                     0,
-                    (*e).u.ind.t as i32,
-                    (*e).u.ind.index as i32,
+                    (*e).u.index.reference_tag as i32,
+                    (*e).u.index.reference_index as i32,
                     0,
                 );
                 (*e).k = V::VRELOC;
             }
             V::VINDEXSTR => {
-                freereg(fs, (*e).u.ind.t as i32);
+                freereg(fs, (*e).u.index.reference_tag as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
                     OP_GETFIELD,
                     0,
-                    (*e).u.ind.t as i32,
-                    (*e).u.ind.index as i32,
+                    (*e).u.index.reference_tag as i32,
+                    (*e).u.index.reference_index as i32,
                     0,
                 );
                 (*e).k = V::VRELOC;
             }
             V::VINDEXED => {
-                freeregs(fs, (*e).u.ind.t as i32, (*e).u.ind.index as i32);
+                freeregs(fs, (*e).u.index.reference_tag as i32, (*e).u.index.reference_index as i32);
                 (*e).u.info = luak_code_abck(
                     fs,
                     OP_GETTABLE,
                     0,
-                    (*e).u.ind.t as i32,
-                    (*e).u.ind.index as i32,
+                    (*e).u.index.reference_tag as i32,
+                    (*e).u.index.reference_index as i32,
                     0,
                 );
                 (*e).k = V::VRELOC;
@@ -1217,11 +1216,11 @@ pub unsafe extern "C" fn discharge2reg(
                 current_block_14 = 6937071982253665452;
             }
             5 => {
-                luak_float(fs, reg, (*e).u.nval);
+                luak_float(fs, reg, (*e).u.number);
                 current_block_14 = 13242334135786603907;
             }
             6 => {
-                luak_int(fs, reg, (*e).u.ival);
+                luak_int(fs, reg, (*e).u.integer);
                 current_block_14 = 13242334135786603907;
             }
             17 => {
@@ -1362,13 +1361,13 @@ pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDe
                     info = nil_k(fs);
                 }
                 6 => {
-                    info = luak_int_k(fs, (*e).u.ival);
+                    info = luak_int_k(fs, (*e).u.integer);
                 }
                 5 => {
-                    info = luak_number_k(fs, (*e).u.nval);
+                    info = luak_number_k(fs, (*e).u.number);
                 }
                 7 => {
-                    info = string_k(fs, (*e).u.strval);
+                    info = string_k(fs, (*e).u.tstring);
                 }
                 4 => {
                     info = (*e).u.info;
@@ -1415,7 +1414,7 @@ pub unsafe extern "C" fn luak_storevar(
         match (*var).k {
             V::VLOCAL => {
                 freeexp(fs, ex);
-                exp2reg(fs, ex, (*var).u.var.ridx as i32);
+                exp2reg(fs, ex, (*var).u.variable.register_index as i32);
                 return;
             }
             V::VUPVAL => {
@@ -1426,8 +1425,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETTABUP,
-                    (*var).u.ind.t as i32,
-                    (*var).u.ind.index as i32,
+                    (*var).u.index.reference_tag as i32,
+                    (*var).u.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1435,8 +1434,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETI,
-                    (*var).u.ind.t as i32,
-                    (*var).u.ind.index as i32,
+                    (*var).u.index.reference_tag as i32,
+                    (*var).u.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1444,8 +1443,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETFIELD,
-                    (*var).u.ind.t as i32,
-                    (*var).u.ind.index as i32,
+                    (*var).u.index.reference_tag as i32,
+                    (*var).u.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1453,8 +1452,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETTABLE,
-                    (*var).u.ind.t as i32,
-                    (*var).u.ind.index as i32,
+                    (*var).u.index.reference_tag as i32,
+                    (*var).u.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1624,14 +1623,14 @@ pub unsafe extern "C" fn constfolding(
         luao_rawarith((*(*fs).lexical_state).state, op, &mut v1, &mut v2, &mut res);
         if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             (*e1).k = V::VKINT;
-            (*e1).u.ival = res.value.i;
+            (*e1).u.integer = res.value.integer;
         } else {
-            let n: f64 = res.value.n;
+            let n: f64 = res.value.number;
             if !(n == n) || n == 0.0 {
                 return 0;
             }
             (*e1).k = V::VKFLT;
-            (*e1).u.nval = n;
+            (*e1).u.number = n;
         }
         return 1;
     }
@@ -1695,7 +1694,7 @@ pub unsafe extern "C" fn codebini(
     event: u32,
 ) {
     unsafe {
-        let v2: i32 = (*e2).u.ival as i32 + ((1 << 8) - 1 >> 1);
+        let v2: i32 = (*e2).u.integer as i32 + ((1 << 8) - 1 >> 1);
         finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
     }
 }
@@ -1726,7 +1725,7 @@ pub unsafe extern "C" fn finishbinexpneg(
         if !is_k_int(e2) {
             return 0;
         } else {
-            let i2: i64 = (*e2).u.ival;
+            let i2: i64 = (*e2).u.integer;
             if !(fits_c(i2) && fits_c(-i2)) {
                 return 0;
             } else {
@@ -1901,7 +1900,7 @@ pub unsafe extern "C" fn luak_prefix(
         pub const EF: ExpressionDescription = {
             let init = ExpressionDescription {
                 k: V::VKINT,
-                u: RawValue { ival: 0 },
+                u: Value { integer: 0 },
                 t: -1,
                 f: -1,
             };

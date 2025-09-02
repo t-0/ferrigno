@@ -42,7 +42,6 @@ mod object;
 mod operator_;
 mod prototype;
 mod randomstate;
-mod rawvalue;
 mod registeredfunction;
 mod rn;
 mod semanticinfo;

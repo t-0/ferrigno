@@ -102,11 +102,11 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 {
             if e.is_null() {
                 return 0u64;
             } else {
-                (*o).value.n = n;
+                (*o).value.number = n;
                 (*o).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             }
         } else {
-            (*o).value.i = i;
+            (*o).value.integer = i;
             (*o).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         }
         return (e.offset_from(s) as i64 + 1) as u64;
@@ -120,14 +120,14 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 
                 buffer,
                 44,
                 b"%lld\0" as *const u8 as *const i8,
-                (*obj).value.i,
+                (*obj).value.integer,
             ) as u64;
         } else {
             length = snprintf(
                 buffer,
                 44,
                 b"%.14g\0" as *const u8 as *const i8,
-                (*obj).value.n,
+                (*obj).value.number,
             ) as u64;
             if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
                 as i32
@@ -220,13 +220,13 @@ pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool
             tag: 0,
         };
         if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            *n = (*obj).value.i as f64;
+            *n = (*obj).value.integer as f64;
             return true;
         } else if l_strton(obj, &mut v) != 0 {
             *n = if v.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-                v.value.i as f64
+                v.value.integer as f64
             } else {
-                v.value.n
+                v.value.number
             };
             return true;
         } else {
@@ -322,10 +322,10 @@ pub unsafe extern "C" fn luav_equalobj(
         }
         match (*t1).get_tag_variant() {
             TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return true,
-            TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.i == (*t2).value.i,
-            TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.n == (*t2).value.n,
-            TAG_VARIANT_POINTER => return (*t1).value.p == (*t2).value.p,
-            TAG_VARIANT_CLOSURE_CFUNCTION => return (*t1).value.f == (*t2).value.f,
+            TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.integer == (*t2).value.integer,
+            TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.number == (*t2).value.number,
+            TAG_VARIANT_POINTER => return (*t1).value.pointer == (*t2).value.pointer,
+            TAG_VARIANT_CLOSURE_CFUNCTION => return (*t1).value.function == (*t2).value.function,
             TAG_VARIANT_STRING_SHORT => {
                 return &mut (*((*t1).value.object as *mut TString)) as *mut TString
                     == &mut (*((*t2).value.object as *mut TString)) as *mut TString;
@@ -444,20 +444,20 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
                 };
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*ra).value;
-                    (*io).value.i = luah_getn(h) as i64;
+                    (*io).value.integer = luah_getn(h) as i64;
                     (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     return;
                 }
             }
             TAG_VARIANT_STRING_SHORT => {
                 let io_0: *mut TValue = &mut (*ra).value;
-                (*io_0).value.i = (*((*rb).value.object as *mut TString)).get_length() as i64;
+                (*io_0).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }
             TAG_VARIANT_STRING_LONG => {
                 let io_1: *mut TValue = &mut (*ra).value;
-                (*io_1).value.i = (*((*rb).value.object as *mut TString)).get_length() as i64;
+                (*io_1).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }

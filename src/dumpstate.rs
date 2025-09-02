@@ -148,10 +148,10 @@ impl DumpState {
                 self.dump_byte(tag);
                 match tag {
                     TAG_VARIANT_NUMERIC_NUMBER => {
-                        self.dump_number((*o).value.n);
+                        self.dump_number((*o).value.number);
                     }
                     TAG_VARIANT_NUMERIC_INTEGER => {
-                        self.dump_integer((*o).value.i);
+                        self.dump_integer((*o).value.integer);
                     }
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         self.dump_string(&mut (*((*o).value.object as *mut TString)));

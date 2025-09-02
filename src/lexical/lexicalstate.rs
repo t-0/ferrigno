@@ -25,7 +25,6 @@ use crate::lexical::blockcontrol::*;
 use crate::debugger::absolutelineinfo::*;
 use crate::tvalue::*;
 use crate::expressiondescription::*;
-use crate::rawvalue::*;
 use crate::lexical::constructorcontrol::*;
 use crate::upvaluedescription::*;
 use crate::localvariable::*;
@@ -475,7 +474,7 @@ pub unsafe extern "C" fn fieldsel(lexical_state: *mut LexicalState, v: *mut Expr
         let fs: *mut FunctionState = (*lexical_state).fs;
         let mut key: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -499,13 +498,13 @@ pub unsafe extern "C" fn recfield(lexical_state: *mut LexicalState, cc: *mut Con
         let reg: i32 = (*(*lexical_state).fs).freereg as i32;
         let mut key: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
         let mut value: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -567,7 +566,7 @@ pub unsafe extern "C" fn constructor(
         let mut cc: ConstructorControl = ConstructorControl {
             v: ExpressionDescription {
                 k: V::VVOID,
-                u: RawValue { ival: 0 },
+                u: Value { integer: 0 },
                 t: 0,
                 f: 0,
             },
@@ -695,7 +694,7 @@ pub unsafe extern "C" fn funcargs(lexical_state: *mut LexicalState, f: *mut Expr
         let fs: *mut FunctionState = (*lexical_state).fs;
         let mut args: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -790,7 +789,7 @@ pub unsafe extern "C" fn suffixedexp(
                 91 => {
                     let mut key: ExpressionDescription = ExpressionDescription {
                         k: V::VVOID,
-                        u: RawValue { ival: 0 },
+                        u: Value { integer: 0 },
                         t: 0,
                         f: 0,
                     };
@@ -801,7 +800,7 @@ pub unsafe extern "C" fn suffixedexp(
                 58 => {
                     let mut key_0: ExpressionDescription = ExpressionDescription {
                         k: V::VVOID,
-                        u: RawValue { ival: 0 },
+                        u: Value { integer: 0 },
                         t: 0,
                         f: 0,
                     };
@@ -827,11 +826,11 @@ pub unsafe extern "C" fn simpleexp(
         match (*lexical_state).t.token {
             TK_FLT => {
                 init_exp(v, V::VKFLT, 0);
-                (*v).u.nval = (*lexical_state).t.semantic_info.r;
+                (*v).u.number = (*lexical_state).t.semantic_info.r;
             }
             TK_INT => {
                 init_exp(v, V::VKINT, 0);
-                (*v).u.ival = (*lexical_state).t.semantic_info.i;
+                (*v).u.integer = (*lexical_state).t.semantic_info.i;
             }
             TK_STRING => {
                 codestring(v, (*lexical_state).t.semantic_info.ts);
@@ -1044,7 +1043,7 @@ pub unsafe extern "C" fn check_readonly(
                 .name;
             }
             9 => {
-                let vardesc: *mut VariableDescription = getlocalvardesc(fs, (*e).u.var.vidx as i32);
+                let vardesc: *mut VariableDescription = getlocalvardesc(fs, (*e).u.variable.value_index as i32);
                 if (*vardesc).vd.kind as i32 != 0 {
                     variable_name = (*vardesc).vd.name;
                 }
@@ -1098,7 +1097,7 @@ pub unsafe extern "C" fn singlevar(
         if (*var).k as u32 == V::VVOID as u32 {
             let mut key: ExpressionDescription = ExpressionDescription {
                 k: V::VVOID,
-                u: RawValue { ival: 0 },
+                u: Value { integer: 0 },
                 t: 0,
                 f: 0,
             };
@@ -1211,7 +1210,7 @@ pub unsafe extern "C" fn subexpr(
         while op as u32 != OPR_NOBINOPR as u32 && PRIORITY[op as usize].left as i32 > limit {
             let mut v2: ExpressionDescription = ExpressionDescription {
                 k: V::VVOID,
-                u: RawValue { ival: 0 },
+                u: Value { integer: 0 },
                 t: 0,
                 f: 0,
             };
@@ -1252,25 +1251,25 @@ pub unsafe extern "C" fn check_conflict(
             {
                 if (*lh).v.k as u32 == V::VINDEXUP as u32 {
                     if (*v).k as u32 == V::VUPVAL as u32
-                        && (*lh).v.u.ind.t as i32 == (*v).u.info
+                        && (*lh).v.u.index.reference_tag as i32 == (*v).u.info
                     {
                         conflict = 1;
                         (*lh).v.k = V::VINDEXSTR;
-                        (*lh).v.u.ind.t = extra as u8;
+                        (*lh).v.u.index.reference_tag = extra as u8;
                     }
                 } else {
                     if (*v).k as u32 == V::VLOCAL as u32
-                        && (*lh).v.u.ind.t as i32 == (*v).u.var.ridx as i32
+                        && (*lh).v.u.index.reference_tag as i32 == (*v).u.variable.register_index as i32
                     {
                         conflict = 1;
-                        (*lh).v.u.ind.t = extra as u8;
+                        (*lh).v.u.index.reference_tag = extra as u8;
                     }
                     if (*lh).v.k as u32 == V::VINDEXED as u32
                         && (*v).k as u32 == V::VLOCAL as u32
-                        && (*lh).v.u.ind.index as i32 == (*v).u.var.ridx as i32
+                        && (*lh).v.u.index.reference_index as i32 == (*v).u.variable.register_index as i32
                     {
                         conflict = 1;
-                        (*lh).v.u.ind.index = extra as i16;
+                        (*lh).v.u.index.reference_index = extra as i16;
                     }
                 }
             }
@@ -1278,7 +1277,7 @@ pub unsafe extern "C" fn check_conflict(
         }
         if conflict != 0 {
             if (*v).k == V::VLOCAL {
-                luak_code_abck(fs, OP_MOVE, extra, (*v).u.var.ridx as i32, 0, 0);
+                luak_code_abck(fs, OP_MOVE, extra, (*v).u.variable.register_index as i32, 0, 0);
             } else {
                 luak_code_abck(fs, OP_GETUPVAL, extra, (*v).u.info, 0, 0);
             }
@@ -1294,7 +1293,7 @@ pub unsafe extern "C" fn restassign(
     unsafe {
         let mut e: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1309,7 +1308,7 @@ pub unsafe extern "C" fn restassign(
                 previous: std::ptr::null_mut(),
                 v: ExpressionDescription {
                     k: V::VVOID,
-                    u: RawValue { ival: 0 },
+                    u: Value { integer: 0 },
                     t: 0,
                     f: 0,
                 },
@@ -1345,7 +1344,7 @@ pub unsafe extern "C" fn cond(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1475,7 +1474,7 @@ pub unsafe extern "C" fn exp1(lexical_state: *mut LexicalState) {
     unsafe {
         let mut e: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1570,7 +1569,7 @@ pub unsafe extern "C" fn forlist(lexical_state: *mut LexicalState, indexname: *m
         let fs: *mut FunctionState = (*lexical_state).fs;
         let mut e: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1661,7 +1660,7 @@ pub unsafe extern "C" fn test_then_block(lexical_state: *mut LexicalState, escap
         let fs: *mut FunctionState = (*lexical_state).fs;
         let mut v: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1727,7 +1726,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
     unsafe {
         let mut b: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1773,7 +1772,7 @@ pub unsafe extern "C" fn localstat(lexical_state: *mut LexicalState) {
         let nexps: i32;
         let mut e: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1839,13 +1838,13 @@ pub unsafe extern "C" fn funcstat(lexical_state: *mut LexicalState, line: i32) {
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
         let mut b: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -1864,7 +1863,7 @@ pub unsafe extern "C" fn exprstat(lexical_state: *mut LexicalState) {
             previous: std::ptr::null_mut(),
             v: ExpressionDescription {
                 k: V::VVOID,
-                u: RawValue { ival: 0 },
+                u: Value { integer: 0 },
                 t: 0,
                 f: 0,
             },
@@ -1888,7 +1887,7 @@ pub unsafe extern "C" fn retstat(lexical_state: *mut LexicalState) {
         let fs: *mut FunctionState = (*lexical_state).fs;
         let mut e: ExpressionDescription = ExpressionDescription {
             k: V::VVOID,
-            u: RawValue { ival: 0 },
+            u: Value { integer: 0 },
             t: 0,
             f: 0,
         };
@@ -2260,10 +2259,10 @@ pub unsafe extern "C" fn read_numeral(
             );
         }
         if obj.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            (*semantic_info).i = obj.value.i;
+            (*semantic_info).i = obj.value.integer;
             return TK_INT as i32;
         } else {
-            (*semantic_info).r = obj.value.n;
+            (*semantic_info).r = obj.value.number;
             return TK_FLT as i32;
         };
     }

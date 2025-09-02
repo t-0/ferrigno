@@ -139,7 +139,7 @@ impl User {
                             }) as isize,
                         ) as *mut libc::c_void;
                 }
-                TAG_VARIANT_POINTER => return (*o).value.p,
+                TAG_VARIANT_POINTER => return (*o).value.pointer,
                 _ => return std::ptr::null_mut(),
             };
         }
@@ -149,7 +149,7 @@ impl User {
             let o: *const TValue = (*state).index2value(index);
             match (*o).get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return ::core::mem::transmute::<CFunction, u64>((*o).value.f) as *mut libc::c_void;
+                    return ::core::mem::transmute::<CFunction, u64>((*o).value.function) as *mut libc::c_void;
                 }
                 TAG_VARIANT_USER | TAG_VARIANT_POINTER => return User::touserdata(o),
                 _ => {

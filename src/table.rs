@@ -383,11 +383,11 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
     unsafe {
         match (*key).get_tag_variant() {
             TAG_VARIANT_NUMERIC_INTEGER => {
-                let i: i64 = (*key).value.i;
+                let i: i64 = (*key).value.integer;
                 return hashint(t, i);
             }
             TAG_VARIANT_NUMERIC_NUMBER => {
-                let n: f64 = (*key).value.n;
+                let n: f64 = (*key).value.number;
                 return &mut *((*t).node).offset(
                     ((l_hashfloat as unsafe extern "C" fn(f64) -> i32)(n)
                         % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize,
@@ -416,7 +416,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                     as *mut Node;
             }
             TAG_VARIANT_POINTER => {
-                let p: *mut libc::c_void = (*key).value.p;
+                let p: *mut libc::c_void = (*key).value.pointer;
                 return &mut *((*t).node).offset(
                     ((p as u64
                         & (0x7FFFFFFF as u32)
@@ -427,7 +427,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
                 ) as *mut Node;
             }
             TAG_VARIANT_CLOSURE_CFUNCTION => {
-                let f: CFunction = (*key).value.f;
+                let f: CFunction = (*key).value.function;
                 return &mut *((*t).node).offset(
                     ((::core::mem::transmute::<CFunction, u64>(f)
                         & (0x7FFFFFFF as u32)
@@ -530,7 +530,7 @@ pub unsafe extern "C" fn findindex(
             return 0u32;
         }
         i = if (*key).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            arrayindex((*key).value.i)
+            arrayindex((*key).value.integer)
         } else {
             0u32
         };
@@ -556,7 +556,7 @@ pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: St
         while i < asize {
             if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
                 let io: *mut TValue = &mut (*key).value;
-                (*io).value.i = i.wrapping_add(1 as u32) as i64;
+                (*io).value.integer = i.wrapping_add(1 as u32) as i64;
                 (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 let io1: *mut TValue = &mut (*key.offset(1 as isize)).value;
                 let io2: *const TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
@@ -684,7 +684,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
             let node: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             if !(get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL) {
                 if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER {
-                    ause += countint((*node).key.value.i, nums);
+                    ause += countint((*node).key.value.integer, nums);
                 }
                 totaluse += 1;
             }
@@ -855,7 +855,7 @@ pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const
         totaluse = na as i32;
         totaluse += numusehash(table, nums.as_mut_ptr(), &mut na);
         if (*ek).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            na = na.wrapping_add(countint((*ek).value.i, nums.as_mut_ptr()) as u32);
+            na = na.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
         }
         totaluse += 1;
         asize = computesizes(nums.as_mut_ptr(), &mut na);
@@ -908,11 +908,11 @@ pub unsafe extern "C" fn luah_newkey(
         if ((get_tag_type((*key).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0 {
             luag_runerror(state, b"table index is nil\0" as *const u8 as *const i8);
         } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
-            let f: f64 = (*key).value.n;
+            let f: f64 = (*key).value.number;
             let mut k: i64 = 0;
             if luav_flttointeger(f, &mut k, F2I::Equal) {
                 let io: *mut TValue = &mut aux;
-                (*io).value.i = k;
+                (*io).value.integer = k;
                 (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 key = &mut aux;
             } else if (!(f == f) as i32 != 0) as i64 != 0 {
@@ -985,7 +985,7 @@ pub unsafe extern "C" fn luah_getint(table: *mut Table, key: i64) -> *const TVal
         } else {
             let mut node: *mut Node = hashint(table, key);
             loop {
-                if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER && (*node).key.value.i == key {
+                if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER && (*node).key.value.integer == key {
                     return &mut (*node).value;
                 } else {
                     let nx: i32 = (*node).next;
@@ -1043,11 +1043,11 @@ pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *con
     unsafe {
         match (*key).get_tag_variant() {
             4 => return luah_getshortstr(table, &mut (*((*key).value.object as *mut TString))),
-            3 => return luah_getint(table, (*key).value.i),
+            3 => return luah_getint(table, (*key).value.integer),
             0 => return &ABSENT_KEY,
             19 => {
                 let mut k: i64 = 0;
-                if luav_flttointeger((*key).value.n, &mut k, F2I::Equal) {
+                if luav_flttointeger((*key).value.number, &mut k, F2I::Equal) {
                     return luah_getint(table, k);
                 }
             }
@@ -1101,7 +1101,7 @@ pub unsafe extern "C" fn luah_setint(
                 tag: 0,
             };
             let io: *mut TValue = &mut k;
-            (*io).value.i = key;
+            (*io).value.integer = key;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             luah_newkey(state, table, &mut k, value);
         } else {

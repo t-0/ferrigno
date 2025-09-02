@@ -1,4 +1,3 @@
-use crate::rawvalue::*;
 use crate::tstring::*;
 use crate::v::*;
 use crate::tvalue::*;
@@ -6,12 +5,13 @@ use crate::object::*;
 use crate::functionstate::*;
 use crate::tag::*;
 use crate::utility::*;
+use crate::value::*;
 use crate::f2i::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ExpressionDescription {
     pub k: V,
-    pub u: RawValue,
+    pub u: Value,
     pub t: i32,
     pub f: i32,
 }
@@ -28,7 +28,7 @@ pub unsafe extern "C" fn codestring(e: *mut ExpressionDescription, s: *mut TStri
         (*e).t = -1;
         (*e).f = (*e).t;
         (*e).k = V::VKSTR;
-        (*e).u.strval = s;
+        (*e).u.tstring = s;
     }
 }
 pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> bool {
@@ -37,14 +37,14 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
             match (*e).k as u32 {
                 6 => {
                     if !v.is_null() {
-                        (*v).value.i = (*e).u.ival;
+                        (*v).value.integer = (*e).u.integer;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     }
                     return true;
                 }
                 5 => {
                     if !v.is_null() {
-                        (*v).value.n = (*e).u.nval;
+                        (*v).value.number = (*e).u.number;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                     }
                     return true;
@@ -91,7 +91,7 @@ pub unsafe extern "C" fn luak_exp2const(
                 return true;
             }
             V::VKSTR => {
-                let x_: *mut TString = (*e).u.strval;
+                let x_: *mut TString = (*e).u.tstring;
                 (*v).value.object = &mut (*(x_ as *mut Object));
                 (*v).set_tag((*x_).get_tag());
                 (*v).set_collectable();
@@ -112,11 +112,11 @@ pub unsafe extern "C" fn const2exp(v: *mut TValue, e: *mut ExpressionDescription
         match (*v).get_tag_variant() {
             TAG_VARIANT_NUMERIC_INTEGER => {
                 (*e).k = V::VKINT;
-                (*e).u.ival = (*v).value.i;
+                (*e).u.integer = (*v).value.integer;
             }
             TAG_VARIANT_NUMERIC_NUMBER => {
                 (*e).k = V::VKFLT;
-                (*e).u.nval = (*v).value.n;
+                (*e).u.number = (*v).value.number;
             }
             TAG_VARIANT_BOOLEAN_FALSE => {
                 (*e).k = V::VFALSE;
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn const2exp(v: *mut TValue, e: *mut ExpressionDescription
             }
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 (*e).k = V::VKSTR;
-                (*e).u.strval = &mut (*((*v).value.object as *mut TString));
+                (*e).u.tstring = &mut (*((*v).value.object as *mut TString));
             }
             _ => {}
         };
@@ -142,12 +142,12 @@ pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> bool {
 }
 pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return is_k_int(e) && (*e).u.ival as u64 <= ((1 << 8) - 1) as u64;
+        return is_k_int(e) && (*e).u.integer as u64 <= ((1 << 8) - 1) as u64;
     }
 }
 pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
-        return is_k_int(e) && fits_c((*e).u.ival);
+        return is_k_int(e) && fits_c((*e).u.integer);
     }
 }
 pub unsafe extern "C" fn is_sc_number(
@@ -158,9 +158,9 @@ pub unsafe extern "C" fn is_sc_number(
     unsafe {
         let mut i: i64 = 0;
         if (*e).k as u32 == V::VKINT as u32 {
-            i = (*e).u.ival;
+            i = (*e).u.integer;
         } else if (*e).k as u32 == V::VKFLT as u32
-            && luav_flttointeger((*e).u.nval, &mut i, F2I::Equal)
+            && luav_flttointeger((*e).u.number, &mut i, F2I::Equal)
         {
             *is_float = true;
         } else {
@@ -188,23 +188,23 @@ pub unsafe extern "C" fn luak_indexed(
         }
         if (*t).k as u32 == V::VUPVAL as u32 {
             let temp: i32 = (*t).u.info;
-            (*t).u.ind.t = temp as u8;
-            (*t).u.ind.index = (*k).u.info as i16;
+            (*t).u.index.reference_tag = temp as u8;
+            (*t).u.index.reference_index = (*k).u.info as i16;
             (*t).k = V::VINDEXUP;
         } else {
-            (*t).u.ind.t = (if (*t).k == V::VLOCAL {
-                (*t).u.var.ridx as i32
+            (*t).u.index.reference_tag = (if (*t).k == V::VLOCAL {
+                (*t).u.variable.register_index as i32
             } else {
                 (*t).u.info
             }) as u8;
             if is_k_string(fs, k) {
-                (*t).u.ind.index = (*k).u.info as i16;
+                (*t).u.index.reference_index = (*k).u.info as i16;
                 (*t).k = V::VINDEXSTR;
             } else if is_c_int(k) {
-                (*t).u.ind.index = (*k).u.ival as i16;
+                (*t).u.index.reference_index = (*k).u.integer as i16;
                 (*t).k = V::VINDEXI;
             } else {
-                (*t).u.ind.index = luak_exp2anyreg(fs, k) as i16;
+                (*t).u.index.reference_index = luak_exp2anyreg(fs, k) as i16;
                 (*t).k = V::VINDEXED;
             }
         };

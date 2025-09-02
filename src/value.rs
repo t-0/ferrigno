@@ -1,13 +1,19 @@
 use crate::functions::*;
 use crate::new::*;
 use crate::object::*;
+use crate::tstring::*;
 #[derive(Copy, Clone)]
+#[repr(C)]
 pub union Value {
     pub object: *mut Object,
-    pub p: *mut libc::c_void,
-    pub f: CFunction,
-    pub i: i64,
-    pub n: f64,
+    pub pointer: *mut libc::c_void,
+    pub function: CFunction,
+    pub integer: i64,
+    pub number: f64,
+    pub tstring: *mut TString,
+    pub info: i32,
+    pub index: ValueReference,
+    pub variable: ValueRegister,
 }
 impl New for Value {
     fn new() -> Self {
@@ -15,4 +21,17 @@ impl New for Value {
             object: std::ptr::null_mut(),
         }
     }
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ValueRegister {
+    pub register_index: u8,
+    pub value_index: u16,
+}
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct ValueReference {
+    pub reference_tag: u8,
+    pub reference_dummy0: u8,
+    pub reference_index: i16,
 }
