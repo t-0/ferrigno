@@ -420,12 +420,12 @@ pub unsafe extern "C" fn luav_equalobj(
             return false;
         } else {
             luat_calltmres(state, tm, t1, t2, (*state).top.p);
-            return !((*(*state).top.p).value.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.p).value.get_tag()) == TAG_TYPE_NIL);
+            return !((*(*state).top.p).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*state).top.p).tvalue.get_tag()) == TAG_TYPE_NIL);
         };
     }
 }
-pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TValue) {
+pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StackValuePointer, rb: *const TValue) {
     unsafe {
         let tm: *const TValue;
         match (*rb).get_tag_variant() {
@@ -443,20 +443,20 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*ra).value;
+                    let io: *mut TValue = &mut (*ra).tvalue;
                     (*io).value.integer = luah_getn(h) as i64;
                     (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     return;
                 }
             }
             TAG_VARIANT_STRING_SHORT => {
-                let io_0: *mut TValue = &mut (*ra).value;
+                let io_0: *mut TValue = &mut (*ra).tvalue;
                 (*io_0).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }
             TAG_VARIANT_STRING_LONG => {
-                let io_1: *mut TValue = &mut (*ra).value;
+                let io_1: *mut TValue = &mut (*ra).tvalue;
                 (*io_1).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 return;

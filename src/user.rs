@@ -102,7 +102,7 @@ impl User {
     ) -> *mut libc::c_void {
         unsafe {
             let u: *mut User = User::luas_newudata(state, size, nuvalue);
-            let io: *mut TValue = &mut (*(*state).top.p).value;
+            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
             let x_: *mut User = u;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag(TAG_VARIANT_USER);

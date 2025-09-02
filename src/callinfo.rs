@@ -55,7 +55,7 @@ pub struct CallInfoConsistuentBTransferInfo {
 pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).u.l.saved_program_counter).offset_from(
-            (*(*((*(*call_info).function.p).value.value.object as *mut LClosure))
+            (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
                 .p)
                 .code,
         ) as i32
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
 pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
-            (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+            (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
                 .p,
             currentpc(call_info),
         );
@@ -85,24 +85,24 @@ pub unsafe extern "C" fn luag_findlocal(
     state: *mut State,
     call_info: *mut CallInfo,
     n: i32,
-    pos: *mut StkId,
+    pos: *mut StackValuePointer,
 ) -> *const i8 {
     unsafe {
-        let base: StkId = ((*call_info).function.p).offset(1 as isize);
+        let base: StackValuePointer = ((*call_info).function.p).offset(1 as isize);
         let mut name: *const i8 = std::ptr::null();
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
                 return findvararg(call_info, n, pos);
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*call_info).function.p).value.value.object as *mut LClosure)).p,
+                    (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure)).p,
                     n,
                     currentpc(call_info),
                 );
             }
         }
         if name.is_null() {
-            let limit: StkId = if call_info == (*state).call_info {
+            let limit: StackValuePointer = if call_info == (*state).call_info {
                 (*state).top.p
             } else {
                 (*(*call_info).next).function.p
@@ -126,10 +126,10 @@ pub unsafe extern "C" fn luag_findlocal(
 pub unsafe extern "C" fn findvararg(
     call_info: *mut CallInfo,
     n: i32,
-    pos: *mut StkId,
+    pos: *mut StackValuePointer,
 ) -> *const i8 {
     unsafe {
-        if (*(*((*(*call_info).function.p).value.value.object as *mut LClosure))
+        if (*(*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
             .p)
             .is_variable_arguments
         {
@@ -172,7 +172,7 @@ pub unsafe extern "C" fn funcnamefromcall(
         } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
                 state,
-                (*((*(*call_info).function.p).value.value.object as *mut LClosure))
+                (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure))
                     .p,
                 currentpc(call_info),
                 name,
@@ -184,10 +184,10 @@ pub unsafe extern "C" fn funcnamefromcall(
 }
 pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, o: *const TValue) -> i32 {
     unsafe {
-        let base: StkId = ((*call_info).function.p).offset(1 as isize);
+        let base: StackValuePointer = ((*call_info).function.p).offset(1 as isize);
         let mut pos: i32 = 0;
         while base.offset(pos as isize) < (*call_info).top.p {
-            if o == &mut (*base.offset(pos as isize)).value as *mut TValue as *const TValue {
+            if o == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue {
                 return pos;
             }
             pos += 1;
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn getupvalname(
 ) -> *const i8 {
     unsafe {
         let c: *mut LClosure =
-            &mut (*((*(*call_info).function.p).value.value.object as *mut LClosure));
+            &mut (*((*(*call_info).function.p).tvalue.value.object as *mut LClosure));
         let mut i: i32;
         i = 0;
         while i < (*c).count_upvalues as i32 {

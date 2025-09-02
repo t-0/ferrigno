@@ -36,25 +36,25 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
         let name;
         if ar.is_null() {
             if !((*(*state).top.p.offset(-(1 as isize)))
-                .value
+                .tvalue
                 .get_tag_variant()
                 == TAG_VARIANT_CLOSURE_L)
             {
                 name = std::ptr::null();
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*state).top.p.offset(-(1 as isize))).value.value.object as *mut LClosure))
+                    (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut LClosure))
                         .p,
                     n,
                     0,
                 );
             }
         } else {
-            let mut pos: StkId = std::ptr::null_mut();
+            let mut pos: StackValuePointer = std::ptr::null_mut();
             name = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
             if !name.is_null() {
-                let io1: *mut TValue = &mut (*(*state).top.p).value;
-                let io2: *const TValue = &mut (*pos).value;
+                let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+                let io2: *const TValue = &mut (*pos).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
                 (*state).top.p = (*state).top.p.offset(1);
@@ -65,11 +65,11 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
 }
 pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
-        let mut pos: StkId = std::ptr::null_mut();
+        let mut pos: StackValuePointer = std::ptr::null_mut();
         let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
-            let io1: *mut TValue = &mut (*pos).value;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            let io1: *mut TValue = &mut (*pos).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
             (*state).top.p = (*state).top.p.offset(-1);
@@ -124,19 +124,19 @@ pub unsafe extern "C" fn lua_getinfo(
         let call_info;
         if *what as i32 == '>' as i32 {
             call_info = std::ptr::null_mut();
-            function = &mut (*(*state).top.p.offset(-(1 as isize))).value;
+            function = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
             what = what.offset(1);
             (*state).top.p = (*state).top.p.offset(-1);
         } else {
             call_info = (*ar).i_ci;
-            function = &mut (*(*call_info).function.p).value;
+            function = &mut (*(*call_info).function.p).tvalue;
         }
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut UClosure = &mut (*((*function).value.object as *mut UClosure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).value;
+                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
@@ -151,7 +151,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 let cl: *mut UClosure = &mut (*((*function).value.object as *mut UClosure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).value;
+                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 let cl: *mut UClosure = std::ptr::null_mut();
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, 'f' as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).value;
+                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());

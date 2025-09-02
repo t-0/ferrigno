@@ -2,7 +2,7 @@ use crate::new::*;
 use crate::stackvalue::*;
 #[repr(C)]
 pub struct CloseP {
-    pub level: StkId,
+    pub level: StackValuePointer,
     pub status: i32,
 }
 impl New for CloseP {

@@ -17,13 +17,13 @@ pub union UClosure {
 pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut UClosure) {
     unsafe {
         if !(!f.is_null() && (*f).c.get_tag() == TAG_VARIANT_CLOSURE_L) {
-            (*(*state).top.p).value.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
             (*state).top.p = (*state).top.p.offset(1);
         } else {
             let p: *const Prototype = (*f).l.p;
             let mut currentline: i32 = (*p).line_defined;
             let table: *mut Table = luah_new(state);
-            let io: *mut TValue = &mut (*(*state).top.p).value;
+            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
             let x_: *mut Table = table;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);

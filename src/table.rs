@@ -549,16 +549,16 @@ pub unsafe extern "C" fn findindex(
         };
     }
 }
-pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: StkId) -> i32 {
+pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: StackValuePointer) -> i32 {
     unsafe {
         let asize: u32 = luah_realasize(table);
-        let mut i: u32 = findindex(state, table, &mut (*key).value, asize);
+        let mut i: u32 = findindex(state, table, &mut (*key).tvalue, asize);
         while i < asize {
             if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
-                let io: *mut TValue = &mut (*key).value;
+                let io: *mut TValue = &mut (*key).tvalue;
                 (*io).value.integer = i.wrapping_add(1 as u32) as i64;
                 (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-                let io1: *mut TValue = &mut (*key.offset(1 as isize)).value;
+                let io1: *mut TValue = &mut (*key.offset(1 as isize)).tvalue;
                 let io2: *const TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
@@ -572,10 +572,10 @@ pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: St
                 == TAG_TYPE_NIL)
             {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
-                let io_: *mut TValue = &mut (*key).value;
+                let io_: *mut TValue = &mut (*key).tvalue;
                 (*io_).value = (*node).key.value;
                 (*io_).set_tag((*node).key.tag);
-                let io1_0: *mut TValue = &mut (*key.offset(1 as isize)).value;
+                let io1_0: *mut TValue = &mut (*key.offset(1 as isize)).tvalue;
                 let io2_0: *const TValue = &mut (*node).value;
                 (*io1_0).value = (*io2_0).value;
                 (*io1_0).set_tag((*io2_0).get_tag());
@@ -1207,7 +1207,7 @@ pub unsafe extern "C" fn luav_finishget(
     state: *mut State,
     mut t: *const TValue,
     key: *mut TValue,
-    value: StkId,
+    value: StackValuePointer,
     mut slot: *const TValue,
 ) {
     unsafe {
@@ -1236,7 +1236,7 @@ pub unsafe extern "C" fn luav_finishget(
                     )
                 };
                 if tm.is_null() {
-                    (*value).value.set_tag(TAG_VARIANT_NIL_NIL);
+                    (*value).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                     return;
                 }
             }
@@ -1253,7 +1253,7 @@ pub unsafe extern "C" fn luav_finishget(
                 (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
             } != 0
             {
-                let io1: *mut TValue = &mut (*value).value;
+                let io1: *mut TValue = &mut (*value).tvalue;
                 let io2: *const TValue = slot;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
@@ -1292,7 +1292,7 @@ pub unsafe extern "C" fn luav_finishset(
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*(*state).top.p).value;
+                    let io: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let x_: *mut Table = h;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag(TAG_VARIANT_TABLE);

@@ -35,8 +35,8 @@ pub struct FunctionState {
     pub program_counter: i32,
     pub last_target: i32,
     pub previous_line: i32,
-    pub nk: i32,
-    pub np: i32,
+    pub count_k: i32,
+    pub count_p: i32,
     pub count_abslineinfo: i32,
     pub first_local: i32,
     pub first_label: i32,
@@ -57,8 +57,8 @@ impl New for FunctionState {
             program_counter: 0,
             last_target: 0,
             previous_line: 0,
-            nk: 0,
-            np: 0,
+            count_k: 0,
+            count_p: 0,
             count_abslineinfo: 0,
             first_local: 0,
             first_label: 0,
@@ -148,35 +148,35 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) {
 }
 pub unsafe extern "C" fn closelistfield(fs: *mut FunctionState, cc: *mut ConstructorControl) {
     unsafe {
-        if (*cc).v.kind == V::VVOID {
+        if (*cc).expression_description.kind == V::VVOID {
             return;
         }
-        luak_exp2nextreg(fs, &mut (*cc).v);
-        (*cc).v.kind = V::VVOID;
-        if (*cc).tostore == 50 as i32 {
-            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).tostore);
-            (*cc).na += (*cc).tostore;
-            (*cc).tostore = 0;
+        luak_exp2nextreg(fs, &mut (*cc).expression_description);
+        (*cc).expression_description.kind = V::VVOID;
+        if (*cc).to_store == 50 as i32 {
+            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
+            (*cc).na += (*cc).to_store;
+            (*cc).to_store = 0;
         }
     }
 }
 pub unsafe extern "C" fn lastlistfield(fs: *mut FunctionState, cc: *mut ConstructorControl) {
     unsafe {
-        if (*cc).tostore == 0 {
+        if (*cc).to_store == 0 {
             return;
         }
-        if (*cc).v.kind as u32 == V::VCALL as u32 || (*cc).v.kind as u32 == V::VVARARG as u32 {
-            luak_setreturns(fs, &mut (*cc).v, -1);
+        if (*cc).expression_description.kind as u32 == V::VCALL as u32 || (*cc).expression_description.kind as u32 == V::VVARARG as u32 {
+            luak_setreturns(fs, &mut (*cc).expression_description, -1);
             luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, -1);
             (*cc).na -= 1;
             (*cc).na;
         } else {
-            if (*cc).v.kind != V::VVOID {
-                luak_exp2nextreg(fs, &mut (*cc).v);
+            if (*cc).expression_description.kind != V::VVOID {
+                luak_exp2nextreg(fs, &mut (*cc).expression_description);
             }
-            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).tostore);
+            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
         }
-        (*cc).na += (*cc).tostore;
+        (*cc).na += (*cc).to_store;
     }
 }
 pub unsafe extern "C" fn setvararg(fs: *mut FunctionState, nparams: i32) {
@@ -889,11 +889,11 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
         };
         let state: *mut State = (*(*fs).lexical_state).state;
         let f: *mut Prototype = (*fs).prototype;
-        let index: *const TValue = luah_get((*(*fs).lexical_state).h, key);
+        let index: *const TValue = luah_get((*(*fs).lexical_state).table, key);
         let mut k: i32;
         if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             k = (*index).value.integer as i32;
-            if k < (*fs).nk
+            if k < (*fs).count_k
                 && (*((*f).k).offset(k as isize)).get_tag_variant() == (*v).get_tag_variant()
                 && luav_equalobj(std::ptr::null_mut(), &mut *((*f).k).offset(k as isize), v)
             {
@@ -901,11 +901,11 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
             }
         }
         let mut old_size: i32 = (*f).size_k;
-        k = (*fs).nk;
+        k = (*fs).count_k;
         let io: *mut TValue = &mut value;
         (*io).value.integer = k as i64;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-        luah_finishset(state, (*(*fs).lexical_state).h, key, index, &mut value);
+        luah_finishset(state, (*(*fs).lexical_state).table, key, index, &mut value);
         (*f).k = luam_growaux_(
             state,
             (*f).k as *mut libc::c_void,
@@ -930,8 +930,8 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
         let io2: *const TValue = v;
         (*io1).value = (*io2).value;
         (*io1).set_tag((*io2).get_tag());
-        (*fs).nk += 1;
-        (*fs).nk;
+        (*fs).count_k += 1;
+        (*fs).count_k;
         if (*v).is_collectable() {
             if (*f).get_marked() & 1 << 5 != 0
                 && (*(*v).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -1049,7 +1049,7 @@ pub unsafe extern "C" fn nil_k(fs: *mut FunctionState) -> i32 {
         };
         v.set_tag(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut k;
-        let x_: *mut Table = (*(*fs).lexical_state).h;
+        let x_: *mut Table = (*(*fs).lexical_state).table;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_TABLE);
         (*io).set_collectable();

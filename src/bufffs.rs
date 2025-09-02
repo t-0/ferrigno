@@ -22,7 +22,7 @@ impl BuffFS {
     }
     pub unsafe extern "C" fn clear(&mut self) {
         unsafe {
-            let io: *mut TValue = &mut (*(*self.state).top.p).value;
+            let io: *mut TValue = &mut (*(*self.state).top.p).tvalue;
             let ts: *mut TString =
                 luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
             (*io).value.object = &mut (*(ts as *mut Object));
@@ -57,7 +57,7 @@ impl BuffFS {
                 self.size += length;
             } else {
                 self.clear();
-                let io = &mut (*(*self.state).top.p).value;
+                let io = &mut (*(*self.state).top.p).tvalue;
                 let ts = luas_newlstr(self.state, pointer, length);
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag((*ts).get_tag());

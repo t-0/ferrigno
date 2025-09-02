@@ -123,7 +123,7 @@ pub unsafe extern "C" fn load_string_n(
                 ts = luas_newlstr(state, buffer.as_mut_ptr(), size);
             } else {
                 ts = TString::create_long(state, size);
-                let io: *mut TValue = &mut (*(*state).top.p).value;
+                let io: *mut TValue = &mut (*(*state).top.p).tvalue;
                 let x_: *mut TString = ts;
                 (*io).value.object = &mut (*(x_ as *mut Object));
                 (*io).set_tag((*x_).get_tag());
@@ -530,7 +530,7 @@ pub unsafe extern "C" fn luau_undump(
         load_state.zio = zio;
         check_header(&mut load_state);
         cl = luaf_newlclosure(state, load_byte(&mut load_state) as i32);
-        let io: *mut TValue = &mut (*(*state).top.p).value;
+        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
         let x_: *mut LClosure = cl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);

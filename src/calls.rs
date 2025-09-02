@@ -1,6 +1,6 @@
 use crate::stackvalue::*;
 #[repr(C)]
 pub struct CallS {
-    pub function: StkId,
+    pub function: StackValuePointer,
     pub count_results: i32,
 }

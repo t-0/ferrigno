@@ -79,7 +79,7 @@ pub unsafe extern "C" fn freeupval(state: *mut State, uv: *mut UpValue) {
 }
 pub unsafe extern "C" fn newupval(
     state: *mut State,
-    level: StkId,
+    level: StackValuePointer,
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
     unsafe {
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn newupval(
         );
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
-        (*uv).v.p = &mut (*level).value;
+        (*uv).v.p = &mut (*level).tvalue;
         (*uv).u.open.next = next;
         (*uv).u.open.previous = previous;
         if !next.is_null() {
@@ -104,15 +104,15 @@ pub unsafe extern "C" fn newupval(
         return uv;
     }
 }
-pub unsafe extern "C" fn luaf_findupval(state: *mut State, level: StkId) -> *mut UpValue {
+pub unsafe extern "C" fn luaf_findupval(state: *mut State, level: StackValuePointer) -> *mut UpValue {
     unsafe {
         let mut pp: *mut *mut UpValue = &mut (*state).open_upvalue;
         loop {
             let p: *mut UpValue = *pp;
-            if !(!p.is_null() && (*p).v.p as StkId >= level) {
+            if !(!p.is_null() && (*p).v.p as StackValuePointer >= level) {
                 break;
             }
-            if (*p).v.p as StkId == level {
+            if (*p).v.p as StackValuePointer == level {
                 return p;
             }
             pp = &mut (*p).u.open.next;

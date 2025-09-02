@@ -45,11 +45,11 @@ pub unsafe extern "C" fn forlimit(
         };
     }
 }
-pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 {
+pub unsafe extern "C" fn forprep(state: *mut State, ra: StackValuePointer) -> i32 {
     unsafe {
-        let pinit: *mut TValue = &mut (*ra).value;
-        let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).value;
-        let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).value;
+        let pinit: *mut TValue = &mut (*ra).tvalue;
+        let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
+        let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).tvalue;
         if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
             && (*pstep).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
         {
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 {
             if step == 0 {
                 luag_runerror(state, b"'for' step is zero\0" as *const u8 as *const i8);
             }
-            let io: *mut TValue = &mut (*ra.offset(3 as isize)).value;
+            let io: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io).value.integer = init;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             if forlimit(state, init, plimit, &mut limit, step) != 0 {
@@ -147,10 +147,10 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 {
                 let io_2: *mut TValue = pstep;
                 (*io_2).value.number = step_0;
                 (*io_2).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-                let io_3: *mut TValue = &mut (*ra).value;
+                let io_3: *mut TValue = &mut (*ra).tvalue;
                 (*io_3).value.number = init_0;
                 (*io_3).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-                let io_4: *mut TValue = &mut (*ra.offset(3 as isize)).value;
+                let io_4: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
                 (*io_4).value.number = init_0;
                 (*io_4).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             }
@@ -158,11 +158,11 @@ pub unsafe extern "C" fn forprep(state: *mut State, ra: StkId) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn floatforloop(ra: StkId) -> i32 {
+pub unsafe extern "C" fn floatforloop(ra: StackValuePointer) -> i32 {
     unsafe {
-        let step: f64 = (*ra.offset(2 as isize)).value.value.number;
-        let limit: f64 = (*ra.offset(1 as isize)).value.value.number;
-        let mut index: f64 = (*ra).value.value.number;
+        let step: f64 = (*ra.offset(2 as isize)).tvalue.value.number;
+        let limit: f64 = (*ra.offset(1 as isize)).tvalue.value.number;
+        let mut index: f64 = (*ra).tvalue.value.number;
         index = index + step;
         if if (0.0) < step {
             (index <= limit) as i32
@@ -170,9 +170,9 @@ pub unsafe extern "C" fn floatforloop(ra: StkId) -> i32 {
             (limit <= index) as i32
         } != 0
         {
-            let io: *mut TValue = &mut (*ra).value;
+            let io: *mut TValue = &mut (*ra).tvalue;
             (*io).value.number = index;
-            let io_0: *mut TValue = &mut (*ra.offset(3 as isize)).value;
+            let io_0: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io_0).value.number = index;
             (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             return 1;

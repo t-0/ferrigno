@@ -1054,8 +1054,8 @@ pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i3
 pub unsafe extern "C" fn initheader(state: *mut State, h: *mut Header) {
     unsafe {
         (*h).state = state;
-        (*h).islittle = NATIVE_ENDIAN.little as i32;
-        (*h).maxalign = 1;
+        (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
+        (*h).maxmimum_alignment = 1;
     }
 }
 pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
@@ -1143,17 +1143,17 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
             88 => return K::PaddingAlignment,
             32 => {}
             60 => {
-                (*h).islittle = 1;
+                (*h).is_little_endian = 1;
             }
             62 => {
-                (*h).islittle = 0;
+                (*h).is_little_endian = 0;
             }
             61 => {
-                (*h).islittle = NATIVE_ENDIAN.little as i32;
+                (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
             }
             33 => {
                 let maxalign: i32 = 8;
-                (*h).maxalign = getnumlimit(h, fmt, maxalign);
+                (*h).maxmimum_alignment = getnumlimit(h, fmt, maxalign);
             }
             _ => {
                 lual_error(
@@ -1191,8 +1191,8 @@ pub unsafe extern "C" fn getdetails(
         if align <= 1 || opt as u32 == K::Character as u32 {
             *ntoalign = 0;
         } else {
-            if align > (*h).maxalign {
-                align = (*h).maxalign;
+            if align > (*h).maxmimum_alignment {
+                align = (*h).maxmimum_alignment;
             }
             if ((align & align - 1 != 0) as i32 != 0) as i64 != 0 {
                 lual_argerror(
@@ -1271,8 +1271,8 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
         let mut b = Buffer::new();
         let mut h: Header = Header {
             state: std::ptr::null_mut(),
-            islittle: 0,
-            maxalign: 0,
+            is_little_endian: 0,
+            maxmimum_alignment: 0,
         };
         let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mut arg: i32 = 1;
@@ -1310,7 +1310,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                                 b"integer overflow\0" as *const u8 as *const i8,
                             ) != 0) as i32;
                     }
-                    packint(&mut b, n as u64, h.islittle, size, (n < 0) as i32);
+                    packint(&mut b, n as u64, h.is_little_endian, size, (n < 0) as i32);
                     current_block_33 = 3222590281903869779;
                 }
                 1 => {
@@ -1323,7 +1323,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                                 b"unsigned overflow\0" as *const u8 as *const i8,
                             ) != 0) as i32;
                     }
-                    packint(&mut b, n_0 as u64, h.islittle, size, 0);
+                    packint(&mut b, n_0 as u64, h.is_little_endian, size, 0);
                     current_block_33 = 3222590281903869779;
                 }
                 2 => {
@@ -1334,7 +1334,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                         buffer,
                         &mut f as *mut libc::c_float as *mut i8,
                         ::core::mem::size_of::<libc::c_float>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     b.length = (b.length as u64).wrapping_add(size as u64) as u64;
                     current_block_33 = 3222590281903869779;
@@ -1346,7 +1346,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                         buff_0,
                         &mut f_0 as *mut f64 as *mut i8,
                         ::core::mem::size_of::<f64>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     b.length = (b.length as u64).wrapping_add(size as u64) as u64;
                     current_block_33 = 3222590281903869779;
@@ -1358,7 +1358,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                         buff_1,
                         &mut f_1 as *mut f64 as *mut i8,
                         ::core::mem::size_of::<f64>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     b.length = (b.length as u64).wrapping_add(size as u64) as u64;
                     current_block_33 = 3222590281903869779;
@@ -1398,7 +1398,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                             arg,
                             b"string length does not fit in given size\0" as *const u8 as *const i8,
                         ) != 0) as i32;
-                    packint(&mut b, length_0 as u64, h.islittle, size, 0);
+                    packint(&mut b, length_0 as u64, h.is_little_endian, size, 0);
                     b.lual_addlstring(s_0, length_0);
                     totalsize = (totalsize as u64).wrapping_add(length_0) as u64;
                     current_block_33 = 3222590281903869779;
@@ -1450,8 +1450,8 @@ pub unsafe extern "C" fn str_packsize(state: *mut State) -> i32 {
     unsafe {
         let mut h: Header = Header {
             state: std::ptr::null_mut(),
-            islittle: 0,
-            maxalign: 0,
+            is_little_endian: 0,
+            maxmimum_alignment: 0,
         };
         let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mut totalsize: u64 = 0;
@@ -1548,8 +1548,8 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
     unsafe {
         let mut h: Header = Header {
             state: std::ptr::null_mut(),
-            islittle: 0,
-            maxalign: 0,
+            is_little_endian: 0,
+            maxmimum_alignment: 0,
         };
         let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mut ld: u64 = 0;
@@ -1584,7 +1584,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                     let res: i64 = unpackint(
                         state,
                         data.offset(pos as isize),
-                        h.islittle,
+                        h.is_little_endian,
                         size,
                         (opt as u32 == K::Integer as u32) as i32,
                     );
@@ -1596,7 +1596,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                         &mut f as *mut libc::c_float as *mut i8,
                         data.offset(pos as isize),
                         ::core::mem::size_of::<libc::c_float>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     (*state).push_number(f as f64);
                 }
@@ -1606,7 +1606,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                         &mut f_0 as *mut f64 as *mut i8,
                         data.offset(pos as isize),
                         ::core::mem::size_of::<f64>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     (*state).push_number(f_0);
                 }
@@ -1616,7 +1616,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                         &mut f_1 as *mut f64 as *mut i8,
                         data.offset(pos as isize),
                         ::core::mem::size_of::<f64>() as i32,
-                        h.islittle,
+                        h.is_little_endian,
                     );
                     (*state).push_number(f_1);
                 }
@@ -1625,7 +1625,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                 }
                 6 => {
                     let length: u64 =
-                        unpackint(state, data.offset(pos as isize), h.islittle, size, 0) as u64;
+                        unpackint(state, data.offset(pos as isize), h.is_little_endian, size, 0) as u64;
                     (((length <= ld.wrapping_sub(pos).wrapping_sub(size as u64)) as i32 != 0) as i32
                         as i64
                         != 0

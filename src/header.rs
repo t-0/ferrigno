@@ -3,6 +3,6 @@ use crate::state::*;
 #[repr(C)]
 pub struct Header {
     pub state: *mut State,
-    pub islittle: i32,
-    pub maxalign: i32,
+    pub is_little_endian: i32,
+    pub maxmimum_alignment: i32,
 }
