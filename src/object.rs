@@ -16,7 +16,6 @@ use crate::global::*;
 use crate::new::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::uvalue::*;
 use crate::tstring::*;
 use crate::lclosure::*;
 use crate::tvalue::*;
@@ -286,7 +285,7 @@ pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
                         32 as u64
                     } else {
                         (40 as u64).wrapping_add(
-                            (::core::mem::size_of::<UValue>() as u64)
+                            (::core::mem::size_of::<TValue>() as u64)
                                 .wrapping_mul((*u).nuvalue as u64),
                         )
                     })

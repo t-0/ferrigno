@@ -64,7 +64,6 @@ mod tvalue;
 mod upvaluedescription;
 mod upvalue;
 mod user;
-mod uvalue;
 mod v;
 mod value;
 mod variabledescription;

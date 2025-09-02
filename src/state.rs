@@ -445,8 +445,7 @@ impl State {
                 let io1: *mut TValue = &mut (*self.top.p).value;
                 let io2: *const TValue = &mut (*((*((*o).value.object as *mut User)).uv)
                     .as_mut_ptr()
-                    .offset((n - 1) as isize))
-                .uv;
+                    .offset((n - 1) as isize));
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
                 t = (get_tag_type((*self.top.p).value.get_tag())) as i32;
@@ -2433,8 +2432,7 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
         } else {
             let io1: *mut TValue = &mut (*((*((*o).value.object as *mut User)).uv)
                 .as_mut_ptr()
-                .offset((n - 1) as isize))
-            .uv;
+                .offset((n - 1) as isize));
             let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).value;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());

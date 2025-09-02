@@ -2,7 +2,6 @@ use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::functions::*;
-use crate::uvalue::*;
 use crate::tvalue::*;
 use crate::state::*;
 use crate::global::*;
@@ -18,7 +17,7 @@ pub struct User {
     pub length: u64,
     pub metatable: *mut Table,
     pub gc_list: *mut Object,
-    pub uv: [UValue; 1],
+    pub uv: [TValue; 1],
 }
 impl TObject for User {
     fn get_marked(&self) -> u8 {
@@ -55,7 +54,7 @@ impl TObject for User {
 impl User {
     pub fn get_size(s: u64, nuvalue: u64) -> u64 {
         return (core::mem::size_of::<User>().wrapping_add(
-            ::core::mem::size_of::<UValue>().wrapping_mul(nuvalue as usize).wrapping_add(s as usize))) as u64;
+            ::core::mem::size_of::<TValue>().wrapping_mul(nuvalue as usize).wrapping_add(s as usize))) as u64;
     }
     pub unsafe extern "C" fn luas_newudata(state: *mut State, s: u64, nuvalue: i32) -> *mut User {
         unsafe {
@@ -70,7 +69,7 @@ impl User {
                     32 as u64
                 } else {
                     (40 as u64).wrapping_add(
-                        (::core::mem::size_of::<UValue>() as u64).wrapping_mul(nuvalue as u64),
+                        (::core::mem::size_of::<TValue>() as u64).wrapping_mul(nuvalue as u64),
                     )
                 })) as i32
                 != 0) as i64
@@ -90,7 +89,6 @@ impl User {
             i = 0;
             while i < nuvalue {
                 (*((*u).uv).as_mut_ptr().offset(i as isize))
-                    .uv
                     .set_tag(TAG_VARIANT_NIL_NIL);
                 i += 1;
             }
@@ -118,7 +116,7 @@ impl User {
                     32 as u64
                 } else {
                     (40 as u64).wrapping_add(
-                        (::core::mem::size_of::<UValue>() as u64).wrapping_mul((*u).nuvalue as u64),
+                        (::core::mem::size_of::<TValue>() as u64).wrapping_mul((*u).nuvalue as u64),
                     )
                 }) as isize,
             ) as *mut libc::c_void;
@@ -134,7 +132,7 @@ impl User {
                                 32 as u64
                             } else {
                                 (40 as u64).wrapping_add(
-                                    (::core::mem::size_of::<UValue>() as u64).wrapping_mul(
+                                    (::core::mem::size_of::<TValue>() as u64).wrapping_mul(
                                         (*((*o).value.object as *mut User)).nuvalue as u64,
                                     ),
                                 )
@@ -176,15 +174,14 @@ pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
         i = 0;
         while i < (*u).nuvalue as i32 {
             if ((*((*u).uv).as_mut_ptr().offset(i as isize))
-                .uv
                 .is_collectable())
-                && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.object).get_marked()
+                && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).value.object).get_marked()
                     & (1 << 3 | 1 << 4)
                     != 0
             {
                 reallymarkobject(
                     g,
-                    (*((*u).uv).as_mut_ptr().offset(i as isize)).uv.value.object,
+                    (*((*u).uv).as_mut_ptr().offset(i as isize)).value.object,
                 );
             }
             i += 1;
