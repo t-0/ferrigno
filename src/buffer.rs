@@ -84,16 +84,16 @@ impl Buffer {
             return self.prepare_with_size_and_index(size, -1);
         }
     }
-    pub unsafe fn add_string_with_length(&mut self, s: *const i8, l: u64) {
+    pub unsafe fn add_string_with_length(&mut self, s: *const i8, length: u64) {
         unsafe {
-            if l > 0u64 {
-                let raw: *mut i8 = self.prepare_with_size_and_index(l, -1);
+            if length > 0u64 {
+                let raw: *mut i8 = self.prepare_with_size_and_index(length, -1);
                 memcpy(
                     raw as *mut libc::c_void,
                     s as *const libc::c_void,
-                    l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                    length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                 );
-                self.length = (self.length as u64).wrapping_add(l) as u64;
+                self.length = (self.length as u64).wrapping_add(length) as u64;
             }
         }
     }

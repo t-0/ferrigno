@@ -57,11 +57,11 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
     }
 }
 pub unsafe extern "C" fn const2val(
-    fs: *mut FunctionState,
+    function_state: *mut FunctionState,
     e: *const ExpressionDescription,
 ) -> *mut TValue {
     unsafe {
-        return &mut (*((*(*(*fs).lexical_state).dynamic_data)
+        return &mut (*((*(*(*function_state).lexical_state).dynamic_data)
             .active_variable
             .pointer)
             .offset((*e).value.info as isize))
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn const2val(
     }
 }
 pub unsafe extern "C" fn luak_exp2const(
-    fs: *mut FunctionState,
+    function_state: *mut FunctionState,
     e: *const ExpressionDescription,
     v: *mut TValue,
 ) -> bool {
@@ -98,7 +98,7 @@ pub unsafe extern "C" fn luak_exp2const(
                 return true;
             }
             ExpressionKind::VCONST => {
-                let io2: *const TValue = const2val(fs, e);
+                let io2: *const TValue = const2val(function_state, e);
                 (*v).value = (*io2).value;
                 (*v).set_tag((*io2).get_tag());
                 return true;
@@ -175,16 +175,16 @@ pub unsafe extern "C" fn is_sc_number(
     }
 }
 pub unsafe extern "C" fn luak_indexed(
-    fs: *mut FunctionState,
+    function_state: *mut FunctionState,
     t: *mut ExpressionDescription,
     k: *mut ExpressionDescription,
 ) {
     unsafe {
         if (*k).expression_kind as u32 == ExpressionKind::VKSTR as u32 {
-            str_to_k(fs, k);
+            str_to_k(function_state, k);
         }
-        if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32 && !is_k_string(fs, k) {
-            luak_exp2anyreg(fs, t);
+        if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32 && !is_k_string(function_state, k) {
+            luak_exp2anyreg(function_state, t);
         }
         if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32 {
             let temp: i32 = (*t).value.info;
@@ -197,14 +197,14 @@ pub unsafe extern "C" fn luak_indexed(
             } else {
                 (*t).value.info
             }) as u8;
-            if is_k_string(fs, k) {
+            if is_k_string(function_state, k) {
                 (*t).value.index.reference_index = (*k).value.info as i16;
                 (*t).expression_kind = ExpressionKind::VINDEXSTR;
             } else if is_c_int(k) {
                 (*t).value.index.reference_index = (*k).value.integer as i16;
                 (*t).expression_kind = ExpressionKind::VINDEXI;
             } else {
-                (*t).value.index.reference_index = luak_exp2anyreg(fs, k) as i16;
+                (*t).value.index.reference_index = luak_exp2anyreg(function_state, k) as i16;
                 (*t).expression_kind = ExpressionKind::VINDEXED;
             }
         };

@@ -88,9 +88,9 @@ impl MatchState {
     pub unsafe extern "C" fn push_onecapture(& mut self, i: i32, s: *const i8, e: *const i8) {
         unsafe {
             let mut cap: *const i8 = std::ptr::null();
-            let l: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
-            if l != -2 as i64 {
-                lua_pushlstring(self.state, cap, l as u64);
+            let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
+            if level != -2 as i64 {
+                lua_pushlstring(self.state, cap, level as u64);
             }
         }
     }
