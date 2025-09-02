@@ -61,19 +61,19 @@ pub unsafe extern "C" fn luas_init(state: *mut State) {
         ) as *mut *mut TString;
         tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE as i32);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
-        (*g).memerrmsg = luas_newlstr(
+        (*g).memory_error_message = luas_newlstr(
             state,
             b"not enough memory\0" as *const u8 as *const i8,
             (::core::mem::size_of::<[i8; 18]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as u64),
         );
-        luac_fix(state, &mut (*((*g).memerrmsg as *mut Object)));
+        luac_fix(state, &mut (*((*g).memory_error_message as *mut Object)));
         let mut i: i32 = 0;
         while i < 53 as i32 {
             let mut j: i32 = 0;
             while j < 2 {
-                (*g).strcache[i as usize][j as usize] = (*g).memerrmsg;
+                (*g).string_cache[i as usize][j as usize] = (*g).memory_error_message;
                 j += 1;
             }
             i += 1;

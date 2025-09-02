@@ -161,7 +161,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
             }
             node = node.offset(1);
         }
-        if (*g).gcstate as i32 == 2 && hasclears != 0 {
+        if (*g).gc_state as i32 == 2 && hasclears != 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
@@ -171,7 +171,7 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).grayagain,
+                &mut (*g).gray_again,
             );
         };
     }
@@ -228,11 +228,11 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
             }
             i = i.wrapping_add(1);
         }
-        if (*g).gcstate as i32 == 0 {
+        if (*g).gc_state as i32 == 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).grayagain,
+                &mut (*g).gray_again,
             );
         } else if hasww != 0 {
             linkgclist_(
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).allweak,
+                &mut (*g).all_weak,
             );
         } else {
             genlink(g, &mut (*(h as *mut Object)));
@@ -301,7 +301,7 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
             luat_gettm(
                 (*h).metatable,
                 TM_MODE,
-                (*g).tmname[TM_MODE as usize],
+                (*g).tm_name[TM_MODE as usize],
             )
         };
         let smode: *mut TString;
@@ -324,7 +324,7 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
                 linkgclist_(
                     &mut (*(h as *mut Object)),
                     &mut (*h).gc_list,
-                    &mut (*g).allweak,
+                    &mut (*g).all_weak,
                 );
             }
         } else {
@@ -1232,7 +1232,7 @@ pub unsafe extern "C" fn luav_finishget(
                     luat_gettm(
                         (*((*t).value.object as *mut Table)).metatable,
                         TM_INDEX,
-                        (*(*state).global).tmname[TM_INDEX as usize],
+                        (*(*state).global).tm_name[TM_INDEX as usize],
                     )
                 };
                 if tm.is_null() {
@@ -1288,7 +1288,7 @@ pub unsafe extern "C" fn luav_finishset(
                     luat_gettm(
                         (*h).metatable,
                         TM_NEWINDEX,
-                        (*(*state).global).tmname[TM_NEWINDEX as usize],
+                        (*(*state).global).tm_name[TM_NEWINDEX as usize],
                     )
                 };
                 if tm.is_null() {

@@ -446,7 +446,7 @@ pub unsafe extern "C" fn funcnamefromcode(
             }
             _ => return std::ptr::null(),
         }
-        *name = ((*(*(*state).global).tmname[tm as usize]).get_contents2())
+        *name = ((*(*(*state).global).tm_name[tm as usize]).get_contents2())
             .offset(2 as isize);
         return b"metamethod\0" as *const u8 as *const i8;
     }

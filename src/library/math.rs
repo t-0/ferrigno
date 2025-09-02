@@ -64,7 +64,7 @@ pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState
                 if !(ran > n) {
                     break;
                 }
-                ran = (next_random(((*ransate).s).as_mut_ptr()) & 0xffffffffffffffff as u64) as u64;
+                ran = (next_random(((*ransate).data).as_mut_ptr()) & 0xffffffffffffffff as u64) as u64;
             }
             return ran;
         };
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn random_seed(state: *mut State, randomstate: *mut Random
     unsafe {
         let seed1: u64 = time(std::ptr::null_mut()) as u64;
         let seed2: u64 = state as u64;
-        set_seed(state, ((*randomstate).s).as_mut_ptr(), seed1, seed2);
+        set_seed(state, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
     }
 }
 unsafe extern "C" fn math_abs(state: *mut State) -> i32 {
@@ -331,7 +331,7 @@ unsafe extern "C" fn math_random(state: *mut State) -> i32 {
         let p: u64;
         let ransate: *mut RandomState =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-        let rv: u64 = next_random(((*ransate).s).as_mut_ptr());
+        let rv: u64 = next_random(((*ransate).data).as_mut_ptr());
         match (*state).get_top() {
             0 => {
                 (*state).push_number(i2d(rv));
@@ -377,7 +377,7 @@ unsafe extern "C" fn math_randomseed(state: *mut State) -> i32 {
         } else {
             let n1: i64 = lual_checkinteger(state, 1);
             let n2: i64 = lual_optinteger(state, 2, 0);
-            set_seed(state, ((*randomstate).s).as_mut_ptr(), n1 as u64, n2 as u64);
+            set_seed(state, ((*randomstate).data).as_mut_ptr(), n1 as u64, n2 as u64);
         }
         return 2;
     }

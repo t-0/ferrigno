@@ -206,8 +206,8 @@ pub unsafe extern "C" fn writer(
 ) -> i32 {
     unsafe {
         let stream_writer: *mut StreamWriter = arbitrary_data as *mut StreamWriter;
-        if (*stream_writer).init == 0 {
-            (*stream_writer).init = 1;
+        if !(*stream_writer).is_initialized {
+            (*stream_writer).is_initialized = true;
             (*stream_writer).buffer.lual_buffinit(state);
         }
         (*stream_writer)
@@ -219,13 +219,13 @@ pub unsafe extern "C" fn writer(
 pub unsafe extern "C" fn str_dump(state: *mut State) -> i32 {
     unsafe {
         let mut stream_writer: StreamWriter = StreamWriter {
-            init: 0,
+            is_initialized: false,
             buffer: Buffer::new(),
         };
         let is_strip = 0 != lua_toboolean(state, 2);
         lual_checktype(state, 1, TAG_TYPE_CLOSURE);
         lua_settop(state, 1);
-        stream_writer.init = 0;
+        stream_writer.is_initialized = false;
         if ((lua_dump(
             state,
             Some(

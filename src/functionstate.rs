@@ -28,21 +28,21 @@ use libc::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct FunctionState {
-    pub f: *mut Prototype,
+    pub prototype: *mut Prototype,
     pub previous: *mut FunctionState,
     pub lexical_state: *mut LexicalState,
     pub block_control: *mut BlockControl,
     pub program_counter: i32,
-    pub lasttarget: i32,
-    pub previousline: i32,
+    pub last_target: i32,
+    pub previous_line: i32,
     pub nk: i32,
     pub np: i32,
-    pub nabslineinfo: i32,
-    pub firstlocal: i32,
+    pub count_abslineinfo: i32,
+    pub first_local: i32,
     pub first_label: i32,
-    pub ndebugvars: i16,
+    pub count_debug_variables: i16,
     pub count_active_variables: u8,
-    pub nups: u8,
+    pub count_upvalues: u8,
     pub freereg: u8,
     pub iwthabs: u8,
     pub needs_close: bool,
@@ -50,21 +50,21 @@ pub struct FunctionState {
 impl New for FunctionState {
     fn new() -> Self {
         return FunctionState {
-            f: std::ptr::null_mut(),
+            prototype: std::ptr::null_mut(),
             previous: std::ptr::null_mut(),
             lexical_state: std::ptr::null_mut(),
             block_control: std::ptr::null_mut(),
             program_counter: 0,
-            lasttarget: 0,
-            previousline: 0,
+            last_target: 0,
+            previous_line: 0,
             nk: 0,
             np: 0,
-            nabslineinfo: 0,
-            firstlocal: 0,
+            count_abslineinfo: 0,
+            first_local: 0,
             first_label: 0,
-            ndebugvars: 0,
+            count_debug_variables: 0,
             count_active_variables: 0,
-            nups: 0,
+            count_upvalues: 0,
             freereg: 0,
             iwthabs: 0,
             needs_close: false,
@@ -148,13 +148,13 @@ pub unsafe extern "C" fn leaveblock(fs: *mut FunctionState) {
 }
 pub unsafe extern "C" fn closelistfield(fs: *mut FunctionState, cc: *mut ConstructorControl) {
     unsafe {
-        if (*cc).v.k == V::VVOID {
+        if (*cc).v.kind == V::VVOID {
             return;
         }
         luak_exp2nextreg(fs, &mut (*cc).v);
-        (*cc).v.k = V::VVOID;
+        (*cc).v.kind = V::VVOID;
         if (*cc).tostore == 50 as i32 {
-            luak_setlist(fs, (*(*cc).t).u.info, (*cc).na, (*cc).tostore);
+            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).tostore);
             (*cc).na += (*cc).tostore;
             (*cc).tostore = 0;
         }
@@ -165,23 +165,23 @@ pub unsafe extern "C" fn lastlistfield(fs: *mut FunctionState, cc: *mut Construc
         if (*cc).tostore == 0 {
             return;
         }
-        if (*cc).v.k as u32 == V::VCALL as u32 || (*cc).v.k as u32 == V::VVARARG as u32 {
+        if (*cc).v.kind as u32 == V::VCALL as u32 || (*cc).v.kind as u32 == V::VVARARG as u32 {
             luak_setreturns(fs, &mut (*cc).v, -1);
-            luak_setlist(fs, (*(*cc).t).u.info, (*cc).na, -1);
+            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, -1);
             (*cc).na -= 1;
             (*cc).na;
         } else {
-            if (*cc).v.k != V::VVOID {
+            if (*cc).v.kind != V::VVOID {
                 luak_exp2nextreg(fs, &mut (*cc).v);
             }
-            luak_setlist(fs, (*(*cc).t).u.info, (*cc).na, (*cc).tostore);
+            luak_setlist(fs, (*(*cc).t).value.info, (*cc).na, (*cc).tostore);
         }
         (*cc).na += (*cc).tostore;
     }
 }
 pub unsafe extern "C" fn setvararg(fs: *mut FunctionState, nparams: i32) {
     unsafe {
-        (*(*fs).f).is_variable_arguments = true;
+        (*(*fs).prototype).is_variable_arguments = true;
         luak_code_abck(fs, OP_VARARGPREP, nparams, 0, 0, 0);
     }
 }
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn errorlimit(fs: *mut FunctionState, limit: i32, what: *c
     unsafe {
         let state: *mut State = (*(*fs).lexical_state).state;
         let message: *const i8;
-        let line: i32 = (*(*fs).f).line_defined;
+        let line: i32 = (*(*fs).prototype).line_defined;
         let where_0: *const i8 = if line == 0 {
             b"main function\0" as *const u8 as *const i8
         } else {
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn getlocalvardesc(
         return &mut *((*(*(*fs).lexical_state).dynamic_data)
             .active_variable
             .pointer)
-            .offset(((*fs).firstlocal + vidx) as isize) as *mut VariableDescription;
+            .offset(((*fs).first_local + vidx) as isize) as *mut VariableDescription;
     }
 }
 pub unsafe extern "C" fn reglevel(fs: *mut FunctionState, mut nvar: i32) -> i32 {
@@ -236,8 +236,8 @@ pub unsafe extern "C" fn reglevel(fs: *mut FunctionState, mut nvar: i32) -> i32 
                 break;
             }
             let vd: *mut VariableDescription = getlocalvardesc(fs, nvar);
-            if (*vd).vd.kind as i32 != 3 {
-                return (*vd).vd.ridx as i32 + 1;
+            if (*vd).content.kind as i32 != 3 {
+                return (*vd).content.ridx as i32 + 1;
             }
         }
         return 0;
@@ -251,11 +251,11 @@ pub unsafe extern "C" fn luay_nvarstack(fs: *mut FunctionState) -> i32 {
 pub unsafe extern "C" fn localdebuginfo(fs: *mut FunctionState, vidx: i32) -> *mut LocalVariable {
     unsafe {
         let vd: *mut VariableDescription = getlocalvardesc(fs, vidx);
-        if (*vd).vd.kind as i32 == 3 {
+        if (*vd).content.kind as i32 == 3 {
             return std::ptr::null_mut();
         } else {
-            let index: i32 = (*vd).vd.pidx as i32;
-            return &mut *((*(*fs).f).local_variables).offset(index as isize) as *mut LocalVariable;
+            let index: i32 = (*vd).content.pidx as i32;
+            return &mut *((*(*fs).prototype).local_variables).offset(index as isize) as *mut LocalVariable;
         };
     }
 }
@@ -267,14 +267,14 @@ pub unsafe extern "C" fn init_var(
     unsafe {
         (*e).t = -1;
         (*e).f = (*e).t;
-        (*e).k = V::VLOCAL;
-        (*e).u.variable.value_index = vidx as u16;
-        (*e).u.variable.register_index = (*getlocalvardesc(fs, vidx)).vd.ridx;
+        (*e).kind = V::VLOCAL;
+        (*e).value.variable.value_index = vidx as u16;
+        (*e).value.variable.register_index = (*getlocalvardesc(fs, vidx)).content.ridx;
     }
 }
 pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) {
     unsafe {
-        (*(*(*fs).lexical_state).dynamic_data).active_variable.n -=
+        (*(*(*fs).lexical_state).dynamic_data).active_variable.length -=
             (*fs).count_active_variables as i32 - tolevel;
         while (*fs).count_active_variables as i32 > tolevel {
             (*fs).count_active_variables = ((*fs).count_active_variables).wrapping_sub(1);
@@ -288,9 +288,9 @@ pub unsafe extern "C" fn removevars(fs: *mut FunctionState, tolevel: i32) {
 pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TString) -> i32 {
     unsafe {
         let mut i: i32;
-        let up: *mut UpValueDescription = (*(*fs).f).upvalues;
+        let up: *mut UpValueDescription = (*(*fs).prototype).upvalues;
         i = 0;
-        while i < (*fs).nups as i32 {
+        while i < (*fs).count_upvalues as i32 {
             if (*up.offset(i as isize)).name == name {
                 return i;
             }
@@ -301,18 +301,18 @@ pub unsafe extern "C" fn searchupvalue(fs: *mut FunctionState, name: *mut TStrin
 }
 pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut UpValueDescription {
     unsafe {
-        let f: *mut Prototype = (*fs).f;
+        let f: *mut Prototype = (*fs).prototype;
         let mut old_size: i32 = (*f).size_upvalues;
         checklimit(
             fs,
-            (*fs).nups as i32 + 1,
+            (*fs).count_upvalues as i32 + 1,
             255 as i32,
             b"upvalues\0" as *const u8 as *const i8,
         );
         (*f).upvalues = luam_growaux_(
             (*(*fs).lexical_state).state,
             (*f).upvalues as *mut libc::c_void,
-            (*fs).nups as i32,
+            (*fs).count_upvalues as i32,
             &mut (*f).size_upvalues,
             ::core::mem::size_of::<UpValueDescription>() as i32,
             (if 255 as u64
@@ -330,8 +330,8 @@ pub unsafe extern "C" fn allocupvalue(fs: *mut FunctionState) -> *mut UpValueDes
             let ref mut fresh42 = (*((*f).upvalues).offset(fresh41 as isize)).name;
             *fresh42 = std::ptr::null_mut();
         }
-        let fresh43 = (*fs).nups;
-        (*fs).nups = ((*fs).nups).wrapping_add(1);
+        let fresh43 = (*fs).count_upvalues;
+        (*fs).count_upvalues = ((*fs).count_upvalues).wrapping_add(1);
         return &mut *((*f).upvalues).offset(fresh43 as isize) as *mut UpValueDescription;
     }
 }
@@ -343,25 +343,25 @@ pub unsafe extern "C" fn newupvalue(
     unsafe {
         let up: *mut UpValueDescription = allocupvalue(fs);
         let previous: *mut FunctionState = (*fs).previous;
-        if (*v).k as u32 == V::VLOCAL as u32 {
+        if (*v).kind as u32 == V::VLOCAL as u32 {
             (*up).is_in_stack = true;
-            (*up).index = (*v).u.variable.register_index;
-            (*up).kind = (*getlocalvardesc(previous, (*v).u.variable.value_index as i32)).vd.kind;
+            (*up).index = (*v).value.variable.register_index;
+            (*up).kind = (*getlocalvardesc(previous, (*v).value.variable.value_index as i32)).content.kind;
         } else {
             (*up).is_in_stack = false;
-            (*up).index = (*v).u.info as u8;
-            (*up).kind = (*((*(*previous).f).upvalues).offset((*v).u.info as isize)).kind;
+            (*up).index = (*v).value.info as u8;
+            (*up).kind = (*((*(*previous).prototype).upvalues).offset((*v).value.info as isize)).kind;
         }
         (*up).name = name;
-        if (*(*fs).f).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
+        if (*(*fs).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
                 (*(*fs).lexical_state).state,
-                &mut (*((*fs).f as *mut Object)),
+                &mut (*((*fs).prototype as *mut Object)),
                 &mut (*(name as *mut Object)),
             );
         } else {
         };
-        return (*fs).nups as i32 - 1;
+        return (*fs).count_upvalues as i32 - 1;
     }
 }
 pub unsafe extern "C" fn searchvar(
@@ -374,13 +374,13 @@ pub unsafe extern "C" fn searchvar(
         i = (*fs).count_active_variables as i32 - 1;
         while i >= 0 {
             let vd: *mut VariableDescription = getlocalvardesc(fs, i);
-            if n == (*vd).vd.name {
-                if (*vd).vd.kind as i32 == 3 {
-                    init_exp(var, V::VCONST, (*fs).firstlocal + i);
+            if n == (*vd).content.name {
+                if (*vd).content.kind as i32 == 3 {
+                    init_exp(var, V::VCONST, (*fs).first_local + i);
                 } else {
                     init_var(fs, var, i);
                 }
-                return (*var).k as i32;
+                return (*var).kind as i32;
             }
             i -= 1;
         }
@@ -418,14 +418,14 @@ pub unsafe extern "C" fn singlevaraux(
             let v: i32 = searchvar(fs, n, var);
             if v >= 0 {
                 if v == V::VLOCAL as i32 && base == 0 {
-                    markupval(fs, (*var).u.variable.value_index as i32);
+                    markupval(fs, (*var).value.variable.value_index as i32);
                 }
             } else {
                 let mut index: i32 = searchupvalue(fs, n);
                 if index < 0 {
                     singlevaraux((*fs).previous, n, var, 0);
-                    if (*var).k == V::VLOCAL
-                        || (*var).k == V::VUPVAL
+                    if (*var).kind == V::VLOCAL
+                        || (*var).kind == V::VUPVAL
                     {
                         index = newupvalue(fs, n, var);
                     } else {
@@ -444,7 +444,7 @@ pub unsafe extern "C" fn fixforjump(
     back: i32,
 ) {
     unsafe {
-        let jmp: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let jmp: *mut u32 = &mut *((*(*fs).prototype).code).offset(program_counter as isize) as *mut u32;
         let mut offset: i32 = dest - (program_counter + 1);
         if back != 0 {
             offset = -offset;
@@ -470,8 +470,8 @@ pub unsafe extern "C" fn checktoclose(fs: *mut FunctionState, level: i32) {
 pub unsafe extern "C" fn previousinstruction(fs: *mut FunctionState) -> *mut u32 {
     unsafe {
         pub const INVALID_INSTRUCTION: u32 = !(0u32);
-        if (*fs).program_counter > (*fs).lasttarget {
-            return &mut *((*(*fs).f).code).offset(((*fs).program_counter - 1) as isize)
+        if (*fs).program_counter > (*fs).last_target {
+            return &mut *((*(*fs).prototype).code).offset(((*fs).program_counter - 1) as isize)
                 as *mut u32;
         } else {
             return &INVALID_INSTRUCTION as *const u32 as *mut u32;
@@ -504,7 +504,7 @@ pub unsafe extern "C" fn luak_nil(fs: *mut FunctionState, mut from: i32, n: i32)
 }
 pub unsafe extern "C" fn getjump(fs: *mut FunctionState, program_counter: i32) -> i32 {
     unsafe {
-        let offset: i32 = (*((*(*fs).f).code).offset(program_counter as isize) >> 0 + 7
+        let offset: i32 = (*((*(*fs).prototype).code).offset(program_counter as isize) >> 0 + 7
             & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
             - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
         if offset == -1 {
@@ -516,7 +516,7 @@ pub unsafe extern "C" fn getjump(fs: *mut FunctionState, program_counter: i32) -
 }
 pub unsafe extern "C" fn fixjump(fs: *mut FunctionState, program_counter: i32, dest: i32) {
     unsafe {
-        let jmp: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let jmp: *mut u32 = &mut *((*(*fs).prototype).code).offset(program_counter as isize) as *mut u32;
         let offset: i32 = dest - (program_counter + 1);
         if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset
             && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1))
@@ -588,13 +588,13 @@ pub unsafe extern "C" fn condjump(
 }
 pub unsafe extern "C" fn luak_getlabel(fs: *mut FunctionState) -> i32 {
     unsafe {
-        (*fs).lasttarget = (*fs).program_counter;
+        (*fs).last_target = (*fs).program_counter;
         return (*fs).program_counter;
     }
 }
 pub unsafe extern "C" fn getjumpcontrol(fs: *mut FunctionState, program_counter: i32) -> *mut u32 {
     unsafe {
-        let pi: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let pi: *mut u32 = &mut *((*(*fs).prototype).code).offset(program_counter as isize) as *mut u32;
         if program_counter >= 1
             && OPMODES[(*pi.offset(-(1 as isize)) >> 0 & !(!(0u32) << 7) << 0) as usize]
                 as i32
@@ -666,7 +666,7 @@ pub unsafe extern "C" fn luak_patchtohere(fs: *mut FunctionState, list: i32) {
 }
 pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype, line: i32) {
     unsafe {
-        let mut linedif: i32 = line - (*fs).previousline;
+        let mut linedif: i32 = line - (*fs).previous_line;
         let program_counter: i32 = (*fs).program_counter - 1;
         if abs(linedif) >= 0x80 as i32 || {
             let fresh132 = (*fs).iwthabs;
@@ -676,7 +676,7 @@ pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype,
             (*f).absolute_line_info = luam_growaux_(
                 (*(*fs).lexical_state).state,
                 (*f).absolute_line_info as *mut libc::c_void,
-                (*fs).nabslineinfo,
+                (*fs).count_abslineinfo,
                 &mut (*f).size_absolute_line_info,
                 ::core::mem::size_of::<AbsoluteLineInfo>() as i32,
                 (if 0x7FFFFFFF as u64
@@ -688,10 +688,10 @@ pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype,
                 }) as i32,
                 b"lines\0" as *const u8 as *const i8,
             ) as *mut AbsoluteLineInfo;
-            (*((*f).absolute_line_info).offset((*fs).nabslineinfo as isize)).program_counter =
+            (*((*f).absolute_line_info).offset((*fs).count_abslineinfo as isize)).program_counter =
                 program_counter;
-            let fresh133 = (*fs).nabslineinfo;
-            (*fs).nabslineinfo = (*fs).nabslineinfo + 1;
+            let fresh133 = (*fs).count_abslineinfo;
+            (*fs).count_abslineinfo = (*fs).count_abslineinfo + 1;
             (*((*f).absolute_line_info).offset(fresh133 as isize)).line = line;
             linedif = -(0x80 as i32);
             (*fs).iwthabs = 1;
@@ -712,20 +712,20 @@ pub unsafe extern "C" fn savelineinfo(fs: *mut FunctionState, f: *mut Prototype,
             b"opcodes\0" as *const u8 as *const i8,
         ) as *mut i8;
         *((*f).line_info).offset(program_counter as isize) = linedif as i8;
-        (*fs).previousline = line;
+        (*fs).previous_line = line;
     }
 }
 pub unsafe extern "C" fn removelastlineinfo(fs: *mut FunctionState) {
     unsafe {
-        let f: *mut Prototype = (*fs).f;
+        let f: *mut Prototype = (*fs).prototype;
         let program_counter: i32 = (*fs).program_counter - 1;
         if *((*f).line_info).offset(program_counter as isize) as i32 != -(0x80 as i32) {
-            (*fs).previousline -= *((*f).line_info).offset(program_counter as isize) as i32;
+            (*fs).previous_line -= *((*f).line_info).offset(program_counter as isize) as i32;
             (*fs).iwthabs = ((*fs).iwthabs).wrapping_sub(1);
             (*fs).iwthabs;
         } else {
-            (*fs).nabslineinfo -= 1;
-            (*fs).nabslineinfo;
+            (*fs).count_abslineinfo -= 1;
+            (*fs).count_abslineinfo;
             (*fs).iwthabs = (128 as i32 + 1) as u8;
         };
     }
@@ -739,7 +739,7 @@ pub unsafe extern "C" fn removelastinstruction(fs: *mut FunctionState) {
 }
 pub unsafe extern "C" fn luak_code(fs: *mut FunctionState, i: u32) -> i32 {
     unsafe {
-        let f: *mut Prototype = (*fs).f;
+        let f: *mut Prototype = (*fs).prototype;
         (*f).code = luam_growaux_(
             (*(*fs).lexical_state).state,
             (*f).code as *mut libc::c_void,
@@ -817,14 +817,14 @@ pub unsafe extern "C" fn luak_codek(fs: *mut FunctionState, reg: i32, k: i32) ->
 pub unsafe extern "C" fn luak_checkstack(fs: *mut FunctionState, n: i32) {
     unsafe {
         let newstack: i32 = (*fs).freereg as i32 + n;
-        if newstack > (*(*fs).f).maximum_stack_size as i32 {
+        if newstack > (*(*fs).prototype).maximum_stack_size as i32 {
             if newstack >= 255 as i32 {
                 luax_syntaxerror(
                     (*fs).lexical_state,
                     b"function or expression needs too many registers\0" as *const u8 as *const i8,
                 );
             }
-            (*(*fs).f).maximum_stack_size = newstack as u8;
+            (*(*fs).prototype).maximum_stack_size = newstack as u8;
         }
     }
 }
@@ -855,8 +855,8 @@ pub unsafe extern "C" fn freeregs(fs: *mut FunctionState, r1: i32, r2: i32) {
 }
 pub unsafe extern "C" fn freeexp(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).k as u32 == V::VNONRELOC as u32 {
-            freereg(fs, (*e).u.info);
+        if (*e).kind as u32 == V::VNONRELOC as u32 {
+            freereg(fs, (*e).value.info);
         }
     }
 }
@@ -866,13 +866,13 @@ pub unsafe extern "C" fn freeexps(
     e2: *mut ExpressionDescription,
 ) {
     unsafe {
-        let r1: i32 = if (*e1).k as u32 == V::VNONRELOC as u32 {
-            (*e1).u.info
+        let r1: i32 = if (*e1).kind as u32 == V::VNONRELOC as u32 {
+            (*e1).value.info
         } else {
             -1
         };
-        let r2: i32 = if (*e2).k as u32 == V::VNONRELOC as u32 {
-            (*e2).u.info
+        let r2: i32 = if (*e2).kind as u32 == V::VNONRELOC as u32 {
+            (*e2).value.info
         } else {
             -1
         };
@@ -888,7 +888,7 @@ pub unsafe extern "C" fn addk(fs: *mut FunctionState, key: *mut TValue, v: *mut 
             tag: 0,
         };
         let state: *mut State = (*(*fs).lexical_state).state;
-        let f: *mut Prototype = (*fs).f;
+        let f: *mut Prototype = (*fs).prototype;
         let index: *const TValue = luah_get((*(*fs).lexical_state).h, key);
         let mut k: i32;
         if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
@@ -1082,8 +1082,8 @@ pub unsafe extern "C" fn luak_setreturns(
 ) {
     unsafe {
         let program_counter: *mut u32 =
-            &mut *((*(*fs).f).code).offset((*e).u.info as isize) as *mut u32;
-        if (*e).k as u32 == V::VCALL as u32 {
+            &mut *((*(*fs).prototype).code).offset((*e).value.info as isize) as *mut u32;
+        if (*e).kind as u32 == V::VCALL as u32 {
             *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
                 | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
                     & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
@@ -1099,86 +1099,86 @@ pub unsafe extern "C" fn luak_setreturns(
 }
 pub unsafe extern "C" fn str_to_k(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        (*e).u.info = string_k(fs, (*e).u.tstring);
-        (*e).k = V::VK;
+        (*e).value.info = string_k(fs, (*e).value.tstring);
+        (*e).kind = V::VK;
     }
 }
 pub unsafe extern "C" fn luak_setoneret(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).k as u32 == V::VCALL as u32 {
-            (*e).k = V::VNONRELOC;
-            (*e).u.info = (*((*(*fs).f).code).offset((*e).u.info as isize) >> 0 + 7
+        if (*e).kind as u32 == V::VCALL as u32 {
+            (*e).kind = V::VNONRELOC;
+            (*e).value.info = (*((*(*fs).prototype).code).offset((*e).value.info as isize) >> 0 + 7
                 & !(!(0u32) << 8) << 0) as i32;
-        } else if (*e).k as u32 == V::VVARARG as u32 {
-            *((*(*fs).f).code).offset((*e).u.info as isize) = *((*(*fs).f).code)
-                .offset((*e).u.info as isize)
+        } else if (*e).kind as u32 == V::VVARARG as u32 {
+            *((*(*fs).prototype).code).offset((*e).value.info as isize) = *((*(*fs).prototype).code)
+                .offset((*e).value.info as isize)
                 & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
                 | (2 as u32) << 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
-            (*e).k = V::VRELOC;
+            (*e).kind = V::VRELOC;
         }
     }
 }
 pub unsafe extern "C" fn luak_dischargevars(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        match (*e).k {
+        match (*e).kind {
             V::VCONST => {
                 const2exp(const2val(fs, e), e);
             }
             V::VLOCAL => {
-                let temp: i32 = (*e).u.variable.register_index as i32;
-                (*e).u.info = temp;
-                (*e).k = V::VNONRELOC;
+                let temp: i32 = (*e).value.variable.register_index as i32;
+                (*e).value.info = temp;
+                (*e).kind = V::VNONRELOC;
             }
             V::VUPVAL => {
-                (*e).u.info = luak_code_abck(fs, OP_GETUPVAL, 0, (*e).u.info, 0, 0);
-                (*e).k = V::VRELOC;
+                (*e).value.info = luak_code_abck(fs, OP_GETUPVAL, 0, (*e).value.info, 0, 0);
+                (*e).kind = V::VRELOC;
             }
             V::VINDEXUP => {
-                (*e).u.info = luak_code_abck(
+                (*e).value.info = luak_code_abck(
                     fs,
                     OP_GETTABUP,
                     0,
-                    (*e).u.index.reference_tag as i32,
-                    (*e).u.index.reference_index as i32,
+                    (*e).value.index.reference_tag as i32,
+                    (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).k = V::VRELOC;
+                (*e).kind = V::VRELOC;
             }
             V::VINDEXI => {
-                freereg(fs, (*e).u.index.reference_tag as i32);
-                (*e).u.info = luak_code_abck(
+                freereg(fs, (*e).value.index.reference_tag as i32);
+                (*e).value.info = luak_code_abck(
                     fs,
                     OP_GETI,
                     0,
-                    (*e).u.index.reference_tag as i32,
-                    (*e).u.index.reference_index as i32,
+                    (*e).value.index.reference_tag as i32,
+                    (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).k = V::VRELOC;
+                (*e).kind = V::VRELOC;
             }
             V::VINDEXSTR => {
-                freereg(fs, (*e).u.index.reference_tag as i32);
-                (*e).u.info = luak_code_abck(
+                freereg(fs, (*e).value.index.reference_tag as i32);
+                (*e).value.info = luak_code_abck(
                     fs,
                     OP_GETFIELD,
                     0,
-                    (*e).u.index.reference_tag as i32,
-                    (*e).u.index.reference_index as i32,
+                    (*e).value.index.reference_tag as i32,
+                    (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).k = V::VRELOC;
+                (*e).kind = V::VRELOC;
             }
             V::VINDEXED => {
-                freeregs(fs, (*e).u.index.reference_tag as i32, (*e).u.index.reference_index as i32);
-                (*e).u.info = luak_code_abck(
+                freeregs(fs, (*e).value.index.reference_tag as i32, (*e).value.index.reference_index as i32);
+                (*e).value.info = luak_code_abck(
                     fs,
                     OP_GETTABLE,
                     0,
-                    (*e).u.index.reference_tag as i32,
-                    (*e).u.index.reference_index as i32,
+                    (*e).value.index.reference_tag as i32,
+                    (*e).value.index.reference_index as i32,
                     0,
                 );
-                (*e).k = V::VRELOC;
+                (*e).kind = V::VRELOC;
             }
             V::VVARARG | V::VCALL => {
                 luak_setoneret(fs, e);
@@ -1195,7 +1195,7 @@ pub unsafe extern "C" fn discharge2reg(
     unsafe {
         luak_dischargevars(fs, e);
         let current_block_14: u64;
-        match (*e).k as u32 {
+        match (*e).kind as u32 {
             1 => {
                 luak_nil(fs, reg, 1);
                 current_block_14 = 13242334135786603907;
@@ -1216,23 +1216,23 @@ pub unsafe extern "C" fn discharge2reg(
                 current_block_14 = 6937071982253665452;
             }
             5 => {
-                luak_float(fs, reg, (*e).u.number);
+                luak_float(fs, reg, (*e).value.number);
                 current_block_14 = 13242334135786603907;
             }
             6 => {
-                luak_int(fs, reg, (*e).u.integer);
+                luak_int(fs, reg, (*e).value.integer);
                 current_block_14 = 13242334135786603907;
             }
             17 => {
                 let program_counter: *mut u32 =
-                    &mut *((*(*fs).f).code).offset((*e).u.info as isize) as *mut u32;
+                    &mut *((*(*fs).prototype).code).offset((*e).value.info as isize) as *mut u32;
                 *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7)
                     | (reg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
                 current_block_14 = 13242334135786603907;
             }
             8 => {
-                if reg != (*e).u.info {
-                    luak_code_abck(fs, OP_MOVE, reg, (*e).u.info, 0, 0);
+                if reg != (*e).value.info {
+                    luak_code_abck(fs, OP_MOVE, reg, (*e).value.info, 0, 0);
                 }
                 current_block_14 = 13242334135786603907;
             }
@@ -1240,17 +1240,17 @@ pub unsafe extern "C" fn discharge2reg(
         }
         match current_block_14 {
             6937071982253665452 => {
-                luak_codek(fs, reg, (*e).u.info);
+                luak_codek(fs, reg, (*e).value.info);
             }
             _ => {}
         }
-        (*e).u.info = reg;
-        (*e).k = V::VNONRELOC;
+        (*e).value.info = reg;
+        (*e).kind = V::VNONRELOC;
     }
 }
 pub unsafe extern "C" fn discharge2anyreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).k as u32 != V::VNONRELOC as u32 {
+        if (*e).kind as u32 != V::VNONRELOC as u32 {
             luak_reserveregs(fs, 1);
             discharge2reg(fs, e, (*fs).freereg as i32 - 1);
         }
@@ -1277,14 +1277,14 @@ pub unsafe extern "C" fn need_value(fs: *mut FunctionState, mut list: i32) -> i3
 pub unsafe extern "C" fn exp2reg(fs: *mut FunctionState, e: *mut ExpressionDescription, reg: i32) {
     unsafe {
         discharge2reg(fs, e, reg);
-        if (*e).k as u32 == V::VJMP as u32 {
-            luak_concat(fs, &mut (*e).t, (*e).u.info);
+        if (*e).kind as u32 == V::VJMP as u32 {
+            luak_concat(fs, &mut (*e).t, (*e).value.info);
         }
         if (*e).t != (*e).f {
             let mut p_f: i32 = -1;
             let mut p_t: i32 = -1;
             if need_value(fs, (*e).t) != 0 || need_value(fs, (*e).f) != 0 {
-                let fj: i32 = if (*e).k as u32 == V::VJMP as u32 {
+                let fj: i32 = if (*e).kind as u32 == V::VJMP as u32 {
                     -1
                 } else {
                     luak_jump(fs)
@@ -1299,8 +1299,8 @@ pub unsafe extern "C" fn exp2reg(fs: *mut FunctionState, e: *mut ExpressionDescr
         }
         (*e).t = -1;
         (*e).f = (*e).t;
-        (*e).u.info = reg;
-        (*e).k = V::VNONRELOC;
+        (*e).value.info = reg;
+        (*e).kind = V::VNONRELOC;
     }
 }
 pub unsafe extern "C" fn luak_exp2nextreg(fs: *mut FunctionState, e: *mut ExpressionDescription) {
@@ -1317,29 +1317,29 @@ pub unsafe extern "C" fn luak_exp2anyreg(
 ) -> i32 {
     unsafe {
         luak_dischargevars(fs, e);
-        if (*e).k as u32 == V::VNONRELOC as u32 {
+        if (*e).kind as u32 == V::VNONRELOC as u32 {
             if !((*e).t != (*e).f) {
-                return (*e).u.info;
+                return (*e).value.info;
             }
-            if (*e).u.info >= luay_nvarstack(fs) {
-                exp2reg(fs, e, (*e).u.info);
-                return (*e).u.info;
+            if (*e).value.info >= luay_nvarstack(fs) {
+                exp2reg(fs, e, (*e).value.info);
+                return (*e).value.info;
             }
         }
         luak_exp2nextreg(fs, e);
-        return (*e).u.info;
+        return (*e).value.info;
     }
 }
 pub unsafe extern "C" fn luak_exp2anyregup(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).k as u32 != V::VUPVAL as u32 || (*e).t != (*e).f {
+        if (*e).kind as u32 != V::VUPVAL as u32 || (*e).t != (*e).f {
             luak_exp2anyreg(fs, e);
         }
     }
 }
 pub unsafe extern "C" fn luak_exp2val(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        if (*e).k as u32 == V::VJMP as u32 || (*e).t != (*e).f {
+        if (*e).kind as u32 == V::VJMP as u32 || (*e).t != (*e).f {
             luak_exp2anyreg(fs, e);
         } else {
             luak_dischargevars(fs, e);
@@ -1350,7 +1350,7 @@ pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDe
     unsafe {
         if !((*e).t != (*e).f) {
             let info: i32;
-            match (*e).k as u32 {
+            match (*e).kind as u32 {
                 2 => {
                     info = bool_true(fs);
                 }
@@ -1361,22 +1361,22 @@ pub unsafe extern "C" fn luak_exp2k(fs: *mut FunctionState, e: *mut ExpressionDe
                     info = nil_k(fs);
                 }
                 6 => {
-                    info = luak_int_k(fs, (*e).u.integer);
+                    info = luak_int_k(fs, (*e).value.integer);
                 }
                 5 => {
-                    info = luak_number_k(fs, (*e).u.number);
+                    info = luak_number_k(fs, (*e).value.number);
                 }
                 7 => {
-                    info = string_k(fs, (*e).u.tstring);
+                    info = string_k(fs, (*e).value.tstring);
                 }
                 4 => {
-                    info = (*e).u.info;
+                    info = (*e).value.info;
                 }
                 _ => return 0,
             }
             if info <= (1 << 8) - 1 {
-                (*e).k = V::VK;
-                (*e).u.info = info;
+                (*e).kind = V::VK;
+                (*e).value.info = info;
                 return 1;
             }
         }
@@ -1402,7 +1402,7 @@ pub unsafe extern "C" fn codeabrk(
 ) {
     unsafe {
         let k: i32 = exp2rk(fs, ec);
-        luak_code_abck(fs, o, a, b, (*ec).u.info, k);
+        luak_code_abck(fs, o, a, b, (*ec).value.info, k);
     }
 }
 pub unsafe extern "C" fn luak_storevar(
@@ -1411,22 +1411,22 @@ pub unsafe extern "C" fn luak_storevar(
     ex: *mut ExpressionDescription,
 ) {
     unsafe {
-        match (*var).k {
+        match (*var).kind {
             V::VLOCAL => {
                 freeexp(fs, ex);
-                exp2reg(fs, ex, (*var).u.variable.register_index as i32);
+                exp2reg(fs, ex, (*var).value.variable.register_index as i32);
                 return;
             }
             V::VUPVAL => {
                 let e: i32 = luak_exp2anyreg(fs, ex);
-                luak_code_abck(fs, OP_SETUPVAL, e, (*var).u.info, 0, 0);
+                luak_code_abck(fs, OP_SETUPVAL, e, (*var).value.info, 0, 0);
             }
             V::VINDEXUP => {
                 codeabrk(
                     fs,
                     OP_SETTABUP,
-                    (*var).u.index.reference_tag as i32,
-                    (*var).u.index.reference_index as i32,
+                    (*var).value.index.reference_tag as i32,
+                    (*var).value.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1434,8 +1434,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETI,
-                    (*var).u.index.reference_tag as i32,
-                    (*var).u.index.reference_index as i32,
+                    (*var).value.index.reference_tag as i32,
+                    (*var).value.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1443,8 +1443,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETFIELD,
-                    (*var).u.index.reference_tag as i32,
-                    (*var).u.index.reference_index as i32,
+                    (*var).value.index.reference_tag as i32,
+                    (*var).value.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1452,8 +1452,8 @@ pub unsafe extern "C" fn luak_storevar(
                 codeabrk(
                     fs,
                     OP_SETTABLE,
-                    (*var).u.index.reference_tag as i32,
-                    (*var).u.index.reference_index as i32,
+                    (*var).value.index.reference_tag as i32,
+                    (*var).value.index.reference_index as i32,
                     ex,
                 );
             }
@@ -1469,18 +1469,18 @@ pub unsafe extern "C" fn luak_self(
 ) {
     unsafe {
         luak_exp2anyreg(fs, e);
-        let ereg: i32 = (*e).u.info;
+        let ereg: i32 = (*e).value.info;
         freeexp(fs, e);
-        (*e).u.info = (*fs).freereg as i32;
-        (*e).k = V::VNONRELOC;
+        (*e).value.info = (*fs).freereg as i32;
+        (*e).kind = V::VNONRELOC;
         luak_reserveregs(fs, 2);
-        codeabrk(fs, OP_SELF, (*e).u.info, ereg, key);
+        codeabrk(fs, OP_SELF, (*e).value.info, ereg, key);
         freeexp(fs, key);
     }
 }
 pub unsafe extern "C" fn negatecondition(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        let program_counter: *mut u32 = getjumpcontrol(fs, (*e).u.info);
+        let program_counter: *mut u32 = getjumpcontrol(fs, (*e).value.info);
         *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
             | (((*program_counter >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 ^ 1) as u32)
                 << 0 + 7 + 8
@@ -1493,8 +1493,8 @@ pub unsafe extern "C" fn jumponcond(
     cond_0: i32,
 ) -> i32 {
     unsafe {
-        if (*e).k as u32 == V::VRELOC as u32 {
-            let ie: u32 = *((*(*fs).f).code).offset((*e).u.info as isize);
+        if (*e).kind as u32 == V::VRELOC as u32 {
+            let ie: u32 = *((*(*fs).prototype).code).offset((*e).value.info as isize);
             if (ie >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_NOT as u32 {
                 removelastinstruction(fs);
                 return condjump(
@@ -1509,17 +1509,17 @@ pub unsafe extern "C" fn jumponcond(
         }
         discharge2anyreg(fs, e);
         freeexp(fs, e);
-        return condjump(fs, OP_TESTSET, (1 << 8) - 1, (*e).u.info, 0, cond_0);
+        return condjump(fs, OP_TESTSET, (1 << 8) - 1, (*e).value.info, 0, cond_0);
     }
 }
 pub unsafe extern "C" fn luak_goiftrue(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
         let program_counter: i32;
         luak_dischargevars(fs, e);
-        match (*e).k as u32 {
+        match (*e).kind as u32 {
             16 => {
                 negatecondition(fs, e);
-                program_counter = (*e).u.info;
+                program_counter = (*e).value.info;
             }
             4 | 5 | 6 | 7 | 2 => {
                 program_counter = -1;
@@ -1537,9 +1537,9 @@ pub unsafe extern "C" fn luak_goiffalse(fs: *mut FunctionState, e: *mut Expressi
     unsafe {
         let program_counter: i32;
         luak_dischargevars(fs, e);
-        match (*e).k as u32 {
+        match (*e).kind as u32 {
             16 => {
-                program_counter = (*e).u.info;
+                program_counter = (*e).value.info;
             }
             1 | 3 => {
                 program_counter = -1;
@@ -1555,12 +1555,12 @@ pub unsafe extern "C" fn luak_goiffalse(fs: *mut FunctionState, e: *mut Expressi
 }
 pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
-        match (*e).k as u32 {
+        match (*e).kind as u32 {
             1 | 3 => {
-                (*e).k = V::VTRUE;
+                (*e).kind = V::VTRUE;
             }
             4 | 5 | 6 | 7 | 2 => {
-                (*e).k = V::VFALSE;
+                (*e).kind = V::VFALSE;
             }
             16 => {
                 negatecondition(fs, e);
@@ -1568,8 +1568,8 @@ pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescr
             17 | 8 => {
                 discharge2anyreg(fs, e);
                 freeexp(fs, e);
-                (*e).u.info = luak_code_abck(fs, OP_NOT, 0, (*e).u.info, 0, 0);
-                (*e).k = V::VRELOC;
+                (*e).value.info = luak_code_abck(fs, OP_NOT, 0, (*e).value.info, 0, 0);
+                (*e).kind = V::VRELOC;
             }
             _ => {}
         }
@@ -1582,10 +1582,10 @@ pub unsafe extern "C" fn codenot(fs: *mut FunctionState, e: *mut ExpressionDescr
 }
 pub unsafe extern "C" fn is_k_string(fs: *mut FunctionState, e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return (*e).k == V::VK
+        return (*e).kind == V::VK
             && !((*e).t != (*e).f)
-            && (*e).u.info <= ((1 << 8) - 1)
-            && (*((*(*fs).f).k).offset((*e).u.info as isize)).get_tag_variant()
+            && (*e).value.info <= ((1 << 8) - 1)
+            && (*((*(*fs).prototype).k).offset((*e).value.info as isize)).get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT;
     }
 }
@@ -1622,15 +1622,15 @@ pub unsafe extern "C" fn constfolding(
         }
         luao_rawarith((*(*fs).lexical_state).state, op, &mut v1, &mut v2, &mut res);
         if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            (*e1).k = V::VKINT;
-            (*e1).u.integer = res.value.integer;
+            (*e1).kind = V::VKINT;
+            (*e1).value.integer = res.value.integer;
         } else {
             let n: f64 = res.value.number;
             if !(n == n) || n == 0.0 {
                 return 0;
             }
-            (*e1).k = V::VKFLT;
-            (*e1).u.number = n;
+            (*e1).kind = V::VKFLT;
+            (*e1).value.number = n;
         }
         return 1;
     }
@@ -1644,8 +1644,8 @@ pub unsafe extern "C" fn codeunexpval(
     unsafe {
         let r: i32 = luak_exp2anyreg(fs, e);
         freeexp(fs, e);
-        (*e).u.info = luak_code_abck(fs, op, 0, r, 0, 0);
-        (*e).k = V::VRELOC;
+        (*e).value.info = luak_code_abck(fs, op, 0, r, 0, 0);
+        (*e).kind = V::VRELOC;
         luak_fixline(fs, line);
     }
 }
@@ -1664,8 +1664,8 @@ pub unsafe extern "C" fn finishbinexpval(
         let v1: i32 = luak_exp2anyreg(fs, e1);
         let program_counter: i32 = luak_code_abck(fs, op, 0, v1, v2, 0);
         freeexps(fs, e1, e2);
-        (*e1).u.info = program_counter;
-        (*e1).k = V::VRELOC;
+        (*e1).value.info = program_counter;
+        (*e1).kind = V::VRELOC;
         luak_fixline(fs, line);
         luak_code_abck(fs, mmop, v1, v2, event as i32, flip);
         luak_fixline(fs, line);
@@ -1694,7 +1694,7 @@ pub unsafe extern "C" fn codebini(
     event: u32,
 ) {
     unsafe {
-        let v2: i32 = (*e2).u.integer as i32 + ((1 << 8) - 1 >> 1);
+        let v2: i32 = (*e2).value.integer as i32 + ((1 << 8) - 1 >> 1);
         finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINI, event);
     }
 }
@@ -1708,7 +1708,7 @@ pub unsafe extern "C" fn codebink(
 ) {
     unsafe {
         let event: u32 = binopr2tm(opr);
-        let v2: i32 = (*e2).u.info;
+        let v2: i32 = (*e2).value.info;
         let op: u32 = binopr2op(opr, OPR_ADD, OP_ADDK);
         finishbinexpval(fs, e1, e2, op, v2, flip, line, OP_MMBINK, event);
     }
@@ -1725,7 +1725,7 @@ pub unsafe extern "C" fn finishbinexpneg(
         if !is_k_int(e2) {
             return 0;
         } else {
-            let i2: i64 = (*e2).u.integer;
+            let i2: i64 = (*e2).value.integer;
             if !(fits_c(i2) && fits_c(-i2)) {
                 return 0;
             } else {
@@ -1741,8 +1741,8 @@ pub unsafe extern "C" fn finishbinexpneg(
                     OP_MMBINI,
                     event,
                 );
-                *((*(*fs).f).code).offset(((*fs).program_counter - 1) as isize) =
-                    *((*(*fs).f).code).offset(((*fs).program_counter - 1) as isize)
+                *((*(*fs).prototype).code).offset(((*fs).program_counter - 1) as isize) =
+                    *((*(*fs).prototype).code).offset(((*fs).program_counter - 1) as isize)
                         & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
                         | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << 0 + 7 + 8 + 1
                             & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
@@ -1811,11 +1811,11 @@ pub unsafe extern "C" fn codebitwise(
 ) {
     unsafe {
         let mut flip: i32 = 0;
-        if (*e1).k == V::VKINT {
+        if (*e1).kind == V::VKINT {
             swapexps(e1, e2);
             flip = 1;
         }
-        if (*e2).k == V::VKINT && luak_exp2k(fs, e2) != 0 {
+        if (*e2).kind == V::VKINT && luak_exp2k(fs, e2) != 0 {
             codebink(fs, opr, e1, e2, flip, line);
         } else {
             codebinnok(fs, opr, e1, e2, flip, line);
@@ -1848,8 +1848,8 @@ pub unsafe extern "C" fn codeorder(
             op = binopr2op(opr, OPR_LT, OP_LT);
         }
         freeexps(fs, e1, e2);
-        (*e1).u.info = condjump(fs, op, r1, r2, is_float as i32, 1);
-        (*e1).k = V::VJMP;
+        (*e1).value.info = condjump(fs, op, r1, r2, is_float as i32, 1);
+        (*e1).kind = V::VJMP;
     }
 }
 pub unsafe extern "C" fn codeeq(
@@ -1864,7 +1864,7 @@ pub unsafe extern "C" fn codeeq(
         let mut im: i32 = 0;
         let mut is_float: bool = false;
         let op: u32;
-        if (*e1).k as u32 != V::VNONRELOC as u32 {
+        if (*e1).kind as u32 != V::VNONRELOC as u32 {
             swapexps(e1, e2);
         }
         r1 = luak_exp2anyreg(fs, e1);
@@ -1873,13 +1873,13 @@ pub unsafe extern "C" fn codeeq(
             r2 = im;
         } else if exp2rk(fs, e2) != 0 {
             op = OP_EQK;
-            r2 = (*e2).u.info;
+            r2 = (*e2).value.info;
         } else {
             op = OP_EQ;
             r2 = luak_exp2anyreg(fs, e2);
         }
         freeexps(fs, e1, e2);
-        (*e1).u.info = condjump(
+        (*e1).value.info = condjump(
             fs,
             op,
             r1,
@@ -1887,7 +1887,7 @@ pub unsafe extern "C" fn codeeq(
             is_float as i32,
             (opr as u32 == OPR_EQ as u32) as i32,
         );
-        (*e1).k = V::VJMP;
+        (*e1).kind = V::VJMP;
     }
 }
 pub unsafe extern "C" fn luak_prefix(
@@ -1899,8 +1899,8 @@ pub unsafe extern "C" fn luak_prefix(
     unsafe {
         pub const EF: ExpressionDescription = {
             let init = ExpressionDescription {
-                k: V::VKINT,
-                u: Value { integer: 0 },
+                kind: V::VKINT,
+                value: Value { integer: 0 },
                 t: -1,
                 f: -1,
             };
@@ -1991,11 +1991,11 @@ pub unsafe extern "C" fn codeconcat(
             let n: i32 = (*ie2 >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
             freeexp(fs, e2);
             *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7)
-                | ((*e1).u.info as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+                | ((*e1).value.info as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
             *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
                 | ((n + 1) as u32) << 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
         } else {
-            luak_code_abck(fs, OP_CONCAT, (*e1).u.info, 2, 0, 0);
+            luak_code_abck(fs, OP_CONCAT, (*e1).value.info, 2, 0, 0);
             freeexp(fs, e2);
             luak_fixline(fs, line);
         };
@@ -2099,7 +2099,7 @@ pub unsafe extern "C" fn luak_posfix(
 pub unsafe extern "C" fn luak_fixline(fs: *mut FunctionState, line: i32) {
     unsafe {
         removelastlineinfo(fs);
-        savelineinfo(fs, (*fs).f, line);
+        savelineinfo(fs, (*fs).prototype, line);
     }
 }
 pub unsafe extern "C" fn luak_settablesize(
@@ -2110,7 +2110,7 @@ pub unsafe extern "C" fn luak_settablesize(
     hsize: i32,
 ) {
     unsafe {
-        let inst: *mut u32 = &mut *((*(*fs).f).code).offset(program_counter as isize) as *mut u32;
+        let inst: *mut u32 = &mut *((*(*fs).prototype).code).offset(program_counter as isize) as *mut u32;
         let rb: i32 = if hsize != 0 {
             ceiling_log2(hsize as u64) as i32 + 1
         } else {
@@ -2151,7 +2151,7 @@ pub unsafe extern "C" fn luak_setlist(
 pub unsafe extern "C" fn luak_finish(fs: *mut FunctionState) {
     unsafe {
         let mut i: i32;
-        let p: *mut Prototype = (*fs).f;
+        let p: *mut Prototype = (*fs).prototype;
         i = 0;
         while i < (*fs).program_counter {
             let program_counter: *mut u32 = &mut *((*p).code).offset(i as isize) as *mut u32;

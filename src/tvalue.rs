@@ -355,7 +355,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     luat_gettm(
                         (*((*t1).value.object as *mut User)).metatable,
                         TM_EQ,
-                        (*(*state).global).tmname[TM_EQ as usize],
+                        (*(*state).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn luav_equalobj(
                         luat_gettm(
                             (*((*t2).value.object as *mut User)).metatable,
                             TM_EQ,
-                            (*(*state).global).tmname[TM_EQ as usize],
+                            (*(*state).global).tm_name[TM_EQ as usize],
                         )
                     };
                 }
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     luat_gettm(
                         (*((*t1).value.object as *mut Table)).metatable,
                         TM_EQ,
-                        (*(*state).global).tmname[TM_EQ as usize],
+                        (*(*state).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn luav_equalobj(
                         luat_gettm(
                             (*((*t2).value.object as *mut Table)).metatable,
                             TM_EQ,
-                            (*(*state).global).tmname[TM_EQ as usize],
+                            (*(*state).global).tm_name[TM_EQ as usize],
                         )
                     };
                 }
@@ -439,7 +439,7 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StkId, rb: *const TV
                     luat_gettm(
                         (*h).metatable,
                         TM_LEN,
-                        (*(*state).global).tmname[TM_LEN as usize],
+                        (*(*state).global).tm_name[TM_LEN as usize],
                     )
                 };
                 if tm.is_null() {

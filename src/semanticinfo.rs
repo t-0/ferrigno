@@ -3,12 +3,12 @@ use crate::tstring::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union SemanticInfo {
-    pub r: f64,
-    pub i: i64,
-    pub ts: *mut TString,
+    pub number: f64,
+    pub integer: i64,
+    pub tstring: *mut TString,
 }
 impl New for SemanticInfo {
     fn new() -> Self {
-        return SemanticInfo { r: 0. };
+        return SemanticInfo { number: 0. };
     }
 }

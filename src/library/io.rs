@@ -336,7 +336,7 @@ pub unsafe extern "C" fn nextc(rn: *mut RN) -> i32 {
             let fresh152 = (*rn).n;
             (*rn).n = (*rn).n + 1;
             (*rn).buffer[fresh152 as usize] = (*rn).c as i8;
-            (*rn).c = getc_unlocked((*rn).f);
+            (*rn).c = getc_unlocked((*rn).file);
             return 1;
         };
     }
@@ -368,7 +368,7 @@ pub unsafe extern "C" fn readdigits(rn: *mut RN, hex: i32) -> i32 {
 pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
     unsafe {
         let mut rn: RN = RN {
-            f: std::ptr::null_mut(),
+            file: std::ptr::null_mut(),
             c: 0,
             n: 0,
             buffer: [0; 201],
@@ -376,13 +376,13 @@ pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
         let mut count: i32 = 0;
         let mut hex: i32 = 0;
         let mut decp: [i8; 2] = [0; 2];
-        rn.f = f;
+        rn.file = f;
         rn.n = 0;
         decp[0] = '.' as i8;
         decp[1] = '.' as i8;
-        flockfile(rn.f);
+        flockfile(rn.file);
         loop {
-            rn.c = getc_unlocked(rn.f);
+            rn.c = getc_unlocked(rn.file);
             if !(*(*__ctype_b_loc()).offset(rn.c as isize) as i32 & _ISSPACE as i32
                 != 0)
             {
@@ -414,8 +414,8 @@ pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
             test2(&mut rn, b"-+\0" as *const u8 as *const i8);
             readdigits(&mut rn, 0);
         }
-        ungetc(rn.c, rn.f);
-        funlockfile(rn.f);
+        ungetc(rn.c, rn.file);
+        funlockfile(rn.file);
         rn.buffer[rn.n as usize] = '\0' as i8;
         if (lua_stringtonumber(state, (rn.buffer).as_mut_ptr()) != 0u64) as i64 != 0 {
             return 1;

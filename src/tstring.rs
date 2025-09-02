@@ -231,7 +231,7 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
                 .wrapping_mul(2 as u32)
                 .wrapping_add(1 as u32) as u64) as u32)
             .wrapping_rem(53 as u32);
-        let p: *mut *mut TString = ((*(*state).global).strcache[i as usize]).as_mut_ptr();
+        let p: *mut *mut TString = ((*(*state).global).string_cache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
             if strcmp(str, (**p.offset(j as isize)).get_contents()) == 0 {

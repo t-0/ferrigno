@@ -132,12 +132,12 @@ pub unsafe extern "C" fn iscleared(g: *mut Global, o: *const Object) -> i32 {
 pub unsafe extern "C" fn luac_barrier_(state: *mut State, o: *mut Object, v: *mut Object) {
     unsafe {
         let g: *mut Global = (*state).global;
-        if (*g).gcstate as i32 <= 2 {
+        if (*g).gc_state as i32 <= 2 {
             reallymarkobject(g, v);
             if (*o).get_marked() & 7 > 1 {
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
-        } else if (*g).gckind as i32 == 0 {
+        } else if (*g).gc_kind as i32 == 0 {
             (*o).set_marked(
                 (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
                     | ((*g).current_white & (1 << 3 | 1 << 4)),
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn luac_barrierback_(state: *mut State, o: *mut Object) {
             linkgclist_(
                 &mut (*(o as *mut Object)),
                 getgclist(o),
-                &mut (*g).grayagain,
+                &mut (*g).gray_again,
             );
         }
         if (*o).get_marked() & 7 > 1 {
@@ -167,9 +167,9 @@ pub unsafe extern "C" fn luac_fix(state: *mut State, o: *mut Object) {
         let g: *mut Global = (*state).global;
         (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         (*o).set_marked((*o).get_marked() & !(7) | 4);
-        (*g).allgc = (*o).next;
-        (*o).next = (*g).fixedgc;
-        (*g).fixedgc = o;
+        (*g).all_gc = (*o).next;
+        (*o).next = (*g).fixed_gc;
+        (*g).fixed_gc = o;
     }
 }
 pub unsafe extern "C" fn reallymarkobject(g: *mut Global, o: *mut Object) {
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn genlink(g: *mut Global, o: *mut Object) {
             linkgclist_(
                 &mut (*(o as *mut Object)),
                 getgclist(o),
-                &mut (*g).grayagain,
+                &mut (*g).gray_again,
             );
         } else if (*o).get_marked() & 7 == 6 {
             (*o).set_marked(((*o).get_marked() ^ (6 ^ 4)) as u8);

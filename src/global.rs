@@ -15,51 +15,51 @@ use crate::tvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Global {
-    pub totalbytes: i64,
+    pub total_bytes: i64,
     pub gc_debt: i64,
     pub gc_estimate: u64,
-    pub lastatomic: u64,
+    pub last_atomic: u64,
     pub string_table: StringTable,
     pub l_registry: TValue,
-    pub nilvalue: TValue,
+    pub nil_value: TValue,
     pub seed: u32,
     pub current_white: u8,
-    pub gcstate: u8,
-    pub gckind: u8,
+    pub gc_state: u8,
+    pub gc_kind: u8,
     pub gcstopem: u8,
-    pub genminormul: u64,
-    pub genmajormul: u64,
-    pub gcstp: u8,
+    pub generational_minor_multiplier: u64,
+    pub generational_major_multiplier: u64,
+    pub gc_step: u8,
     pub is_emergency: bool,
-    pub gcpause: u8,
-    pub gcstepmul: u8,
-    pub gcstepsize: u8,
-    pub allgc: *mut Object,
-    pub sweepgc: *mut *mut Object,
-    pub finobj: *mut Object,
+    pub gc_pause: u8,
+    pub gc_step_multiplier: u8,
+    pub gc_step_size: u8,
+    pub all_gc: *mut Object,
+    pub sweep_gc: *mut *mut Object,
+    pub finalized_objects: *mut Object,
     pub gray: *mut Object,
-    pub grayagain: *mut Object,
+    pub gray_again: *mut Object,
     pub weak: *mut Object,
     pub ephemeron: *mut Object,
-    pub allweak: *mut Object,
-    pub tobefnz: *mut Object,
-    pub fixedgc: *mut Object,
+    pub all_weak: *mut Object,
+    pub to_be_finalized: *mut Object,
+    pub fixed_gc: *mut Object,
     pub survival: *mut Object,
     pub old1: *mut Object,
-    pub reallyold: *mut Object,
-    pub firstold1: *mut Object,
+    pub really_old: *mut Object,
+    pub first_old1: *mut Object,
     pub finobjsur: *mut Object,
     pub finobjold1: *mut Object,
     pub finobjrold: *mut Object,
     pub twups: *mut State,
     pub panic: CFunction,
-    pub mainthread: *mut State,
-    pub memerrmsg: *mut TString,
-    pub tmname: [*mut TString; 25],
-    pub mt: [*mut Table; 9],
-    pub strcache: [[*mut TString; 2]; 53],
-    pub warnf: WarnFunction,
-    pub ud_warn: *mut libc::c_void,
+    pub main_state: *mut State,
+    pub memory_error_message: *mut TString,
+    pub tm_name: [*mut TString; 25],
+    pub metatable: [*mut Table; 9],
+    pub string_cache: [[*mut TString; 2]; 53],
+    pub warn_function: WarnFunction,
+    pub warn_userdata: *mut libc::c_void,
 }
 impl Global {
     pub unsafe extern "C" fn clear_cache(&mut self) {
@@ -68,10 +68,10 @@ impl Global {
             while i < 53 as i32 {
                 let mut j: i32 = 0;
                 while j < 2 {
-                    if (*self.strcache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
+                    if (*self.string_cache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                     {
-                        self.strcache[i as usize][j as usize] = self.memerrmsg;
+                        self.string_cache[i as usize][j as usize] = self.memory_error_message;
                     }
                     j += 1;
                 }
@@ -92,32 +92,32 @@ impl Global {
     }
     pub unsafe extern "C" fn enter_incremental(&mut self) {
         unsafe {
-            self.white_list(self.allgc);
+            self.white_list(self.all_gc);
             self.survival = std::ptr::null_mut();
             self.old1 = self.survival;
-            self.reallyold = self.old1;
-            self.white_list(self.finobj);
-            self.white_list(self.tobefnz);
+            self.really_old = self.old1;
+            self.white_list(self.finalized_objects);
+            self.white_list(self.to_be_finalized);
             self.finobjsur = std::ptr::null_mut();
             self.finobjold1 = self.finobjsur;
             self.finobjrold = self.finobjold1;
-            self.gcstate = 8i32 as u8;
-            self.gckind = 0i32 as u8;
-            self.lastatomic = 0i32 as u64;
+            self.gc_state = 8i32 as u8;
+            self.gc_kind = 0i32 as u8;
+            self.last_atomic = 0i32 as u64;
         }
     }
     pub unsafe extern "C" fn set_debt(&mut self, mut debt: i64) {
-        let tb: i64 = (self.totalbytes + self.gc_debt) as i64;
+        let tb: i64 = (self.total_bytes + self.gc_debt) as i64;
         if debt < tb - (!(0i32 as u64) >> 1i32) as i64 {
             debt = tb - (!(0i32 as u64) >> 1i32) as i64;
         }
-        self.totalbytes = tb - debt;
+        self.total_bytes = tb - debt;
         self.gc_debt = debt;
     }
     pub unsafe extern "C" fn set_minor_debt(&mut self) {
         unsafe {
             self.set_debt(
-                -((self.totalbytes + self.gc_debt).wrapping_div(100) * self.genminormul as i64),
+                -((self.total_bytes + self.gc_debt).wrapping_div(100) * self.generational_minor_multiplier as i64),
             );
         }
     }
@@ -153,11 +153,11 @@ pub unsafe extern "C" fn markmt(g: *mut Global) {
         let mut i: i32;
         i = 0;
         while i < 9 as i32 {
-            if !((*g).mt[i as usize]).is_null() {
-                if (*(*g).mt[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if !((*g).metatable[i as usize]).is_null() {
+                if (*(*g).metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     reallymarkobject(
                         g,
-                        &mut (*(*((*g).mt).as_mut_ptr().offset(i as isize) as *mut Object)),
+                        &mut (*(*((*g).metatable).as_mut_ptr().offset(i as isize) as *mut Object)),
                     );
                 }
             }
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn markmt(g: *mut Global) {
 pub unsafe extern "C" fn markbeingfnz(g: *mut Global) -> u64 {
     unsafe {
         let mut count: u64 = 0;
-        let mut o: *mut Object = (*g).tobefnz;
+        let mut o: *mut Object = (*g).to_be_finalized;
         while !o.is_null() {
             count = count.wrapping_add(1);
             if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -215,18 +215,18 @@ pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 {
 }
 pub unsafe extern "C" fn cleargraylists(g: *mut Global) {
     unsafe {
-        (*g).grayagain = std::ptr::null_mut();
-        (*g).gray = (*g).grayagain;
+        (*g).gray_again = std::ptr::null_mut();
+        (*g).gray = (*g).gray_again;
         (*g).ephemeron = std::ptr::null_mut();
-        (*g).allweak = (*g).ephemeron;
-        (*g).weak = (*g).allweak;
+        (*g).all_weak = (*g).ephemeron;
+        (*g).weak = (*g).all_weak;
     }
 }
 pub unsafe extern "C" fn restartcollection(g: *mut Global) {
     unsafe {
         cleargraylists(g);
-        if (*(*g).mainthread).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            reallymarkobject(g, &mut (*((*g).mainthread as *mut Object)));
+        if (*(*g).main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            reallymarkobject(g, &mut (*((*g).main_state as *mut Object)));
         }
         if ((*g).l_registry.is_collectable())
             && (*(*g).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -351,26 +351,26 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
 }
 pub unsafe extern "C" fn udata2finalize(g: *mut Global) -> *mut Object {
     unsafe {
-        let o: *mut Object = (*g).tobefnz;
-        (*g).tobefnz = (*o).next;
-        (*o).next = (*g).allgc;
-        (*g).allgc = o;
+        let o: *mut Object = (*g).to_be_finalized;
+        (*g).to_be_finalized = (*o).next;
+        (*o).next = (*g).all_gc;
+        (*g).all_gc = o;
         (*o).set_marked((*o).get_marked() & !(1 << 6));
-        if 3 <= (*g).gcstate as i32 && (*g).gcstate as i32 <= 6 {
+        if 3 <= (*g).gc_state as i32 && (*g).gc_state as i32 <= 6 {
             (*o).set_marked(
                 (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
                     | ((*g).current_white & (1 << 3 | 1 << 4)),
             );
         } else if (*o).get_marked() & 7 == 3 {
-            (*g).firstold1 = o;
+            (*g).first_old1 = o;
         }
         return o;
     }
 }
 pub unsafe extern "C" fn separatetobefnz(g: *mut Global, all: i32) {
     unsafe {
-        let mut p: *mut *mut Object = &mut (*g).finobj;
-        let mut lastnext: *mut *mut Object = findlast(&mut (*g).tobefnz);
+        let mut p: *mut *mut Object = &mut (*g).finalized_objects;
+        let mut lastnext: *mut *mut Object = findlast(&mut (*g).to_be_finalized);
         loop {
             let curr: *mut Object = *p;
             if !(curr != (*g).finobjold1) {
@@ -394,13 +394,13 @@ pub unsafe extern "C" fn correctpointers(g: *mut Global, o: *mut Object) {
     unsafe {
         checkpointer(&mut (*g).survival, o);
         checkpointer(&mut (*g).old1, o);
-        checkpointer(&mut (*g).reallyold, o);
-        checkpointer(&mut (*g).firstold1, o);
+        checkpointer(&mut (*g).really_old, o);
+        checkpointer(&mut (*g).first_old1, o);
     }
 }
 pub unsafe extern "C" fn setpause(g: *mut Global) {
     unsafe {
-        let pause: i32 = (*g).gcpause as i32 * 4;
+        let pause: i32 = (*g).gc_pause as i32 * 4;
         let estimate: i64 = ((*g).gc_estimate).wrapping_div(100 as u64) as i64;
         let threshold: i64 = if (pause as i64) < (!(0u64) >> 1) as i64 / estimate {
             estimate * pause as i64
@@ -408,7 +408,7 @@ pub unsafe extern "C" fn setpause(g: *mut Global) {
             (!(0u64) >> 1) as i64
         };
         let mut debt: i64 =
-            (((*g).totalbytes + (*g).gc_debt) as u64).wrapping_sub(threshold as u64) as i64;
+            (((*g).total_bytes + (*g).gc_debt) as u64).wrapping_sub(threshold as u64) as i64;
         if debt > 0 {
             debt = 0;
         }
@@ -417,12 +417,12 @@ pub unsafe extern "C" fn setpause(g: *mut Global) {
 }
 pub unsafe extern "C" fn correctgraylists(g: *mut Global) {
     unsafe {
-        let mut list: *mut *mut Object = correctgraylist(&mut (*g).grayagain);
+        let mut list: *mut *mut Object = correctgraylist(&mut (*g).gray_again);
         *list = (*g).weak;
         (*g).weak = std::ptr::null_mut();
         list = correctgraylist(list);
-        *list = (*g).allweak;
-        (*g).allweak = std::ptr::null_mut();
+        *list = (*g).all_weak;
+        (*g).all_weak = std::ptr::null_mut();
         list = correctgraylist(list);
         *list = (*g).ephemeron;
         (*g).ephemeron = std::ptr::null_mut();

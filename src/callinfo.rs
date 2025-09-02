@@ -34,9 +34,9 @@ pub struct CallInfoConstituentAL {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallInfoConstituentAC {
-    pub k: ContextFunction,
+    pub context_function: ContextFunction,
     pub old_error_function: i64,
-    pub ctx: i64,
+    pub context: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

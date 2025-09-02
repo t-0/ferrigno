@@ -4,13 +4,13 @@ use crate::value::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union VariableDescription {
-    pub vd: VariableDescriptionA,
+    pub content: VariableDescriptionContent,
     pub k: TValue,
 }
 
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct VariableDescriptionA {
+pub struct VariableDescriptionContent {
     pub value: Value,
     pub tag: u8,
     pub kind: u8,

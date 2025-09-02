@@ -11,6 +11,6 @@ pub struct DynamicData {
 #[repr(C)]
 pub struct DynamicDataActiveVariable {
     pub pointer: *mut VariableDescription,
-    pub n: i32,
+    pub length: i32,
     pub size: i32,
 }
