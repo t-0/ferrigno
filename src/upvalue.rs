@@ -7,39 +7,22 @@ use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    pub dummy0: u8 = 0,
-    pub dummy1: u8 = 0,
-    pub dummy2: u32 = 0,
+    pub object: Object,
     pub v: UpValueA,
     pub u: UpValueB,
 }
 impl TObject for UpValue {
-    fn get_marked(&self) -> u8 {
-        self.marked
-    }
-    fn set_marked(&mut self, marked: u8) {
-        self.marked = marked;
+    fn get_tag(&self) -> u8 {
+        self.object.tag
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.tag = tag;
     }
-    fn set_collectable(&mut self) {
-        self.tag = set_collectable(self.tag);
+    fn get_marked(&self) -> u8 {
+        self.object.marked
     }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.tag);
-    }
-    fn get_tag(&self) -> u8 {
-        self.tag
-    }
-    fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+    fn set_marked(&mut self, marked: u8) {
+        self.object.marked = marked;
     }
     fn get_class_name(&mut self) -> String {
         "upvalue".to_string()

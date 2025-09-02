@@ -11,8 +11,9 @@ pub struct User {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
-    pub dummy0: u8 = 0,
-    pub dummy1: u8 = 0,
+    pub _dummy0: u8 = 0,
+    pub _dummy1: u8 = 0,
+    //PROBLEM
     pub nuvalue: i32,
     pub length: u64,
     pub metatable: *mut Table,
@@ -20,29 +21,17 @@ pub struct User {
     pub uv: [TValue; 1],
 }
 impl TObject for User {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
+    fn set_tag(&mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_marked(&self) -> u8 {
         self.marked
     }
     fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
-    }
-    fn set_collectable(&mut self) {
-        self.tag = set_collectable(self.tag);
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.tag);
-    }
-    fn get_tag(&self) -> u8 {
-        return self.tag;
-    }
-    fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
     }
     fn get_class_name(&mut self) -> String {
         "user".to_string()

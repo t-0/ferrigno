@@ -16,12 +16,7 @@ use libc::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    pub dummy0: u8 = 0,
-    pub dummy1: u8 = 0,
-    pub dummy2: u32 = 0,
+    pub object: Object,
     pub flags: u8,
     pub log_size_node: u8,
     pub dummy3: u8 = 0,
@@ -33,29 +28,17 @@ pub struct Table {
     pub gc_list: *mut Object,
 }
 impl TObject for Table {
-    fn get_marked(&self) -> u8 {
-        self.marked
-    }
-    fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
+    fn get_tag(&self) -> u8 {
+        self.object.tag
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.tag = tag;
     }
-    fn set_collectable(&mut self) {
-        self.tag = set_collectable(self.tag);
+    fn get_marked(&self) -> u8 {
+        self.object.marked
     }
-    fn is_collectable(&self) -> bool {
-        is_collectable(self.tag)
-    }
-    fn get_tag(&self) -> u8 {
-        self.tag
-    }
-    fn get_tag_type(&self) -> u8 {
-        get_tag_type(self.get_tag())
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.tag)
+    fn set_marked(&mut self, marked_: u8) {
+        self.object.marked = marked_;
     }
     fn get_class_name(&mut self) -> String {
         "table".to_string()
@@ -67,13 +50,12 @@ impl TObject for Table {
 impl New for Table {
     fn new() -> Self {
         Table {
-            next: std::ptr::null_mut(),
-            tag: TAG_VARIANT_TABLE,
-            marked: 0,
-            dummy0: 0,
-            dummy1: 0,
-            dummy2: 0,
-            dummy3: 0,
+            object: Object {
+                next: std::ptr::null_mut(),
+                tag: TAG_VARIANT_TABLE,
+                marked: 0,
+                ..
+            },
             flags: 0,
             log_size_node: 0,
             array_limit: 0,

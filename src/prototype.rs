@@ -14,15 +14,7 @@ use crate::upvaluedescription::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Prototype {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    pub count_parameters: u8,
-    pub is_variable_arguments: bool,
-    pub maximum_stack_size: u8,
-    pub dummy1: u8 = 0,
-    pub dummy2: u8 = 0,
-    pub dummy3: u8 = 0,
+    pub object: Object,
     pub size_upvalues: i32,
     pub size_k: i32,
     pub size_code: i32,
@@ -41,31 +33,22 @@ pub struct Prototype {
     pub local_variables: *mut LocalVariable,
     pub source: *mut TString,
     pub gc_list: *mut Object,
+    pub count_parameters: u8,
+    pub is_variable_arguments: bool,
+    pub maximum_stack_size: u8,
 }
 impl TObject for Prototype {
     fn get_marked(&self) -> u8 {
-        self.marked
+        self.object.marked
     }
     fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
-    }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
+        self.object.marked = marked_;
     }
     fn get_tag(&self) -> u8 {
-        self.tag
+        self.object.tag
     }
-    fn get_tag_type(&self) -> u8 {
-        get_tag_type(self.get_tag())
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+    fn set_tag(&mut self, tag: u8) {
+        self.object.tag = tag;
     }
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()

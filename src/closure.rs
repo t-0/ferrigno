@@ -28,6 +28,7 @@ pub struct Closure {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
+    //PROBLEM
     pub count_upvalues: u8,
     pub dummy1: u8,
     pub dummy2: u32,
@@ -36,29 +37,17 @@ pub struct Closure {
     pub upvalues: ClosureUpValue,
 }
 impl TObject for Closure {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
+    fn set_tag(&mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_marked(&self) -> u8 {
         self.marked
     }
     fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
-    }
-    fn get_tag(&self) -> u8 {
-        return self.tag;
-    }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
-    }
-    fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
     }
     fn get_class_name(&mut self) -> String {
         "closure".to_string()

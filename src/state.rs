@@ -48,12 +48,7 @@ use crate::lexical::lexicalstate::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct State {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    pub dummy0: u8 = 0,
-    pub dummy1: u8 = 0,
-    pub dummy2: u32 = 0,
+    pub object: Object,
     pub status: u8,
     pub allow_hook: u8,
     pub count_call_info: u16,
@@ -78,29 +73,17 @@ pub struct State {
     pub hook_mask: i32,
 }
 impl TObject for State {
-    fn get_marked(&self) -> u8 {
-        self.marked
-    }
-    fn set_marked(&mut self, marked: u8) {
-        self.marked = marked;
+    fn get_tag(&self) -> u8 {
+        self.object.tag
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.tag = tag;
     }
-    fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
+    fn get_marked(&self) -> u8 {
+        self.object.marked
     }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
-    }
-    fn get_tag(&self) -> u8 {
-        self.tag
-    }
-    fn get_tag_type(&self) -> u8 {
-        get_tag_type(self.get_tag())
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+    fn set_marked(&mut self, marked: u8) {
+        self.object.marked = marked;
     }
     fn get_class_name(&mut self) -> String {
         "state".to_string()
@@ -3215,7 +3198,7 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State {
         (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
         preinit_thread(state, g);
         (*g).all_gc = &mut (*(state as *mut Object));
-        (*state).next = std::ptr::null_mut();
+        (*state).object.next = std::ptr::null_mut();
         (*state).count_c_calls =
             ((*state).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
         (*g).warn_function = None;

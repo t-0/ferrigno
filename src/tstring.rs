@@ -14,6 +14,7 @@ pub struct TString {
     pub next: *mut Object,
     pub tag: u8,
     pub marked: u8,
+    //PROBLEM
     pub extra: u8,
     pub short_length: u8,
     pub hash: u32,
@@ -21,29 +22,17 @@ pub struct TString {
     pub contents: [i8; 1],
 }
 impl TObject for TString {
+    fn get_tag(&self) -> u8 {
+        return self.tag;
+    }
+    fn set_tag(&mut self, tag: u8) {
+        self.tag = tag;
+    }
     fn get_marked(&self) -> u8 {
         self.marked
     }
     fn set_marked(&mut self, marked_: u8) {
         self.marked = marked_;
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
-    }
-    fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
-    }
-    fn get_tag(&self) -> u8 {
-        return self.tag;
-    }
-    fn get_tag_type(&self) -> u8 {
-        return get_tag_type(self.get_tag());
-    }
-    fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
     }
     fn get_class_name(&mut self) -> String {
         "string".to_string()
