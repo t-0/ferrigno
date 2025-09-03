@@ -4875,40 +4875,40 @@ pub unsafe extern "C" fn luac_freeallobjects(state: *mut State) {
 }
 pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let mut work: u64 = 0;
-        let grayagain: *mut Object = (*g).gray_again;
-        (*g).gray_again = std::ptr::null_mut();
-        (*g).gc_state = 2 as u8;
+        let grayagain: *mut Object = (*global).gray_again;
+        (*global).gray_again = std::ptr::null_mut();
+        (*global).gc_state = 2 as u8;
         if (*state).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            reallymarkobject(g, &mut (*(state as *mut Object)));
+            reallymarkobject(global, &mut (*(state as *mut Object)));
         }
-        if ((*g).l_registry.is_collectable())
-            && (*(*g).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+        if ((*global).l_registry.is_collectable())
+            && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
         {
-            reallymarkobject(g, (*g).l_registry.value.object);
+            reallymarkobject(global, (*global).l_registry.value.object);
         }
-        markmt(g);
-        work = (work as u64).wrapping_add(propagateall(g)) as u64;
-        work = (work as u64).wrapping_add(remarkupvals(g) as u64) as u64;
-        work = (work as u64).wrapping_add(propagateall(g)) as u64;
-        (*g).gray = grayagain;
-        work = (work as u64).wrapping_add(propagateall(g)) as u64;
-        convergeephemerons(g);
-        clearbyvalues(g, (*g).weak, std::ptr::null_mut());
-        clearbyvalues(g, (*g).all_weak, std::ptr::null_mut());
-        let origweak: *mut Object = (*g).weak;
-        let origall: *mut Object = (*g).all_weak;
-        separatetobefnz(g, 0);
-        work = (work as u64).wrapping_add(markbeingfnz(g)) as u64;
-        work = (work as u64).wrapping_add(propagateall(g)) as u64;
-        convergeephemerons(g);
-        clearbykeys(g, (*g).ephemeron);
-        clearbykeys(g, (*g).all_weak);
-        clearbyvalues(g, (*g).weak, origweak);
-        clearbyvalues(g, (*g).all_weak, origall);
-        (*g).clear_cache();
-        (*g).current_white = ((*g).current_white as i32 ^ (1 << 3 | 1 << 4)) as u8;
+        (*global).markmt();
+        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        work = (work as u64).wrapping_add(remarkupvals(global) as u64) as u64;
+        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        (*global).gray = grayagain;
+        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        convergeephemerons(global);
+        clearbyvalues(global, (*global).weak, std::ptr::null_mut());
+        clearbyvalues(global, (*global).all_weak, std::ptr::null_mut());
+        let origweak: *mut Object = (*global).weak;
+        let origall: *mut Object = (*global).all_weak;
+        separatetobefnz(global, 0);
+        work = (work as u64).wrapping_add(markbeingfnz(global)) as u64;
+        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        convergeephemerons(global);
+        clearbykeys(global, (*global).ephemeron);
+        clearbykeys(global, (*global).all_weak);
+        clearbyvalues(global, (*global).weak, origweak);
+        clearbyvalues(global, (*global).all_weak, origall);
+        (*global).clear_cache();
+        (*global).current_white = ((*global).current_white as i32 ^ (1 << 3 | 1 << 4)) as u8;
         return work;
     }
 }

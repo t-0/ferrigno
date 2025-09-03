@@ -73,11 +73,15 @@ pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
 }
 pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
     unsafe {
-        while !call_info.is_null() {
-            if (*call_info).call_status as i32 & 1 << 1 == 0 {
-                ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
+        loop {
+            if call_info.is_null() {
+                break;
+            } else {
+                if (*call_info).call_status as i32 & (1 << 1) == 0 {
+                    ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
+                }
+                call_info = (*call_info).previous;
             }
-            call_info = (*call_info).previous;
         }
     }
 }
@@ -186,13 +190,17 @@ pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, o: *const TValue) ->
     unsafe {
         let base: StackValuePointer = ((*call_info).function.p).offset(1 as isize);
         let mut pos: i32 = 0;
-        while base.offset(pos as isize) < (*call_info).top.p {
-            if o == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue {
-                return pos;
+        loop {
+            if base.offset(pos as isize) < (*call_info).top.p {
+                if o == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue {
+                    return pos;
+                } else {
+                    pos += 1;
+                }
+            } else {
+                return -1;
             }
-            pos += 1;
         }
-        return -1;
     }
 }
 pub unsafe extern "C" fn getupvalname(

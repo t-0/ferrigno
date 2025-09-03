@@ -142,16 +142,16 @@ impl Global {
             };
         }
     }
-}
-pub unsafe extern "C" fn markmt(g: *mut Global) {
-    unsafe {
-        for i in 0..9 {
-            if !((*g).metatable[i as usize]).is_null() {
-                if (*(*g).metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(
-                        g,
-                        &mut (*(*((*g).metatable).as_mut_ptr().offset(i as isize) as *mut Object)),
-                    );
+    pub unsafe extern "C" fn markmt(& mut self) {
+        unsafe {
+            for i in TAG_SIMPLE_ {
+                if !(self.metatable[i as usize]).is_null() {
+                    if (*self.metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                        reallymarkobject(
+                            self,
+                            &mut (*(*(self.metatable).as_mut_ptr().offset(i as isize) as *mut Object)),
+                        );
+                    }
                 }
             }
         }
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn restartcollection(g: *mut Global) {
         {
             reallymarkobject(g, (*g).l_registry.value.object);
         }
-        markmt(g);
+        (*g).markmt();
         markbeingfnz(g);
     }
 }

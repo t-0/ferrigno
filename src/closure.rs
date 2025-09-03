@@ -72,7 +72,6 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Clos
             (*io).set_collectable();
             (*state).top.p = (*state).top.p.offset(1);
             if !((*p).line_info).is_null() {
-                let mut i: i32;
                 let mut v: TValue = TValue {
                     value: Value {
                         object: std::ptr::null_mut(),
@@ -80,16 +79,15 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Clos
                     tag: 0,
                 };
                 v.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
-                if !(*p).is_variable_arguments {
-                    i = 0;
+                let start: i32 = if !(*p).is_variable_arguments {
+                    0
                 } else {
                     currentline = nextline(p, currentline, 0);
-                    i = 1;
-                }
-                while i < (*p).size_line_info {
+                    1
+                };
+                for i in start..(*p).size_line_info {
                     currentline = nextline(p, currentline, i);
                     luah_setint(state, table, currentline as i64, &mut v);
-                    i += 1;
                 }
             }
         };

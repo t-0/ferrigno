@@ -12,6 +12,17 @@ enum TagType {
     Prototype = 0x0A,
     DeadKey = 0x0B,
 }
+pub const TAG_SIMPLE_: [u8 ; 9] = [
+    TAG_TYPE_NIL,
+    TAG_TYPE_BOOLEAN,
+    TAG_TYPE_POINTER,
+    TAG_TYPE_NUMERIC,
+    TAG_TYPE_STRING,
+    TAG_TYPE_TABLE,
+    TAG_TYPE_CLOSURE,
+    TAG_TYPE_USER,
+    TAG_TYPE_STATE,
+];
 pub const TAG_TYPE_NIL: u8 = TagType::Nil as u8;
 pub const TAG_VARIANT_NIL_NIL: u8 = TAG_TYPE_NIL | (0x00 << 0x04);
 pub const TAG_VARIANT_NIL_EMPTY: u8 = TAG_TYPE_NIL | (0x01 << 0x04);
