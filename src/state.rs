@@ -1385,7 +1385,7 @@ pub unsafe extern "C" fn f_parser(state: *mut State, arbitrary_data: *mut libc::
         };
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             checkmode(state, (*p).mode, b"binary\0" as *const u8 as *const i8);
-            cl = luau_undump(state, (*p).zio, (*p).name);
+            cl = load_closure(state, (*p).zio, (*p).name);
         } else {
             checkmode(state, (*p).mode, b"text\0" as *const u8 as *const i8);
             cl = luay_parser(
@@ -2582,7 +2582,7 @@ pub unsafe extern "C" fn lua_dump(
         let status: i32;
         let o: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
         if (*o).get_tag_variant() == TAG_VARIANT_CLOSURE_L {
-            status = DumpState::dump(
+            status = save_prototype(
                 state,
                 (*((*o).value.object as *mut Closure)).payload.l_prototype,
                 writer_0,
