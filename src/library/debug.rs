@@ -1,5 +1,6 @@
 #![allow(unpredictable_function_pointer_comparisons)]
 use crate::utility::c::*;
+use crate::character::*;
 use crate::state::*;
 use crate::functions::*;
 use crate::debuginfo::*;
@@ -96,11 +97,11 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
             std::ptr::null_mut(),
         );
         checkstack(state, other_state, 3);
-        (((*options.offset(0 as isize) as i32 != '>' as i32) as i32 != 0) as i64 != 0
+        (((*options.offset(0 as isize) as i32 != CHARACTER_ANGLE_RIGHT as i32) as i32 != 0) as i64 != 0
             || lual_argerror(
                 state,
                 arg + 2,
-                b"invalid option '>'\0" as *const u8 as *const i8,
+                b"invalid option CHARACTER_ANGLE_RIGHT\0" as *const u8 as *const i8,
             ) != 0) as i32;
         if lua_type(state, arg + 1) == Some(TAG_TYPE_CLOSURE) {
             options = lua_pushfstring(state, b">%s\0" as *const u8 as *const i8, options);
@@ -123,7 +124,7 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
             );
         }
         (*state).lua_createtable();
-        if !(strchr(options, 'S' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_UPPER_S as i32)).is_null() {
             lua_pushlstring(state, ar.source, ar.source_length);
             lua_setfield(state, -2, b"source\0" as *const u8 as *const i8);
             settabss(
@@ -143,14 +144,14 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
             );
             settabss(state, b"what\0" as *const u8 as *const i8, ar.what);
         }
-        if !(strchr(options, 'l' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_L as i32)).is_null() {
             settabsi(
                 state,
                 b"currentline\0" as *const u8 as *const i8,
                 ar.currentline,
             );
         }
-        if !(strchr(options, 'u' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_U as i32)).is_null() {
             settabsi(state, b"nups\0" as *const u8 as *const i8, ar.nups as i32);
             settabsi(
                 state,
@@ -163,11 +164,11 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
                 ar.is_variable_arguments as i32,
             );
         }
-        if !(strchr(options, 'n' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_N as i32)).is_null() {
             settabss(state, b"name\0" as *const u8 as *const i8, ar.name);
             settabss(state, b"namewhat\0" as *const u8 as *const i8, ar.namewhat);
         }
-        if !(strchr(options, 'r' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_R as i32)).is_null() {
             settabsi(
                 state,
                 b"ftransfer\0" as *const u8 as *const i8,
@@ -179,21 +180,21 @@ pub unsafe extern "C" fn db_getinfo(state: *mut State) -> i32 {
                 ar.ntransfer as i32,
             );
         }
-        if !(strchr(options, 't' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_T as i32)).is_null() {
             settabsb(
                 state,
                 b"istailcall\0" as *const u8 as *const i8,
                 if ar.is_tail_call { 1 } else { 0 },
             );
         }
-        if !(strchr(options, 'L' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_UPPER_L as i32)).is_null() {
             treatstackoption(
                 state,
                 other_state,
                 b"activelines\0" as *const u8 as *const i8,
             );
         }
-        if !(strchr(options, 'f' as i32)).is_null() {
+        if !(strchr(options, CHARACTER_LOWER_F as i32)).is_null() {
             treatstackoption(state, other_state, b"func\0" as *const u8 as *const i8);
         }
         return 1;

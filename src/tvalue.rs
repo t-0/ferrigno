@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use crate::character::*;
 use crate::new::*;
 use crate::tag::*;
 use crate::value::*;
@@ -130,14 +131,14 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 
             ) as u64;
             if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
                 as i32
-                == '\0' as i32
+                == CHARACTER_NUL as i32
             {
                 let fresh10 = length;
                 length = length + 1;
-                *buffer.offset(fresh10 as isize) = '.' as i8;
+                *buffer.offset(fresh10 as isize) = CHARACTER_PERIOD as i8;
                 let fresh11 = length;
                 length = length + 1;
-                *buffer.offset(fresh11 as isize) = '0' as i8;
+                *buffer.offset(fresh11 as isize) = CHARACTER_0 as i8;
             }
         }
         return length;

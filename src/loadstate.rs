@@ -1,5 +1,6 @@
 use crate::state::*;
 use crate::zio::*;
+use crate::character::*;
 use crate::closure::*;
 use crate::prototype::*;
 use crate::tstring::*;
@@ -478,7 +479,7 @@ pub unsafe extern "C" fn load_closure(
             zio: std::ptr::null_mut(),
             name: std::ptr::null(),
         };
-        if *name as i32 == '@' as i32 || *name as i32 == '=' as i32 {
+        if *name as i32 == CHARACTER_AT as i32 || *name as i32 == CHARACTER_EQUAL as i32 {
             load_state.name = name.offset(1 as isize);
         } else if *name as i32
             == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32

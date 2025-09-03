@@ -1,4 +1,5 @@
 use crate::debugger::absolutelineinfo::*;
+use crate::character::*;
 use crate::localvariable::*;
 use crate::object::*;
 use crate::global::*;
@@ -285,7 +286,7 @@ pub unsafe extern "C" fn rname(
 ) {
     unsafe {
         let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
-        if !(!what.is_null() && *what as i32 == 'c' as i32) {
+        if !(!what.is_null() && *what as i32 == CHARACTER_LOWER_C as i32) {
             *name = b"?\0" as *const u8 as *const i8;
         }
     }

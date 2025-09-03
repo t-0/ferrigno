@@ -2070,7 +2070,7 @@ pub unsafe extern "C" fn handle_luainit(state: *mut State) -> i32 {
         }
         if init.is_null() {
             return 0;
-        } else if *init.offset(0 as isize) as i32 == '@' as i32 {
+        } else if *init.offset(0 as isize) as i32 == CHARACTER_AT as i32 {
             return dofile(state, init.offset(1 as isize));
         } else {
             return dostring(state, init, name);
@@ -3489,8 +3489,8 @@ pub unsafe extern "C" fn luag_addinfo(
                 (*src).get_length(),
             );
         } else {
-            buffer[0] = '?' as i8;
-            buffer[1] = '\0' as i8;
+            buffer[0] = CHARACTER_QUESTION as i8;
+            buffer[1] = CHARACTER_NUL as i8;
         }
         return luao_pushfstring(
             state,
@@ -3928,7 +3928,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
         let mut buff_fs = BuffFS::new(state);
         let mut e: *const i8;
         loop {
-            e = strchr(fmt, '%' as i32);
+            e = strchr(fmt, CHARACTER_PERCENT as i32);
             if e.is_null() {
                 break;
             }
@@ -8148,16 +8148,16 @@ pub unsafe extern "C" fn pushfuncname(state: *mut State, ar: *mut DebugInfo) {
             );
             lua_rotate(state, -2, -1);
             lua_settop(state, -2);
-        } else if *(*ar).namewhat as i32 != '\0' as i32 {
+        } else if *(*ar).namewhat as i32 != CHARACTER_NUL as i32 {
             lua_pushfstring(
                 state,
                 b"%s '%s'\0" as *const u8 as *const i8,
                 (*ar).namewhat,
                 (*ar).name,
             );
-        } else if *(*ar).what as i32 == 'm' as i32 {
+        } else if *(*ar).what as i32 == CHARACTER_LOWER_M as i32 {
             lua_pushstring(state, b"main chunk\0" as *const u8 as *const i8);
-        } else if *(*ar).what as i32 != 'C' as i32 {
+        } else if *(*ar).what as i32 != CHARACTER_UPPER_C as i32 {
             lua_pushfstring(
                 state,
                 b"function <%s:%d>\0" as *const u8 as *const i8,
@@ -8246,7 +8246,7 @@ pub unsafe extern "C" fn lual_traceback(
             (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
             let fresh145 = b.length;
             b.length = (b.length).wrapping_add(1);
-            *(b.pointer).offset(fresh145 as isize) = '\n' as i8;
+            *(b.pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
         }
         b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
         loop {
@@ -8461,7 +8461,7 @@ pub unsafe extern "C" fn lual_execresult(state: *mut State, mut stat: i32) -> i3
                 stat = stat & 0x7f as i32;
                 what = b"signal\0" as *const u8 as *const i8;
             }
-            if *what as i32 == 'e' as i32 && stat == 0 {
+            if *what as i32 == CHARACTER_LOWER_E as i32 && stat == 0 {
                 (*state).push_boolean(true);
             } else {
                 (*state).push_nil();
@@ -8738,10 +8738,10 @@ pub unsafe extern "C" fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
     unsafe {
         *cp = skip_bom(file);
         let mut c: i32 = *cp;
-        if c == '#' as i32 {
+        if c == CHARACTER_OCTOTHORPE as i32 {
             loop {
                 c = getc(file);
-                if !(c != -1 && c != '\n' as i32) {
+                if !(c != -1 && c != CHARACTER_LF as i32) {
                     break;
                 }
             }
@@ -8782,7 +8782,7 @@ pub unsafe extern "C" fn lual_loadfilex(
         if skipcomment(lf.file, &mut c) != 0 {
             let fresh148 = lf.n;
             lf.n = lf.n + 1;
-            lf.buffer[fresh148 as usize] = '\n' as i8;
+            lf.buffer[fresh148 as usize] = CHARACTER_LF as i8;
         }
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             lf.n = 0;
@@ -9122,7 +9122,7 @@ pub unsafe extern "C" fn checkcontrol(
         if tocont != 0 || {
             let fresh150 = message;
             message = message.offset(1);
-            *fresh150 as i32 != '@' as i32
+            *fresh150 as i32 != CHARACTER_AT as i32
         } {
             return 0;
         } else {
@@ -9336,8 +9336,8 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
     unsafe {
         fprintf(stderr, b"%s: \0" as *const u8 as *const i8, PROGRAM_NAME);
         fflush(stderr);
-        if *badoption.offset(1 as isize) as i32 == 'e' as i32
-            || *badoption.offset(1 as isize) as i32 == 'l' as i32
+        if *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_E as i32
+            || *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_L as i32
         {
             fprintf(
                 stderr,
@@ -9355,7 +9355,7 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
         }
         fprintf(
         stderr,
-        b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l g=mod  require library 'mod' into global 'g'\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
+        b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l g=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
             as *const u8 as *const i8,
         PROGRAM_NAME,
     );
@@ -9464,12 +9464,12 @@ pub unsafe extern "C" fn dolibrary(state: *mut State, globname: *mut i8) -> i32 
     unsafe {
         let status: i32;
         let mut suffix: *mut i8 = std::ptr::null_mut();
-        let mut modname: *mut i8 = strchr(globname, '=' as i32);
+        let mut modname: *mut i8 = strchr(globname, CHARACTER_EQUAL as i32);
         if modname.is_null() {
             modname = globname;
             suffix = strchr(modname, *(b"-\0" as *const u8 as *const i8) as i32);
         } else {
-            *modname = '\0' as i8;
+            *modname = CHARACTER_NUL as i8;
             modname = modname.offset(1);
         }
         lua_getglobal(state, b"require\0" as *const u8 as *const i8);
@@ -9477,7 +9477,7 @@ pub unsafe extern "C" fn dolibrary(state: *mut State, globname: *mut i8) -> i32 
         status = docall(state, 1, 1);
         if status == 0 {
             if !suffix.is_null() {
-                *suffix = '\0' as i8;
+                *suffix = CHARACTER_NUL as i8;
             }
             lua_setglobal(state, globname);
         }
@@ -9536,13 +9536,13 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
         i = 1;
         while !(*argv.offset(i as isize)).is_null() {
             *first = i;
-            if *(*argv.offset(i as isize)).offset(0 as isize) as i32 != '-' as i32 {
+            if *(*argv.offset(i as isize)).offset(0 as isize) as i32 != CHARACTER_HYPHEN as i32 {
                 return args;
             }
             let current_block_31: u64;
             match *(*argv.offset(i as isize)).offset(1 as isize) as i32 {
                 45 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != '\0' as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
                         return 1;
                     }
                     *first = i + 1;
@@ -9550,14 +9550,14 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
                 }
                 0 => return args,
                 69 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != '\0' as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
                         return 1;
                     }
                     args |= 16 as i32;
                     current_block_31 = 4761528863920922185;
                 }
                 87 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != '\0' as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
                         return 1;
                     }
                     current_block_31 = 4761528863920922185;
@@ -9580,16 +9580,16 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
             }
             match current_block_31 {
                 6636775023221328366 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != '\0' as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
                         return 1;
                     }
                     args |= 4;
                 }
                 15172496195422792753 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 == '\0' as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 == CHARACTER_NUL as i32 {
                         i += 1;
                         if (*argv.offset(i as isize)).is_null()
-                            || *(*argv.offset(i as isize)).offset(0 as isize) as i32 == '-' as i32
+                            || *(*argv.offset(i as isize)).offset(0 as isize) as i32 == CHARACTER_HYPHEN as i32
                         {
                             return 1;
                         }
@@ -9611,10 +9611,10 @@ pub unsafe extern "C" fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) 
                 CHARACTER_LOWER_E | CHARACTER_LOWER_L => {
                     let status: i32;
                     let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
-                    if *extra as i32 == '\0' as i32 {
+                    if *extra as i32 == CHARACTER_NUL as i32 {
                         continue;
                     }
-                    status = if option == 'e' as i32 {
+                    status = if option == CHARACTER_LOWER_E as i32 {
                         dostring(state, extra, b"=(command line)\0" as *const u8 as *const i8)
                     } else {
                         dolibrary(state, extra)
@@ -9694,11 +9694,11 @@ pub unsafe extern "C" fn pushline(state: *mut State, firstline: i32) -> i32 {
             return 0;
         }
         let mut l: u64 = strlen(b);
-        if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == '\n' as i32 {
+        if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
             l = l.wrapping_sub(1);
-            *b.offset(l as isize) = '\0' as i8;
+            *b.offset(l as isize) = CHARACTER_NUL as i8;
         }
-        if firstline != 0 && *b.offset(0 as isize) as i32 == '=' as i32 {
+        if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
             lua_pushfstring(
                 state,
                 b"return %s\0" as *const u8 as *const i8,
@@ -9915,13 +9915,13 @@ pub unsafe extern "C" fn hookf(state: *mut State, ar: *mut DebugInfo) {
 pub unsafe extern "C" fn makemask(smask: *const i8, count: i32) -> i32 {
     unsafe {
         let mut mask: i32 = 0;
-        if !(strchr(smask, 'c' as i32)).is_null() {
+        if !(strchr(smask, CHARACTER_LOWER_C as i32)).is_null() {
             mask |= 1 << 0;
         }
-        if !(strchr(smask, 'r' as i32)).is_null() {
+        if !(strchr(smask, CHARACTER_LOWER_R as i32)).is_null() {
             mask |= 1 << 1;
         }
-        if !(strchr(smask, 'l' as i32)).is_null() {
+        if !(strchr(smask, CHARACTER_LOWER_L as i32)).is_null() {
             mask |= 1 << 2;
         }
         if count > 0 {
@@ -9936,19 +9936,19 @@ pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
         if mask & 1 << 0 != 0 {
             let fresh190 = i;
             i = i + 1;
-            *smask.offset(fresh190 as isize) = 'c' as i8;
+            *smask.offset(fresh190 as isize) = CHARACTER_LOWER_C as i8;
         }
         if mask & 1 << 1 != 0 {
             let fresh191 = i;
             i = i + 1;
-            *smask.offset(fresh191 as isize) = 'r' as i8;
+            *smask.offset(fresh191 as isize) = CHARACTER_LOWER_R as i8;
         }
         if mask & 1 << 2 != 0 {
             let fresh192 = i;
             i = i + 1;
-            *smask.offset(fresh192 as isize) = 'l' as i8;
+            *smask.offset(fresh192 as isize) = CHARACTER_LOWER_L as i8;
         }
-        *smask.offset(i as isize) = '\0' as i8;
+        *smask.offset(i as isize) = CHARACTER_NUL as i8;
         return smask;
     }
 }

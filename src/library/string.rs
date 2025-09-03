@@ -1,6 +1,7 @@
 use crate::tstring::*;
 use crate::buffer::*;
 use crate::gmatchstate::*;
+use crate::character::*;
 use crate::registeredfunction::*;
 use crate::new::*;
 use crate::utility::c::*;
@@ -479,7 +480,7 @@ pub unsafe extern "C" fn str_find_aux(state: *mut State, find: i32) -> i32 {
                 }; 32],
             };
             let mut s1: *const i8 = s.offset(init as isize);
-            let anchor: i32 = (*p as i32 == '^' as i32) as i32;
+            let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
             if anchor != 0 {
                 p = p.offset(1);
                 lp = lp.wrapping_sub(1);
@@ -528,7 +529,7 @@ pub unsafe extern "C" fn str_gsub(state: *mut State) -> i32 {
         let mut lastmatch: *const i8 = std::ptr::null();
         let tr = lua_type(state, 3);
         let max_s: i64 = lual_optinteger(state, 4, srcl.wrapping_add(1 as u64) as i64);
-        let anchor: i32 = (*p as i32 == '^' as i32) as i32;
+        let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
         let mut n: i64 = 0;
         let mut changed: i32 = 0;
         let mut match_state: MatchState = MatchState {
@@ -602,11 +603,11 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
             if !(fresh168 != 0) {
                 break;
             }
-            if *s as i32 == '"' as i32 || *s as i32 == '\\' as i32 || *s as i32 == '\n' as i32 {
+            if *s as i32 == '"' as i32 || *s as i32 == CHARACTER_BACKSLASH as i32 || *s as i32 == CHARACTER_LF as i32 {
                 ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh169 = (*b).length;
                 (*b).length = ((*b).length).wrapping_add(1);
-                *((*b).pointer).offset(fresh169 as isize) = '\\' as i8;
+                *((*b).pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
                 ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh170 = (*b).length;
                 (*b).length = ((*b).length).wrapping_add(1);
@@ -665,12 +666,12 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut State, buffer: *mut i8, n: 
                 b"%a\0" as *const u8 as *const i8,
                 n,
             );
-            if (memchr(buffer as *const libc::c_void, '.' as i32, nb as u64)).is_null() {
-                let point: i8 = '.' as i8;
+            if (memchr(buffer as *const libc::c_void, CHARACTER_PERIOD as i32, nb as u64)).is_null() {
+                let point: i8 = CHARACTER_PERIOD as i8;
                 let ppoint: *mut i8 =
                     memchr(buffer as *const libc::c_void, point as i32, nb as u64) as *mut i8;
                 if !ppoint.is_null() {
-                    *ppoint = '.' as i8;
+                    *ppoint = CHARACTER_PERIOD as i8;
                 }
             }
             return nb;
@@ -751,9 +752,9 @@ pub unsafe extern "C" fn checkformat(
     unsafe {
         let mut spec: *const i8 = form.offset(1 as isize);
         spec = spec.offset(strspn(spec, flags) as isize);
-        if *spec as i32 != '0' as i32 {
+        if *spec as i32 != CHARACTER_0 as i32 {
             spec = get2digits(spec);
-            if *spec as i32 == '.' as i32 && precision != 0 {
+            if *spec as i32 == CHARACTER_PERIOD as i32 && precision != 0 {
                 spec = spec.offset(1);
                 spec = get2digits(spec);
             }
@@ -786,13 +787,13 @@ pub unsafe extern "C" fn getformat(
         }
         let fresh173 = form;
         form = form.offset(1);
-        *fresh173 = '%' as i8;
+        *fresh173 = CHARACTER_PERCENT as i8;
         memcpy(
             form as *mut libc::c_void,
             strfrmt as *const libc::c_void,
             (length as usize).wrapping_mul(::core::mem::size_of::<i8>()),
         );
-        *form.offset(length as isize) = '\0' as i8;
+        *form.offset(length as isize) = CHARACTER_NUL as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }
 }
@@ -803,7 +804,7 @@ pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) {
         let spec: i8 = *form.offset(l.wrapping_sub(1 as u64) as isize);
         strcpy(form.offset(l as isize).offset(-(1 as isize)), lenmod);
         *form.offset(l.wrapping_add(lm).wrapping_sub(1 as u64) as isize) = spec;
-        *form.offset(l.wrapping_add(lm) as isize) = '\0' as i8;
+        *form.offset(l.wrapping_add(lm) as isize) = CHARACTER_NUL as i8;
     }
 }
 pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
@@ -818,7 +819,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
         let mut b = Buffer::new();
         b.initialize(state);
         while strfrmt < strfrmt_end {
-            if *strfrmt as i32 != '%' as i32 {
+            if *strfrmt as i32 != CHARACTER_PERCENT as i32 {
                 (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
@@ -827,7 +828,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                 *(b.pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
-                if *strfrmt as i32 == '%' as i32 {
+                if *strfrmt as i32 == CHARACTER_PERCENT as i32 {
                     (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
@@ -909,13 +910,13 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                             if p.is_null() {
                                 p = b"(null)\0" as *const u8 as *const i8 as *const libc::c_void;
                                 form[(strlen(form.as_mut_ptr())).wrapping_sub(1 as u64) as usize] =
-                                    's' as i8;
+                                    CHARACTER_LOWER_S as i8;
                             }
                             nb = snprintf(buffer, maxitem as u64, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
                         }
                         113 => {
-                            if form[2 as usize] as i32 != '\0' as i32 {
+                            if form[2 as usize] as i32 != CHARACTER_NUL as i32 {
                                 return lual_error(
                                     state,
                                     b"specifier '%%q' cannot have modifiers\0" as *const u8
@@ -928,7 +929,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                         115 => {
                             let mut l: u64 = 0;
                             let s: *const i8 = lual_tolstring(state, arg, &mut l);
-                            if form[2 as usize] as i32 == '\0' as i32 {
+                            if form[2 as usize] as i32 == CHARACTER_NUL as i32 {
                                 b.add_value();
                             } else {
                                 (((l == strlen(s)) as i32 != 0) as i64 != 0
@@ -943,7 +944,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
                                     b"-\0" as *const u8 as *const i8,
                                     1,
                                 );
-                                if (strchr(form.as_mut_ptr(), '.' as i32)).is_null()
+                                if (strchr(form.as_mut_ptr(), CHARACTER_PERIOD as i32)).is_null()
                                     && l >= 100 as u64
                                 {
                                     b.add_value();
@@ -992,7 +993,7 @@ pub unsafe extern "C" fn str_format(state: *mut State) -> i32 {
 }
 pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { dummy: 1 };
 pub unsafe extern "C" fn digit(c: i32) -> i32 {
-    return ('0' as i32 <= c && c <= '9' as i32) as i32;
+    return (CHARACTER_0 <= c && c <= CHARACTER_9) as i32;
 }
 pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
@@ -1003,7 +1004,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
             loop {
                 let fresh179 = *fmt;
                 *fmt = (*fmt).offset(1);
-                a = a * 10 as i32 + (*fresh179 as i32 - '0' as i32);
+                a = a * 10 as i32 + (*fresh179 as i32 - CHARACTER_0);
                 if !(digit(**fmt as i32) != 0
                     && a <= ((if (::core::mem::size_of::<u64>() as u64)
                         < ::core::mem::size_of::<i32>() as u64
@@ -1115,7 +1116,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
                 if ((*size == -1) as i32 != 0) as i64 != 0 {
                     lual_error(
                         (*h).state,
-                        b"missing size for format option 'c'\0" as *const u8 as *const i8,
+                        b"missing size for format option CHARACTER_LOWER_C\0" as *const u8 as *const i8,
                     );
                 }
                 return K::Character;
@@ -1162,14 +1163,14 @@ pub unsafe extern "C" fn getdetails(
         let opt: K = getoption(h, fmt, total_size);
         let mut align: i32 = *total_size;
         if opt as u32 == K::PaddingAlignment as u32 {
-            if **fmt as i32 == '\0' as i32
+            if **fmt as i32 == CHARACTER_NUL as i32
                 || getoption(h, fmt, &mut align) as u32 == K::Character as u32
                 || align == 0
             {
                 lual_argerror(
                     (*h).state,
                     1,
-                    b"invalid next option for option 'X'\0" as *const u8 as *const i8,
+                    b"invalid next option for option CHARACTER_UPPER_X\0" as *const u8 as *const i8,
                 );
             }
         }
@@ -1260,7 +1261,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
         initheader(state, &mut h);
         (*state).push_nil();
         b.initialize(state);
-        while *fmt as i32 != '\0' as i32 {
+        while *fmt as i32 != CHARACTER_NUL as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
             let opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
@@ -1396,7 +1397,7 @@ pub unsafe extern "C" fn str_pack(state: *mut State) -> i32 {
                     (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh188 = b.length;
                     b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh188 as isize) = '\0' as i8;
+                    *(b.pointer).offset(fresh188 as isize) = CHARACTER_NUL as i8;
                     totalsize = (totalsize as u64).wrapping_add(length_1.wrapping_add(1 as u64))
                         as u64;
                     current_block_33 = 3222590281903869779;
@@ -1436,7 +1437,7 @@ pub unsafe extern "C" fn str_packsize(state: *mut State) -> i32 {
         let mut fmt: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mut totalsize: u64 = 0;
         initheader(state, &mut h);
-        while *fmt as i32 != '\0' as i32 {
+        while *fmt as i32 != CHARACTER_NUL as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
             let opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
@@ -1542,7 +1543,7 @@ pub unsafe extern "C" fn str_unpack(state: *mut State) -> i32 {
                 b"initial position out of string\0" as *const u8 as *const i8,
             ) != 0) as i32;
         initheader(state, &mut h);
-        while *fmt as i32 != '\0' as i32 {
+        while *fmt as i32 != CHARACTER_NUL as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
             let opt: K = getdetails(&mut h, pos, &mut fmt, &mut size, &mut ntoalign);

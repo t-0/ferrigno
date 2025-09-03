@@ -1,6 +1,7 @@
 use crate::tvalue::*;
 use crate::tag::*;
 use crate::value::*;
+use crate::character::*;
 use crate::state::*;
 use crate::utility::c::*;
 use libc::{toupper};
@@ -231,10 +232,10 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
         let mut n: u64 = 0;
         let mut is_negative_: i32 = 0;
         s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
-        if *s as i32 == '-' as i32 {
+        if *s as i32 == CHARACTER_HYPHEN as i32 {
             s = s.offset(1);
             is_negative_ = 1;
-        } else if *s as i32 == '+' as i32 {
+        } else if *s as i32 == CHARACTER_PLUS as i32 {
             s = s.offset(1);
         }
         if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
@@ -248,9 +249,9 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
                 & _ISDIGIT as i32
                 != 0
             {
-                *s as i32 - '0' as i32
+                *s as i32 - CHARACTER_0 as i32
             } else {
-                toupper(*s as u8 as i32) - 'A' as i32 + 10 as i32
+                toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
             };
             if digit_0 >= base {
                 return std::ptr::null();

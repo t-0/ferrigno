@@ -5,6 +5,7 @@ use crate::global::*;
 use crate::debuginfo::*;
 use crate::value::*;
 use crate::table::*;
+use crate::character::*;
 use crate::callinfo::*;
 use crate::tvalue::*;
 use crate::prototype::*;
@@ -104,10 +105,10 @@ pub unsafe extern "C" fn auxgetinfo(
         let mut status: i32 = 1;
         while *what != 0 {
             match *what as i32 {
-                83 => {
+                CHARACTER_UPPER_S => {
                     funcinfo(ar, closure);
                 }
-                108 => {
+                CHARACTER_LOWER_L => {
                     (*ar).currentline =
                         if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 1 == 0 {
                             getcurrentline(call_info)
@@ -115,7 +116,7 @@ pub unsafe extern "C" fn auxgetinfo(
                             -1
                         };
                 }
-                117 => {
+                CHARACTER_LOWER_U => {
                     (*ar).nups = (if closure.is_null() {
                         0
                     } else {
@@ -129,21 +130,21 @@ pub unsafe extern "C" fn auxgetinfo(
                         (*ar).nparams = (*(*closure).payload.l_prototype).count_parameters;
                     }
                 }
-                116 => {
+                CHARACTER_LOWER_T => {
                     (*ar).is_tail_call = if !call_info.is_null() {
                         0 != ((*call_info).call_status as i32 & 1 << 5)
                     } else {
                         false
                     };
                 }
-                110 => {
+                CHARACTER_LOWER_N => {
                     (*ar).namewhat = getfuncname(state, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
                         (*ar).namewhat = b"\0" as *const u8 as *const i8;
                         (*ar).name = std::ptr::null();
                     }
                 }
-                114 => {
+                CHARACTER_LOWER_R => {
                     if call_info.is_null() || (*call_info).call_status as i32 & 1 << 8 == 0 {
                         (*ar).ntransfer = 0;
                         (*ar).ftransfer = (*ar).ntransfer;
@@ -152,7 +153,7 @@ pub unsafe extern "C" fn auxgetinfo(
                         (*ar).ntransfer = (*call_info).u2.transferinfo.ntransfer;
                     }
                 }
-                76 | 102 => {}
+                CHARACTER_UPPER_L | CHARACTER_LOWER_F => {}
                 _ => {
                     status = 0;
                 }

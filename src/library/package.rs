@@ -1,5 +1,6 @@
 use crate::utility::c::*;
 use crate::state::*;
+use crate::character::*;
 use crate::new::*;
 use crate::tag::*;
 use crate::registeredfunction::*;
@@ -145,13 +146,13 @@ pub unsafe extern "C" fn lookforfunc(state: *mut State, path: *const i8, sym: *c
     unsafe {
         let mut reg: *mut libc::c_void = checkclib(state, path);
         if reg.is_null() {
-            reg = lsys_load(state, path, (*sym as i32 == '*' as i32) as i32);
+            reg = lsys_load(state, path, (*sym as i32 == CHARACTER_ASTERISK as i32) as i32);
             if reg.is_null() {
                 return 1;
             }
             addtoclib(state, path, reg);
         }
-        if *sym as i32 == '*' as i32 {
+        if *sym as i32 == CHARACTER_ASTERISK as i32 {
             (*state).push_boolean(true);
             return 0;
         } else {
@@ -201,7 +202,7 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
         let mut name: *mut i8 = *path;
         if name == end {
             return std::ptr::null();
-        } else if *name as i32 == '\0' as i32 {
+        } else if *name as i32 == CHARACTER_NUL as i32 {
             *name = *(b";\0" as *const u8 as *const i8);
             name = name.offset(1);
         }
@@ -209,7 +210,7 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
         if sep.is_null() {
             sep = end;
         }
-        *sep = '\0' as i8;
+        *sep = CHARACTER_NUL as i8;
         *path = sep;
         return name;
     }
@@ -240,7 +241,7 @@ pub unsafe extern "C" fn searchpath(
         let mut pathname;
         let endpathname;
         let mut filename;
-        if *sep as i32 != '\0' as i32 && !(strchr(name, *sep as i32)).is_null() {
+        if *sep as i32 != CHARACTER_NUL as i32 && !(strchr(name, *sep as i32)).is_null() {
             name = lual_gsub(state, name, sep, dirsep);
         }
         let mut buffer = Buffer::new();
@@ -249,7 +250,7 @@ pub unsafe extern "C" fn searchpath(
         (buffer.length < buffer.size || !(buffer.prepare_with_size(1 as u64)).is_null()) as i32;
         let fresh195 = buffer.length;
         buffer.length = (buffer.length).wrapping_add(1);
-        *(buffer.pointer).offset(fresh195 as isize) = '\0' as i8;
+        *(buffer.pointer).offset(fresh195 as isize) = CHARACTER_NUL as i8;
         pathname = buffer.pointer;
         endpathname = pathname
             .offset(buffer.length as isize)
@@ -399,7 +400,7 @@ pub unsafe extern "C" fn searcher_c(state: *mut State) -> i32 {
 pub unsafe extern "C" fn searcher_croot(state: *mut State) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
-        let p: *const i8 = strchr(name, '.' as i32);
+        let p: *const i8 = strchr(name, CHARACTER_PERIOD as i32);
         if p.is_null() {
             return 0;
         }

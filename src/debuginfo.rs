@@ -2,6 +2,7 @@
 use crate::callinfo::*;
 use crate::utility::c::*;
 use crate::state::*;
+use crate::character::*;
 use crate::utility::*;
 use crate::closure::*;
 use crate::prototype::*;
@@ -121,7 +122,7 @@ pub unsafe extern "C" fn lua_getinfo(
         let status: i32;
         let function;
         let call_info;
-        if *what as i32 == '>' as i32 {
+        if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
             call_info = std::ptr::null_mut();
             function = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
             what = what.offset(1);
@@ -134,14 +135,14 @@ pub unsafe extern "C" fn lua_getinfo(
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
-                if !(strchr(what, 'f' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
                     (*state).top.p = (*state).top.p.offset(1);
                 }
-                if !(strchr(what, 'L' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);
                 }
                 return status;
@@ -149,14 +150,14 @@ pub unsafe extern "C" fn lua_getinfo(
             TAG_VARIANT_CLOSURE_C => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
-                if !(strchr(what, 'f' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
                     (*state).top.p = (*state).top.p.offset(1);
                 }
-                if !(strchr(what, 'L' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);
                 }
                 return status;
@@ -164,14 +165,14 @@ pub unsafe extern "C" fn lua_getinfo(
             _ => {
                 let cl: *mut Closure = std::ptr::null_mut();
                 status = auxgetinfo(state, what, ar, cl, call_info);
-                if !(strchr(what, 'f' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
                     (*state).top.p = (*state).top.p.offset(1);
                 }
-                if !(strchr(what, 'L' as i32)).is_null() {
+                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);
                 }
                 return status;

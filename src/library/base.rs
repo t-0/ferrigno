@@ -2,6 +2,7 @@
 use crate::f2i::*;
 use crate::registeredfunction::*;
 use crate::state::*;
+use crate::character::*;
 use crate::tag::*;
 pub unsafe extern "C" fn luab_tonumber(state: *mut State) -> i32 {
     unsafe {
@@ -431,7 +432,7 @@ pub unsafe extern "C" fn luab_select(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
         if lua_type(state, 1) == Some(TAG_TYPE_STRING)
-            && *lua_tolstring(state, 1, std::ptr::null_mut()) as i32 == '#' as i32
+            && *lua_tolstring(state, 1, std::ptr::null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32
         {
             (*state).push_integer((n - 1) as i64);
             return 1;

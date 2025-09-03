@@ -1,6 +1,7 @@
 use crate::global::*;
 use crate::object::*;
 use crate::stackvalue::*;
+use crate::character::*;
 use crate::state::*;
 use crate::stringtable::*;
 use crate::table::*;
@@ -182,7 +183,7 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
-        *((*ts).get_contents2()).offset(l as isize) = '\0' as i8;
+        *((*ts).get_contents2()).offset(l as isize) = CHARACTER_NUL as i8;
         return ts;
     }
 }

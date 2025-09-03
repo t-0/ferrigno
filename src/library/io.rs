@@ -1,6 +1,7 @@
 use crate::utility::c::*;
 use crate::io::stream::*;
 use crate::state::*;
+use crate::character::*;
 use crate::functions::*;
 use crate::tag::*;
 use crate::io::rn::*;
@@ -10,13 +11,13 @@ use crate::new::*;
 use crate::buffer::*;
 pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 {
     unsafe {
-        return (*mode as i32 != '\0' as i32
+        return (*mode as i32 != CHARACTER_NUL as i32
             && {
                 let fresh151 = mode;
                 mode = mode.offset(1);
                 !(strchr(b"rwa\0" as *const u8 as *const i8, *fresh151 as i32)).is_null()
             }
-            && (*mode as i32 != '+' as i32 || {
+            && (*mode as i32 != CHARACTER_PLUS as i32 || {
                 mode = mode.offset(1);
                 1 != 0
             })
@@ -183,9 +184,9 @@ pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
             std::ptr::null_mut(),
         );
         let p: *mut Stream = newprefile(state);
-        ((((*mode.offset(0 as isize) as i32 == 'r' as i32
-            || *mode.offset(0 as isize) as i32 == 'w' as i32)
-            && *mode.offset(1 as isize) as i32 == '\0' as i32) as i32
+        ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32
+            || *mode.offset(0 as isize) as i32 == CHARACTER_LOWER_W as i32)
+            && *mode.offset(1 as isize) as i32 == CHARACTER_NUL as i32) as i32
             != 0) as i64
             != 0
             || lual_argerror(state, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
@@ -330,7 +331,7 @@ pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 {
 pub unsafe extern "C" fn nextc(rn: *mut RN) -> i32 {
     unsafe {
         if (((*rn).n >= 200 as i32) as i32 != 0) as i64 != 0 {
-            (*rn).buffer[0] = '\0' as i8;
+            (*rn).buffer[0] = CHARACTER_NUL as i8;
             return 0;
         } else {
             let fresh152 = (*rn).n;
@@ -378,8 +379,8 @@ pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 
         let mut decp: [i8; 2] = [0; 2];
         rn.file = file;
         rn.n = 0;
-        decp[0] = '.' as i8;
-        decp[1] = '.' as i8;
+        decp[0] = CHARACTER_PERIOD as i8;
+        decp[1] = CHARACTER_PERIOD as i8;
         flockfile(rn.file);
         loop {
             rn.c = getc_unlocked(rn.file);
@@ -416,7 +417,7 @@ pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 
         }
         ungetc(rn.c, rn.file);
         funlockfile(rn.file);
-        rn.buffer[rn.n as usize] = '\0' as i8;
+        rn.buffer[rn.n as usize] = CHARACTER_NUL as i8;
         if (lua_stringtonumber(state, (rn.buffer).as_mut_ptr()) != 0u64) as i64 != 0 {
             return 1;
         } else {
@@ -455,7 +456,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
                     c = getc_unlocked(file);
                     c != -1
                 }
-                && c != '\n' as i32
+                && c != CHARACTER_LF as i32
             {
                 let fresh153 = i;
                 i = i + 1;
@@ -463,18 +464,18 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
             }
             funlockfile(file);
             b.length = (b.length as u64).wrapping_add(i as u64) as u64;
-            if !(c != -1 && c != '\n' as i32) {
+            if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
-        if chop == 0 && c == '\n' as i32 {
+        if chop == 0 && c == CHARACTER_LF as i32 {
             (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
             let fresh154 = b.length;
             b.length = (b.length).wrapping_add(1);
             *(b.pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
-        return (c == '\n' as i32 || lua_rawlen(state, -1) > 0u64) as i32;
+        return (c == CHARACTER_LF as i32 || lua_rawlen(state, -1) > 0u64) as i32;
     }
 }
 pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
@@ -562,7 +563,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) 
                     };
                 } else {
                     let mut p: *const i8 = lual_checklstring(state, n, std::ptr::null_mut());
-                    if *p as i32 == '*' as i32 {
+                    if *p as i32 == CHARACTER_ASTERISK as i32 {
                         p = p.offset(1);
                     }
                     match *p as i32 {

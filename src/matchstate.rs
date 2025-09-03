@@ -128,7 +128,7 @@ impl MatchState {
     }
     pub unsafe extern "C" fn check_capture(&mut self, mut l: i32) -> i32 {
         unsafe {
-            l -= '1' as i32;
+            l -= CHARACTER_1 as i32;
             if ((l < 0 || l >= self.level as i32 || self.capture[l as usize].length == -1 as i64)
                 as i32
                 != 0) as i64
@@ -174,22 +174,22 @@ impl MatchState {
                     return p.offset(1 as isize);
                 }
                 91 => {
-                    if *p as i32 == '^' as i32 {
+                    if *p as i32 == CHARACTER_CARET as i32 {
                         p = p.offset(1);
                     }
                     loop {
                         if ((p == self.p_end) as i32 != 0) as i64 != 0 {
                             lual_error(
                                 self.state,
-                                b"malformed pattern (missing ']')\0" as *const u8 as *const i8,
+                                b"malformed pattern (missing CHARACTER_BRACKET_RIGHT)\0" as *const u8 as *const i8,
                             );
                         }
                         let fresh161 = p;
                         p = p.offset(1);
-                        if *fresh161 as i32 == '%' as i32 && p < self.p_end {
+                        if *fresh161 as i32 == CHARACTER_PERCENT as i32 && p < self.p_end {
                             p = p.offset(1);
                         }
-                        if !(*p as i32 != ']' as i32) {
+                        if !(*p as i32 != CHARACTER_BRACKET_RIGHT as i32) {
                             break;
                         }
                     }
@@ -376,7 +376,7 @@ impl MatchState {
                 }
                 match *p as i32 {
                     CHARACTER_PARENTHESIS_LEFT => {
-                        if *p.offset(1 as isize) as i32 == ')' as i32 {
+                        if *p.offset(1 as isize) as i32 == CHARACTER_PARENTHESIS_RIGHT as i32 {
                             s = self.start_capture(s, p.offset(2 as isize), -2);
                         } else {
                             s = self.start_capture(s, p.offset(1 as isize), -1);
@@ -389,7 +389,7 @@ impl MatchState {
                         current_block = 6476622998065200121;
                         break;
                     }
-                    36 => {
+                    CHARACTER_DOLLAR => {
                         if !(p.offset(1 as isize) != self.p_end) {
                             s = if s == self.src_end {
                                 s
@@ -400,8 +400,8 @@ impl MatchState {
                             break;
                         }
                     }
-                    37 => match *p.offset(1 as isize) as i32 {
-                        98 => {
+                    CHARACTER_PERCENT => match *p.offset(1 as isize) as i32 {
+                        CHARACTER_LOWER_B => {
                             current_block = 17965632435239708295;
                             match current_block {
                                 17965632435239708295 => {
@@ -417,16 +417,16 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
+                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
                                             self.state,
-                                            b"missing '[' after '%%f' in pattern\0" as *const u8
+                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        '\0' as i32
+                                        CHARACTER_NUL as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -460,7 +460,7 @@ impl MatchState {
                                 }
                             }
                         }
-                        102 => {
+                        CHARACTER_LOWER_F => {
                             current_block = 8236137900636309791;
                             match current_block {
                                 17965632435239708295 => {
@@ -476,16 +476,16 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
+                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
                                             self.state,
-                                            b"missing '[' after '%%f' in pattern\0" as *const u8
+                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        '\0' as i32
+                                        CHARACTER_NUL as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -519,7 +519,7 @@ impl MatchState {
                                 }
                             }
                         }
-                        48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 => {
+                        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => {
                             current_block = 14576567515993809846;
                             match current_block {
                                 17965632435239708295 => {
@@ -535,16 +535,16 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != '[' as i32) as i32 != 0) as i64 != 0 {
+                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
                                             self.state,
-                                            b"missing '[' after '%%f' in pattern\0" as *const u8
+                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        '\0' as i32
+                                        CHARACTER_NUL as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -584,9 +584,9 @@ impl MatchState {
                 }
                 ep_0 = self.classend(p);
                 if self.singlematch(s, p, ep_0) == 0 {
-                    if *ep_0 as i32 == '*' as i32
-                        || *ep_0 as i32 == '?' as i32
-                        || *ep_0 as i32 == '-' as i32
+                    if *ep_0 as i32 == CHARACTER_ASTERISK as i32
+                        || *ep_0 as i32 == CHARACTER_QUESTION as i32
+                        || *ep_0 as i32 == CHARACTER_HYPHEN as i32
                     {
                         p = ep_0.offset(1 as isize);
                     } else {
@@ -665,25 +665,25 @@ impl MatchState {
             let mut news: *const i8 = lua_tolstring(state, 3, &mut l);
             let mut p: *const i8;
             loop {
-                p = memchr(news as *const libc::c_void, '%' as i32, l) as *mut i8;
+                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l) as *mut i8;
                 if p.is_null() {
                     break;
                 }
                 (*b).add_string_with_length(news, p.offset_from(news) as u64);
                 p = p.offset(1);
-                if *p as i32 == '%' as i32 {
+                if *p as i32 == CHARACTER_PERCENT as i32 {
                     ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh164 = (*b).length;
                     (*b).length = ((*b).length).wrapping_add(1);
                     *((*b).pointer).offset(fresh164 as isize) = *p;
-                } else if *p as i32 == '0' as i32 {
+                } else if *p as i32 == CHARACTER_0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as u64);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32
                     & _ISDIGIT as i32
                     != 0
                 {
                     let mut cap: *const i8 = std::ptr::null();
-                    let resl: i64 = self.get_onecapture(*p as i32 - '1' as i32, s, e, &mut cap) as i64;
+                    let resl: i64 = self.get_onecapture(*p as i32 - CHARACTER_1 as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
                         (*b).add_value();
                     } else {
@@ -693,7 +693,7 @@ impl MatchState {
                     lual_error(
                         state,
                         b"invalid use of '%c' in replacement string\0" as *const u8 as *const i8,
-                        '%' as i32,
+                        CHARACTER_PERCENT as i32,
                     );
                 }
                 l = (l as u64).wrapping_sub(p.offset(1 as isize).offset_from(news) as u64) as u64
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
 pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
     unsafe {
         let mut sig: i32 = 1;
-        if *p.offset(1 as isize) as i32 == '^' as i32 {
+        if *p.offset(1 as isize) as i32 == CHARACTER_CARET as i32 {
             sig = 0;
             p = p.offset(1);
         }
@@ -768,12 +768,12 @@ pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const 
             if !(p < ec) {
                 break;
             }
-            if *p as i32 == '%' as i32 {
+            if *p as i32 == CHARACTER_PERCENT as i32 {
                 p = p.offset(1);
                 if match_class(c, *p as u8 as i32) != 0 {
                     return sig;
                 }
-            } else if *p.offset(1 as isize) as i32 == '-' as i32 && p.offset(2 as isize) < ec {
+            } else if *p.offset(1 as isize) as i32 == CHARACTER_HYPHEN as i32 && p.offset(2 as isize) < ec {
                 p = p.offset(2 as isize);
                 if *p.offset(-(2 as isize)) as u8 as i32 <= c && c <= *p as u8 as i32 {
                     return sig;

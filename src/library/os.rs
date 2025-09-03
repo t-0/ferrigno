@@ -1,6 +1,8 @@
+use crate::character::CHARACTER_EXCLAMATION;
 use crate::state::*;
 use crate::registeredfunction::*;
 use crate::utility::c::*;
+use crate::character::*;
 use crate::tag::*;
 use crate::new::*;
 use crate::buffer::*;
@@ -192,7 +194,7 @@ pub unsafe extern "C" fn checkoption(
             b"aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy\0"
                 as *const u8 as *const i8;
         let mut oplen: i32 = 1;
-        while *option as i32 != '\0' as i32 && oplen as i64 <= convlen {
+        while *option as i32 != CHARACTER_NUL as i32 && oplen as i64 <= convlen {
             if *option as i32 == '|' as i32 {
                 oplen += 1;
             } else if memcmp(
@@ -206,7 +208,7 @@ pub unsafe extern "C" fn checkoption(
                     conv as *const libc::c_void,
                     oplen as u64,
                 );
-                *buffer.offset(oplen as isize) = '\0' as i8;
+                *buffer.offset(oplen as isize) = CHARACTER_NUL as i8;
                 return conv.offset(oplen as isize);
             }
             option = option.offset(oplen as isize);
@@ -260,7 +262,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
             __tm_zone: std::ptr::null(),
         };
         let stm: *mut TM;
-        if *s as i32 == '!' as i32 {
+        if *s as i32 == CHARACTER_EXCLAMATION as i32 {
             stm = gmtime_r(&mut t, &mut tmr);
             s = s.offset(1);
         } else {
@@ -279,10 +281,10 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
         } else {
             let mut cc: [i8; 4] = [0; 4];
             let mut b = Buffer::new();
-            cc[0] = '%' as i8;
+            cc[0] = CHARACTER_PERCENT as i8;
             b.initialize(state);
             while s < se {
-                if *s as i32 != '%' as i32 {
+                if *s as i32 != CHARACTER_PERCENT as i32 {
                     (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
                     let fresh157 = s;
                     s = s.offset(1);

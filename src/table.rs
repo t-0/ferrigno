@@ -1,4 +1,5 @@
 use crate::new::*;
+use crate::character::*;
 use crate::node::*;
 use crate::object::*;
 use crate::tag::*;
@@ -288,8 +289,8 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
             smode = &mut (*((*mode).value.object as *mut TString)) as *mut TString;
-            weakkey = strchr((*smode).get_contents(), 'k' as i32);
-            weakvalue = strchr((*smode).get_contents(), 'v' as i32);
+            weakkey = strchr((*smode).get_contents(), CHARACTER_LOWER_K as i32);
+            weakvalue = strchr((*smode).get_contents(), CHARACTER_LOWER_V as i32);
             !weakkey.is_null() || !weakvalue.is_null()
         } {
             if weakkey.is_null() {
