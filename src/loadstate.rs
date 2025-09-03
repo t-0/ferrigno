@@ -32,7 +32,7 @@ impl LoadState {
     }
     unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: u64) {
         unsafe {
-            if luaz_read(self.zio, b, size) != 0u64 {
+            if luaz_read(self.zio, b, size) != 0 {
                 self.error(b"truncated chunk\0" as *const u8 as *const i8);
             }
         }
@@ -41,7 +41,7 @@ impl LoadState {
         unsafe {
             let fresh25 = (*self.zio).n;
             (*self.zio).n = ((*self.zio).n).wrapping_sub(1);
-            let b: i32 = if fresh25 > 0u64 {
+            let b: i32 = if fresh25 > 0 {
                 let fresh26 = (*self.zio).p;
                 (*self.zio).p = ((*self.zio).p).offset(1);
                 *fresh26 as u8 as i32
@@ -109,7 +109,7 @@ impl LoadState {
             let state: *mut State = self.state;
             let ts: *mut TString;
             let mut size: u64 = self.load_size();
-            if size == 0u64 {
+            if size == 0 {
                 return std::ptr::null_mut();
             } else {
                 size = size.wrapping_sub(1);

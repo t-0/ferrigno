@@ -49,7 +49,7 @@ pub unsafe extern "C" fn i2d(x: u64) -> f64 {
 }
 pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState) -> u64 {
     unsafe {
-        if n & n.wrapping_add(1 as u64) == 0u64 {
+        if n & n.wrapping_add(1 as u64) == 0 {
             return ran & n;
         } else {
             let mut lim: u64 = n;

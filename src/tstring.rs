@@ -154,7 +154,7 @@ pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool
 pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32 {
     unsafe {
         let mut h: u32 = seed ^ l as u32;
-        while l > 0u64 {
+        while l > 0 {
             h ^= (h << 5)
                 .wrapping_add(h >> 2)
                 .wrapping_add(*str.offset(l.wrapping_sub(1 as u64) as isize) as u8 as u32);

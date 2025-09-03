@@ -115,7 +115,7 @@ impl DumpState {
     unsafe extern "C" fn dump_string(& mut self, tstring: *const TString) {
         unsafe {
             if tstring.is_null() {
-                self.dump_size(0u64);
+                self.dump_size(0);
             } else {
                 let size: usize = (*tstring).get_length() as usize;
                 let str: *const i8 = (*tstring).get_contents();

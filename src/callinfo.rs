@@ -15,7 +15,7 @@ pub struct CallInfo {
     pub next: *mut CallInfo,
     pub u: CallInfoConstituentA,
     pub u2: CallInfoConsistuentB,
-    pub count_results: i16,
+    pub count_results: i32,
     pub call_status: u16,
 }
 #[derive(Copy, Clone)]

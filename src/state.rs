@@ -857,7 +857,7 @@ pub unsafe extern "C" fn prepcallinfo(
         };
         let call_info: *mut CallInfo = (*state).call_info;
         (*call_info).function.p = function;
-        (*call_info).count_results = nret as i16;
+        (*call_info).count_results = nret;
         (*call_info).call_status = mask as u16;
         (*call_info).top.p = top;
         return call_info;
@@ -1367,7 +1367,7 @@ pub unsafe extern "C" fn f_parser(state: *mut State, arbitrary_data: *mut libc::
         let p: *mut SParser = arbitrary_data as *mut SParser;
         let fresh2 = (*(*p).zio).n;
         (*(*p).zio).n = ((*(*p).zio).n).wrapping_sub(1);
-        let c: i32 = if fresh2 > 0u64 {
+        let c: i32 = if fresh2 > 0 {
             let fresh3 = (*(*p).zio).p;
             (*(*p).zio).p = ((*(*p).zio).p).offset(1);
             *fresh3 as u8 as i32
@@ -1766,7 +1766,7 @@ pub unsafe extern "C" fn lua_compare(state: *mut State, index1: i32, index2: i32
 pub unsafe extern "C" fn lua_stringtonumber(state: *mut State, s: *const i8) -> u64 {
     unsafe {
         let size: u64 = luao_str2num(s, &mut (*(*state).top.p).tvalue);
-        if size != 0u64 {
+        if size != 0 {
             (*state).top.p = (*state).top.p.offset(1);
         }
         return size;
@@ -1877,7 +1877,7 @@ pub unsafe extern "C" fn lua_pushlstring(
     length: u64,
 ) -> *const i8 {
     unsafe {
-        let ts: *mut TString = if length == 0u64 {
+        let ts: *mut TString = if length == 0 {
             luas_new(state, b"\0" as *const u8 as *const i8)
         } else {
             luas_newlstr(state, s, length)
@@ -2644,7 +2644,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
             10 => {
                 let minormul: i32 = argp.arg::<i32>();
                 let majormul: i32 = argp.arg::<i32>();
-                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0u64 {
+                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
                     10 as i32
                 } else {
                     11 as i32
@@ -2661,7 +2661,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
                 let pause: i32 = argp.arg::<i32>();
                 let stepmul: i32 = argp.arg::<i32>();
                 let stepsize: i32 = argp.arg::<i32>();
-                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0u64 {
+                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
                     10 as i32
                 } else {
                     11 as i32
@@ -2715,7 +2715,7 @@ pub unsafe extern "C" fn lua_toclose(state: *mut State, index: i32) {
         let count_results: i32 = (*(*state).call_info).count_results as i32;
         luaf_newtbcupval(state, o);
         if !(count_results < -1) {
-            (*(*state).call_info).count_results = (-count_results - 3) as i16;
+            (*(*state).call_info).count_results = -count_results - 3;
         }
     }
 }
@@ -2976,7 +2976,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut State, state: *mut State) 
         (*call_info).call_status = (1 << 1) as u16;
         (*call_info).function.p = (*other_state).top.p;
         (*call_info).u.c.context_function = None;
-        (*call_info).count_results = 0 as i16;
+        (*call_info).count_results = 0;
         (*(*other_state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
         (*other_state).top.p = ((*other_state).top.p).offset(1);
         (*other_state).top.p;
@@ -3706,7 +3706,7 @@ pub unsafe extern "C" fn luam_realloc_(
     unsafe {
         let g: *mut Global = (*state).global;
         let mut new_block: *mut libc::c_void = raw_allocate(block, old_size, new_size);
-        if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i64 != 0 {
+        if ((new_block.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
             new_block = tryagain(state, block, old_size, new_size);
             if new_block.is_null() {
                 return std::ptr::null_mut();
@@ -3726,7 +3726,7 @@ pub unsafe extern "C" fn luam_saferealloc_(
 ) -> *mut libc::c_void {
     unsafe {
         let new_block: *mut libc::c_void = luam_realloc_(state, block, old_size, new_size);
-        if ((new_block.is_null() && new_size > 0u64) as i32 != 0) as i64 != 0 {
+        if ((new_block.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
             luad_throw(state, 4);
         }
         return new_block;
@@ -4826,7 +4826,7 @@ pub unsafe extern "C" fn stepgenfull(state: *mut State, g: *mut Global) {
 }
 pub unsafe extern "C" fn genstep(state: *mut State, g: *mut Global) {
     unsafe {
-        if (*g).last_atomic != 0u64 {
+        if (*g).last_atomic != 0 {
             stepgenfull(state, g);
         } else {
             let majorbase: u64 = (*g).gc_estimate;
@@ -5033,7 +5033,7 @@ pub unsafe extern "C" fn luac_step(state: *mut State) {
         let g: *mut Global = (*state).global;
         if !((*g).gc_step as i32 == 0) {
             (*g).set_debt(-(2000 as i32) as i64);
-        } else if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0u64 {
+        } else if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
             genstep(state, g);
         } else {
             incstep(state, g);
@@ -7881,7 +7881,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 == TAG_VARIANT_NUMERIC_INTEGER
                             {
                                 let count: u64 = (*ra_71.offset(1 as isize)).tvalue.value.integer as u64;
-                                if count > 0u64 {
+                                if count > 0 {
                                     let step: i64 = (*ra_71.offset(2 as isize)).tvalue.value.integer;
                                     let mut index: i64 = (*ra_71).tvalue.value.integer;
                                     let io_43: *mut TValue = &mut (*ra_71.offset(1 as isize)).tvalue;
@@ -8830,7 +8830,7 @@ pub unsafe extern "C" fn get_s(
 ) -> *const i8 {
     unsafe {
         let lexical_state: *mut LoadS = arbitrary_data as *mut LoadS;
-        if (*lexical_state).size == 0u64 {
+        if (*lexical_state).size == 0 {
             return std::ptr::null();
         }
         *size = (*lexical_state).size;
@@ -9089,7 +9089,7 @@ pub unsafe extern "C" fn raw_allocate(
     new_size: u64,
 ) -> *mut libc::c_void {
     unsafe {
-        if new_size == 0u64 {
+        if new_size == 0 {
             free(ptr);
             return std::ptr::null_mut();
         } else {

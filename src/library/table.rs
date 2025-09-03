@@ -354,7 +354,7 @@ pub unsafe extern "C" fn auxsort(state: *mut State, mut lo: u32, mut up: u32, mu
             if up.wrapping_sub(lo) == 1 as u32 {
                 return;
             }
-            if up.wrapping_sub(lo) < 100 as u32 || rnd == 0u32 {
+            if up.wrapping_sub(lo) < 100 as u32 || rnd == 0 {
                 p = lo.wrapping_add(up).wrapping_div(2 as u32);
             } else {
                 p = choose_pivot(lo, up, rnd);

@@ -86,7 +86,7 @@ impl Buffer {
     }
     pub unsafe fn add_string_with_length(&mut self, s: *const i8, length: u64) {
         unsafe {
-            if length > 0u64 {
+            if length > 0 {
                 let raw: *mut i8 = self.prepare_with_size_and_index(length, -1);
                 memcpy(
                     raw as *mut libc::c_void,

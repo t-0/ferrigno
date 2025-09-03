@@ -121,7 +121,7 @@ pub unsafe extern "C" fn str_rep(state: *mut State) -> i32 {
                 (l as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             );
             p = p.offset(l as isize);
-            if lsep > 0u64 {
+            if lsep > 0 {
                 memcpy(
                     p as *mut libc::c_void,
                     sep as *const libc::c_void,
@@ -391,7 +391,7 @@ pub unsafe extern "C" fn lmemfind(
     mut l2: u64,
 ) -> *const i8 {
     unsafe {
-        if l2 == 0u64 {
+        if l2 == 0 {
             return s1;
         } else if l2 > l1 {
             return std::ptr::null();
@@ -399,7 +399,7 @@ pub unsafe extern "C" fn lmemfind(
             let mut init: *const i8 = std::ptr::null();
             l2 = l2.wrapping_sub(1);
             l1 = l1.wrapping_sub(l2);
-            while l1 > 0u64 && {
+            while l1 > 0 && {
                 init = memchr(s1 as *const libc::c_void, *s2 as i32, l1) as *const i8;
                 !init.is_null()
             } {
@@ -1051,67 +1051,67 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
         let opt: i32 = *fresh180 as i32;
         *size = 0;
         match opt {
-            98 => {
+            CHARACTER_LOWER_B => {
                 *size = ::core::mem::size_of::<i8>() as i32;
                 return K::Integer;
             }
-            66 => {
+            CHARACTER_UPPER_B => {
                 *size = ::core::mem::size_of::<i8>() as i32;
                 return K::Unsigned;
             }
-            104 => {
+            CHARACTER_LOWER_H => {
                 *size = ::core::mem::size_of::<i16>() as i32;
                 return K::Integer;
             }
-            72 => {
+            CHARACTER_UPPER_H => {
                 *size = ::core::mem::size_of::<i16>() as i32;
                 return K::Unsigned;
             }
-            108 => {
+            CHARACTER_LOWER_L => {
                 *size = ::core::mem::size_of::<i64>() as i32;
                 return K::Integer;
             }
-            76 => {
+            CHARACTER_UPPER_L => {
                 *size = ::core::mem::size_of::<i64>() as i32;
                 return K::Unsigned;
             }
-            106 => {
+            CHARACTER_LOWER_J => {
                 *size = ::core::mem::size_of::<i64>() as i32;
                 return K::Integer;
             }
-            74 => {
+            CHARACTER_UPPER_J => {
                 *size = ::core::mem::size_of::<i64>() as i32;
                 return K::Unsigned;
             }
-            84 => {
+            CHARACTER_UPPER_T => {
                 *size = ::core::mem::size_of::<u64>() as i32;
                 return K::Unsigned;
             }
-            102 => {
+            CHARACTER_LOWER_F => {
                 *size = ::core::mem::size_of::<libc::c_float>() as i32;
                 return K::Float;
             }
-            110 => {
+            CHARACTER_LOWER_N => {
                 *size = ::core::mem::size_of::<f64>() as i32;
                 return K::Number;
             }
-            100 => {
+            CHARACTER_LOWER_D => {
                 *size = ::core::mem::size_of::<f64>() as i32;
                 return K::Double;
             }
-            105 => {
+            CHARACTER_LOWER_I => {
                 *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as i32);
                 return K::Integer;
             }
-            73 => {
+            CHARACTER_UPPER_I => {
                 *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as i32);
                 return K::Unsigned;
             }
-            115 => {
+            CHARACTER_LOWER_S => {
                 *size = getnumlimit(h, fmt, ::core::mem::size_of::<u64>() as i32);
                 return K::String;
             }
-            99 => {
+            CHARACTER_LOWER_C => {
                 *size = getnum(fmt, -1);
                 if ((*size == -1) as i32 != 0) as i64 != 0 {
                     lual_error(
@@ -1121,23 +1121,23 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
                 }
                 return K::Character;
             }
-            122 => return K::ZString,
-            120 => {
+            CHARACTER_LOWER_Z => return K::ZString,
+            CHARACTER_LOWER_X => {
                 *size = 1;
                 return K::Padding;
             }
-            88 => return K::PaddingAlignment,
-            32 => {}
-            60 => {
+            CHARACTER_UPPER_X => return K::PaddingAlignment,
+            CHARACTER_SPACE => {}
+            CHARACTER_ANGLE_LEFT => {
                 (*h).is_little_endian = 1;
             }
-            62 => {
+            CHARACTER_ANGLE_RIGHT => {
                 (*h).is_little_endian = 0;
             }
-            61 => {
+            CHARACTER_EQUAL => {
                 (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
             }
-            33 => {
+            CHARACTER_EXCLAMATION => {
                 let maxalign: i32 = 8;
                 (*h).maxmimum_alignment = getnumlimit(h, fmt, maxalign);
             }

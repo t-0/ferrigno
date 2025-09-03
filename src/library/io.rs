@@ -418,7 +418,7 @@ pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 
         ungetc(rn.c, rn.file);
         funlockfile(rn.file);
         rn.buffer[rn.n as usize] = CHARACTER_NUL as i8;
-        if (lua_stringtonumber(state, (rn.buffer).as_mut_ptr()) != 0u64) as i64 != 0 {
+        if (lua_stringtonumber(state, (rn.buffer).as_mut_ptr()) != 0) as i64 != 0 {
             return 1;
         } else {
             (*state).push_nil();
@@ -475,7 +475,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
             *(b.pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
-        return (c == CHARACTER_LF as i32 || lua_rawlen(state, -1) > 0u64) as i32;
+        return (c == CHARACTER_LF as i32 || lua_rawlen(state, -1) > 0) as i32;
     }
 }
 pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
@@ -527,7 +527,7 @@ pub unsafe extern "C" fn read_chars(state: *mut State, file: *mut FILE, n: u64) 
         );
         b.length = (b.length as u64).wrapping_add(nr) as u64;
         b.push_result();
-        return (nr > 0u64) as i32;
+        return (nr > 0) as i32;
     }
 }
 pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) -> i32 {
@@ -556,7 +556,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) 
                 }
                 if lua_type(state, n) == Some(TAG_TYPE_NUMERIC) {
                     let l: u64 = lual_checkinteger(state, n) as u64;
-                    success = if l == 0u64 {
+                    success = if l == 0 {
                         test_eof(state, file)
                     } else {
                         read_chars(state, file, l)

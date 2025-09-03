@@ -16,7 +16,7 @@ pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
         let state: *mut State = (*zio).state;
         let buffer: *const i8 =
             ((*zio).reader).expect("non-null function pointer")(state, (*zio).data, &mut size);
-        if buffer.is_null() || size == 0u64 {
+        if buffer.is_null() || size == 0 {
             return -1;
         }
         (*zio).n = size.wrapping_sub(1 as u64);
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn luaz_init(
 pub unsafe extern "C" fn luaz_read(zio: *mut ZIO, mut b: *mut libc::c_void, mut n: u64) -> u64 {
     unsafe {
         while n != 0 {
-            if (*zio).n == 0u64 {
+            if (*zio).n == 0 {
                 if luaz_fill(zio) == -1 {
                     return n;
                 } else {

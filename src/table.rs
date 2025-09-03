@@ -441,7 +441,7 @@ pub unsafe extern "C" fn mainpositionfromnode(t: *const Table, nd: *mut Node) ->
 pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 {
     unsafe {
         if (*t).flags as i32 & 1 << 7 == 0
-            || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32
+            || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0
         {
             return (*t).array_limit;
         } else {
@@ -459,7 +459,7 @@ pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 {
 pub unsafe extern "C" fn ispow2realasize(t: *const Table) -> i32 {
     unsafe {
         return ((*t).flags as i32 & 1 << 7 != 0
-            || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0u32)
+            || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0)
             as i32;
     }
 }
@@ -594,7 +594,7 @@ pub unsafe extern "C" fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
 pub unsafe extern "C" fn countint(key: i64, nums: *mut u32) -> i32 {
     unsafe {
         let k: u32 = arrayindex(key);
-        if k != 0u32 {
+        if k != 0 {
             let ref mut fresh129 = *nums.offset(ceiling_log2(k as u64) as isize);
             *fresh129 = (*fresh129).wrapping_add(1);
             return 1;
@@ -667,7 +667,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
 }
 pub unsafe extern "C" fn setnodevector(state: *mut State, table: *mut Table, mut size: u32) {
     unsafe {
-        if size == 0u32 {
+        if size == 0 {
             (*table).node = &DUMMY_NODE as *const Node as *mut Node;
             (*table).log_size_node = 0;
             (*table).last_free = std::ptr::null_mut();
@@ -1078,7 +1078,7 @@ pub unsafe extern "C" fn luah_setint(
 pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
     unsafe {
         let mut i: u64;
-        if j == 0u64 {
+        if j == 0 {
             j = j.wrapping_add(1);
         }
         loop {
@@ -1123,7 +1123,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
                 if ispow2realasize(table) != 0
                     && !(limit.wrapping_sub(1 as u32)
                         & limit.wrapping_sub(1 as u32).wrapping_sub(1 as u32)
-                        == 0u32)
+                        == 0)
                 {
                     (*table).array_limit = limit.wrapping_sub(1 as u32);
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
@@ -1141,7 +1141,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
             }
         }
         if !((*table).flags as i32 & 1 << 7 == 0
-            || (*table).array_limit & ((*table).array_limit).wrapping_sub(1 as u32) == 0u32)
+            || (*table).array_limit & ((*table).array_limit).wrapping_sub(1 as u32) == 0)
         {
             if get_tag_type((*((*table).array).offset(limit as isize)).get_tag()) == TAG_TYPE_NIL {
                 return limit as u64;
