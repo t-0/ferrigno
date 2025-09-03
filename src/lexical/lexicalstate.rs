@@ -2582,15 +2582,15 @@ pub unsafe extern "C" fn read_string(
                     };
                     match (*lexical_state).current {
                         CHARACTER_LOWER_A => {
-                            c = '\u{7}' as i32;
+                            c = CHARACTER_BEL as i32;
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_B => {
-                            c = '\u{8}' as i32;
+                            c = CHARACTER_BS as i32;
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_F => {
-                            c = '\u{c}' as i32;
+                            c = CHARACTER_FF as i32;
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_N => {
@@ -2606,7 +2606,7 @@ pub unsafe extern "C" fn read_string(
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_V => {
-                            c = '\u{b}' as i32;
+                            c = CHARACTER_VT as i32;
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_X => {
