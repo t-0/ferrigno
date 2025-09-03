@@ -157,14 +157,11 @@ pub unsafe extern "C" fn utfchar(state: *mut State) -> i32 {
         if n == 1 {
             pushutfchar(state, 1);
         } else {
-            let mut i: i32;
             let mut b = Buffer::new();
             b.initialize(state);
-            i = 1;
-            while i <= n {
+            for i in 1..(1 + n) {
                 pushutfchar(state, i);
                 b.add_value();
-                i += 1;
             }
             b.push_result();
         }

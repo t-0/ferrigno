@@ -56,13 +56,13 @@ impl TObject for Closure {
         std::ptr::null_mut()
     }
 }
-pub unsafe extern "C" fn collectvalidlines(state: *mut State, f: *mut Closure) {
+pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Closure) {
     unsafe {
-        if !(!f.is_null() && (*f).get_tag() == TAG_VARIANT_CLOSURE_L) {
+        if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
             (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
             (*state).top.p = (*state).top.p.offset(1);
         } else {
-            let p: *const Prototype = (*f).payload.l_prototype;
+            let p: *const Prototype = (*closure).payload.l_prototype;
             let mut currentline: i32 = (*p).line_defined;
             let table: *mut Table = luah_new(state);
             let io: *mut TValue = &mut (*(*state).top.p).tvalue;
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn auxgetinfo(
     state: *mut State,
     mut what: *const i8,
     ar: *mut DebugInfo,
-    f: *mut Closure,
+    closure: *mut Closure,
     call_info: *mut CallInfo,
 ) -> i32 {
     unsafe {
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn auxgetinfo(
         while *what != 0 {
             match *what as i32 {
                 83 => {
-                    funcinfo(ar, f);
+                    funcinfo(ar, closure);
                 }
                 108 => {
                     (*ar).currentline =
@@ -118,17 +118,17 @@ pub unsafe extern "C" fn auxgetinfo(
                         };
                 }
                 117 => {
-                    (*ar).nups = (if f.is_null() {
+                    (*ar).nups = (if closure.is_null() {
                         0
                     } else {
-                        (*f).count_upvalues as i32
+                        (*closure).count_upvalues as i32
                     }) as u8;
-                    if !(!f.is_null() && (*f).get_tag() == TAG_VARIANT_CLOSURE_L) {
+                    if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
                         (*ar).is_variable_arguments = true;
                         (*ar).nparams = 0;
                     } else {
-                        (*ar).is_variable_arguments = (*(*f).payload.l_prototype).is_variable_arguments;
-                        (*ar).nparams = (*(*f).payload.l_prototype).count_parameters;
+                        (*ar).is_variable_arguments = (*(*closure).payload.l_prototype).is_variable_arguments;
+                        (*ar).nparams = (*(*closure).payload.l_prototype).count_parameters;
                     }
                 }
                 116 => {
@@ -166,9 +166,7 @@ pub unsafe extern "C" fn auxgetinfo(
 }
 pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut Closure) -> u64 {
     unsafe {
-        let mut i: u64;
-        i = 0;
-        while i < (*cl).count_upvalues as u64 {
+        for i in 0..(*cl).count_upvalues {
             if ((*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
                 && (*(*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
                     .value
@@ -184,7 +182,6 @@ pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut Closure) -> u
                         .object,
                 );
             }
-            i += 1;
         }
         return 1 + (*cl).count_upvalues as u64;
     }
@@ -208,15 +205,13 @@ pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut Closure) -> u
                 reallymarkobject(g, &mut (*((*cl).payload.l_prototype as *mut Object)));
             }
         }
-        let mut i: u64 = 0;
-        while i < (*cl).count_upvalues as u64 {
+        for i in 0..(*cl).count_upvalues {
             let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             if !uv.is_null() {
                 if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     reallymarkobject(g, &mut (*(uv as *mut Object)));
                 }
             }
-            i += 1;
         }
         return 1 + (*cl).count_upvalues as u64;
     }
@@ -246,9 +241,7 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut nupvals: i32) -
 }
 pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut Closure) {
     unsafe {
-        let mut i: i32;
-        i = 0;
-        while i < (*cl).count_upvalues as i32 {
+        for i in 0..(*cl).count_upvalues {
             let o: *mut Object = luac_newobj(
                 state,
                 TAG_TYPE_UPVALUE,
@@ -267,7 +260,6 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut Closure) {
                 );
             } else {
             };
-            i += 1;
         }
     }
 }

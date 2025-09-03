@@ -63,18 +63,14 @@ pub struct Global {
 impl Global {
     pub unsafe extern "C" fn clear_cache(&mut self) {
         unsafe {
-            let mut i: i32 = 0;
-            while i < 53 as i32 {
-                let mut j: i32 = 0;
-                while j < 2 {
+            for i in 0..STRCACHE_N {
+                for j in 0..STRCACHE_M {
                     if (*self.string_cache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                     {
                         self.string_cache[i as usize][j as usize] = self.memory_error_message;
                     }
-                    j += 1;
                 }
-                i += 1;
             }
         }
     }
@@ -149,9 +145,7 @@ impl Global {
 }
 pub unsafe extern "C" fn markmt(g: *mut Global) {
     unsafe {
-        let mut i: i32;
-        i = 0;
-        while i < 9 as i32 {
+        for i in 0..9 {
             if !((*g).metatable[i as usize]).is_null() {
                 if (*(*g).metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     reallymarkobject(
@@ -160,7 +154,6 @@ pub unsafe extern "C" fn markmt(g: *mut Global) {
                     );
                 }
             }
-            i += 1;
         }
     }
 }
@@ -309,9 +302,8 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
             let limit: *mut Node = &mut *((*h).node)
                 .offset((1 << (*h).log_size_node as i32) as isize)
                 as *mut Node;
-            let mut i: u32 = 0;
             let asize: u32 = luah_realasize(h);
-            while i < asize {
+            for i in 0..asize {
                 let o: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
                 if iscleared(
                     g,
@@ -324,7 +316,6 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
                 {
                     (*o).set_tag(TAG_VARIANT_NIL_EMPTY);
                 }
-                i = i.wrapping_add(1);
             }
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
             while node < limit {

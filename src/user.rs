@@ -47,7 +47,6 @@ impl User {
     }
     pub unsafe extern "C" fn luas_newudata(state: *mut State, s: u64, nuvalue: i32) -> *mut User {
         unsafe {
-            let mut i: i32;
             if ((s
                 > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                     !(0u64)
@@ -75,11 +74,9 @@ impl User {
             (*u).length = s;
             (*u).nuvalue = nuvalue;
             (*u).metatable = std::ptr::null_mut();
-            i = 0;
-            while i < nuvalue {
+            for i in 0..nuvalue {
                 (*((*u).uv).as_mut_ptr().offset(i as isize))
                     .set_tag(TAG_VARIANT_NIL_NIL);
-                i += 1;
             }
             return u;
         }
@@ -154,14 +151,12 @@ impl User {
 }
 pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
     unsafe {
-        let mut i: i32;
         if !((*u).metatable).is_null() {
             if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 reallymarkobject(g, &mut (*((*u).metatable as *mut Object)));
             }
         }
-        i = 0;
-        while i < (*u).nuvalue as i32 {
+        for i in 0..(*u).nuvalue {
             if ((*((*u).uv).as_mut_ptr().offset(i as isize))
                 .is_collectable())
                 && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).value.object).get_marked()
@@ -173,7 +168,6 @@ pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
                     (*((*u).uv).as_mut_ptr().offset(i as isize)).value.object,
                 );
             }
-            i += 1;
         }
         genlink(g, &mut (*(u as *mut Object)));
         return 1 + (*u).nuvalue as i32;

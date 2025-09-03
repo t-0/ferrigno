@@ -7,6 +7,7 @@ use crate::loadstate::*;
 use crate::loadf::*;
 use crate::loads::*;
 use crate::token::*;
+use crate::character::*;
 use crate::upvaluedescription::*;
 use crate::forloop::*;
 use crate::bufffs::*;
@@ -26,7 +27,6 @@ use crate::closure::*;
 use crate::zio::*;
 use crate::tag::*;
 use crate::buffer::*;
-use crate::character::*;
 use crate::utility::*;
 use crate::sparser::*;
 use crate::closep::*;
@@ -491,8 +491,8 @@ pub unsafe extern "C" fn do_repl(state: *mut State) {
         lua_settop(state, 0);
         fwrite(
             b"\n\0" as *const u8 as *const i8 as *const libc::c_void,
-            ::core::mem::size_of::<i8>() as u64,
-            1 as u64,
+            ::core::mem::size_of::<i8>(),
+            1,
             stdout,
         );
         fflush(stdout);
@@ -574,12 +574,10 @@ pub unsafe extern "C" fn luad_reallocstack(
         (*state).stack.p = newstack;
         (*state).correct_stack();
         (*state).stack_last.p = ((*state).stack.p).offset(new_size as isize);
-        let mut i: i32 = old_size + 5;
-        while i < new_size + 5 {
+        for i in (old_size + 5)..(new_size + 5) {
             (*newstack.offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
-            i += 1;
         }
         return 1;
     }
@@ -777,7 +775,6 @@ pub unsafe extern "C" fn moveresults(
 ) {
     unsafe {
         let firstresult: StackValuePointer;
-        let mut i: i32;
         match wanted {
             0 => {
                 (*state).top.p = res;
@@ -823,17 +820,14 @@ pub unsafe extern "C" fn moveresults(
         if nres > wanted {
             nres = wanted;
         }
-        i = 0;
-        while i < nres {
+        for i in 0..nres {
             let io1_0: *mut TValue = &mut (*res.offset(i as isize)).tvalue;
             let io2_0: *const TValue = &mut (*firstresult.offset(i as isize)).tvalue;
             (*io1_0).value = (*io2_0).value;
             (*io1_0).set_tag((*io2_0).get_tag());
-            i += 1;
         }
-        while i < wanted {
+        for i in nres..wanted {
             (*res.offset(i as isize)).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-            i += 1;
         }
         (*state).top.p = res.offset(wanted as isize);
     }
@@ -873,7 +867,7 @@ pub unsafe extern "C" fn precallc(
     state: *mut State,
     mut function: StackValuePointer,
     count_results: i32,
-    f: CFunction,
+    cfunction: CFunction,
 ) -> i32 {
     unsafe {
         if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 20 as i64) as i32
@@ -899,7 +893,7 @@ pub unsafe extern "C" fn precallc(
             let narg: i32 = ((*state).top.p).offset_from(function) as i32 - 1;
             luad_hook(state, 0, -1, 1, narg);
         }
-        let n: i32 = (Some(f.expect("non-null function pointer")))
+        let n: i32 = (Some(cfunction.expect("non-null function pointer")))
             .expect("non-null function pointer")(state);
         luad_poscall(state, call_info, n);
         return n;
@@ -931,7 +925,6 @@ pub unsafe extern "C" fn luad_pretailcall(
                         (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
                     let fsize: i32 = (*p).maximum_stack_size as i32;
                     let nfixparams: i32 = (*p).count_parameters as i32;
-                    let mut i: i32;
                     if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
                         <= (fsize - delta) as i64) as i32
                         != 0) as i64
@@ -946,14 +939,12 @@ pub unsafe extern "C" fn luad_pretailcall(
                         function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
                     }
                     (*call_info).function.p = ((*call_info).function.p).offset(-(delta as isize));
-                    i = 0;
-                    while i < narg1 {
+                    for i in 0..narg1   {
                         let io1: *mut TValue =
                             &mut (*((*call_info).function.p).offset(i as isize)).tvalue;
                         let io2: *const TValue = &mut (*function.offset(i as isize)).tvalue;
                         (*io1).value = (*io2).value;
                         (*io1).set_tag((*io2).get_tag());
-                        i += 1;
                     }
                     function = (*call_info).function.p;
                     while narg1 <= nfixparams {
@@ -1506,20 +1497,16 @@ pub unsafe extern "C" fn lua_checkstack(state: *mut State, n: i32) -> i32 {
 }
 pub unsafe extern "C" fn lua_xmove(from: *mut State, to: *mut State, n: i32) {
     unsafe {
-        let mut i: i32;
-        if from == to {
-            return;
-        }
-        (*from).top.p = ((*from).top.p).offset(-(n as isize));
-        i = 0;
-        while i < n {
-            let io1: *mut TValue = &mut (*(*to).top.p).tvalue;
-            let io2: *const TValue = &mut (*((*from).top.p).offset(i as isize)).tvalue;
-            (*io1).value = (*io2).value;
-            (*io1).set_tag((*io2).get_tag());
-            (*to).top.p = ((*to).top.p).offset(1);
-            (*to).top.p;
-            i += 1;
+        if from != to {
+            (*from).top.p = ((*from).top.p).offset(-(n as isize));
+            for i in 0..n {
+                let io1: *mut TValue = &mut (*(*to).top.p).tvalue;
+                let io2: *const TValue = &mut (*((*from).top.p).offset(i as isize)).tvalue;
+                (*io1).value = (*io2).value;
+                (*io1).set_tag((*io2).get_tag());
+                (*to).top.p = ((*to).top.p).offset(1);
+                (*to).top.p;
+            }
         }
     }
 }
@@ -2540,26 +2527,26 @@ pub unsafe extern "C" fn lua_load(
         luaz_init(state, &mut zio, reader, data);
         status = luad_protectedparser(state, &mut zio, chunkname, mode);
         if status == 0 {
-            let f: *mut Closure =
+            let closure: *mut Closure =
                 &mut (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object
                     as *mut Closure));
-            if (*f).count_upvalues as i32 >= 1 {
+            if (*closure).count_upvalues as i32 >= 1 {
                 let gt: *const TValue =
                     &mut *((*((*(*state).global).l_registry.value.object as *mut Table))
                         .array)
                         .offset((2 - 1) as isize) as *mut TValue;
-                let io1: *mut TValue = (**((*f).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).v.p;
+                let io1: *mut TValue = (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).v.p;
                 let io2: *const TValue = gt;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
                 if (*gt).is_collectable() {
-                    if (**((*f).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).get_marked() & 1 << 5
+                    if (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).get_marked() & 1 << 5
                         != 0
                         && (*(*gt).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                     {
                         luac_barrier_(
                             state,
-                            &mut (*(*((*f).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)
+                            &mut (*(*((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)
                                 as *mut Object)),
                             &mut (*((*gt).value.object as *mut Object)),
                         );
@@ -2824,12 +2811,12 @@ pub unsafe extern "C" fn getupvalref(
 ) -> *mut *mut UpValue {
     unsafe {
         let fi: *mut TValue = (*state).index2value(fidx);
-        let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
+        let closure: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
         if !pf.is_null() {
-            *pf = f;
+            *pf = closure;
         }
-        if 1 <= n && n <= (*(*f).payload.l_prototype).size_upvalues {
-            return &mut *((*f).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
+        if 1 <= n && n <= (*(*closure).payload.l_prototype).size_upvalues {
+            return &mut *((*closure).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
                 as *mut *mut UpValue;
         } else {
             return &NULLUP as *const *const UpValue as *mut *mut UpValue;
@@ -2844,9 +2831,9 @@ pub unsafe extern "C" fn lua_upvalueid(state: *mut State, fidx: i32, n: i32) -> 
                 return *getupvalref(state, fidx, n, std::ptr::null_mut()) as *mut libc::c_void;
             }
             TAG_VARIANT_CLOSURE_C => {
-                let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
-                if 1 <= n && n <= (*f).count_upvalues as i32 {
-                    return &mut *((*f).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue
+                let closure: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
+                if 1 <= n && n <= (*closure).count_upvalues as i32 {
+                    return &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue
                         as *mut libc::c_void;
                 }
             }
@@ -2971,23 +2958,19 @@ pub unsafe extern "C" fn luae_shrinkci(state: *mut State) {
 }
 pub unsafe extern "C" fn stack_init(other_state: *mut State, state: *mut State) {
     unsafe {
-        let mut i: i32;
-        let call_info;
         (*other_state).stack.p = luam_malloc_(
             state,
             ((2 * 20 as i32 + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
         ) as *mut StackValue;
         (*other_state).tbc_list.p = (*other_state).stack.p;
-        i = 0;
-        while i < 2 * 20 as i32 + 5 {
+        for i in 0..2 * 20 as i32 + 5 {
             (*((*other_state).stack.p).offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
-            i += 1;
         }
         (*other_state).top.p = (*other_state).stack.p;
         (*other_state).stack_last.p = ((*other_state).stack.p).offset((2 * 20 as i32) as isize);
-        call_info = &mut (*other_state).base_callinfo;
+        let call_info = &mut (*other_state).base_callinfo;
         (*call_info).previous = std::ptr::null_mut();
         (*call_info).next = (*call_info).previous;
         (*call_info).call_status = (1 << 1) as u16;
@@ -3182,7 +3165,6 @@ pub unsafe extern "C" fn lua_closethread(state: *mut State, from: *mut State) ->
 }
 pub unsafe extern "C" fn lua_newstate() -> *mut State {
     unsafe {
-        let mut i: i32;
         let l: *mut Interpreter = raw_allocate(
             std::ptr::null_mut(),
             8 as u64,
@@ -3243,10 +3225,8 @@ pub unsafe extern "C" fn lua_newstate() -> *mut State {
         (*g).gc_step_size = 13;
         (*g).generational_major_multiplier = 100 / 4;
         (*g).generational_minor_multiplier = 20;
-        i = 0;
-        while i < 9 as i32 {
+        for i in 0..9 {
             (*g).metatable[i as usize] = std::ptr::null_mut();
-            i += 1;
         }
         if luad_rawrunprotected(
             state,
@@ -3268,9 +3248,9 @@ pub unsafe extern "C" fn lua_close(mut state: *mut State) {
 }
 pub unsafe extern "C" fn luae_warning(state: *mut State, message: *const i8, tocont: i32) {
     unsafe {
-        let wf: WarnFunction = (*(*state).global).warn_function;
-        if wf.is_some() {
-            wf.expect("non-null function pointer")((*(*state).global).warn_userdata, message, tocont);
+        let warn_function: WarnFunction = (*(*state).global).warn_function;
+        if warn_function.is_some() {
+            warn_function.expect("non-null function pointer")((*(*state).global).warn_userdata, message, tocont);
         }
     }
 }
@@ -4082,16 +4062,13 @@ pub unsafe extern "C" fn luat_init(state: *mut State) {
             b"__call\0" as *const u8 as *const i8,
             b"__close\0" as *const u8 as *const i8,
         ];
-        let mut i: i32;
-        i = 0;
-        while i < TM_N as i32 {
+        for i in 0..TM_N {
             (*(*state).global).tm_name[i as usize] = luas_new(state, EVENT_NAMES[i as usize]);
             luac_fix(
                 state,
                 &mut (*(*((*(*state).global).tm_name).as_mut_ptr().offset(i as isize)
                     as *mut Object))
             );
-            i += 1;
         }
     }
 }
@@ -4149,9 +4126,8 @@ pub unsafe extern "C" fn luat_calltm(
     unsafe {
         let function: StackValuePointer = (*state).top.p;
         let io1: *mut TValue = &mut (*function).tvalue;
-        let io2: *const TValue = f;
-        (*io1).value = (*io2).value;
-        (*io1).set_tag((*io2).get_tag());
+        (*io1).value = (*f).value;
+        (*io1).set_tag((*f).get_tag());
         let io1_0: *mut TValue = &mut (*function.offset(1 as isize)).tvalue;
         let io2_0: *const TValue = p1;
         (*io1_0).value = (*io2_0).value;
@@ -4377,7 +4353,6 @@ pub unsafe extern "C" fn luat_adjustvarargs(
     p: *const Prototype,
 ) {
     unsafe {
-        let mut i: i32;
         let actual: i32 = ((*state).top.p).offset_from((*call_info).function.p) as i32 - 1;
         let nextra: i32 = actual - nfixparams;
         (*call_info).u.l.count_extra_arguments = nextra;
@@ -4394,8 +4369,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
         let io2: *const TValue = &mut (*(*call_info).function.p).tvalue;
         (*io1).value = (*io2).value;
         (*io1).set_tag((*io2).get_tag());
-        i = 1;
-        while i <= nfixparams {
+        for i in 1..(1 + nfixparams) {
             let fresh13 = (*state).top.p;
             (*state).top.p = (*state).top.p.offset(1);
             let io1_0: *mut TValue = &mut (*fresh13).tvalue;
@@ -4405,7 +4379,6 @@ pub unsafe extern "C" fn luat_adjustvarargs(
             (*((*call_info).function.p).offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
-            i += 1;
         }
         (*call_info).function.p = ((*call_info).function.p).offset((actual + 1) as isize);
         (*call_info).top.p = ((*call_info).top.p).offset((actual + 1) as isize);
@@ -4418,7 +4391,6 @@ pub unsafe extern "C" fn luat_getvarargs(
     mut wanted: i32,
 ) {
     unsafe {
-        let mut i: i32;
         let nextra: i32 = (*call_info).u.l.count_extra_arguments;
         if wanted < 0 {
             wanted = nextra;
@@ -4436,8 +4408,7 @@ pub unsafe extern "C" fn luat_getvarargs(
             }
             (*state).top.p = where_0.offset(nextra as isize);
         }
-        i = 0;
-        while i < wanted && i < nextra {
+        for i in 0..wanted.min(nextra) {
             let io1: *mut TValue = &mut (*where_0.offset(i as isize)).tvalue;
             let io2: *const TValue = &mut (*((*call_info).function.p)
                 .offset(-(nextra as isize))
@@ -4445,13 +4416,11 @@ pub unsafe extern "C" fn luat_getvarargs(
             .tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            i += 1;
         }
-        while i < wanted {
+        for i in wanted.min(nextra)..wanted {
             (*where_0.offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
-            i += 1;
         }
     }
 }
@@ -5341,7 +5310,6 @@ pub unsafe extern "C" fn pushclosure(
     unsafe {
         let nup: i32 = (*p).size_upvalues;
         let uv: *mut UpValueDescription = (*p).upvalues;
-        let mut i: i32;
         let ncl: *mut Closure = luaf_newlclosure(state, nup);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra).tvalue;
@@ -5349,8 +5317,7 @@ pub unsafe extern "C" fn pushclosure(
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
-        i = 0;
-        while i < nup {
+        for i in 0..nup {
             if (*uv.offset(i as isize)).is_in_stack {
                 let ref mut fresh136 = *((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
                 *fresh136 = luaf_findupval(
@@ -5373,7 +5340,6 @@ pub unsafe extern "C" fn pushclosure(
                 );
             } else {
             };
-            i += 1;
         }
     }
 }
@@ -8719,14 +8685,14 @@ pub unsafe extern "C" fn get_f(
             *size = (*lf).n as u64;
             (*lf).n = 0;
         } else {
-            if feof((*lf).f) != 0 {
+            if feof((*lf).file) != 0 {
                 return std::ptr::null();
             }
             *size = fread(
                 ((*lf).buffer).as_mut_ptr() as *mut libc::c_void,
                 1 as u64,
                 ::core::mem::size_of::<[i8; 8192]>() as u64,
-                (*lf).f,
+                (*lf).file,
             );
         }
         return ((*lf).buffer).as_mut_ptr();
@@ -8758,28 +8724,28 @@ pub unsafe extern "C" fn errfile(state: *mut State, what: *const i8, fnameindex:
         return 5 + 1;
     }
 }
-pub unsafe extern "C" fn skip_bom(f: *mut FILE) -> i32 {
+pub unsafe extern "C" fn skip_bom(file: *mut FILE) -> i32 {
     unsafe {
-        let c: i32 = getc(f);
-        if c == 0xef as i32 && getc(f) == 0xbb as i32 && getc(f) == 0xbf as i32 {
-            return getc(f);
+        let c: i32 = getc(file);
+        if c == 0xef as i32 && getc(file) == 0xbb as i32 && getc(file) == 0xbf as i32 {
+            return getc(file);
         } else {
             return c;
         };
     }
 }
-pub unsafe extern "C" fn skipcomment(f: *mut FILE, cp: *mut i32) -> i32 {
+pub unsafe extern "C" fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
     unsafe {
-        *cp = skip_bom(f);
+        *cp = skip_bom(file);
         let mut c: i32 = *cp;
         if c == '#' as i32 {
             loop {
-                c = getc(f);
+                c = getc(file);
                 if !(c != -1 && c != '\n' as i32) {
                     break;
                 }
             }
-            *cp = getc(f);
+            *cp = getc(file);
             return 1;
         } else {
             return 0;
@@ -8794,7 +8760,7 @@ pub unsafe extern "C" fn lual_loadfilex(
     unsafe {
         let mut lf: LoadF = LoadF {
             n: 0,
-            f: std::ptr::null_mut(),
+            file: std::ptr::null_mut(),
             buffer: [0; 8192],
         };
         let status: i32;
@@ -8803,17 +8769,17 @@ pub unsafe extern "C" fn lual_loadfilex(
         let fnameindex: i32 = (*state).get_top() + 1;
         if filename.is_null() {
             lua_pushstring(state, b"=stdin\0" as *const u8 as *const i8);
-            lf.f = stdin;
+            lf.file = stdin;
         } else {
             lua_pushfstring(state, b"@%s\0" as *const u8 as *const i8, filename);
             *__errno_location() = 0;
-            lf.f = fopen(filename, b"r\0" as *const u8 as *const i8);
-            if (lf.f).is_null() {
+            lf.file = fopen(filename, b"r\0" as *const u8 as *const i8);
+            if (lf.file).is_null() {
                 return errfile(state, b"open\0" as *const u8 as *const i8, fnameindex);
             }
         }
         lf.n = 0;
-        if skipcomment(lf.f, &mut c) != 0 {
+        if skipcomment(lf.file, &mut c) != 0 {
             let fresh148 = lf.n;
             lf.n = lf.n + 1;
             lf.buffer[fresh148 as usize] = '\n' as i8;
@@ -8822,11 +8788,11 @@ pub unsafe extern "C" fn lual_loadfilex(
             lf.n = 0;
             if !filename.is_null() {
                 *__errno_location() = 0;
-                lf.f = freopen(filename, b"rb\0" as *const u8 as *const i8, lf.f);
-                if (lf.f).is_null() {
+                lf.file = freopen(filename, b"rb\0" as *const u8 as *const i8, lf.file);
+                if (lf.file).is_null() {
                     return errfile(state, b"reopen\0" as *const u8 as *const i8, fnameindex);
                 }
-                skipcomment(lf.f, &mut c);
+                skipcomment(lf.file, &mut c);
             }
         }
         if c != -1 {
@@ -8844,9 +8810,9 @@ pub unsafe extern "C" fn lual_loadfilex(
             lua_tolstring(state, -1, std::ptr::null_mut()),
             mode,
         );
-        readstatus = ferror(lf.f);
+        readstatus = ferror(lf.file);
         if !filename.is_null() {
-            fclose(lf.f);
+            fclose(lf.file);
         }
         if readstatus != 0 {
             lua_settop(state, fnameindex);
@@ -9024,11 +8990,8 @@ pub unsafe extern "C" fn lual_setfuncs(
             if ((*l).function).is_none() {
                 (*state).push_boolean(false);
             } else {
-                let mut i: i32;
-                i = 0;
-                while i < nup {
+                for _ in 0..nup {
                     lua_pushvalue(state, -nup);
-                    i += 1;
                 }
                 lua_pushcclosure(state, (*l).function, nup);
             }
@@ -9268,32 +9231,29 @@ pub unsafe extern "C" fn lual_checkversion_(state: *mut State, version: f64, siz
 pub unsafe extern "C" fn luab_print(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
-        let mut i: i32;
-        i = 1;
-        while i <= n {
+        for i in 1..(1 + n) {
             let mut l: u64 = 0;
             let s: *const i8 = lual_tolstring(state, i, &mut l);
             if i > 1 {
                 fwrite(
                     b"\t\0" as *const u8 as *const i8 as *const libc::c_void,
-                    ::core::mem::size_of::<i8>() as u64,
-                    1 as u64,
+                    ::core::mem::size_of::<i8>(),
+                    1,
                     stdout,
                 );
             }
             fwrite(
                 s as *const libc::c_void,
-                ::core::mem::size_of::<i8>() as u64,
-                l,
+                ::core::mem::size_of::<i8>(),
+                l as usize,
                 stdout,
             );
             lua_settop(state, -2);
-            i += 1;
         }
         fwrite(
             b"\n\0" as *const u8 as *const i8 as *const libc::c_void,
-            ::core::mem::size_of::<i8>() as u64,
-            1 as u64,
+            ::core::mem::size_of::<i8>(),
+            1,
             stdout,
         );
         fflush(stdout);
@@ -9303,17 +9263,12 @@ pub unsafe extern "C" fn luab_print(state: *mut State) -> i32 {
 pub unsafe extern "C" fn luab_warn(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
-        let mut i: i32;
         lual_checklstring(state, 1, std::ptr::null_mut());
-        i = 2;
-        while i <= n {
+        for i in 2..(1 + n) {
             lual_checklstring(state, i, std::ptr::null_mut());
-            i += 1;
         }
-        i = 1;
-        while i < n {
+        for i in 1..n {
             lua_warning(state, lua_tolstring(state, i, std::ptr::null_mut()), 1);
-            i += 1;
         }
         lua_warning(state, lua_tolstring(state, n, std::ptr::null_mut()), 0);
         return 0;
@@ -9477,11 +9432,9 @@ pub unsafe extern "C" fn createargtable(
 ) {
     unsafe {
         (*state).lua_createtable();
-        let mut i: i32 = 0;
-        while i < argc {
+        for i in 0..argc {
             lua_pushstring(state, *argv.offset(i as isize));
             lua_rawseti(state, -2, (i - script) as i64);
-            i += 1;
         }
         lua_setglobal(state, b"arg\0" as *const u8 as *const i8);
     }
@@ -9533,7 +9486,6 @@ pub unsafe extern "C" fn dolibrary(state: *mut State, globname: *mut i8) -> i32 
 }
 pub unsafe extern "C" fn pushargs(state: *mut State) -> i32 {
     unsafe {
-        let mut i: i32;
         let n: i32;
         if lua_getglobal(state, b"arg\0" as *const u8 as *const i8) != 5 {
             lual_error(state, b"'arg' is not a table\0" as *const u8 as *const i8);
@@ -9544,12 +9496,10 @@ pub unsafe extern "C" fn pushargs(state: *mut State) -> i32 {
             n + 3,
             b"too many arguments to script\0" as *const u8 as *const i8,
         );
-        i = 1;
-        while i <= n {
+        for i in 1..(1 + n) {
             lua_rawgeti(state, -i, i as i64);
-            i += 1;
         }
-        lua_rotate(state, -i, -1);
+        lua_rotate(state, -(1 + n), -1);
         lua_settop(state, -2);
         return n;
     }
@@ -9655,17 +9605,14 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
 }
 pub unsafe extern "C" fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) -> i32 {
     unsafe {
-        let mut i: i32;
-        i = 1;
-        while i < n {
+        for i in 0..n {
             let option: i32 = *(*argv.offset(i as isize)).offset(1 as isize) as i32;
             match option {
-                101 | 108 => {
+                CHARACTER_LOWER_E | CHARACTER_LOWER_L => {
                     let status: i32;
-                    let mut extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
+                    let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
                     if *extra as i32 == '\0' as i32 {
-                        i += 1;
-                        extra = *argv.offset(i as isize);
+                        continue;
                     }
                     status = if option == 'e' as i32 {
                         dostring(state, extra, b"=(command line)\0" as *const u8 as *const i8)
@@ -9676,12 +9623,11 @@ pub unsafe extern "C" fn runargs(state: *mut State, argv: *mut *mut i8, n: i32) 
                         return 0;
                     }
                 }
-                87 => {
+                CHARACTER_UPPER_W => {
                     lua_warning(state, b"@on\0" as *const u8 as *const i8, 0);
                 }
                 _ => {}
             }
-            i += 1;
         }
         return 1;
     }

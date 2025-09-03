@@ -26,7 +26,7 @@ unsafe extern "C" {
     pub fn fputs(s: *const i8, __stream: *mut FILE) -> i32;
     pub fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
     pub fn fread(_: *mut libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
-    pub fn fwrite(_: *const libc::c_void, _: u64, _: u64, _: *mut FILE) -> u64;
+    pub fn fwrite(_: *const libc::c_void, _: usize, _: usize, _: *mut FILE) -> usize;
     pub fn fseeko(__stream: *mut FILE, __off: i64, __whence: i32) -> i32;
     pub fn ftello(__stream: *mut FILE) -> i64;
     pub fn clearerr(__stream: *mut FILE);

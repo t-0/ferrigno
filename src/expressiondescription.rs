@@ -34,15 +34,15 @@ pub unsafe extern "C" fn codestring(e: *mut ExpressionDescription, s: *mut TStri
 pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> bool {
     unsafe {
         if (*e).t == (*e).f {
-            match (*e).expression_kind as u32 {
-                6 => {
+            match (*e).expression_kind {
+                ExpressionKind::VKINT => {
                     if !v.is_null() {
                         (*v).value.integer = (*e).value.integer;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     }
                     return true;
                 }
-                5 => {
+                ExpressionKind::VKFLT => {
                     if !v.is_null() {
                         (*v).value.number = (*e).value.number;
                         (*v).set_tag(TAG_VARIANT_NUMERIC_NUMBER);

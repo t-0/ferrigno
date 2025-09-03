@@ -159,7 +159,7 @@ impl LoadState {
             return st;
         }
     }
-    unsafe extern "C" fn load_code(& mut self, f: *mut Prototype) {
+    unsafe extern "C" fn load_code(& mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
@@ -169,20 +169,19 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).code = luam_malloc_(
+            (*prototype).code = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
             ) as *mut u32;
-            (*f).size_code = n;
+            (*prototype).size_code = n;
             self.load_block(
-                (*f).code as *mut libc::c_void,
+                (*prototype).code as *mut libc::c_void,
                 (n as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
             );
         }
     }
-    unsafe extern "C" fn load_constants(& mut self, f: *mut Prototype) {
+    unsafe extern "C" fn load_constants(& mut self, prototype: *mut Prototype) {
         unsafe {
-            let mut i: i32;
             let n: i32 = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
                 && (n as u64).wrapping_add(1 as u64)
@@ -191,19 +190,16 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).k = luam_malloc_(
+            (*prototype).k = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
             ) as *mut TValue;
-            (*f).size_k = n;
-            i = 0;
-            while i < n {
-                (*((*f).k).offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
-                i += 1;
+            (*prototype).size_k = n;
+            for i in 0..n {
+                (*((*prototype).k).offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
             }
-            i = 0;
-            while i < n {
-                let o: *mut TValue = &mut *((*f).k).offset(i as isize) as *mut TValue;
+            for i in 0..n {
+                let o: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
                 let t: i32 = self.load_byte() as i32;
                 match t {
                     0 => {
@@ -227,20 +223,18 @@ impl LoadState {
                     }
                     4 | 20 => {
                         let io_1: *mut TValue = o;
-                        let x_: *mut TString = self.load_string(f);
+                        let x_: *mut TString = self.load_string(prototype);
                         (*io_1).value.object = &mut (*(x_ as *mut Object));
                         (*io_1).set_tag((*x_).get_tag());
                         (*io_1).set_collectable();
                     }
                     _ => {}
                 }
-                i += 1;
             }
         }
     }
-    unsafe extern "C" fn load_prototypes(& mut self, f: *mut Prototype) {
+    unsafe extern "C" fn load_prototypes(& mut self, prototype: *mut Prototype) {
         unsafe {
-            let mut i: i32;
             let n: i32 = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
                 && (n as u64).wrapping_add(1 as u64)
@@ -249,39 +243,34 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).p = luam_malloc_(
+            (*prototype).p = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
             ) as *mut *mut Prototype;
-            (*f).size_p = n;
-            i = 0;
-            while i < n {
-                let ref mut fresh27 = *((*f).p).offset(i as isize);
+            (*prototype).size_p = n;
+            for i in 0..n {
+                let ref mut fresh27 = *((*prototype).p).offset(i as isize);
                 *fresh27 = std::ptr::null_mut();
-                i += 1;
             }
-            i = 0;
-            while i < n {
-                let ref mut fresh28 = *((*f).p).offset(i as isize);
+            for i in 0..n {
+                let ref mut fresh28 = *((*prototype).p).offset(i as isize);
                 *fresh28 = luaf_newproto(self.state);
-                if (*f).get_marked() & 1 << 5 != 0
-                    && (**((*f).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0
+                if (*prototype).get_marked() & 1 << 5 != 0
+                    && (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
                     luac_barrier_(
                         self.state,
-                        &mut (*(f as *mut Object)),
-                        &mut (*(*((*f).p).offset(i as isize) as *mut Object)),
+                        &mut (*(prototype as *mut Object)),
+                        &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
                     );
                 } else {
-                };
-                self.load_function(*((*f).p).offset(i as isize), (*f).source);
-                i += 1;
+                }
+                self.load_function(*((*prototype).p).offset(i as isize), (*prototype).source);
             }
         }
     }
-    unsafe extern "C" fn load_upvalues(& mut self, f: *mut Prototype) {
+    unsafe extern "C" fn load_upvalues(& mut self, prototype: *mut Prototype) {
         unsafe {
-            let mut i: i32;
             let n: i32;
             n = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
@@ -291,29 +280,24 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).upvalues = luam_malloc_(
+            (*prototype).upvalues = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64),
             ) as *mut UpValueDescription;
-            (*f).size_upvalues = n;
-            i = 0;
-            while i < n {
-                let ref mut fresh29 = (*((*f).upvalues).offset(i as isize)).name;
+            (*prototype).size_upvalues = n;
+            for i in 0..n {
+                let ref mut fresh29 = (*((*prototype).upvalues).offset(i as isize)).name;
                 *fresh29 = std::ptr::null_mut();
-                i += 1;
             }
-            i = 0;
-            while i < n {
-                (*((*f).upvalues).offset(i as isize)).is_in_stack = self.load_byte() != 0;
-                (*((*f).upvalues).offset(i as isize)).index = self.load_byte();
-                (*((*f).upvalues).offset(i as isize)).kind = self.load_byte();
-                i += 1;
+            for i in 0..n {
+                (*((*prototype).upvalues).offset(i as isize)).is_in_stack = self.load_byte() != 0;
+                (*((*prototype).upvalues).offset(i as isize)).index = self.load_byte();
+                (*((*prototype).upvalues).offset(i as isize)).kind = self.load_byte();
             }
         }
     }
-    unsafe extern "C" fn load_debug(& mut self, f: *mut Prototype) {
+    unsafe extern "C" fn load_debug(& mut self, prototype: *mut Prototype) {
         unsafe {
-            let mut i: i32;
             let mut n: i32;
             n = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
@@ -323,13 +307,13 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).line_info = luam_malloc_(
+            (*prototype).line_info = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
             ) as *mut i8;
-            (*f).size_line_info = n;
+            (*prototype).size_line_info = n;
             self.load_block(
-                (*f).line_info as *mut libc::c_void,
+                (*prototype).line_info as *mut libc::c_void,
                 (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
             n = self.load_int();
@@ -340,16 +324,14 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).absolute_line_info = luam_malloc_(
+            (*prototype).absolute_line_info = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
             ) as *mut AbsoluteLineInfo;
-            (*f).size_absolute_line_info = n;
-            i = 0;
-            while i < n {
-                (*((*f).absolute_line_info).offset(i as isize)).program_counter = self.load_int();
-                (*((*f).absolute_line_info).offset(i as isize)).line = self.load_int();
-                i += 1;
+            (*prototype).size_absolute_line_info = n;
+            for i in 0..n {
+                (*((*prototype).absolute_line_info).offset(i as isize)).program_counter = self.load_int();
+                (*((*prototype).absolute_line_info).offset(i as isize)).line = self.load_int();
             }
             n = self.load_int();
             if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
@@ -359,58 +341,52 @@ impl LoadState {
                 (*(self.state)).too_big();
             } else {
             };
-            (*f).local_variables = luam_malloc_(
+            (*prototype).local_variables = luam_malloc_(
                 self.state,
                 (n as u64).wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
             ) as *mut LocalVariable;
-            (*f).size_local_variables = n;
-            i = 0;
-            while i < n {
-                let ref mut fresh30 = (*((*f).local_variables).offset(i as isize)).variable_name;
+            (*prototype).size_local_variables = n;
+            for i in 0..n {
+                let ref mut fresh30 = (*((*prototype).local_variables).offset(i as isize)).variable_name;
                 *fresh30 = std::ptr::null_mut();
-                i += 1;
             }
-            i = 0;
-            while i < n {
-                let ref mut fresh31 = (*((*f).local_variables).offset(i as isize)).variable_name;
-                *fresh31 = self.load_string_n(f);
-                (*((*f).local_variables).offset(i as isize)).start_program_counter =
+            for i in 0..n {
+                let ref mut fresh31 = (*((*prototype).local_variables).offset(i as isize)).variable_name;
+                *fresh31 = self.load_string_n(prototype);
+                (*((*prototype).local_variables).offset(i as isize)).start_program_counter =
                     self.load_int();
-                (*((*f).local_variables).offset(i as isize)).end_program_counter = self.load_int();
-                i += 1;
+                (*((*prototype).local_variables).offset(i as isize)).end_program_counter = self.load_int();
             }
             n = self.load_int();
             if n != 0 {
-                n = (*f).size_upvalues;
+                n = (*prototype).size_upvalues;
             }
-            i = 0;
-            while i < n {
-                let ref mut fresh32 = (*((*f).upvalues).offset(i as isize)).name;
-                *fresh32 = self.load_string_n(f);
-                i += 1;
+            for i in 0..n {
+                let ref mut fresh32 = (*((*prototype).upvalues).offset(i as isize)).name;
+                *fresh32 = self.load_string_n(prototype);
             }
         }
     }
     unsafe extern "C" fn load_function(
         & mut self,
-        f: *mut Prototype,
+        prototype: *mut Prototype,
         psource: *mut TString,
     ) {
         unsafe {
-            (*f).source = self.load_string_n(f);
-            if ((*f).source).is_null() {
-                (*f).source = psource;
+            (*prototype).source = self.load_string_n(prototype);
+            if ((*prototype).source).is_null() {
+                (*prototype).source = psource;
             }
-            (*f).line_defined = self.load_int();
-            (*f).last_line_defined = self.load_int();
-            (*f).count_parameters = self.load_byte();
-            (*f).is_variable_arguments = 0 != self.load_byte();
-            (*f).maximum_stack_size = self.load_byte();
-            self.load_code(f);
-            self.load_constants(f);
-            self.load_upvalues(f);
-            self.load_prototypes(f);
-            self.load_debug(f);
+            (*prototype).line_defined = self.load_int();
+            (*prototype).last_line_defined = self.load_int();
+            (*prototype).count_parameters = self.load_byte();
+            (*prototype).is_variable_arguments = 0 != self.load_byte();
+            (*prototype).maximum_stack_size = self.load_byte();
+            self.load_code(prototype);
+            self.load_constants(prototype);
+            self.load_upvalues(prototype);
+            self.load_prototypes(prototype);
+            self.load_debug(prototype);
         }
     }
     unsafe extern "C" fn check_literal(

@@ -34,11 +34,11 @@ pub unsafe extern "C" fn lsys_sym(
     sym: *const i8,
 ) -> CFunction {
     unsafe {
-        let f: CFunction = ::core::mem::transmute::<*mut libc::c_void, CFunction>(dlsym(lib, sym));
-        if (f.is_none() as i32 != 0) as i64 != 0 {
+        let cfunction: CFunction = ::core::mem::transmute::<*mut libc::c_void, CFunction>(dlsym(lib, sym));
+        if (cfunction.is_none() as i32 != 0) as i64 != 0 {
             lua_pushstring(state, dlerror());
         }
-        return f;
+        return cfunction;
     }
 }
 pub unsafe extern "C" fn noenv(state: *mut State) -> i32 {
@@ -155,11 +155,11 @@ pub unsafe extern "C" fn lookforfunc(state: *mut State, path: *const i8, sym: *c
             (*state).push_boolean(true);
             return 0;
         } else {
-            let f: CFunction = lsys_sym(state, reg, sym);
-            if f.is_none() {
+            let cfunction: CFunction = lsys_sym(state, reg, sym);
+            if cfunction.is_none() {
                 return 2;
             }
-            lua_pushcclosure(state, f, 0);
+            lua_pushcclosure(state, cfunction, 0);
             return 0;
         };
     }
@@ -188,11 +188,11 @@ pub unsafe extern "C" fn ll_loadlib(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn readable(filename: *const i8) -> i32 {
     unsafe {
-        let f: *mut FILE = fopen(filename, b"r\0" as *const u8 as *const i8);
-        if f.is_null() {
+        let file: *mut FILE = fopen(filename, b"r\0" as *const u8 as *const i8);
+        if file.is_null() {
             return 0;
         }
-        fclose(f);
+        fclose(file);
         return 1;
     }
 }

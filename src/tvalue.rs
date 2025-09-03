@@ -57,13 +57,13 @@ pub unsafe extern "C" fn aux_upvalue(
     unsafe {
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_C => {
-                let f: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
-                if !((n as u32).wrapping_sub(1 as u32) < (*f).count_upvalues as u32) {
+                let closure: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
+                if !((n as u32).wrapping_sub(1 as u32) < (*closure).count_upvalues as u32) {
                     return std::ptr::null();
                 }
-                *value = &mut *((*f).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
+                *value = &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
                 if !owner.is_null() {
-                    *owner = &mut (*(f as *mut Object));
+                    *owner = &mut (*(closure as *mut Object));
                 }
                 return b"\0" as *const u8 as *const i8;
             }

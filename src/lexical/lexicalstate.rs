@@ -180,14 +180,14 @@ impl LexicalState {
     pub unsafe extern "C" fn add_prototype(&mut self) -> *mut Prototype {
         unsafe {
             let function_state: *mut FunctionState = self.function_state;
-            let f: *mut Prototype = (*function_state).prototype;
-            if (*function_state).count_p >= (*f).size_p {
-                let mut old_size: i32 = (*f).size_p;
-                (*f).p = luam_growaux_(
+            let prototype: *mut Prototype = (*function_state).prototype;
+            if (*function_state).count_p >= (*prototype).size_p {
+                let mut old_size: i32 = (*prototype).size_p;
+                (*prototype).p = luam_growaux_(
                     self.state,
-                    (*f).p as *mut libc::c_void,
+                    (*prototype).p as *mut libc::c_void,
                     (*function_state).count_p,
-                    &mut (*f).size_p,
+                    &mut (*prototype).size_p,
                     ::core::mem::size_of::<*mut Prototype>() as i32,
                     (if ((1 << 8 + 8 + 1) - 1) as u64
                         <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
@@ -199,22 +199,22 @@ impl LexicalState {
                     }) as i32,
                     b"functions\0" as *const u8 as *const i8,
                 ) as *mut *mut Prototype;
-                while old_size < (*f).size_p {
+                while old_size < (*prototype).size_p {
                     let fresh45 = old_size;
                     old_size = old_size + 1;
-                    let ref mut fresh46 = *((*f).p).offset(fresh45 as isize);
+                    let ref mut fresh46 = *((*prototype).p).offset(fresh45 as isize);
                     *fresh46 = std::ptr::null_mut();
                 }
             }
             let clp: *mut Prototype = luaf_newproto(self.state);
             let np = (*function_state).count_p;
             (*function_state).count_p = (*function_state).count_p + 1;
-            let ref mut target = *((*f).p).offset(np as isize);
+            let ref mut target = *((*prototype).p).offset(np as isize);
             *target = clp;
-            if (*f).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if (*prototype).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(
                     self.state,
-                    &mut (*(f as *mut Object)),
+                    &mut (*(prototype as *mut Object)),
                     &mut (*(clp as *mut Object)),
                 );
             } else {
@@ -228,16 +228,13 @@ pub unsafe extern "C" fn findlabel(
     name: *mut TString,
 ) -> *mut LabelDescription {
     unsafe {
-        let mut i: i32;
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
-        i = (*(*lexical_state).function_state).first_label;
-        while i < (*dynamic_data).label.n {
+        for i in (*(*lexical_state).function_state).first_label..(*dynamic_data).label.n {
             let lb: *mut LabelDescription =
                 &mut *((*dynamic_data).label.pointer).offset(i as isize) as *mut LabelDescription;
             if (*lb).name == name {
                 return lb;
             }
-            i += 1;
         }
         return std::ptr::null_mut();
     }
@@ -361,12 +358,12 @@ pub unsafe extern "C" fn open_func(
     block_control: *mut BlockControl,
 ) {
     unsafe {
-        let f: *mut Prototype = (*function_state).prototype;
+        let prototype: *mut Prototype = (*function_state).prototype;
         (*function_state).previous = (*lexical_state).function_state;
         (*function_state).lexical_state = lexical_state;
         (*lexical_state).function_state = function_state;
         (*function_state).program_counter = 0;
-        (*function_state).previous_line = (*f).line_defined;
+        (*function_state).previous_line = (*prototype).line_defined;
         (*function_state).iwthabs = 0;
         (*function_state).last_target = 0;
         (*function_state).freereg = 0;
@@ -380,16 +377,16 @@ pub unsafe extern "C" fn open_func(
         (*function_state).first_local = (*(*lexical_state).dynamic_data).active_variable.length;
         (*function_state).first_label = (*(*lexical_state).dynamic_data).label.n;
         (*function_state).block_control = std::ptr::null_mut();
-        (*f).source = (*lexical_state).source;
-        if (*f).get_marked() & 1 << 5 != 0 && (*(*f).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
+        (*prototype).source = (*lexical_state).source;
+        if (*prototype).get_marked() & 1 << 5 != 0 && (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
                 (*lexical_state).state,
-                &mut (*(f as *mut Object)),
-                &mut (*((*f).source as *mut Object)),
+                &mut (*(prototype as *mut Object)),
+                &mut (*((*prototype).source as *mut Object)),
             );
         } else {
         };
-        (*f).maximum_stack_size = 2 as u8;
+        (*prototype).maximum_stack_size = 2 as u8;
         enterblock(function_state, block_control, false);
     }
 }
@@ -397,56 +394,56 @@ pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
     unsafe {
         let state: *mut State = (*lexical_state).state;
         let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let f: *mut Prototype = (*function_state).prototype;
+        let prototype: *mut Prototype = (*function_state).prototype;
         luak_ret(function_state, luay_nvarstack(function_state), 0);
         leaveblock(function_state);
         luak_finish(function_state);
-        (*f).code = luam_shrinkvector_(
+        (*prototype).code = luam_shrinkvector_(
             state,
-            (*f).code as *mut libc::c_void,
-            &mut (*f).size_code,
+            (*prototype).code as *mut libc::c_void,
+            &mut (*prototype).size_code,
             (*function_state).program_counter,
             ::core::mem::size_of::<u32>() as i32,
         ) as *mut u32;
-        (*f).line_info = luam_shrinkvector_(
+        (*prototype).line_info = luam_shrinkvector_(
             state,
-            (*f).line_info as *mut libc::c_void,
-            &mut (*f).size_line_info,
+            (*prototype).line_info as *mut libc::c_void,
+            &mut (*prototype).size_line_info,
             (*function_state).program_counter,
             ::core::mem::size_of::<i8>() as i32,
         ) as *mut i8;
-        (*f).absolute_line_info = luam_shrinkvector_(
+        (*prototype).absolute_line_info = luam_shrinkvector_(
             state,
-            (*f).absolute_line_info as *mut libc::c_void,
-            &mut (*f).size_absolute_line_info,
+            (*prototype).absolute_line_info as *mut libc::c_void,
+            &mut (*prototype).size_absolute_line_info,
             (*function_state).count_abslineinfo,
             ::core::mem::size_of::<AbsoluteLineInfo>() as i32,
         ) as *mut AbsoluteLineInfo;
-        (*f).k = luam_shrinkvector_(
+        (*prototype).k = luam_shrinkvector_(
             state,
-            (*f).k as *mut libc::c_void,
-            &mut (*f).size_k,
+            (*prototype).k as *mut libc::c_void,
+            &mut (*prototype).size_k,
             (*function_state).count_k,
             ::core::mem::size_of::<TValue>() as i32,
         ) as *mut TValue;
-        (*f).p = luam_shrinkvector_(
+        (*prototype).p = luam_shrinkvector_(
             state,
-            (*f).p as *mut libc::c_void,
-            &mut (*f).size_p,
+            (*prototype).p as *mut libc::c_void,
+            &mut (*prototype).size_p,
             (*function_state).count_p,
             ::core::mem::size_of::<*mut Prototype>() as i32,
         ) as *mut *mut Prototype;
-        (*f).local_variables = luam_shrinkvector_(
+        (*prototype).local_variables = luam_shrinkvector_(
             state,
-            (*f).local_variables as *mut libc::c_void,
-            &mut (*f).size_local_variables,
+            (*prototype).local_variables as *mut libc::c_void,
+            &mut (*prototype).size_local_variables,
             (*function_state).count_debug_variables as i32,
             ::core::mem::size_of::<LocalVariable>() as i32,
         ) as *mut LocalVariable;
-        (*f).upvalues = luam_shrinkvector_(
+        (*prototype).upvalues = luam_shrinkvector_(
             state,
-            (*f).upvalues as *mut libc::c_void,
-            &mut (*f).size_upvalues,
+            (*prototype).upvalues as *mut libc::c_void,
+            &mut (*prototype).size_upvalues,
             (*function_state).count_upvalues as i32,
             ::core::mem::size_of::<UpValueDescription>() as i32,
         ) as *mut UpValueDescription;
@@ -600,7 +597,7 @@ pub unsafe extern "C" fn constructor(
 pub unsafe extern "C" fn parlist(lexical_state: *mut LexicalState) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let f: *mut Prototype = (*function_state).prototype;
+        let prototype: *mut Prototype = (*function_state).prototype;
         let mut nparams: i32 = 0;
         let mut is_variable_arguments = false;
         if (*lexical_state).token.token != ')' as i32 {
@@ -627,9 +624,9 @@ pub unsafe extern "C" fn parlist(lexical_state: *mut LexicalState) {
             }
         }
         adjustlocalvars(lexical_state, nparams);
-        (*f).count_parameters = (*function_state).count_active_variables;
+        (*prototype).count_parameters = (*function_state).count_active_variables;
         if is_variable_arguments {
-            setvararg(function_state, (*f).count_parameters as i32);
+            setvararg(function_state, (*prototype).count_parameters as i32);
         }
         luak_reserveregs(function_state, (*function_state).count_active_variables as i32);
     }
@@ -688,7 +685,7 @@ pub unsafe extern "C" fn body(
         close_func(lexical_state);
     }
 }
-pub unsafe extern "C" fn funcargs(lexical_state: *mut LexicalState, f: *mut ExpressionDescription) {
+pub unsafe extern "C" fn funcargs(lexical_state: *mut LexicalState, expression_description: *mut ExpressionDescription) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut args: ExpressionDescription = ExpressionDescription {
@@ -727,7 +724,7 @@ pub unsafe extern "C" fn funcargs(lexical_state: *mut LexicalState, f: *mut Expr
                 );
             }
         }
-        let base: i32 = (*f).value.info;
+        let base: i32 = (*expression_description).value.info;
         let nparams: i32;
         if args.expression_kind as u32 == ExpressionKind::VCALL as u32 || args.expression_kind as u32 == ExpressionKind::VVARARG as u32 {
             nparams = -1;
@@ -738,7 +735,7 @@ pub unsafe extern "C" fn funcargs(lexical_state: *mut LexicalState, f: *mut Expr
             nparams = (*function_state).freereg as i32 - (base + 1);
         }
         init_exp(
-            f,
+            expression_description,
             ExpressionKind::VCALL,
             luak_code_abck(function_state, OP_CALL, base, nparams + 1, 2, 0),
         );
@@ -949,13 +946,13 @@ pub unsafe extern "C" fn registerlocalvar(
     variable_name: *mut TString,
 ) -> i32 {
     unsafe {
-        let f: *mut Prototype = (*function_state).prototype;
-        let mut old_size: i32 = (*f).size_local_variables;
-        (*f).local_variables = luam_growaux_(
+        let prototype: *mut Prototype = (*function_state).prototype;
+        let mut old_size: i32 = (*prototype).size_local_variables;
+        (*prototype).local_variables = luam_growaux_(
             (*lexical_state).state,
-            (*f).local_variables as *mut libc::c_void,
+            (*prototype).local_variables as *mut libc::c_void,
             (*function_state).count_debug_variables as i32,
-            &mut (*f).size_local_variables,
+            &mut (*prototype).size_local_variables,
             ::core::mem::size_of::<LocalVariable>() as i32,
             (if 32767 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
@@ -966,22 +963,22 @@ pub unsafe extern "C" fn registerlocalvar(
             }) as i32,
             b"local variables\0" as *const u8 as *const i8,
         ) as *mut LocalVariable;
-        while old_size < (*f).size_local_variables {
+        while old_size < (*prototype).size_local_variables {
             let fresh33 = old_size;
             old_size = old_size + 1;
-            let ref mut fresh34 = (*((*f).local_variables).offset(fresh33 as isize)).variable_name;
+            let ref mut fresh34 = (*((*prototype).local_variables).offset(fresh33 as isize)).variable_name;
             *fresh34 = std::ptr::null_mut();
         }
         let ref mut fresh35 =
-            (*((*f).local_variables).offset((*function_state).count_debug_variables as isize)).variable_name;
+            (*((*prototype).local_variables).offset((*function_state).count_debug_variables as isize)).variable_name;
         *fresh35 = variable_name;
-        (*((*f).local_variables).offset((*function_state).count_debug_variables as isize)).start_program_counter =
+        (*((*prototype).local_variables).offset((*function_state).count_debug_variables as isize)).start_program_counter =
             (*function_state).program_counter;
-        if (*f).get_marked() & 1 << 5 != 0 && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0
+        if (*prototype).get_marked() & 1 << 5 != 0 && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
                 (*lexical_state).state,
-                &mut (*(f as *mut Object)),
+                &mut (*(prototype as *mut Object)),
                 &mut (*(variable_name as *mut Object)),
             );
         } else {
@@ -1068,20 +1065,17 @@ pub unsafe extern "C" fn check_readonly(
 }
 pub unsafe extern "C" fn adjustlocalvars(lexical_state: *mut LexicalState, nvars: i32) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let mut reglevel_0: i32 = luay_nvarstack(function_state);
-        let mut i: i32;
-        i = 0;
-        while i < nvars {
+        let function_state = (*lexical_state).function_state;
+        let mut reglevel_0 = luay_nvarstack(function_state);
+        for _ in 0..nvars {
             let fresh39 = (*function_state).count_active_variables;
             (*function_state).count_active_variables = ((*function_state).count_active_variables).wrapping_add(1);
-            let vidx: i32 = fresh39 as i32;
-            let var: *mut VariableDescription = getlocalvardesc(function_state, vidx);
+            let vidx = fresh39 as i32;
+            let var = getlocalvardesc(function_state, vidx);
             let fresh40 = reglevel_0;
-            reglevel_0 = reglevel_0 + 1;
+            reglevel_0 += 1;
             (*var).content.ridx = fresh40 as u8;
             (*var).content.pidx = registerlocalvar(lexical_state, function_state, (*var).content.name) as i16;
-            i += 1;
         }
     }
 }

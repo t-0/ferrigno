@@ -46,7 +46,7 @@ pub unsafe extern "C" fn f_tostring(state: *mut State) -> i32 {
         if ((*p).close_function).is_none() {
             lua_pushstring(state, b"file (closed)\0" as *const u8 as *const i8);
         } else {
-            lua_pushfstring(state, b"file (%p)\0" as *const u8 as *const i8, (*p).f);
+            lua_pushfstring(state, b"file (%p)\0" as *const u8 as *const i8, (*p).file);
         }
         return 1;
     }
@@ -61,7 +61,7 @@ pub unsafe extern "C" fn tofile(state: *mut State) -> *mut FILE {
                 b"attempt to use a closed file\0" as *const u8 as *const i8,
             );
         }
-        return (*p).f;
+        return (*p).file;
     }
 }
 pub unsafe extern "C" fn newprefile(state: *mut State) -> *mut Stream {
@@ -106,7 +106,7 @@ pub unsafe extern "C" fn f_gc(state: *mut State) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
-        if ((*p).close_function).is_some() && !((*p).f).is_null() {
+        if ((*p).close_function).is_some() && !((*p).file).is_null() {
             aux_close(state);
         }
         return 0;
@@ -117,13 +117,13 @@ pub unsafe extern "C" fn io_fclose(state: *mut State) -> i32 {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         *__errno_location() = 0;
-        return lual_fileresult(state, (fclose((*p).f) == 0) as i32, std::ptr::null());
+        return lual_fileresult(state, (fclose((*p).file) == 0) as i32, std::ptr::null());
     }
 }
 pub unsafe extern "C" fn newfile(state: *mut State) -> *mut Stream {
     unsafe {
         let p: *mut Stream = newprefile(state);
-        (*p).f = std::ptr::null_mut();
+        (*p).file = std::ptr::null_mut();
         (*p).close_function = Some(io_fclose as unsafe extern "C" fn(*mut State) -> i32);
         return p;
     }
@@ -131,8 +131,8 @@ pub unsafe extern "C" fn newfile(state: *mut State) -> *mut Stream {
 pub unsafe extern "C" fn opencheck(state: *mut State, fname: *const i8, mode: *const i8) {
     unsafe {
         let p: *mut Stream = newfile(state);
-        (*p).f = fopen(fname, mode);
-        if (((*p).f == std::ptr::null_mut() as *mut FILE) as i32 != 0) as i64 != 0 {
+        (*p).file = fopen(fname, mode);
+        if (((*p).file == std::ptr::null_mut() as *mut FILE) as i32 != 0) as i64 != 0 {
             lual_error(
                 state,
                 b"cannot open file '%s' (%s)\0" as *const u8 as *const i8,
@@ -157,8 +157,8 @@ pub unsafe extern "C" fn io_open(state: *mut State) -> i32 {
             || lual_argerror(state, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
             as i32;
         *__errno_location() = 0;
-        (*p).f = fopen(filename, mode);
-        return if ((*p).f).is_null() {
+        (*p).file = fopen(filename, mode);
+        return if ((*p).file).is_null() {
             lual_fileresult(state, 0, filename)
         } else {
             1
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn io_pclose(state: *mut State) -> i32 {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         *__errno_location() = 0;
-        return lual_execresult(state, pclose((*p).f));
+        return lual_execresult(state, pclose((*p).file));
     }
 }
 pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
@@ -192,9 +192,9 @@ pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
             as i32;
         *__errno_location() = 0;
         fflush(std::ptr::null_mut());
-        (*p).f = popen(filename, mode);
+        (*p).file = popen(filename, mode);
         (*p).close_function = Some(io_pclose as unsafe extern "C" fn(*mut State) -> i32);
-        return if ((*p).f).is_null() {
+        return if ((*p).file).is_null() {
             lual_fileresult(state, 0, filename)
         } else {
             1
@@ -205,8 +205,8 @@ pub unsafe extern "C" fn io_tmpfile(state: *mut State) -> i32 {
     unsafe {
         let p: *mut Stream = newfile(state);
         *__errno_location() = 0;
-        (*p).f = tmpfile();
-        return if ((*p).f).is_null() {
+        (*p).file = tmpfile();
+        return if ((*p).file).is_null() {
             lual_fileresult(state, 0, std::ptr::null())
         } else {
             1
@@ -229,7 +229,7 @@ pub unsafe extern "C" fn getiofile(state: *mut State, findex: *const i8) -> *mut
                 ),
             );
         }
-        return (*p).f;
+        return (*p).file;
     }
 }
 pub unsafe extern "C" fn g_iofile(state: *mut State, f: *const i8, mode: *const i8) -> i32 {
@@ -365,7 +365,7 @@ pub unsafe extern "C" fn readdigits(rn: *mut RN, hex: i32) -> i32 {
         return count;
     }
 }
-pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
+pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 {
     unsafe {
         let mut rn: RN = RN {
             file: std::ptr::null_mut(),
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
         let mut count: i32 = 0;
         let mut hex: i32 = 0;
         let mut decp: [i8; 2] = [0; 2];
-        rn.file = f;
+        rn.file = file;
         rn.n = 0;
         decp[0] = '.' as i8;
         decp[1] = '.' as i8;
@@ -425,15 +425,15 @@ pub unsafe extern "C" fn read_number(state: *mut State, f: *mut FILE) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn test_eof(state: *mut State, f: *mut FILE) -> i32 {
+pub unsafe extern "C" fn test_eof(state: *mut State, file: *mut FILE) -> i32 {
     unsafe {
-        let c: i32 = getc(f);
-        ungetc(c, f);
+        let c: i32 = getc(file);
+        ungetc(c, file);
         lua_pushstring(state, b"\0" as *const u8 as *const i8);
         return (c != -1) as i32;
     }
 }
-pub unsafe extern "C" fn read_line(state: *mut State, f: *mut FILE, chop: i32) -> i32 {
+pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         let mut c: i32 = 0;
@@ -446,13 +446,13 @@ pub unsafe extern "C" fn read_line(state: *mut State, f: *mut FILE, chop: i32) -
                     as u64,
             );
             let mut i: i32 = 0;
-            flockfile(f);
+            flockfile(file);
             while i
                 < (16 as u64)
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
                     .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
                 && {
-                    c = getc_unlocked(f);
+                    c = getc_unlocked(file);
                     c != -1
                 }
                 && c != '\n' as i32
@@ -461,7 +461,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, f: *mut FILE, chop: i32) -
                 i = i + 1;
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
-            funlockfile(f);
+            funlockfile(file);
             b.length = (b.length as u64).wrapping_add(i as u64) as u64;
             if !(c != -1 && c != '\n' as i32) {
                 break;
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, f: *mut FILE, chop: i32) -
         return (c == '\n' as i32 || lua_rawlen(state, -1) > 0u64) as i32;
     }
 }
-pub unsafe extern "C" fn read_all(state: *mut State, f: *mut FILE) {
+pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
     unsafe {
         let mut nr: u64;
         let mut b = Buffer::new();
@@ -496,7 +496,7 @@ pub unsafe extern "C" fn read_all(state: *mut State, f: *mut FILE) {
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
                     .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
                     as u64,
-                f,
+                file,
             );
             b.length = (b.length as u64).wrapping_add(nr) as u64;
             if !(nr
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn read_all(state: *mut State, f: *mut FILE) {
         b.push_result();
     }
 }
-pub unsafe extern "C" fn read_chars(state: *mut State, f: *mut FILE, n: u64) -> i32 {
+pub unsafe extern "C" fn read_chars(state: *mut State, file: *mut FILE, n: u64) -> i32 {
     unsafe {
         let nr: u64;
         let p: *mut i8;
@@ -522,22 +522,22 @@ pub unsafe extern "C" fn read_chars(state: *mut State, f: *mut FILE, n: u64) -> 
             p as *mut libc::c_void,
             ::core::mem::size_of::<i8>() as u64,
             n,
-            f,
+            file,
         );
         b.length = (b.length as u64).wrapping_add(nr) as u64;
         b.push_result();
         return (nr > 0u64) as i32;
     }
 }
-pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> i32 {
+pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) -> i32 {
     unsafe {
         let mut nargs: i32 = (*state).get_top() - 1;
         let mut n: i32;
         let mut success: i32;
-        clearerr(f);
+        clearerr(file);
         *__errno_location() = 0;
         if nargs == 0 {
-            success = read_line(state, f, 1);
+            success = read_line(state, file, 1);
             n = first + 1;
         } else {
             lual_checkstack(
@@ -556,9 +556,9 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
                 if lua_type(state, n) == Some(TAG_TYPE_NUMERIC) {
                     let l: u64 = lual_checkinteger(state, n) as u64;
                     success = if l == 0u64 {
-                        test_eof(state, f)
+                        test_eof(state, file)
                     } else {
-                        read_chars(state, f, l)
+                        read_chars(state, file, l)
                     };
                 } else {
                     let mut p: *const i8 = lual_checklstring(state, n, std::ptr::null_mut());
@@ -567,16 +567,16 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
                     }
                     match *p as i32 {
                         110 => {
-                            success = read_number(state, f);
+                            success = read_number(state, file);
                         }
                         108 => {
-                            success = read_line(state, f, 1);
+                            success = read_line(state, file, 1);
                         }
                         76 => {
-                            success = read_line(state, f, 0);
+                            success = read_line(state, file, 0);
                         }
                         97 => {
-                            read_all(state, f);
+                            read_all(state, file);
                             success = 1;
                         }
                         _ => {
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, f: *mut FILE, first: i32) -> 
                 n += 1;
             }
         }
-        if ferror(f) != 0 {
+        if ferror(file) != 0 {
             return lual_fileresult(state, 0, std::ptr::null());
         }
         if success == 0 {
@@ -619,7 +619,6 @@ pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 {
     unsafe {
         let p: *mut Stream =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut Stream;
-        let mut i: i32;
         let mut n: i32 = lua_tointegerx(
             state,
             -(1000000 as i32) - 1000 as i32 - 2,
@@ -630,12 +629,10 @@ pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 {
         }
         lua_settop(state, 1);
         lual_checkstack(state, n, b"too many arguments\0" as *const u8 as *const i8);
-        i = 1;
-        while i <= n {
+        for i in 1..(1 + n) {
             lua_pushvalue(state, -(1000000 as i32) - 1000 as i32 - (3 + i));
-            i += 1;
         }
-        n = g_read(state, (*p).f, 2);
+        n = g_read(state, (*p).file, 2);
         if lua_toboolean(state, -n) != 0 {
             return n;
         } else {
@@ -655,7 +652,7 @@ pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn g_write(state: *mut State, f: *mut FILE, mut arg: i32) -> i32 {
+pub unsafe extern "C" fn g_write(state: *mut State, file: *mut FILE, mut arg: i32) -> i32 {
     unsafe {
         let mut nargs: i32 = (*state).get_top() - arg;
         let mut status: i32 = 1;
@@ -669,13 +666,13 @@ pub unsafe extern "C" fn g_write(state: *mut State, f: *mut FILE, mut arg: i32) 
             if lua_type(state, arg) == Some(TAG_TYPE_NUMERIC) {
                 let length: i32 = if lua_isinteger(state, arg) {
                     fprintf(
-                        f,
+                        file,
                         b"%lld\0" as *const u8 as *const i8,
                         lua_tointegerx(state, arg, std::ptr::null_mut()),
                     )
                 } else {
                     fprintf(
-                        f,
+                        file,
                         b"%.14g\0" as *const u8 as *const i8,
                         lua_tonumberx(state, arg, std::ptr::null_mut()),
                     )
@@ -687,10 +684,10 @@ pub unsafe extern "C" fn g_write(state: *mut State, f: *mut FILE, mut arg: i32) 
                 status = (status != 0
                     && fwrite(
                         s as *const libc::c_void,
-                        ::core::mem::size_of::<i8>() as u64,
-                        l,
-                        f,
-                    ) == l) as i32;
+                        ::core::mem::size_of::<i8>(),
+                        l as usize,
+                        file,
+                    ) == l as usize) as i32;
             }
             arg += 1;
         }
@@ -712,9 +709,9 @@ pub unsafe extern "C" fn io_write(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn f_write(state: *mut State) -> i32 {
     unsafe {
-        let f: *mut FILE = tofile(state);
+        let file: *mut FILE = tofile(state);
         lua_pushvalue(state, 1);
-        return g_write(state, f, 2);
+        return g_write(state, file, 2);
     }
 }
 pub unsafe extern "C" fn f_seek(state: *mut State) -> i32 {
@@ -726,7 +723,7 @@ pub unsafe extern "C" fn f_seek(state: *mut State) -> i32 {
             b"end\0" as *const u8 as *const i8,
             std::ptr::null(),
         ];
-        let f: *mut FILE = tofile(state);
+        let file: *mut FILE = tofile(state);
         let mut op: i32 = lual_checkoption(
             state,
             2,
@@ -742,11 +739,11 @@ pub unsafe extern "C" fn f_seek(state: *mut State) -> i32 {
                 b"not an integer in proper range\0" as *const u8 as *const i8,
             ) != 0) as i32;
         *__errno_location() = 0;
-        op = fseeko(f, offset, MODE[op as usize]);
+        op = fseeko(file, offset, MODE[op as usize]);
         if (op != 0) as i64 != 0 {
             return lual_fileresult(state, 0, std::ptr::null());
         } else {
-            (*state).push_integer(ftello(f) as i64);
+            (*state).push_integer(ftello(file) as i64);
             return 1;
         };
     }
@@ -760,7 +757,7 @@ pub unsafe extern "C" fn f_setvbuf(state: *mut State) -> i32 {
             b"line\0" as *const u8 as *const i8,
             std::ptr::null(),
         ];
-        let f: *mut FILE = tofile(state);
+        let file: *mut FILE = tofile(state);
         let op: i32 = lual_checkoption(state, 2, std::ptr::null(), MODE_NAMES.as_ptr());
         let size: i64 = lual_optinteger(
             state,
@@ -771,22 +768,22 @@ pub unsafe extern "C" fn f_setvbuf(state: *mut State) -> i32 {
         );
         let res: i32;
         *__errno_location() = 0;
-        res = setvbuf(f, std::ptr::null_mut(), MODE[op as usize], size as u64);
+        res = setvbuf(file, std::ptr::null_mut(), MODE[op as usize], size as u64);
         return lual_fileresult(state, (res == 0) as i32, std::ptr::null());
     }
 }
 pub unsafe extern "C" fn io_flush(state: *mut State) -> i32 {
     unsafe {
-        let f: *mut FILE = getiofile(state, b"_IO_output\0" as *const u8 as *const i8);
+        let file: *mut FILE = getiofile(state, b"_IO_output\0" as *const u8 as *const i8);
         *__errno_location() = 0;
-        return lual_fileresult(state, (fflush(f) == 0) as i32, std::ptr::null());
+        return lual_fileresult(state, (fflush(file) == 0) as i32, std::ptr::null());
     }
 }
 pub unsafe extern "C" fn f_flush(state: *mut State) -> i32 {
     unsafe {
-        let f: *mut FILE = tofile(state);
+        let file: *mut FILE = tofile(state);
         *__errno_location() = 0;
-        return lual_fileresult(state, (fflush(f) == 0) as i32, std::ptr::null());
+        return lual_fileresult(state, (fflush(file) == 0) as i32, std::ptr::null());
     }
 }
 pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
@@ -976,13 +973,13 @@ pub unsafe extern "C" fn io_noclose(state: *mut State) -> i32 {
 }
 pub unsafe extern "C" fn createstdfile(
     state: *mut State,
-    f: *mut FILE,
+    file: *mut FILE,
     k: *const i8,
     fname: *const i8,
 ) {
     unsafe {
         let p: *mut Stream = newprefile(state);
-        (*p).f = f;
+        (*p).file = file;
         (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut State) -> i32);
         if !k.is_null() {
             lua_pushvalue(state, -1);

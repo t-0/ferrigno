@@ -72,15 +72,12 @@ pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState
 }
 pub unsafe extern "C" fn set_seed(state: *mut State, randomstate: *mut u64, n1: u64, n2: u64) {
     unsafe {
-        let mut i: i32;
         *randomstate.offset(0 as isize) = n1 as u64;
         *randomstate.offset(1 as isize) = 0xFF as u64;
         *randomstate.offset(2 as isize) = n2 as u64;
         *randomstate.offset(3 as isize) = 0;
-        i = 0;
-        while i < 16 as i32 {
+        for _ in 0..16 {
             next_random(randomstate);
-            i += 1;
         }
         (*state).push_integer(n1 as i64);
         (*state).push_integer(n2 as i64);
@@ -272,16 +269,13 @@ unsafe extern "C" fn math_min(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
         let mut imin: i32 = 1;
-        let mut i: i32;
         (((n >= 1) as i32 != 0) as i64 != 0
             || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
-        i = 2;
-        while i <= n {
+        for i in 2..(1 + n) {
             if lua_compare(state, i, imin, 1) != 0 {
                 imin = i;
             }
-            i += 1;
         }
         lua_pushvalue(state, imin);
         1
@@ -291,16 +285,13 @@ unsafe extern "C" fn math_max(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
         let mut imax: i32 = 1;
-        let mut i: i32;
         (((n >= 1) as i32 != 0) as i64 != 0
             || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
-        i = 2;
-        while i <= n {
+        for i in 2..(1 + n) {
             if lua_compare(state, imax, i, 1) != 0 {
                 imax = i;
             }
-            i += 1;
         }
         lua_pushvalue(state, imax);
         1

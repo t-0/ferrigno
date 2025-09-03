@@ -138,11 +138,9 @@ impl DumpState {
     }
     unsafe extern "C" fn dump_constants(& mut self, prototype: *const Prototype) {
         unsafe {
-            let mut i: i32;
             let n: i32 = (*prototype).size_k;
             self.dump_int(n);
-            i = 0;
-            while i < n {
+            for i in 0..n {
                 let o: *const TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
                 let tag = (*o).get_tag_variant();
                 self.dump_byte(tag);
@@ -158,7 +156,6 @@ impl DumpState {
                     }
                     _ => {}
                 }
-                i += 1;
             }
         }
     }
@@ -166,10 +163,8 @@ impl DumpState {
         unsafe {
             let n: i32 = (*prototype).size_p;
             self.dump_int(n);
-            let mut i: i32 = 0;
-            while i < n {
+            for i in 0..n {
                 self.dump_function(*((*prototype).p).offset(i as isize), (*prototype).source);
-                i += 1;
             }
         }
     }
@@ -177,8 +172,7 @@ impl DumpState {
         unsafe {
             let n: i32 = (*prototype).size_upvalues;
             self.dump_int(n);
-            let mut i: i32 = 0;
-            while i < n {
+            for i in 0..n {
                 self.dump_byte(
                     if (*((*prototype).upvalues).offset(i as isize)).is_in_stack {
                         1
@@ -188,7 +182,6 @@ impl DumpState {
                 );
                 self.dump_byte((*((*prototype).upvalues).offset(i as isize)).index);
                 self.dump_byte((*((*prototype).upvalues).offset(i as isize)).kind);
-                i += 1;
             }
         }
     }
@@ -210,15 +203,13 @@ impl DumpState {
                 (*prototype).size_absolute_line_info as usize
             };
             self.dump_int(n as i32);
-            let mut i: usize = 0;
-            while i < n {
+            for i in 0..n {
                 self.dump_int(
                     (*((*prototype).absolute_line_info).offset(i as isize)).program_counter,
                 );
                 self.dump_int(
                     (*((*prototype).absolute_line_info).offset(i as isize)).line,
                 );
-                i += 1;
             }
             n = if self.is_strip {
                 0
@@ -226,8 +217,7 @@ impl DumpState {
                 (*prototype).size_local_variables as usize
             };
             self.dump_int(n as i32);
-            i = 0;
-            while i < n {
+            for i in 0..n {
                 self.dump_string(
                     (*((*prototype).local_variables).offset(i as isize)).variable_name,
                 );
@@ -237,7 +227,6 @@ impl DumpState {
                 self.dump_int(
                     (*((*prototype).local_variables).offset(i as isize)).end_program_counter,
                 );
-                i += 1;
             }
             n = if self.is_strip {
                 0
@@ -245,10 +234,8 @@ impl DumpState {
                 (*prototype).size_upvalues as usize
             };
             self.dump_int(n as i32);
-            i = 0;
-            while i < n {
+            for i in 0..n {
                 self.dump_string((*((*prototype).upvalues).offset(i as isize)).name);
-                i += 1;
             }
         }
     }

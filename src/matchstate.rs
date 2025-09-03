@@ -66,7 +66,6 @@ impl MatchState {
     }
     pub unsafe extern "C" fn push_captures(& mut self, s: *const i8, e: *const i8) -> i32 {
         unsafe {
-            let mut i: i32;
             let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() {
                 1
             } else {
@@ -77,10 +76,8 @@ impl MatchState {
                 nlevels,
                 b"too many captures\0" as *const u8 as *const i8,
             );
-            i = 0;
-            while i < nlevels {
+            for i in 0..nlevels {
                 self.push_onecapture(i, s, e);
-                i += 1;
             }
             return nlevels;
         }

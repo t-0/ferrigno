@@ -50,14 +50,16 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
         };
     }
 }
-pub const STRINGTABLE_INITIAL_SIZE: u64 = 128;
+pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
+pub const STRCACHE_N: usize = 53;
+pub const STRCACHE_M: usize = 2;
 pub unsafe extern "C" fn luas_init(state: *mut State) {
     unsafe {
         let g: *mut Global = (*state).global;
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
         (*tb).hash = luam_malloc_(
             state,
-            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
+            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()) as u64,
         ) as *mut *mut TString;
         tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE as i32);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
@@ -69,14 +71,10 @@ pub unsafe extern "C" fn luas_init(state: *mut State) {
                 .wrapping_sub(1 as u64),
         );
         luac_fix(state, &mut (*((*g).memory_error_message as *mut Object)));
-        let mut i: i32 = 0;
-        while i < 53 as i32 {
-            let mut j: i32 = 0;
-            while j < 2 {
-                (*g).string_cache[i as usize][j as usize] = (*g).memory_error_message;
-                j += 1;
+        for i in 0..STRCACHE_N {
+            for j in 0..STRCACHE_M {
+                (*g).string_cache[i][j] = (*g).memory_error_message;
             }
-            i += 1;
         }
     }
 }

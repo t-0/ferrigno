@@ -128,11 +128,9 @@ pub unsafe extern "C" fn table_move(state: *mut State) -> i32 {
                     b"destination wrap around\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             if t > e || t <= f || tag != 1 && lua_compare(state, 1, tag, 0) == 0 {
-                i = 0;
-                while i < n {
+                for i in 0..n {
                     lua_geti(state, 1, f + i);
                     lua_seti(state, tag, t + i);
-                    i += 1;
                 }
             } else {
                 i = n - 1;

@@ -203,14 +203,11 @@ pub unsafe extern "C" fn getupvalname(
     unsafe {
         let c: *mut Closure =
             &mut (*((*(*call_info).function.p).tvalue.value.object as *mut Closure));
-        let mut i: i32;
-        i = 0;
-        while i < (*c).count_upvalues as i32 {
+        for i in 0..(*c).count_upvalues {
             if (**((*c).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).v.p == o as *mut TValue {
-                *name = upvalname((*c).payload.l_prototype, i);
+                *name = upvalname((*c).payload.l_prototype, i as i32);
                 return STRING_UPVALUE.as_ptr();
             }
-            i += 1;
         }
         return std::ptr::null();
     }

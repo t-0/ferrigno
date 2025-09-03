@@ -42,14 +42,11 @@ pub unsafe extern "C" fn str_sub(state: *mut State) -> i32 {
 pub unsafe extern "C" fn str_reverse(state: *mut State) -> i32 {
     unsafe {
         let mut l: u64 = 0;
-        let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
         let p: *mut i8 = b.initialize_with_size(state, l);
-        i = 0;
-        while i < l {
+        for i in 0.. l {
             *p.offset(i as isize) = *s.offset(l.wrapping_sub(i).wrapping_sub(1 as u64) as isize);
-            i = i.wrapping_add(1);
         }
         b.push_result_with_size(l);
         return 1;
@@ -58,14 +55,11 @@ pub unsafe extern "C" fn str_reverse(state: *mut State) -> i32 {
 pub unsafe extern "C" fn str_lower(state: *mut State) -> i32 {
     unsafe {
         let mut l: u64 = 0;
-        let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
         let p: *mut i8 = b.initialize_with_size(state, l);
-        i = 0;
-        while i < l {
+        for i in 0..l {
             *p.offset(i as isize) = tolower(*s.offset(i as isize) as u8 as i32) as i8;
-            i = i.wrapping_add(1);
         }
         b.push_result_with_size(l);
         return 1;
@@ -74,14 +68,11 @@ pub unsafe extern "C" fn str_lower(state: *mut State) -> i32 {
 pub unsafe extern "C" fn str_upper(state: *mut State) -> i32 {
     unsafe {
         let mut l: u64 = 0;
-        let mut i: u64;
         let mut b = Buffer::new();
         let s: *const i8 = lual_checklstring(state, 1, &mut l);
         let p: *mut i8 = b.initialize_with_size(state, l);
-        i = 0;
-        while i < l {
+        for i in 0..l {
             *p.offset(i as isize) = toupper(*s.offset(i as isize) as u8 as i32) as i8;
-            i = i.wrapping_add(1);
         }
         b.push_result_with_size(l);
         return 1;
@@ -156,7 +147,6 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 {
         let posi: u64 = get_position_relative(pi, l);
         let pose: u64 = get_position_end(state, 3, pi, l);
         let n: i32;
-        let mut i: i32;
         if posi > pose {
             return 0;
         }
@@ -169,12 +159,10 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 {
             n,
             b"string slice too long\0" as *const u8 as *const i8,
         );
-        i = 0;
-        while i < n {
+        for i in 0..n {
             (*state).push_integer(
                 *s.offset(posi.wrapping_add(i as u64).wrapping_sub(1 as u64) as isize) as u8 as i64,
             );
-            i += 1;
         }
         return n;
     }
@@ -182,19 +170,16 @@ pub unsafe extern "C" fn str_byte(state: *mut State) -> i32 {
 pub unsafe extern "C" fn str_char(state: *mut State) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
-        let mut i: i32;
-        let mut b = Buffer::new();
-        let p: *mut i8 = b.initialize_with_size(state, n as u64);
-        i = 1;
-        while i <= n {
+        let mut buffer = Buffer::new();
+        let p: *mut i8 = buffer.initialize_with_size(state, n as u64);
+        for i in 1..(1 + n) {
             let c: u64 = lual_checkinteger(state, i) as u64;
             (((c <= (127 as i32 * 2 + 1) as u64) as i32 != 0) as i64 != 0
                 || lual_argerror(state, i, b"value out of range\0" as *const u8 as *const i8) != 0)
                 as i32;
             *p.offset((i - 1) as isize) = c as u8 as i8;
-            i += 1;
         }
-        b.push_result_with_size(n as u64);
+        buffer.push_result_with_size(n as u64);
         return 1;
     }
 }
@@ -1215,22 +1200,17 @@ pub unsafe extern "C" fn packint(
 ) {
     unsafe {
         let buffer: *mut i8 = (*b).prepare_with_size(size as u64);
-        let mut i: i32;
         *buffer.offset((if islittle != 0 { 0 } else { size - 1 }) as isize) =
             (n & ((1 << 8) - 1) as u64) as i8;
-        i = 1;
-        while i < size {
+        for i in 1..size {
             n >>= 8;
             *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
                 (n & ((1 << 8) - 1) as u64) as i8;
-            i += 1;
         }
         if is_negative_ != 0 && size > ::core::mem::size_of::<i64>() as i32 {
-            i = ::core::mem::size_of::<i64>() as i32;
-            while i < size {
+            for i in (::core::mem::size_of::<i64>() as i32)..size {
                 *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
                     ((1 << 8) - 1) as i8;
-                i += 1;
             }
         }
         (*b).length = ((*b).length as u64).wrapping_add(size as u64) as u64;
@@ -1523,8 +1503,7 @@ pub unsafe extern "C" fn unpackint(
             } else {
                 (1 << 8) - 1
             };
-            i = limit;
-            while i < size {
+            for i in limit..size {
                 if ((*str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8
                     as i32
                     != mask_0) as i32
@@ -1538,7 +1517,6 @@ pub unsafe extern "C" fn unpackint(
                         size,
                     );
                 }
-                i += 1;
             }
         }
         return res as i64;
