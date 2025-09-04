@@ -57,6 +57,48 @@ impl TObject for Closure {
         std::ptr::null_mut()
     }
 }
+impl Closure {
+    pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut Closure) -> u64 {
+        unsafe {
+            for i in 0..(*cl).count_upvalues {
+                if ((*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
+                    && (*(*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
+                        .value
+                        .object)
+                        .get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    reallymarkobject(
+                        g,
+                        (*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
+                            .value
+                            .object,
+                    );
+                }
+            }
+            return 1 + (*cl).count_upvalues as u64;
+        }
+    }
+    pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut Closure) -> u64 {
+        unsafe {
+            if !((*cl).payload.l_prototype).is_null() {
+                if (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    reallymarkobject(g, &mut (*((*cl).payload.l_prototype as *mut Object)));
+                }
+            }
+            for i in 0..(*cl).count_upvalues {
+                let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
+                if !uv.is_null() {
+                    if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                        reallymarkobject(g, &mut (*(uv as *mut Object)));
+                    }
+                }
+            }
+            return 1 + (*cl).count_upvalues as u64;
+        }
+    }
+}
 pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
@@ -163,28 +205,6 @@ pub unsafe extern "C" fn auxgetinfo(
         return status;
     }
 }
-pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut Closure) -> u64 {
-    unsafe {
-        for i in 0..(*cl).count_upvalues {
-            if ((*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
-                && (*(*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
-                    .value
-                    .object)
-                    .get_marked()
-                    & (1 << 3 | 1 << 4)
-                    != 0
-            {
-                reallymarkobject(
-                    g,
-                    (*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
-                        .value
-                        .object,
-                );
-            }
-        }
-        return 1 + (*cl).count_upvalues as u64;
-    }
-}
 pub unsafe extern "C" fn luaf_newcclosure(state: *mut State, nupvals: i32) -> *mut Closure {
     unsafe {
         let o: *mut Object = luac_newobj(
@@ -195,24 +215,6 @@ pub unsafe extern "C" fn luaf_newcclosure(state: *mut State, nupvals: i32) -> *m
         let c: *mut Closure = &mut (*(o as *mut Closure));
         (*c).count_upvalues = nupvals as u8;
         return c;
-    }
-}
-pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut Closure) -> u64 {
-    unsafe {
-        if !((*cl).payload.l_prototype).is_null() {
-            if (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*((*cl).payload.l_prototype as *mut Object)));
-            }
-        }
-        for i in 0..(*cl).count_upvalues {
-            let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
-            if !uv.is_null() {
-                if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(g, &mut (*(uv as *mut Object)));
-                }
-            }
-        }
-        return 1 + (*cl).count_upvalues as u64;
     }
 }
 pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut nupvals: i32) -> *mut Closure {

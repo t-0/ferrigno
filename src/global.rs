@@ -124,16 +124,16 @@ impl Global {
             match (*o).get_tag_variant() {
                 TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut Table))),
                 TAG_VARIANT_USER => {
-                    return traverseudata(self, &mut (*(o as *mut User))) as u64
+                    return User::traverseudata(self, &mut (*(o as *mut User))) as u64
                 }
                 TAG_VARIANT_CLOSURE_L => {
-                    return traverselclosure(self, &mut (*(o as *mut Closure)))
+                    return Closure::traverselclosure(self, &mut (*(o as *mut Closure)))
                 }
                 TAG_VARIANT_CLOSURE_C => {
-                    return traversecclosure(self, &mut (*(o as *mut Closure)))
+                    return Closure::traversecclosure(self, &mut (*(o as *mut Closure)))
                 }
                 TAG_VARIANT_PROTOTYPE => {
-                    return traverseproto(self, &mut (*(o as *mut Prototype)))
+                    return Prototype::traverseproto(self, &mut (*(o as *mut Prototype)))
                 }
                 TAG_VARIANT_STATE => {
                     return traverse_state(self, &mut (*(o as *mut State))) as u64

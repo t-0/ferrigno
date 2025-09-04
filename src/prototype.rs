@@ -59,6 +59,60 @@ impl TObject for Prototype {
     }
 }
 impl Prototype {
+    pub unsafe extern "C" fn traverseproto(g: *mut Global, prototype: *mut Prototype) -> u64 {
+        unsafe {
+            if !((*prototype).source).is_null() {
+                if (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    reallymarkobject(g, &mut (*((*prototype).source as *mut Object)));
+                }
+            }
+            for i in 0..(*prototype).size_k {
+                if ((*((*prototype).k).offset(i as isize)).is_collectable())
+                    && (*(*((*prototype).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    reallymarkobject(g, (*((*prototype).k).offset(i as isize)).value.object);
+                }
+            }
+            for i in 0..(*prototype).size_upvalues {
+                if !((*((*prototype).upvalues).offset(i as isize)).name).is_null() {
+                    if (*(*((*prototype).upvalues).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4)
+                        != 0
+                    {
+                        reallymarkobject(
+                            g,
+                            &mut (*((*((*prototype).upvalues).offset(i as isize)).name as *mut Object)),
+                        );
+                    }
+                }
+            }
+            for i in 0..(*prototype).size_p {
+                if !(*((*prototype).p).offset(i as isize)).is_null() {
+                    if (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                        reallymarkobject(
+                            g,
+                            &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
+                        );
+                    }
+                }
+            }
+            for i in 0..(*prototype).size_local_variables {
+                if !((*((*prototype).local_variables).offset(i as isize)).variable_name).is_null() {
+                    if (*(*((*prototype).local_variables).offset(i as isize)).variable_name).get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                    {
+                        reallymarkobject(
+                            g,
+                            &mut (*((*((*prototype).local_variables).offset(i as isize)).variable_name
+                                as *mut Object)),
+                        );
+                    }
+                }
+            }
+            return (1 + (*prototype).size_k + (*prototype).size_upvalues + (*prototype).size_p + (*prototype).size_local_variables) as u64
+        }
+    }
     pub unsafe extern "C" fn free_prototype(&mut self, state: *mut State) {
         unsafe {
             (*state).free_memory(
@@ -460,60 +514,6 @@ pub unsafe extern "C" fn changedline(
             }
         }
         return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
-    }
-}
-pub unsafe extern "C" fn traverseproto(g: *mut Global, prototype: *mut Prototype) -> u64 {
-    unsafe {
-        if !((*prototype).source).is_null() {
-            if (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*((*prototype).source as *mut Object)));
-            }
-        }
-        for i in 0..(*prototype).size_k {
-            if ((*((*prototype).k).offset(i as isize)).is_collectable())
-                && (*(*((*prototype).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
-                    != 0
-            {
-                reallymarkobject(g, (*((*prototype).k).offset(i as isize)).value.object);
-            }
-        }
-        for i in 0..(*prototype).size_upvalues {
-            if !((*((*prototype).upvalues).offset(i as isize)).name).is_null() {
-                if (*(*((*prototype).upvalues).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4)
-                    != 0
-                {
-                    reallymarkobject(
-                        g,
-                        &mut (*((*((*prototype).upvalues).offset(i as isize)).name as *mut Object)),
-                    );
-                }
-            }
-        }
-        for i in 0..(*prototype).size_p {
-            if !(*((*prototype).p).offset(i as isize)).is_null() {
-                if (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(
-                        g,
-                        &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
-                    );
-                }
-            }
-        }
-        for i in 0..(*prototype).size_local_variables {
-            if !((*((*prototype).local_variables).offset(i as isize)).variable_name).is_null() {
-                if (*(*((*prototype).local_variables).offset(i as isize)).variable_name).get_marked()
-                    & (1 << 3 | 1 << 4)
-                    != 0
-                {
-                    reallymarkobject(
-                        g,
-                        &mut (*((*((*prototype).local_variables).offset(i as isize)).variable_name
-                            as *mut Object)),
-                    );
-                }
-            }
-        }
-        return (1 + (*prototype).size_k + (*prototype).size_upvalues + (*prototype).size_p + (*prototype).size_local_variables) as u64
     }
 }
 pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype {
