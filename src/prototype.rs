@@ -1,6 +1,7 @@
 use crate::debugger::absolutelineinfo::*;
 use crate::character::*;
 use crate::localvariable::*;
+use crate::functionstate::*;
 use crate::object::*;
 use crate::global::*;
 use crate::state::*;
@@ -183,11 +184,11 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
         while program_counter < lastpc {
             let i: u32 = *((*p).code).offset(program_counter as isize);
             let op: u32 = (i >> 0 & !(!(0) << 7) << 0) as u32;
-            let a: i32 = (i >> 0 + 7 & !(!(0) << 8) << 0) as i32;
+            let a: i32 = (i >> POSITION_A & !(!(0) << 8) << 0) as i32;
             let change: i32;
             match op as u32 {
                 8 => {
-                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0) << 8) << 0) as i32;
+                    let b: i32 = (i >> POSITION_B & !(!(0) << 8) << 0) as i32;
                     change = (a <= reg && reg <= a + b) as i32;
                 }
                 76 => {
@@ -197,7 +198,7 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
                     change = (reg >= a) as i32;
                 }
                 56 => {
-                    let b_0: i32 = (i >> 0 + 7 & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                    let b_0: i32 = (i >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
                     let dest: i32 = program_counter + 1 + b_0;
                     if dest <= lastpc && dest > jmptarget {
@@ -248,26 +249,26 @@ pub unsafe extern "C" fn basicgetobjname(
             let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
             match op as u32 {
                 0 => {
-                    let b: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
-                    if b < (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32 {
+                    let b: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                    if b < (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32 {
                         return basicgetobjname(p, ppc, b, name);
                     }
                 }
                 9 => {
-                    *name = upvalname(p, (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32);
+                    *name = upvalname(p, (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32);
                     return STRING_UPVALUE.as_ptr();
                 }
                 3 => {
                     return kname(
                         p,
-                        (i >> 0 + 7 + 8 & !(!(0u32) << 8 + 8 + 1) << 0) as i32,
+                        (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32,
                         name,
                     );
                 }
                 4 => {
                     return kname(
                         p,
-                        (*((*p).code).offset((program_counter + 1) as isize) >> 0 + 7
+                        (*((*p).code).offset((program_counter + 1) as isize) >> POSITION_A
                             & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32,
                         name,
                     );
@@ -298,8 +299,8 @@ pub unsafe extern "C" fn rkname(
     name: *mut *const i8,
 ) {
     unsafe {
-        let c: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
-        if (i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 != 0 {
+        let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+        if (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 != 0 {
             kname(p, c, name);
         } else {
             rname(p, program_counter, c, name);
@@ -313,7 +314,7 @@ pub unsafe extern "C" fn is_environment(
     isup: i32,
 ) -> *const i8 {
     unsafe {
-        let t: i32 = (i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+        let t: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
         let mut name: *const i8 = std::ptr::null();
         if isup != 0 {
             name = upvalname(p, t);
@@ -345,12 +346,12 @@ pub unsafe extern "C" fn getobjname(
             let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
             match op as u32 {
                 11 => {
-                    let k: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    let k: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     kname(p, k, name);
                     return is_environment(p, lastpc, i, 1);
                 }
                 12 => {
-                    let k_0: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    let k_0: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     rname(p, lastpc, k_0, name);
                     return is_environment(p, lastpc, i, 0);
                 }
@@ -359,7 +360,7 @@ pub unsafe extern "C" fn getobjname(
                     return b"field\0" as *const u8 as *const i8;
                 }
                 14 => {
-                    let k_1: i32 = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as i32;
+                    let k_1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     kname(p, k_1, name);
                     return is_environment(p, lastpc, i, 0);
                 }
@@ -387,7 +388,7 @@ pub unsafe extern "C" fn funcnamefromcode(
                 return getobjname(
                     p,
                     program_counter,
-                    (i >> 0 + 7 & !(!(0u32) << 8) << 0) as i32,
+                    (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32,
                     name,
                 );
             }
@@ -402,7 +403,7 @@ pub unsafe extern "C" fn funcnamefromcode(
                 tm = TM_NEWINDEX;
             }
             OP_MMBIN | OP_MMBINI | OP_MMBINK => {
-                tm = (i >> 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0) as u32;
+                tm = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
             }
             OP_UNM => {
                 tm = TM_UNM;

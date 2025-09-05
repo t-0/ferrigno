@@ -1,5 +1,6 @@
 use crate::registeredfunction::*;
 use crate::state::*;
+use crate::utility::*;
 use crate::tag::*;
 use crate::buffer::*;
 use crate::new::*;
@@ -114,14 +115,14 @@ pub unsafe extern "C" fn table_move(state: *mut State) -> i32 {
         if e >= f {
             let n: i64;
             let mut i: i64;
-            (((f > 0 || e < 0x7FFFFFFFFFFFFFFF as i64 + f) as i32 != 0) as i64 != 0
+            (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0
                 || lual_argerror(
                     state,
                     3,
                     b"too many elements to move\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             n = e - f + 1;
-            (((t <= 0x7FFFFFFFFFFFFFFF as i64 - n + 1) as i32 != 0) as i64 != 0
+            (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
                 || lual_argerror(
                     state,
                     4,

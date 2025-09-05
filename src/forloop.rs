@@ -1,5 +1,6 @@
 use crate::tvalue::*;
 use crate::state::*;
+use crate::utility::*;
 use crate::f2i::*;
 use crate::tag::*;
 use crate::stackvalue::*;
@@ -30,12 +31,12 @@ pub unsafe extern "C" fn forlimit(
                 if step < 0 {
                     return 1;
                 }
-                *p = 0x7FFFFFFFFFFFFFFF as i64;
+                *p = MAXIMUM_SIZE as i64;
             } else {
                 if step > 0 {
                     return 1;
                 }
-                *p = -(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64;
+                *p = -(MAXIMUM_SIZE as i64) - 1 as i64;
             }
         }
         return if step > 0 {

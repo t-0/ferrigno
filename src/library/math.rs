@@ -1,5 +1,6 @@
 use crate::utility::c::*;
 use crate::randomstate::*;
+use crate::utility::*;
 use crate::tag::*;
 use crate::user::*;
 use crate::registeredfunction::*;
@@ -8,8 +9,8 @@ pub const PI: f64 = 3.141592653589793238462643383279502884f64;
 pub unsafe extern "C" fn push_numericcc(state: *mut State, d: f64) {
     unsafe {
         let mut n: i64 = 0;
-        if d >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
-            && d < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
+        if d >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64
+            && d < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64)
             && {
                 n = d as i64;
                 1 != 0

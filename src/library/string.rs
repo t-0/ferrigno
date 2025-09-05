@@ -1,5 +1,6 @@
 use crate::tstring::*;
 use crate::buffer::*;
+use crate::utility::*;
 use crate::gmatchstate::*;
 use crate::character::*;
 use crate::registeredfunction::*;
@@ -697,7 +698,7 @@ pub unsafe extern "C" fn addliteral(state: *mut State, b: *mut Buffer, arg: i32)
                 let nb: i32;
                 if lua_isinteger(state, arg) {
                     let n: i64 = lua_tointegerx(state, arg, std::ptr::null_mut());
-                    let format: *const i8 = if n == -(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64 {
+                    let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
                         b"0x%llx\0" as *const u8 as *const i8
                     } else {
                         b"%lld\0" as *const u8 as *const i8

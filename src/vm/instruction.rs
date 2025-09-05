@@ -1,3 +1,4 @@
+use crate::functionstate::*;
 pub const OP_EXTRAARG: u32 = 82;
 pub const OP_LOADKX: u32 = 4;
 pub const OP_LOADK: u32 = 3;
@@ -186,7 +187,7 @@ pub unsafe extern "C" fn finaltarget(code: *mut u32, mut i: i32) -> i32 {
             if (program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_JMP as u32 {
                 break;
             }
-            i += (program_counter >> 0 + 7 & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+            i += (program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
                 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                 + 1;
             count += 1;

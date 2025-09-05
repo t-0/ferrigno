@@ -1,5 +1,6 @@
 use libc::*;
 use crate::buffer::*;
+use crate::utility::*;
 use crate::dynamicdata::*;
 use crate::node::*;
 use crate::labeldescription::*;
@@ -1870,8 +1871,8 @@ pub unsafe extern "C" fn exprstat(lexical_state: *mut LexicalState) {
                 luax_syntaxerror(lexical_state, b"syntax error\0" as *const u8 as *const i8);
             }
             let inst: *mut u32 = &mut *((*(*function_state).prototype).code).offset(v.expression_description.value.info as isize) as *mut u32;
-            *inst = *inst & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
-                | (1 as u32) << 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+            *inst = *inst & !(!(!(0u32) << 8) << POSITION_C)
+                | (1 as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
         };
     }
 }
@@ -1947,7 +1948,7 @@ pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
                 {
                     !(0u64)
                 } else {
-                    0x7FFFFFFFFFFFFFFF as u64
+                    MAXIMUM_SIZE as u64
                 })
                 .wrapping_div(2 as u64)
             {

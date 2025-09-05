@@ -449,8 +449,8 @@ pub unsafe extern "C" fn fixforjump(
                 b"control structure too long\0" as *const u8 as *const i8,
             );
         }
-        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1) << 0 + 7 + 8)
-            | (offset as u32) << 0 + 7 + 8 & !(!(0u32) << 8 + 8 + 1) << 0 + 7 + 8;
+        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1) << POSITION_K)
+            | (offset as u32) << POSITION_K & !(!(0u32) << 8 + 8 + 1) << POSITION_K;
     }
 }
 pub unsafe extern "C" fn checktoclose(function_state: *mut FunctionState, level: i32) {
@@ -477,8 +477,8 @@ pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: 
         let mut length: i32 = from + n - 1;
         let previous: *mut u32 = previousinstruction(function_state);
         if (*previous >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_LOADNIL as u32 {
-            let pfrom: i32 = (*previous >> 0 + 7 & !(!(0u32) << 8) << 0) as i32;
-            let pl: i32 = pfrom + (*previous >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+            let pfrom: i32 = (*previous >> POSITION_A & !(!(0u32) << 8) << 0) as i32;
+            let pl: i32 = pfrom + (*previous >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
             if pfrom <= from && from <= pl + 1 || from <= pfrom && pfrom <= length + 1 {
                 if pfrom < from {
                     from = pfrom;
@@ -486,10 +486,10 @@ pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: 
                 if pl > length {
                     length = pl;
                 }
-                *previous = *previous & !(!(!(0u32) << 8) << 0 + 7)
-                    | (from as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
-                *previous = *previous & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
-                    | ((length - from) as u32) << 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
+                *previous = *previous & !(!(!(0u32) << 8) << POSITION_A)
+                    | (from as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
+                *previous = *previous & !(!(!(0u32) << 8) << POSITION_B)
+                    | ((length - from) as u32) << POSITION_B & !(!(0u32) << 8) << POSITION_B;
                 return;
             }
         }
@@ -498,7 +498,7 @@ pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: 
 }
 pub unsafe extern "C" fn getjump(function_state: *mut FunctionState, program_counter: i32) -> i32 {
     unsafe {
-        let offset: i32 = (*((*(*function_state).prototype).code).offset(program_counter as isize) >> 0 + 7
+        let offset: i32 = (*((*(*function_state).prototype).code).offset(program_counter as isize) >> POSITION_A
             & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
             - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
         if offset == -1 {
@@ -520,9 +520,9 @@ pub unsafe extern "C" fn fixjump(function_state: *mut FunctionState, program_cou
                 b"control structure too long\0" as *const u8 as *const i8,
             );
         }
-        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1 + 8) << 0 + 7)
-            | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << 0 + 7
-                & !(!(0u32) << 8 + 8 + 1 + 8) << 0 + 7;
+        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A)
+            | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << POSITION_A
+                & !(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A;
     }
 }
 pub unsafe extern "C" fn luak_concat(function_state: *mut FunctionState, l1: *mut i32, l2: i32) {
@@ -607,15 +607,15 @@ pub unsafe extern "C" fn patchtestreg(function_state: *mut FunctionState, node: 
         if (*i >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_TESTSET as u32 {
             return 0;
         }
-        if reg != (1 << 8) - 1 && reg != (*i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32 {
+        if reg != (1 << 8) - 1 && reg != (*i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 {
             *i =
-                *i & !(!(!(0u32) << 8) << 0 + 7) | (reg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+                *i & !(!(!(0u32) << 8) << POSITION_A) | (reg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
         } else {
             *i = (OP_TEST as u32) << 0
-                | ((*i >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as u32) << 0 + 7
-                | (0u32) << 0 + 7 + 8 + 1
-                | (0u32) << 0 + 7 + 8 + 1 + 8
-                | ((*i >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as u32) << 0 + 7 + 8;
+                | ((*i >> POSITION_B & !(!(0u32) << 8) << 0) as u32) << POSITION_A
+                | (0u32) << POSITION_B
+                | (0u32) << POSITION_C
+                | ((*i >> POSITION_K & !(!(0u32) << 1) << 0) as u32) << POSITION_K;
         }
         return 1;
     }
@@ -768,33 +768,33 @@ pub unsafe extern "C" fn luak_code_abck(
         return luak_code(
             function_state,
             (o as u32) << 0
-                | (a as u32) << 0 + 7
-                | (b as u32) << 0 + 7 + 8 + 1
-                | (c as u32) << 0 + 7 + 8 + 1 + 8
-                | (k as u32) << 0 + 7 + 8,
+                | (a as u32) << POSITION_A
+                | (b as u32) << POSITION_B
+                | (c as u32) << POSITION_C
+                | (k as u32) << POSITION_K,
         );
     }
 }
 pub unsafe extern "C" fn luak_codeabx(function_state: *mut FunctionState, o: u32, a: i32, bc: u32) -> i32 {
     unsafe {
-        return luak_code(function_state, (o as u32) << 0 | (a as u32) << 0 + 7 | bc << 0 + 7 + 8);
+        return luak_code(function_state, (o as u32) << 0 | (a as u32) << POSITION_A | bc << POSITION_K);
     }
 }
 pub unsafe extern "C" fn codeasbx(function_state: *mut FunctionState, o: u32, a: i32, bc: i32) -> i32 {
     unsafe {
         let b: u32 = (bc + ((1 << 8 + 8 + 1) - 1 >> 1)) as u32;
-        return luak_code(function_state, (o as u32) << 0 | (a as u32) << 0 + 7 | b << 0 + 7 + 8);
+        return luak_code(function_state, (o as u32) << 0 | (a as u32) << POSITION_A | b << POSITION_K);
     }
 }
 pub unsafe extern "C" fn codesj(function_state: *mut FunctionState, o: u32, sj: i32, k: i32) -> i32 {
     unsafe {
         let j: u32 = (sj + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32;
-        return luak_code(function_state, (o as u32) << 0 | j << 0 + 7 | (k as u32) << 0 + 7 + 8);
+        return luak_code(function_state, (o as u32) << 0 | j << POSITION_A | (k as u32) << POSITION_K);
     }
 }
 pub unsafe extern "C" fn codeextraarg(function_state: *mut FunctionState, a: i32) -> i32 {
     unsafe {
-        return luak_code(function_state, (OP_EXTRAARG as u32) << 0 | (a as u32) << 0 + 7);
+        return luak_code(function_state, (OP_EXTRAARG as u32) << 0 | (a as u32) << POSITION_A);
     }
 }
 pub unsafe extern "C" fn luak_codek(function_state: *mut FunctionState, reg: i32, k: i32) -> i32 {
@@ -1078,15 +1078,15 @@ pub unsafe extern "C" fn luak_setreturns(
         let program_counter: *mut u32 =
             &mut *((*(*function_state).prototype).code).offset((*e).value.info as isize) as *mut u32;
         if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
-                | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
-                    & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
+                | ((count_results + 1) as u32) << POSITION_C
+                    & !(!(0u32) << 8) << POSITION_C;
         } else {
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
-                | ((count_results + 1) as u32) << 0 + 7 + 8 + 1 + 8
-                    & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7)
-                | ((*function_state).freereg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
+                | ((count_results + 1) as u32) << POSITION_C
+                    & !(!(0u32) << 8) << POSITION_C;
+            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_A)
+                | ((*function_state).freereg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
             luak_reserveregs(function_state, 1);
         };
     }
@@ -1101,13 +1101,13 @@ pub unsafe extern "C" fn luak_setoneret(function_state: *mut FunctionState, e: *
     unsafe {
         if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
             (*e).expression_kind = ExpressionKind::VNONRELOC;
-            (*e).value.info = (*((*(*function_state).prototype).code).offset((*e).value.info as isize) >> 0 + 7
+            (*e).value.info = (*((*(*function_state).prototype).code).offset((*e).value.info as isize) >> POSITION_A
                 & !(!(0u32) << 8) << 0) as i32;
         } else if (*e).expression_kind as u32 == ExpressionKind::VVARARG as u32 {
             *((*(*function_state).prototype).code).offset((*e).value.info as isize) = *((*(*function_state).prototype).code)
                 .offset((*e).value.info as isize)
-                & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
-                | (2 as u32) << 0 + 7 + 8 + 1 + 8 & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+                & !(!(!(0u32) << 8) << POSITION_C)
+                | (2 as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
             (*e).expression_kind = ExpressionKind::VRELOC;
         }
     }
@@ -1220,8 +1220,8 @@ pub unsafe extern "C" fn discharge2reg(
             17 => {
                 let program_counter: *mut u32 =
                     &mut *((*(*function_state).prototype).code).offset((*e).value.info as isize) as *mut u32;
-                *program_counter = *program_counter & !(!(!(0u32) << 8) << 0 + 7)
-                    | (reg as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
+                *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_A)
+                    | (reg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
                 current_block_14 = 13242334135786603907;
             }
             8 => {
@@ -1475,10 +1475,10 @@ pub unsafe extern "C" fn luak_self(
 pub unsafe extern "C" fn negatecondition(function_state: *mut FunctionState, e: *mut ExpressionDescription) {
     unsafe {
         let program_counter: *mut u32 = getjumpcontrol(function_state, (*e).value.info);
-        *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
-            | (((*program_counter >> 0 + 7 + 8 & !(!(0u32) << 1) << 0) as i32 ^ 1) as u32)
-                << 0 + 7 + 8
-                & !(!(0u32) << 1) << 0 + 7 + 8;
+        *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
+            | (((*program_counter >> POSITION_K & !(!(0u32) << 1) << 0) as i32 ^ 1) as u32)
+                << POSITION_K
+                & !(!(0u32) << 1) << POSITION_K;
     }
 }
 pub unsafe extern "C" fn jumponcond(
@@ -1494,7 +1494,7 @@ pub unsafe extern "C" fn jumponcond(
                 return condjump(
                     function_state,
                     OP_TEST,
-                    (ie >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32,
+                    (ie >> POSITION_B & !(!(0u32) << 8) << 0) as i32,
                     0,
                     0,
                     (cond_0 == 0) as i32,
@@ -1737,9 +1737,9 @@ pub unsafe extern "C" fn finishbinexpneg(
                 );
                 *((*(*function_state).prototype).code).offset(((*function_state).program_counter - 1) as isize) =
                     *((*(*function_state).prototype).code).offset(((*function_state).program_counter - 1) as isize)
-                        & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
-                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << 0 + 7 + 8 + 1
-                            & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
+                        & !(!(!(0u32) << 8) << POSITION_B)
+                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << POSITION_B
+                            & !(!(0u32) << 8) << POSITION_B;
                 return 1;
             }
         };
@@ -1982,12 +1982,12 @@ pub unsafe extern "C" fn codeconcat(
     unsafe {
         let ie2: *mut u32 = previousinstruction(function_state);
         if (*ie2 >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_CONCAT as u32 {
-            let n: i32 = (*ie2 >> 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0) as i32;
+            let n: i32 = (*ie2 >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
             freeexp(function_state, e2);
-            *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7)
-                | ((*e1).value.info as u32) << 0 + 7 & !(!(0u32) << 8) << 0 + 7;
-            *ie2 = *ie2 & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1)
-                | ((n + 1) as u32) << 0 + 7 + 8 + 1 & !(!(0u32) << 8) << 0 + 7 + 8 + 1;
+            *ie2 = *ie2 & !(!(!(0u32) << 8) << POSITION_A)
+                | ((*e1).value.info as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
+            *ie2 = *ie2 & !(!(!(0u32) << 8) << POSITION_B)
+                | ((n + 1) as u32) << POSITION_B & !(!(0u32) << 8) << POSITION_B;
         } else {
             luak_code_abck(function_state, OP_CONCAT, (*e1).value.info, 2, 0, 0);
             freeexp(function_state, e2);
@@ -2096,6 +2096,10 @@ pub unsafe extern "C" fn luak_fixline(function_state: *mut FunctionState, line: 
         savelineinfo(function_state, (*function_state).prototype, line);
     }
 }
+pub const POSITION_A: usize = 7;
+pub const POSITION_K: usize = POSITION_A + 8;
+pub const POSITION_B: usize = POSITION_K + 1;
+pub const POSITION_C: usize = POSITION_B + 8;
 pub unsafe extern "C" fn luak_settablesize(
     function_state: *mut FunctionState,
     program_counter: i32,
@@ -2105,20 +2109,20 @@ pub unsafe extern "C" fn luak_settablesize(
 ) {
     unsafe {
         let inst: *mut u32 = &mut *((*(*function_state).prototype).code).offset(program_counter as isize) as *mut u32;
-        let rb: i32 = if hsize != 0 {
-            ceiling_log2(hsize as u64) as i32 + 1
-        } else {
+        let rb: i32 = if hsize == 0 {
             0
+        } else {
+            1 + hsize.ilog2() as i32
         };
         let extra: i32 = asize / ((1 << 8) - 1 + 1);
         let rc: i32 = asize % ((1 << 8) - 1 + 1);
         let k: i32 = (extra > 0) as i32;
         *inst = (OP_NEWTABLE as u32) << 0
-            | (ra as u32) << 0 + 7
-            | (rb as u32) << 0 + 7 + 8 + 1
-            | (rc as u32) << 0 + 7 + 8 + 1 + 8
-            | (k as u32) << 0 + 7 + 8;
-        *inst.offset(1 as isize) = (OP_EXTRAARG as u32) << 0 | (extra as u32) << 0 + 7;
+            | (ra as u32) << POSITION_A
+            | (rb as u32) << POSITION_B
+            | (rc as u32) << POSITION_C
+            | (k as u32) << POSITION_K;
+        *inst.offset(1 as isize) = (OP_EXTRAARG as u32) << 0 | (extra as u32) << POSITION_A;
     }
 }
 pub unsafe extern "C" fn luak_setlist(
@@ -2149,7 +2153,7 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
             let program_counter: *mut u32 = &mut *((*p).code).offset(i as isize) as *mut u32;
             let current_block_7: u64;
             match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
-                71 | 72 => {
+                OP_RETURN0 | OP_RETURN1 => {
                     if !((*function_state).needs_close || (*p).is_variable_arguments as i32 != 0) {
                         current_block_7 = 12599329904712511516;
                     } else {
@@ -2158,10 +2162,10 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
                         current_block_7 = 11006700562992250127;
                     }
                 }
-                70 | 69 => {
+                OP_RETURN | OP_TAILCALL => {
                     current_block_7 = 11006700562992250127;
                 }
-                56 => {
+                OP_JMP => {
                     let target: i32 = finaltarget((*p).code, i);
                     fixjump(function_state, i, target);
                     current_block_7 = 12599329904712511516;
@@ -2173,14 +2177,14 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
             match current_block_7 {
                 11006700562992250127 => {
                     if (*function_state).needs_close {
-                        *program_counter = *program_counter & !(!(!(0u32) << 1) << 0 + 7 + 8)
-                            | (1 as u32) << 0 + 7 + 8 & !(!(0u32) << 1) << 0 + 7 + 8;
+                        *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
+                            | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
                     }
                     if (*p).is_variable_arguments {
                         *program_counter = *program_counter
-                            & !(!(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8)
-                            | (((*p).count_parameters as i32 + 1) as u32) << 0 + 7 + 8 + 1 + 8
-                                & !(!(0u32) << 8) << 0 + 7 + 8 + 1 + 8;
+                            & !(!(!(0u32) << 8) << POSITION_C)
+                            | (((*p).count_parameters as i32 + 1) as u32) << POSITION_C
+                                & !(!(0u32) << 8) << POSITION_C;
                     }
                 }
                 _ => {}

@@ -1,34 +1,21 @@
 use crate::character::*;
 use libc::*;
 pub mod c;
+pub const MAXIMUM_SIZE: usize = 0x7FFFFFFFFFFFFFFF;
 pub fn ceiling_log2(input: u64) -> u64 {
-    const BITS: u64 = 8;
-    const LOG2: [u8; 256] = [
-        0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-        5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-        6, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-        7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-        7, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-    ];
-    let mut accumulator: u64 = 0;
-    let mut remainder: u64 = input.wrapping_sub(1);
-    while remainder >= 256 {
-        accumulator += BITS;
-        remainder >>= BITS;
+    if input == 0 {
+        return 0;
+    } else {
+        return 1 + input.ilog2() as u64;
     }
-    return accumulator + (LOG2[remainder as usize] as u64);
 }
 pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
     unsafe {
-        if **s as i32 == CHARACTER_HYPHEN as i32 {
+        if **s as i32 == CHARACTER_HYPHEN {
             *s = (*s).offset(1);
             return true;
         } else {
-            if **s as i32 == CHARACTER_PLUS as i32 {
+            if **s as i32 == CHARACTER_PLUS {
                 *s = (*s).offset(1);
             }
             return false;
@@ -107,9 +94,9 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
         } else {
             while is_digit_decimal(*s as i32 + 1) {
                 let d: i32 = *s as i32 - CHARACTER_0 as i32;
-                if a >= (0x7FFFFFFFFFFFFFFF as i64 / 10 as i64) as u64
-                    && (a > (0x7FFFFFFFFFFFFFFF as i64 / 10 as i64) as u64
-                        || d > (0x7FFFFFFFFFFFFFFF as i64 % 10 as i64) as i32
+                if a >= (MAXIMUM_SIZE as i64 / 10 as i64) as u64
+                    && (a > (MAXIMUM_SIZE as i64 / 10 as i64) as u64
+                        || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32
                             + if is_negative_ { 1 } else { 0 })
                 {
                     return std::ptr::null();
@@ -292,8 +279,8 @@ pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
     let mut ni: i64 = 0;
     (n, i) = frexp_(n);
     n = n * -((-(0x7FFFFFFF as i32) - 1) as f64);
-    if !(n >= (-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64
-        && n < -((-(0x7FFFFFFFFFFFFFFF as i64) - 1 as i64) as f64)
+    if !(n >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64
+        && n < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64)
         && {
             ni = n as i64;
             1 != 0

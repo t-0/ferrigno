@@ -594,12 +594,12 @@ pub unsafe extern "C" fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
 pub unsafe extern "C" fn countint(key: i64, nums: *mut u32) -> i32 {
     unsafe {
         let k: u32 = arrayindex(key);
-        if k != 0 {
-            let ref mut fresh129 = *nums.offset(ceiling_log2(k as u64) as isize);
-            *fresh129 = (*fresh129).wrapping_add(1);
-            return 1;
-        } else {
+        if k ==0 {
             return 0;
+        } else {
+            let ref mut fresh = *nums.offset(ceiling_log2(k as u64) as isize);
+            *fresh += 1;
+            return 1;
         };
     }
 }
@@ -1005,10 +1005,10 @@ pub unsafe extern "C" fn luah_getstr(table: *mut Table, key: *mut TString) -> *c
 pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
     unsafe {
         match (*key).get_tag_variant() {
-            4 => return luah_getshortstr(table, &mut (*((*key).value.object as *mut TString))),
-            3 => return luah_getint(table, (*key).value.integer),
-            0 => return &ABSENT_KEY,
-            19 => {
+            TAG_VARIANT_STRING_SHORT => return luah_getshortstr(table, &mut (*((*key).value.object as *mut TString))),
+            TAG_VARIANT_NUMERIC_INTEGER => return luah_getint(table, (*key).value.integer),
+            TAG_VARIANT_NIL_NIL => return &ABSENT_KEY,
+            TAG_VARIANT_NUMERIC_NUMBER => {
                 let mut k: i64 = 0;
                 if luav_flttointeger((*key).value.number, &mut k, F2I::Equal) {
                     return luah_getint(table, k);
@@ -1083,13 +1083,13 @@ pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
         }
         loop {
             i = j;
-            if j <= (0x7FFFFFFFFFFFFFFF as u64).wrapping_div(2 as u64) {
+            if j <= (MAXIMUM_SIZE as u64).wrapping_div(2 as u64) {
                 j = (j as u64).wrapping_mul(2 as u64) as u64;
                 if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TAG_TYPE_NIL {
                     break;
                 }
             } else {
-                j = 0x7FFFFFFFFFFFFFFF as u64;
+                j = MAXIMUM_SIZE as u64;
                 if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TAG_TYPE_NIL {
                     break;
                 }

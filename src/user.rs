@@ -1,3 +1,4 @@
+use crate::utility::*;
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
@@ -51,7 +52,7 @@ impl User {
                 > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                     !(0u64)
                 } else {
-                    0x7FFFFFFFFFFFFFFF as u64
+                    MAXIMUM_SIZE as u64
                 })
                 .wrapping_sub(if nuvalue == 0 {
                     32 as u64

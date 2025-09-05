@@ -201,28 +201,28 @@ impl LoadState {
             }
             for i in 0..n {
                 let o: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
-                let t: i32 = self.load_byte() as i32;
+                let t: u8 = self.load_byte() as u8;
                 match t {
-                    0 => {
+                    TAG_VARIANT_NIL_NIL => {
                         (*o).set_tag(TAG_VARIANT_NIL_NIL);
                     }
-                    1 => {
+                    TAG_VARIANT_BOOLEAN_FALSE => {
                         (*o).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
                     }
-                    17 => {
+                    TAG_VARIANT_BOOLEAN_TRUE => {
                         (*o).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                     }
-                    19 => {
+                    TAG_VARIANT_NUMERIC_NUMBER => {
                         let io: *mut TValue = o;
                         (*io).value.number = self.load_number();
                         (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                     }
-                    3 => {
+                    TAG_VARIANT_NUMERIC_INTEGER => {
                         let io_0: *mut TValue = o;
                         (*io_0).value.integer = self.load_integer();
                         (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     }
-                    4 | 20 => {
+                    TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = o;
                         let x_: *mut TString = self.load_string(prototype);
                         (*io_1).value.object = &mut (*(x_ as *mut Object));

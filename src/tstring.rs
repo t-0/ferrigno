@@ -1,3 +1,4 @@
+use crate::utility::*;
 use crate::global::*;
 use crate::object::*;
 use crate::stackvalue::*;
@@ -196,7 +197,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
         >= (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
                 !(0u64)
             } else {
-                0x7FFFFFFFFFFFFFFF
+                MAXIMUM_SIZE as u64
             })
             .wrapping_sub(::core::mem::size_of::<TString>() as u64)) as i32
             != 0) as i64
@@ -366,7 +367,7 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                         {
                             !(0u64)
                         } else {
-                            0x7FFFFFFFFFFFFFFF as u64
+                            MAXIMUM_SIZE as u64
                         })
                         .wrapping_sub(::core::mem::size_of::<TString>() as u64)
                         .wrapping_sub(tl)) as i32
