@@ -14,7 +14,7 @@ pub struct VariableDescriptionContent {
     pub value: Value,
     pub tag: u8,
     pub kind: u8,
-    pub ridx: u8,
+    pub register_index: u8,
     pub pidx: i16,
     pub name: *mut TString,
 }

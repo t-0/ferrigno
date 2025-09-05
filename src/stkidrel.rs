@@ -1,6 +1,6 @@
 use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 pub union StkIdRel {
-    pub p: StackValuePointer,
-    pub offset: i64,
+    pub stkidrel_pointer: StackValuePointer,
+    pub stkidrel_offset: i64,
 }

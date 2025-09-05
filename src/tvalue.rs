@@ -419,9 +419,9 @@ pub unsafe extern "C" fn luav_equalobj(
         if tm.is_null() {
             return false;
         } else {
-            luat_calltmres(state, tm, t1, t2, (*state).top.p);
-            return !((*(*state).top.p).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.p).tvalue.get_tag()) == TAG_TYPE_NIL);
+            luat_calltmres(state, tm, t1, t2, (*state).top.stkidrel_pointer);
+            return !((*(*state).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*state).top.stkidrel_pointer).tvalue.get_tag()) == TAG_TYPE_NIL);
         };
     }
 }

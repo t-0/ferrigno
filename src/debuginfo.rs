@@ -35,7 +35,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
     unsafe {
         let name;
         if ar.is_null() {
-            if !((*(*state).top.p.offset(-(1 as isize)))
+            if !((*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue
                 .get_tag_variant()
                 == TAG_VARIANT_CLOSURE_L)
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
                 name = std::ptr::null();
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
+                    (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
                         .payload.l_prototype,
                     n,
                     0,
@@ -53,11 +53,11 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
             let mut pos: StackValuePointer = std::ptr::null_mut();
             name = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
             if !name.is_null() {
-                let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+                let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                 let io2: *const TValue = &mut (*pos).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                (*state).top.p = (*state).top.p.offset(1);
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             }
         }
         return name;
@@ -69,10 +69,10 @@ pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const DebugInfo, n
         let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         }
         return name;
     }
@@ -124,23 +124,23 @@ pub unsafe extern "C" fn lua_getinfo(
         let call_info;
         if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
             call_info = std::ptr::null_mut();
-            function = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            function = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             what = what.offset(1);
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         } else {
             call_info = (*ar).i_ci;
-            function = &mut (*(*call_info).function.p).tvalue;
+            function = &mut (*(*call_info).function.stkidrel_pointer).tvalue;
         }
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.p = (*state).top.p.offset(1);
+                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);
@@ -151,11 +151,11 @@ pub unsafe extern "C" fn lua_getinfo(
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.p = (*state).top.p.offset(1);
+                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);
@@ -166,11 +166,11 @@ pub unsafe extern "C" fn lua_getinfo(
                 let cl: *mut Closure = std::ptr::null_mut();
                 status = auxgetinfo(state, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.p = (*state).top.p.offset(1);
+                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(state, cl);

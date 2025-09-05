@@ -295,7 +295,7 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
             return;
         }
         loop {
-            let top: StackValuePointer = (*state).top.p;
+            let top: StackValuePointer = (*state).top.stkidrel_pointer;
             let mut n: i32 = 2;
             if !(get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TAG_TYPE_STRING
                 || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TAG_TYPE_NUMERIC)
@@ -374,7 +374,7 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                         != 0) as i64
                         != 0
                     {
-                        (*state).top.p = top.offset(-(total as isize));
+                        (*state).top.stkidrel_pointer = top.offset(-(total as isize));
                         luag_runerror(state, b"string length overflow\0" as *const u8 as *const i8);
                     }
                     tl = (tl as u64).wrapping_add(l) as u64;
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                 (*io).set_collectable();
             }
             total -= n - 1;
-            (*state).top.p = (*state).top.p.offset(-((n - 1) as isize));
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-((n - 1) as isize));
             if !(total > 1) {
                 break;
             }

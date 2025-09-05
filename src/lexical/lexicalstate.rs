@@ -1032,20 +1032,20 @@ pub unsafe extern "C" fn check_readonly(
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut variable_name: *mut TString = std::ptr::null_mut();
-        match (*e).expression_kind as u32 {
-            11 => {
+        match (*e).expression_kind {
+            ExpressionKind::VCONST => {
                 variable_name = (*((*(*lexical_state).dynamic_data).active_variable.pointer)
                     .offset((*e).value.info as isize))
                 .content
                 .name;
             }
-            9 => {
+            ExpressionKind::VLOCAL => {
                 let vardesc: *mut VariableDescription = getlocalvardesc(function_state, (*e).value.variable.value_index as i32);
                 if (*vardesc).content.kind as i32 != 0 {
                     variable_name = (*vardesc).content.name;
                 }
             }
-            10 => {
+            ExpressionKind::VUPVAL => {
                 let up: *mut UpValueDescription =
                     &mut *((*(*function_state).prototype).upvalues).offset((*e).value.info as isize) as *mut UpValueDescription;
                 if (*up).kind as i32 != 0 {
@@ -1075,7 +1075,7 @@ pub unsafe extern "C" fn adjustlocalvars(lexical_state: *mut LexicalState, nvars
             let var = getlocalvardesc(function_state, vidx);
             let fresh40 = reglevel_0;
             reglevel_0 += 1;
-            (*var).content.ridx = fresh40 as u8;
+            (*var).content.register_index = fresh40 as u8;
             (*var).content.pidx = registerlocalvar(lexical_state, function_state, (*var).content.name) as i16;
         }
     }
@@ -2060,8 +2060,8 @@ pub unsafe extern "C" fn luax_newstring(
         if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) {
             ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
         } else {
-            let fresh50 = (*state).top.p;
-            (*state).top.p = (*state).top.p.offset(1);
+            let fresh50 = (*state).top.stkidrel_pointer;
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             let stv: *mut TValue = &mut (*fresh50).tvalue;
             let io: *mut TValue = stv;
             let x_: *mut TString = ts;
@@ -2072,7 +2072,7 @@ pub unsafe extern "C" fn luax_newstring(
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         }
         return ts;
     }
@@ -2080,11 +2080,11 @@ pub unsafe extern "C" fn luax_newstring(
 pub unsafe extern "C" fn inclinenumber(lexical_state: *mut LexicalState) {
     unsafe {
         let old: i32 = (*lexical_state).current;
-        let fresh51 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh51 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh51 > 0 {
-            let fresh52 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh52 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh52 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2092,11 +2092,11 @@ pub unsafe extern "C" fn inclinenumber(lexical_state: *mut LexicalState) {
         if ((*lexical_state).current == CHARACTER_LF as i32 || (*lexical_state).current == CHARACTER_CR as i32)
             && (*lexical_state).current != old
         {
-            let fresh53 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh53 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh53 > 0 {
-                let fresh54 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh54 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh54 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2148,11 +2148,11 @@ pub unsafe extern "C" fn luax_setinput(
 pub unsafe extern "C" fn check_next1(lexical_state: *mut LexicalState, c: i32) -> i32 {
     unsafe {
         if (*lexical_state).current == c {
-            let fresh55 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh55 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh55 > 0 {
-                let fresh56 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh56 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh56 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2169,11 +2169,11 @@ pub unsafe extern "C" fn check_next2(lexical_state: *mut LexicalState, set: *con
             || (*lexical_state).current == *set.offset(1 as isize) as i32
         {
             save(lexical_state, (*lexical_state).current);
-            let fresh57 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh57 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh57 > 0 {
-                let fresh58 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh58 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh58 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2198,11 +2198,11 @@ pub unsafe extern "C" fn read_numeral(
         let mut expo: *const i8 = b"Ee\0" as *const u8 as *const i8;
         let first: i32 = (*lexical_state).current;
         save(lexical_state, (*lexical_state).current);
-        let fresh59 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh59 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh59 > 0 {
-            let fresh60 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh60 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh60 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2221,11 +2221,11 @@ pub unsafe extern "C" fn read_numeral(
                     break;
                 }
                 save(lexical_state, (*lexical_state).current);
-                let fresh61 = (*(*lexical_state).zio).n;
-                (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                let fresh61 = (*(*lexical_state).zio).length;
+                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                 (*lexical_state).current = if fresh61 > 0 {
-                    let fresh62 = (*(*lexical_state).zio).p;
-                    (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                    let fresh62 = (*(*lexical_state).zio).pointer;
+                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                     *fresh62 as u8 as i32
                 } else {
                     luaz_fill((*lexical_state).zio)
@@ -2234,11 +2234,11 @@ pub unsafe extern "C" fn read_numeral(
         }
         if is_identifier((*lexical_state).current + 1) {
             save(lexical_state, (*lexical_state).current);
-            let fresh63 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh63 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh63 > 0 {
-                let fresh64 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh64 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh64 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2266,22 +2266,22 @@ pub unsafe extern "C" fn skip_sep(lexical_state: *mut LexicalState) -> u64 {
         let mut count: u64 = 0;
         let s: i32 = (*lexical_state).current;
         save(lexical_state, (*lexical_state).current);
-        let fresh65 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh65 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh65 > 0 {
-            let fresh66 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh66 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh66 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
         };
         while (*lexical_state).current == CHARACTER_EQUAL as i32 {
             save(lexical_state, (*lexical_state).current);
-            let fresh67 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh67 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh67 > 0 {
-                let fresh68 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh68 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh68 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2303,11 +2303,11 @@ pub unsafe extern "C" fn read_long_string(
     unsafe {
         let line: i32 = (*lexical_state).line_number;
         save(lexical_state, (*lexical_state).current);
-        let fresh69 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh69 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh69 > 0 {
-            let fresh70 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh70 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh70 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2336,11 +2336,11 @@ pub unsafe extern "C" fn read_long_string(
                         continue;
                     }
                     save(lexical_state, (*lexical_state).current);
-                    let fresh71 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh71 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh71 > 0 {
-                        let fresh72 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh72 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh72 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2357,21 +2357,21 @@ pub unsafe extern "C" fn read_long_string(
                 _ => {
                     if !semantic_info.is_null() {
                         save(lexical_state, (*lexical_state).current);
-                        let fresh73 = (*(*lexical_state).zio).n;
-                        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                        let fresh73 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                         (*lexical_state).current = if fresh73 > 0 {
-                            let fresh74 = (*(*lexical_state).zio).p;
-                            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                            let fresh74 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                             *fresh74 as u8 as i32
                         } else {
                             luaz_fill((*lexical_state).zio)
                         };
                     } else {
-                        let fresh75 = (*(*lexical_state).zio).n;
-                        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                        let fresh75 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                         (*lexical_state).current = if fresh75 > 0 {
-                            let fresh76 = (*(*lexical_state).zio).p;
-                            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                            let fresh76 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                             *fresh76 as u8 as i32
                         } else {
                             luaz_fill((*lexical_state).zio)
@@ -2394,11 +2394,11 @@ pub unsafe extern "C" fn esccheck(lexical_state: *mut LexicalState, condition: b
         if !condition {
             if (*lexical_state).current != -1 {
                 save(lexical_state, (*lexical_state).current);
-                let fresh77 = (*(*lexical_state).zio).n;
-                (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                let fresh77 = (*(*lexical_state).zio).length;
+                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                 (*lexical_state).current = if fresh77 > 0 {
-                    let fresh78 = (*(*lexical_state).zio).p;
-                    (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                    let fresh78 = (*(*lexical_state).zio).pointer;
+                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                     *fresh78 as u8 as i32
                 } else {
                     luaz_fill((*lexical_state).zio)
@@ -2411,11 +2411,11 @@ pub unsafe extern "C" fn esccheck(lexical_state: *mut LexicalState, condition: b
 pub unsafe extern "C" fn gethexa(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         save(lexical_state, (*lexical_state).current);
-        let fresh79 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh79 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh79 > 0 {
-            let fresh80 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh80 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh80 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2441,11 +2441,11 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
     unsafe {
         let mut i: i32 = 4;
         save(lexical_state, (*lexical_state).current);
-        let fresh81 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh81 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh81 > 0 {
-            let fresh82 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh82 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh82 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2458,11 +2458,11 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
         let mut r: u64 = gethexa(lexical_state) as u64;
         loop {
             save(lexical_state, (*lexical_state).current);
-            let fresh83 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh83 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh83 > 0 {
-                let fresh84 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh84 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh84 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2483,11 +2483,11 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> u64 {
             (*lexical_state).current == CHARACTER_BRACE_RIGHT,
             b"missing CHARACTER_BRACE_RIGHT\0" as *const u8 as *const i8,
         );
-        let fresh85 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh85 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh85 > 0 {
-            let fresh86 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh86 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh86 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2515,11 +2515,11 @@ pub unsafe extern "C" fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
         while i < 3 && is_digit_decimal((*lexical_state).current + 1) {
             r = 10 as i32 * r + (*lexical_state).current - CHARACTER_0 as i32;
             save(lexical_state, (*lexical_state).current);
-            let fresh87 = (*(*lexical_state).zio).n;
-            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+            let fresh87 = (*(*lexical_state).zio).length;
+            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh87 > 0 {
-                let fresh88 = (*(*lexical_state).zio).p;
-                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                let fresh88 = (*(*lexical_state).zio).pointer;
+                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                 *fresh88 as u8 as i32
             } else {
                 luaz_fill((*lexical_state).zio)
@@ -2544,11 +2544,11 @@ pub unsafe extern "C" fn read_string(
     unsafe {
         let mut current_block: u64;
         save(lexical_state, (*lexical_state).current);
-        let fresh89 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh89 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh89 > 0 {
-            let fresh90 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh90 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh90 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2572,11 +2572,11 @@ pub unsafe extern "C" fn read_string(
                 CHARACTER_BACKSLASH => {
                     let c: i32;
                     save(lexical_state, (*lexical_state).current);
-                    let fresh91 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh91 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh91 > 0 {
-                        let fresh92 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh92 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh92 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2634,11 +2634,11 @@ pub unsafe extern "C" fn read_string(
                             (*(*lexical_state).buffer).length =
                                 ((*(*lexical_state).buffer).length as u64).wrapping_sub(1 as u64)
                                     as u64;
-                            let fresh93 = (*(*lexical_state).zio).n;
-                            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                            let fresh93 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                             (*lexical_state).current = if fresh93 > 0 {
-                                let fresh94 = (*(*lexical_state).zio).p;
-                                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                                let fresh94 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                                 *fresh94 as u8 as i32
                             } else {
                                 luaz_fill((*lexical_state).zio)
@@ -2649,13 +2649,13 @@ pub unsafe extern "C" fn read_string(
                                 {
                                     inclinenumber(lexical_state);
                                 } else {
-                                    let fresh95 = (*(*lexical_state).zio).n;
-                                    (*(*lexical_state).zio).n =
-                                        ((*(*lexical_state).zio).n).wrapping_sub(1);
+                                    let fresh95 = (*(*lexical_state).zio).length;
+                                    (*(*lexical_state).zio).length =
+                                        ((*(*lexical_state).zio).length).wrapping_sub(1);
                                     (*lexical_state).current = if fresh95 > 0 {
-                                        let fresh96 = (*(*lexical_state).zio).p;
-                                        (*(*lexical_state).zio).p =
-                                            ((*(*lexical_state).zio).p).offset(1);
+                                        let fresh96 = (*(*lexical_state).zio).pointer;
+                                        (*(*lexical_state).zio).pointer =
+                                            ((*(*lexical_state).zio).pointer).offset(1);
                                         *fresh96 as u8 as i32
                                     } else {
                                         luaz_fill((*lexical_state).zio)
@@ -2676,11 +2676,11 @@ pub unsafe extern "C" fn read_string(
                     }
                     match current_block {
                         15029063370732930705 => {
-                            let fresh97 = (*(*lexical_state).zio).n;
-                            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                            let fresh97 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                             (*lexical_state).current = if fresh97 > 0 {
-                                let fresh98 = (*(*lexical_state).zio).p;
-                                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                                let fresh98 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                                 *fresh98 as u8 as i32
                             } else {
                                 luaz_fill((*lexical_state).zio)
@@ -2695,11 +2695,11 @@ pub unsafe extern "C" fn read_string(
                 }
                 _ => {
                     save(lexical_state, (*lexical_state).current);
-                    let fresh99 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh99 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh99 > 0 {
-                        let fresh100 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh100 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh100 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2708,11 +2708,11 @@ pub unsafe extern "C" fn read_string(
             }
         }
         save(lexical_state, (*lexical_state).current);
-        let fresh101 = (*(*lexical_state).zio).n;
-        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+        let fresh101 = (*(*lexical_state).zio).length;
+        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh101 > 0 {
-            let fresh102 = (*(*lexical_state).zio).p;
-            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+            let fresh102 = (*(*lexical_state).zio).pointer;
+            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
             *fresh102 as u8 as i32
         } else {
             luaz_fill((*lexical_state).zio)
@@ -2737,22 +2737,22 @@ pub unsafe extern "C" fn llex(
                     inclinenumber(lexical_state);
                 }
                 CHARACTER_SPACE | CHARACTER_FF | CHARACTER_HT | CHARACTER_VT => {
-                    let fresh103 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh103 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh103 > 0 {
-                        let fresh104 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh104 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh104 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
                 }
                 CHARACTER_HYPHEN => {
-                    let fresh105 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh105 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh105 > 0 {
-                        let fresh106 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh106 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh106 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2760,11 +2760,11 @@ pub unsafe extern "C" fn llex(
                     if (*lexical_state).current != CHARACTER_HYPHEN as i32 {
                         return CHARACTER_HYPHEN as i32;
                     }
-                    let fresh107 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh107 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh107 > 0 {
-                        let fresh108 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh108 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh108 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2789,13 +2789,13 @@ pub unsafe extern "C" fn llex(
                                 || (*lexical_state).current == CHARACTER_CR as i32)
                                 && (*lexical_state).current != -1
                             {
-                                let fresh109 = (*(*lexical_state).zio).n;
-                                (*(*lexical_state).zio).n =
-                                    ((*(*lexical_state).zio).n).wrapping_sub(1);
+                                let fresh109 = (*(*lexical_state).zio).length;
+                                (*(*lexical_state).zio).length =
+                                    ((*(*lexical_state).zio).length).wrapping_sub(1);
                                 (*lexical_state).current = if fresh109 > 0 {
-                                    let fresh110 = (*(*lexical_state).zio).p;
-                                    (*(*lexical_state).zio).p =
-                                        ((*(*lexical_state).zio).p).offset(1);
+                                    let fresh110 = (*(*lexical_state).zio).pointer;
+                                    (*(*lexical_state).zio).pointer =
+                                        ((*(*lexical_state).zio).pointer).offset(1);
                                     *fresh110 as u8 as i32
                                 } else {
                                     luaz_fill((*lexical_state).zio)
@@ -2819,11 +2819,11 @@ pub unsafe extern "C" fn llex(
                     return CHARACTER_BRACKET_LEFT as i32;
                 }
                 CHARACTER_EQUAL => {
-                    let fresh111 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh111 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh111 > 0 {
-                        let fresh112 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh112 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh112 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2835,11 +2835,11 @@ pub unsafe extern "C" fn llex(
                     }
                 }
                 CHARACTER_ANGLE_LEFT => {
-                    let fresh113 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh113 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh113 > 0 {
-                        let fresh114 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh114 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh114 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2853,11 +2853,11 @@ pub unsafe extern "C" fn llex(
                     }
                 }
                 CHARACTER_ANGLE_RIGHT => {
-                    let fresh115 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh115 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh115 > 0 {
-                        let fresh116 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh116 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh116 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2871,11 +2871,11 @@ pub unsafe extern "C" fn llex(
                     }
                 }
                 CHARACTER_SOLIDUS => {
-                    let fresh117 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh117 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh117 > 0 {
-                        let fresh118 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh118 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh118 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2887,11 +2887,11 @@ pub unsafe extern "C" fn llex(
                     }
                 }
                 CHARACTER_TILDE => {
-                    let fresh119 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh119 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh119 > 0 {
-                        let fresh120 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh120 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh120 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2903,11 +2903,11 @@ pub unsafe extern "C" fn llex(
                     }
                 }
                 CHARACTER_COLON => {
-                    let fresh121 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh121 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh121 > 0 {
-                        let fresh122 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh122 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh122 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2924,11 +2924,11 @@ pub unsafe extern "C" fn llex(
                 }
                 CHARACTER_PERIOD => {
                     save(lexical_state, (*lexical_state).current);
-                    let fresh123 = (*(*lexical_state).zio).n;
-                    (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                    let fresh123 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                     (*lexical_state).current = if fresh123 > 0 {
-                        let fresh124 = (*(*lexical_state).zio).p;
-                        (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                        let fresh124 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                         *fresh124 as u8 as i32
                     } else {
                         luaz_fill((*lexical_state).zio)
@@ -2953,11 +2953,11 @@ pub unsafe extern "C" fn llex(
                     if is_identifier((*lexical_state).current + 1) {
                         loop {
                             save(lexical_state, (*lexical_state).current);
-                            let fresh125 = (*(*lexical_state).zio).n;
-                            (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                            let fresh125 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                             (*lexical_state).current = if fresh125 > 0 {
-                                let fresh126 = (*(*lexical_state).zio).p;
-                                (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                                let fresh126 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                                 *fresh126 as u8 as i32
                             } else {
                                 luaz_fill((*lexical_state).zio)
@@ -2980,11 +2980,11 @@ pub unsafe extern "C" fn llex(
                         }
                     } else {
                         let c: i32 = (*lexical_state).current;
-                        let fresh127 = (*(*lexical_state).zio).n;
-                        (*(*lexical_state).zio).n = ((*(*lexical_state).zio).n).wrapping_sub(1);
+                        let fresh127 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                         (*lexical_state).current = if fresh127 > 0 {
-                            let fresh128 = (*(*lexical_state).zio).p;
-                            (*(*lexical_state).zio).p = ((*(*lexical_state).zio).p).offset(1);
+                            let fresh128 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
                             *fresh128 as u8 as i32
                         } else {
                             luaz_fill((*lexical_state).zio)

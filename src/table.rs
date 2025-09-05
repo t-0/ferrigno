@@ -1255,14 +1255,14 @@ pub unsafe extern "C" fn luav_finishset(
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+                    let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                     let x_: *mut Table = h;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag(TAG_VARIANT_TABLE);
                     (*io).set_collectable();
-                    (*state).top.p = (*state).top.p.offset(1);
+                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                     luah_finishset(state, h, key, slot, value);
-                    (*state).top.p = (*state).top.p.offset(-1);
+                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
                         if (*(h as *mut Object)).get_marked() & 1 << 5 != 0

@@ -234,7 +234,7 @@ pub unsafe extern "C" fn reglevel(function_state: *mut FunctionState, mut nvar: 
             }
             let variable_description: *mut VariableDescription = getlocalvardesc(function_state, nvar);
             if (*variable_description).content.kind as i32 != 3 {
-                return (*variable_description).content.ridx as i32 + 1;
+                return (*variable_description).content.register_index as i32 + 1;
             }
         }
         return 0;
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn init_var(
         (*e).f = (*e).t;
         (*e).expression_kind = ExpressionKind::VLOCAL;
         (*e).value.variable.value_index = vidx as u16;
-        (*e).value.variable.register_index = (*getlocalvardesc(function_state, vidx)).content.ridx;
+        (*e).value.variable.register_index = (*getlocalvardesc(function_state, vidx)).content.register_index;
     }
 }
 pub unsafe extern "C" fn removevars(function_state: *mut FunctionState, tolevel: i32) {
@@ -1886,7 +1886,7 @@ pub unsafe extern "C" fn codeeq(
 }
 pub unsafe extern "C" fn luak_prefix(
     function_state: *mut FunctionState,
-    opr: OperatorUnary,
+    unary: OperatorUnary,
     e: *mut ExpressionDescription,
     line: i32,
 ) {
@@ -1902,11 +1902,11 @@ pub unsafe extern "C" fn luak_prefix(
         };
         luak_dischargevars(function_state, e);
         let current_block_3: u64;
-        match opr as u32 {
-            0 | 1 => {
+        match unary {
+            OperatorUnary::Minus | OperatorUnary::BitwiseNot => {
                 if constfolding(
                     function_state,
-                    (opr as u32).wrapping_add(12 as u32) as i32,
+                    (unary as u32).wrapping_add(12 as u32) as i32,
                     e,
                     &EF,
                 ) != 0
@@ -1916,10 +1916,10 @@ pub unsafe extern "C" fn luak_prefix(
                     current_block_3 = 4051245927518328098;
                 }
             }
-            3 => {
+            OperatorUnary::Length => {
                 current_block_3 = 4051245927518328098;
             }
-            2 => {
+            OperatorUnary::Not => {
                 codenot(function_state, e);
                 current_block_3 = 7815301370352969686;
             }
@@ -1929,7 +1929,7 @@ pub unsafe extern "C" fn luak_prefix(
         }
         match current_block_3 {
             4051245927518328098 => {
-                codeunexpval(function_state, unopr2op(opr), e, line);
+                codeunexpval(function_state, unopr2op(unary), e, line);
             }
             _ => {}
         };
@@ -1943,26 +1943,26 @@ pub unsafe extern "C" fn luak_infix(
     unsafe {
         luak_dischargevars(function_state, v);
         match op as u32 {
-            19 => {
+            OP_NEWTABLE => {
                 luak_goiftrue(function_state, v);
             }
-            20 => {
+            OP_SELF => {
                 luak_goiffalse(function_state, v);
             }
-            12 => {
+            OP_GETTABLE => {
                 luak_exp2nextreg(function_state, v);
             }
-            0 | 1 | 2 | 5 | 6 | 3 | 4 | 7 | 8 | 9 | 10 | 11 => {
+            OP_MOVE | OP_LOADI | OP_LOADF | OP_LOADFALSE | OP_LFALSESKIP | OP_LOADK | OP_LOADKX | OP_LOADTRUE | OP_LOADNIL | OP_GETUPVAL | OP_SETUPVAL | OP_GETTABUP => {
                 if !tonumeral(v, std::ptr::null_mut()) {
                     luak_exp2anyreg(function_state, v);
                 }
             }
-            13 | 16 => {
+            OP_GETI | OP_SETTABLE => {
                 if !tonumeral(v, std::ptr::null_mut()) {
                     exp2rk(function_state, v);
                 }
             }
-            14 | 15 | 17 | 18 => {
+            OP_GETFIELD | OP_SETTABUP | OP_SETI | OP_SETFIELD => {
                 let mut dummy: i32 = 0;
                 let mut dummy2: bool = false;
                 if is_sc_number(v, &mut dummy, &mut dummy2) == 0 {
@@ -2011,40 +2011,40 @@ pub unsafe extern "C" fn luak_posfix(
         }
         let current_block_30: u64;
         match opr as u32 {
-            19 => {
+            OP_NEWTABLE => {
                 luak_concat(function_state, &mut (*e2).f, (*e1).f);
                 *e1 = *e2;
                 current_block_30 = 8180496224585318153;
             }
-            20 => {
+            OPR_OR => {
                 luak_concat(function_state, &mut (*e2).t, (*e1).t);
                 *e1 = *e2;
                 current_block_30 = 8180496224585318153;
             }
-            12 => {
+            OPR_CONCAT => {
                 luak_exp2nextreg(function_state, e2);
                 codeconcat(function_state, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            0 | 2 => {
+            OPR_ADD | OPR_MUL => {
                 codecommutative(function_state, opr, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            1 => {
+            OPR_SUB => {
                 if finishbinexpneg(function_state, e1, e2, OP_ADDI, line, TM_SUB) != 0 {
                     current_block_30 = 8180496224585318153;
                 } else {
                     current_block_30 = 12599329904712511516;
                 }
             }
-            5 | 6 | 3 | 4 => {
+            OPR_POW | OPR_MOD | OPR_DIV | OPR_IDIV => {
                 current_block_30 = 12599329904712511516;
             }
-            7 | 8 | 9 => {
+            OPR_BAND | OPR_BOR | OPR_BXOR => {
                 codebitwise(function_state, opr, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            10 => {
+            OPR_SHL => {
                 if is_sc_int(e1) {
                     swapexps(e1, e2);
                     codebini(function_state, OP_SHLI, e1, e2, 1, line, TM_SHL);
@@ -2053,7 +2053,7 @@ pub unsafe extern "C" fn luak_posfix(
                 }
                 current_block_30 = 8180496224585318153;
             }
-            11 => {
+            OPR_SHR => {
                 if is_sc_int(e2) {
                     codebini(function_state, OP_SHRI, e1, e2, 0, line, TM_SHR);
                 } else {
@@ -2061,18 +2061,18 @@ pub unsafe extern "C" fn luak_posfix(
                 }
                 current_block_30 = 8180496224585318153;
             }
-            13 | 16 => {
+            OPR_EQ | OPR_NE => {
                 codeeq(function_state, opr, e1, e2);
                 current_block_30 = 8180496224585318153;
             }
-            17 | 18 => {
+            OPR_GE | OPR_GT => {
                 swapexps(e1, e2);
                 opr = (opr as u32)
                     .wrapping_sub(OPR_GT as u32)
                     .wrapping_add(OPR_LT as u32) as u32;
                 current_block_30 = 1118134448028020070;
             }
-            14 | 15 => {
+            OPR_LE | OPR_LT => {
                 current_block_30 = 1118134448028020070;
             }
             _ => {

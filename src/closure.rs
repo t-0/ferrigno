@@ -60,18 +60,18 @@ impl TObject for Closure {
 pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
-            (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-            (*state).top.p = (*state).top.p.offset(1);
+            (*(*state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         } else {
             let p: *const Prototype = (*closure).payload.l_prototype;
             let mut currentline: i32 = (*p).line_defined;
             let table: *mut Table = luah_new(state);
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut Table = table;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);
             (*io).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             if !((*p).line_info).is_null() {
                 let mut v: TValue = TValue {
                     value: Value {

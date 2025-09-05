@@ -89,12 +89,12 @@ impl User {
     ) -> *mut libc::c_void {
         unsafe {
             let u: *mut User = User::luas_newudata(state, size, nuvalue);
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut User = u;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag(TAG_VARIANT_USER);
             (*io).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }

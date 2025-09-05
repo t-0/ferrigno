@@ -111,33 +111,33 @@ impl State {
                 }
                 _ => {
                     let io1: *mut TValue = &mut (*old_top).tvalue;
-                    let io2: *const TValue = &mut (*(self.top.p).offset(-(1i32 as isize))).tvalue;
+                    let io2: *const TValue = &mut (*(self.top.stkidrel_pointer).offset(-(1i32 as isize))).tvalue;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
                 }
             }
-            self.top.p = old_top.offset(1);
+            self.top.stkidrel_pointer = old_top.offset(1);
         }
     }
     pub unsafe extern "C" fn correct_stack(&mut self) {
         unsafe {
-            (*self).top.p =
-                ((*self).stack.p as *mut i8).offset((*self).top.offset as isize) as StackValuePointer;
-            (*self).tbc_list.p =
-                ((*self).stack.p as *mut i8).offset((*self).tbc_list.offset as isize) as StackValuePointer;
+            (*self).top.stkidrel_pointer =
+                ((*self).stack.stkidrel_pointer as *mut i8).offset((*self).top.stkidrel_offset as isize) as StackValuePointer;
+            (*self).tbc_list.stkidrel_pointer =
+                ((*self).stack.stkidrel_pointer as *mut i8).offset((*self).tbc_list.stkidrel_offset as isize) as StackValuePointer;
             let mut up: *mut UpValue = (*self).open_upvalue;
             while !up.is_null() {
-                (*up).v.p = &mut (*(((*self).stack.p as *mut i8).offset((*up).v.offset as isize)
+                (*up).v.p = &mut (*(((*self).stack.stkidrel_pointer as *mut i8).offset((*up).v.offset as isize)
                     as StackValuePointer))
                     .tvalue;
                 up = (*up).u.open.next;
             }
             let mut call_info: *mut CallInfo = (*self).call_info;
             while !call_info.is_null() {
-                (*call_info).top.p =
-                    ((*self).stack.p as *mut i8).offset((*call_info).top.offset as isize) as StackValuePointer;
-                (*call_info).function.p = ((*self).stack.p as *mut i8)
-                    .offset((*call_info).function.offset as isize)
+                (*call_info).top.stkidrel_pointer =
+                    ((*self).stack.stkidrel_pointer as *mut i8).offset((*call_info).top.stkidrel_offset as isize) as StackValuePointer;
+                (*call_info).function.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
+                    .offset((*call_info).function.stkidrel_offset as isize)
                     as StackValuePointer;
                 if (*call_info).call_status as i32 & (1i32) << 1i32 == 0 {
                     ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1i32);
@@ -152,41 +152,41 @@ impl State {
     pub unsafe extern "C" fn push_boolean(&mut self, x: bool) {
         unsafe {
             if x {
-                (*self.top.p).tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+                (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
             } else {
-                (*self.top.p).tvalue.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+                (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
             }
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe extern "C" fn push_integer(&mut self, x: i64) {
         unsafe {
-            let t_value: *mut TValue = &mut (*self.top.p).tvalue;
+            let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*t_value).value.integer = x;
             (*t_value).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
-            (*self.top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-            self.top.p = self.top.p.offset(1);
+            (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe extern "C" fn push_number(&mut self, x: f64) {
         unsafe {
-            let t_value: *mut TValue = &mut (*self.top.p).tvalue;
+            let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*t_value).value.number = x;
             (*t_value).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe extern "C" fn get_top(&mut self) -> i32 {
         unsafe {
             return self
                 .top
-                .p
-                .offset_from(((*self.call_info).function.p).offset(1 as isize))
+                .stkidrel_pointer
+                .offset_from(((*self.call_info).function.stkidrel_pointer).offset(1 as isize))
                 as i32;
         }
     }
@@ -254,32 +254,32 @@ impl State {
     }
     pub unsafe extern "C" fn push_state(&mut self) -> bool {
         unsafe {
-            let io: *mut TValue = &mut (*self.top.p).tvalue;
+            let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(self as *mut State as *mut Object));
             (*io).set_tag(TAG_VARIANT_STATE);
             (*io).set_collectable();
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             return (*self.global).main_state == self;
         }
     }
     pub unsafe extern "C" fn relstack(& mut self) {
         unsafe {
-            self.top.offset =
-                (self.top.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
-            self.tbc_list.offset =
-                (self.tbc_list.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+            self.top.stkidrel_offset =
+                (self.top.stkidrel_pointer as *mut i8).offset_from(self.stack.stkidrel_pointer as *mut i8) as i64;
+            self.tbc_list.stkidrel_offset =
+                (self.tbc_list.stkidrel_pointer as *mut i8).offset_from(self.stack.stkidrel_pointer as *mut i8) as i64;
             let mut up: *mut UpValue = self.open_upvalue;
             while !up.is_null() {
                 (*up).v.offset =
-                    ((*up).v.p as StackValuePointer as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
+                    ((*up).v.p as StackValuePointer as *mut i8).offset_from(self.stack.stkidrel_pointer as *mut i8) as i64;
                 up = (*up).u.open.next;
             }
             let mut call_info: *mut CallInfo = self.call_info;
             while !call_info.is_null() {
-                (*call_info).top.offset =
-                    ((*call_info).top.p as *mut i8).offset_from(self.stack.p as *mut i8) as i64;
-                (*call_info).function.offset = ((*call_info).function.p as *mut i8)
-                    .offset_from(self.stack.p as *mut i8)
+                (*call_info).top.stkidrel_offset =
+                    ((*call_info).top.stkidrel_pointer as *mut i8).offset_from(self.stack.stkidrel_pointer as *mut i8) as i64;
+                (*call_info).function.stkidrel_offset = ((*call_info).function.stkidrel_pointer as *mut i8)
+                    .offset_from(self.stack.stkidrel_pointer as *mut i8)
                     as i64;
                 call_info = (*call_info).previous;
             }
@@ -294,11 +294,11 @@ impl State {
                     .wrapping_div(::core::mem::size_of::<i8>() as u64)
                     .wrapping_sub(1 as u64),
             );
-            let io: *mut TValue = &mut (*self.top.p).tvalue;
+            let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(message as *mut Object));
             (*io).set_tag((*message).get_tag());
             (*io).set_collectable();
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             luad_throw(self, 5);
         }
     }
@@ -327,15 +327,15 @@ impl State {
     }
     pub unsafe extern "C" fn stackinuse(& mut self) -> i32 {
         unsafe {
-            let mut lim: StackValuePointer = self.top.p;
+            let mut lim: StackValuePointer = self.top.stkidrel_pointer;
             let mut call_info: *mut CallInfo = self.call_info;
             while !call_info.is_null() {
-                if lim < (*call_info).top.p {
-                    lim = (*call_info).top.p;
+                if lim < (*call_info).top.stkidrel_pointer {
+                    lim = (*call_info).top.stkidrel_pointer;
                 }
                 call_info = (*call_info).previous;
             }
-            let mut res: i32 = lim.offset_from(self.stack.p) as i32 + 1;
+            let mut res: i32 = lim.offset_from(self.stack.stkidrel_pointer) as i32 + 1;
             if res < 20 as i32 {
                 res = 20 as i32;
             }
@@ -351,7 +351,7 @@ impl State {
                 inuse * 3
             };
             if inuse <= 1000000
-                && (self.stack_last.p).offset_from(self.stack.p) as i32 > max
+                && (self.stack_last.stkidrel_pointer).offset_from(self.stack.stkidrel_pointer) as i32 > max
             {
                 let new_size: i32 = if inuse > 1000000 / 2 {
                     1000000
@@ -365,25 +365,25 @@ impl State {
     }
     pub unsafe extern "C" fn luad_inctop(& mut self) {
         unsafe {
-            if (((self.stack_last.p).offset_from(self.top.p) as i64 <= 1) as i32 != 0) as i32
+            if (((self.stack_last.stkidrel_pointer).offset_from(self.top.stkidrel_pointer) as i64 <= 1) as i32 != 0) as i32
                 as i64
                 != 0
             {
                 luad_growstack(self, 1, true);
             }
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe extern "C" fn lua_createtable(& mut self) {
         unsafe {
             let table: *mut Table;
             table = luah_new(self);
-            let io: *mut TValue = &mut (*self.top.p).tvalue;
+            let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             let x_: *mut Table = table;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);
             (*io).set_collectable();
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             if (*self.global).gc_debt > 0 {
                 luac_step(self);
             }
@@ -407,11 +407,11 @@ impl State {
             if metatable.is_null() {
                 false
             } else {
-                let io: *mut TValue = &mut (*self.top.p).tvalue;
+                let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
                 (*io).value.object = &mut (*(metatable as *mut Object));
                 (*io).set_tag(TAG_VARIANT_TABLE);
                 (*io).set_collectable();
-                self.top.p = self.top.p.offset(1);
+                self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
                 true
             }
         }
@@ -421,18 +421,18 @@ impl State {
             let t: i32;
             let o: *mut TValue = self.index2value(index);
             if n <= 0 || n > (*((*o).value.object as *mut User)).nuvalue as i32 {
-                (*self.top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 t = -1;
             } else {
-                let io1: *mut TValue = &mut (*self.top.p).tvalue;
+                let io1: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
                 let io2: *const TValue = &mut (*((*((*o).value.object as *mut User)).uv)
                     .as_mut_ptr()
                     .offset((n - 1) as isize));
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                t = (get_tag_type((*self.top.p).tvalue.get_tag())) as i32;
+                t = (get_tag_type((*self.top.stkidrel_pointer).tvalue.get_tag())) as i32;
             }
-            self.top.p = self.top.p.offset(1);
+            self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             return t;
         }
     }
@@ -440,19 +440,19 @@ impl State {
         unsafe {
             let call_info: *mut CallInfo = self.call_info;
             if index > 0 {
-                let o: StackValuePointer = ((*call_info).function.p).offset(index as isize);
-                if o >= self.top.p {
+                let o: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(index as isize);
+                if o >= self.top.stkidrel_pointer {
                     return &mut (*self.global).nil_value;
                 } else {
                     return &mut (*o).tvalue;
                 }
             } else if !(index <= -(1000000 as i32) - 1000 as i32) {
-                return &mut (*self.top.p.offset(index as isize)).tvalue;
+                return &mut (*self.top.stkidrel_pointer.offset(index as isize)).tvalue;
             } else if index == -(1000000 as i32) - 1000 as i32 {
                 return &mut (*self.global).l_registry;
             } else {
                 index = -(1000000 as i32) - 1000 as i32 - index;
-                let value = (*(*call_info).function.p).tvalue;
+                let value = (*(*call_info).function.stkidrel_pointer).tvalue;
                 if value.is_collectable() && value.get_tag_variant() == TAG_VARIANT_CLOSURE_C {
                     let function: *mut Closure = &mut (*(value.value.object as *mut Closure));
                     return if index <= (*function).count_upvalues as i32 {
@@ -509,10 +509,10 @@ pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> !
             error_code = luae_resetthread(state, error_code);
             (*state).status = error_code as u8;
             if !((*(*g).main_state).long_jump).is_null() {
-                let fresh0 = (*(*g).main_state).top.p;
-                (*(*g).main_state).top.p = ((*(*g).main_state).top.p).offset(1);
+                let fresh0 = (*(*g).main_state).top.stkidrel_pointer;
+                (*(*g).main_state).top.stkidrel_pointer = ((*(*g).main_state).top.stkidrel_pointer).offset(1);
                 let io1: *mut TValue = &mut (*fresh0).tvalue;
-                let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+                let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
                 luad_throw((*g).main_state, error_code);
@@ -552,13 +552,13 @@ pub unsafe extern "C" fn luad_reallocstack(
     should_raise_error: bool,
 ) -> i32 {
     unsafe {
-        let old_size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i32;
+        let old_size: i32 = ((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32;
         let oldgcstop: i32 = (*(*state).global).gcstopem as i32;
         (*state).relstack();
         (*(*state).global).gcstopem = 1;
         let newstack: StackValuePointer = luam_realloc_(
             state,
-            (*state).stack.p as *mut libc::c_void,
+            (*state).stack.stkidrel_pointer as *mut libc::c_void,
             ((old_size + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
             ((new_size + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
         ) as *mut StackValue;
@@ -571,9 +571,9 @@ pub unsafe extern "C" fn luad_reallocstack(
                 return 0;
             }
         }
-        (*state).stack.p = newstack;
+        (*state).stack.stkidrel_pointer = newstack;
         (*state).correct_stack();
-        (*state).stack_last.p = ((*state).stack.p).offset(new_size as isize);
+        (*state).stack_last.stkidrel_pointer = ((*state).stack.stkidrel_pointer).offset(new_size as isize);
         for i in (old_size + 5)..(new_size + 5) {
             (*newstack.offset(i as isize))
                 .tvalue
@@ -588,7 +588,7 @@ pub unsafe extern "C" fn luad_growstack(
     should_raise_error: bool,
 ) -> i32 {
     unsafe {
-        let size: i32 = ((*state).stack_last.p).offset_from((*state).stack.p) as i32;
+        let size: i32 = ((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32;
         if size > 1000000 {
             if should_raise_error {
                 (*state).luad_errerr();
@@ -596,7 +596,7 @@ pub unsafe extern "C" fn luad_growstack(
             return 0;
         } else if n < 1000000 {
             let mut new_size: i32 = 2 * size;
-            let needed: i32 = ((*state).top.p).offset_from((*state).stack.p) as i32 + n;
+            let needed: i32 = ((*state).top.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32 + n;
             if new_size > 1000000 {
                 new_size = 1000000;
             }
@@ -627,9 +627,9 @@ pub unsafe extern "C" fn luad_hook(
             let mut mask: i32 = 1 << 3;
             let call_info: *mut CallInfo = (*state).call_info;
             let top: i64 =
-                ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                ((*state).top.stkidrel_pointer as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
             let ci_top: i64 =
-                ((*call_info).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                ((*call_info).top.stkidrel_pointer as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
             let mut ar: DebugInfo = DebugInfo {
                 event: 0,
                 name: std::ptr::null(),
@@ -657,19 +657,19 @@ pub unsafe extern "C" fn luad_hook(
                 (*call_info).u2.transferinfo.ftransfer = ftransfer as u16;
                 (*call_info).u2.transferinfo.ntransfer = ntransfer as u16;
             }
-            if (*call_info).call_status as i32 & 1 << 1 == 0 && (*state).top.p < (*call_info).top.p
+            if (*call_info).call_status as i32 & 1 << 1 == 0 && (*state).top.stkidrel_pointer < (*call_info).top.stkidrel_pointer
             {
-                (*state).top.p = (*call_info).top.p;
+                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
             }
-            if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 20 as i64)
+            if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= 20 as i64)
                 as i32
                 != 0) as i64
                 != 0
             {
                 luad_growstack(state, 20 as i32, true);
             }
-            if (*call_info).top.p < (*state).top.p.offset(20 as isize) {
-                (*call_info).top.p = (*state).top.p.offset(20 as isize);
+            if (*call_info).top.stkidrel_pointer < (*state).top.stkidrel_pointer.offset(20 as isize) {
+                (*call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(20 as isize);
             }
             (*state).allow_hook = 0;
             (*call_info).call_status = ((*call_info).call_status as i32 | mask) as u16;
@@ -677,8 +677,8 @@ pub unsafe extern "C" fn luad_hook(
                 state, &mut ar,
             );
             (*state).allow_hook = 1;
-            (*call_info).top.p = ((*state).stack.p as *mut i8).offset(ci_top as isize) as StackValuePointer;
-            (*state).top.p = ((*state).stack.p as *mut i8).offset(top as isize) as StackValuePointer;
+            (*call_info).top.stkidrel_pointer = ((*state).stack.stkidrel_pointer as *mut i8).offset(ci_top as isize) as StackValuePointer;
+            (*state).top.stkidrel_pointer = ((*state).stack.stkidrel_pointer as *mut i8).offset(top as isize) as StackValuePointer;
             (*call_info).call_status = ((*call_info).call_status as i32 & !mask) as u16;
         }
     }
@@ -692,7 +692,7 @@ pub unsafe extern "C" fn luad_hookcall(state: *mut State, call_info: *mut CallIn
             } else {
                 0
             };
-            let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object
+            let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object
                 as *mut Closure)).payload.l_prototype;
             (*call_info).u.l.saved_program_counter =
                 ((*call_info).u.l.saved_program_counter).offset(1);
@@ -707,25 +707,25 @@ pub unsafe extern "C" fn luad_hookcall(state: *mut State, call_info: *mut CallIn
 pub unsafe extern "C" fn rethook(state: *mut State, mut call_info: *mut CallInfo, nres: i32) {
     unsafe {
         if (*state).hook_mask & 1 << 1 != 0 {
-            let firstres: StackValuePointer = (*state).top.p.offset(-(nres as isize));
+            let firstres: StackValuePointer = (*state).top.stkidrel_pointer.offset(-(nres as isize));
             let mut delta: i32 = 0;
             if (*call_info).call_status as i32 & 1 << 1 == 0 {
-                let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object
+                let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object
                     as *mut Closure)).payload.l_prototype;
                 if (*p).is_variable_arguments {
                     delta =
                         (*call_info).u.l.count_extra_arguments + (*p).count_parameters as i32 + 1;
                 }
             }
-            (*call_info).function.p = ((*call_info).function.p).offset(delta as isize);
-            let ftransfer: i32 = firstres.offset_from((*call_info).function.p) as i32;
+            (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset(delta as isize);
+            let ftransfer: i32 = firstres.offset_from((*call_info).function.stkidrel_pointer) as i32;
             luad_hook(state, 1, -1, ftransfer, nres);
-            (*call_info).function.p = ((*call_info).function.p).offset(-(delta as isize));
+            (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset(-(delta as isize));
         }
         call_info = (*call_info).previous;
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             (*state).old_program_counter = ((*call_info).u.l.saved_program_counter).offset_from(
-                (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
+                (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
                     .code,
             ) as i32
@@ -736,22 +736,22 @@ pub unsafe extern "C" fn rethook(state: *mut State, mut call_info: *mut CallInfo
 pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StackValuePointer) -> StackValuePointer {
     unsafe {
         let mut p: StackValuePointer;
-        if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 1) as i32 != 0) as i32
+        if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= 1) as i32 != 0) as i32
             as i64
             != 0
         {
-            let t__: i64 = (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+            let t__: i64 = (function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
             luad_growstack(state, 1, true);
-            function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+            function = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
         }
         let tm: *const TValue = luat_gettmbyobj(state, &mut (*function).tvalue, TM_CALL);
         if (*tm).get_tag_type() == TAG_TYPE_NIL {
             luag_callerror(state, &mut (*function).tvalue);
         }
-        p = (*state).top.p;
+        p = (*state).top.stkidrel_pointer;
         while p > function {
             let io1: *mut TValue = &mut (*p).tvalue;
             let io2: *const TValue = &mut (*p.offset(-(1 as isize))).tvalue;
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn tryfunctm(state: *mut State, mut function: StackValuePo
             (*io1).set_tag((*io2).get_tag());
             p = p.offset(-1);
         }
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         let io1_0: *mut TValue = &mut (*function).tvalue;
         let io2_0: *const TValue = tm;
         (*io1_0).value = (*io2_0).value;
@@ -777,7 +777,7 @@ pub unsafe extern "C" fn moveresults(
         let firstresult: StackValuePointer;
         match wanted {
             0 => {
-                (*state).top.p = res;
+                (*state).top.stkidrel_pointer = res;
                 return;
             }
             1 => {
@@ -785,11 +785,11 @@ pub unsafe extern "C" fn moveresults(
                     (*res).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 } else {
                     let io1: *mut TValue = &mut (*res).tvalue;
-                    let io2: *const TValue = &mut (*(*state).top.p.offset(-(nres as isize))).tvalue;
+                    let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(nres as isize))).tvalue;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
                 }
-                (*state).top.p = res.offset(1 as isize);
+                (*state).top.stkidrel_pointer = res.offset(1 as isize);
                 return;
             }
             -1 => {
@@ -805,9 +805,9 @@ pub unsafe extern "C" fn moveresults(
                         ((*(*state).call_info).call_status as i32 & !(1 << 9 as i32)) as u16;
                     if (*state).hook_mask != 0 {
                         let savedres: i64 =
-                            (res as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                            (res as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
                         rethook(state, (*state).call_info, nres);
-                        res = ((*state).stack.p as *mut i8).offset(savedres as isize) as StackValuePointer;
+                        res = ((*state).stack.stkidrel_pointer as *mut i8).offset(savedres as isize) as StackValuePointer;
                     }
                     wanted = -wanted - 3;
                     if wanted == -1 {
@@ -816,7 +816,7 @@ pub unsafe extern "C" fn moveresults(
                 }
             }
         }
-        firstresult = (*state).top.p.offset(-(nres as isize));
+        firstresult = (*state).top.stkidrel_pointer.offset(-(nres as isize));
         if nres > wanted {
             nres = wanted;
         }
@@ -829,7 +829,7 @@ pub unsafe extern "C" fn moveresults(
         for i in nres..wanted {
             (*res.offset(i as isize)).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
         }
-        (*state).top.p = res.offset(wanted as isize);
+        (*state).top.stkidrel_pointer = res.offset(wanted as isize);
     }
 }
 pub unsafe extern "C" fn luad_poscall(state: *mut State, call_info: *mut CallInfo, nres: i32) {
@@ -838,7 +838,7 @@ pub unsafe extern "C" fn luad_poscall(state: *mut State, call_info: *mut CallInf
         if (((*state).hook_mask != 0 && !(wanted < -1)) as i32 != 0) as i64 != 0 {
             rethook(state, call_info, nres);
         }
-        moveresults(state, (*call_info).function.p, nres, wanted);
+        moveresults(state, (*call_info).function.stkidrel_pointer, nres, wanted);
         (*state).call_info = (*call_info).previous;
     }
 }
@@ -856,10 +856,10 @@ pub unsafe extern "C" fn prepcallinfo(
             luae_extendci(state)
         };
         let call_info: *mut CallInfo = (*state).call_info;
-        (*call_info).function.p = function;
+        (*call_info).function.stkidrel_pointer = function;
         (*call_info).count_results = nret;
         (*call_info).call_status = mask as u16;
-        (*call_info).top.p = top;
+        (*call_info).top.stkidrel_pointer = top;
         return call_info;
     }
 }
@@ -870,27 +870,27 @@ pub unsafe extern "C" fn precallc(
     cfunction: CFunction,
 ) -> i32 {
     unsafe {
-        if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 20 as i64) as i32
+        if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= 20 as i64) as i32
             != 0) as i64
             != 0
         {
-            let t__: i64 = (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+            let t__: i64 = (function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
             luad_growstack(state, 20 as i32, true);
-            function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+            function = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
         }
         let call_info = prepcallinfo(
             state,
             function,
             count_results,
             1 << 1,
-            (*state).top.p.offset(20 as isize),
+            (*state).top.stkidrel_pointer.offset(20 as isize),
         );
         (*state).call_info = call_info;
         if ((*state).hook_mask & 1 << 0 != 0) as i64 != 0 {
-            let narg: i32 = ((*state).top.p).offset_from(function) as i32 - 1;
+            let narg: i32 = ((*state).top.stkidrel_pointer).offset_from(function) as i32 - 1;
             luad_hook(state, 0, -1, 1, narg);
         }
         let n: i32 = (Some(cfunction.expect("non-null function pointer")))
@@ -925,38 +925,38 @@ pub unsafe extern "C" fn luad_pretailcall(
                         (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
                     let fsize: i32 = (*p).maximum_stack_size as i32;
                     let nfixparams: i32 = (*p).count_parameters as i32;
-                    if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
+                    if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64
                         <= (fsize - delta) as i64) as i32
                         != 0) as i64
                         != 0
                     {
                         let t__: i64 =
-                            (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                            (function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
                         if (*(*state).global).gc_debt > 0 {
                             luac_step(state);
                         }
                         luad_growstack(state, fsize - delta, true);
-                        function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+                        function = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
                     }
-                    (*call_info).function.p = ((*call_info).function.p).offset(-(delta as isize));
+                    (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset(-(delta as isize));
                     for i in 0..narg1   {
                         let io1: *mut TValue =
-                            &mut (*((*call_info).function.p).offset(i as isize)).tvalue;
+                            &mut (*((*call_info).function.stkidrel_pointer).offset(i as isize)).tvalue;
                         let io2: *const TValue = &mut (*function.offset(i as isize)).tvalue;
                         (*io1).value = (*io2).value;
                         (*io1).set_tag((*io2).get_tag());
                     }
-                    function = (*call_info).function.p;
+                    function = (*call_info).function.stkidrel_pointer;
                     while narg1 <= nfixparams {
                         (*function.offset(narg1 as isize))
                             .tvalue
                             .set_tag(TAG_VARIANT_NIL_NIL);
                         narg1 += 1;
                     }
-                    (*call_info).top.p = function.offset(1 as isize).offset(fsize as isize);
+                    (*call_info).top.stkidrel_pointer = function.offset(1 as isize).offset(fsize as isize);
                     (*call_info).u.l.saved_program_counter = (*p).code;
                     (*call_info).call_status = ((*call_info).call_status as i32 | 1 << 5) as u16;
-                    (*state).top.p = function.offset(narg1 as isize);
+                    (*state).top.stkidrel_pointer = function.offset(narg1 as isize);
                     return -1;
                 }
                 _ => {
@@ -992,21 +992,21 @@ pub unsafe extern "C" fn luad_precall(
                     let call_info;
                     let p: *mut Prototype =
                         (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
-                    let mut narg: i32 = ((*state).top.p).offset_from(function) as i32 - 1;
+                    let mut narg: i32 = ((*state).top.stkidrel_pointer).offset_from(function) as i32 - 1;
                     let nfixparams: i32 = (*p).count_parameters as i32;
                     let fsize: i32 = (*p).maximum_stack_size as i32;
-                    if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= fsize as i64)
+                    if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= fsize as i64)
                         as i32
                         != 0) as i64
                         != 0
                     {
                         let t__: i64 =
-                            (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                            (function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
                         if (*(*state).global).gc_debt > 0 {
                             luac_step(state);
                         }
                         luad_growstack(state, fsize, true);
-                        function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+                        function = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
                     }
                     call_info = prepcallinfo(
                         state,
@@ -1018,8 +1018,8 @@ pub unsafe extern "C" fn luad_precall(
                     (*state).call_info = call_info;
                     (*call_info).u.l.saved_program_counter = (*p).code;
                     while narg < nfixparams {
-                        let fresh1 = (*state).top.p;
-                        (*state).top.p = (*state).top.p.offset(1);
+                        let fresh1 = (*state).top.stkidrel_pointer;
+                        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                         (*fresh1).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                         narg += 1;
                     }
@@ -1045,14 +1045,14 @@ pub unsafe extern "C" fn ccall(
             as i64
             != 0
         {
-            if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= 0) as i32 != 0)
+            if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= 0) as i32 != 0)
                 as i64
                 != 0
             {
                 let t__: i64 =
-                    (function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                    (function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
                 luad_growstack(state, 0, true);
-                function = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+                function = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
             }
             (*state).luae_checkcstack();
         }
@@ -1076,7 +1076,7 @@ pub unsafe extern "C" fn finishpcallk(state: *mut State, call_info: *mut CallInf
             status = 1;
         } else {
             let mut function: StackValuePointer =
-                ((*state).stack.p as *mut i8).offset((*call_info).u2.funcidx as isize) as StackValuePointer;
+                ((*state).stack.stkidrel_pointer as *mut i8).offset((*call_info).u2.funcidx as isize) as StackValuePointer;
             (*state).allow_hook = ((*call_info).call_status as i32 & 1 << 0) as u8;
             function = luaf_close(state, function, status, 1);
             (*state).set_error_object(status, function);
@@ -1099,8 +1099,8 @@ pub unsafe extern "C" fn finishccall(state: *mut State, call_info: *mut CallInfo
             if (*call_info).call_status as i32 & 1 << 4 != 0 {
                 status = finishpcallk(state, call_info);
             }
-            if -1 <= -1 && (*(*state).call_info).top.p < (*state).top.p {
-                (*(*state).call_info).top.p = (*state).top.p;
+            if -1 <= -1 && (*(*state).call_info).top.stkidrel_pointer < (*state).top.stkidrel_pointer {
+                (*(*state).call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer;
             }
             n = (Some(((*call_info).u.c.context_function).expect("non-null function pointer")))
                 .expect("non-null function pointer")(
@@ -1129,20 +1129,20 @@ pub unsafe extern "C" fn unroll(state: *mut State, mut _ud: *mut libc::c_void) {
 }
 pub unsafe extern "C" fn resume_error(state: *mut State, message: *const i8, narg: i32) -> i32 {
     unsafe {
-        (*state).top.p = (*state).top.p.offset(-(narg as isize));
-        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-(narg as isize));
+        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let x_: *mut TString = luas_new(state, message);
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag((*x_).get_tag());
         (*io).set_collectable();
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         return 2;
     }
 }
 pub unsafe extern "C" fn resume(state: *mut State, arbitrary_data: *mut libc::c_void) {
     unsafe {
         let mut n: i32 = *(arbitrary_data as *mut i32);
-        let first_argument: StackValuePointer = (*state).top.p.offset(-(n as isize));
+        let first_argument: StackValuePointer = (*state).top.stkidrel_pointer.offset(-(n as isize));
         let call_info: *mut CallInfo = (*state).call_info;
         if (*state).status as i32 == 0 {
             ccall(state, first_argument.offset(-(1 as isize)), -1, 0);
@@ -1152,7 +1152,7 @@ pub unsafe extern "C" fn resume(state: *mut State, arbitrary_data: *mut libc::c_
                 (*call_info).u.l.saved_program_counter =
                     ((*call_info).u.l.saved_program_counter).offset(-1);
                 (*call_info).u.l.saved_program_counter;
-                (*state).top.p = first_argument;
+                (*state).top.stkidrel_pointer = first_argument;
                 luav_execute(state, call_info);
             } else {
                 if ((*call_info).u.c.context_function).is_some() {
@@ -1201,8 +1201,8 @@ pub unsafe extern "C" fn lua_resume(
                     b"cannot resume non-suspended coroutine\0" as *const u8 as *const i8,
                     nargs,
                 );
-            } else if ((*state).top.p)
-                .offset_from(((*(*state).call_info).function.p).offset(1 as isize))
+            } else if ((*state).top.stkidrel_pointer)
+                .offset_from(((*(*state).call_info).function.stkidrel_pointer).offset(1 as isize))
                 as i64
                 == nargs as i64
             {
@@ -1241,13 +1241,13 @@ pub unsafe extern "C" fn lua_resume(
         status = precover(state, status);
         if !((!(status > 1) as i32 != 0) as i64 != 0) {
             (*state).status = status as u8;
-            (*state).set_error_object(status, (*state).top.p);
-            (*(*state).call_info).top.p = (*state).top.p;
+            (*state).set_error_object(status, (*state).top.stkidrel_pointer);
+            (*(*state).call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer;
         }
         *count_results = if status == 1 {
             (*(*state).call_info).u2.nyield
         } else {
-            ((*state).top.p).offset_from(((*(*state).call_info).function.p).offset(1 as isize))
+            ((*state).top.stkidrel_pointer).offset_from(((*(*state).call_info).function.stkidrel_pointer).offset(1 as isize))
                 as i32
         };
         return status;
@@ -1304,7 +1304,7 @@ pub unsafe extern "C" fn luad_closeprotected(
         let old_allowhooks: u8 = (*state).allow_hook;
         loop {
             let mut closep = CloseP::new();
-            closep.level = ((*state).stack.p as *mut i8).offset(level as isize) as StackValuePointer;
+            closep.level = ((*state).stack.stkidrel_pointer as *mut i8).offset(level as isize) as StackValuePointer;
             closep.status = status;
             status = luad_rawrunprotected(
                 state,
@@ -1340,7 +1340,7 @@ pub unsafe extern "C" fn luad_pcall(
             status = luad_closeprotected(state, old_top, status);
             (*state).set_error_object(
                 status,
-                ((*state).stack.p as *mut i8).offset(old_top as isize) as StackValuePointer,
+                ((*state).stack.stkidrel_pointer as *mut i8).offset(old_top as isize) as StackValuePointer,
             );
             (*state).luad_shrinkstack();
         }
@@ -1365,11 +1365,11 @@ pub unsafe extern "C" fn f_parser(state: *mut State, arbitrary_data: *mut libc::
     unsafe {
         let cl: *mut Closure;
         let p: *mut SParser = arbitrary_data as *mut SParser;
-        let fresh2 = (*(*p).zio).n;
-        (*(*p).zio).n = ((*(*p).zio).n).wrapping_sub(1);
+        let fresh2 = (*(*p).zio).length;
+        (*(*p).zio).length = ((*(*p).zio).length).wrapping_sub(1);
         let c: i32 = if fresh2 > 0 {
-            let fresh3 = (*(*p).zio).p;
-            (*(*p).zio).p = ((*(*p).zio).p).offset(1);
+            let fresh3 = (*(*p).zio).pointer;
+            (*(*p).zio).pointer = ((*(*p).zio).pointer).offset(1);
             *fresh3 as u8 as i32
         } else {
             luaz_fill((*p).zio)
@@ -1438,7 +1438,7 @@ pub unsafe extern "C" fn luad_protectedparser(
             state,
             Some(f_parser as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
             &mut p as *mut SParser as *mut libc::c_void,
-            ((*state).top.p as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
+            ((*state).top.stkidrel_pointer as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64,
             (*state).error_function,
         );
         p.buffer.pointer = luam_saferealloc_(
@@ -1472,10 +1472,10 @@ pub unsafe extern "C" fn index2stack(state: *mut State, index: i32) -> StackValu
     unsafe {
         let call_info: *mut CallInfo = (*state).call_info;
         if index > 0 {
-            let o: StackValuePointer = ((*call_info).function.p).offset(index as isize);
+            let o: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(index as isize);
             return o;
         } else {
-            return (*state).top.p.offset(index as isize);
+            return (*state).top.stkidrel_pointer.offset(index as isize);
         };
     }
 }
@@ -1484,13 +1484,13 @@ pub unsafe extern "C" fn lua_checkstack(state: *mut State, n: i32) -> i32 {
         let res: i32;
         let call_info;
         call_info = (*state).call_info;
-        if ((*state).stack_last.p).offset_from((*state).top.p) as i64 > n as i64 {
+        if ((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 > n as i64 {
             res = 1;
         } else {
             res = luad_growstack(state, n, false);
         }
-        if res != 0 && (*call_info).top.p < (*state).top.p.offset(n as isize) {
-            (*call_info).top.p = (*state).top.p.offset(n as isize);
+        if res != 0 && (*call_info).top.stkidrel_pointer < (*state).top.stkidrel_pointer.offset(n as isize) {
+            (*call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(n as isize);
         }
         return res;
     }
@@ -1498,14 +1498,14 @@ pub unsafe extern "C" fn lua_checkstack(state: *mut State, n: i32) -> i32 {
 pub unsafe extern "C" fn lua_xmove(from: *mut State, to: *mut State, n: i32) {
     unsafe {
         if from != to {
-            (*from).top.p = ((*from).top.p).offset(-(n as isize));
+            (*from).top.stkidrel_pointer = ((*from).top.stkidrel_pointer).offset(-(n as isize));
             for i in 0..n {
-                let io1: *mut TValue = &mut (*(*to).top.p).tvalue;
-                let io2: *const TValue = &mut (*((*from).top.p).offset(i as isize)).tvalue;
+                let io1: *mut TValue = &mut (*(*to).top.stkidrel_pointer).tvalue;
+                let io2: *const TValue = &mut (*((*from).top.stkidrel_pointer).offset(i as isize)).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                (*to).top.p = ((*to).top.p).offset(1);
-                (*to).top.p;
+                (*to).top.stkidrel_pointer = ((*to).top.stkidrel_pointer).offset(1);
+                (*to).top.stkidrel_pointer;
             }
         }
     }
@@ -1522,7 +1522,7 @@ pub unsafe extern "C" fn lua_absindex(state: *mut State, index: i32) -> i32 {
         return if index > 0 || index <= -(1000000 as i32) - 1000 as i32 {
             index
         } else {
-            ((*state).top.p).offset_from((*(*state).call_info).function.p) as i32 + index
+            ((*state).top.stkidrel_pointer).offset_from((*(*state).call_info).function.stkidrel_pointer) as i32 + index
         };
     }
 }
@@ -1532,26 +1532,26 @@ pub unsafe extern "C" fn lua_settop(state: *mut State, index: i32) {
         let mut newtop;
         let mut diff;
         call_info = (*state).call_info;
-        let function: StackValuePointer = (*call_info).function.p;
+        let function: StackValuePointer = (*call_info).function.stkidrel_pointer;
         if index >= 0 {
             diff = function
                 .offset(1 as isize)
                 .offset(index as isize)
-                .offset_from((*state).top.p) as i64;
+                .offset_from((*state).top.stkidrel_pointer) as i64;
             while diff > 0 {
-                let fresh4 = (*state).top.p;
-                (*state).top.p = (*state).top.p.offset(1);
+                let fresh4 = (*state).top.stkidrel_pointer;
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                 (*fresh4).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 diff -= 1;
             }
         } else {
             diff = (index + 1) as i64;
         }
-        newtop = (*state).top.p.offset(diff as isize);
-        if diff < 0 && (*state).tbc_list.p >= newtop {
+        newtop = (*state).top.stkidrel_pointer.offset(diff as isize);
+        if diff < 0 && (*state).tbc_list.stkidrel_pointer >= newtop {
             newtop = luaf_close(state, newtop, -1, 0);
         }
-        (*state).top.p = newtop;
+        (*state).top.stkidrel_pointer = newtop;
     }
 }
 pub unsafe extern "C" fn lua_closeslot(state: *mut State, index: i32) {
@@ -1589,7 +1589,7 @@ pub unsafe extern "C" fn reverse(mut _state: *mut State, mut from: StackValuePoi
 }
 pub unsafe extern "C" fn lua_rotate(state: *mut State, index: i32, n: i32) {
     unsafe {
-        let high: StackValuePointer = (*state).top.p.offset(-(1 as isize));
+        let high: StackValuePointer = (*state).top.stkidrel_pointer.offset(-(1 as isize));
         let low: StackValuePointer = index2stack(state, index);
         let middle: StackValuePointer = if n >= 0 {
             high.offset(-(n as isize))
@@ -1611,7 +1611,7 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
         (*io1).set_tag((*io2).get_tag());
         if toidx < -(1000000 as i32) - 1000 as i32 {
             if (*fr).is_collectable() {
-                if (*((*(*(*state).call_info).function.p).tvalue.value.object as *mut Closure))
+                if (*((*(*(*state).call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .get_marked()
                     & 1 << 5
                     != 0
@@ -1619,7 +1619,7 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
                 {
                     luac_barrier_(
                         state,
-                        &mut (*(&mut (*((*(*(*state).call_info).function.p).tvalue.value.object)))),
+                        &mut (*(&mut (*((*(*(*state).call_info).function.stkidrel_pointer).tvalue.value.object)))),
                         &mut (*((*fr).value.object as *mut Object)),
                     );
                 } else {
@@ -1631,11 +1631,11 @@ pub unsafe extern "C" fn lua_copy(state: *mut State, fromidx: i32, toidx: i32) {
 }
 pub unsafe extern "C" fn lua_pushvalue(state: *mut State, index: i32) {
     unsafe {
-        let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let io2: *const TValue = (*state).index2value(index);
         (*io1).value = (*io2).value;
         (*io1).set_tag((*io2).get_tag());
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
     }
 }
 pub unsafe fn lua_type(state: *mut State, index: i32) -> Option<u8> {
@@ -1721,20 +1721,20 @@ pub unsafe extern "C" fn lua_rawequal(state: *mut State, index1: i32, index2: i3
 pub unsafe extern "C" fn lua_arith(state: *mut State, op: i32) {
     unsafe {
         if !(op != 12 as i32 && op != 13 as i32) {
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         }
         luao_arith(
             state,
             op,
-            &mut (*(*state).top.p.offset(-(2 as isize))).tvalue,
-            &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
-            (*state).top.p.offset(-(2 as isize)),
+            &mut (*(*state).top.stkidrel_pointer.offset(-(2 as isize))).tvalue,
+            &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
+            (*state).top.stkidrel_pointer.offset(-(2 as isize)),
         );
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
     }
 }
 pub unsafe extern "C" fn lua_compare(state: *mut State, index1: i32, index2: i32, op: i32) -> i32 {
@@ -1765,9 +1765,9 @@ pub unsafe extern "C" fn lua_compare(state: *mut State, index1: i32, index2: i32
 }
 pub unsafe extern "C" fn lua_stringtonumber(state: *mut State, s: *const i8) -> u64 {
     unsafe {
-        let size: u64 = luao_str2num(s, &mut (*(*state).top.p).tvalue);
+        let size: u64 = luao_str2num(s, &mut (*(*state).top.stkidrel_pointer).tvalue);
         if size != 0 {
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         }
         return size;
     }
@@ -1882,12 +1882,12 @@ pub unsafe extern "C" fn lua_pushlstring(
         } else {
             luas_newlstr(state, s, length)
         };
-        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let x_: *mut TString = ts;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag((*x_).get_tag());
         (*io).set_collectable();
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
@@ -1897,17 +1897,17 @@ pub unsafe extern "C" fn lua_pushlstring(
 pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> *const i8 {
     unsafe {
         if s.is_null() {
-            (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
         } else {
             let ts: *mut TString = luas_new(state, s);
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut TString = ts;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
             s = (*ts).get_contents();
         }
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
@@ -1945,14 +1945,14 @@ pub unsafe extern "C" fn lua_pushfstring(
 pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mut n: i32) {
     unsafe {
         if n == 0 {
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             (*io).value.function = fn_0;
             (*io).set_tag(TAG_VARIANT_CLOSURE_CFUNCTION);
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         } else {
             let cl: *mut Closure = luaf_newcclosure(state, n);
             (*cl).payload.c_cfunction = fn_0;
-            (*state).top.p = (*state).top.p.offset(-(n as isize));
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-(n as isize));
             loop {
                 let fresh5 = n;
                 n = n - 1;
@@ -1961,16 +1961,16 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
                 }
                 let io1: *mut TValue =
                     &mut *((*cl).upvalues).c_tvalues.as_mut_ptr().offset(n as isize) as *mut TValue;
-                let io2: *const TValue = &mut (*(*state).top.p.offset(n as isize)).tvalue;
+                let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(n as isize)).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
             }
-            let io_0: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io_0: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut Closure = cl;
             (*io_0).value.object = &mut (*(x_ as *mut Object));
             (*io_0).set_tag(TAG_VARIANT_CLOSURE_C);
             (*io_0).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
@@ -1979,10 +1979,10 @@ pub unsafe extern "C" fn lua_pushcclosure(state: *mut State, fn_0: CFunction, mu
 }
 pub unsafe extern "C" fn lua_pushlightuserdata(state: *mut State, p: *mut libc::c_void) {
     unsafe {
-        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         (*io).value.pointer = p;
         (*io).set_tag(TAG_TYPE_POINTER);
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
     }
 }
 pub unsafe extern "C" fn auxgetstr(state: *mut State, t: *const TValue, k: *const i8) -> i32 {
@@ -1997,27 +1997,27 @@ pub unsafe extern "C" fn auxgetstr(state: *mut State, t: *const TValue, k: *cons
             (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
         } != 0
         {
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let io2: *const TValue = slot;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         } else {
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut TString = str;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             luav_finishget(
                 state,
                 t,
-                &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
-                (*state).top.p.offset(-(1 as isize)),
+                &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
+                (*state).top.stkidrel_pointer.offset(-(1 as isize)),
                 slot,
             );
         }
-        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag())) as i32;
+        return (get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
     }
 }
 pub unsafe extern "C" fn lua_getglobal(state: *mut State, name: *const i8) -> i32 {
@@ -2039,12 +2039,12 @@ pub unsafe extern "C" fn lua_gettable(state: *mut State, index: i32) -> i32 {
         } else {
             slot = luah_get(
                 &mut (*((*t).value.object as *mut Table)),
-                &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
+                &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
             );
             (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
         } != 0
         {
-            let io1: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             let io2: *const TValue = slot;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
@@ -2052,12 +2052,12 @@ pub unsafe extern "C" fn lua_gettable(state: *mut State, index: i32) -> i32 {
             luav_finishget(
                 state,
                 t,
-                &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
-                (*state).top.p.offset(-(1 as isize)),
+                &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
+                (*state).top.stkidrel_pointer.offset(-(1 as isize)),
                 slot,
             );
         }
-        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag())) as i32;
+        return (get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
     }
 }
 pub unsafe extern "C" fn handle_luainit(state: *mut State) -> i32 {
@@ -2102,7 +2102,7 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
             (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
         } != 0
         {
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let io2: *const TValue = slot;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
@@ -2116,24 +2116,24 @@ pub unsafe extern "C" fn lua_geti(state: *mut State, index: i32, n: i64) -> i32 
             let io: *mut TValue = &mut aux;
             (*io).value.integer = n;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-            luav_finishget(state, t, &mut aux, (*state).top.p, slot);
+            luav_finishget(state, t, &mut aux, (*state).top.stkidrel_pointer, slot);
         }
-        (*state).top.p = (*state).top.p.offset(1);
-        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag())) as i32;
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+        return (get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
     }
 }
 pub unsafe extern "C" fn finishrawget(state: *mut State, value: *const TValue) -> i32 {
     unsafe {
         if get_tag_type((*value).get_tag()) == TAG_TYPE_NIL {
-            (*(*state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
         } else {
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let io2: *const TValue = value;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
         }
-        (*state).top.p = (*state).top.p.offset(1);
-        return (get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag())) as i32;
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+        return (get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
     }
 }
 pub unsafe extern "C" fn gettable(state: *mut State, index: i32) -> *mut Table {
@@ -2146,8 +2146,8 @@ pub unsafe extern "C" fn lua_rawget(state: *mut State, index: i32) -> i32 {
     unsafe {
         let table: *mut Table = gettable(state, index);
         let value: *const TValue =
-            luah_get(table, &mut (*(*state).top.p.offset(-(1 as isize))).tvalue);
-        (*state).top.p = (*state).top.p.offset(-1);
+            luah_get(table, &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         return finishrawget(state, value);
     }
 }
@@ -2170,15 +2170,15 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            if (*(*state).top.p.offset(-(1 as isize)))
+            if (*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue
                 .is_collectable()
             {
                 if (*(*t).value.object).get_marked() & 1 << 5 != 0
-                    && (*(*(*state).top.p.offset(-(1 as isize))).tvalue.value.object).get_marked()
+                    && (*(*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object).get_marked()
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
@@ -2187,22 +2187,22 @@ pub unsafe extern "C" fn auxsetstr(state: *mut State, t: *const TValue, k: *cons
                 };
             } else {
             };
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         } else {
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut TString = str;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             luav_finishset(
                 state,
                 t,
-                &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
-                &mut (*(*state).top.p.offset(-(2 as isize))).tvalue,
+                &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
+                &mut (*(*state).top.stkidrel_pointer.offset(-(2 as isize))).tvalue,
                 slot,
             );
-            (*state).top.p = (*state).top.p.offset(-(2 as isize));
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-(2 as isize));
         };
     }
 }
@@ -2241,15 +2241,15 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) {
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            if (*(*state).top.p.offset(-(1 as isize)))
+            if (*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue
                 .is_collectable()
             {
                 if (*(*t).value.object).get_marked() & 1 << 5 != 0
-                    && (*(*(*state).top.p.offset(-(1 as isize))).tvalue.value.object).get_marked()
+                    && (*(*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object).get_marked()
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
@@ -2266,11 +2266,11 @@ pub unsafe extern "C" fn lua_seti(state: *mut State, index: i32, n: i64) {
                 state,
                 t,
                 &mut aux,
-                &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
+                &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
                 slot,
             );
         }
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
     }
 }
 pub unsafe extern "C" fn aux_rawset(state: *mut State, index: i32, key: *mut TValue, n: i32) {
@@ -2280,15 +2280,15 @@ pub unsafe extern "C" fn aux_rawset(state: *mut State, index: i32, key: *mut TVa
             state,
             table,
             key,
-            &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
+            &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
         );
         (*table).flags = ((*table).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
-        if (*(*state).top.p.offset(-(1 as isize)))
+        if (*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue
             .is_collectable()
         {
             if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
-                && (*(*(*state).top.p.offset(-(1 as isize))).tvalue.value.object).get_marked()
+                && (*(*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object).get_marked()
                     & (1 << 3 | 1 << 4)
                     != 0
             {
@@ -2297,7 +2297,7 @@ pub unsafe extern "C" fn aux_rawset(state: *mut State, index: i32, key: *mut TVa
             };
         } else {
         };
-        (*state).top.p = (*state).top.p.offset(-(n as isize));
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-(n as isize));
     }
 }
 pub unsafe extern "C" fn lua_rawset(state: *mut State, index: i32) {
@@ -2305,7 +2305,7 @@ pub unsafe extern "C" fn lua_rawset(state: *mut State, index: i32) {
         aux_rawset(
             state,
             index,
-            &mut (*(*state).top.p.offset(-(2 as isize))).tvalue,
+            &mut (*(*state).top.stkidrel_pointer.offset(-(2 as isize))).tvalue,
             2,
         );
     }
@@ -2317,14 +2317,14 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) {
             state,
             table,
             n,
-            &mut (*(*state).top.p.offset(-(1 as isize))).tvalue,
+            &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
         );
-        if (*(*state).top.p.offset(-(1 as isize)))
+        if (*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue
             .is_collectable()
         {
             if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
-                && (*(*(*state).top.p.offset(-(1 as isize))).tvalue.value.object).get_marked()
+                && (*(*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object).get_marked()
                     & (1 << 3 | 1 << 4)
                     != 0
             {
@@ -2333,17 +2333,17 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) {
             };
         } else {
         };
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
     }
 }
 pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i32 {
     unsafe {
         let mt: *mut Table;
         let obj: *mut TValue = (*state).index2value(objindex);
-        if get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()) == TAG_TYPE_NIL {
             mt = std::ptr::null_mut();
         } else {
-            mt = &mut (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object
+            mt = &mut (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object
                 as *mut Table))
         }
         match get_tag_type((*obj).get_tag()) {
@@ -2386,7 +2386,7 @@ pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i
                 (*(*state).global).metatable[(get_tag_type((*obj).get_tag())) as usize] = mt;
             }
         }
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         return 1;
     }
 }
@@ -2402,15 +2402,15 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
             let io1: *mut TValue = &mut (*((*((*o).value.object as *mut User)).uv)
                 .as_mut_ptr()
                 .offset((n - 1) as isize));
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            if (*(*state).top.p.offset(-(1 as isize)))
+            if (*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue
                 .is_collectable()
             {
                 if (*(*o).value.object).get_marked() & 1 << 5 != 0
-                    && (*(*(*state).top.p.offset(-(1 as isize))).tvalue.value.object).get_marked()
+                    && (*(*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object).get_marked()
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
@@ -2421,7 +2421,7 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
             };
             res = 1;
         }
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         return res;
     }
 }
@@ -2433,7 +2433,7 @@ pub unsafe extern "C" fn lua_callk(
     k: ContextFunction,
 ) {
     unsafe {
-        let function: StackValuePointer = (*state).top.p.offset(-((nargs + 1) as isize));
+        let function: StackValuePointer = (*state).top.stkidrel_pointer.offset(-((nargs + 1) as isize));
         if k.is_some() && (*state).count_c_calls & 0xffff0000 as u32 == 0 {
             (*(*state).call_info).u.c.context_function = k;
             (*(*state).call_info).u.c.context = ctx;
@@ -2441,8 +2441,8 @@ pub unsafe extern "C" fn lua_callk(
         } else {
             luad_callnoyield(state, function, count_results);
         }
-        if count_results <= -1 && (*(*state).call_info).top.p < (*state).top.p {
-            (*(*state).call_info).top.p = (*state).top.p;
+        if count_results <= -1 && (*(*state).call_info).top.stkidrel_pointer < (*state).top.stkidrel_pointer {
+            (*(*state).call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer;
         }
     }
 }
@@ -2471,16 +2471,16 @@ pub unsafe extern "C" fn lua_pcallk(
             function = 0;
         } else {
             let o: StackValuePointer = index2stack(state, error_function);
-            function = (o as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+            function = (o as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
         }
-        calls.function = (*state).top.p.offset(-((nargs + 1) as isize));
+        calls.function = (*state).top.stkidrel_pointer.offset(-((nargs + 1) as isize));
         if k.is_none() || !((*state).count_c_calls & 0xffff0000 as u32 == 0) {
             calls.count_results = count_results;
             status = luad_pcall(
                 state,
                 Some(f_call as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
                 &mut calls as *mut CallS as *mut libc::c_void,
-                (calls.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i64,
+                (calls.function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64,
                 function,
             );
         } else {
@@ -2488,7 +2488,7 @@ pub unsafe extern "C" fn lua_pcallk(
             (*call_info).u.c.context_function = k;
             (*call_info).u.c.context = ctx;
             (*call_info).u2.funcidx =
-                (calls.function as *mut i8).offset_from((*state).stack.p as *mut i8) as i32;
+                (calls.function as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i32;
             (*call_info).u.c.old_error_function = (*state).error_function;
             (*state).error_function = function;
             (*call_info).call_status =
@@ -2499,8 +2499,8 @@ pub unsafe extern "C" fn lua_pcallk(
             (*state).error_function = (*call_info).u.c.old_error_function;
             status = 0;
         }
-        if count_results <= -1 && (*(*state).call_info).top.p < (*state).top.p {
-            (*(*state).call_info).top.p = (*state).top.p;
+        if count_results <= -1 && (*(*state).call_info).top.stkidrel_pointer < (*state).top.stkidrel_pointer {
+            (*(*state).call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer;
         }
         return status;
     }
@@ -2513,22 +2513,14 @@ pub unsafe extern "C" fn lua_load(
     mode: *const i8,
 ) -> i32 {
     unsafe {
-        let mut zio: ZIO = ZIO {
-            n: 0,
-            p: std::ptr::null(),
-            reader: None,
-            data: std::ptr::null_mut(),
-            state: std::ptr::null_mut(),
-        };
-        let status: i32;
+        let mut zio: ZIO = ZIO::new(state, reader, data);
         if chunkname.is_null() {
             chunkname = b"?\0" as *const u8 as *const i8;
         }
-        luaz_init(state, &mut zio, reader, data);
-        status = luad_protectedparser(state, &mut zio, chunkname, mode);
+        let status: i32 = luad_protectedparser(state, &mut zio, chunkname, mode);
         if status == 0 {
             let closure: *mut Closure =
-                &mut (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object
+                &mut (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object
                     as *mut Closure));
             if (*closure).count_upvalues as i32 >= 1 {
                 let gt: *const TValue =
@@ -2567,7 +2559,7 @@ pub unsafe extern "C" fn lua_dump(
 ) -> i32 {
     unsafe {
         let status: i32;
-        let o: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+        let o: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
         if (*o).get_tag_variant() == TAG_VARIANT_CLOSURE_L {
             status = save_prototype(
                 state,
@@ -2686,7 +2678,7 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
 }
 pub unsafe extern "C" fn lua_error(state: *mut State) -> i32 {
     unsafe {
-        let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+        let errobj: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
         if (*errobj).get_tag_variant() == TAG_VARIANT_STRING_SHORT
             && &mut (*((*errobj).value.object as *mut TString)) as *mut TString
                 == (*(*state).global).memory_error_message
@@ -2700,11 +2692,11 @@ pub unsafe extern "C" fn lua_error(state: *mut State) -> i32 {
 pub unsafe extern "C" fn lua_next(state: *mut State, index: i32) -> i32 {
     unsafe {
         let table: *mut Table = gettable(state, index);
-        let more: i32 = luah_next(state, table, (*state).top.p.offset(-(1 as isize)));
+        let more: i32 = luah_next(state, table, (*state).top.stkidrel_pointer.offset(-(1 as isize)));
         if more != 0 {
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         } else {
-            (*state).top.p = (*state).top.p.offset(-(1 as isize));
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-(1 as isize));
         }
         return more;
     }
@@ -2724,12 +2716,12 @@ pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) {
         if n > 0 {
             concatenate(state, n);
         } else {
-            let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let x_: *mut TString = luas_newlstr(state, b"\0" as *const u8 as *const i8, 0u64);
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         }
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
@@ -2739,8 +2731,8 @@ pub unsafe extern "C" fn lua_concat(state: *mut State, n: i32) {
 pub unsafe extern "C" fn lua_len(state: *mut State, index: i32) {
     unsafe {
         let t: *mut TValue = (*state).index2value(index);
-        luav_objlen(state, (*state).top.p, t);
-        (*state).top.p = (*state).top.p.offset(1);
+        luav_objlen(state, (*state).top.stkidrel_pointer, t);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
     }
 }
 pub unsafe extern "C" fn lua_setwarnf(state: *mut State, f: WarnFunction, arbitrary_data: *mut libc::c_void) {
@@ -2764,11 +2756,11 @@ pub unsafe extern "C" fn lua_getupvalue(state: *mut State, funcindex: i32, n: i3
             std::ptr::null_mut(),
         );
         if !name.is_null() {
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             let io2: *const TValue = value;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.p = (*state).top.p.offset(1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         }
         return name;
     }
@@ -2780,9 +2772,9 @@ pub unsafe extern "C" fn lua_setupvalue(state: *mut State, funcindex: i32, n: i3
         let fi: *mut TValue = (*state).index2value(funcindex);
         let name: *const i8 = aux_upvalue(fi, n, &mut value, &mut owner);
         if !name.is_null() {
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
             let io1: *mut TValue = value;
-            let io2: *const TValue = &mut (*(*state).top.p).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
             if (*value).is_collectable() {
@@ -2958,42 +2950,42 @@ pub unsafe extern "C" fn luae_shrinkci(state: *mut State) {
 }
 pub unsafe extern "C" fn stack_init(other_state: *mut State, state: *mut State) {
     unsafe {
-        (*other_state).stack.p = luam_malloc_(
+        (*other_state).stack.stkidrel_pointer = luam_malloc_(
             state,
             ((2 * 20 as i32 + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
         ) as *mut StackValue;
-        (*other_state).tbc_list.p = (*other_state).stack.p;
+        (*other_state).tbc_list.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         for i in 0..2 * 20 as i32 + 5 {
-            (*((*other_state).stack.p).offset(i as isize))
+            (*((*other_state).stack.stkidrel_pointer).offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
         }
-        (*other_state).top.p = (*other_state).stack.p;
-        (*other_state).stack_last.p = ((*other_state).stack.p).offset((2 * 20 as i32) as isize);
+        (*other_state).top.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
+        (*other_state).stack_last.stkidrel_pointer = ((*other_state).stack.stkidrel_pointer).offset((2 * 20 as i32) as isize);
         let call_info = &mut (*other_state).base_callinfo;
         (*call_info).previous = std::ptr::null_mut();
         (*call_info).next = (*call_info).previous;
         (*call_info).call_status = (1 << 1) as u16;
-        (*call_info).function.p = (*other_state).top.p;
+        (*call_info).function.stkidrel_pointer = (*other_state).top.stkidrel_pointer;
         (*call_info).u.c.context_function = None;
         (*call_info).count_results = 0;
-        (*(*other_state).top.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-        (*other_state).top.p = ((*other_state).top.p).offset(1);
-        (*other_state).top.p;
-        (*call_info).top.p = ((*other_state).top.p).offset(20 as isize);
+        (*(*other_state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+        (*other_state).top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(1);
+        (*other_state).top.stkidrel_pointer;
+        (*call_info).top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(20 as isize);
         (*other_state).call_info = call_info;
     }
 }
 pub unsafe extern "C" fn freestack(state: *mut State) {
     unsafe {
-        if ((*state).stack.p).is_null() {
+        if ((*state).stack.stkidrel_pointer).is_null() {
             return;
         }
         (*state).call_info = &mut (*state).base_callinfo;
         freeci(state);
         (*state).free_memory(
-            (*state).stack.p as *mut libc::c_void,
-            ((((*state).stack_last.p).offset_from((*state).stack.p) as i32 + 5) as u64)
+            (*state).stack.stkidrel_pointer as *mut libc::c_void,
+            ((((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32 + 5) as u64)
                 .wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
         );
     }
@@ -3034,7 +3026,7 @@ pub unsafe extern "C" fn f_luaopen(state: *mut State, mut _ud: *mut libc::c_void
 pub unsafe extern "C" fn preinit_thread(state: *mut State, g: *mut Global) {
     unsafe {
         (*state).global = g;
-        (*state).stack.p = std::ptr::null_mut();
+        (*state).stack.stkidrel_pointer = std::ptr::null_mut();
         (*state).call_info = std::ptr::null_mut();
         (*state).count_call_info = 0;
         (*state).twups = state;
@@ -3060,7 +3052,7 @@ pub unsafe extern "C" fn close_state(state: *mut State) {
             (*state).call_info = &mut (*state).base_callinfo;
             (*state).error_function = 0;
             luad_closeprotected(state, 1 as i64, 0);
-            (*state).top.p = ((*state).stack.p).offset(1 as isize);
+            (*state).top.stkidrel_pointer = ((*state).stack.stkidrel_pointer).offset(1 as isize);
             luac_freeallobjects(state);
         }
         (*state).free_memory(
@@ -3089,12 +3081,12 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
             8 as u64,
         );
         let other_state: *mut State = &mut (*(o as *mut State));
-        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let x_: *mut State = other_state;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_STATE);
         (*io).set_collectable();
-        (*state).top.p = (*state).top.p.offset(1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         preinit_thread(other_state, g);
         ::core::ptr::write_volatile(
             &mut (*other_state).hook_mask as *mut i32,
@@ -3119,7 +3111,7 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
 pub unsafe extern "C" fn luae_freethread(state: *mut State, other_state: *mut State) {
     unsafe {
         let l: *mut StateExtra = (other_state as *mut u8).offset(-(8 as isize)) as *mut StateExtra;
-        luaf_closeupval(other_state, (*other_state).stack.p);
+        luaf_closeupval(other_state, (*other_state).stack.stkidrel_pointer);
         freestack(other_state);
         (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>() as u64);
     }
@@ -3128,8 +3120,8 @@ pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) ->
     unsafe {
         (*state).call_info = &mut (*state).base_callinfo;
         let call_info: *mut CallInfo = (*state).call_info;
-        (*(*state).stack.p).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-        (*call_info).function.p = (*state).stack.p;
+        (*(*state).stack.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+        (*call_info).function.stkidrel_pointer = (*state).stack.stkidrel_pointer;
         (*call_info).call_status = (1 << 1) as u16;
         if status == 1 {
             status = 0;
@@ -3138,14 +3130,14 @@ pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) ->
         (*state).error_function = 0;
         status = luad_closeprotected(state, 1 as i64, status);
         if status != 0 {
-            (*state).set_error_object(status, ((*state).stack.p).offset(1 as isize));
+            (*state).set_error_object(status, ((*state).stack.stkidrel_pointer).offset(1 as isize));
         } else {
-            (*state).top.p = ((*state).stack.p).offset(1 as isize);
+            (*state).top.stkidrel_pointer = ((*state).stack.stkidrel_pointer).offset(1 as isize);
         }
-        (*call_info).top.p = (*state).top.p.offset(20 as isize);
+        (*call_info).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(20 as isize);
         luad_reallocstack(
             state,
-            ((*call_info).top.p).offset_from((*state).stack.p) as i32,
+            ((*call_info).top.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32,
             false,
         );
         return status;
@@ -3256,7 +3248,7 @@ pub unsafe extern "C" fn luae_warning(state: *mut State, message: *const i8, toc
 }
 pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) {
     unsafe {
-        let errobj: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+        let errobj: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
         let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TAG_TYPE_STRING {
             ((*((*errobj).value.object as *mut TString)).get_contents()) as *const i8
         } else {
@@ -3349,7 +3341,7 @@ pub unsafe extern "C" fn varinfo(state: *mut State, o: *const TValue) -> *const 
                 let reg: i32 = in_stack(call_info, o);
                 if reg >= 0 {
                     kind = getobjname(
-                        (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
+                        (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                             .payload.l_prototype,
                         currentpc(call_info),
                         reg,
@@ -3505,17 +3497,17 @@ pub unsafe extern "C" fn luag_errormsg(state: *mut State) -> ! {
     unsafe {
         if (*state).error_function != 0 {
             let error_function: StackValuePointer =
-                ((*state).stack.p as *mut i8).offset((*state).error_function as isize) as StackValuePointer;
-            let io1: *mut TValue = &mut (*(*state).top.p).tvalue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+                ((*state).stack.stkidrel_pointer as *mut i8).offset((*state).error_function as isize) as StackValuePointer;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            let io1_0: *mut TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io1_0: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             let io2_0: *const TValue = &mut (*error_function).tvalue;
             (*io1_0).value = (*io2_0).value;
             (*io1_0).set_tag((*io2_0).get_tag());
-            (*state).top.p = (*state).top.p.offset(1);
-            luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+            luad_callnoyield(state, (*state).top.stkidrel_pointer.offset(-(2 as isize)), 1);
         }
         luad_throw(state, 2);
     }
@@ -3534,16 +3526,16 @@ pub unsafe extern "C" fn luag_runerror(state: *mut State, fmt: *const i8, args: 
             luag_addinfo(
                 state,
                 message,
-                (*(*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
+                (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
                     .source,
                 getcurrentline(call_info),
             );
-            let io1: *mut TValue = &mut (*(*state).top.p.offset(-(2 as isize))).tvalue;
-            let io2: *const TValue = &mut (*(*state).top.p.offset(-(1 as isize))).tvalue;
+            let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(2 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.p = (*state).top.p.offset(-1);
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         }
         luag_errormsg(state);
     }
@@ -3551,7 +3543,7 @@ pub unsafe extern "C" fn luag_runerror(state: *mut State, fmt: *const i8, args: 
 pub unsafe extern "C" fn luag_tracecall(state: *mut State) -> i32 {
     unsafe {
         let call_info: *mut CallInfo = (*state).call_info;
-        let p: *mut Prototype = (*((*(*call_info).function.p).tvalue.value.object as *mut Closure))
+        let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
             .payload.l_prototype;
         ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
         if (*call_info).u.l.saved_program_counter == (*p).code as *const u32 {
@@ -3568,7 +3560,7 @@ pub unsafe extern "C" fn luag_traceexec(state: *mut State, mut program_counter: 
     unsafe {
         let call_info: *mut CallInfo = (*state).call_info;
         let mask: u8 = (*state).hook_mask as u8;
-        let p: *const Prototype = (*((*(*call_info).function.p).tvalue.value.object
+        let p: *const Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object
             as *mut Closure))
             .payload.l_prototype;
         if mask as i32 & (1 << 2 | 1 << 3) == 0 {
@@ -3598,7 +3590,7 @@ pub unsafe extern "C" fn luag_traceexec(state: *mut State, mut program_counter: 
                 & !(!(0u32) << 8) << 0) as i32
                 == 0)
         {
-            (*state).top.p = (*call_info).top.p;
+            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
         }
         if counthook != 0 {
             luad_hook(state, 3, -1, 0, 0);
@@ -4016,7 +4008,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
         }
         buff_fs.add_string(fmt, strlen(fmt));
         buff_fs.clear();
-        return (*((*(*state).top.p.offset(-(1 as isize))).tvalue.value.object as *mut TString))
+        return (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut TString))
             .get_contents();
     }
 }
@@ -4124,7 +4116,7 @@ pub unsafe extern "C" fn luat_calltm(
     p3: *const TValue,
 ) {
     unsafe {
-        let function: StackValuePointer = (*state).top.p;
+        let function: StackValuePointer = (*state).top.stkidrel_pointer;
         let io1: *mut TValue = &mut (*function).tvalue;
         (*io1).value = (*f).value;
         (*io1).set_tag((*f).get_tag());
@@ -4140,7 +4132,7 @@ pub unsafe extern "C" fn luat_calltm(
         let io2_2: *const TValue = p3;
         (*io1_2).value = (*io2_2).value;
         (*io1_2).set_tag((*io2_2).get_tag());
-        (*state).top.p = function.offset(4 as isize);
+        (*state).top.stkidrel_pointer = function.offset(4 as isize);
         if (*(*state).call_info).call_status as i32 & (1 << 1 | 1 << 3) == 0 {
             ccall(state, function, 0, 1);
         } else {
@@ -4156,8 +4148,8 @@ pub unsafe extern "C" fn luat_calltmres(
     mut res: StackValuePointer,
 ) {
     unsafe {
-        let result: i64 = (res as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
-        let function: StackValuePointer = (*state).top.p;
+        let result: i64 = (res as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
+        let function: StackValuePointer = (*state).top.stkidrel_pointer;
         let io1: *mut TValue = &mut (*function).tvalue;
         let io2: *const TValue = f;
         (*io1).value = (*io2).value;
@@ -4170,16 +4162,16 @@ pub unsafe extern "C" fn luat_calltmres(
         let io2_1: *const TValue = p2;
         (*io1_1).value = (*io2_1).value;
         (*io1_1).set_tag((*io2_1).get_tag());
-        (*state).top.p = (*state).top.p.offset(3 as isize);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(3 as isize);
         if (*(*state).call_info).call_status as i32 & (1 << 1 | 1 << 3) == 0 {
             ccall(state, function, 1, 1);
         } else {
             luad_callnoyield(state, function, 1);
         }
-        res = ((*state).stack.p as *mut i8).offset(result as isize) as StackValuePointer;
+        res = ((*state).stack.stkidrel_pointer as *mut i8).offset(result as isize) as StackValuePointer;
         let io1_2: *mut TValue = &mut (*res).tvalue;
-        (*state).top.p = (*state).top.p.offset(-1);
-        let io2_2: *const TValue = &mut (*(*state).top.p).tvalue;
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+        let io2_2: *const TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         (*io1_2).value = (*io2_2).value;
         (*io1_2).set_tag((*io2_2).get_tag());
     }
@@ -4241,7 +4233,7 @@ pub unsafe extern "C" fn luat_trybintm(
 }
 pub unsafe extern "C" fn luat_tryconcattm(state: *mut State) {
     unsafe {
-        let top: StackValuePointer = (*state).top.p;
+        let top: StackValuePointer = (*state).top.stkidrel_pointer;
         if ((callbintm(
             state,
             &mut (*top.offset(-(2 as isize))).tvalue,
@@ -4304,9 +4296,9 @@ pub unsafe extern "C" fn luat_callordertm(
     event: u32,
 ) -> i32 {
     unsafe {
-        if callbintm(state, p1, p2, (*state).top.p, event) != 0 {
-            return !((*(*state).top.p).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.p).tvalue.get_tag()) == TAG_TYPE_NIL)
+        if callbintm(state, p1, p2, (*state).top.stkidrel_pointer, event) != 0 {
+            return !((*(*state).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*state).top.stkidrel_pointer).tvalue.get_tag()) == TAG_TYPE_NIL)
                 as i32;
         }
         luag_ordererror(state, p1, p2);
@@ -4353,35 +4345,35 @@ pub unsafe extern "C" fn luat_adjustvarargs(
     p: *const Prototype,
 ) {
     unsafe {
-        let actual: i32 = ((*state).top.p).offset_from((*call_info).function.p) as i32 - 1;
+        let actual: i32 = ((*state).top.stkidrel_pointer).offset_from((*call_info).function.stkidrel_pointer) as i32 - 1;
         let nextra: i32 = actual - nfixparams;
         (*call_info).u.l.count_extra_arguments = nextra;
-        if ((((*state).stack_last.p).offset_from((*state).top.p) as i64
+        if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64
             <= ((*p).maximum_stack_size as i32 + 1) as i64) as i32
             != 0) as i64
             != 0
         {
             luad_growstack(state, (*p).maximum_stack_size as i32 + 1, true);
         }
-        let fresh12 = (*state).top.p;
-        (*state).top.p = (*state).top.p.offset(1);
+        let fresh12 = (*state).top.stkidrel_pointer;
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         let io1: *mut TValue = &mut (*fresh12).tvalue;
-        let io2: *const TValue = &mut (*(*call_info).function.p).tvalue;
+        let io2: *const TValue = &mut (*(*call_info).function.stkidrel_pointer).tvalue;
         (*io1).value = (*io2).value;
         (*io1).set_tag((*io2).get_tag());
         for i in 1..(1 + nfixparams) {
-            let fresh13 = (*state).top.p;
-            (*state).top.p = (*state).top.p.offset(1);
+            let fresh13 = (*state).top.stkidrel_pointer;
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             let io1_0: *mut TValue = &mut (*fresh13).tvalue;
-            let io2_0: *const TValue = &mut (*((*call_info).function.p).offset(i as isize)).tvalue;
+            let io2_0: *const TValue = &mut (*((*call_info).function.stkidrel_pointer).offset(i as isize)).tvalue;
             (*io1_0).value = (*io2_0).value;
             (*io1_0).set_tag((*io2_0).get_tag());
-            (*((*call_info).function.p).offset(i as isize))
+            (*((*call_info).function.stkidrel_pointer).offset(i as isize))
                 .tvalue
                 .set_tag(TAG_VARIANT_NIL_NIL);
         }
-        (*call_info).function.p = ((*call_info).function.p).offset((actual + 1) as isize);
-        (*call_info).top.p = ((*call_info).top.p).offset((actual + 1) as isize);
+        (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset((actual + 1) as isize);
+        (*call_info).top.stkidrel_pointer = ((*call_info).top.stkidrel_pointer).offset((actual + 1) as isize);
     }
 }
 pub unsafe extern "C" fn luat_getvarargs(
@@ -4394,23 +4386,23 @@ pub unsafe extern "C" fn luat_getvarargs(
         let nextra: i32 = (*call_info).u.l.count_extra_arguments;
         if wanted < 0 {
             wanted = nextra;
-            if ((((*state).stack_last.p).offset_from((*state).top.p) as i64 <= nextra as i64)
+            if ((((*state).stack_last.stkidrel_pointer).offset_from((*state).top.stkidrel_pointer) as i64 <= nextra as i64)
                 as i32
                 != 0) as i64
                 != 0
             {
-                let t__: i64 = (where_0 as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+                let t__: i64 = (where_0 as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
                 if (*(*state).global).gc_debt > 0 {
                     luac_step(state);
                 }
                 luad_growstack(state, nextra, true);
-                where_0 = ((*state).stack.p as *mut i8).offset(t__ as isize) as StackValuePointer;
+                where_0 = ((*state).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
             }
-            (*state).top.p = where_0.offset(nextra as isize);
+            (*state).top.stkidrel_pointer = where_0.offset(nextra as isize);
         }
         for i in 0..wanted.min(nextra) {
             let io1: *mut TValue = &mut (*where_0.offset(i as isize)).tvalue;
-            let io2: *const TValue = &mut (*((*call_info).function.p)
+            let io2: *const TValue = &mut (*((*call_info).function.stkidrel_pointer)
                 .offset(-(nextra as isize))
                 .offset(i as isize))
             .tvalue;
@@ -4448,7 +4440,7 @@ pub unsafe extern "C" fn luac_newobj(state: *mut State, tag: u8, size: u64) -> *
 }
 pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i32 {
     unsafe {
-        let mut o: StackValuePointer = (*state).stack.p;
+        let mut o: StackValuePointer = (*state).stack.stkidrel_pointer;
         if (*state).get_marked() & 7 > 1 || (*g).gc_state as i32 == 0 {
             linkgclist_(
                 &mut (*(state as *mut Object)),
@@ -4459,7 +4451,7 @@ pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i3
         if o.is_null() {
             return 1;
         }
-        while o < (*state).top.p {
+        while o < (*state).top.stkidrel_pointer {
             if ((*o).tvalue.is_collectable())
                 && (*(*o).tvalue.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
@@ -4478,8 +4470,8 @@ pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i3
             if !(*g).is_emergency {
                 (*state).luad_shrinkstack();
             }
-            o = (*state).top.p;
-            while o < ((*state).stack_last.p).offset(5 as isize) {
+            o = (*state).top.stkidrel_pointer;
+            while o < ((*state).stack_last.stkidrel_pointer).offset(5 as isize) {
                 (*o).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 o = o.offset(1);
             }
@@ -4488,7 +4480,7 @@ pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i3
                 (*g).twups = state;
             }
         }
-        return 1 + ((*state).stack_last.p).offset_from((*state).stack.p) as i32;
+        return 1 + ((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32;
     }
 }
 pub unsafe extern "C" fn sweeptolive(
@@ -4521,7 +4513,7 @@ pub unsafe extern "C" fn check_sizes(state: *mut State, g: *mut Global) {
 }
 pub unsafe extern "C" fn dothecall(state: *mut State, mut _ud: *mut libc::c_void) {
     unsafe {
-        luad_callnoyield(state, (*state).top.p.offset(-(2 as isize)), 0);
+        luad_callnoyield(state, (*state).top.stkidrel_pointer.offset(-(2 as isize)), 0);
     }
 }
 pub unsafe extern "C" fn gctm_function(state: *mut State) {
@@ -4546,14 +4538,14 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
             let oldgcstp: i32 = (*g).gc_step as i32;
             (*g).gc_step = ((*g).gc_step as i32 | 2) as u8;
             (*state).allow_hook = 0;
-            let fresh15 = (*state).top.p;
-            (*state).top.p = (*state).top.p.offset(1);
+            let fresh15 = (*state).top.stkidrel_pointer;
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             let io1: *mut TValue = &mut (*fresh15).tvalue;
             let io2: *const TValue = tm;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            let fresh16 = (*state).top.p;
-            (*state).top.p = (*state).top.p.offset(1);
+            let fresh16 = (*state).top.stkidrel_pointer;
+            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             let io1_0: *mut TValue = &mut (*fresh16).tvalue;
             let io2_0: *const TValue = &mut v;
             (*io1_0).value = (*io2_0).value;
@@ -4564,8 +4556,8 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
                 state,
                 Some(dothecall as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
                 std::ptr::null_mut(),
-                ((*state).top.p.offset(-(2 as isize)) as *mut i8)
-                    .offset_from((*state).stack.p as *mut i8) as i64,
+                ((*state).top.stkidrel_pointer.offset(-(2 as isize)) as *mut i8)
+                    .offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64,
                 0,
             );
             (*(*state).call_info).call_status =
@@ -4574,7 +4566,7 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
             (*g).gc_step = oldgcstp as u8;
             if ((status != 0) as i32 != 0) as i64 != 0 {
                 luae_warnerror(state, b"__gc\0" as *const u8 as *const i8);
-                (*state).top.p = (*state).top.p.offset(-1);
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
             }
         }
     }
@@ -5071,7 +5063,7 @@ pub unsafe extern "C" fn callclosemethod(
     yy: i32,
 ) {
     unsafe {
-        let top: StackValuePointer = (*state).top.p;
+        let top: StackValuePointer = (*state).top.stkidrel_pointer;
         let tm: *const TValue = luat_gettmbyobj(state, obj, TM_CLOSE);
         let io1: *mut TValue = &mut (*top).tvalue;
         let io2: *const TValue = tm;
@@ -5085,7 +5077,7 @@ pub unsafe extern "C" fn callclosemethod(
         let io2_1: *const TValue = err;
         (*io1_1).value = (*io2_1).value;
         (*io1_1).set_tag((*io2_1).get_tag());
-        (*state).top.p = top.offset(3 as isize);
+        (*state).top.stkidrel_pointer = top.offset(3 as isize);
         if yy != 0 {
             ccall(state, top, 0, 1);
         } else {
@@ -5097,7 +5089,7 @@ pub unsafe extern "C" fn checkclosemth(state: *mut State, level: StackValuePoint
     unsafe {
         let tm: *const TValue = luat_gettmbyobj(state, &mut (*level).tvalue, TM_CLOSE);
         if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
-            let index: i32 = level.offset_from((*(*state).call_info).function.p) as i32;
+            let index: i32 = level.offset_from((*(*state).call_info).function.stkidrel_pointer) as i32;
             let mut vname: *const i8 =
                 luag_findlocal(state, (*state).call_info, index, std::ptr::null_mut());
             if vname.is_null() {
@@ -5132,24 +5124,24 @@ pub unsafe extern "C" fn luaf_newtbcupval(state: *mut State, level: StackValuePo
             return;
         }
         checkclosemth(state, level);
-        while level.offset_from((*state).tbc_list.p) as u64
+        while level.offset_from((*state).tbc_list.stkidrel_pointer) as u64
             > ((256 as u64)
                 << (::core::mem::size_of::<u16>() as u64)
                     .wrapping_sub(1 as u64)
                     .wrapping_mul(8 as u64))
             .wrapping_sub(1 as u64)
         {
-            (*state).tbc_list.p = ((*state).tbc_list.p).offset(
+            (*state).tbc_list.stkidrel_pointer = ((*state).tbc_list.stkidrel_pointer).offset(
                 ((256 as u64)
                     << (::core::mem::size_of::<u16>() as u64)
                         .wrapping_sub(1 as u64)
                         .wrapping_mul(8 as u64))
                 .wrapping_sub(1 as u64) as isize,
             );
-            (*(*state).tbc_list.p).delta = 0;
+            (*(*state).tbc_list.stkidrel_pointer).delta = 0;
         }
-        (*level).delta = level.offset_from((*state).tbc_list.p) as u16;
-        (*state).tbc_list.p = level;
+        (*level).delta = level.offset_from((*state).tbc_list.stkidrel_pointer) as u16;
+        (*state).tbc_list.stkidrel_pointer = level;
     }
 }
 pub unsafe extern "C" fn luaf_closeupval(state: *mut State, level: StackValuePointer) {
@@ -5191,9 +5183,9 @@ pub unsafe extern "C" fn luaf_closeupval(state: *mut State, level: StackValuePoi
 }
 pub unsafe extern "C" fn poptbclist(state: *mut State) {
     unsafe {
-        let mut tbc: StackValuePointer = (*state).tbc_list.p;
+        let mut tbc: StackValuePointer = (*state).tbc_list.stkidrel_pointer;
         tbc = tbc.offset(-((*tbc).delta as isize));
-        while tbc > (*state).stack.p && (*tbc).delta == 0 {
+        while tbc > (*state).stack.stkidrel_pointer && (*tbc).delta == 0 {
             tbc = tbc.offset(
                 -(((256 as u64)
                     << (::core::mem::size_of::<u16>() as u64)
@@ -5202,7 +5194,7 @@ pub unsafe extern "C" fn poptbclist(state: *mut State) {
                 .wrapping_sub(1 as u64) as isize),
             );
         }
-        (*state).tbc_list.p = tbc;
+        (*state).tbc_list.stkidrel_pointer = tbc;
     }
 }
 pub unsafe extern "C" fn luaf_close(
@@ -5212,13 +5204,13 @@ pub unsafe extern "C" fn luaf_close(
     yy: i32,
 ) -> StackValuePointer {
     unsafe {
-        let levelrel: i64 = (level as *mut i8).offset_from((*state).stack.p as *mut i8) as i64;
+        let levelrel: i64 = (level as *mut i8).offset_from((*state).stack.stkidrel_pointer as *mut i8) as i64;
         luaf_closeupval(state, level);
-        while (*state).tbc_list.p >= level {
-            let tbc: StackValuePointer = (*state).tbc_list.p;
+        while (*state).tbc_list.stkidrel_pointer >= level {
+            let tbc: StackValuePointer = (*state).tbc_list.stkidrel_pointer;
             poptbclist(state);
             prepcallclosemth(state, tbc, status, yy);
-            level = ((*state).stack.p as *mut i8).offset(levelrel as isize) as StackValuePointer;
+            level = ((*state).stack.stkidrel_pointer as *mut i8).offset(levelrel as isize) as StackValuePointer;
         }
         return level;
     }
@@ -5235,14 +5227,14 @@ pub unsafe extern "C" fn luay_parser(
         let mut lexstate: LexicalState = LexicalState::new();
         let mut funcstate: FunctionState = FunctionState::new();
         let cl: *mut Closure = luaf_newlclosure(state, 1);
-        let io: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let x_: *mut Closure = cl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
         (*state).luad_inctop();
         lexstate.table = luah_new(state);
-        let io_0: *mut TValue = &mut (*(*state).top.p).tvalue;
+        let io_0: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
         let x0: *mut Table = lexstate.table;
         (*io_0).value.object = &mut (*(x0 as *mut Object));
         (*io_0).set_tag(TAG_VARIANT_TABLE);
@@ -5276,7 +5268,7 @@ pub unsafe extern "C" fn luay_parser(
         (*dynamic_data).active_variable.length = (*dynamic_data).gt.n;
         luax_setinput(state, &mut lexstate, zio, (*funcstate.prototype).source, firstchar);
         mainfunc(&mut lexstate, &mut funcstate);
-        (*state).top.p = (*state).top.p.offset(-1);
+        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
         return cl;
     }
 }
@@ -5346,7 +5338,7 @@ pub unsafe extern "C" fn pushclosure(
 pub unsafe extern "C" fn luav_finishop(state: *mut State) {
     unsafe {
         let call_info: *mut CallInfo = (*state).call_info;
-        let base: StackValuePointer = ((*call_info).function.p).offset(1 as isize);
+        let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
         let inst: u32 = *((*call_info).u.l.saved_program_counter).offset(-(1 as isize));
         let op: u32 = (inst >> 0 & !(!(0u32) << 7) << 0) as u32;
         match op as u32 {
@@ -5356,8 +5348,8 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
                         & !(!(0u32) << 8) << 0) as isize,
                 ))
                 .tvalue;
-                (*state).top.p = (*state).top.p.offset(-1);
-                let io2: *const TValue = &mut (*(*state).top.p).tvalue;
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+                let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
             }
@@ -5365,17 +5357,17 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
                 let io1_0: *mut TValue = &mut (*base
                     .offset((inst >> POSITION_A & !(!(0u32) << 8) << 0) as isize))
                 .tvalue;
-                (*state).top.p = (*state).top.p.offset(-1);
-                let io2_0: *const TValue = &mut (*(*state).top.p).tvalue;
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+                let io2_0: *const TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
                 (*io1_0).value = (*io2_0).value;
                 (*io1_0).set_tag((*io2_0).get_tag());
             }
             58 | 59 | 62 | 63 | 64 | 65 | 57 => {
-                let res: i32 = !((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag()
+                let res: i32 = !((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()
                     == TAG_VARIANT_BOOLEAN_FALSE
-                    || get_tag_type((*(*state).top.p.offset(-(1 as isize))).tvalue.get_tag())
+                    || get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())
                         == TAG_TYPE_NIL) as i32;
-                (*state).top.p = (*state).top.p.offset(-1);
+                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
                 if res != (inst >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
                     (*call_info).u.l.saved_program_counter =
                         ((*call_info).u.l.saved_program_counter).offset(1);
@@ -5383,7 +5375,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
                 }
             }
             53 => {
-                let top: StackValuePointer = (*state).top.p.offset(-(1 as isize));
+                let top: StackValuePointer = (*state).top.stkidrel_pointer.offset(-(1 as isize));
                 let a: i32 = (inst >> POSITION_A & !(!(0u32) << 8) << 0) as i32;
                 let total: i32 =
                     top.offset(-(1 as isize))
@@ -5392,7 +5384,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
                 let io2_1: *const TValue = &mut (*top).tvalue;
                 (*io1_1).value = (*io2_1).value;
                 (*io1_1).set_tag((*io2_1).get_tag());
-                (*state).top.p = top.offset(-(1 as isize));
+                (*state).top.stkidrel_pointer = top.offset(-(1 as isize));
                 concatenate(state, total);
             }
             54 => {
@@ -5402,7 +5394,7 @@ pub unsafe extern "C" fn luav_finishop(state: *mut State) {
             }
             70 => {
                 let ra: StackValuePointer = base.offset((inst >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                (*state).top.p = ra.offset((*call_info).u2.nres as isize);
+                (*state).top.stkidrel_pointer = ra.offset((*call_info).u2.nres as isize);
                 (*call_info).u.l.saved_program_counter =
                     ((*call_info).u.l.saved_program_counter).offset(-1);
                 (*call_info).u.l.saved_program_counter;
@@ -5427,17 +5419,17 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
         '_startfunc: loop {
             trap = (*state).hook_mask;
             '_returning: loop {
-                cl = &mut (*((*(*call_info).function.p).tvalue.value.object as *mut Closure));
+                cl = &mut (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure));
                 k = (*(*cl).payload.l_prototype).k;
                 program_counter = (*call_info).u.l.saved_program_counter;
                 if (trap != 0) as i64 != 0 {
                     trap = luag_tracecall(state);
                 }
-                base = ((*call_info).function.p).offset(1 as isize);
+                base = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
                 loop {
                     if (trap != 0) as i64 != 0 {
                         trap = luag_traceexec(state, program_counter);
-                        base = ((*call_info).function.p).offset(1 as isize);
+                        base = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
                     }
                     let fresh138 = program_counter;
                     program_counter = program_counter.offset(1);
@@ -5606,7 +5598,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io1_4).set_tag((*io2_4).get_tag());
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishget(state, count_upvalues, rc, ra_10, slot);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5664,7 +5656,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io1_5).set_tag((*io2_5).get_tag());
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishget(state, rb_1, rc_0, ra_11, slot_0);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5714,7 +5706,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io_1).value.integer = c as i64;
                                 (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishget(state, rb_2, &mut key_0, ra_12, slot_1);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5750,7 +5742,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io1_7).set_tag((*io2_7).get_tag());
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishget(state, rb_3, rc_1, ra_13, slot_2);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5805,7 +5797,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishset(state, upval_0, rb_4, rc_2, slot_3);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5881,7 +5873,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishset(state, &mut (*ra_14).tvalue, rb_5, rc_3, slot_4);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -5948,7 +5940,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io_2).value.integer = c_0 as i64;
                                 (*io_2).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishset(
                                     state,
                                     &mut (*ra_15).tvalue,
@@ -6006,7 +5998,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishset(state, &mut (*ra_16).tvalue, rb_6, rc_5, slot_6);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -6029,7 +6021,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                     * ((1 << 8) - 1 + 1);
                             }
                             program_counter = program_counter.offset(1);
-                            (*state).top.p = ra_17.offset(1 as isize);
+                            (*state).top.stkidrel_pointer = ra_17.offset(1 as isize);
                             table = luah_new(state);
                             let io_3: *mut TValue = &mut (*ra_17).tvalue;
                             let x_: *mut Table = table;
@@ -6041,7 +6033,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             }
                             if (*(*state).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = ra_17.offset(1 as isize);
+                                (*state).top.stkidrel_pointer = ra_17.offset(1 as isize);
                                 luac_step(state);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -6088,7 +6080,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io1_13).set_tag((*io2_13).get_tag());
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luav_finishget(state, rb_7, rc_6, ra_18, slot_7);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -6280,7 +6272,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         }
                         OP_MODK => {
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             let v1_3: *mut TValue = &mut (*base.offset(
                                 (i >> POSITION_B & !(!(0u32) << 8) << 0) as isize,
                             ))
@@ -6423,7 +6415,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         }
                         OP_IDIVK => {
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             let v1_6: *mut TValue = &mut (*base.offset(
                                 (i >> POSITION_B & !(!(0u32) << 8) << 0) as isize,
                             ))
@@ -6781,7 +6773,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         }
                         OP_MOD => {
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             let v1_13: *mut TValue = &mut (*base.offset(
                                 (i >> POSITION_B & !(!(0u32) << 8) << 0) as isize,
                             ))
@@ -6927,7 +6919,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         }
                         OP_IDIV => {
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             let v1_16: *mut TValue = &mut (*base.offset(
                                 (i >> POSITION_B & !(!(0u32) << 8) << 0) as isize,
                             ))
@@ -7190,7 +7182,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let result: StackValuePointer =
                                 base.offset((pi >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luat_trybintm(state, &mut (*ra_44).tvalue, rb_10, result, tm);
                             trap = (*call_info).u.l.trap;
                             continue;
@@ -7207,7 +7199,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let result_0: StackValuePointer =
                                 base.offset((pi_0 >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luat_trybinitm(
                                 state,
                                 &mut (*ra_45).tvalue,
@@ -7232,7 +7224,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let result_1: StackValuePointer =
                                 base.offset((pi_1 >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luat_trybinassoctm(
                                 state,
                                 &mut (*ra_46).tvalue,
@@ -7272,7 +7264,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io_41).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luat_trybintm(state, rb_11, rb_11, ra_47, TM_UNM);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -7301,7 +7293,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (*io_42).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 luat_trybintm(state, rb_12, rb_12, ra_48, TM_BNOT);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -7327,7 +7319,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_50: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luav_objlen(
                                 state,
                                 ra_50,
@@ -7343,13 +7335,13 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_51: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let n_1: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-                            (*state).top.p = ra_51.offset(n_1 as isize);
+                            (*state).top.stkidrel_pointer = ra_51.offset(n_1 as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
                             concatenate(state, n_1);
                             trap = (*call_info).u.l.trap;
                             if (*(*state).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*state).top.p;
+                                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer;
                                 luac_step(state);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -7359,7 +7351,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_52: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luaf_close(state, ra_52, 0, 1);
                             trap = (*call_info).u.l.trap;
                             continue;
@@ -7368,7 +7360,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_53: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luaf_newtbcupval(state, ra_53);
                             continue;
                         }
@@ -7390,7 +7382,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             ))
                             .tvalue;
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             cond_0 = if luav_equalobj(state, &mut (*ra_54).tvalue, rb_14) { 1 } else { 0 };
                             trap = (*call_info).u.l.trap;
                             if cond_0 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
@@ -7426,7 +7418,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 cond_1 = if ltnum(&mut (*ra_55).tvalue, rb_15) { 1 } else { 0 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_1 = lessthanothers(state, &mut (*ra_55).tvalue, rb_15);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -7463,7 +7455,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 cond_2 = if lenum(&mut (*ra_56).tvalue, rb_16) { 1 } else { 0 };
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_2 = if lessequalothers(state, &mut (*ra_56).tvalue, rb_16) { 1 } else { 0 };
                                 trap = (*call_info).u.l.trap;
                             }
@@ -7543,7 +7535,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let isf: bool =
                                     (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_5 = luat_callorderitm(
                                     state,
                                     &mut (*ra_59).tvalue,
@@ -7583,7 +7575,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let isf_0: bool =
                                     (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_6 = luat_callorderitm(
                                     state,
                                     &mut (*ra_60).tvalue,
@@ -7623,7 +7615,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let isf_1: bool =
                                     (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_7 = luat_callorderitm(
                                     state,
                                     &mut (*ra_61).tvalue,
@@ -7663,7 +7655,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let isf_2: bool =
                                     (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 cond_8 = luat_callorderitm(
                                     state,
                                     &mut (*ra_62).tvalue,
@@ -7742,7 +7734,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             count_results =
                                 (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - 1;
                             if b_4 != 0 {
-                                (*state).top.p = ra_65.offset(b_4 as isize);
+                                (*state).top.stkidrel_pointer = ra_65.offset(b_4 as isize);
                             }
                             (*call_info).u.l.saved_program_counter = program_counter;
                             new_call_info = luad_precall(state, ra_65, count_results);
@@ -7765,9 +7757,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 0
                             };
                             if b_5 != 0 {
-                                (*state).top.p = ra_66.offset(b_5 as isize);
+                                (*state).top.stkidrel_pointer = ra_66.offset(b_5 as isize);
                             } else {
-                                b_5 = ((*state).top.p).offset_from(ra_66) as i32;
+                                b_5 = ((*state).top.stkidrel_pointer).offset_from(ra_66) as i32;
                             }
                             (*call_info).u.l.saved_program_counter = program_counter;
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
@@ -7777,8 +7769,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             if n_2 < 0 {
                                 continue '_startfunc;
                             }
-                            (*call_info).function.p =
-                                ((*call_info).function.p).offset(-(delta as isize));
+                            (*call_info).function.stkidrel_pointer =
+                                ((*call_info).function.stkidrel_pointer).offset(-(delta as isize));
                             luad_poscall(state, call_info, n_2);
                             trap = (*call_info).u.l.trap;
                             break;
@@ -7791,30 +7783,30 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let nparams1_0: i32 =
                                 (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                             if n_3 < 0 {
-                                n_3 = ((*state).top.p).offset_from(ra_67) as i32;
+                                n_3 = ((*state).top.stkidrel_pointer).offset_from(ra_67) as i32;
                             }
                             (*call_info).u.l.saved_program_counter = program_counter;
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
                                 (*call_info).u2.nres = n_3;
-                                if (*state).top.p < (*call_info).top.p {
-                                    (*state).top.p = (*call_info).top.p;
+                                if (*state).top.stkidrel_pointer < (*call_info).top.stkidrel_pointer {
+                                    (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                                 }
                                 luaf_close(state, base, -1, 1);
                                 trap = (*call_info).u.l.trap;
                                 if (trap != 0) as i64 != 0 {
-                                    base = ((*call_info).function.p).offset(1 as isize);
+                                    base = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
                                     ra_67 = base.offset(
                                         (i >> POSITION_A & !(!(0u32) << 8) << 0) as isize,
                                     );
                                 }
                             }
                             if nparams1_0 != 0 {
-                                (*call_info).function.p = ((*call_info).function.p).offset(
+                                (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset(
                                     -(((*call_info).u.l.count_extra_arguments + nparams1_0)
                                         as isize),
                                 );
                             }
-                            (*state).top.p = ra_67.offset(n_3 as isize);
+                            (*state).top.stkidrel_pointer = ra_67.offset(n_3 as isize);
                             luad_poscall(state, call_info, n_3);
                             trap = (*call_info).u.l.trap;
                             break;
@@ -7823,18 +7815,18 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             if ((*state).hook_mask != 0) as i64 != 0 {
                                 let ra_68: StackValuePointer = base
                                     .offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                                (*state).top.p = ra_68;
+                                (*state).top.stkidrel_pointer = ra_68;
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 luad_poscall(state, call_info, 0);
                                 trap = 1;
                             } else {
                                 let mut nres: i32;
                                 (*state).call_info = (*call_info).previous;
-                                (*state).top.p = base.offset(-(1 as isize));
+                                (*state).top.stkidrel_pointer = base.offset(-(1 as isize));
                                 nres = (*call_info).count_results as i32;
                                 while ((nres > 0) as i32 != 0) as i64 != 0 {
-                                    let fresh141 = (*state).top.p;
-                                    (*state).top.p = (*state).top.p.offset(1);
+                                    let fresh141 = (*state).top.stkidrel_pointer;
+                                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                                     (*fresh141).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                                     nres -= 1;
                                 }
@@ -7845,7 +7837,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             if ((*state).hook_mask != 0) as i64 != 0 {
                                 let ra_69: StackValuePointer = base
                                     .offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                                (*state).top.p = ra_69.offset(1 as isize);
+                                (*state).top.stkidrel_pointer = ra_69.offset(1 as isize);
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 luad_poscall(state, call_info, 1);
                                 trap = 1;
@@ -7853,7 +7845,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 let mut nres_0: i32 = (*call_info).count_results as i32;
                                 (*state).call_info = (*call_info).previous;
                                 if nres_0 == 0 {
-                                    (*state).top.p = base.offset(-(1 as isize));
+                                    (*state).top.stkidrel_pointer = base.offset(-(1 as isize));
                                 } else {
                                     let ra_70: StackValuePointer = base.offset(
                                         (i >> POSITION_A & !(!(0u32) << 8) << 0) as isize,
@@ -7863,10 +7855,10 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                     let io2_15: *const TValue = &mut (*ra_70).tvalue;
                                     (*io1_15).value = (*io2_15).value;
                                     (*io1_15).set_tag((*io2_15).get_tag());
-                                    (*state).top.p = base;
+                                    (*state).top.stkidrel_pointer = base;
                                     while ((nres_0 > 1) as i32 != 0) as i64 != 0 {
-                                        let fresh142 = (*state).top.p;
-                                        (*state).top.p = (*state).top.p.offset(1);
+                                        let fresh142 = (*state).top.stkidrel_pointer;
+                                        (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
                                         (*fresh142).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                                         nres_0 -= 1;
                                     }
@@ -7910,7 +7902,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_72: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             if forprep(state, ra_72) != 0 {
                                 program_counter = program_counter.offset(
                                     ((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 + 1)
@@ -7923,7 +7915,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let ra_73: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luaf_newtbcupval(state, ra_73.offset(3 as isize));
                             program_counter = program_counter.offset(
                                 (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize,
@@ -7948,9 +7940,9 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let h: *mut Table =
                                 &mut (*((*ra_76).tvalue.value.object as *mut Table));
                             if n_4 == 0 {
-                                n_4 = ((*state).top.p).offset_from(ra_76) as i32 - 1;
+                                n_4 = ((*state).top.stkidrel_pointer).offset_from(ra_76) as i32 - 1;
                             } else {
-                                (*state).top.p = (*call_info).top.p;
+                                (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             }
                             last = last.wrapping_add(n_4 as u32);
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
@@ -7998,11 +7990,11 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize,
                             );
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             pushclosure(state, p, ((*cl).upvalues).l_upvalues.as_mut_ptr(), base, ra_77);
                             if (*(*state).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
-                                (*state).top.p = ra_77.offset(1 as isize);
+                                (*state).top.stkidrel_pointer = ra_77.offset(1 as isize);
                                 luac_step(state);
                                 trap = (*call_info).u.l.trap;
                             }
@@ -8014,7 +8006,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             let n_5: i32 =
                                 (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - 1;
                             (*call_info).u.l.saved_program_counter = program_counter;
-                            (*state).top.p = (*call_info).top.p;
+                            (*state).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
                             luat_getvarargs(state, call_info, ra_78, n_5);
                             trap = (*call_info).u.l.trap;
                             continue;
@@ -8032,7 +8024,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 luad_hookcall(state, call_info);
                                 (*state).old_program_counter = 1;
                             }
-                            base = ((*call_info).function.p).offset(1 as isize);
+                            base = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
                             continue;
                         }
                         82 | _ => {
@@ -8049,7 +8041,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 (3 as u64)
                                     .wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
                             );
-                            (*state).top.p = ra_74.offset(4 as isize).offset(3 as isize);
+                            (*state).top.stkidrel_pointer = ra_74.offset(4 as isize).offset(3 as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
                             ccall(
                                 state,
@@ -8059,7 +8051,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             );
                             trap = (*call_info).u.l.trap;
                             if (trap != 0) as i64 != 0 {
-                                base = ((*call_info).function.p).offset(1 as isize);
+                                base = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
                             }
                             let fresh144 = program_counter;
                             program_counter = program_counter.offset(1);
