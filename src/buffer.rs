@@ -52,30 +52,30 @@ impl Buffer {
     }
     pub unsafe fn prepare_with_size_and_index(&mut self, size: u64, boxidx: i32) -> *mut i8 {
         unsafe {
-            if (self.size).wrapping_sub(self.length) >= size {
-                return (self.pointer).offset(self.length as isize);
+            if self.size - self.length >= size {
+                return self.pointer.offset(self.length as isize);
             } else {
                 let state: *mut State = self.state;
-                let newbuff: *mut i8;
+                let new_pointer: *mut i8;
                 let new_size: u64 = self.new_with_size(size);
                 if self.pointer != (self.initial_data).as_mut_ptr() {
-                    newbuff = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
+                    new_pointer = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
                 } else {
                     lua_rotate(state, boxidx, -1);
                     lua_settop(state, -1 - 1);
                     UserBox::new_userbox(state);
                     lua_rotate(state, boxidx, 1);
                     lua_toclose(state, boxidx);
-                    newbuff = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
+                    new_pointer = UserBox::resize_userbox(state, boxidx, new_size) as *mut i8;
                     memcpy(
-                        newbuff as *mut libc::c_void,
+                        new_pointer as *mut libc::c_void,
                         self.pointer as *const libc::c_void,
                         self.length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
                 }
-                self.pointer = newbuff;
+                self.pointer = new_pointer;
                 self.size = new_size;
-                return newbuff.offset(self.length as isize);
+                return new_pointer.offset(self.length as isize);
             };
         }
     }

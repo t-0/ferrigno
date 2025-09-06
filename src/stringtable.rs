@@ -34,8 +34,8 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
         let newvect: *mut *mut TString = luam_realloc_(
             state,
             (*tb).hash as *mut libc::c_void,
-            (old_size as u64).wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
-            (new_size as u64).wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
+            (old_size as usize).wrapping_mul(::core::mem::size_of::<*mut TString>()),
+            (new_size as usize).wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
         if ((newvect == std::ptr::null_mut() as *mut *mut TString) as i32 != 0) as i64 != 0 {
             if new_size < old_size {
@@ -55,25 +55,25 @@ pub const STRCACHE_N: usize = 53;
 pub const STRCACHE_M: usize = 2;
 pub unsafe extern "C" fn luas_init(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
         (*tb).hash = luam_malloc_(
             state,
-            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()) as u64,
+            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
         tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE as i32);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
-        (*g).memory_error_message = luas_newlstr(
+        (*global).memory_error_message = luas_newlstr(
             state,
             b"not enough memory\0" as *const u8 as *const i8,
             (::core::mem::size_of::<[i8; 18]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as u64),
         );
-        luac_fix(state, &mut (*((*g).memory_error_message as *mut Object)));
+        luac_fix(state, &mut (*((*global).memory_error_message as *mut Object)));
         for i in 0..STRCACHE_N {
             for j in 0..STRCACHE_M {
-                (*g).string_cache[i][j] = (*g).memory_error_message;
+                (*global).string_cache[i][j] = (*global).memory_error_message;
             }
         }
     }

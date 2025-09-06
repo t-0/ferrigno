@@ -153,7 +153,7 @@ pub unsafe extern "C" fn closelistfield(function_state: *mut FunctionState, cc: 
         luak_exp2nextreg(function_state, &mut (*cc).expression_description);
         (*cc).expression_description.expression_kind = ExpressionKind::VVOID;
         if (*cc).to_store == 50 as i32 {
-            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
+            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na as usize, (*cc).to_store);
             (*cc).na += (*cc).to_store;
             (*cc).to_store = 0;
         }
@@ -166,14 +166,14 @@ pub unsafe extern "C" fn lastlistfield(function_state: *mut FunctionState, cc: *
         }
         if (*cc).expression_description.expression_kind as u32 == ExpressionKind::VCALL as u32 || (*cc).expression_description.expression_kind as u32 == ExpressionKind::VVARARG as u32 {
             luak_setreturns(function_state, &mut (*cc).expression_description, -1);
-            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na, -1);
+            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na as usize, -1);
             (*cc).na -= 1;
             (*cc).na;
         } else {
             if (*cc).expression_description.expression_kind != ExpressionKind::VVOID {
                 luak_exp2nextreg(function_state, &mut (*cc).expression_description);
             }
-            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na, (*cc).to_store);
+            luak_setlist(function_state, (*(*cc).t).value.info, (*cc).na as usize, (*cc).to_store);
         }
         (*cc).na += (*cc).to_store;
     }
@@ -308,9 +308,9 @@ pub unsafe extern "C" fn allocupvalue(function_state: *mut FunctionState) -> *mu
         (*prototype).upvalues = luam_growaux_(
             (*(*function_state).lexical_state).state,
             (*prototype).upvalues as *mut libc::c_void,
-            (*function_state).count_upvalues as i32,
+            (*function_state).count_upvalues as usize,
             &mut (*prototype).size_upvalues,
-            ::core::mem::size_of::<UpValueDescription>() as i32,
+            ::core::mem::size_of::<UpValueDescription>(),
             (if 255 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
             {
@@ -672,9 +672,9 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             (*prototype).absolute_line_info = luam_growaux_(
                 (*(*function_state).lexical_state).state,
                 (*prototype).absolute_line_info as *mut libc::c_void,
-                (*function_state).count_abslineinfo,
+                (*function_state).count_abslineinfo as usize,
                 &mut (*prototype).size_absolute_line_info,
-                ::core::mem::size_of::<AbsoluteLineInfo>() as i32,
+                ::core::mem::size_of::<AbsoluteLineInfo>(),
                 (if 0x7FFFFFFF as u64
                     <= (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
                 {
@@ -695,9 +695,9 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
         (*prototype).line_info = luam_growaux_(
             (*(*function_state).lexical_state).state,
             (*prototype).line_info as *mut libc::c_void,
-            program_counter,
+            program_counter as usize,
             &mut (*prototype).size_line_info,
-            ::core::mem::size_of::<i8>() as i32,
+            ::core::mem::size_of::<i8>(),
             (if 0x7FFFFFFF as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
             {
@@ -739,9 +739,9 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
         (*prototype).code = luam_growaux_(
             (*(*function_state).lexical_state).state,
             (*prototype).code as *mut libc::c_void,
-            (*function_state).program_counter,
+            (*function_state).program_counter as usize,
             &mut (*prototype).size_code,
-            ::core::mem::size_of::<u32>() as i32,
+            ::core::mem::size_of::<u32>(),
             (if 0x7FFFFFFF as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
             {
@@ -886,28 +886,28 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let state: *mut State = (*(*function_state).lexical_state).state;
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
-        let mut k: i32;
+        let mut count_k: i32;
         if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
-            k = (*index).value.integer as i32;
-            if k < (*function_state).count_k
-                && (*((*prototype).k).offset(k as isize)).get_tag_variant() == (*v).get_tag_variant()
-                && luav_equalobj(std::ptr::null_mut(), &mut *((*prototype).k).offset(k as isize), v)
+            count_k = (*index).value.integer as i32;
+            if count_k < (*function_state).count_k
+                && (*((*prototype).k).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
+                && luav_equalobj(std::ptr::null_mut(), &mut *((*prototype).k).offset(count_k as isize), v)
             {
-                return k;
+                return count_k;
             }
         }
         let mut old_size: i32 = (*prototype).size_k;
-        k = (*function_state).count_k;
+        count_k = (*function_state).count_k;
         let io: *mut TValue = &mut value;
-        (*io).value.integer = k as i64;
+        (*io).value.integer = count_k as i64;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(state, (*(*function_state).lexical_state).table, key, index, &mut value);
         (*prototype).k = luam_growaux_(
             state,
             (*prototype).k as *mut libc::c_void,
-            k,
+            count_k as usize,
             &mut (*prototype).size_k,
-            ::core::mem::size_of::<TValue>() as i32,
+            ::core::mem::size_of::<TValue>(),
             (if ((1 << 8 + 8 + 1 + 8) - 1) as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
             {
@@ -922,7 +922,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             old_size = old_size + 1;
             (*((*prototype).k).offset(fresh135 as isize)).set_tag(TAG_VARIANT_NIL_NIL);
         }
-        let io1: *mut TValue = &mut *((*prototype).k).offset(k as isize) as *mut TValue;
+        let io1: *mut TValue = &mut *((*prototype).k).offset(count_k as isize) as *mut TValue;
         let io2: *const TValue = v;
         (*io1).value = (*io2).value;
         (*io1).set_tag((*io2).get_tag());
@@ -941,7 +941,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             };
         } else {
         };
-        return k;
+        return count_k;
     }
 }
 pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TString) -> i32 {
@@ -2130,7 +2130,7 @@ pub unsafe extern "C" fn luak_settablesize(
 pub unsafe extern "C" fn luak_setlist(
     function_state: *mut FunctionState,
     base: i32,
-    mut count_elements: i32,
+    mut count_elements: usize,
     mut tostore: i32,
 ) {
     unsafe {
@@ -2138,12 +2138,12 @@ pub unsafe extern "C" fn luak_setlist(
             tostore = 0;
         }
         if count_elements <= (1 << 8) - 1 {
-            luak_code_abck(function_state, OP_SETLIST, base, tostore, count_elements, 0);
+            luak_code_abck(function_state, OP_SETLIST, base, tostore, count_elements as i32, 0);
         } else {
-            let extra: i32 = count_elements / ((1 << 8) - 1 + 1);
+            let extra = count_elements / ((1 << 8) - 1 + 1);
             count_elements %= (1 << 8) - 1 + 1;
-            luak_code_abck(function_state, OP_SETLIST, base, tostore, count_elements, 1);
-            codeextraarg(function_state, extra);
+            luak_code_abck(function_state, OP_SETLIST, base, tostore, count_elements as i32, 1);
+            codeextraarg(function_state, extra as i32);
         }
         (*function_state).freereg = (base + 1) as u8;
     }

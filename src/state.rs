@@ -239,11 +239,11 @@ impl State {
             };
         }
     }
-    pub unsafe extern "C" fn free_memory(&mut self, block: *mut libc::c_void, old_size: u64) {
+    pub unsafe extern "C" fn free_memory(&mut self, block: *mut libc::c_void, old_size: usize) {
         unsafe {
-            raw_allocate(block, old_size, 0u64);
+            raw_allocate(block, old_size, 0);
             (*(self.global)).gc_debt =
-                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size) as i64;
+                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size as u64) as i64;
         }
     }
     pub unsafe extern "C" fn too_big(&mut self) -> ! {
@@ -507,20 +507,20 @@ pub unsafe extern "C" fn luad_throw(state: *mut State, mut error_code: i32) -> !
             ::core::ptr::write_volatile(&mut (*(*state).long_jump).status as *mut i32, error_code);
             _longjmp(((*(*state).long_jump).jbt).as_mut_ptr(), 1);
         } else {
-            let g: *mut Global = (*state).global;
+            let global: *mut Global = (*state).global;
             error_code = luae_resetthread(state, error_code);
             (*state).status = error_code as u8;
-            if !((*(*g).main_state).long_jump).is_null() {
-                let fresh0 = (*(*g).main_state).top.stkidrel_pointer;
-                (*(*g).main_state).top.stkidrel_pointer = ((*(*g).main_state).top.stkidrel_pointer).offset(1);
+            if !((*(*global).main_state).long_jump).is_null() {
+                let fresh0 = (*(*global).main_state).top.stkidrel_pointer;
+                (*(*global).main_state).top.stkidrel_pointer = ((*(*global).main_state).top.stkidrel_pointer).offset(1);
                 let io1: *mut TValue = &mut (*fresh0).tvalue;
                 let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                luad_throw((*g).main_state, error_code);
+                luad_throw((*global).main_state, error_code);
             } else {
-                if ((*g).panic).is_some() {
-                    ((*g).panic).expect("non-null function pointer")(state);
+                if ((*global).panic).is_some() {
+                    ((*global).panic).expect("non-null function pointer")(state);
                 }
                 abort();
             }
@@ -561,8 +561,8 @@ pub unsafe extern "C" fn luad_reallocstack(
         let newstack: StackValuePointer = luam_realloc_(
             state,
             (*state).stack.stkidrel_pointer as *mut libc::c_void,
-            ((old_size + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
-            ((new_size + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
+            ((old_size + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>() as usize),
+            ((new_size + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>() as usize),
         ) as *mut StackValue;
         (*(*state).global).gcstopem = oldgcstop as u8;
         if ((newstack == std::ptr::null_mut() as StackValuePointer) as i32 != 0) as i64 != 0 {
@@ -1446,24 +1446,24 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.buffer.pointer = luam_saferealloc_(
             state,
             p.buffer.pointer as *mut libc::c_void,
-            (p.buffer.size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
-            (0u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            (p.buffer.size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+            0,
         ) as *mut i8;
         p.buffer.size = 0;
         (*state).free_memory(
             p.dynamic_data.active_variable.pointer as *mut libc::c_void,
             (p.dynamic_data.active_variable.size as u64)
-                .wrapping_mul(::core::mem::size_of::<VariableDescription>() as u64),
+                .wrapping_mul(::core::mem::size_of::<VariableDescription>() as u64) as usize,
         );
         (*state).free_memory(
             p.dynamic_data.gt.pointer as *mut libc::c_void,
             (p.dynamic_data.gt.size as u64)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64),
+                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64) as usize,
         );
         (*state).free_memory(
             p.dynamic_data.label.pointer as *mut libc::c_void,
             (p.dynamic_data.label.size as u64)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64),
+                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64) as usize,
         );
         (*state).count_c_calls =
             ((*state).count_c_calls as u32).wrapping_sub(0x10000 as u32) as u32;
@@ -1841,7 +1841,7 @@ pub unsafe extern "C" fn lua_tolstring(
         if !length.is_null() {
             *length = (*((*o).value.object as *mut TString)).get_length();
         }
-        return (*((*o).value.object as *mut TString)).get_contents();
+        return (*((*o).value.object as *mut TString)).get_contents_mut();
     }
 }
 pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 {
@@ -1893,7 +1893,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        return (*ts).get_contents();
+        return (*ts).get_contents_mut();
     }
 }
 pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> *const i8 {
@@ -1907,7 +1907,7 @@ pub unsafe extern "C" fn lua_pushstring(state: *mut State, mut s: *const i8) -> 
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            s = (*ts).get_contents();
+            s = (*ts).get_contents_mut();
         }
         (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
         if (*(*state).global).gc_debt > 0 {
@@ -2580,74 +2580,74 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
     unsafe {
         let mut argp: ::core::ffi::VaListImpl;
         let mut res: i32 = 0;
-        let g: *mut Global = (*state).global;
-        if (*g).gc_step as i32 & 2 != 0 {
+        let global: *mut Global = (*state).global;
+        if (*global).gc_step as i32 & 2 != 0 {
             return -1;
         }
         argp = args.clone();
         match what {
             0 => {
-                (*g).gc_step = 1;
+                (*global).gc_step = 1;
             }
             1 => {
-                (*g).set_debt(0);
-                (*g).gc_step = 0;
+                (*global).set_debt(0);
+                (*global).gc_step = 0;
             }
             2 => {
                 luac_fullgc(state, false);
             }
             3 => {
-                res = (((*g).total_bytes + (*g).gc_debt) as u64 >> 10 as i32) as i32;
+                res = (((*global).total_bytes + (*global).gc_debt) as u64 >> 10 as i32) as i32;
             }
             4 => {
-                res = (((*g).total_bytes + (*g).gc_debt) as u64 & 0x3ff as u64) as i32;
+                res = (((*global).total_bytes + (*global).gc_debt) as u64 & 0x3ff as u64) as i32;
             }
             5 => {
                 let data: i32 = argp.arg::<i32>();
                 let mut debt: i64 = 1;
-                let oldstp: u8 = (*g).gc_step;
-                (*g).gc_step = 0;
+                let oldstp: u8 = (*global).gc_step;
+                (*global).gc_step = 0;
                 if data == 0 {
-                    (*g).set_debt(0);
+                    (*global).set_debt(0);
                     luac_step(state);
                 } else {
-                    debt = data as i64 * 1024 as i64 + (*g).gc_debt;
-                    (*g).set_debt(debt);
+                    debt = data as i64 * 1024 as i64 + (*global).gc_debt;
+                    (*global).set_debt(debt);
                     if (*(*state).global).gc_debt > 0 {
                         luac_step(state);
                     }
                 }
-                (*g).gc_step = oldstp;
-                if debt > 0 && (*g).gc_state as i32 == 8 {
+                (*global).gc_step = oldstp;
+                if debt > 0 && (*global).gc_state as i32 == 8 {
                     res = 1;
                 }
             }
             6 => {
                 let data_0: i32 = argp.arg::<i32>();
-                res = (*g).gc_pause as i32 * 4;
-                (*g).gc_pause = (data_0 / 4) as u8;
+                res = (*global).gc_pause as i32 * 4;
+                (*global).gc_pause = (data_0 / 4) as u8;
             }
             7 => {
                 let data_1: i32 = argp.arg::<i32>();
-                res = (*g).gc_step_multiplier as i32 * 4;
-                (*g).gc_step_multiplier = (data_1 / 4) as u8;
+                res = (*global).gc_step_multiplier as i32 * 4;
+                (*global).gc_step_multiplier = (data_1 / 4) as u8;
             }
             9 => {
-                res = ((*g).gc_step as i32 == 0) as i32;
+                res = ((*global).gc_step as i32 == 0) as i32;
             }
             10 => {
                 let minormul: i32 = argp.arg::<i32>();
                 let majormul: i32 = argp.arg::<i32>();
-                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
+                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
                     10 as i32
                 } else {
                     11 as i32
                 };
                 if minormul != 0 {
-                    (*g).generational_minor_multiplier = minormul as u64;
+                    (*global).generational_minor_multiplier = minormul as u64;
                 }
                 if majormul != 0 {
-                    (*g).generational_major_multiplier = (majormul / 4) as u64;
+                    (*global).generational_major_multiplier = (majormul / 4) as u64;
                 }
                 luac_changemode(state, 1);
             }
@@ -2655,19 +2655,19 @@ pub unsafe extern "C" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 
                 let pause: i32 = argp.arg::<i32>();
                 let stepmul: i32 = argp.arg::<i32>();
                 let stepsize: i32 = argp.arg::<i32>();
-                res = if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
+                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
                     10 as i32
                 } else {
                     11 as i32
                 };
                 if pause != 0 {
-                    (*g).gc_pause = (pause / 4) as u8;
+                    (*global).gc_pause = (pause / 4) as u8;
                 }
                 if stepmul != 0 {
-                    (*g).gc_step_multiplier = (stepmul / 4) as u8;
+                    (*global).gc_step_multiplier = (stepmul / 4) as u8;
                 }
                 if stepsize != 0 {
-                    (*g).gc_step_size = stepsize as u8;
+                    (*global).gc_step_size = stepsize as u8;
                 }
                 luac_changemode(state, 0);
             }
@@ -2893,7 +2893,7 @@ pub unsafe fn luai_makeseed(state: *mut State) -> u32 {
 }
 pub unsafe extern "C" fn luae_extendci(state: *mut State) -> *mut CallInfo {
     unsafe {
-        let ret = luam_malloc_(state, ::core::mem::size_of::<CallInfo>() as u64) as *mut CallInfo;
+        let ret = luam_malloc_(state, ::core::mem::size_of::<CallInfo>()) as *mut CallInfo;
         (*(*state).call_info).next = ret;
         (*ret).previous = (*state).call_info;
         (*ret).next = std::ptr::null_mut();
@@ -2916,7 +2916,7 @@ pub unsafe extern "C" fn freeci(state: *mut State) {
             next = (*call_info).next;
             (*state).free_memory(
                 call_info as *mut libc::c_void,
-                ::core::mem::size_of::<CallInfo>() as u64,
+                ::core::mem::size_of::<CallInfo>(),
             );
             (*state).count_call_info = ((*state).count_call_info).wrapping_sub(1);
             (*state).count_call_info;
@@ -2939,7 +2939,7 @@ pub unsafe extern "C" fn luae_shrinkci(state: *mut State) {
                 (*state).count_call_info;
                 (*state).free_memory(
                     next as *mut libc::c_void,
-                    ::core::mem::size_of::<CallInfo>() as u64,
+                    ::core::mem::size_of::<CallInfo>(),
                 );
                 if next2.is_null() {
                     break;
@@ -2954,7 +2954,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut State, state: *mut State) 
     unsafe {
         (*other_state).stack.stkidrel_pointer = luam_malloc_(
             state,
-            ((2 * 20 as i32 + 5) as u64).wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
+            ((2 * 20 as i32 + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>()),
         ) as *mut StackValue;
         (*other_state).tbc_list.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         for i in 0..2 * 20 as i32 + 5 {
@@ -2988,14 +2988,14 @@ pub unsafe extern "C" fn freestack(state: *mut State) {
         (*state).free_memory(
             (*state).stack.stkidrel_pointer as *mut libc::c_void,
             ((((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32 + 5) as u64)
-                .wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
+                .wrapping_mul(::core::mem::size_of::<StackValue>() as u64) as usize,
         );
     }
 }
-pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn init_registry(state: *mut State, global: *mut Global) {
     unsafe {
         let registry: *mut Table = luah_new(state);
-        let io: *mut TValue = &mut (*g).l_registry;
+        let io: *mut TValue = &mut (*global).l_registry;
         let x_: *mut Table = registry;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_TABLE);
@@ -3015,19 +3015,19 @@ pub unsafe extern "C" fn init_registry(state: *mut State, g: *mut Global) {
 }
 pub unsafe extern "C" fn f_luaopen(state: *mut State, mut _ud: *mut libc::c_void) {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         stack_init(state, state);
-        init_registry(state, g);
+        init_registry(state, global);
         luas_init(state);
         luat_init(state);
         luax_init(state);
-        (*g).gc_step = 0;
-        (*g).nil_value.set_tag(TAG_VARIANT_NIL_NIL);
+        (*global).gc_step = 0;
+        (*global).nil_value.set_tag(TAG_VARIANT_NIL_NIL);
     }
 }
-pub unsafe extern "C" fn preinit_thread(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn preinit_thread(state: *mut State, global: *mut Global) {
     unsafe {
-        (*state).global = g;
+        (*state).global = global;
         (*state).stack.stkidrel_pointer = std::ptr::null_mut();
         (*state).call_info = std::ptr::null_mut();
         (*state).count_call_info = 0;
@@ -3047,8 +3047,8 @@ pub unsafe extern "C" fn preinit_thread(state: *mut State, g: *mut Global) {
 }
 pub unsafe extern "C" fn close_state(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        if !(get_tag_type((*g).nil_value.get_tag()) == TAG_TYPE_NIL) {
+        let global: *mut Global = (*state).global;
+        if !(get_tag_type((*global).nil_value.get_tag()) == TAG_TYPE_NIL) {
             luac_freeallobjects(state);
         } else {
             (*state).call_info = &mut (*state).base_callinfo;
@@ -3060,19 +3060,19 @@ pub unsafe extern "C" fn close_state(state: *mut State) {
         (*state).free_memory(
             (*(*state).global).string_table.hash as *mut libc::c_void,
             ((*(*state).global).string_table.size as u64)
-                .wrapping_mul(::core::mem::size_of::<*mut TString>() as u64),
+                .wrapping_mul(::core::mem::size_of::<*mut TString>() as u64) as usize,
         );
         freestack(state);
         raw_allocate(
             (state as *mut u8).offset(-(8 as isize)) as *mut libc::c_void,
-            ::core::mem::size_of::<Interpreter>() as u64,
+            ::core::mem::size_of::<Interpreter>(),
             0,
         );
     }
 }
 pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
@@ -3089,7 +3089,7 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
         (*io).set_tag(TAG_VARIANT_STATE);
         (*io).set_collectable();
         (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
-        preinit_thread(other_state, g);
+        preinit_thread(other_state, global);
         ::core::ptr::write_volatile(
             &mut (*other_state).hook_mask as *mut i32,
             (*state).hook_mask,
@@ -3101,7 +3101,7 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
             (other_state as *mut i8)
                 .offset(-(::core::mem::size_of::<*mut libc::c_void>() as isize))
                 as *mut libc::c_void,
-            ((*g).main_state as *mut i8)
+            ((*global).main_state as *mut i8)
                 .offset(-(::core::mem::size_of::<*mut libc::c_void>() as isize))
                 as *mut libc::c_void,
             ::core::mem::size_of::<*mut libc::c_void>() as u64,
@@ -3115,7 +3115,7 @@ pub unsafe extern "C" fn luae_freethread(state: *mut State, other_state: *mut St
         let l: *mut StateExtra = (other_state as *mut u8).offset(-(8 as isize)) as *mut StateExtra;
         luaf_closeupval(other_state, (*other_state).stack.stkidrel_pointer);
         freestack(other_state);
-        (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>() as u64);
+        (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>());
     }
 }
 pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) -> i32 {
@@ -3175,7 +3175,7 @@ pub unsafe extern "C" fn luae_warnerror(state: *mut State, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
         let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TAG_TYPE_STRING {
-            ((*((*errobj).value.object as *mut TString)).get_contents()) as *const i8
+            ((*((*errobj).value.object as *mut TString)).get_contents_mut()) as *const i8
         } else {
             b"error object is not a string\0" as *const u8 as *const i8
         };
@@ -3402,7 +3402,7 @@ pub unsafe extern "C" fn luag_addinfo(
         if !src.is_null() {
             luao_chunkid(
                 buffer.as_mut_ptr(),
-                (*src).get_contents(),
+                (*src).get_contents_mut(),
                 (*src).get_length(),
             );
         } else {
@@ -3546,15 +3546,15 @@ pub unsafe extern "C" fn luag_traceexec(state: *mut State, mut program_counter: 
 pub unsafe extern "C" fn luam_growaux_(
     state: *mut State,
     block: *mut libc::c_void,
-    count_elements: i32,
+    count_elements: usize,
     total_size: *mut i32,
-    element_size: i32,
+    element_size: usize,
     limit: i32,
     what: *const i8,
 ) -> *mut libc::c_void {
     unsafe {
         let mut size: i32 = *total_size;
-        if count_elements + 1 <= size {
+        if count_elements + 1 <= size as usize {
             return block;
         }
         if size >= limit / 2 {
@@ -3576,8 +3576,8 @@ pub unsafe extern "C" fn luam_growaux_(
         let new_block: *mut libc::c_void = luam_saferealloc_(
             state,
             block,
-            (*total_size as u64).wrapping_mul(element_size as u64),
-            (size as u64).wrapping_mul(element_size as u64),
+            (*total_size as usize).wrapping_mul(element_size),
+            (size as usize).wrapping_mul(element_size),
         );
         *total_size = size;
         return new_block;
@@ -3587,26 +3587,26 @@ pub unsafe extern "C" fn luam_shrinkvector_(
     state: *mut State,
     block: *mut libc::c_void,
     size: *mut i32,
-    count_elements: i32,
-    element_size: i32,
+    count_elements: usize,
+    element_size: usize,
 ) -> *mut libc::c_void {
     unsafe {
-        let old_size: u64 = (*size * element_size) as u64;
-        let new_size: u64 = (count_elements * element_size) as u64;
+        let old_size = *size as usize * element_size;
+        let new_size = count_elements * element_size;
         let new_block: *mut libc::c_void = luam_saferealloc_(state, block, old_size, new_size);
-        *size = count_elements;
+        *size = count_elements as i32;
         return new_block;
     }
 }
 pub unsafe extern "C" fn tryagain(
     state: *mut State,
     block: *mut libc::c_void,
-    old_size: u64,
-    new_size: u64,
+    old_size: usize,
+    new_size: usize,
 ) -> *mut libc::c_void {
     unsafe {
-        let g: *mut Global = (*state).global;
-        if get_tag_type((*g).nil_value.get_tag()) == TAG_TYPE_NIL && (*g).gcstopem == 0 {
+        let global: *mut Global = (*state).global;
+        if get_tag_type((*global).nil_value.get_tag()) == TAG_TYPE_NIL && (*global).gcstopem == 0 {
             luac_fullgc(state, true);
             return raw_allocate(block, old_size, new_size);
         } else {
@@ -3617,19 +3617,19 @@ pub unsafe extern "C" fn tryagain(
 pub unsafe extern "C" fn luam_realloc_(
     state: *mut State,
     block: *mut libc::c_void,
-    old_size: u64,
-    new_size: u64,
+    old_size: usize,
+    new_size: usize,
 ) -> *mut libc::c_void {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let mut new_block: *mut libc::c_void = raw_allocate(block, old_size, new_size);
-        if ((new_block.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
+        if new_block.is_null() && new_size > 0 {
             new_block = tryagain(state, block, old_size, new_size);
             if new_block.is_null() {
                 return std::ptr::null_mut();
             }
         }
-        (*g).gc_debt = ((*g).gc_debt as u64)
+        (*global).gc_debt = ((*global).gc_debt as usize)
             .wrapping_add(new_size)
             .wrapping_sub(old_size) as i64;
         return new_block;
@@ -3638,31 +3638,31 @@ pub unsafe extern "C" fn luam_realloc_(
 pub unsafe extern "C" fn luam_saferealloc_(
     state: *mut State,
     block: *mut libc::c_void,
-    old_size: u64,
-    new_size: u64,
+    old_size: usize,
+    new_size: usize,
 ) -> *mut libc::c_void {
     unsafe {
         let new_block: *mut libc::c_void = luam_realloc_(state, block, old_size, new_size);
-        if ((new_block.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
+        if new_block.is_null() && new_size > 0 {
             luad_throw(state, 4);
         }
         return new_block;
     }
 }
-pub unsafe extern "C" fn luam_malloc_(state: *mut State, size: u64) -> *mut libc::c_void {
+pub unsafe extern "C" fn luam_malloc_(state: *mut State, new_size: usize) -> *mut libc::c_void {
     unsafe {
-        if size == 0 {
+        if new_size == 0 {
             return std::ptr::null_mut();
         } else {
-            let g: *mut Global = (*state).global;
-            let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), 0, size);
+            let global: *mut Global = (*state).global;
+            let mut new_block: *mut libc::c_void = raw_allocate(std::ptr::null_mut(), 0, new_size);
             if new_block.is_null() {
-                new_block = tryagain(state, std::ptr::null_mut(), 0, size);
+                new_block = tryagain(state, std::ptr::null_mut(), 0, new_size);
                 if new_block.is_null() {
                     luad_throw(state, 4);
                 }
             }
-            (*g).gc_debt = ((*g).gc_debt as u64).wrapping_add(size) as i64;
+            (*global).gc_debt = ((*global).gc_debt as usize).wrapping_add(new_size) as i64;
             return new_block;
         };
     }
@@ -3934,7 +3934,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
         buff_fs.add_string(fmt, strlen(fmt));
         buff_fs.clear();
         return (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut TString))
-            .get_contents();
+            .get_contents_mut();
     }
 }
 pub unsafe extern "C" fn luao_pushfstring(
@@ -4027,7 +4027,7 @@ pub unsafe extern "C" fn luat_objtypename(state: *mut State, o: *const TValue) -
             let name: *const TValue =
                 luah_getshortstr(mt, luas_new(state, b"__name\0" as *const u8 as *const i8));
             if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
-                return (*((*name).value.object as *mut TString)).get_contents();
+                return (*((*name).value.object as *mut TString)).get_contents_mut();
             }
         }
         return TYPE_NAMES[(((*o).get_tag_type()) + 1) as usize];
@@ -4348,13 +4348,13 @@ pub unsafe extern "C" fn luac_newobjdt(
     offset: u64,
 ) -> *mut Object {
     unsafe {
-        let g: *mut Global = (*state).global;
-        let p: *mut i8 = luam_malloc_(state, size) as *mut i8;
+        let global: *mut Global = (*state).global;
+        let p: *mut i8 = luam_malloc_(state, size as usize) as *mut i8;
         let o: *mut Object = p.offset(offset as isize) as *mut Object;
-        (*o).set_marked((*g).current_white & (1 << 3 | 1 << 4));
+        (*o).set_marked((*global).current_white & (1 << 3 | 1 << 4));
         (*o).set_tag(tag);
-        (*o).next = (*g).all_gc;
-        (*g).all_gc = o;
+        (*o).next = (*global).all_gc;
+        (*global).all_gc = o;
         return o;
     }
 }
@@ -4363,14 +4363,14 @@ pub unsafe extern "C" fn luac_newobj(state: *mut State, tag: u8, size: u64) -> *
         return luac_newobjdt(state, tag, size, 0u64);
     }
 }
-pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i32 {
+pub unsafe extern "C" fn traverse_state(global: *mut Global, state: *mut State) -> i32 {
     unsafe {
         let mut o: StackValuePointer = (*state).stack.stkidrel_pointer;
-        if (*state).get_marked() & 7 > 1 || (*g).gc_state as i32 == 0 {
+        if (*state).get_marked() & 7 > 1 || (*global).gc_state as i32 == 0 {
             linkgclist_(
                 &mut (*(state as *mut Object)),
                 &mut (*state).gc_list,
-                &mut (*g).gray_again,
+                &mut (*global).gray_again,
             );
         }
         if o.is_null() {
@@ -4380,19 +4380,19 @@ pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i3
             if ((*o).tvalue.is_collectable())
                 && (*(*o).tvalue.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
-                reallymarkobject(g, (*o).tvalue.value.object);
+                reallymarkobject(global, (*o).tvalue.value.object);
             }
             o = o.offset(1);
         }
         let mut uv: *mut UpValue = (*state).open_upvalue;
         while !uv.is_null() {
             if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*(uv as *mut Object)));
+                reallymarkobject(global, &mut (*(uv as *mut Object)));
             }
             uv = (*uv).u.open.next;
         }
-        if (*g).gc_state as i32 == 2 {
-            if !(*g).is_emergency {
+        if (*global).gc_state as i32 == 2 {
+            if !(*global).is_emergency {
                 (*state).luad_shrinkstack();
             }
             o = (*state).top.stkidrel_pointer;
@@ -4401,8 +4401,8 @@ pub unsafe extern "C" fn traverse_state(g: *mut Global, state: *mut State) -> i3
                 o = o.offset(1);
             }
             if !((*state).twups != state) && !((*state).open_upvalue).is_null() {
-                (*state).twups = (*g).twups;
-                (*g).twups = state;
+                (*state).twups = (*global).twups;
+                (*global).twups = state;
             }
         }
         return 1 + ((*state).stack_last.stkidrel_pointer).offset_from((*state).stack.stkidrel_pointer) as i32;
@@ -4423,14 +4423,14 @@ pub unsafe extern "C" fn sweeptolive(
         return p;
     }
 }
-pub unsafe extern "C" fn check_sizes(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn check_sizes(state: *mut State, global: *mut Global) {
     unsafe {
-        if !(*g).is_emergency {
-            if (*g).string_table.length < (*g).string_table.size / 4 {
-                let olddebt: i64 = (*g).gc_debt;
-                luas_resize(state, (*g).string_table.size / 2);
-                (*g).gc_estimate = ((*g).gc_estimate as u64)
-                    .wrapping_add(((*g).gc_debt - olddebt) as u64)
+        if !(*global).is_emergency {
+            if (*global).string_table.length < (*global).string_table.size / 4 {
+                let olddebt: i64 = (*global).gc_debt;
+                luas_resize(state, (*global).string_table.size / 2);
+                (*global).gc_estimate = ((*global).gc_estimate as u64)
+                    .wrapping_add(((*global).gc_debt - olddebt) as u64)
                     as u64;
             }
         }
@@ -4443,7 +4443,7 @@ pub unsafe extern "C" fn dothecall(state: *mut State, mut _ud: *mut libc::c_void
 }
 pub unsafe extern "C" fn gctm_function(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let tm: *const TValue;
         let mut v: TValue = TValue {
             value: Value {
@@ -4452,7 +4452,7 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
             tag: 0,
         };
         let io: *mut TValue = &mut v;
-        let i_g: *mut Object = udata2finalize(g);
+        let i_g: *mut Object = udata2finalize(global);
         (*io).value.object = i_g;
         (*io).set_tag((*i_g).get_tag());
         (*io).set_collectable();
@@ -4460,8 +4460,8 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
         if !(get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) {
             let status: i32;
             let oldah: u8 = (*state).allow_hook;
-            let oldgcstp: i32 = (*g).gc_step as i32;
-            (*g).gc_step = ((*g).gc_step as i32 | 2) as u8;
+            let oldgcstp: i32 = (*global).gc_step as i32;
+            (*global).gc_step = ((*global).gc_step as i32 | 2) as u8;
             (*state).allow_hook = 0;
             let fresh15 = (*state).top.stkidrel_pointer;
             (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
@@ -4488,7 +4488,7 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
             (*(*state).call_info).call_status =
                 ((*(*state).call_info).call_status as i32 & !(1 << 7)) as u16;
             (*state).allow_hook = oldah;
-            (*g).gc_step = oldgcstp as u8;
+            (*global).gc_step = oldgcstp as u8;
             if ((status != 0) as i32 != 0) as i64 != 0 {
                 luae_warnerror(state, b"__gc\0" as *const u8 as *const i8);
                 (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
@@ -4498,10 +4498,10 @@ pub unsafe extern "C" fn gctm_function(state: *mut State) {
 }
 pub unsafe extern "C" fn runafewfinalizers(state: *mut State, n: i32) -> i32 {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let mut i: i32;
         i = 0;
-        while i < n && !((*g).to_be_finalized).is_null() {
+        while i < n && !((*global).to_be_finalized).is_null() {
             gctm_function(state);
             i += 1;
         }
@@ -4510,15 +4510,15 @@ pub unsafe extern "C" fn runafewfinalizers(state: *mut State, n: i32) -> i32 {
 }
 pub unsafe extern "C" fn callallpendingfinalizers(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        while !((*g).to_be_finalized).is_null() {
+        let global: *mut Global = (*state).global;
+        while !((*global).to_be_finalized).is_null() {
             gctm_function(state);
         }
     }
 }
 pub unsafe extern "C" fn luac_checkfinalizer(state: *mut State, o: *mut Object, mt: *mut Table) {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         if (*o).get_marked() & 1 << 6 != 0
             || (if mt.is_null() {
                 std::ptr::null()
@@ -4526,39 +4526,39 @@ pub unsafe extern "C" fn luac_checkfinalizer(state: *mut State, o: *mut Object, 
                 if (*mt).flags as u32 & (1 as u32) << TM_GC as i32 != 0 {
                     std::ptr::null()
                 } else {
-                    luat_gettm(mt, TM_GC, (*g).tm_name[TM_GC as usize])
+                    luat_gettm(mt, TM_GC, (*global).tm_name[TM_GC as usize])
                 }
             })
             .is_null()
-            || (*g).gc_step as i32 & 4 != 0
+            || (*global).gc_step as i32 & 4 != 0
         {
             return;
         } else {
-            if 3 <= (*g).gc_state as i32 && (*g).gc_state as i32 <= 6 {
+            if 3 <= (*global).gc_state as i32 && (*global).gc_state as i32 <= 6 {
                 (*o).set_marked(
                     (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
-                        | ((*g).current_white & (1 << 3 | 1 << 4)),
+                        | ((*global).current_white & (1 << 3 | 1 << 4)),
                 );
-                if (*g).sweep_gc == &mut (*o).next as *mut *mut Object {
-                    (*g).sweep_gc = sweeptolive(state, (*g).sweep_gc);
+                if (*global).sweep_gc == &mut (*o).next as *mut *mut Object {
+                    (*global).sweep_gc = sweeptolive(state, (*global).sweep_gc);
                 }
             } else {
-                correctpointers(g, o);
+                correctpointers(global, o);
             }
-            let mut p: *mut *mut Object = &mut (*g).all_gc;
+            let mut p: *mut *mut Object = &mut (*global).all_gc;
             while *p != o {
                 p = &mut (**p).next;
             }
             *p = (*o).next;
-            (*o).next = (*g).finalized_objects;
-            (*g).finalized_objects = o;
+            (*o).next = (*global).finalized_objects;
+            (*global).finalized_objects = o;
             (*o).set_marked(((*o).get_marked() | 1 << 6) as u8);
         };
     }
 }
 pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         loop {
             let curr: *mut Object = *p;
             if curr.is_null() {
@@ -4574,7 +4574,7 @@ pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
                     linkgclist_(
                         &mut (*(other_state as *mut Object)),
                         &mut (*other_state).gc_list,
-                        &mut (*g).gray_again,
+                        &mut (*global).gray_again,
                     );
                 } else if (*curr).get_tag() == TAG_TYPE_UPVALUE
                     && (*(curr as *mut UpValue)).v.p
@@ -4591,14 +4591,14 @@ pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
 }
 pub unsafe extern "C" fn sweepgen(
     state: *mut State,
-    g: *mut Global,
+    global: *mut Global,
     mut p: *mut *mut Object,
     limit: *mut Object,
     pfirstold1: *mut *mut Object,
 ) -> *mut *mut Object {
     unsafe {
         static mut NEXT_AGE: [u8; 7] = [1, 3 as u8, 3 as u8, 4 as u8, 4 as u8, 5 as u8, 6 as u8];
-        let white = (*g).current_white & (1 << 3 | 1 << 4);
+        let white = (*global).current_white & (1 << 3 | 1 << 4);
         loop {
             let curr: *mut Object = *p;
             if !(curr != limit) {
@@ -4625,169 +4625,169 @@ pub unsafe extern "C" fn sweepgen(
         return p;
     }
 }
-pub unsafe extern "C" fn finishgencycle(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn finishgencycle(state: *mut State, global: *mut Global) {
     unsafe {
-        correctgraylists(g);
-        check_sizes(state, g);
-        (*g).gc_state = 0;
-        if !(*g).is_emergency {
+        correctgraylists(global);
+        check_sizes(state, global);
+        (*global).gc_state = 0;
+        if !(*global).is_emergency {
             callallpendingfinalizers(state);
         }
     }
 }
-pub unsafe extern "C" fn youngcollection(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn youngcollection(state: *mut State, global: *mut Global) {
     unsafe {
-        if !((*g).first_old1).is_null() {
-            markold(g, (*g).first_old1, (*g).really_old);
-            (*g).first_old1 = std::ptr::null_mut();
+        if !((*global).first_old1).is_null() {
+            markold(global, (*global).first_old1, (*global).really_old);
+            (*global).first_old1 = std::ptr::null_mut();
         }
-        markold(g, (*g).finalized_objects, (*g).finobjrold);
-        markold(g, (*g).to_be_finalized, std::ptr::null_mut());
+        markold(global, (*global).finalized_objects, (*global).finobjrold);
+        markold(global, (*global).to_be_finalized, std::ptr::null_mut());
         atomic(state);
-        (*g).gc_state = 3 as u8;
+        (*global).gc_state = 3 as u8;
         let mut psurvival: *mut *mut Object = sweepgen(
             state,
-            g,
-            &mut (*g).all_gc,
-            (*g).survival,
-            &mut (*g).first_old1,
+            global,
+            &mut (*global).all_gc,
+            (*global).survival,
+            &mut (*global).first_old1,
         );
-        sweepgen(state, g, psurvival, (*g).old1, &mut (*g).first_old1);
-        (*g).really_old = (*g).old1;
-        (*g).old1 = *psurvival;
-        (*g).survival = (*g).all_gc;
+        sweepgen(state, global, psurvival, (*global).old1, &mut (*global).first_old1);
+        (*global).really_old = (*global).old1;
+        (*global).old1 = *psurvival;
+        (*global).survival = (*global).all_gc;
         let mut dummy: *mut Object = std::ptr::null_mut();
-        psurvival = sweepgen(state, g, &mut (*g).finalized_objects, (*g).finobjsur, &mut dummy);
-        sweepgen(state, g, psurvival, (*g).finobjold1, &mut dummy);
-        (*g).finobjrold = (*g).finobjold1;
-        (*g).finobjold1 = *psurvival;
-        (*g).finobjsur = (*g).finalized_objects;
+        psurvival = sweepgen(state, global, &mut (*global).finalized_objects, (*global).finobjsur, &mut dummy);
+        sweepgen(state, global, psurvival, (*global).finobjold1, &mut dummy);
+        (*global).finobjrold = (*global).finobjold1;
+        (*global).finobjold1 = *psurvival;
+        (*global).finobjsur = (*global).finalized_objects;
         sweepgen(
             state,
-            g,
-            &mut (*g).to_be_finalized,
+            global,
+            &mut (*global).to_be_finalized,
             std::ptr::null_mut(),
             &mut dummy,
         );
-        finishgencycle(state, g);
+        finishgencycle(state, global);
     }
 }
-pub unsafe extern "C" fn atomic2gen(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn atomic2gen(state: *mut State, global: *mut Global) {
     unsafe {
-        cleargraylists(g);
-        (*g).gc_state = 3 as u8;
-        sweep2old(state, &mut (*g).all_gc);
-        (*g).survival = (*g).all_gc;
-        (*g).old1 = (*g).survival;
-        (*g).really_old = (*g).old1;
-        (*g).first_old1 = std::ptr::null_mut();
-        sweep2old(state, &mut (*g).finalized_objects);
-        (*g).finobjsur = (*g).finalized_objects;
-        (*g).finobjold1 = (*g).finobjsur;
-        (*g).finobjrold = (*g).finobjold1;
-        sweep2old(state, &mut (*g).to_be_finalized);
-        (*g).gc_kind = 1;
-        (*g).last_atomic = 0;
-        (*g).gc_estimate = ((*g).total_bytes + (*g).gc_debt) as u64;
-        finishgencycle(state, g);
+        cleargraylists(global);
+        (*global).gc_state = 3 as u8;
+        sweep2old(state, &mut (*global).all_gc);
+        (*global).survival = (*global).all_gc;
+        (*global).old1 = (*global).survival;
+        (*global).really_old = (*global).old1;
+        (*global).first_old1 = std::ptr::null_mut();
+        sweep2old(state, &mut (*global).finalized_objects);
+        (*global).finobjsur = (*global).finalized_objects;
+        (*global).finobjold1 = (*global).finobjsur;
+        (*global).finobjrold = (*global).finobjold1;
+        sweep2old(state, &mut (*global).to_be_finalized);
+        (*global).gc_kind = 1;
+        (*global).last_atomic = 0;
+        (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
+        finishgencycle(state, global);
     }
 }
-pub unsafe extern "C" fn entergen(state: *mut State, g: *mut Global) -> u64 {
+pub unsafe extern "C" fn entergen(state: *mut State, global: *mut Global) -> u64 {
     unsafe {
         luac_runtilstate(state, 1 << 8);
         luac_runtilstate(state, 1 << 0);
         let numobjs: u64 = atomic(state);
-        atomic2gen(state, g);
-        (*g).set_minor_debt();
+        atomic2gen(state, global);
+        (*global).set_minor_debt();
         return numobjs;
     }
 }
 pub unsafe extern "C" fn luac_changemode(state: *mut State, newmode: i32) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        if newmode != (*g).gc_kind as i32 {
+        let global: *mut Global = (*state).global;
+        if newmode != (*global).gc_kind as i32 {
             if newmode == 1 {
-                entergen(state, g);
+                entergen(state, global);
             } else {
-                (*g).enter_incremental();
+                (*global).enter_incremental();
             }
         }
-        (*g).last_atomic = 0;
+        (*global).last_atomic = 0;
     }
 }
-pub unsafe extern "C" fn fullgen(state: *mut State, g: *mut Global) -> u64 {
+pub unsafe extern "C" fn fullgen(state: *mut State, global: *mut Global) -> u64 {
     unsafe {
-        (*g).enter_incremental();
-        return entergen(state, g);
+        (*global).enter_incremental();
+        return entergen(state, global);
     }
 }
-pub unsafe extern "C" fn stepgenfull(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn stepgenfull(state: *mut State, global: *mut Global) {
     unsafe {
-        let lastatomic: u64 = (*g).last_atomic;
-        if (*g).gc_kind as i32 == 1 {
-            (*g).enter_incremental();
+        let lastatomic: u64 = (*global).last_atomic;
+        if (*global).gc_kind as i32 == 1 {
+            (*global).enter_incremental();
         }
         luac_runtilstate(state, 1 << 0);
         let newatomic: u64 = atomic(state);
         if newatomic < lastatomic.wrapping_add(lastatomic >> 3) {
-            atomic2gen(state, g);
-            (*g).set_minor_debt();
+            atomic2gen(state, global);
+            (*global).set_minor_debt();
         } else {
-            (*g).gc_estimate = ((*g).total_bytes + (*g).gc_debt) as u64;
+            (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
             entersweep(state);
             luac_runtilstate(state, 1 << 8);
-            setpause(g);
-            (*g).last_atomic = newatomic;
+            setpause(global);
+            (*global).last_atomic = newatomic;
         };
     }
 }
-pub unsafe extern "C" fn genstep(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn genstep(state: *mut State, global: *mut Global) {
     unsafe {
-        if (*g).last_atomic != 0 {
-            stepgenfull(state, g);
+        if (*global).last_atomic != 0 {
+            stepgenfull(state, global);
         } else {
-            let majorbase: u64 = (*g).gc_estimate;
+            let majorbase: u64 = (*global).gc_estimate;
             let majorinc: u64 = majorbase
                 .wrapping_div(100 as u64)
-                .wrapping_mul((*g).generational_major_multiplier * 4);
-            if (*g).gc_debt > 0
-                && ((*g).total_bytes + (*g).gc_debt) as u64 > majorbase.wrapping_add(majorinc)
+                .wrapping_mul((*global).generational_major_multiplier * 4);
+            if (*global).gc_debt > 0
+                && ((*global).total_bytes + (*global).gc_debt) as u64 > majorbase.wrapping_add(majorinc)
             {
-                let numobjs: u64 = fullgen(state, g);
-                if !((((*g).total_bytes + (*g).gc_debt) as u64)
+                let numobjs: u64 = fullgen(state, global);
+                if !((((*global).total_bytes + (*global).gc_debt) as u64)
                     < majorbase.wrapping_add(majorinc.wrapping_div(2 as u64)))
                 {
-                    (*g).last_atomic = numobjs;
-                    setpause(g);
+                    (*global).last_atomic = numobjs;
+                    setpause(global);
                 }
             } else {
-                youngcollection(state, g);
-                (*g).set_minor_debt();
-                (*g).gc_estimate = majorbase;
+                youngcollection(state, global);
+                (*global).set_minor_debt();
+                (*global).gc_estimate = majorbase;
             }
         };
     }
 }
 pub unsafe extern "C" fn entersweep(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        (*g).gc_state = 3 as u8;
-        (*g).sweep_gc = sweeptolive(state, &mut (*g).all_gc);
+        let global: *mut Global = (*state).global;
+        (*global).gc_state = 3 as u8;
+        (*global).sweep_gc = sweeptolive(state, &mut (*global).all_gc);
     }
 }
 pub unsafe extern "C" fn luac_freeallobjects(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        (*g).gc_step = 4 as u8;
+        let global: *mut Global = (*state).global;
+        (*global).gc_step = 4 as u8;
         luac_changemode(state, 0);
-        separatetobefnz(g, 1);
+        separatetobefnz(global, 1);
         callallpendingfinalizers(state);
         deletelist(
             state,
-            (*g).all_gc,
-            &mut (*((*g).main_state as *mut Object)),
+            (*global).all_gc,
+            &mut (*((*global).main_state as *mut Object)),
         );
-        deletelist(state, (*g).fixed_gc, std::ptr::null_mut());
+        deletelist(state, (*global).fixed_gc, std::ptr::null_mut());
     }
 }
 pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
@@ -4831,99 +4831,99 @@ pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
 }
 pub unsafe extern "C" fn sweepstep(
     state: *mut State,
-    g: *mut Global,
+    global: *mut Global,
     nextstate: i32,
     nextlist: *mut *mut Object,
 ) -> i32 {
     unsafe {
-        if !((*g).sweep_gc).is_null() {
-            let olddebt: i64 = (*g).gc_debt;
+        if !((*global).sweep_gc).is_null() {
+            let olddebt: i64 = (*global).gc_debt;
             let mut count: i32 = 0;
-            (*g).sweep_gc = (*state).sweep_list((*g).sweep_gc, 100 as i32, &mut count);
-            (*g).gc_estimate = ((*g).gc_estimate as u64)
-                .wrapping_add(((*g).gc_debt - olddebt) as u64) as u64
+            (*global).sweep_gc = (*state).sweep_list((*global).sweep_gc, 100 as i32, &mut count);
+            (*global).gc_estimate = ((*global).gc_estimate as u64)
+                .wrapping_add(((*global).gc_debt - olddebt) as u64) as u64
                 as u64;
             return count;
         } else {
-            (*g).gc_state = nextstate as u8;
-            (*g).sweep_gc = nextlist;
+            (*global).gc_state = nextstate as u8;
+            (*global).sweep_gc = nextlist;
             return 0;
         };
     }
 }
 pub unsafe extern "C" fn singlestep(state: *mut State) -> u64 {
     unsafe {
-        let g: *mut Global = (*state).global;
+        let global: *mut Global = (*state).global;
         let work: u64;
-        (*g).gcstopem = 1;
-        match (*g).gc_state as i32 {
+        (*global).gcstopem = 1;
+        match (*global).gc_state as i32 {
             8 => {
-                restartcollection(g);
-                (*g).gc_state = 0;
+                restartcollection(global);
+                (*global).gc_state = 0;
                 work = 1 as u64;
             }
             0 => {
-                if ((*g).gray).is_null() {
-                    (*g).gc_state = 1;
+                if ((*global).gray).is_null() {
+                    (*global).gc_state = 1;
                     work = 0;
                 } else {
-                    work = (*g).propagatemark();
+                    work = (*global).propagatemark();
                 }
             }
             1 => {
                 work = atomic(state);
                 entersweep(state);
-                (*g).gc_estimate = ((*g).total_bytes + (*g).gc_debt) as u64;
+                (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
             }
             3 => {
-                work = sweepstep(state, g, 4, &mut (*g).finalized_objects) as u64;
+                work = sweepstep(state, global, 4, &mut (*global).finalized_objects) as u64;
             }
             4 => {
-                work = sweepstep(state, g, 5, &mut (*g).to_be_finalized) as u64;
+                work = sweepstep(state, global, 5, &mut (*global).to_be_finalized) as u64;
             }
             5 => {
-                work = sweepstep(state, g, 6, std::ptr::null_mut()) as u64;
+                work = sweepstep(state, global, 6, std::ptr::null_mut()) as u64;
             }
             6 => {
-                check_sizes(state, g);
-                (*g).gc_state = 7 as u8;
+                check_sizes(state, global);
+                (*global).gc_state = 7 as u8;
                 work = 0;
             }
             7 => {
-                if !((*g).to_be_finalized).is_null() && !(*g).is_emergency {
-                    (*g).gcstopem = 0;
+                if !((*global).to_be_finalized).is_null() && !(*global).is_emergency {
+                    (*global).gcstopem = 0;
                     work = (runafewfinalizers(state, 10 as i32) * 50 as i32) as u64;
                 } else {
-                    (*g).gc_state = 8 as u8;
+                    (*global).gc_state = 8 as u8;
                     work = 0;
                 }
             }
             _ => return 0u64,
         }
-        (*g).gcstopem = 0;
+        (*global).gcstopem = 0;
         return work;
     }
 }
 pub unsafe extern "C" fn luac_runtilstate(state: *mut State, statesmask: i32) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        while statesmask & 1 << (*g).gc_state as i32 == 0 {
+        let global: *mut Global = (*state).global;
+        while statesmask & 1 << (*global).gc_state as i32 == 0 {
             singlestep(state);
         }
     }
 }
-pub unsafe extern "C" fn incstep(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn incstep(state: *mut State, global: *mut Global) {
     unsafe {
-        let stepmul: i32 = (*g).gc_step_multiplier as i32 * 4 | 1;
-        let mut debt: i64 = ((*g).gc_debt as u64)
+        let stepmul: i32 = (*global).gc_step_multiplier as i32 * 4 | 1;
+        let mut debt: i64 = ((*global).gc_debt as u64)
             .wrapping_div(::core::mem::size_of::<TValue>() as u64)
             .wrapping_mul(stepmul as u64) as i64;
-        let stepsize: i64 = (if (*g).gc_step_size as u64
+        let stepsize: i64 = (if (*global).gc_step_size as u64
             <= (::core::mem::size_of::<i64>() as u64)
                 .wrapping_mul(8 as u64)
                 .wrapping_sub(2 as u64)
         {
-            ((1 << (*g).gc_step_size as i32) as u64)
+            ((1 << (*global).gc_step_size as i32) as u64)
                 .wrapping_div(::core::mem::size_of::<TValue>() as u64)
                 .wrapping_mul(stepmul as u64)
         } else {
@@ -4932,42 +4932,42 @@ pub unsafe extern "C" fn incstep(state: *mut State, g: *mut Global) {
         loop {
             let work: u64 = singlestep(state);
             debt = (debt as u64).wrapping_sub(work) as i64;
-            if !(debt > -stepsize && (*g).gc_state as i32 != 8) {
+            if !(debt > -stepsize && (*global).gc_state as i32 != 8) {
                 break;
             }
         }
-        if (*g).gc_state as i32 == 8 {
-            setpause(g);
+        if (*global).gc_state as i32 == 8 {
+            setpause(global);
         } else {
             debt = ((debt / stepmul as i64) as u64)
                 .wrapping_mul(::core::mem::size_of::<TValue>() as u64) as i64;
-            (*g).set_debt(debt);
+            (*global).set_debt(debt);
         };
     }
 }
 pub unsafe extern "C" fn luac_step(state: *mut State) {
     unsafe {
-        let g: *mut Global = (*state).global;
-        if !((*g).gc_step as i32 == 0) {
-            (*g).set_debt(-(2000 as i32) as i64);
-        } else if (*g).gc_kind as i32 == 1 || (*g).last_atomic != 0 {
-            genstep(state, g);
+        let global: *mut Global = (*state).global;
+        if !((*global).gc_step as i32 == 0) {
+            (*global).set_debt(-(2000 as i32) as i64);
+        } else if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
+            genstep(state, global);
         } else {
-            incstep(state, g);
+            incstep(state, global);
         };
     }
 }
-pub unsafe extern "C" fn fullinc(state: *mut State, g: *mut Global) {
+pub unsafe extern "C" fn fullinc(state: *mut State, global: *mut Global) {
     unsafe {
-        if (*g).gc_state as i32 <= 2 {
+        if (*global).gc_state as i32 <= 2 {
             entersweep(state);
         }
         luac_runtilstate(state, 1 << 8);
         luac_runtilstate(state, 1 << 0);
-        (*g).gc_state = 1;
+        (*global).gc_state = 1;
         luac_runtilstate(state, 1 << 7);
         luac_runtilstate(state, 1 << 8);
-        setpause(g);
+        setpause(global);
     }
 }
 pub unsafe extern "C" fn luac_fullgc(state: *mut State, is_emergency: bool) {
@@ -9002,15 +9002,15 @@ pub unsafe extern "C" fn lual_gsub(
 }
 pub unsafe extern "C" fn raw_allocate(
     ptr: *mut libc::c_void,
-    mut _old_size: u64,
-    new_size: u64,
+    mut _old_size: usize,
+    new_size: usize,
 ) -> *mut libc::c_void {
     unsafe {
         if new_size == 0 {
             free(ptr);
             return std::ptr::null_mut();
         } else {
-            return realloc(ptr, new_size);
+            return realloc(ptr, new_size as u64);
         };
     }
 }
@@ -9110,65 +9110,65 @@ pub unsafe extern "C" fn lual_newstate() -> *mut State {
         let interpreter: *mut Interpreter = raw_allocate(
             std::ptr::null_mut(),
             0,
-            ::core::mem::size_of::<Interpreter>() as u64,
+            ::core::mem::size_of::<Interpreter>(),
         ) as *mut Interpreter;
         if interpreter.is_null() {
             return std::ptr::null_mut();
         }
         let mut state: *mut State = &mut (*interpreter).state;
-        let g: *mut Global = &mut (*interpreter).global;
+        let global: *mut Global = &mut (*interpreter).global;
         (*state).set_tag(TAG_TYPE_STATE);
-        (*g).current_white = (1 << 3) as u8;
-        (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
-        preinit_thread(state, g);
-        (*g).all_gc = &mut (*(state as *mut Object));
+        (*global).current_white = (1 << 3) as u8;
+        (*state).set_marked((*global).current_white & (1 << 3 | 1 << 4));
+        preinit_thread(state, global);
+        (*global).all_gc = &mut (*(state as *mut Object));
         (*state).object.next = std::ptr::null_mut();
         (*state).count_c_calls =
             ((*state).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
-        (*g).warn_function = None;
-        (*g).warn_userdata = std::ptr::null_mut();
-        (*g).main_state = state;
-        (*g).seed = luai_makeseed(state);
-        (*g).gc_step = 2 as u8;
-        (*g).string_table.length = 0;
-        (*g).string_table.size = (*g).string_table.length;
-        (*g).string_table.hash = std::ptr::null_mut();
-        (*g).l_registry.set_tag(TAG_VARIANT_NIL_NIL);
-        (*g).panic = None;
-        (*g).gc_state = 8 as u8;
-        (*g).gc_kind = 0;
-        (*g).gcstopem = 0;
-        (*g).is_emergency = false;
-        (*g).fixed_gc = std::ptr::null_mut();
-        (*g).to_be_finalized = (*g).fixed_gc;
-        (*g).finalized_objects = (*g).to_be_finalized;
-        (*g).really_old = std::ptr::null_mut();
-        (*g).old1 = (*g).really_old;
-        (*g).survival = (*g).old1;
-        (*g).first_old1 = (*g).survival;
-        (*g).finobjrold = std::ptr::null_mut();
-        (*g).finobjold1 = (*g).finobjrold;
-        (*g).finobjsur = (*g).finobjold1;
-        (*g).sweep_gc = std::ptr::null_mut();
-        (*g).gray_again = std::ptr::null_mut();
-        (*g).gray = (*g).gray_again;
-        (*g).all_weak = std::ptr::null_mut();
-        (*g).ephemeron = (*g).all_weak;
-        (*g).weak = (*g).ephemeron;
-        (*g).twups = std::ptr::null_mut();
-        (*g).total_bytes = ::core::mem::size_of::<Interpreter>() as i64;
-        (*g).gc_debt = 0;
-        (*g).last_atomic = 0;
-        let io: *mut TValue = &mut (*g).nil_value;
+        (*global).warn_function = None;
+        (*global).warn_userdata = std::ptr::null_mut();
+        (*global).main_state = state;
+        (*global).seed = luai_makeseed(state);
+        (*global).gc_step = 2 as u8;
+        (*global).string_table.length = 0;
+        (*global).string_table.size = (*global).string_table.length;
+        (*global).string_table.hash = std::ptr::null_mut();
+        (*global).l_registry.set_tag(TAG_VARIANT_NIL_NIL);
+        (*global).panic = None;
+        (*global).gc_state = 8 as u8;
+        (*global).gc_kind = 0;
+        (*global).gcstopem = 0;
+        (*global).is_emergency = false;
+        (*global).fixed_gc = std::ptr::null_mut();
+        (*global).to_be_finalized = (*global).fixed_gc;
+        (*global).finalized_objects = (*global).to_be_finalized;
+        (*global).really_old = std::ptr::null_mut();
+        (*global).old1 = (*global).really_old;
+        (*global).survival = (*global).old1;
+        (*global).first_old1 = (*global).survival;
+        (*global).finobjrold = std::ptr::null_mut();
+        (*global).finobjold1 = (*global).finobjrold;
+        (*global).finobjsur = (*global).finobjold1;
+        (*global).sweep_gc = std::ptr::null_mut();
+        (*global).gray_again = std::ptr::null_mut();
+        (*global).gray = (*global).gray_again;
+        (*global).all_weak = std::ptr::null_mut();
+        (*global).ephemeron = (*global).all_weak;
+        (*global).weak = (*global).ephemeron;
+        (*global).twups = std::ptr::null_mut();
+        (*global).total_bytes = ::core::mem::size_of::<Interpreter>() as i64;
+        (*global).gc_debt = 0;
+        (*global).last_atomic = 0;
+        let io: *mut TValue = &mut (*global).nil_value;
         (*io).value.integer = 0;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-        (*g).gc_pause = 200 / 4;
-        (*g).gc_step_multiplier = 100 / 4;
-        (*g).gc_step_size = 13;
-        (*g).generational_major_multiplier = 100 / 4;
-        (*g).generational_minor_multiplier = 20;
+        (*global).gc_pause = 200 / 4;
+        (*global).gc_step_multiplier = 100 / 4;
+        (*global).gc_step_size = 13;
+        (*global).generational_major_multiplier = 100 / 4;
+        (*global).generational_minor_multiplier = 20;
         for i in 0..9 {
-            (*g).metatable[i as usize] = std::ptr::null_mut();
+            (*global).metatable[i as usize] = std::ptr::null_mut();
         }
         if luad_rawrunprotected(
             state,
@@ -9343,7 +9343,7 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
         }
         fprintf(
         stderr,
-        b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l g=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
+        b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
             as *const u8 as *const i8,
         PROGRAM_NAME,
     );

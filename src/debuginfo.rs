@@ -90,7 +90,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
         } else {
             let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).source).is_null() {
-                (*ar).source = (*(*p).source).get_contents();
+                (*ar).source = (*(*p).source).get_contents_mut();
                 (*ar).source_length = (*(*p).source).get_length();
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;

@@ -58,7 +58,7 @@ impl TObject for Closure {
     }
 }
 impl Closure {
-    pub unsafe extern "C" fn traversecclosure(g: *mut Global, cl: *mut Closure) -> u64 {
+    pub unsafe extern "C" fn traversecclosure(global: *mut Global, cl: *mut Closure) -> u64 {
         unsafe {
             for i in 0..(*cl).count_upvalues {
                 if ((*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
@@ -70,7 +70,7 @@ impl Closure {
                         != 0
                 {
                     reallymarkobject(
-                        g,
+                        global,
                         (*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
                             .value
                             .object,
@@ -80,18 +80,18 @@ impl Closure {
             return 1 + (*cl).count_upvalues as u64;
         }
     }
-    pub unsafe extern "C" fn traverselclosure(g: *mut Global, cl: *mut Closure) -> u64 {
+    pub unsafe extern "C" fn traverselclosure(global: *mut Global, cl: *mut Closure) -> u64 {
         unsafe {
             if !((*cl).payload.l_prototype).is_null() {
                 if (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(g, &mut (*((*cl).payload.l_prototype as *mut Object)));
+                    reallymarkobject(global, &mut (*((*cl).payload.l_prototype as *mut Object)));
                 }
             }
             for i in 0..(*cl).count_upvalues {
                 let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
                 if !uv.is_null() {
                     if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        reallymarkobject(g, &mut (*(uv as *mut Object)));
+                        reallymarkobject(global, &mut (*(uv as *mut Object)));
                     }
                 }
             }

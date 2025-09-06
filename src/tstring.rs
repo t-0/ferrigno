@@ -61,10 +61,10 @@ impl TString {
             self.remove_from_global(global);
         }
     }
-    pub fn get_contents(&self) -> *const i8 {
+    pub fn get_contents_mut(&self) -> *const i8 {
         return &self.contents as *const i8;
     }
-    pub fn get_contents2(&mut self) -> *mut i8 {
+    pub fn get_contents(&mut self) -> *mut i8 {
         return &mut self.contents as *mut i8;
     }
     pub fn get_length(&self) -> u64 {
@@ -91,9 +91,9 @@ impl TString {
     }
     pub unsafe fn intern(state: *mut State, str: *const i8, l: u64) -> *mut TString {
         unsafe {
-            let g: *mut Global = (*state).global;
-            let tb: *mut StringTable = &mut (*g).string_table;
-            let h: u32 = luas_hash(str, l, (*g).seed);
+            let global: *mut Global = (*state).global;
+            let tb: *mut StringTable = &mut (*global).string_table;
+            let h: u32 = luas_hash(str, l, (*global).seed);
             let mut list: *mut *mut TString = &mut *((*tb).hash)
                 .offset((h & ((*tb).size - 1) as u32) as isize)
                 as *mut *mut TString;
@@ -102,11 +102,11 @@ impl TString {
                 if l == (*ts).get_length() as u64
                     && memcmp(
                         str as *const libc::c_void,
-                        (*ts).get_contents2() as *const libc::c_void,
+                        (*ts).get_contents() as *const libc::c_void,
                         l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     ) == 0
                 {
-                    if (*ts).get_marked() & ((*g).current_white ^ (1 << 3 | 1 << 4)) != 0 {
+                    if (*ts).get_marked() & ((*global).current_white ^ (1 << 3 | 1 << 4)) != 0 {
                         (*ts).set_marked((*ts).get_marked() ^ (1 << 3 | 1 << 4));
                     }
                     return ts;
@@ -121,7 +121,7 @@ impl TString {
             ts = createstrobj(state, l, TAG_VARIANT_STRING_SHORT, h);
             (*ts).short_length = l as u8;
             memcpy(
-                (*ts).get_contents2() as *mut libc::c_void,
+                (*ts).get_contents() as *mut libc::c_void,
                 str as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
@@ -144,8 +144,8 @@ pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool
             } else {
                 return 0
                     == memcmp(
-                        ((*a).get_contents()) as *const libc::c_void,
-                        ((*b).get_contents()) as *const libc::c_void,
+                        ((*a).get_contents_mut()) as *const libc::c_void,
+                        ((*b).get_contents_mut()) as *const libc::c_void,
                         length,
                     );
             }
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra == 0 {
             let length = (*ts).get_length();
-            (*ts).hash = luas_hash((*ts).get_contents(), length, (*ts).hash);
+            (*ts).hash = luas_hash((*ts).get_contents_mut(), length, (*ts).hash);
             (*ts).extra = 1;
         }
         return (*ts).hash;
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
-        *((*ts).get_contents2()).offset(l as isize) = CHARACTER_NUL as i8;
+        *((*ts).get_contents()).offset(l as isize) = CHARACTER_NUL as i8;
         return ts;
     }
 }
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
         }
             let ts: *mut TString = TString::create_long(state, l);
             memcpy(
-                ((*ts).get_contents()) as *mut libc::c_void,
+                ((*ts).get_contents_mut()) as *mut libc::c_void,
                 str as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
         let p: *mut *mut TString = ((*(*state).global).string_cache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
-            if strcmp(str, (**p.offset(j as isize)).get_contents()) == 0 {
+            if strcmp(str, (**p.offset(j as isize)).get_contents_mut()) == 0 {
                 return *p.offset(j as isize);
             }
             j += 1;
@@ -243,9 +243,9 @@ pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TSt
 }
 pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
     unsafe {
-        let mut s1: *const i8 = (*ts1).get_contents();
+        let mut s1: *const i8 = (*ts1).get_contents_mut();
         let mut rl1: u64 = (*ts1).get_length();
-        let mut s2: *const i8 = (*ts2).get_contents();
+        let mut s2: *const i8 = (*ts2).get_contents_mut();
         let mut rl2: u64 = (*ts2).get_length();
         loop {
             let temp: i32 = strcoll(s1, s2);
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *
             let l: u64 = (*st).get_length();
             memcpy(
                 buffer.offset(tl as isize) as *mut libc::c_void,
-                ((*st).get_contents()) as *const libc::c_void,
+                ((*st).get_contents_mut()) as *const libc::c_void,
                 l.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
             tl = (tl as u64).wrapping_add(l) as u64;
@@ -386,7 +386,7 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                     ts = luas_newlstr(state, buffer.as_mut_ptr(), tl);
                 } else {
                     ts = TString::create_long(state, tl);
-                    copy2buff(top, n, (*ts).get_contents2());
+                    copy2buff(top, n, (*ts).get_contents());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize))).tvalue;
                 let x_: *mut TString = ts;

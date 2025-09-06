@@ -56,7 +56,7 @@ pub unsafe extern "C" fn freeupval(state: *mut State, uv: *mut UpValue) {
         }
         (*state).free_memory(
             uv as *mut libc::c_void,
-            ::core::mem::size_of::<UpValue>() as u64,
+            ::core::mem::size_of::<UpValue>(),
         );
     }
 }

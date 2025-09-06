@@ -85,7 +85,7 @@ pub unsafe extern "C" fn aux_upvalue(
                 return if name.is_null() {
                     b"(no name)\0" as *const u8 as *const i8
                 } else {
-                    ((*name).get_contents()) as *const i8
+                    ((*name).get_contents_mut()) as *const i8
                 };
             }
             _ => return std::ptr::null(),
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
             return 0;
         } else {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
-            return (luao_str2num((*st).get_contents(), result)
+            return (luao_str2num((*st).get_contents_mut(), result)
                 == (*st).get_length().wrapping_add(1 as u64)) as i32;
         };
     }

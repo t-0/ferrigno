@@ -187,9 +187,9 @@ impl LexicalState {
                 (*prototype).p = luam_growaux_(
                     self.state,
                     (*prototype).p as *mut libc::c_void,
-                    (*function_state).count_p,
+                    (*function_state).count_p as usize,
                     &mut (*prototype).size_p,
-                    ::core::mem::size_of::<*mut Prototype>() as i32,
+                    ::core::mem::size_of::<*mut Prototype>(),
                     (if ((1 << 8 + 8 + 1) - 1) as u64
                         <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
                     {
@@ -252,9 +252,9 @@ pub unsafe extern "C" fn newlabelentry(
         (*l).pointer = luam_growaux_(
             (*lexical_state).state,
             (*l).pointer as *mut libc::c_void,
-            n,
+            n as usize,
             &mut (*l).size,
-            ::core::mem::size_of::<LabelDescription>() as i32,
+            ::core::mem::size_of::<LabelDescription>(),
             (if 32767 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<LabelDescription>() as u64)
             {
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn undefgoto(
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                (*(*gt).name).get_contents(),
+                (*(*gt).name).get_contents_mut(),
                 (*gt).line,
             );
         }
@@ -403,50 +403,50 @@ pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
             state,
             (*prototype).code as *mut libc::c_void,
             &mut (*prototype).size_code,
-            (*function_state).program_counter,
-            ::core::mem::size_of::<u32>() as i32,
+            (*function_state).program_counter as usize,
+            ::core::mem::size_of::<u32>(),
         ) as *mut u32;
         (*prototype).line_info = luam_shrinkvector_(
             state,
             (*prototype).line_info as *mut libc::c_void,
             &mut (*prototype).size_line_info,
-            (*function_state).program_counter,
-            ::core::mem::size_of::<i8>() as i32,
+            (*function_state).program_counter as usize,
+            ::core::mem::size_of::<i8>(),
         ) as *mut i8;
         (*prototype).absolute_line_info = luam_shrinkvector_(
             state,
             (*prototype).absolute_line_info as *mut libc::c_void,
             &mut (*prototype).size_absolute_line_info,
-            (*function_state).count_abslineinfo,
-            ::core::mem::size_of::<AbsoluteLineInfo>() as i32,
+            (*function_state).count_abslineinfo as usize,
+            ::core::mem::size_of::<AbsoluteLineInfo>(),
         ) as *mut AbsoluteLineInfo;
         (*prototype).k = luam_shrinkvector_(
             state,
             (*prototype).k as *mut libc::c_void,
             &mut (*prototype).size_k,
-            (*function_state).count_k,
-            ::core::mem::size_of::<TValue>() as i32,
+            (*function_state).count_k as usize,
+            ::core::mem::size_of::<TValue>(),
         ) as *mut TValue;
         (*prototype).p = luam_shrinkvector_(
             state,
             (*prototype).p as *mut libc::c_void,
             &mut (*prototype).size_p,
-            (*function_state).count_p,
-            ::core::mem::size_of::<*mut Prototype>() as i32,
+            (*function_state).count_p as usize,
+            ::core::mem::size_of::<*mut Prototype>(),
         ) as *mut *mut Prototype;
         (*prototype).local_variables = luam_shrinkvector_(
             state,
             (*prototype).local_variables as *mut libc::c_void,
             &mut (*prototype).size_local_variables,
-            (*function_state).count_debug_variables as i32,
-            ::core::mem::size_of::<LocalVariable>() as i32,
+            (*function_state).count_debug_variables as usize,
+            ::core::mem::size_of::<LocalVariable>(),
         ) as *mut LocalVariable;
         (*prototype).upvalues = luam_shrinkvector_(
             state,
             (*prototype).upvalues as *mut libc::c_void,
             &mut (*prototype).size_upvalues,
-            (*function_state).count_upvalues as i32,
-            ::core::mem::size_of::<UpValueDescription>() as i32,
+            (*function_state).count_upvalues as usize,
+            ::core::mem::size_of::<UpValueDescription>(),
         ) as *mut UpValueDescription;
         (*lexical_state).function_state = (*function_state).previous;
         if (*(*state).global).gc_debt > 0 {
@@ -952,9 +952,9 @@ pub unsafe extern "C" fn registerlocalvar(
         (*prototype).local_variables = luam_growaux_(
             (*lexical_state).state,
             (*prototype).local_variables as *mut libc::c_void,
-            (*function_state).count_debug_variables as i32,
+            (*function_state).count_debug_variables as usize,
             &mut (*prototype).size_local_variables,
-            ::core::mem::size_of::<LocalVariable>() as i32,
+            ::core::mem::size_of::<LocalVariable>(),
             (if 32767 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
             {
@@ -1004,9 +1004,9 @@ pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *m
         (*dynamic_data).active_variable.pointer = luam_growaux_(
             state,
             (*dynamic_data).active_variable.pointer as *mut libc::c_void,
-            (*dynamic_data).active_variable.length + 1,
+            ((*dynamic_data).active_variable.length + 1) as usize,
             &mut (*dynamic_data).active_variable.size,
-            ::core::mem::size_of::<VariableDescription>() as i32,
+            ::core::mem::size_of::<VariableDescription>(),
             (if 32767 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<VariableDescription>() as u64)
             {
@@ -1058,7 +1058,7 @@ pub unsafe extern "C" fn check_readonly(
             let message: *const i8 = luao_pushfstring(
                 (*lexical_state).state,
                 b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
-                (*variable_name).get_contents(),
+                (*variable_name).get_contents_mut(),
             );
             luak_semerror(lexical_state, message);
         }
@@ -1141,13 +1141,13 @@ pub unsafe extern "C" fn jumpscopeerror(
             (*(*getlocalvardesc((*lexical_state).function_state, (*gt).count_active_variables as i32))
                 .content
                 .name)
-                .get_contents();
+                .get_contents_mut();
         let mut message: *const i8 =
             b"<goto %s> at line %d jumps into the scope of local '%s'\0" as *const u8 as *const i8;
         message = luao_pushfstring(
             (*lexical_state).state,
             message,
-            (*(*gt).name).get_contents(),
+            (*(*gt).name).get_contents_mut(),
             (*gt).line,
             variable_name,
         );
@@ -1156,32 +1156,30 @@ pub unsafe extern "C" fn jumpscopeerror(
 }
 pub unsafe extern "C" fn solvegoto(
     lexical_state: *mut LexicalState,
-    g: i32,
+    goto_offset: i32,
     label: *mut LabelDescription,
 ) {
     unsafe {
-        let mut i: i32;
-        let gl: *mut LabelList = &mut (*(*lexical_state).dynamic_data).gt;
-        let gt: *mut LabelDescription =
-            &mut *((*gl).pointer).offset(g as isize) as *mut LabelDescription;
-        if ((((*gt).count_active_variables as i32) < (*label).count_active_variables as i32) as i32
+        let goto_label_list: *mut LabelList = &mut (*(*lexical_state).dynamic_data).gt;
+        let goto_label_description: *mut LabelDescription =
+            &mut *((*goto_label_list).pointer).offset(goto_offset as isize) as *mut LabelDescription;
+        if ((((*goto_label_description).count_active_variables as i32) < (*label).count_active_variables as i32) as i32
             != 0) as i64
             != 0
         {
-            jumpscopeerror(lexical_state, gt);
+            jumpscopeerror(lexical_state, goto_label_description);
         }
         luak_patchlist(
             (*lexical_state).function_state,
-            (*gt).program_counter,
+            (*goto_label_description).program_counter,
             (*label).program_counter,
         );
-        i = g;
-        while i < (*gl).n - 1 {
-            *((*gl).pointer).offset(i as isize) = *((*gl).pointer).offset((i + 1) as isize);
+        let mut i: i32 = goto_offset;
+        while i < (*goto_label_list).n - 1 {
+            *((*goto_label_list).pointer).offset(i as isize) = *((*goto_label_list).pointer).offset((i + 1) as isize);
             i += 1;
         }
-        (*gl).n -= 1;
-        (*gl).n;
+        (*goto_label_list).n -= 1;
     }
 }
 pub unsafe extern "C" fn subexpr(
@@ -1394,7 +1392,7 @@ pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *
             message = luao_pushfstring(
                 (*lexical_state).state,
                 message,
-                (*name).get_contents(),
+                (*name).get_contents_mut(),
                 (*lb).line,
             );
             luak_semerror(lexical_state, message);
@@ -1735,7 +1733,7 @@ pub unsafe extern "C" fn localfunc(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         if testnext(lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
-            let attr: *const i8 = (*str_checkname(lexical_state)).get_contents();
+            let attr: *const i8 = (*str_checkname(lexical_state)).get_contents_mut();
             checknext(lexical_state, CHARACTER_ANGLE_RIGHT);
             if strcmp(attr, b"const\0" as *const u8 as *const i8) == 0 {
                 return 1;
@@ -1962,8 +1960,8 @@ pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
             (*b).pointer = luam_saferealloc_(
                 (*lexical_state).state,
                 (*b).pointer as *mut libc::c_void,
-                ((*b).size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
-                new_size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                ((*b).size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+                (new_size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             ) as *mut i8;
             (*b).size = new_size;
         }
@@ -2139,8 +2137,8 @@ pub unsafe extern "C" fn luax_setinput(
         (*(*lexical_state).buffer).pointer = luam_saferealloc_(
             (*lexical_state).state,
             (*(*lexical_state).buffer).pointer as *mut libc::c_void,
-            ((*(*lexical_state).buffer).size).wrapping_mul(::core::mem::size_of::<i8>() as u64),
-            (32 as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+            ((*(*lexical_state).buffer).size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+            (32 as usize).wrapping_mul(::core::mem::size_of::<i8>()),
         ) as *mut i8;
         (*(*lexical_state).buffer).size = 32 as u64;
     }

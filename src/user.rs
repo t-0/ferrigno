@@ -149,11 +149,11 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn traverseudata(g: *mut Global, u: *mut User) -> i32 {
+    pub unsafe extern "C" fn traverseudata(global: *mut Global, u: *mut User) -> i32 {
         unsafe {
             if !((*u).metatable).is_null() {
                 if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(g, &mut (*((*u).metatable as *mut Object)));
+                    reallymarkobject(global, &mut (*((*u).metatable as *mut Object)));
                 }
             }
             for i in 0..(*u).nuvalue {
@@ -164,12 +164,12 @@ impl User {
                         != 0
                         {
                     reallymarkobject(
-                        g,
+                        global,
                         (*((*u).uv).as_mut_ptr().offset(i as isize)).value.object,
                     );
                 }
             }
-            genlink(g, &mut (*(u as *mut Object)));
+            genlink(global, &mut (*(u as *mut Object)));
             return 1 + (*u).nuvalue as i32;
         }
     }

@@ -62,11 +62,11 @@ impl TObject for Prototype {
     }
 }
 impl Prototype {
-    pub unsafe extern "C" fn traverseproto(g: *mut Global, prototype: *mut Prototype) -> u64 {
+    pub unsafe extern "C" fn traverseproto(global: *mut Global, prototype: *mut Prototype) -> u64 {
         unsafe {
             if !((*prototype).source).is_null() {
                 if (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(g, &mut (*((*prototype).source as *mut Object)));
+                    reallymarkobject(global, &mut (*((*prototype).source as *mut Object)));
                 }
             }
             for i in 0..(*prototype).size_k {
@@ -74,7 +74,7 @@ impl Prototype {
                     && (*(*((*prototype).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                 {
-                    reallymarkobject(g, (*((*prototype).k).offset(i as isize)).value.object);
+                    reallymarkobject(global, (*((*prototype).k).offset(i as isize)).value.object);
                 }
             }
             for i in 0..(*prototype).size_upvalues {
@@ -83,7 +83,7 @@ impl Prototype {
                         != 0
                     {
                         reallymarkobject(
-                            g,
+                            global,
                             &mut (*((*((*prototype).upvalues).offset(i as isize)).name as *mut Object)),
                         );
                     }
@@ -93,7 +93,7 @@ impl Prototype {
                 if !(*((*prototype).p).offset(i as isize)).is_null() {
                     if (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         reallymarkobject(
-                            g,
+                            global,
                             &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
                         );
                     }
@@ -106,7 +106,7 @@ impl Prototype {
                         != 0
                     {
                         reallymarkobject(
-                            g,
+                            global,
                             &mut (*((*((*prototype).local_variables).offset(i as isize)).variable_name
                                 as *mut Object)),
                         );
@@ -120,38 +120,38 @@ impl Prototype {
         unsafe {
             (*state).free_memory(
                 self.code as *mut libc::c_void,
-                (self.size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
+                (self.size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64) as usize,
             );
             (*state).free_memory(
                 self.p as *mut libc::c_void,
-                (self.size_p as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
+                (self.size_p as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64) as usize,
             );
             (*state).free_memory(
                 self.k as *mut libc::c_void,
-                (self.size_k as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
+                (self.size_k as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
             );
             (*state).free_memory(
                 self.line_info as *mut libc::c_void,
-                (self.size_line_info as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                (self.size_line_info as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64) as usize,
             );
             (*state).free_memory(
                 self.absolute_line_info as *mut libc::c_void,
                 (self.size_absolute_line_info as u64)
-                    .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
+                    .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64) as usize,
             );
             (*state).free_memory(
                 self.local_variables as *mut libc::c_void,
                 (self.size_local_variables as u64)
-                    .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
+                    .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64) as usize,
             );
             (*state).free_memory(
                 self.upvalues as *mut libc::c_void,
                 (self.size_upvalues as u64)
-                    .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64),
+                    .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64) as usize,
             );
             (*state).free_memory(
                 self as *mut Prototype as *mut libc::c_void,
-                ::core::mem::size_of::<Prototype>() as u64,
+                ::core::mem::size_of::<Prototype>(),
             );
         }
     }
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         if s.is_null() {
             return b"?\0" as *const u8 as *const i8;
         } else {
-            return (*s).get_contents();
+            return (*s).get_contents_mut();
         };
     }
 }
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *cons
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
         if get_tag_type((*kvalue).get_tag()) == TAG_TYPE_STRING {
-            *name = (*((*kvalue).value.object as *mut TString)).get_contents();
+            *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
             return b"constant\0" as *const u8 as *const i8;
         } else {
             *name = b"?\0" as *const u8 as *const i8;
@@ -487,7 +487,7 @@ pub unsafe extern "C" fn funcnamefromcode(
             }
             _ => return std::ptr::null(),
         }
-        *name = ((*(*(*state).global).tm_name[tm as usize]).get_contents2())
+        *name = ((*(*(*state).global).tm_name[tm as usize]).get_contents())
             .offset(2 as isize);
         return b"metamethod\0" as *const u8 as *const i8;
     }
@@ -563,7 +563,7 @@ pub unsafe extern "C" fn luaf_getlocalname(
                 local_number -= 1;
                 if local_number == 0 {
                     return (*(*((*prototype).local_variables).offset(i as isize)).variable_name)
-                        .get_contents();
+                        .get_contents_mut();
                 }
             }
         }

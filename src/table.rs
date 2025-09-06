@@ -114,7 +114,7 @@ pub unsafe extern "C" fn luat_gettm(
         };
     }
 }
-pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
+pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
     unsafe {
         let limit: *mut Node =
             &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
@@ -127,11 +127,11 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(g, (*node).key.value.object);
+                    reallymarkobject(global, (*node).key.value.object);
                 }
                 if hasclears == 0
                     && iscleared(
-                        g,
+                        global,
                         if (*node).value.is_collectable() {
                             (*node).value.value.object
                         } else {
@@ -144,22 +144,22 @@ pub unsafe extern "C" fn traverseweakvalue(g: *mut Global, h: *mut Table) {
             }
             node = node.offset(1);
         }
-        if (*g).gc_state as i32 == 2 && hasclears != 0 {
+        if (*global).gc_state as i32 == 2 && hasclears != 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).weak,
+                &mut (*global).weak,
             );
         } else {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).gray_again,
+                &mut (*global).gray_again,
             );
         };
     }
 }
-pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i32) -> i32 {
+pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, inv: i32) -> i32 {
     unsafe {
         let mut marked: i32 = 0;
         let mut hasclears: i32 = 0;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
                     != 0
             {
                 marked = 1;
-                reallymarkobject(g, (*((*h).array).offset(i as isize)).value.object);
+                reallymarkobject(global, (*((*h).array).offset(i as isize)).value.object);
             }
         }
         for i in 0..new_size {
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
             if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
                 (*node).clearkey();
             } else if iscleared(
-                g,
+                global,
                 if is_collectable((*node).key.tag) {
                     (*node).key.value.object
                 } else {
@@ -204,34 +204,34 @@ pub unsafe extern "C" fn traverseephemeron(g: *mut Global, h: *mut Table, inv: i
                 && (*(*node).value.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
                 marked = 1;
-                reallymarkobject(g, (*node).value.value.object);
+                reallymarkobject(global, (*node).value.value.object);
             }
         }
-        if (*g).gc_state as i32 == 0 {
+        if (*global).gc_state as i32 == 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).gray_again,
+                &mut (*global).gray_again,
             );
         } else if hasww != 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).ephemeron,
+                &mut (*global).ephemeron,
             );
         } else if hasclears != 0 {
             linkgclist_(
                 &mut (*(h as *mut Object)),
                 &mut (*h).gc_list,
-                &mut (*g).all_weak,
+                &mut (*global).all_weak,
             );
         } else {
-            genlink(g, &mut (*(h as *mut Object)));
+            genlink(global, &mut (*(h as *mut Object)));
         }
         return marked;
     }
 }
-pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) {
+pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table) {
     unsafe {
         let limit: *mut Node =
             &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) {
                     & (1 << 3 | 1 << 4)
                     != 0
             {
-                reallymarkobject(g, (*((*h).array).offset(i as isize)).value.object);
+                reallymarkobject(global, (*((*h).array).offset(i as isize)).value.object);
             }
         }
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
@@ -253,20 +253,20 @@ pub unsafe extern "C" fn traversestrongtable(g: *mut Global, h: *mut Table) {
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(g, (*node).key.value.object);
+                    reallymarkobject(global, (*node).key.value.object);
                 }
                 if ((*node).value.is_collectable())
                     && (*(*node).value.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(g, (*node).value.value.object);
+                    reallymarkobject(global, (*node).value.value.object);
                 }
             }
             node = node.offset(1);
         }
-        genlink(g, &mut (*(h as *mut Object)));
+        genlink(global, &mut (*(h as *mut Object)));
     }
 }
-pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
+pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u64 {
     unsafe {
         let mut weakkey: *const i8 = std::ptr::null();
         let mut weakvalue: *const i8 = std::ptr::null();
@@ -278,34 +278,34 @@ pub unsafe extern "C" fn traversetable(g: *mut Global, h: *mut Table) -> u64 {
             luat_gettm(
                 (*h).metatable,
                 TM_MODE,
-                (*g).tm_name[TM_MODE as usize],
+                (*global).tm_name[TM_MODE as usize],
             )
         };
         let smode: *mut TString;
         if !((*h).metatable).is_null() {
             if (*(*h).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*((*h).metatable as *mut Object)));
+                reallymarkobject(global, &mut (*((*h).metatable as *mut Object)));
             }
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
             smode = &mut (*((*mode).value.object as *mut TString)) as *mut TString;
-            weakkey = strchr((*smode).get_contents(), CHARACTER_LOWER_K as i32);
-            weakvalue = strchr((*smode).get_contents(), CHARACTER_LOWER_V as i32);
+            weakkey = strchr((*smode).get_contents_mut(), CHARACTER_LOWER_K as i32);
+            weakvalue = strchr((*smode).get_contents_mut(), CHARACTER_LOWER_V as i32);
             !weakkey.is_null() || !weakvalue.is_null()
         } {
             if weakkey.is_null() {
-                traverseweakvalue(g, h);
+                traverseweakvalue(global, h);
             } else if weakvalue.is_null() {
-                traverseephemeron(g, h, 0);
+                traverseephemeron(global, h, 0);
             } else {
                 linkgclist_(
                     &mut (*(h as *mut Object)),
                     &mut (*h).gc_list,
-                    &mut (*g).all_weak,
+                    &mut (*global).all_weak,
                 );
             }
         } else {
-            traversestrongtable(g, h);
+            traversestrongtable(global, h);
         }
         return (1 as u32).wrapping_add((*h).array_limit).wrapping_add(
             (2 * (if ((*h).last_free).is_null() {
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn freehash(state: *mut State, table: *mut Table) {
             (*state).free_memory(
                 (*table).node as *mut libc::c_void,
                 ((1 << (*table).log_size_node as i32) as u64)
-                    .wrapping_mul(::core::mem::size_of::<Node>() as u64),
+                    .wrapping_mul(::core::mem::size_of::<Node>() as u64) as usize,
             );
         }
     }
@@ -700,7 +700,7 @@ pub unsafe extern "C" fn setnodevector(state: *mut State, table: *mut Table, mut
             size = (1 << lsize) as u32;
             (*table).node = luam_malloc_(
                 state,
-                (size as u64).wrapping_mul(::core::mem::size_of::<Node>() as u64),
+                (size as usize).wrapping_mul(::core::mem::size_of::<Node>()),
             ) as *mut Node;
             for i in 0..size {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
@@ -767,8 +767,8 @@ pub unsafe extern "C" fn luah_resize(
         new_array = luam_realloc_(
             state,
             (*table).array as *mut libc::c_void,
-            (old_array_size as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
-            (new_array_size as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
+            (old_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
+            (new_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
         ) as *mut TValue;
         if ((new_array.is_null() && new_array_size > 0u32) as i32 != 0) as i64 != 0 {
             freehash(state, &mut new_table);
@@ -847,11 +847,11 @@ pub unsafe extern "C" fn luah_free(state: *mut State, table: *mut Table) {
         freehash(state, table);
         (*state).free_memory(
             (*table).array as *mut libc::c_void,
-            (luah_realasize(table) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
+            (luah_realasize(table) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
         );
         (*state).free_memory(
             table as *mut libc::c_void,
-            ::core::mem::size_of::<Table>() as u64,
+            ::core::mem::size_of::<Table>(),
         );
     }
 }

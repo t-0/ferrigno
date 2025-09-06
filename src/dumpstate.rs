@@ -118,7 +118,7 @@ impl DumpState {
                 self.dump_size(0);
             } else {
                 let size: usize = (*tstring).get_length() as usize;
-                let str: *const i8 = (*tstring).get_contents();
+                let str: *const i8 = (*tstring).get_contents_mut();
                 self.dump_size(size.wrapping_add(1) as u64);
                 self.dump_block(
                     str as *const libc::c_void,

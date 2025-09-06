@@ -157,23 +157,23 @@ impl Global {
         }
     }
 }
-pub unsafe extern "C" fn markbeingfnz(g: *mut Global) -> u64 {
+pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> u64 {
     unsafe {
         let mut count: u64 = 0;
-        let mut o: *mut Object = (*g).to_be_finalized;
+        let mut o: *mut Object = (*global).to_be_finalized;
         while !o.is_null() {
             count = count.wrapping_add(1);
             if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(g, &mut (*(o as *mut Object)));
+                reallymarkobject(global, &mut (*(o as *mut Object)));
             }
             o = (*o).next;
         }
         return count;
     }
 }
-pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 {
+pub unsafe extern "C" fn remarkupvals(global: *mut Global) -> i32 {
     unsafe {
-        let mut p: *mut *mut State = &mut (*g).twups;
+        let mut p: *mut *mut State = &mut (*global).twups;
         let mut work: i32 = 0;
         loop {
             let thread: *mut State = *p;
@@ -195,7 +195,7 @@ pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 {
                         if ((*(*uv).v.p).is_collectable())
                             && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                         {
-                            reallymarkobject(g, (*(*uv).v.p).value.object);
+                            reallymarkobject(global, (*(*uv).v.p).value.object);
                         }
                     }
                     uv = (*uv).u.open.next;
@@ -205,46 +205,46 @@ pub unsafe extern "C" fn remarkupvals(g: *mut Global) -> i32 {
         return work;
     }
 }
-pub unsafe extern "C" fn cleargraylists(g: *mut Global) {
+pub unsafe extern "C" fn cleargraylists(global: *mut Global) {
     unsafe {
-        (*g).gray_again = std::ptr::null_mut();
-        (*g).gray = (*g).gray_again;
-        (*g).ephemeron = std::ptr::null_mut();
-        (*g).all_weak = (*g).ephemeron;
-        (*g).weak = (*g).all_weak;
+        (*global).gray_again = std::ptr::null_mut();
+        (*global).gray = (*global).gray_again;
+        (*global).ephemeron = std::ptr::null_mut();
+        (*global).all_weak = (*global).ephemeron;
+        (*global).weak = (*global).all_weak;
     }
 }
-pub unsafe extern "C" fn restartcollection(g: *mut Global) {
+pub unsafe extern "C" fn restartcollection(global: *mut Global) {
     unsafe {
-        cleargraylists(g);
-        if (*(*g).main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            reallymarkobject(g, &mut (*((*g).main_state as *mut Object)));
+        cleargraylists(global);
+        if (*(*global).main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            reallymarkobject(global, &mut (*((*global).main_state as *mut Object)));
         }
-        if ((*g).l_registry.is_collectable())
-            && (*(*g).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+        if ((*global).l_registry.is_collectable())
+            && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
         {
-            reallymarkobject(g, (*g).l_registry.value.object);
+            reallymarkobject(global, (*global).l_registry.value.object);
         }
-        (*g).markmt();
-        markbeingfnz(g);
+        (*global).markmt();
+        markbeingfnz(global);
     }
 }
-pub unsafe extern "C" fn propagateall(g: *mut Global) -> u64 {
+pub unsafe extern "C" fn propagateall(global: *mut Global) -> u64 {
     unsafe {
         let mut tot: u64 = 0;
-        while !((*g).gray).is_null() {
-            tot = (tot as u64).wrapping_add((*g).propagatemark()) as u64;
+        while !((*global).gray).is_null() {
+            tot = (tot as u64).wrapping_add((*global).propagatemark()) as u64;
         }
         return tot;
     }
 }
-pub unsafe extern "C" fn convergeephemerons(g: *mut Global) {
+pub unsafe extern "C" fn convergeephemerons(global: *mut Global) {
     unsafe {
         let mut changed;
         let mut dir: i32 = 0;
         loop {
-            let mut next: *mut Object = (*g).ephemeron;
-            (*g).ephemeron = std::ptr::null_mut();
+            let mut next: *mut Object = (*global).ephemeron;
+            (*global).ephemeron = std::ptr::null_mut();
             changed = 0;
             loop {
                 let w: *mut Object = next;
@@ -254,8 +254,8 @@ pub unsafe extern "C" fn convergeephemerons(g: *mut Global) {
                 let h: *mut Table = &mut (*(w as *mut Table));
                 next = (*h).gc_list;
                 (*h).set_marked((*h).get_marked() | 1 << 5);
-                if traverseephemeron(g, h, dir) != 0 {
-                    propagateall(g);
+                if traverseephemeron(global, h, dir) != 0 {
+                    propagateall(global);
                     changed = 1;
                 }
             }
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn convergeephemerons(g: *mut Global) {
         }
     }
 }
-pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) {
+pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
             let h: *mut Table = &mut (*(l as *mut Table));
@@ -276,7 +276,7 @@ pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) {
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
-                    g,
+                    global,
                     if is_collectable((*node).key.tag) {
                         (*node).key.value.object
                     } else {
@@ -295,7 +295,7 @@ pub unsafe extern "C" fn clearbykeys(g: *mut Global, mut l: *mut Object) {
         }
     }
 }
-pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *mut Object) {
+pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Object) {
     unsafe {
         while l != f {
             let h: *mut Table = &mut (*(l as *mut Table));
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
             for i in 0..asize {
                 let o: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
                 if iscleared(
-                    g,
+                    global,
                     if (*o).is_collectable() {
                         (*o).value.object
                     } else {
@@ -320,7 +320,7 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
-                    g,
+                    global,
                     if (*node).value.is_collectable() {
                         (*node).value.value.object
                     } else {
@@ -339,38 +339,38 @@ pub unsafe extern "C" fn clearbyvalues(g: *mut Global, mut l: *mut Object, f: *m
         }
     }
 }
-pub unsafe extern "C" fn udata2finalize(g: *mut Global) -> *mut Object {
+pub unsafe extern "C" fn udata2finalize(global: *mut Global) -> *mut Object {
     unsafe {
-        let o: *mut Object = (*g).to_be_finalized;
-        (*g).to_be_finalized = (*o).next;
-        (*o).next = (*g).all_gc;
-        (*g).all_gc = o;
+        let o: *mut Object = (*global).to_be_finalized;
+        (*global).to_be_finalized = (*o).next;
+        (*o).next = (*global).all_gc;
+        (*global).all_gc = o;
         (*o).set_marked((*o).get_marked() & !(1 << 6));
-        if 3 <= (*g).gc_state as i32 && (*g).gc_state as i32 <= 6 {
+        if 3 <= (*global).gc_state as i32 && (*global).gc_state as i32 <= 6 {
             (*o).set_marked(
                 (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
-                    | ((*g).current_white & (1 << 3 | 1 << 4)),
+                    | ((*global).current_white & (1 << 3 | 1 << 4)),
             );
         } else if (*o).get_marked() & 7 == 3 {
-            (*g).first_old1 = o;
+            (*global).first_old1 = o;
         }
         return o;
     }
 }
-pub unsafe extern "C" fn separatetobefnz(g: *mut Global, all: i32) {
+pub unsafe extern "C" fn separatetobefnz(global: *mut Global, all: i32) {
     unsafe {
-        let mut p: *mut *mut Object = &mut (*g).finalized_objects;
-        let mut lastnext: *mut *mut Object = findlast(&mut (*g).to_be_finalized);
+        let mut p: *mut *mut Object = &mut (*global).finalized_objects;
+        let mut lastnext: *mut *mut Object = findlast(&mut (*global).to_be_finalized);
         loop {
             let curr: *mut Object = *p;
-            if !(curr != (*g).finobjold1) {
+            if !(curr != (*global).finobjold1) {
                 break;
             }
             if !((*curr).get_marked() & (1 << 3 | 1 << 4) != 0 || all != 0) {
                 p = &mut (*curr).next;
             } else {
-                if curr == (*g).finobjsur {
-                    (*g).finobjsur = (*curr).next;
+                if curr == (*global).finobjsur {
+                    (*global).finobjsur = (*curr).next;
                 }
                 *p = (*curr).next;
                 (*curr).next = *lastnext;
@@ -380,53 +380,53 @@ pub unsafe extern "C" fn separatetobefnz(g: *mut Global, all: i32) {
         }
     }
 }
-pub unsafe extern "C" fn correctpointers(g: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn correctpointers(global: *mut Global, o: *mut Object) {
     unsafe {
-        checkpointer(&mut (*g).survival, o);
-        checkpointer(&mut (*g).old1, o);
-        checkpointer(&mut (*g).really_old, o);
-        checkpointer(&mut (*g).first_old1, o);
+        checkpointer(&mut (*global).survival, o);
+        checkpointer(&mut (*global).old1, o);
+        checkpointer(&mut (*global).really_old, o);
+        checkpointer(&mut (*global).first_old1, o);
     }
 }
-pub unsafe extern "C" fn setpause(g: *mut Global) {
+pub unsafe extern "C" fn setpause(global: *mut Global) {
     unsafe {
-        let pause: i32 = (*g).gc_pause as i32 * 4;
-        let estimate: i64 = ((*g).gc_estimate).wrapping_div(100 as u64) as i64;
+        let pause: i32 = (*global).gc_pause as i32 * 4;
+        let estimate: i64 = ((*global).gc_estimate).wrapping_div(100 as u64) as i64;
         let threshold: i64 = if (pause as i64) < (!(0u64) >> 1) as i64 / estimate {
             estimate * pause as i64
         } else {
             (!(0u64) >> 1) as i64
         };
         let mut debt: i64 =
-            (((*g).total_bytes + (*g).gc_debt) as u64).wrapping_sub(threshold as u64) as i64;
+            (((*global).total_bytes + (*global).gc_debt) as u64).wrapping_sub(threshold as u64) as i64;
         if debt > 0 {
             debt = 0;
         }
-        (*g).set_debt(debt);
+        (*global).set_debt(debt);
     }
 }
-pub unsafe extern "C" fn correctgraylists(g: *mut Global) {
+pub unsafe extern "C" fn correctgraylists(global: *mut Global) {
     unsafe {
-        let mut list: *mut *mut Object = correctgraylist(&mut (*g).gray_again);
-        *list = (*g).weak;
-        (*g).weak = std::ptr::null_mut();
+        let mut list: *mut *mut Object = correctgraylist(&mut (*global).gray_again);
+        *list = (*global).weak;
+        (*global).weak = std::ptr::null_mut();
         list = correctgraylist(list);
-        *list = (*g).all_weak;
-        (*g).all_weak = std::ptr::null_mut();
+        *list = (*global).all_weak;
+        (*global).all_weak = std::ptr::null_mut();
         list = correctgraylist(list);
-        *list = (*g).ephemeron;
-        (*g).ephemeron = std::ptr::null_mut();
+        *list = (*global).ephemeron;
+        (*global).ephemeron = std::ptr::null_mut();
         correctgraylist(list);
     }
 }
-pub unsafe extern "C" fn markold(g: *mut Global, from: *mut Object, to: *mut Object) {
+pub unsafe extern "C" fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
     unsafe {
         let mut p: *mut Object = from;
         while p != to {
             if (*p).get_marked() & 7 == 3 {
                 (*p).set_marked((*p).get_marked() ^ (3 ^ 4));
                 if (*p).get_marked() & 1 << 5 != 0 {
-                    reallymarkobject(g, p);
+                    reallymarkobject(global, p);
                 }
             }
             p = (*p).next;

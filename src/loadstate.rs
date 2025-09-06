@@ -129,7 +129,7 @@ impl LoadState {
                     (*io).set_collectable();
                     (*state).luad_inctop();
                     self.load_block(
-                        ((*ts).get_contents()) as *mut libc::c_void,
+                        ((*ts).get_contents_mut()) as *mut libc::c_void,
                         size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
                     (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
@@ -172,12 +172,12 @@ impl LoadState {
             };
             (*prototype).code = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<u32>()),
             ) as *mut u32;
             (*prototype).size_code = n;
             self.load_block(
                 (*prototype).code as *mut libc::c_void,
-                (n as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<u32>()) as u64,
             );
         }
     }
@@ -193,7 +193,7 @@ impl LoadState {
             };
             (*prototype).k = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
             ) as *mut TValue;
             (*prototype).size_k = n;
             for i in 0..n {
@@ -246,7 +246,7 @@ impl LoadState {
             };
             (*prototype).p = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<*mut Prototype>()),
             ) as *mut *mut Prototype;
             (*prototype).size_p = n;
             for i in 0..n {
@@ -281,7 +281,7 @@ impl LoadState {
             };
             (*prototype).upvalues = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<UpValueDescription>()),
             ) as *mut UpValueDescription;
             (*prototype).size_upvalues = n;
             for i in 0..n {
@@ -308,7 +308,7 @@ impl LoadState {
             };
             (*prototype).line_info = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             ) as *mut i8;
             (*prototype).size_line_info = n;
             self.load_block(
@@ -325,7 +325,7 @@ impl LoadState {
             };
             (*prototype).absolute_line_info = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>()),
             ) as *mut AbsoluteLineInfo;
             (*prototype).size_absolute_line_info = n;
             for i in 0..n {
@@ -342,7 +342,7 @@ impl LoadState {
             };
             (*prototype).local_variables = luam_malloc_(
                 self.state,
-                (n as u64).wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<LocalVariable>()),
             ) as *mut LocalVariable;
             (*prototype).size_local_variables = n;
             for i in 0..n {
