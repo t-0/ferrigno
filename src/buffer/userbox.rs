@@ -56,7 +56,7 @@ impl UserBox {
     pub unsafe extern "C" fn new_userbox(state: *mut State) {
         unsafe {
             let box_0: *mut UserBox =
-                User::lua_newuserdatauv(state, ::core::mem::size_of::<UserBox>() as u64, 0) as *mut UserBox;
+                User::lua_newuserdatauv(state, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;
             (*box_0).pointer = std::ptr::null_mut();
             (*box_0).size = 0;
             if lual_newmetatable(state, b"_UBOX*\0" as *const u8 as *const i8) != 0 {

@@ -61,16 +61,28 @@ pub struct Global {
     pub warn_userdata: *mut libc::c_void,
 }
 impl Global {
-    pub unsafe extern "C" fn clear_cache(&mut self) {
+    pub unsafe extern "C" fn stringcache_clear(&mut self) {
         unsafe {
-            for i in 0..STRCACHE_N {
-                for j in 0..STRCACHE_M {
+            for i in 0..GLOBAL_STRINGCACHE_N {
+                for j in 0..GLOBAL_STRINGCACHE_M {
                     if (*self.string_cache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                     {
                         self.string_cache[i as usize][j as usize] = self.memory_error_message;
                     }
                 }
+            }
+        }
+    }
+    pub unsafe extern "C" fn fix_memory_error_message_global(& mut self) {
+        unsafe {
+            fix_object_global(self, self.memory_error_message as *mut Object);
+        }
+    }
+    pub fn stringcache_set_error(&mut self) {
+        for i in 0..GLOBAL_STRINGCACHE_N {
+            for j in 0..GLOBAL_STRINGCACHE_M {
+                self.string_cache[i][j] = self.memory_error_message;
             }
         }
     }
@@ -118,26 +130,16 @@ impl Global {
     }
     pub unsafe extern "C" fn propagatemark(&mut self) -> u64 {
         unsafe {
-            let o: *mut Object = self.gray;
-            (*o).set_marked((*o).get_marked() | 1 << 5);
-            self.gray = *getgclist(o);
-            match (*o).get_tag_variant() {
-                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(o as *mut Table))),
-                TAG_VARIANT_USER => {
-                    return User::traverseudata(self, &mut (*(o as *mut User))) as u64
-                }
-                TAG_VARIANT_CLOSURE_L => {
-                    return Closure::traverselclosure(self, &mut (*(o as *mut Closure)))
-                }
-                TAG_VARIANT_CLOSURE_C => {
-                    return Closure::traversecclosure(self, &mut (*(o as *mut Closure)))
-                }
-                TAG_VARIANT_PROTOTYPE => {
-                    return Prototype::traverseproto(self, &mut (*(o as *mut Prototype)))
-                }
-                TAG_VARIANT_STATE => {
-                    return traverse_state(self, &mut (*(o as *mut State))) as u64
-                }
+            let object: *mut Object = self.gray;
+            (*object).set_marked((*object).get_marked() | 1 << 5);
+            self.gray = *getgclist(object);
+            match (*object).get_tag_variant() {
+                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(object as *mut Table))),
+                TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as u64,
+                TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
+                TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
+                TAG_VARIANT_PROTOTYPE => return Prototype::traverseproto(self, &mut (*(object as *mut Prototype))),
+                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut State))) as u64,
                 _ => return 0,
             };
         }
@@ -147,7 +149,7 @@ impl Global {
             for i in TAG_SIMPLE_ {
                 if !(self.metatable[i as usize]).is_null() {
                     if (*self.metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        reallymarkobject(
+                        really_mark_object(
                             self,
                             &mut (*(*(self.metatable).as_mut_ptr().offset(i as isize) as *mut Object)),
                         );
@@ -164,7 +166,7 @@ pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> u64 {
         while !o.is_null() {
             count = count.wrapping_add(1);
             if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(global, &mut (*(o as *mut Object)));
+                really_mark_object(global, &mut (*(o as *mut Object)));
             }
             o = (*o).next;
         }
@@ -195,7 +197,7 @@ pub unsafe extern "C" fn remarkupvals(global: *mut Global) -> i32 {
                         if ((*(*uv).v.p).is_collectable())
                             && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                         {
-                            reallymarkobject(global, (*(*uv).v.p).value.object);
+                            really_mark_object(global, (*(*uv).v.p).value.object);
                         }
                     }
                     uv = (*uv).u.open.next;
@@ -218,12 +220,12 @@ pub unsafe extern "C" fn restartcollection(global: *mut Global) {
     unsafe {
         cleargraylists(global);
         if (*(*global).main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            reallymarkobject(global, &mut (*((*global).main_state as *mut Object)));
+            really_mark_object(global, &mut (*((*global).main_state as *mut Object)));
         }
         if ((*global).l_registry.is_collectable())
             && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
         {
-            reallymarkobject(global, (*global).l_registry.value.object);
+            really_mark_object(global, (*global).l_registry.value.object);
         }
         (*global).markmt();
         markbeingfnz(global);
@@ -360,7 +362,7 @@ pub unsafe extern "C" fn udata2finalize(global: *mut Global) -> *mut Object {
 pub unsafe extern "C" fn separatetobefnz(global: *mut Global, all: i32) {
     unsafe {
         let mut p: *mut *mut Object = &mut (*global).finalized_objects;
-        let mut lastnext: *mut *mut Object = findlast(&mut (*global).to_be_finalized);
+        let mut lastnext: *mut *mut Object = find_last(&mut (*global).to_be_finalized);
         loop {
             let curr: *mut Object = *p;
             if !(curr != (*global).finobjold1) {
@@ -382,10 +384,10 @@ pub unsafe extern "C" fn separatetobefnz(global: *mut Global, all: i32) {
 }
 pub unsafe extern "C" fn correctpointers(global: *mut Global, o: *mut Object) {
     unsafe {
-        checkpointer(&mut (*global).survival, o);
-        checkpointer(&mut (*global).old1, o);
-        checkpointer(&mut (*global).really_old, o);
-        checkpointer(&mut (*global).first_old1, o);
+        check_pointer(&mut (*global).survival, o);
+        check_pointer(&mut (*global).old1, o);
+        check_pointer(&mut (*global).really_old, o);
+        check_pointer(&mut (*global).first_old1, o);
     }
 }
 pub unsafe extern "C" fn setpause(global: *mut Global) {
@@ -407,16 +409,16 @@ pub unsafe extern "C" fn setpause(global: *mut Global) {
 }
 pub unsafe extern "C" fn correctgraylists(global: *mut Global) {
     unsafe {
-        let mut list: *mut *mut Object = correctgraylist(&mut (*global).gray_again);
+        let mut list: *mut *mut Object = correct_gray_list(&mut (*global).gray_again);
         *list = (*global).weak;
         (*global).weak = std::ptr::null_mut();
-        list = correctgraylist(list);
+        list = correct_gray_list(list);
         *list = (*global).all_weak;
         (*global).all_weak = std::ptr::null_mut();
-        list = correctgraylist(list);
+        list = correct_gray_list(list);
         *list = (*global).ephemeron;
         (*global).ephemeron = std::ptr::null_mut();
-        correctgraylist(list);
+        correct_gray_list(list);
     }
 }
 pub unsafe extern "C" fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
@@ -426,7 +428,7 @@ pub unsafe extern "C" fn markold(global: *mut Global, from: *mut Object, to: *mu
             if (*p).get_marked() & 7 == 3 {
                 (*p).set_marked((*p).get_marked() ^ (3 ^ 4));
                 if (*p).get_marked() & 1 << 5 != 0 {
-                    reallymarkobject(global, p);
+                    really_mark_object(global, p);
                 }
             }
             p = (*p).next;

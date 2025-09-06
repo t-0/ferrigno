@@ -66,7 +66,7 @@ impl Prototype {
         unsafe {
             if !((*prototype).source).is_null() {
                 if (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(global, &mut (*((*prototype).source as *mut Object)));
+                    really_mark_object(global, &mut (*((*prototype).source as *mut Object)));
                 }
             }
             for i in 0..(*prototype).size_k {
@@ -74,7 +74,7 @@ impl Prototype {
                     && (*(*((*prototype).k).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                 {
-                    reallymarkobject(global, (*((*prototype).k).offset(i as isize)).value.object);
+                    really_mark_object(global, (*((*prototype).k).offset(i as isize)).value.object);
                 }
             }
             for i in 0..(*prototype).size_upvalues {
@@ -82,7 +82,7 @@ impl Prototype {
                     if (*(*((*prototype).upvalues).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                     {
-                        reallymarkobject(
+                        really_mark_object(
                             global,
                             &mut (*((*((*prototype).upvalues).offset(i as isize)).name as *mut Object)),
                         );
@@ -92,7 +92,7 @@ impl Prototype {
             for i in 0..(*prototype).size_p {
                 if !(*((*prototype).p).offset(i as isize)).is_null() {
                     if (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        reallymarkobject(
+                        really_mark_object(
                             global,
                             &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
                         );
@@ -105,7 +105,7 @@ impl Prototype {
                         & (1 << 3 | 1 << 4)
                         != 0
                     {
-                        reallymarkobject(
+                        really_mark_object(
                             global,
                             &mut (*((*((*prototype).local_variables).offset(i as isize)).variable_name
                                 as *mut Object)),
@@ -524,7 +524,7 @@ pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype {
         let o: *mut Object = luac_newobj(
             state,
             TAG_TYPE_PROTOTYPE,
-            ::core::mem::size_of::<Prototype>() as u64,
+            ::core::mem::size_of::<Prototype>(),
         );
         let prototype: *mut Prototype = &mut (*(o as *mut Prototype));
         (*prototype).k = std::ptr::null_mut();

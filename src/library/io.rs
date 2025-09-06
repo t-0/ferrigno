@@ -68,7 +68,7 @@ pub unsafe extern "C" fn tofile(state: *mut State) -> *mut FILE {
 pub unsafe extern "C" fn newprefile(state: *mut State) -> *mut Stream {
     unsafe {
         let p: *mut Stream =
-            User::lua_newuserdatauv(state, ::core::mem::size_of::<Stream>() as u64, 0) as *mut Stream;
+            User::lua_newuserdatauv(state, ::core::mem::size_of::<Stream>(), 0) as *mut Stream;
         (*p).close_function = None;
         lual_setmetatable(state, b"FILE*\0" as *const u8 as *const i8);
         return p;

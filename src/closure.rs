@@ -58,6 +58,14 @@ impl TObject for Closure {
     }
 }
 impl Closure {
+    pub unsafe fn free_closure(& mut self, state: * mut State) {
+        unsafe {
+            (*state).free_memory(
+                self as * mut Closure as *mut libc::c_void,
+                32 + ::core::mem::size_of::<*mut TValue>() * self.count_upvalues as usize,
+            );
+        }
+    }
     pub unsafe extern "C" fn traversecclosure(global: *mut Global, cl: *mut Closure) -> u64 {
         unsafe {
             for i in 0..(*cl).count_upvalues {
@@ -69,7 +77,7 @@ impl Closure {
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
-                    reallymarkobject(
+                    really_mark_object(
                         global,
                         (*((*cl).upvalues).c_tvalues.as_mut_ptr().offset(i as isize))
                             .value
@@ -84,14 +92,14 @@ impl Closure {
         unsafe {
             if !((*cl).payload.l_prototype).is_null() {
                 if (*(*cl).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(global, &mut (*((*cl).payload.l_prototype as *mut Object)));
+                    really_mark_object(global, &mut (*((*cl).payload.l_prototype as *mut Object)));
                 }
             }
             for i in 0..(*cl).count_upvalues {
                 let uv: *mut UpValue = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
                 if !uv.is_null() {
                     if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        reallymarkobject(global, &mut (*(uv as *mut Object)));
+                        really_mark_object(global, &mut (*(uv as *mut Object)));
                     }
                 }
             }
@@ -205,12 +213,18 @@ pub unsafe extern "C" fn auxgetinfo(
         return status;
     }
 }
+pub unsafe extern "C" fn size_cclosure(nupvals: usize) -> usize {
+    32usize + ::core::mem::size_of::<TValue>() * nupvals
+}
+pub unsafe extern "C" fn size_lclosure(nupvals: usize) -> usize {
+    32usize + ::core::mem::size_of::<*mut TValue>() * nupvals
+}
 pub unsafe extern "C" fn luaf_newcclosure(state: *mut State, nupvals: i32) -> *mut Closure {
     unsafe {
         let o: *mut Object = luac_newobj(
             state,
             TAG_VARIANT_CLOSURE_C,
-            (32 as i32 + ::core::mem::size_of::<TValue>() as i32 * nupvals) as u64,
+            size_cclosure(nupvals as usize),
         );
         let c: *mut Closure = &mut (*(o as *mut Closure));
         (*c).count_upvalues = nupvals as u8;
@@ -222,8 +236,7 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut nupvals: i32) -
         let o: *mut Object = luac_newobj(
             state,
             TAG_VARIANT_CLOSURE_L,
-            (32 as i32 + ::core::mem::size_of::<*mut TValue>() as i32 * nupvals)
-                as u64,
+            size_lclosure(nupvals as usize),
         );
         let c: *mut Closure = &mut (*(o as *mut Closure));
         (*c).payload.l_prototype = std::ptr::null_mut();
@@ -246,7 +259,7 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut Closure) {
             let o: *mut Object = luac_newobj(
                 state,
                 TAG_TYPE_UPVALUE,
-                ::core::mem::size_of::<UpValue>() as u64,
+                ::core::mem::size_of::<UpValue>(),
             );
             let uv: *mut UpValue = &mut (*(o as *mut UpValue));
             (*uv).v.p = &mut (*uv).u.value;

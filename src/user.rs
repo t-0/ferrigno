@@ -1,11 +1,11 @@
-use crate::utility::*;
+use crate::functions::*;
+use crate::global::*;
 use crate::object::*;
+use crate::state::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::functions::*;
 use crate::tvalue::*;
-use crate::state::*;
-use crate::global::*;
+use crate::utility::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
@@ -19,7 +19,7 @@ pub struct User {
     pub length: u64,
     pub metatable: *mut Table,
     pub gc_list: *mut Object,
-    pub uv: [TValue; 1],
+    pub uv: [TValue; 0],
 }
 impl TObject for User {
     fn get_tag(&self) -> u8 {
@@ -42,90 +42,67 @@ impl TObject for User {
     }
 }
 impl User {
-    pub fn get_size(s: u64, nuvalue: u64) -> u64 {
-        return (core::mem::size_of::<User>().wrapping_add(
-            ::core::mem::size_of::<TValue>().wrapping_mul(nuvalue as usize).wrapping_add(s as usize))) as u64;
+    pub fn get_size(count_bytes: usize, count_upvalues: usize) -> usize {
+        return core::mem::size_of::<User>().wrapping_add(
+            ::core::mem::size_of::<TValue>()
+                .wrapping_mul(count_upvalues)
+                .wrapping_add(count_bytes),
+        );
     }
-    pub unsafe extern "C" fn luas_newudata(state: *mut State, s: u64, nuvalue: i32) -> *mut User {
+    pub fn get_offset(count_upvalues: usize) -> isize {
+        (core::mem::offset_of!(User, uv)).wrapping_add(::core::mem::size_of::<TValue>().wrapping_mul(count_upvalues)) as isize
+    }
+    pub unsafe fn get_raw_memory(& mut self) -> *mut libc::c_void {
         unsafe {
-            if ((s
-                > (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
-                    !(0u64)
-                } else {
-                    MAXIMUM_SIZE as u64
-                })
-                .wrapping_sub(if nuvalue == 0 {
-                    32 as u64
-                } else {
-                    (40 as u64).wrapping_add(
-                        (::core::mem::size_of::<TValue>() as u64).wrapping_mul(nuvalue as u64),
-                    )
-                })) as i32
-                != 0) as i64
-                != 0
-            {
+            return (self as *mut User as *mut i8).offset(User::get_offset((*self).nuvalue as usize)) as *mut libc::c_void;
+        }
+    }
+    pub unsafe extern "C" fn luas_newudata(
+        state: *mut State,
+        count_bytes: usize,
+        count_upvalues: usize,
+    ) -> *mut User {
+        unsafe {
+            if count_bytes > MAXIMUM_SIZE - User::get_size(0, count_upvalues) {
                 (*state).too_big();
             }
-            let o: *mut Object = luac_newobj(
+            let object: *mut Object = luac_newobj(
                 state,
                 TAG_TYPE_USER,
-                User::get_size(s, nuvalue as u64),
+                User::get_size(count_bytes, count_upvalues),
             );
-            let u: *mut User = &mut (*(o as *mut User));
-            (*u).length = s;
-            (*u).nuvalue = nuvalue;
-            (*u).metatable = std::ptr::null_mut();
-            for i in 0..nuvalue {
-                (*((*u).uv).as_mut_ptr().offset(i as isize))
-                    .set_tag(TAG_VARIANT_NIL_NIL);
+            let ret: *mut User = &mut (*(object as *mut User));
+            (*ret).length = count_bytes as u64;
+            (*ret).nuvalue = count_upvalues as i32;
+            (*ret).metatable = std::ptr::null_mut();
+            for i in 0..count_upvalues {
+                (*((*ret).uv).as_mut_ptr().offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
             }
-            return u;
+            return ret;
         }
     }
     pub unsafe extern "C" fn lua_newuserdatauv(
         state: *mut State,
-        size: u64,
-        nuvalue: i32,
+        size: usize,
+        count_upvalues: usize,
     ) -> *mut libc::c_void {
         unsafe {
-            let u: *mut User = User::luas_newudata(state, size, nuvalue);
+            let new_user: *mut User = User::luas_newudata(state, size, count_upvalues);
             let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
-            let x_: *mut User = u;
-            (*io).value.object = &mut (*(x_ as *mut Object));
+            (*io).value.object = &mut (*(new_user as *mut Object));
             (*io).set_tag(TAG_VARIANT_USER);
             (*io).set_collectable();
             (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
             if (*(*state).global).gc_debt > 0 {
                 luac_step(state);
             }
-            return (u as *mut i8).offset(
-                (if (*u).nuvalue as i32 == 0 {
-                    32 as u64
-                } else {
-                    (40 as u64).wrapping_add(
-                        (::core::mem::size_of::<TValue>() as u64).wrapping_mul((*u).nuvalue as u64),
-                    )
-                }) as isize,
-            ) as *mut libc::c_void;
+            return (*new_user).get_raw_memory();
         }
     }
     pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
         unsafe {
             match get_tag_type((*o).get_tag()) {
-                TAG_VARIANT_USER => {
-                    return (&mut (*((*o).value.object as *mut User)) as *mut User as *mut i8)
-                        .offset(
-                            (if (*((*o).value.object as *mut User)).nuvalue as i32 == 0 {
-                                32 as u64
-                            } else {
-                                (40 as u64).wrapping_add(
-                                    (::core::mem::size_of::<TValue>() as u64).wrapping_mul(
-                                        (*((*o).value.object as *mut User)).nuvalue as u64,
-                                    ),
-                                )
-                            }) as isize,
-                        ) as *mut libc::c_void;
-                }
+                TAG_VARIANT_USER => return (*((*o).value.object as *mut User)).get_raw_memory(),
                 TAG_VARIANT_POINTER => return (*o).value.pointer,
                 _ => return std::ptr::null_mut(),
             };
@@ -136,7 +113,8 @@ impl User {
             let o: *const TValue = (*state).index2value(index);
             match (*o).get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return ::core::mem::transmute::<CFunction, u64>((*o).value.function) as *mut libc::c_void;
+                    return ::core::mem::transmute::<CFunction, u64>((*o).value.function)
+                        as *mut libc::c_void;
                 }
                 TAG_VARIANT_USER | TAG_VARIANT_POINTER => return User::touserdata(o),
                 _ => {
@@ -149,28 +127,43 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn traverseudata(global: *mut Global, u: *mut User) -> i32 {
+    pub unsafe extern "C" fn free_user(&mut self, state: *mut State) {
         unsafe {
-            if !((*u).metatable).is_null() {
-                if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    reallymarkobject(global, &mut (*((*u).metatable as *mut Object)));
+            (*state).free_memory(
+                self as *mut User as *mut libc::c_void,
+                (if self.nuvalue as i32 == 0 {
+                    32 as u64
+                } else {
+                    (40 as u64).wrapping_add(
+                        (::core::mem::size_of::<TValue>() as u64)
+                            .wrapping_mul(self.nuvalue as u64),
+                    )
+                })
+                .wrapping_add(self.length) as usize,
+            );
+        }
+    }
+    pub unsafe extern "C" fn traverseudata(& mut self, global: *mut Global) -> i32 {
+        unsafe {
+            if !self.metatable.is_null() {
+                if (*self.metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(global, &mut (*(self.metatable as *mut Object)));
                 }
             }
-            for i in 0..(*u).nuvalue {
-                if ((*((*u).uv).as_mut_ptr().offset(i as isize))
-                    .is_collectable())
-                    && (*(*((*u).uv).as_mut_ptr().offset(i as isize)).value.object).get_marked()
-                    & (1 << 3 | 1 << 4)
+            for i in 0..self.nuvalue {
+                if ((*(self.uv).as_mut_ptr().offset(i as isize)).is_collectable())
+                    && (*(*(self.uv).as_mut_ptr().offset(i as isize)).value.object).get_marked()
+                        & (1 << 3 | 1 << 4)
                         != 0
-                        {
-                    reallymarkobject(
+                {
+                    really_mark_object(
                         global,
-                        (*((*u).uv).as_mut_ptr().offset(i as isize)).value.object,
+                        (*(self.uv).as_mut_ptr().offset(i as isize)).value.object,
                     );
                 }
             }
-            genlink(global, &mut (*(u as *mut Object)));
-            return 1 + (*u).nuvalue as i32;
+            generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut Object)));
+            return 1 + self.nuvalue as i32;
         }
     }
 }

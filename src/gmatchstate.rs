@@ -48,7 +48,7 @@ impl GMatchState {
             if init > lexical_state {
                 init = lexical_state.wrapping_add(1 as u64);
             }
-            let gm: *mut GMatchState = User::lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>() as u64, 0)
+            let gm: *mut GMatchState = User::lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>(), 0)
                 as *mut GMatchState;
             (*gm).match_state.prepstate(state, s, lexical_state, p, lp);
             (*gm).source = s.offset(init as isize);

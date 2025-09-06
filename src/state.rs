@@ -95,6 +95,14 @@ impl TObject for State {
     }
 }
 impl State {
+    pub unsafe extern "C" fn free_state(& mut self, state: *mut State) {
+        unsafe {
+            let l: *mut StateExtra = (self as *mut State as *mut u8).offset(-(8 as isize)) as *mut StateExtra;
+            luaf_closeupval(self, self.stack.stkidrel_pointer);
+            freestack(self);
+            (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>());
+        }
+    }
     pub fn get_status(& mut self) -> i32 {
         return self.status as i32;
     }
@@ -222,7 +230,7 @@ impl State {
                 let marked = (*curr).get_marked();
                 if marked & other_white != 0 {
                     *p = (*curr).next;
-                    freeobj(self, curr);
+                    free_object(self, curr);
                 } else {
                     (*curr).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7) | white);
                     p = &mut (*curr).next;
@@ -3000,7 +3008,7 @@ pub unsafe extern "C" fn init_registry(state: *mut State, global: *mut Global) {
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_TABLE);
         (*io).set_collectable();
-        luah_resize(state, registry, 2 as u32, 0);
+        luah_resize(state, registry, 2, 0);
         let io_0: *mut TValue = &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
         let x0: *mut State = state;
         (*io_0).value.object = &mut (*(x0 as *mut Object));
@@ -3018,7 +3026,7 @@ pub unsafe extern "C" fn f_luaopen(state: *mut State, mut _ud: *mut libc::c_void
         let global: *mut Global = (*state).global;
         stack_init(state, state);
         init_registry(state, global);
-        luas_init(state);
+        luas_init_state(state);
         luat_init(state);
         luax_init(state);
         (*global).gc_step = 0;
@@ -3108,14 +3116,6 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
         );
         stack_init(other_state, state);
         return other_state;
-    }
-}
-pub unsafe extern "C" fn luae_freethread(state: *mut State, other_state: *mut State) {
-    unsafe {
-        let l: *mut StateExtra = (other_state as *mut u8).offset(-(8 as isize)) as *mut StateExtra;
-        luaf_closeupval(other_state, (*other_state).stack.stkidrel_pointer);
-        freestack(other_state);
-        (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>());
     }
 }
 pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) -> i32 {
@@ -3981,7 +3981,7 @@ pub unsafe extern "C" fn luat_init(state: *mut State) {
         ];
         for i in 0..TM_N {
             (*(*state).global).tm_name[i as usize] = luas_new(state, EVENT_NAMES[i as usize]);
-            luac_fix(
+            fix_object_state(
                 state,
                 &mut (*(*((*(*state).global).tm_name).as_mut_ptr().offset(i as isize)
                     as *mut Object))
@@ -4358,9 +4358,9 @@ pub unsafe extern "C" fn luac_newobjdt(
         return o;
     }
 }
-pub unsafe extern "C" fn luac_newobj(state: *mut State, tag: u8, size: u64) -> *mut Object {
+pub unsafe extern "C" fn luac_newobj(state: *mut State, tag: u8, size: usize) -> *mut Object {
     unsafe {
-        return luac_newobjdt(state, tag, size, 0u64);
+        return luac_newobjdt(state, tag, size as u64, 0u64);
     }
 }
 pub unsafe extern "C" fn traverse_state(global: *mut Global, state: *mut State) -> i32 {
@@ -4380,14 +4380,14 @@ pub unsafe extern "C" fn traverse_state(global: *mut Global, state: *mut State) 
             if ((*o).tvalue.is_collectable())
                 && (*(*o).tvalue.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
-                reallymarkobject(global, (*o).tvalue.value.object);
+                really_mark_object(global, (*o).tvalue.value.object);
             }
             o = o.offset(1);
         }
         let mut uv: *mut UpValue = (*state).open_upvalue;
         while !uv.is_null() {
             if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(global, &mut (*(uv as *mut Object)));
+                really_mark_object(global, &mut (*(uv as *mut Object)));
             }
             uv = (*uv).u.open.next;
         }
@@ -4566,7 +4566,7 @@ pub unsafe extern "C" fn sweep2old(state: *mut State, mut p: *mut *mut Object) {
             }
             if (*curr).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 *p = (*curr).next;
-                freeobj(state, curr);
+                free_object(state, curr);
             } else {
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
                 if (*curr).get_tag() == TAG_TYPE_STATE {
@@ -4606,7 +4606,7 @@ pub unsafe extern "C" fn sweepgen(
             }
             if (*curr).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 *p = (*curr).next;
-                freeobj(state, curr);
+                free_object(state, curr);
             } else {
                 if (*curr).get_marked() & 7 == 0 {
                     let marked = (*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4) | 7);
@@ -4782,12 +4782,12 @@ pub unsafe extern "C" fn luac_freeallobjects(state: *mut State) {
         luac_changemode(state, 0);
         separatetobefnz(global, 1);
         callallpendingfinalizers(state);
-        deletelist(
+        delete_list(
             state,
             (*global).all_gc,
             &mut (*((*global).main_state as *mut Object)),
         );
-        deletelist(state, (*global).fixed_gc, std::ptr::null_mut());
+        delete_list(state, (*global).fixed_gc, std::ptr::null_mut());
     }
 }
 pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
@@ -4798,12 +4798,12 @@ pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
         (*global).gray_again = std::ptr::null_mut();
         (*global).gc_state = 2 as u8;
         if (*state).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            reallymarkobject(global, &mut (*(state as *mut Object)));
+            really_mark_object(global, &mut (*(state as *mut Object)));
         }
         if ((*global).l_registry.is_collectable())
             && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
         {
-            reallymarkobject(global, (*global).l_registry.value.object);
+            really_mark_object(global, (*global).l_registry.value.object);
         }
         (*global).markmt();
         work = (work as u64).wrapping_add(propagateall(global)) as u64;
@@ -4824,7 +4824,7 @@ pub unsafe extern "C" fn atomic(state: *mut State) -> u64 {
         clearbykeys(global, (*global).all_weak);
         clearbyvalues(global, (*global).weak, origweak);
         clearbyvalues(global, (*global).all_weak, origall);
-        (*global).clear_cache();
+        (*global).stringcache_clear();
         (*global).current_white = ((*global).current_white as i32 ^ (1 << 3 | 1 << 4)) as u8;
         return work;
     }
@@ -5207,11 +5207,11 @@ pub unsafe extern "C" fn luax_init(state: *mut State) {
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as u64),
         );
-        luac_fix(state, &mut (*(e as *mut Object)));
+        fix_object_state(state, &mut (*(e as *mut Object)));
         i = 0;
         while i < TK_WHILE as i32 - (127 as i32 * 2 + 1 + 1) + 1 {
             let ts: *mut TString = luas_new(state, TOKENS[i as usize]);
-            luac_fix(state, &mut (*(ts as *mut Object)));
+            fix_object_state(state, &mut (*(ts as *mut Object)));
             (*ts).extra = (i + 1) as u8;
             i += 1;
         }
@@ -5932,18 +5932,18 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                         OP_NEWTABLE => {
                             let ra_17: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut b_3: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-                            let mut c_1: i32 =
-                                (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                            let mut new_table_size = (i >> POSITION_B & !(!(0u32) << 8) << 0) as usize;
+                            let mut new_array_size: usize =
+                                (i >> POSITION_C & !(!(0u32) << 8) << 0) as usize;
                             let table: *mut Table;
-                            if b_3 > 0 {
-                                b_3 = 1 << b_3 - 1;
+                            if new_table_size > 0 {
+                                new_table_size = 1 << new_table_size - 1;
                             }
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                c_1 += (*program_counter >> POSITION_A
+                                new_array_size += ((*program_counter >> POSITION_A as usize
                                     & !(!(0u32) << 8 + 8 + 1 + 8) << 0)
                                     as i32
-                                    * ((1 << 8) - 1 + 1);
+                                    * ((1 << 8) - 1 + 1)) as usize;
                             }
                             program_counter = program_counter.offset(1);
                             (*state).top.stkidrel_pointer = ra_17.offset(1 as isize);
@@ -5953,8 +5953,8 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                             (*io_3).value.object = &mut (*(x_ as *mut Object));
                             (*io_3).set_tag(TAG_VARIANT_TABLE);
                             (*io_3).set_collectable();
-                            if b_3 != 0 || c_1 != 0 {
-                                luah_resize(state, table, c_1 as u32, b_3 as u32);
+                            if new_table_size != 0 || new_array_size != 0 {
+                                luah_resize(state, table, new_array_size, new_table_size);
                             }
                             if (*(*state).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
@@ -7880,7 +7880,7 @@ pub unsafe extern "C" fn luav_execute(state: *mut State, mut call_info: *mut Cal
                                 program_counter = program_counter.offset(1);
                             }
                             if last > luah_realasize(h) {
-                                luah_resizearray(state, h, last);
+                                luah_resizearray(state, h, last as usize);
                             }
                             while n_4 > 0 {
                                 let value: *mut TValue = &mut (*ra_76.offset(n_4 as isize)).tvalue;

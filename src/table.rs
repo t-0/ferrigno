@@ -49,7 +49,7 @@ impl TObject for Table {
     }
 }
 impl New for Table {
-    fn new() -> Self {
+   fn new() -> Self {
         Table {
             object: Object {
                 next: std::ptr::null_mut(),
@@ -70,6 +70,19 @@ impl New for Table {
     }
 }
 impl Table {
+    pub unsafe fn free_table(& mut self, state: *mut State) {
+        unsafe {
+            freehash(state, self);
+            (*state).free_memory(
+                self.array as *mut libc::c_void,
+                (luah_realasize(self) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
+            );
+            (*state).free_memory(
+                self as *mut Table as *mut libc::c_void,
+                ::core::mem::size_of::<Table>(),
+            );
+        }
+    }
     pub unsafe extern "C" fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
         unsafe {
             let temporary_size_node: u8 = (*t1).log_size_node;
@@ -127,7 +140,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(global, (*node).key.value.object);
+                    really_mark_object(global, (*node).key.value.object);
                 }
                 if hasclears == 0
                     && iscleared(
@@ -173,7 +186,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
                     != 0
             {
                 marked = 1;
-                reallymarkobject(global, (*((*h).array).offset(i as isize)).value.object);
+                really_mark_object(global, (*((*h).array).offset(i as isize)).value.object);
             }
         }
         for i in 0..new_size {
@@ -204,7 +217,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
                 && (*(*node).value.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
                 marked = 1;
-                reallymarkobject(global, (*node).value.value.object);
+                really_mark_object(global, (*node).value.value.object);
             }
         }
         if (*global).gc_state as i32 == 0 {
@@ -226,7 +239,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
                 &mut (*global).all_weak,
             );
         } else {
-            genlink(global, &mut (*(h as *mut Object)));
+            generate_link(global, &mut (*(h as *mut Object)));
         }
         return marked;
     }
@@ -242,7 +255,7 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
                     & (1 << 3 | 1 << 4)
                     != 0
             {
-                reallymarkobject(global, (*((*h).array).offset(i as isize)).value.object);
+                really_mark_object(global, (*((*h).array).offset(i as isize)).value.object);
             }
         }
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
@@ -253,17 +266,17 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
                 if is_collectable((*node).key.tag)
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(global, (*node).key.value.object);
+                    really_mark_object(global, (*node).key.value.object);
                 }
                 if ((*node).value.is_collectable())
                     && (*(*node).value.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(global, (*node).value.value.object);
+                    really_mark_object(global, (*node).value.value.object);
                 }
             }
             node = node.offset(1);
         }
-        genlink(global, &mut (*(h as *mut Object)));
+        generate_link(global, &mut (*(h as *mut Object)));
     }
 }
 pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u64 {
@@ -284,7 +297,7 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u6
         let smode: *mut TString;
         if !((*h).metatable).is_null() {
             if (*(*h).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(global, &mut (*((*h).metatable as *mut Object)));
+                really_mark_object(global, &mut (*((*h).metatable as *mut Object)));
             }
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
@@ -740,28 +753,28 @@ pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, table: *mut
 pub unsafe extern "C" fn luah_resize(
     state: *mut State,
     table: *mut Table,
-    new_array_size: u32,
-    nhsize: u32,
+    new_array_size: usize,
+    new_table_size: usize,
 ) {
     unsafe {
         let mut new_table: Table = Table::new();
-        let old_array_size: u32 = setlimittosize(table);
+        let old_array_size = setlimittosize(table) as usize;
         let new_array: *mut TValue;
-        setnodevector(state, &mut new_table, nhsize);
+        setnodevector(state, &mut new_table, new_table_size as u32);
         if new_array_size < old_array_size {
-            (*table).array_limit = new_array_size;
+            (*table).array_limit = new_array_size as u32;
             Table::exchange_hash_part(table, &mut new_table);
             for i in new_array_size..old_array_size {
                 if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
                     luah_setint(
                         state,
                         table,
-                        i.wrapping_add(1 as u32) as i64,
+                        i.wrapping_add(1) as i64,
                         &mut *((*table).array).offset(i as isize),
                     );
                 }
             }
-            (*table).array_limit = old_array_size;
+            (*table).array_limit = old_array_size as u32;
             Table::exchange_hash_part(table, &mut new_table);
         }
         new_array = luam_realloc_(
@@ -770,13 +783,13 @@ pub unsafe extern "C" fn luah_resize(
             (old_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
             (new_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
         ) as *mut TValue;
-        if ((new_array.is_null() && new_array_size > 0u32) as i32 != 0) as i64 != 0 {
+        if ((new_array.is_null() && new_array_size > 0) as i32 != 0) as i64 != 0 {
             freehash(state, &mut new_table);
             luad_throw(state, 4);
         }
         Table::exchange_hash_part(table, &mut new_table);
         (*table).array = new_array;
-        (*table).array_limit = new_array_size;
+        (*table).array_limit = new_array_size as u32;
         for i in old_array_size..new_array_size {
             (*((*table).array).offset(i as isize)).set_tag(TAG_VARIANT_NIL_EMPTY);
         }
@@ -787,25 +800,22 @@ pub unsafe extern "C" fn luah_resize(
 pub unsafe extern "C" fn luah_resizearray(
     state: *mut State,
     table: *mut Table,
-    new_array_size: u32,
+    new_array_size: usize,
 ) {
     unsafe {
-        let new_size: i32 = if ((*table).last_free).is_null() {
+        let new_table_size = if ((*table).last_free).is_null() {
             0
         } else {
-            1 << (*table).log_size_node as i32
+            1usize << (*table).log_size_node
         };
-        luah_resize(state, table, new_array_size, new_size as u32);
+        luah_resize(state, table, new_array_size, new_table_size);
     }
 }
 pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const TValue) {
     unsafe {
-        let asize: u32;
-        let mut na: u32;
         let mut nums: [u32; 32] = [0; 32];
-        let mut i: i32;
         let mut totaluse: i32;
-        i = 0;
+        let mut i: i32 = 0;
         while i
             <= (::core::mem::size_of::<i32>() as u64)
                 .wrapping_mul(8 as u64)
@@ -815,44 +825,31 @@ pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const
             i += 1;
         }
         setlimittosize(table);
-        na = numusearray(table, nums.as_mut_ptr());
+        let mut na: u32 = numusearray(table, nums.as_mut_ptr());
         totaluse = na as i32;
         totaluse += numusehash(table, nums.as_mut_ptr(), &mut na);
         if (*ek).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             na = na.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
         }
         totaluse += 1;
-        asize = computesizes(nums.as_mut_ptr(), &mut na);
-        luah_resize(state, table, asize, (totaluse as u32).wrapping_sub(na));
+        let asize: u32 = computesizes(nums.as_mut_ptr(), &mut na);
+        luah_resize(state, table, asize as usize, (totaluse as usize).wrapping_sub(na as usize));
     }
 }
 pub unsafe extern "C" fn luah_new(state: *mut State) -> *mut Table {
     unsafe {
-        let o: *mut Object = luac_newobj(
+        let object: *mut Object = luac_newobj(
             state,
             TAG_TYPE_TABLE,
-            ::core::mem::size_of::<Table>() as u64,
+            ::core::mem::size_of::<Table>(),
         );
-        let new_table: *mut Table = &mut (*(o as *mut Table));
+        let new_table: *mut Table = &mut (*(object as *mut Table));
         (*new_table).metatable = std::ptr::null_mut();
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
         (*new_table).array = std::ptr::null_mut();
         (*new_table).array_limit = 0u32;
         setnodevector(state, new_table, 0u32);
         return new_table;
-    }
-}
-pub unsafe extern "C" fn luah_free(state: *mut State, table: *mut Table) {
-    unsafe {
-        freehash(state, table);
-        (*state).free_memory(
-            (*table).array as *mut libc::c_void,
-            (luah_realasize(table) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
-        );
-        (*state).free_memory(
-            table as *mut libc::c_void,
-            ::core::mem::size_of::<Table>(),
-        );
     }
 }
 pub unsafe extern "C" fn luah_newkey(

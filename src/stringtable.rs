@@ -1,8 +1,11 @@
 use crate::tstring::*;
 use crate::state::*;
 use crate::global::*;
-use crate::object::*;
 use crate::table::*;
+pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
+pub const GLOBAL_STRINGCACHE_N: usize = 53;
+pub const GLOBAL_STRINGCACHE_M: usize = 2;
+pub const STRINGTABLE_LENGTH_MAX: usize = 0x7FFFFFFF;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct StringTable {
@@ -50,13 +53,15 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
         };
     }
 }
-pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
-pub const STRCACHE_N: usize = 53;
-pub const STRCACHE_M: usize = 2;
-pub unsafe extern "C" fn luas_init(state: *mut State) {
+pub unsafe extern "C" fn luas_init_state(state: *mut State) {
     unsafe {
         let global: *mut Global = (*state).global;
-        let tb: *mut StringTable = &mut (*(*state).global).string_table;
+        luas_init_global(global, state);
+    }
+}
+pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut State) {
+    unsafe {
+        let tb: *mut StringTable = &mut (*global).string_table;
         (*tb).hash = luam_malloc_(
             state,
             STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()),
@@ -70,29 +75,25 @@ pub unsafe extern "C" fn luas_init(state: *mut State) {
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
                 .wrapping_sub(1 as u64),
         );
-        luac_fix(state, &mut (*((*global).memory_error_message as *mut Object)));
-        for i in 0..STRCACHE_N {
-            for j in 0..STRCACHE_M {
-                (*global).string_cache[i][j] = (*global).memory_error_message;
-            }
-        }
+        (*global).fix_memory_error_message_global();
+        (*global).stringcache_set_error();
     }
 }
 pub unsafe extern "C" fn growstrtab(state: *mut State, tb: *mut StringTable) {
     unsafe {
-        if (*tb).length == 0x7FFFFFF {
+        if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
             luac_fullgc(state, true);
-            if (*tb).length == 0x7FFFFFF {
+            if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
                 luad_throw(state, 4);
             }
         }
         if (*tb).size
-            <= (if 0x7FFFFFF
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<*mut TString>() as u64)
+            <= (if STRINGTABLE_LENGTH_MAX
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<*mut TString>())
             {
-                0x7FFFFFF
+                STRINGTABLE_LENGTH_MAX
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<*mut TString>() as u64) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<*mut TString>())
             }) as i32
                 / 2
         {

@@ -12,16 +12,16 @@
 //         }
 //     }
 // }
+use crate::closure::*;
+use crate::closure::*;
 use crate::global::*;
+use crate::prototype::*;
+use crate::state::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
-use crate::closure::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
-use crate::closure::*;
-use crate::state::*;
-use crate::prototype::*;
 use crate::user::*;
 pub trait TObject {
     fn get_tag(&self) -> u8;
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, o: *const Object) -> i32
             return 0;
         } else if get_tag_type((*o).get_tag()) == TAG_TYPE_STRING {
             if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                reallymarkobject(global, &mut (*(o as *mut Object)));
+                really_mark_object(global, &mut (*(o as *mut Object)));
             }
             return 0;
         } else {
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn luac_barrier_(state: *mut State, o: *mut Object, v: *mu
     unsafe {
         let global: *mut Global = (*state).global;
         if (*global).gc_state as i32 <= 2 {
-            reallymarkobject(global, v);
+            really_mark_object(global, v);
             if (*o).get_marked() & 7 > 1 {
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
@@ -143,17 +143,29 @@ pub unsafe extern "C" fn luac_barrierback_(state: *mut State, o: *mut Object) {
         }
     }
 }
-pub unsafe extern "C" fn luac_fix(state: *mut State, o: *mut Object) {
+
+pub unsafe extern "C" fn fix_memory_error_message_state(state: *mut State) {
     unsafe {
         let global: *mut Global = (*state).global;
-        (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
-        (*o).set_marked((*o).get_marked() & !(7) | 4);
-        (*global).all_gc = (*o).next;
-        (*o).next = (*global).fixed_gc;
-        (*global).fixed_gc = o;
+        (*global).fix_memory_error_message_global();
     }
 }
-pub unsafe extern "C" fn reallymarkobject(global: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn fix_object_state(state: *mut State, object: *mut Object) {
+    unsafe {
+        let global: *mut Global = (*state).global;
+        fix_object_global(global, object);
+    }
+}
+pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Object) {
+    unsafe {
+        (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
+        (*object).set_marked((*object).get_marked() & !(7) | 4);
+        (*global).all_gc = (*object).next;
+        (*object).next = (*global).fixed_gc;
+        (*global).fixed_gc = object;
+    }
+}
+pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object) {
     unsafe {
         let current_block_18: u64;
         match (*o).get_tag() {
@@ -171,7 +183,7 @@ pub unsafe extern "C" fn reallymarkobject(global: *mut Global, o: *mut Object) {
                 if ((*(*uv).v.p).is_collectable())
                     && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    reallymarkobject(global, (*(*uv).v.p).value.object);
+                    really_mark_object(global, (*(*uv).v.p).value.object);
                 }
                 current_block_18 = 18317007320854588510;
             }
@@ -180,7 +192,7 @@ pub unsafe extern "C" fn reallymarkobject(global: *mut Global, o: *mut Object) {
                 if (*u).nuvalue as i32 == 0 {
                     if !((*u).metatable).is_null() {
                         if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            reallymarkobject(global, &mut (*((*u).metatable as *mut Object)));
+                            really_mark_object(global, &mut (*((*u).metatable as *mut Object)));
                         }
                     }
                     (*u).set_marked((*u).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -212,7 +224,7 @@ pub unsafe extern "C" fn reallymarkobject(global: *mut Global, o: *mut Object) {
         };
     }
 }
-pub unsafe extern "C" fn genlink(global: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn generate_link(global: *mut Global, o: *mut Object) {
     unsafe {
         if (*o).get_marked() & 7 == 5 {
             linkgclist_(
@@ -225,100 +237,61 @@ pub unsafe extern "C" fn genlink(global: *mut Global, o: *mut Object) {
         }
     }
 }
-pub unsafe extern "C" fn freeobj(state: *mut State, o: *mut Object) {
+pub unsafe extern "C" fn free_object(state: *mut State, object: *mut Object) {
     unsafe {
-        match (*o).get_tag() {
+        match (*object).get_tag() {
             TAG_VARIANT_PROTOTYPE => {
-                (*(&mut (*(o as *mut Prototype)))).free_prototype(state);
+                let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
+                (*prototype).free_prototype(state);
             }
             TAG_VARIANT_UPVALUE => {
-                freeupval(state, &mut (*(o as *mut UpValue)));
+                let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
+                (*upvalue).free_upvalue(state);
             }
-            TAG_VARIANT_CLOSURE_L => {
-                let cl: *mut Closure = &mut (*(o as *mut Closure));
-                (*state).free_memory(
-                    cl as *mut libc::c_void,
-                    (32 as i32
-                        + ::core::mem::size_of::<*mut TValue>() as i32
-                            * (*cl).count_upvalues as i32) as usize,
-                );
-            }
-            TAG_VARIANT_CLOSURE_C => {
-                let cl_0: *mut Closure = &mut (*(o as *mut Closure));
-                (*state).free_memory(
-                    cl_0 as *mut libc::c_void,
-                    (32 as i32
-                        + ::core::mem::size_of::<TValue>() as i32
-                            * (*cl_0).count_upvalues as i32) as usize,
-                );
+            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
+                let closure: *mut Closure = &mut (*(object as *mut Closure));
+                (*closure).free_closure(state);
             }
             TAG_VARIANT_TABLE => {
-                luah_free(state, &mut (*(o as *mut Table)));
+                let table: *mut Table = &mut (*(object as *mut Table));
+                (*table).free_table(state);
             }
             TAG_VARIANT_STATE => {
-                luae_freethread(state, &mut (*(o as *mut State)));
+                let other: *mut State = &mut (*(object as *mut State));
+                (*other).free_state(state);
             }
             TAG_VARIANT_USER => {
-                let u: *mut User = &mut (*(o as *mut User));
-                (*state).free_memory(
-                    o as *mut libc::c_void,
-                    (if (*u).nuvalue as i32 == 0 {
-                        32 as u64
-                    } else {
-                        (40 as u64).wrapping_add(
-                            (::core::mem::size_of::<TValue>() as u64)
-                                .wrapping_mul((*u).nuvalue as u64),
-                        )
-                    })
-                    .wrapping_add((*u).length) as usize,
-                );
+                let user: *mut User = &mut (*(object as *mut User));
+                (*user).free_user(state);
             }
-            TAG_VARIANT_STRING_SHORT => {
-                let ts: *mut TString = &mut (*(o as *mut TString));
-                (*ts).remove_from_state(state);
-                (*state).free_memory(
-                    ts as *mut libc::c_void,
-                    (24 as u64).wrapping_add(
-                        (((*ts).get_length() as i32 + 1) as u64)
-                            .wrapping_mul(::core::mem::size_of::<i8>() as u64),
-                    ) as usize,
-                );
-            }
-            TAG_VARIANT_STRING_LONG => {
-                let ts_0: *mut TString = &mut (*(o as *mut TString));
-                (*state).free_memory(
-                    ts_0 as *mut libc::c_void,
-                    (24 as usize).wrapping_add(
-                        ((*ts_0).get_length() as usize)
-                            .wrapping_add(1 as usize)
-                            .wrapping_mul(::core::mem::size_of::<i8>() as usize),
-                    ),
-                );
-            }
+            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+                let tstring: *mut TString = &mut (*(object as *mut TString));
+                (*tstring).free_tstring(state);
+            },
             _ => {}
         };
     }
 }
-pub unsafe extern "C" fn findlast(mut p: *mut *mut Object) -> *mut *mut Object {
+pub unsafe extern "C" fn find_last(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
-        while !(*p).is_null() {
-            p = &mut (**p).next;
+        while !(*objects).is_null() {
+            objects = &mut (**objects).next;
         }
-        return p;
+        return objects;
     }
 }
-pub unsafe extern "C" fn checkpointer(p: *mut *mut Object, o: *mut Object) {
+pub unsafe extern "C" fn check_pointer(objects: *mut *mut Object, object: *mut Object) {
     unsafe {
-        if o == *p {
-            *p = (*o).next;
+        if object == *objects {
+            *objects = (*object).next;
         }
     }
 }
-pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut Object {
+pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         let mut current_block: u64;
         loop {
-            let curr: *mut Object = *p;
+            let curr: *mut Object = *objects;
             if curr.is_null() {
                 break;
             }
@@ -340,22 +313,22 @@ pub unsafe extern "C" fn correctgraylist(mut p: *mut *mut Object) -> *mut *mut O
                 match current_block {
                     6316553219439668466 => {}
                     _ => {
-                        p = next;
+                        objects = next;
                         continue;
                     }
                 }
             }
-            *p = *next;
+            *objects = *next;
         }
-        return p;
+        return objects;
     }
 }
-pub unsafe extern "C" fn deletelist(state: *mut State, mut p: *mut Object, limit: *mut Object) {
+pub unsafe extern "C" fn delete_list(state: *mut State, mut object: *mut Object, limit: *mut Object) {
     unsafe {
-        while p != limit {
-            let next: *mut Object = (*p).next;
-            freeobj(state, p);
-            p = next;
+        while object != limit {
+            let next: *mut Object = (*object).next;
+            free_object(state, object);
+            object = next;
         }
     }
 }

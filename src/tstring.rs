@@ -1,14 +1,14 @@
-use crate::utility::*;
+use crate::character::*;
 use crate::global::*;
 use crate::object::*;
 use crate::stackvalue::*;
-use crate::character::*;
 use crate::state::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::c::*;
+use crate::utility::*;
 pub const STRING_SHORT_MAX: u64 = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -49,13 +49,36 @@ pub union TStringExtension {
     pub hash_next: *mut TString,
 }
 impl TString {
-    pub unsafe fn remove_from_global(& mut self, global: *mut Global) {
+    pub unsafe fn free_tstring(&mut self, state: *mut State) {
         unsafe {
-            let stringtable: *mut StringTable = &mut (*global).string_table;
-            (*stringtable).remove (self);
+            if self.get_tag_variant() == TAG_VARIANT_STRING_SHORT {
+                self.remove_from_state(state);
+                (*state).free_memory(
+                    self as *mut TString as *mut libc::c_void,
+                    (24 as u64).wrapping_add(
+                        ((self.get_length() as i32 + 1) as u64)
+                            .wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                    ) as usize,
+                );
+            } else {
+                (*state).free_memory(
+                    self as *mut TString as *mut libc::c_void,
+                    (24 as usize).wrapping_add(
+                        (self.get_length() as usize)
+                            .wrapping_add(1 as usize)
+                            .wrapping_mul(::core::mem::size_of::<i8>() as usize),
+                    ),
+                );
+            }
         }
     }
-    pub unsafe fn remove_from_state(& mut self, state: *mut State) {
+    pub unsafe fn remove_from_global(&mut self, global: *mut Global) {
+        unsafe {
+            let stringtable: *mut StringTable = &mut (*global).string_table;
+            (*stringtable).remove(self);
+        }
+    }
+    pub unsafe fn remove_from_state(&mut self, state: *mut State) {
         unsafe {
             let global: *mut Global = &mut (*(*state).global);
             self.remove_from_global(global);
@@ -176,11 +199,12 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
 }
 pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32) -> *mut TString {
     unsafe {
-        let totalsize: u64 = (24 as u64).wrapping_add(
-            l.wrapping_add(1 as u64)
-                .wrapping_mul(::core::mem::size_of::<i8>() as u64),
+        let total_size = (24 as usize).wrapping_add(
+            (l as usize)
+                .wrapping_add(1)
+                .wrapping_mul(::core::mem::size_of::<i8>()),
         );
-        let o: *mut Object = luac_newobj(state, tag, totalsize);
+        let o: *mut Object = luac_newobj(state, tag, total_size);
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
@@ -310,8 +334,8 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                 luat_tryconcattm(state);
             } else if (*top.offset(-(1 as isize))).tvalue.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString)).get_length()
-                    as i32
+                && (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString))
+                    .get_length() as i32
                     == 0
             {
                 (get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TAG_TYPE_STRING
@@ -323,8 +347,8 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                         }) as i32;
             } else if (*top.offset(-(2 as isize))).tvalue.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(2 as isize))).tvalue.value.object as *mut TString)).get_length()
-                    as i32
+                && (*((*top.offset(-(2 as isize))).tvalue.value.object as *mut TString))
+                    .get_length() as i32
                     == 0
             {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).tvalue;
@@ -395,7 +419,8 @@ pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
                 (*io).set_collectable();
             }
             total -= n - 1;
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-((n - 1) as isize));
+            (*state).top.stkidrel_pointer =
+                (*state).top.stkidrel_pointer.offset(-((n - 1) as isize));
             if !(total > 1) {
                 break;
             }
@@ -413,7 +438,12 @@ pub unsafe extern "C" fn get_position_relative(pos: i64, length: u64) -> u64 {
         return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
     };
 }
-pub unsafe extern "C" fn get_position_end(state: *mut State, arg: i32, def: i64, length: u64) -> u64 {
+pub unsafe extern "C" fn get_position_end(
+    state: *mut State,
+    arg: i32,
+    def: i64,
+    length: u64,
+) -> u64 {
     unsafe {
         let pos: i64 = lual_optinteger(state, arg, def);
         if pos > length as i64 {

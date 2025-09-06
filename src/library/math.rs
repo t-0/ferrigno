@@ -399,7 +399,7 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
 unsafe extern "C" fn set_random_function(state: *mut State) {
     unsafe {
         let ranstate: *mut RandomState =
-            User::lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>() as u64, 0)
+            User::lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>(), 0)
                 as *mut RandomState;
         random_seed(state, ranstate);
         lua_settop(state, -3);

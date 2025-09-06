@@ -1,9 +1,9 @@
 use crate::object::*;
+use crate::stackvalue::*;
+use crate::state::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
-use crate::state::*;
-use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
@@ -31,6 +31,19 @@ impl TObject for UpValue {
         std::ptr::null_mut()
     }
 }
+impl UpValue {
+    pub unsafe extern "C" fn free_upvalue(&mut self, state: *mut State) {
+        unsafe {
+            if self.v.p != &mut self.u.value as *mut TValue {
+                luaf_unlinkupval(self);
+            }
+            (*state).free_memory(
+                self as *mut UpValue as *mut libc::c_void,
+                ::core::mem::size_of::<UpValue>(),
+            );
+        }
+    }
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union UpValueA {
@@ -49,28 +62,14 @@ pub struct UpValueBA {
     pub next: *mut UpValue,
     pub previous: *mut *mut UpValue,
 }
-pub unsafe extern "C" fn freeupval(state: *mut State, uv: *mut UpValue) {
-    unsafe {
-        if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
-            luaf_unlinkupval(uv);
-        }
-        (*state).free_memory(
-            uv as *mut libc::c_void,
-            ::core::mem::size_of::<UpValue>(),
-        );
-    }
-}
 pub unsafe extern "C" fn newupval(
     state: *mut State,
     level: StackValuePointer,
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
     unsafe {
-        let o: *mut Object = luac_newobj(
-            state,
-            TAG_TYPE_UPVALUE,
-            ::core::mem::size_of::<UpValue>() as u64,
-        );
+        let o: *mut Object =
+            luac_newobj(state, TAG_TYPE_UPVALUE, ::core::mem::size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level).tvalue;
@@ -87,7 +86,10 @@ pub unsafe extern "C" fn newupval(
         return uv;
     }
 }
-pub unsafe extern "C" fn luaf_findupval(state: *mut State, level: StackValuePointer) -> *mut UpValue {
+pub unsafe extern "C" fn luaf_findupval(
+    state: *mut State,
+    level: StackValuePointer,
+) -> *mut UpValue {
     unsafe {
         let mut pp: *mut *mut UpValue = &mut (*state).open_upvalue;
         loop {
