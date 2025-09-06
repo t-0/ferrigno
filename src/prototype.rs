@@ -1,6 +1,8 @@
 use crate::debugger::absolutelineinfo::*;
+use crate::vm::opcode::*;
 use crate::character::*;
 use crate::localvariable::*;
+use crate::vm::opmode::*;
 use crate::functionstate::*;
 use crate::object::*;
 use crate::global::*;
@@ -265,7 +267,7 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
                 }
             }
             if change != 0 {
-                setreg = filterpc(program_counter, jmptarget);
+                setreg = filter_program_counter(program_counter, jmptarget);
             }
             program_counter += 1;
         }

@@ -1,8 +1,9 @@
 use crate::global::*;
-use crate::stateextra::*;
+use crate::state::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
-    pub state_extra: StateExtra,
+    pub extra_space: [u8; 8],
+    pub state: State,
     pub global: Global,
 }

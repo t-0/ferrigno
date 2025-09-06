@@ -1,5 +1,7 @@
 use crate::callinfo::*;
 use crate::functions::*;
+use crate::vm::opcode::*;
+use crate::vm::opmode::*;
 use crate::debuginfo::*;
 use crate::stateextra::*;
 use crate::interpreter::*;
@@ -14,7 +16,6 @@ use crate::bufffs::*;
 use crate::utility::c::*;
 use crate::calls::*;
 use crate::dumpstate::*;
-use crate::vm::instruction::*;
 use crate::stringtable::*;
 use crate::dynamicdata::*;
 use crate::functionstate::*;
@@ -71,6 +72,7 @@ pub struct State {
     pub base_hook_count: i32,
     pub hook_count: i32,
     pub hook_mask: i32,
+    pub extra: [u8; 8],
 }
 impl TObject for State {
     fn get_tag(&self) -> u8 {
@@ -2857,7 +2859,7 @@ pub unsafe extern "C" fn lua_upvaluejoin(
         };
     }
 }
-pub unsafe extern "C" fn luai_makeseed(state: *mut State) -> u32 {
+pub unsafe fn luai_makeseed(state: *mut State) -> u32 {
     unsafe {
         let mut buffer: [i8; 24] = [0; 24];
         let mut h: u32 = time(std::ptr::null_mut()) as u32;
@@ -2877,9 +2879,9 @@ pub unsafe extern "C" fn luai_makeseed(state: *mut State) -> u32 {
         );
         p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
         let mut t_1: u64 = ::core::mem::transmute::<
-            Option<unsafe extern "C" fn() -> *mut State>,
+            Option<unsafe fn (state: *mut State) -> u32>,
             u64,
-        >(Some(lua_newstate as unsafe extern "C" fn() -> *mut State));
+        >(Some(luai_makeseed as unsafe fn (state: *mut State) -> u32));
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_1 as *mut u64 as *const libc::c_void,
@@ -3062,9 +3064,9 @@ pub unsafe extern "C" fn close_state(state: *mut State) {
         );
         freestack(state);
         raw_allocate(
-            (state as *mut u8).offset(-(8 as isize)) as *mut StateExtra as *mut libc::c_void,
+            (state as *mut u8).offset(-(8 as isize)) as *mut libc::c_void,
             ::core::mem::size_of::<Interpreter>() as u64,
-            0u64,
+            0,
         );
     }
 }
@@ -3153,83 +3155,6 @@ pub unsafe extern "C" fn lua_closethread(state: *mut State, from: *mut State) ->
         };
         status = luae_resetthread(state, (*state).status as i32);
         return status;
-    }
-}
-pub unsafe extern "C" fn lua_newstate() -> *mut State {
-    unsafe {
-        let l: *mut Interpreter = raw_allocate(
-            std::ptr::null_mut(),
-            8 as u64,
-            ::core::mem::size_of::<Interpreter>() as u64,
-        ) as *mut Interpreter;
-        if l.is_null() {
-            return std::ptr::null_mut();
-        }
-        let mut state: *mut State = &mut (*l).state_extra.state;
-        let g: *mut Global = &mut (*l).global;
-        (*state).set_tag(TAG_TYPE_STATE);
-        (*g).current_white = (1 << 3) as u8;
-        (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
-        preinit_thread(state, g);
-        (*g).all_gc = &mut (*(state as *mut Object));
-        (*state).object.next = std::ptr::null_mut();
-        (*state).count_c_calls =
-            ((*state).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
-        (*g).warn_function = None;
-        (*g).warn_userdata = std::ptr::null_mut();
-        (*g).main_state = state;
-        (*g).seed = luai_makeseed(state);
-        (*g).gc_step = 2 as u8;
-        (*g).string_table.length = 0;
-        (*g).string_table.size = (*g).string_table.length;
-        (*g).string_table.hash = std::ptr::null_mut();
-        (*g).l_registry.set_tag(TAG_VARIANT_NIL_NIL);
-        (*g).panic = None;
-        (*g).gc_state = 8 as u8;
-        (*g).gc_kind = 0;
-        (*g).gcstopem = 0;
-        (*g).is_emergency = false;
-        (*g).fixed_gc = std::ptr::null_mut();
-        (*g).to_be_finalized = (*g).fixed_gc;
-        (*g).finalized_objects = (*g).to_be_finalized;
-        (*g).really_old = std::ptr::null_mut();
-        (*g).old1 = (*g).really_old;
-        (*g).survival = (*g).old1;
-        (*g).first_old1 = (*g).survival;
-        (*g).finobjrold = std::ptr::null_mut();
-        (*g).finobjold1 = (*g).finobjrold;
-        (*g).finobjsur = (*g).finobjold1;
-        (*g).sweep_gc = std::ptr::null_mut();
-        (*g).gray_again = std::ptr::null_mut();
-        (*g).gray = (*g).gray_again;
-        (*g).all_weak = std::ptr::null_mut();
-        (*g).ephemeron = (*g).all_weak;
-        (*g).weak = (*g).ephemeron;
-        (*g).twups = std::ptr::null_mut();
-        (*g).total_bytes = ::core::mem::size_of::<Interpreter>() as i64;
-        (*g).gc_debt = 0;
-        (*g).last_atomic = 0;
-        let io: *mut TValue = &mut (*g).nil_value;
-        (*io).value.integer = 0;
-        (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-        (*g).gc_pause = 200 / 4;
-        (*g).gc_step_multiplier = 100 / 4;
-        (*g).gc_step_size = 13;
-        (*g).generational_major_multiplier = 100 / 4;
-        (*g).generational_minor_multiplier = 20;
-        for i in 0..9 {
-            (*g).metatable[i as usize] = std::ptr::null_mut();
-        }
-        if luad_rawrunprotected(
-            state,
-            Some(f_luaopen as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
-            std::ptr::null_mut(),
-        ) != 0
-        {
-            close_state(state);
-            state = std::ptr::null_mut();
-        }
-        return state;
     }
 }
 pub unsafe extern "C" fn lua_close(mut state: *mut State) {
@@ -9077,7 +9002,7 @@ pub unsafe extern "C" fn lual_gsub(
 }
 pub unsafe extern "C" fn raw_allocate(
     ptr: *mut libc::c_void,
-    mut _osize: u64,
+    mut _old_size: u64,
     new_size: u64,
 ) -> *mut libc::c_void {
     unsafe {
@@ -9182,7 +9107,78 @@ pub unsafe extern "C" fn warnfon(arbitrary_data: *mut libc::c_void, message: *co
 }
 pub unsafe extern "C" fn lual_newstate() -> *mut State {
     unsafe {
-        let state: *mut State = lua_newstate();
+        let interpreter: *mut Interpreter = raw_allocate(
+            std::ptr::null_mut(),
+            0,
+            ::core::mem::size_of::<Interpreter>() as u64,
+        ) as *mut Interpreter;
+        if interpreter.is_null() {
+            return std::ptr::null_mut();
+        }
+        let mut state: *mut State = &mut (*interpreter).state;
+        let g: *mut Global = &mut (*interpreter).global;
+        (*state).set_tag(TAG_TYPE_STATE);
+        (*g).current_white = (1 << 3) as u8;
+        (*state).set_marked((*g).current_white & (1 << 3 | 1 << 4));
+        preinit_thread(state, g);
+        (*g).all_gc = &mut (*(state as *mut Object));
+        (*state).object.next = std::ptr::null_mut();
+        (*state).count_c_calls =
+            ((*state).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
+        (*g).warn_function = None;
+        (*g).warn_userdata = std::ptr::null_mut();
+        (*g).main_state = state;
+        (*g).seed = luai_makeseed(state);
+        (*g).gc_step = 2 as u8;
+        (*g).string_table.length = 0;
+        (*g).string_table.size = (*g).string_table.length;
+        (*g).string_table.hash = std::ptr::null_mut();
+        (*g).l_registry.set_tag(TAG_VARIANT_NIL_NIL);
+        (*g).panic = None;
+        (*g).gc_state = 8 as u8;
+        (*g).gc_kind = 0;
+        (*g).gcstopem = 0;
+        (*g).is_emergency = false;
+        (*g).fixed_gc = std::ptr::null_mut();
+        (*g).to_be_finalized = (*g).fixed_gc;
+        (*g).finalized_objects = (*g).to_be_finalized;
+        (*g).really_old = std::ptr::null_mut();
+        (*g).old1 = (*g).really_old;
+        (*g).survival = (*g).old1;
+        (*g).first_old1 = (*g).survival;
+        (*g).finobjrold = std::ptr::null_mut();
+        (*g).finobjold1 = (*g).finobjrold;
+        (*g).finobjsur = (*g).finobjold1;
+        (*g).sweep_gc = std::ptr::null_mut();
+        (*g).gray_again = std::ptr::null_mut();
+        (*g).gray = (*g).gray_again;
+        (*g).all_weak = std::ptr::null_mut();
+        (*g).ephemeron = (*g).all_weak;
+        (*g).weak = (*g).ephemeron;
+        (*g).twups = std::ptr::null_mut();
+        (*g).total_bytes = ::core::mem::size_of::<Interpreter>() as i64;
+        (*g).gc_debt = 0;
+        (*g).last_atomic = 0;
+        let io: *mut TValue = &mut (*g).nil_value;
+        (*io).value.integer = 0;
+        (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+        (*g).gc_pause = 200 / 4;
+        (*g).gc_step_multiplier = 100 / 4;
+        (*g).gc_step_size = 13;
+        (*g).generational_major_multiplier = 100 / 4;
+        (*g).generational_minor_multiplier = 20;
+        for i in 0..9 {
+            (*g).metatable[i as usize] = std::ptr::null_mut();
+        }
+        if luad_rawrunprotected(
+            state,
+            Some(f_luaopen as unsafe extern "C" fn(*mut State, *mut libc::c_void) -> ()),
+            std::ptr::null_mut(),
+        ) != 0
+        {
+            close_state(state);
+            state = std::ptr::null_mut();
+        }
         if (state != std::ptr::null_mut()) as i64 != 0 {
             lua_atpanic(
                 state,

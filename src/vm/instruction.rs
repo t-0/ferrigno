@@ -1,197 +1,28 @@
 use crate::functionstate::*;
-pub const OP_EXTRAARG: u32 = 82;
-pub const OP_LOADKX: u32 = 4;
-pub const OP_LOADK: u32 = 3;
-pub const OP_GETUPVAL: u32 = 9;
-pub const OP_MOVE: u32 = 0;
-pub const OP_VARARGPREP: u32 = 81;
-pub const OP_VARARG: u32 = 80;
-pub const OP_CLOSURE: u32 = 79;
-pub const OP_SETLIST: u32 = 78;
-pub const OP_TFORLOOP: u32 = 77;
-pub const OP_TFORCALL: u32 = 76;
-pub const OP_TFORPREP: u32 = 75;
-pub const OP_FORPREP: u32 = 74;
-pub const OP_FORLOOP: u32 = 73;
-pub const OP_RETURN1: u32 = 72;
-pub const OP_RETURN0: u32 = 71;
-pub const OP_RETURN: u32 = 70;
-pub const OP_TAILCALL: u32 = 69;
-pub const OP_CALL: u32 = 68;
-pub const OP_TESTSET: u32 = 67;
-pub const OP_TEST: u32 = 66;
-pub const OP_GEI: u32 = 65;
-pub const OP_GTI: u32 = 64;
-pub const OP_LEI: u32 = 63;
-pub const OP_LTI: u32 = 62;
-pub const OP_EQI: u32 = 61;
-pub const OP_EQK: u32 = 60;
-pub const OP_LE: u32 = 59;
-pub const OP_LT: u32 = 58;
-pub const OP_EQ: u32 = 57;
-pub const OP_JMP: u32 = 56;
-pub const OP_TBC: u32 = 55;
-pub const OP_CLOSE: u32 = 54;
-pub const OP_CONCAT: u32 = 53;
-pub const OP_LEN: u32 = 52;
-pub const OP_NOT: u32 = 51;
-pub const OP_BNOT: u32 = 50;
-pub const OP_UNM: u32 = 49;
-pub const OP_MMBINK: u32 = 48;
-pub const OP_MMBINI: u32 = 47;
-pub const OP_MMBIN: u32 = 46;
-pub const OP_SHR: u32 = 45;
-pub const OP_SHL: u32 = 44;
-pub const OP_BXOR: u32 = 43;
-pub const OP_BOR: u32 = 42;
-pub const OP_BAND: u32 = 41;
-pub const OP_IDIV: u32 = 40;
-pub const OP_DIV: u32 = 39;
-pub const OP_POW: u32 = 38;
-pub const OP_MOD: u32 = 37;
-pub const OP_MUL: u32 = 36;
-pub const OP_SUB: u32 = 35;
-pub const OP_ADD: u32 = 34;
-pub const OP_SHLI: u32 = 33;
-pub const OP_SHRI: u32 = 32;
-pub const OP_BXORK: u32 = 31;
-pub const OP_BORK: u32 = 30;
-pub const OP_BANDK: u32 = 29;
-pub const OP_IDIVK: u32 = 28;
-pub const OP_DIVK: u32 = 27;
-pub const OP_POWK: u32 = 26;
-pub const OP_MODK: u32 = 25;
-pub const OP_MULK: u32 = 24;
-pub const OP_SUBK: u32 = 23;
-pub const OP_ADDK: u32 = 22;
-pub const OP_ADDI: u32 = 21;
-pub const OP_SELF: u32 = 20;
-pub const OP_NEWTABLE: u32 = 19;
-pub const OP_SETFIELD: u32 = 18;
-pub const OP_SETI: u32 = 17;
-pub const OP_SETTABLE: u32 = 16;
-pub const OP_SETTABUP: u32 = 15;
-pub const OP_GETFIELD: u32 = 14;
-pub const OP_GETI: u32 = 13;
-pub const OP_GETTABLE: u32 = 12;
-pub const OP_GETTABUP: u32 = 11;
-pub const OP_SETUPVAL: u32 = 10;
-pub const OP_LOADNIL: u32 = 8;
-pub const OP_LOADTRUE: u32 = 7;
-pub const OP_LFALSESKIP: u32 = 6;
-pub const OP_LOADFALSE: u32 = 5;
-pub const OP_LOADF: u32 = 2;
-pub const OP_LOADI: u32 = 1;
+use crate::vm::opcode::*;
 pub const IAX: u32 = 3;
 pub const IABC: u32 = 0;
 pub const IABX: u32 = 1;
 pub const ISJ: u32 = 4;
 pub const IASBX: u32 = 2;
-pub unsafe extern "C" fn filterpc(program_counter: i32, jmptarget: i32) -> i32 {
-    if program_counter < jmptarget {
+pub unsafe extern "C" fn filter_program_counter(program_counter: i32, jump_target: i32) -> i32 {
+    if program_counter < jump_target {
         return -1;
     } else {
         return program_counter;
     };
 }
-pub const OPMODES: [u8; 83] = [
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IASBX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IASBX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (1 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (1 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (1 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | ISJ as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 1 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 1 << 6 | 1 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 1 << 6 | 1 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 1 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 0 << 6 | 1 << 5 | 0 << 4 | 0 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABX as i32) as u8,
-    (0 << 7 | 1 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 1 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
-    (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | IAX as i32) as u8,
-];
-pub unsafe extern "C" fn finaltarget(code: *mut u32, mut i: i32) -> i32 {
+pub unsafe extern "C" fn final_target(code: *mut u32, mut index: i32) -> i32 {
     unsafe {
-        let mut count: i32 = 0;
-        while count < 100 as i32 {
-            let program_counter: u32 = *code.offset(i as isize);
+        for _ in 0..100 {
+            let program_counter: u32 = *code.offset(index as isize);
             if (program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_JMP as u32 {
                 break;
             }
-            i += (program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+            index += (program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
                 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                 + 1;
-            count += 1;
         }
-        return i;
+        return index;
     }
 }

@@ -7,7 +7,7 @@ use crate::labeldescription::*;
 use crate::character::*;
 use crate::labellist::*;
 use crate::expressionkind::*;
-use crate::vm::instruction::*;
+use crate::vm::opcode::*;
 use crate::lexical::operatorunary::*;
 use crate::operator_::*;
 use crate::functionstate::*;

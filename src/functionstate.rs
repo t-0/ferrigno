@@ -3,6 +3,8 @@ use crate::lexical::lexicalstate::*;
 use crate::operator_::*;
 use crate::labeldescription::*;
 use crate::vm::instruction::*;
+use crate::vm::opmode::*;
+use crate::vm::opcode::*;
 use crate::lexical::constructorcontrol::*;
 use crate::expressionkind::*;
 use crate::labellist::*;
@@ -2166,7 +2168,7 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
                     current_block_7 = 11006700562992250127;
                 }
                 OP_JMP => {
-                    let target: i32 = finaltarget((*p).code, i);
+                    let target: i32 = final_target((*p).code, i);
                     fixjump(function_state, i, target);
                     current_block_7 = 12599329904712511516;
                 }
