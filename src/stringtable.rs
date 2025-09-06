@@ -27,18 +27,18 @@ impl StringTable {
         }
     }
 }
-pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
+pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: usize) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
-        let old_size: i32 = (*tb).size;
+        let old_size= (*tb).size as usize;
         if new_size < old_size {
             tablerehash((*tb).hash, old_size, new_size);
         }
         let newvect: *mut *mut TString = luam_realloc_(
             state,
             (*tb).hash as *mut libc::c_void,
-            (old_size as usize).wrapping_mul(::core::mem::size_of::<*mut TString>()),
-            (new_size as usize).wrapping_mul(::core::mem::size_of::<*mut TString>()),
+            old_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
+            new_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
         if ((newvect == std::ptr::null_mut() as *mut *mut TString) as i32 != 0) as i64 != 0 {
             if new_size < old_size {
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: i32) {
             }
         } else {
             (*tb).hash = newvect;
-            (*tb).size = new_size;
+            (*tb).size = new_size as i32;
             if new_size > old_size {
                 tablerehash(newvect, old_size, new_size);
             }
@@ -66,7 +66,7 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut State
             state,
             STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
-        tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE as i32);
+        tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*global).memory_error_message = luas_newlstr(
             state,
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn growstrtab(state: *mut State, tb: *mut StringTable) {
             }) as i32
                 / 2
         {
-            luas_resize(state, (*tb).size * 2);
+            luas_resize(state, ((*tb).size * 2) as usize);
         }
     }
 }

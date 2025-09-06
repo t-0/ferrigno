@@ -329,11 +329,11 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u6
         ) as u64;
     }
 }
-pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: i32, new_size: i32) {
+pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: usize) {
     unsafe {
         for i in old_size..new_size {
-            let ref mut fresh20 = *vect.offset(i as isize);
-            *fresh20 = std::ptr::null_mut();
+            let ref mut fresh = *vect.offset(i as isize);
+            *fresh = std::ptr::null_mut();
         }
         for i in 0..old_size {
             let mut p: *mut TString = *vect.offset(i as isize);

@@ -441,10 +441,9 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
         b.initialize(state);
         loop {
             let buffer: *mut i8 = b.prepare_with_size(
-                (16 as u64)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
-                    as u64,
+                (16 as usize)
+                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                    .wrapping_mul(::core::mem::size_of::<f64>()),
             );
             let mut i: i32 = 0;
             flockfile(file);
@@ -463,19 +462,19 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
             funlockfile(file);
-            b.length = (b.length as u64).wrapping_add(i as u64) as u64;
+            b.length = b.length.wrapping_add(i as usize);
             if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
         if chop == 0 && c == CHARACTER_LF as i32 {
-            (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
+            (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh154 = b.length;
             b.length = (b.length).wrapping_add(1);
             *(b.pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
-        return (c == CHARACTER_LF as i32 || lua_rawlen(state, -1) > 0) as i32;
+        return (c == CHARACTER_LF as i32 || get_length_raw(state, -1) > 0) as u64 as u32 as i32;
     }
 }
 pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
@@ -485,10 +484,9 @@ pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
         b.initialize(state);
         loop {
             let p: *mut i8 = b.prepare_with_size(
-                (16 as u64)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
-                    as u64,
+                (16 as usize)
+                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                    .wrapping_mul(::core::mem::size_of::<f64>()),
             );
             nr = fread(
                 p as *mut libc::c_void,
@@ -499,7 +497,7 @@ pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
                     as u64,
                 file,
             );
-            b.length = (b.length as u64).wrapping_add(nr) as u64;
+            b.length = b.length.wrapping_add(nr as usize);
             if !(nr
                 == (16 as u64)
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
@@ -518,14 +516,14 @@ pub unsafe extern "C" fn read_chars(state: *mut State, file: *mut FILE, n: u64) 
         let p: *mut i8;
         let mut b = Buffer::new();
         b.initialize(state);
-        p = b.prepare_with_size(n);
+        p = b.prepare_with_size(n as usize);
         nr = fread(
             p as *mut libc::c_void,
             ::core::mem::size_of::<i8>() as u64,
             n,
             file,
         );
-        b.length = (b.length as u64).wrapping_add(nr) as u64;
+        b.length = b.length.wrapping_add(nr as usize);
         b.push_result();
         return (nr > 0) as i32;
     }

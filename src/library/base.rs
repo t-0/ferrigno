@@ -105,7 +105,7 @@ pub unsafe extern "C" fn luab_rawlen(state: *mut State) -> i32 {
                 lual_typeerror(state, 1, b"table or string\0" as *const u8 as *const i8);
             },
         };
-        (*state).push_integer(lua_rawlen(state, 1) as i64);
+        (*state).push_integer(get_length_raw(state, 1) as u64 as i64);
         return 1;
     }
 }

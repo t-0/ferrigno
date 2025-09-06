@@ -172,7 +172,7 @@ pub unsafe extern "C" fn table_concat(state: *mut State) -> i32 {
         b.initialize(state);
         while i < last {
             addfield(state, &mut b, i);
-            b.add_string_with_length(sep, lsep);
+            b.add_string_with_length(sep, lsep as usize);
             i += 1;
         }
         if i == last {

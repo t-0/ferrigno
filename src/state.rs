@@ -430,12 +430,12 @@ impl State {
         unsafe {
             let t: i32;
             let o: *mut TValue = self.index2value(index);
-            if n <= 0 || n > (*((*o).value.object as *mut User)).nuvalue as i32 {
+            if n <= 0 || n > (*((*o).value.object as *mut User)).count_upvalues as i32 {
                 (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 t = -1;
             } else {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
-                let io2: *const TValue = &mut (*((*((*o).value.object as *mut User)).uv)
+                let io2: *const TValue = &mut (*((*((*o).value.object as *mut User)).upvalues)
                     .as_mut_ptr()
                     .offset((n - 1) as isize));
                 (*io1).value = (*io2).value;
@@ -1454,7 +1454,7 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.buffer.pointer = luam_saferealloc_(
             state,
             p.buffer.pointer as *mut libc::c_void,
-            (p.buffer.size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+            p.buffer.size.wrapping_mul(::core::mem::size_of::<i8>()),
             0,
         ) as *mut i8;
         p.buffer.size = 0;
@@ -1852,15 +1852,15 @@ pub unsafe extern "C" fn lua_tolstring(
         return (*((*o).value.object as *mut TString)).get_contents_mut();
     }
 }
-pub unsafe extern "C" fn lua_rawlen(state: *mut State, index: i32) -> u64 {
+pub unsafe extern "C" fn get_length_raw(state: *mut State, index: i32) -> usize {
     unsafe {
-        let o: *const TValue = (*state).index2value(index);
-        match (*o).get_tag_variant() {
+        let tvalue: *const TValue = (*state).index2value(index);
+        match (*tvalue).get_tag_variant() {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                return (*((*o).value.object as *mut TString)).get_length();
+                return (*((*tvalue).value.object as *mut TString)).get_length() as usize;
             },
-            TAG_VARIANT_USER => return (*((*o).value.object as *mut User)).length as u64,
-            TAG_VARIANT_TABLE => return luah_getn(&mut (*((*o).value.object as *mut Table))),
+            TAG_VARIANT_USER => return (*((*tvalue).value.object as *mut User)).count_bytes,
+            TAG_VARIANT_TABLE => return luah_getn(&mut (*((*tvalue).value.object as *mut Table))) as usize,
             _ => return 0,
         };
     }
@@ -2405,11 +2405,11 @@ pub unsafe extern "C" fn lua_setiuservalue(state: *mut State, index: i32, n: i32
         let res: i32;
         let o: *mut TValue = (*state).index2value(index);
         if !((n as u32).wrapping_sub(1 as u32)
-            < (*((*o).value.object as *mut User)).nuvalue as u32)
+            < (*((*o).value.object as *mut User)).count_upvalues as u32)
         {
             res = 0;
         } else {
-            let io1: *mut TValue = &mut (*((*((*o).value.object as *mut User)).uv)
+            let io1: *mut TValue = &mut (*((*((*o).value.object as *mut User)).upvalues)
                 .as_mut_ptr()
                 .offset((n - 1) as isize));
             let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
@@ -3899,14 +3899,14 @@ pub unsafe extern "C" fn luao_pushvfstring(
                     buff_fs.add_number(&mut num_1);
                 }
                 112 => {
-                    let size = (3 as u64)
-                        .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                        .wrapping_add(8 as u64);
+                    let size = (3 as usize)
+                        .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                        .wrapping_add(8);
                     let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                     let length =
                         snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p) as u64;
-                    buff_fs.add_length(length);
+                    buff_fs.add_length(length as usize);
                 }
                 85 => {
                     let mut bf_0: [i8; 8] = [0; 8];
@@ -4428,7 +4428,7 @@ pub unsafe extern "C" fn check_sizes(state: *mut State, global: *mut Global) {
         if !(*global).is_emergency {
             if (*global).string_table.length < (*global).string_table.size / 4 {
                 let olddebt: i64 = (*global).gc_debt;
-                luas_resize(state, (*global).string_table.size / 2);
+                luas_resize(state, ((*global).string_table.size / 2) as usize);
                 (*global).gc_estimate = ((*global).gc_estimate as u64)
                     .wrapping_add(((*global).gc_debt - olddebt) as u64)
                     as u64;
@@ -8160,7 +8160,7 @@ pub unsafe extern "C" fn lual_traceback(
         b.initialize(state);
         if !message.is_null() {
             b.add_string(message);
-            (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
+            (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh145 = b.length;
             b.length = (b.length).wrapping_add(1);
             *(b.pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
@@ -8979,7 +8979,7 @@ pub unsafe extern "C" fn lual_addgsub(
             if wild.is_null() {
                 break;
             }
-            (*b).add_string_with_length(s, wild.offset_from(s) as u64);
+            (*b).add_string_with_length(s, wild.offset_from(s) as usize);
             (*b).add_string(r);
             s = wild.offset(l as isize);
         }

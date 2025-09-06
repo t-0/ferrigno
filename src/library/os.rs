@@ -285,7 +285,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
             b.initialize(state);
             while s < se {
                 if *s as i32 != CHARACTER_PERCENT as i32 {
-                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
+                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh157 = s;
                     s = s.offset(1);
                     let fresh158 = b.length;
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
                     *(b.pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
                     let reslen: u64;
-                    let buffer: *mut i8 = b.prepare_with_size(250 as u64);
+                    let buffer: *mut i8 = b.prepare_with_size(250);
                     s = s.offset(1);
                     s = checkoption(
                         state,
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
                         cc.as_mut_ptr().offset(1 as isize),
                     );
                     reslen = strftime(buffer, 250 as u64, cc.as_mut_ptr(), stm);
-                    b.length = (b.length as u64).wrapping_add(reslen) as u64;
+                    b.length = b.length.wrapping_add(reslen as usize);
                 }
             }
             b.push_result();

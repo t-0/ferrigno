@@ -84,15 +84,15 @@ pub unsafe extern "C" fn setpath(
                 let mut b = Buffer::new();
                 b.initialize(state);
                 if path < dftmark {
-                    b.add_string_with_length(path, dftmark.offset_from(path) as u64);
-                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
+                    b.add_string_with_length(path, dftmark.offset_from(path) as usize);
+                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh193 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh193 as isize) = *(b";\0" as *const u8 as *const i8);
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
-                    (b.length < b.size || !(b.prepare_with_size(1 as u64)).is_null()) as i32;
+                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh194 = b.length;
                     b.length = (b.length).wrapping_add(1);
                     *(b.pointer).offset(fresh194 as isize) = *(b";\0" as *const u8 as *const i8);
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn setpath(
                         dftmark.offset(2 as isize),
                         path.offset(length as isize)
                             .offset(-(2 as isize))
-                            .offset_from(dftmark) as u64,
+                            .offset_from(dftmark) as usize,
                     );
                 }
                 b.push_result();
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn searchpath(
         let mut buffer = Buffer::new();
         buffer.initialize(state);
         lual_addgsub(&mut buffer, path, b"?\0" as *const u8 as *const i8, name);
-        (buffer.length < buffer.size || !(buffer.prepare_with_size(1 as u64)).is_null()) as i32;
+        (buffer.length < buffer.size || !(buffer.prepare_with_size(1)).is_null()) as i32;
         let fresh195 = buffer.length;
         buffer.length = (buffer.length).wrapping_add(1);
         *(buffer.pointer).offset(fresh195 as isize) = CHARACTER_NUL as i8;
@@ -476,7 +476,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
             message.add_string(b"\n\t\0" as *const u8 as *const i8);
             if ((lua_rawgeti(state, 3, i as i64) == 0) as i32 != 0) as i64 != 0 {
                 lua_settop(state, -2);
-                message.length = (message.length as u64).wrapping_sub(2 as u64) as u64;
+                message.length = message.length.wrapping_sub(2);
                 message.push_result();
                 lual_error(
                     state,
@@ -494,7 +494,7 @@ pub unsafe extern "C" fn findloader(state: *mut State, name: *const i8) {
                 message.add_value();
             } else {
                 lua_settop(state, -2 - 1);
-                message.length = (message.length as u64).wrapping_sub(2 as u64) as u64;
+                message.length = message.length.wrapping_sub(2);
             }
             i += 1;
         }

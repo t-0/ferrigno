@@ -189,7 +189,7 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object)
             }
             TAG_VARIANT_USER => {
                 let u: *mut User = &mut (*(o as *mut User));
-                if (*u).nuvalue as i32 == 0 {
+                if (*u).count_upvalues as i32 == 0 {
                     if !((*u).metatable).is_null() {
                         if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
                             really_mark_object(global, &mut (*((*u).metatable as *mut Object)));

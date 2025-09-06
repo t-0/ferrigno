@@ -50,7 +50,7 @@ impl MatchState {
             }
             if lua_toboolean(state, -1) == 0 {
                 lua_settop(state, -1 - 1);
-                (*b).add_string_with_length(s, e.offset_from(s) as u64);
+                (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;
             } else if ((!lua_isstring(state, -1)) as i32 != 0) as i64 != 0 {
                 return lual_error(
@@ -669,15 +669,15 @@ impl MatchState {
                 if p.is_null() {
                     break;
                 }
-                (*b).add_string_with_length(news, p.offset_from(news) as u64);
+                (*b).add_string_with_length(news, p.offset_from(news) as usize);
                 p = p.offset(1);
                 if *p as i32 == CHARACTER_PERCENT as i32 {
-                    ((*b).length < (*b).size || !((*b).prepare_with_size(1 as u64)).is_null()) as i32;
+                    ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
                     let fresh164 = (*b).length;
                     (*b).length = ((*b).length).wrapping_add(1);
                     *((*b).pointer).offset(fresh164 as isize) = *p;
                 } else if *p as i32 == CHARACTER_0 as i32 {
-                    (*b).add_string_with_length(s, e.offset_from(s) as u64);
+                    (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32
                     & _ISDIGIT as i32
                     != 0
@@ -687,7 +687,7 @@ impl MatchState {
                     if resl == -2 as i64 {
                         (*b).add_value();
                     } else {
-                        (*b).add_string_with_length(cap, resl as u64);
+                        (*b).add_string_with_length(cap, resl as usize);
                     }
                 } else {
                     lual_error(
@@ -700,7 +700,7 @@ impl MatchState {
                     as u64;
                 news = p.offset(1 as isize);
             }
-            (*b).add_string_with_length(news, l);
+            (*b).add_string_with_length(news, l as usize);
         }
     }
 }

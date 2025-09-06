@@ -5,29 +5,29 @@ use crate::user::*;
 #[repr(C)]
 pub struct UserBox {
     pub pointer: *mut libc::c_void,
-    pub size: u64,
+    pub size: usize,
 }
 impl UserBox {
     pub unsafe extern "C" fn resize_userbox(
         state: *mut State,
         index: i32,
-        new_size: u64,
+        new_size: usize,
     ) -> *mut libc::c_void {
         unsafe {
-            let box_0: *mut UserBox = lua_touserdata(state, index) as *mut UserBox;
-            let temp: *mut libc::c_void = raw_allocate((*box_0).pointer, (*box_0).size as usize, new_size as usize);
+            let user_box: *mut UserBox = lua_touserdata(state, index) as *mut UserBox;
+            let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
             if ((temp.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
                 lua_pushstring(state, b"not enough memory\0" as *const u8 as *const i8);
                 lua_error(state);
             }
-            (*box_0).pointer = temp;
-            (*box_0).size = new_size;
+            (*user_box).pointer = temp;
+            (*user_box).size = new_size;
             return temp;
         }
     }
     pub unsafe extern "C" fn userbox_gc(state: *mut State) -> i32 {
         unsafe {
-            UserBox::resize_userbox(state, 1, 0u64);
+            UserBox::resize_userbox(state, 1, 0);
             return 0;
         }
     }
