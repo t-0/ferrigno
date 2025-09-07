@@ -4,7 +4,6 @@ use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::debuginfo::*;
 use crate::stateextra::*;
-use crate::interpreter::*;
 use crate::loadstate::*;
 use crate::loadf::*;
 use crate::loads::*;
@@ -3066,8 +3065,13 @@ pub unsafe extern "C" fn close_state(state: *mut State) {
         );
         freestack(state);
         raw_allocate(
-            (state as *mut u8).offset(-(8 as isize)) as *mut libc::c_void,
-            ::core::mem::size_of::<Interpreter>(),
+            state as *mut u8 as *mut libc::c_void,
+            ::core::mem::size_of::<State>(),
+            0,
+        );
+        raw_allocate(
+            global as *mut u8 as *mut libc::c_void,
+            ::core::mem::size_of::<Global>(),
             0,
         );
     }
@@ -3078,29 +3082,28 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
         if (*(*state).global).gc_debt > 0 {
             luac_step(state);
         }
-        let o: *mut Object = luac_newobjdt(
+        let object: *mut Object = luac_newobjdt(
             state,
             TAG_TYPE_STATE,
             ::core::mem::size_of::<StateExtra>() as u64,
             8 as u64,
         );
-        let other_state: *mut State = &mut (*(o as *mut State));
+        let ret: *mut State = &mut (*(object as *mut State));
         let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
-        let x_: *mut State = other_state;
-        (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag(TAG_VARIANT_STATE);
+        (*io).value.object = &mut (*(ret as *mut Object));
         (*io).set_collectable();
         (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
-        preinit_thread(other_state, global);
+        preinit_thread(ret, global);
         ::core::ptr::write_volatile(
-            &mut (*other_state).hook_mask as *mut i32,
+            &mut (*ret).hook_mask as *mut i32,
             (*state).hook_mask,
         );
-        (*other_state).base_hook_count = (*state).base_hook_count;
-        ::core::ptr::write_volatile(&mut (*other_state).hook as *mut HookFunction, (*state).hook);
-        (*other_state).hook_count = (*other_state).base_hook_count;
+        (*ret).base_hook_count = (*state).base_hook_count;
+        ::core::ptr::write_volatile(&mut (*ret).hook as *mut HookFunction, (*state).hook);
+        (*ret).hook_count = (*ret).base_hook_count;
         memcpy(
-            (other_state as *mut i8)
+            (ret as *mut i8)
                 .offset(-(::core::mem::size_of::<*mut libc::c_void>() as isize))
                 as *mut libc::c_void,
             ((*global).main_state as *mut i8)
@@ -3108,8 +3111,8 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
                 as *mut libc::c_void,
             ::core::mem::size_of::<*mut libc::c_void>() as u64,
         );
-        stack_init(other_state, state);
-        return other_state;
+        stack_init(ret, state);
+        return ret;
     }
 }
 pub unsafe extern "C" fn luae_resetthread(state: *mut State, mut status: i32) -> i32 {
@@ -4343,13 +4346,13 @@ pub unsafe extern "C" fn luac_newobjdt(
 ) -> *mut Object {
     unsafe {
         let global: *mut Global = (*state).global;
-        let p: *mut i8 = luam_malloc_(state, size as usize) as *mut i8;
-        let o: *mut Object = p.offset(offset as isize) as *mut Object;
-        (*o).set_marked((*global).current_white & (1 << 3 | 1 << 4));
-        (*o).set_tag(tag);
-        (*o).next = (*global).all_gc;
-        (*global).all_gc = o;
-        return o;
+        let pointer: *mut i8 = luam_malloc_(state, size as usize) as *mut i8;
+        let ret: *mut Object = pointer.offset(offset as isize) as *mut Object;
+        (*ret).set_tag(tag);
+        (*ret).set_marked((*global).current_white & (1 << 3 | 1 << 4));
+        (*ret).next = (*global).all_gc;
+        (*global).all_gc = ret;
+        return ret;
     }
 }
 pub unsafe extern "C" fn luac_newobj(state: *mut State, tag: u8, size: usize) -> *mut Object {
@@ -9101,16 +9104,23 @@ pub unsafe extern "C" fn warnfon(arbitrary_data: *mut libc::c_void, message: *co
 }
 pub unsafe extern "C" fn lual_newstate() -> *mut State {
     unsafe {
-        let interpreter: *mut Interpreter = raw_allocate(
+        let mut state: *mut State = raw_allocate(
             std::ptr::null_mut(),
             0,
-            ::core::mem::size_of::<Interpreter>(),
-        ) as *mut Interpreter;
-        if interpreter.is_null() {
+            ::core::mem::size_of::<State>(),
+        ) as *mut State;
+        if state.is_null() {
             return std::ptr::null_mut();
         }
-        let mut state: *mut State = &mut (*interpreter).state;
-        let global: *mut Global = &mut (*interpreter).global;
+        let mut global: *mut Global = raw_allocate(
+            std::ptr::null_mut(),
+            0,
+            ::core::mem::size_of::<Global>(),
+        ) as *mut Global;
+        if global.is_null() {
+            raw_allocate(state as *mut u8 as *mut libc::c_void, ::core::mem::size_of::<State>(), 0);
+            return std::ptr::null_mut();
+        }
         (*state).set_tag(TAG_TYPE_STATE);
         (*global).current_white = (1 << 3) as u8;
         (*state).set_marked((*global).current_white & (1 << 3 | 1 << 4));
@@ -9150,7 +9160,9 @@ pub unsafe extern "C" fn lual_newstate() -> *mut State {
         (*global).ephemeron = (*global).all_weak;
         (*global).weak = (*global).ephemeron;
         (*global).twups = std::ptr::null_mut();
-        (*global).total_bytes = ::core::mem::size_of::<Interpreter>() as i64;
+        (*global).total_bytes = 0;
+        (*global).total_bytes += ::core::mem::size_of::<State>() as i64;
+        (*global).total_bytes += ::core::mem::size_of::<Global>() as i64;
         (*global).gc_debt = 0;
         (*global).last_atomic = 0;
         let io: *mut TValue = &mut (*global).nil_value;

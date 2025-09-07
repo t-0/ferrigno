@@ -21,7 +21,6 @@ mod functionstate;
 mod global;
 mod gmatchstate;
 mod header;
-mod interpreter;
 mod io;
 mod k;
 mod labeldescription;
