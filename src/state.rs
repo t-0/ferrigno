@@ -3,7 +3,6 @@ use crate::functions::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::debuginfo::*;
-use crate::stateextra::*;
 use crate::loadstate::*;
 use crate::loadf::*;
 use crate::loads::*;
@@ -96,10 +95,9 @@ impl TObject for State {
 impl State {
     pub unsafe extern "C" fn free_state(& mut self, state: *mut State) {
         unsafe {
-            let l: *mut StateExtra = (self as *mut State as *mut u8).offset(-(8 as isize)) as *mut StateExtra;
             luaf_closeupval(self, self.stack.stkidrel_pointer);
             freestack(self);
-            (*state).free_memory(l as *mut libc::c_void, ::core::mem::size_of::<StateExtra>());
+            (*state).free_memory(self as *mut State as *mut libc::c_void, ::core::mem::size_of::<State>());
         }
     }
     pub fn get_status(& mut self) -> i32 {
@@ -3085,8 +3083,8 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
         let object: *mut Object = luac_newobjdt(
             state,
             TAG_TYPE_STATE,
-            ::core::mem::size_of::<StateExtra>() as u64,
-            8 as u64,
+            ::core::mem::size_of::<State>() as u64,
+            0,
         );
         let ret: *mut State = &mut (*(object as *mut State));
         let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
@@ -3102,15 +3100,6 @@ pub unsafe extern "C" fn lua_newthread(state: *mut State) -> *mut State {
         (*ret).base_hook_count = (*state).base_hook_count;
         ::core::ptr::write_volatile(&mut (*ret).hook as *mut HookFunction, (*state).hook);
         (*ret).hook_count = (*ret).base_hook_count;
-        memcpy(
-            (ret as *mut i8)
-                .offset(-(::core::mem::size_of::<*mut libc::c_void>() as isize))
-                as *mut libc::c_void,
-            ((*global).main_state as *mut i8)
-                .offset(-(::core::mem::size_of::<*mut libc::c_void>() as isize))
-                as *mut libc::c_void,
-            ::core::mem::size_of::<*mut libc::c_void>() as u64,
-        );
         stack_init(ret, state);
         return ret;
     }
@@ -9112,7 +9101,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut State {
         if state.is_null() {
             return std::ptr::null_mut();
         }
-        let mut global: *mut Global = raw_allocate(
+        let global: *mut Global = raw_allocate(
             std::ptr::null_mut(),
             0,
             ::core::mem::size_of::<Global>(),

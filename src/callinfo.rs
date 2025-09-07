@@ -140,7 +140,7 @@ pub unsafe extern "C" fn findvararg(
             let nextra: i32 = (*call_info).u.l.count_extra_arguments;
             if n >= -nextra {
                 *pos = ((*call_info).function.stkidrel_pointer)
-                    .offset(-(nextra as isize))
+                    .offset(-nextra as isize)
                     .offset(-((n + 1) as isize));
                 return b"(vararg)\0" as *const u8 as *const i8;
             }

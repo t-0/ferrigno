@@ -45,7 +45,6 @@ mod repl;
 mod sparser;
 mod stackvalue;
 mod state;
-mod stateextra;
 mod stkidrel;
 mod streamwriter;
 mod stringtable;
