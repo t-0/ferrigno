@@ -41,9 +41,9 @@ impl Buffer {
     }
     pub unsafe fn new_with_size(&mut self, size: usize) -> usize {
         unsafe {
-            let mut new_size = 3 * (self.size / 2);
+            let mut new_size = 2 * self.size;
             if (!0usize).wrapping_sub(size) < self.length {
-                return lual_error(self.interpreter, b"buffer too large\0" as *const u8 as *const i8) as usize;
+                return lual_error(self.interpreter, b"buffer too large\0".as_ptr()) as usize;
             }
             new_size = new_size.max(self.length + size);
             return new_size;

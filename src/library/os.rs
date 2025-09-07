@@ -56,7 +56,7 @@ pub unsafe extern "C" fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
         if (err != 0) as i64 != 0 {
             return lual_error(
                 interpreter,
-                b"unable to generate a unique filename\0" as *const u8 as *const i8,
+                b"unable to generate a unique filename\0".as_ptr(),
             );
         }
         lua_pushstring(interpreter, buffer.as_mut_ptr());
@@ -153,13 +153,13 @@ pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8,
             if ((t != 0) as i32 != 0) as i64 != 0 {
                 return lual_error(
                     interpreter,
-                    b"field '%s' is not an integer\0" as *const u8 as *const i8,
+                    b"field '%s' is not an integer\0".as_ptr(),
                     key,
                 );
             } else if ((d < 0) as i32 != 0) as i64 != 0 {
                 return lual_error(
                     interpreter,
-                    b"field '%s' missing in date table\0" as *const u8 as *const i8,
+                    b"field '%s' missing in date table\0".as_ptr(),
                     key,
                 );
             }
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8,
             {
                 return lual_error(
                     interpreter,
-                    b"field '%s' is out-of-bound\0" as *const u8 as *const i8,
+                    b"field '%s' is out-of-bound\0".as_ptr(),
                     key,
                 );
             }
@@ -271,8 +271,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
         if stm.is_null() {
             return lual_error(
                 interpreter,
-                b"date result cannot be represented in this installation\0" as *const u8
-                    as *const i8,
+                b"date result cannot be represented in this installation\0".as_ptr(),
             );
         }
         if strcmp(s, b"*t\0" as *const u8 as *const i8) == 0 {
@@ -347,8 +346,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
         if t != t as i64 || t == -1 as i64 {
             return lual_error(
                 interpreter,
-                b"time result cannot be represented in this installation\0" as *const u8
-                    as *const i8,
+                b"time result cannot be represented in this installation\0".as_ptr(),
             );
         }
         (*interpreter).push_integer(t as i64);

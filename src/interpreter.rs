@@ -8197,23 +8197,13 @@ pub unsafe extern "C" fn lual_argerror(
             i_ci: std::ptr::null_mut(),
         };
         if lua_getstack(interpreter, 0, &mut ar) == 0 {
-            return lual_error(
-                interpreter,
-                b"bad argument #%d (%s)\0" as *const u8 as *const i8,
-                arg,
-                extramsg,
-            );
+            return lual_error(interpreter, b"bad argument #%d (%s)\0".as_ptr(), arg, extramsg);
         }
         lua_getinfo(interpreter, b"n\0" as *const u8 as *const i8, &mut ar);
         if strcmp(ar.namewhat, b"method\0" as *const u8 as *const i8) == 0 {
             arg -= 1;
             if arg == 0 {
-                return lual_error(
-                    interpreter,
-                    b"calling '%s' on bad self (%s)\0" as *const u8 as *const i8,
-                    ar.name,
-                    extramsg,
-                );
+                return lual_error(interpreter, b"calling '%s' on bad self (%s)\0".as_ptr(), ar.name, extramsg);
             }
         }
         if ar.name.is_null() {
@@ -8225,7 +8215,7 @@ pub unsafe extern "C" fn lual_argerror(
         }
         return lual_error(
             interpreter,
-            b"bad argument #%d to '%s' (%s)\0" as *const u8 as *const i8,
+            b"bad argument #%d to '%s' (%s)\0".as_ptr(),
             arg,
             ar.name,
             extramsg,
@@ -8293,12 +8283,12 @@ pub unsafe extern "C" fn lual_where(interpreter: *mut Interpreter, level: i32) {
         lua_pushfstring(interpreter, b"\0" as *const u8 as *const i8);
     }
 }
-pub unsafe extern "C" fn lual_error(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> i32 {
+pub unsafe extern "C" fn lual_error(interpreter: *mut Interpreter, fmt: *const u8, args: ...) -> i32 {
     unsafe {
         let mut argp: ::core::ffi::VaListImpl;
         argp = args.clone();
         lual_where(interpreter, 1);
-        lua_pushvfstring(interpreter, fmt, argp.as_va_list());
+        lua_pushvfstring(interpreter, fmt as *const i8, argp.as_va_list());
         lua_concat(interpreter, 2);
         return lua_error(interpreter);
     }
@@ -8439,11 +8429,11 @@ pub unsafe extern "C" fn lual_checkstack(interpreter: *mut Interpreter, space: i
             if !message.is_null() {
                 lual_error(
                     interpreter,
-                    b"stack overflow (%s)\0" as *const u8 as *const i8,
+                    b"stack overflow (%s)\0".as_ptr(),
                     message,
                 );
             } else {
-                lual_error(interpreter, b"stack overflow\0" as *const u8 as *const i8);
+                lual_error(interpreter, b"stack overflow\0".as_ptr());
             }
         }
     }
@@ -8758,15 +8748,15 @@ pub unsafe extern "C" fn lual_getmetafield(interpreter: *mut Interpreter, obj: i
         };
     }
 }
-pub unsafe extern "C" fn lual_callmeta(interpreter: *mut Interpreter, mut obj: i32, event: *const i8) -> i32 {
+pub unsafe extern "C" fn lual_callmeta(interpreter: *mut Interpreter, mut obj: i32, event: *const i8) -> bool {
     unsafe {
         obj = lua_absindex(interpreter, obj);
         if lual_getmetafield(interpreter, obj, event) == TagType::Nil {
-            return 0;
+            return false;
         }
         lua_pushvalue(interpreter, obj);
         lua_callk(interpreter, 1, 1, 0, None);
-        return 1;
+        return true;
     }
 }
 pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> i64 {
@@ -8778,7 +8768,7 @@ pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> 
         if !is_number {
             lual_error(
                 interpreter,
-                b"object length is not an integer\0" as *const u8 as *const i8,
+                b"object length is not an integer\0".as_ptr(),
             );
         }
         lua_settop(interpreter, -2);
@@ -8792,11 +8782,11 @@ pub unsafe extern "C" fn lual_tolstring(
 ) -> *const i8 {
     unsafe {
         index = lua_absindex(interpreter, index);
-        if lual_callmeta(interpreter, index, b"__tostring\0" as *const u8 as *const i8) != 0 {
+        if lual_callmeta(interpreter, index, b"__tostring\0" as *const u8 as *const i8) {
             if !lua_isstring(interpreter, -1) {
                 lual_error(
                     interpreter,
-                    b"'__tostring' must return a string\0" as *const u8 as *const i8,
+                    b"'__tostring' must return a string\0".as_ptr(),
                 );
             }
         } else {
@@ -9172,13 +9162,12 @@ pub unsafe extern "C" fn lual_checkversion_(interpreter: *mut Interpreter, versi
         {
             lual_error(
                 interpreter,
-                b"core and library have incompatible numeric types\0" as *const u8 as *const i8,
+                b"core and library have incompatible numeric types\0".as_ptr(),
             );
         } else if v != version {
             lual_error(
                 interpreter,
-                b"version mismatch: app. needs %f, Lua core provides %f\0" as *const u8
-                    as *const i8,
+                b"version mismatch: app. needs %f, Lua core provides %f\0".as_ptr(),
                 version,
                 v,
             );
@@ -9274,7 +9263,7 @@ pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" f
 pub unsafe extern "C" fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(interpreter, None, 0, 0);
-        lual_error(interpreter, b"interrupted!\0" as *const u8 as *const i8);
+        lual_error(interpreter, b"interrupted!\0".as_ptr());
     }
 }
 pub unsafe extern "C" fn laction(i: i32) {
@@ -9346,7 +9335,7 @@ pub unsafe extern "C" fn msghandler(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut message: *const i8 = lua_tolstring(interpreter, 1, std::ptr::null_mut());
         if message.is_null() {
-            if lual_callmeta(interpreter, 1, b"__tostring\0" as *const u8 as *const i8) != 0
+            if lual_callmeta(interpreter, 1, b"__tostring\0" as *const u8 as *const i8)
                 && lua_type(interpreter, -1) == Some(TagType::String)
             {
                 return 1;
@@ -9445,7 +9434,7 @@ pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32;
         if lua_getglobal(interpreter, b"arg\0" as *const u8 as *const i8) != 5 {
-            lual_error(interpreter, b"'arg' is not a table\0" as *const u8 as *const i8);
+            lual_error(interpreter, b"'arg' is not a table\0".as_ptr());
         }
         n = lual_len(interpreter, -1) as i32;
         lual_checkstack(
@@ -9759,7 +9748,7 @@ pub unsafe extern "C" fn checkstack(interpreter: *mut Interpreter, other_state: 
         if ((interpreter != other_state && lua_checkstack(other_state, n) == 0) as i32 != 0) as i64
             != 0
         {
-            lual_error(interpreter, b"stack overflow\0" as *const u8 as *const i8);
+            lual_error(interpreter, b"stack overflow\0".as_ptr());
         }
     }
 }

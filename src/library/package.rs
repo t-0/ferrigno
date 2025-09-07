@@ -309,7 +309,7 @@ pub unsafe extern "C" fn findfile(
         if ((path == std::ptr::null_mut() as *const i8) as i32 != 0) as i64 != 0 {
             lual_error(
                 interpreter,
-                b"'package.%s' must be a string\0" as *const u8 as *const i8,
+                b"'package.%s' must be a string\0".as_ptr(),
                 pname,
             );
         }
@@ -324,7 +324,7 @@ pub unsafe extern "C" fn checkload(interpreter: *mut Interpreter, stat: i32, fil
         } else {
             return lual_error(
                 interpreter,
-                b"error loading module '%s' from file '%s':\n\t%s\0" as *const u8 as *const i8,
+                b"error loading module '%s' from file '%s':\n\t%s\0".as_ptr(),
                 lua_tolstring(interpreter, 1, std::ptr::null_mut()),
                 filename,
                 lua_tolstring(interpreter, -1, std::ptr::null_mut()),
@@ -467,7 +467,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
         {
             lual_error(
                 interpreter,
-                b"'package.searchers' must be a table\0" as *const u8 as *const i8,
+                b"'package.searchers' must be a table\0".as_ptr(),
             );
         }
         message.initialize(interpreter);
@@ -480,7 +480,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
                 message.push_result();
                 lual_error(
                     interpreter,
-                    b"module '%s' not found:%s\0" as *const u8 as *const i8,
+                    b"module '%s' not found:%s\0".as_ptr(),
                     name,
                     lua_tolstring(interpreter, -1, std::ptr::null_mut()),
                 );

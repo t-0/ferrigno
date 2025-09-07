@@ -344,7 +344,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
             _ => {
                 return lual_error(
                     interpreter,
-                    b"wrong number of arguments\0" as *const u8 as *const i8,
+                    b"wrong number of arguments\0".as_ptr(),
                 );
             }
         }

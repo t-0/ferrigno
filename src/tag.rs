@@ -1,3 +1,10 @@
+use crate::user::*;
+use crate::prototype::*;
+use crate::table::*;
+use crate::interpreter::*;
+use crate::tstring::*;
+use crate::upvalue::*;
+use crate::closure::*;
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum TagType {
@@ -14,7 +21,7 @@ pub enum TagType {
     Prototype = 0x0A,
     DeadKey = 0x0B,
 }
-pub const TAG_SIMPLE_: [TagType; 9] = [
+pub const TAGTYPE_SIMPLE_: [TagType; 9] = [
     TagType::Nil,
     TagType::Boolean,
     TagType::Pointer,
@@ -25,10 +32,46 @@ pub const TAG_SIMPLE_: [TagType; 9] = [
     TagType::User,
     TagType::State,
 ];
+#[repr(u8)]
+pub enum TagVariantNil {
+    Nil,
+    Empty,
+    AbsentKey,
+}
+#[repr(u8,C)]
+pub enum TagVariantNumeric {
+    Integer(i64),
+    Number(f64),
+}
+#[repr(u8,C)]
+pub enum TagVariantString {
+    Short(TString),
+    Long(TString),
+}
+#[repr(u8,C)]
+pub enum TagVariantClosure {
+    C(Closure),
+    L(Closure),
+}
+#[repr(u8,C)]
+pub enum TagVariant {
+    Nil(TagVariantNil) = 0x00,
+    Boolean(bool) = 0x01,
+    Pointer(*mut libc::c_void) = 0x02,
+    Numeric(TagVariantNumeric) = 0x03,
+    String(TagVariantString) = 0x04,
+    Table(Table) = 0x05,
+    Closure(TagVariantClosure) = 0x06,
+    User(User) = 0x07,
+    State(Interpreter) = 0x08,
+    UpValue(UpValue) = 0x09,
+    Prototype(Prototype) = 0x0A,
+    DeadKey() = 0x0B,
+}
 pub const TAG_TYPE_NIL: u8 = TagType::Nil as u8;
-pub const TAG_VARIANT_NIL_NIL: u8 = TAG_TYPE_NIL | (0x00 << 0x04);
-pub const TAG_VARIANT_NIL_EMPTY: u8 = TAG_TYPE_NIL | (0x01 << 0x04);
-pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TAG_TYPE_NIL | (0x02 << 0x04);
+pub const TAG_VARIANT_NIL_NIL: u8 = TagType::Nil as u8 | (0x00 << 0x04);
+pub const TAG_VARIANT_NIL_EMPTY: u8 = TagType::Nil as u8 | (0x01 << 0x04);
+pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagType::Nil as u8 | (0x02 << 0x04);
 pub const TAG_TYPE_BOOLEAN: u8 = TagType::Boolean as u8;
 pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TAG_TYPE_BOOLEAN | (0x00 << 0x04);
 pub const TAG_VARIANT_BOOLEAN_TRUE: u8 = TAG_TYPE_BOOLEAN | (0x01 << 0x04);

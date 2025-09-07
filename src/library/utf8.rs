@@ -1,7 +1,7 @@
-use crate::registeredfunction::*;
-use crate::interpreter::*;
 use crate::buffer::*;
+use crate::interpreter::*;
 use crate::new::*;
+use crate::registeredfunction::*;
 pub unsafe extern "C" fn u_posrelat(pos: i64, length: u64) -> i64 {
     if pos >= 0 {
         return pos;
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         if pose - posi >= 0x7FFFFFFF as i64 {
-            return lual_error(interpreter, b"string slice too long\0" as *const u8 as *const i8);
+            return lual_error(interpreter, b"string slice too long\0".as_ptr());
         }
         n = (pose - posi) as i32 + 1;
         lual_checkstack(
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
             let mut code: u32 = 0;
             s = utf8_decode(s, &mut code, (lax == 0) as i32);
             if s.is_null() {
-                return lual_error(interpreter, b"invalid UTF-8 code\0" as *const u8 as *const i8);
+                return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
             }
             (*interpreter).push_integer(code as i64);
             n += 1;
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
             if *s.offset(posi as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
                 return lual_error(
                     interpreter,
-                    b"initial position is a continuation byte\0" as *const u8 as *const i8,
+                    b"initial position is a continuation byte\0".as_ptr(),
                 );
             }
             if n < 0 {
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
             let mut code: u32 = 0;
             let next: *const i8 = utf8_decode(s.offset(n as isize), &mut code, strict);
             if next.is_null() || *next as i32 & 0xc0 as i32 == 0x80 as i32 {
-                return lual_error(interpreter, b"invalid UTF-8 code\0" as *const u8 as *const i8);
+                return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
             }
             (*interpreter).push_integer(n.wrapping_add(1 as u64) as i64);
             (*interpreter).push_integer(code as i64);
@@ -273,8 +273,11 @@ pub unsafe extern "C" fn iter_codes(interpreter: *mut Interpreter) -> i32 {
         let lax: i32 = lua_toboolean(interpreter, 2);
         let s: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
         ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, b"invalid UTF-8 code\0" as *const u8 as *const i8) != 0)
-            as i32;
+            || lual_argerror(
+                interpreter,
+                1,
+                b"invalid UTF-8 code\0" as *const u8 as *const i8,
+            ) != 0) as i32;
         lua_pushcclosure(
             interpreter,
             if lax != 0 {

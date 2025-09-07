@@ -1,10 +1,10 @@
-use crate::registeredfunction::*;
-use crate::interpreter::*;
-use crate::utility::*;
-use crate::tag::*;
 use crate::buffer::*;
+use crate::interpreter::*;
 use crate::new::*;
+use crate::registeredfunction::*;
+use crate::tag::*;
 use crate::utility::c::*;
+use crate::utility::*;
 pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> bool {
     unsafe {
         lua_pushstring(interpreter, key);
@@ -49,9 +49,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
             3 => {
                 let mut i: i64;
                 pos = lual_checkinteger(interpreter, 2);
-                ((((pos as u64).wrapping_sub(1 as u64) < e as u64) as i32 != 0) as i32
-                    as i64
-                    != 0
+                ((((pos as u64).wrapping_sub(1 as u64) < e as u64) as i32 != 0) as i32 as i64 != 0
                     || lual_argerror(
                         interpreter,
                         2,
@@ -67,7 +65,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
             _ => {
                 return lual_error(
                     interpreter,
-                    b"wrong number of arguments to 'insert'\0" as *const u8 as *const i8,
+                    b"wrong number of arguments to 'insert'\0".as_ptr(),
                 );
             }
         }
@@ -81,9 +79,7 @@ pub unsafe extern "C" fn table_remove(interpreter: *mut Interpreter) -> i32 {
         let size: i64 = lual_len(interpreter, 1);
         let mut pos: i64 = lual_optinteger(interpreter, 2, size);
         if pos != size {
-            ((((pos as u64).wrapping_sub(1 as u64) <= size as u64) as i32 != 0) as i32
-                as i64
-                != 0
+            ((((pos as u64).wrapping_sub(1 as u64) <= size as u64) as i32 != 0) as i32 as i64 != 0
                 || lual_argerror(
                     interpreter,
                     2,
@@ -108,7 +104,7 @@ pub unsafe extern "C" fn table_move(interpreter: *mut Interpreter) -> i32 {
         let t: i64 = lual_checkinteger(interpreter, 4);
         let tag: i32 = match lua_type(interpreter, 5) {
             None | Some(TagType::Nil) => 1,
-            _ =>  5,
+            _ => 5,
         };
         checktab(interpreter, 1, 1);
         checktab(interpreter, tag, 2);
@@ -152,7 +148,7 @@ pub unsafe extern "C" fn addfield(interpreter: *mut Interpreter, b: *mut Buffer,
         if !lua_isstring(interpreter, -1) {
             lual_error(
                 interpreter,
-                b"invalid value (%s) at index %I in table for 'concat'\0" as *const u8 as *const i8,
+                b"invalid value (%s) at index %I in table for 'concat'\0".as_ptr(),
                 lua_typename(interpreter, lua_type(interpreter, -1)),
                 i,
             );
@@ -166,7 +162,8 @@ pub unsafe extern "C" fn table_concat(interpreter: *mut Interpreter) -> i32 {
         checktab(interpreter, 1, 1 | 4);
         let mut last: i64 = lual_len(interpreter, 1);
         let mut lsep: u64 = 0;
-        let sep: *const i8 = lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const i8, &mut lsep);
+        let sep: *const i8 =
+            lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const i8, &mut lsep);
         let mut i: i64 = lual_optinteger(interpreter, 3, 1);
         last = lual_optinteger(interpreter, 4, last);
         b.initialize(interpreter);
@@ -203,12 +200,8 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
         let mut n: u64;
         let mut i: i64 = lual_optinteger(interpreter, 2, 1);
         let e = match lua_type(interpreter, 3) {
-            None | Some(TagType::Nil) => {
-                lual_len(interpreter, 1)
-            },
-            _ => {
-                lual_checkinteger(interpreter, 3)
-            },
+            None | Some(TagType::Nil) => lual_len(interpreter, 1),
+            _ => lual_checkinteger(interpreter, 3),
         };
         if i > e {
             return 0;
@@ -221,10 +214,7 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
             != 0) as i64
             != 0
         {
-            return lual_error(
-                interpreter,
-                b"too many results to unpack\0" as *const u8 as *const i8,
-            );
+            return lual_error(interpreter, b"too many results to unpack\0".as_ptr());
         }
         while i < e {
             lua_geti(interpreter, 1, i);
@@ -305,7 +295,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if ((i == up.wrapping_sub(1 as u32)) as i32 != 0) as i64 != 0 {
                     lual_error(
                         interpreter,
-                        b"invalid order function for sorting\0" as *const u8 as *const i8,
+                        b"invalid order function for sorting\0".as_ptr(),
                     );
                 }
                 lua_settop(interpreter, -2);
@@ -319,7 +309,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if ((j < i) as i32 != 0) as i64 != 0 {
                     lual_error(
                         interpreter,
-                        b"invalid order function for sorting\0" as *const u8 as *const i8,
+                        b"invalid order function for sorting\0".as_ptr(),
                     );
                 }
                 lua_settop(interpreter, -2);
@@ -340,7 +330,12 @@ pub unsafe extern "C" fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
         .wrapping_add(lo.wrapping_add(r4));
     return p;
 }
-pub unsafe extern "C" fn auxsort(interpreter: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
+pub unsafe extern "C" fn auxsort(
+    interpreter: *mut Interpreter,
+    mut lo: u32,
+    mut up: u32,
+    mut rnd: u32,
+) {
     unsafe {
         while lo < up {
             let mut p: u32;
@@ -405,11 +400,10 @@ pub unsafe extern "C" fn table_sort(interpreter: *mut Interpreter) -> i32 {
                 lual_argerror(interpreter, 1, b"array too big\0" as *const u8 as *const i8);
             }
             match lua_type(interpreter, 2) {
-                None | Some(TagType::Nil) => {
-                },
+                None | Some(TagType::Nil) => {}
                 _ => {
                     lual_checktype(interpreter, 2, TagType::Closure);
-                },
+                }
             }
             lua_settop(interpreter, 2);
             auxsort(interpreter, 1 as u32, n as u32, 0);

@@ -59,7 +59,7 @@ pub unsafe extern "C" fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
         if (((*p).close_function).is_none() as i32 != 0) as i64 != 0 {
             lual_error(
                 interpreter,
-                b"attempt to use a closed file\0" as *const u8 as *const i8,
+                b"attempt to use a closed file\0".as_ptr(),
             );
         }
         return (*p).file;
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const 
         if (((*p).file == std::ptr::null_mut() as *mut FILE) as i32 != 0) as i64 != 0 {
             lual_error(
                 interpreter,
-                b"cannot open file '%s' (%s)\0" as *const u8 as *const i8,
+                b"cannot open file '%s' (%s)\0".as_ptr(),
                 fname,
                 strerror(*__errno_location()),
             );
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
         if (((*p).close_function).is_none() as i32 != 0) as i64 != 0 {
             lual_error(
                 interpreter,
-                b"default %s file is closed\0" as *const u8 as *const i8,
+                b"default %s file is closed\0".as_ptr(),
                 findex.offset(
                     (::core::mem::size_of::<[i8; 5]>() as u64)
                         .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -624,7 +624,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
             std::ptr::null_mut(),
         ) as i32;
         if ((*p).close_function).is_none() {
-            return lual_error(interpreter, b"file is already closed\0" as *const u8 as *const i8);
+            return lual_error(interpreter, b"file is already closed\0".as_ptr());
         }
         lua_settop(interpreter, 1);
         lual_checkstack(interpreter, n, b"too many arguments\0" as *const u8 as *const i8);
@@ -638,7 +638,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
             if n > 1 {
                 return lual_error(
                     interpreter,
-                    b"%s\0" as *const u8 as *const i8,
+                    b"%s\0".as_ptr(),
                     lua_tolstring(interpreter, -n + 1, std::ptr::null_mut()),
                 );
             }

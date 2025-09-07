@@ -146,7 +146,7 @@ impl Global {
     }
     pub unsafe extern "C" fn markmt(& mut self) {
         unsafe {
-            for i in TAG_SIMPLE_ {
+            for i in TAGTYPE_SIMPLE_ {
                 if !(self.metatables[i as usize]).is_null() {
                     if (*self.metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         really_mark_object(

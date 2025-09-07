@@ -77,7 +77,7 @@ pub unsafe extern "C" fn luab_setmetatable(interpreter: *mut Interpreter) -> i32
         if lual_getmetafield(interpreter, 1, b"__metatable\0" as *const u8 as *const i8) != TagType::Nil {
             return lual_error(
                 interpreter,
-                b"cannot change a protected metatable\0" as *const u8 as *const i8
+                b"cannot change a protected metatable\0".as_ptr()
             );
         }
         lua_settop(interpreter, 2);
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn generic_reader(
         } else if !lua_isstring(interpreter, -1) {
             lual_error(
                 interpreter,
-                b"reader function must return a string\0" as *const u8 as *const i8,
+                b"reader function must return a string\0".as_ptr(),
             );
         }
         lua_copy(interpreter, -1, 5);
