@@ -51,7 +51,6 @@ pub struct State {
     pub status: u8,
     pub allow_hook: u8,
     pub count_call_info: u16,
-    pub dummy3: u32 = 0,
     pub top: StkIdRel,
     pub global: *mut Global,
     pub call_info: *mut CallInfo,
