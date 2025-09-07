@@ -18,7 +18,7 @@ pub const DUMMY_NODE: Node = Node {
         },
     },
     key: TValue {
-        tag: TAG_VARIANT_NIL_NIL,
+        tag: TagVariant::NilNil as u8,
         value: Value {
             object: std::ptr::null_mut(),
         },

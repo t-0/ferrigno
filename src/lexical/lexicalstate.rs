@@ -230,7 +230,7 @@ pub unsafe extern "C" fn findlabel(
 ) -> *mut LabelDescription {
     unsafe {
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
-        for i in (*(*lexical_state).function_state).first_label..(*dynamic_data).label.n {
+        for i in (*(*lexical_state).function_state).first_label..(*dynamic_data).label.length {
             let lb: *mut LabelDescription =
                 &mut *((*dynamic_data).label.pointer).offset(i as isize) as *mut LabelDescription;
             if (*lb).name == name {
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn newlabelentry(
     program_counter: i32,
 ) -> i32 {
     unsafe {
-        let n: i32 = (*l).n;
+        let n: i32 = (*l).length;
         (*l).pointer = luam_growaux_(
             (*lexical_state).interpreter,
             (*l).pointer as *mut libc::c_void,
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn newlabelentry(
             (*(*lexical_state).function_state).count_active_variables;
         (*((*l).pointer).offset(n as isize)).close = 0;
         (*((*l).pointer).offset(n as isize)).program_counter = program_counter;
-        (*l).n = n + 1;
+        (*l).length = n + 1;
         return n;
     }
 }
@@ -299,7 +299,7 @@ pub unsafe extern "C" fn solvegotos(
         let gl: *mut LabelList = &mut (*(*lexical_state).dynamic_data).gt;
         let mut i: i32 = (*(*(*lexical_state).function_state).block_control).first_goto;
         let mut needsclose = false;
-        while i < (*gl).n {
+        while i < (*gl).length {
             if (*((*gl).pointer).offset(i as isize)).name == (*lb).name {
                 needsclose = needsclose || (0 != (*((*gl).pointer).offset(i as isize)).close);
                 solvegoto(lexical_state, i, lb);
@@ -376,7 +376,7 @@ pub unsafe extern "C" fn open_func(
         (*function_state).count_active_variables = 0;
         (*function_state).needs_close = false;
         (*function_state).first_local = (*(*lexical_state).dynamic_data).active_variable.length;
-        (*function_state).first_label = (*(*lexical_state).dynamic_data).label.n;
+        (*function_state).first_label = (*(*lexical_state).dynamic_data).label.length;
         (*function_state).block_control = std::ptr::null_mut();
         (*prototype).source = (*lexical_state).source;
         if (*prototype).get_marked() & 1 << 5 != 0 && (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -1175,11 +1175,11 @@ pub unsafe extern "C" fn solvegoto(
             (*label).program_counter,
         );
         let mut i: i32 = goto_offset;
-        while i < (*goto_label_list).n - 1 {
+        while i < (*goto_label_list).length - 1 {
             *((*goto_label_list).pointer).offset(i as isize) = *((*goto_label_list).pointer).offset((i + 1) as isize);
             i += 1;
         }
-        (*goto_label_list).n -= 1;
+        (*goto_label_list).length -= 1;
     }
 }
 pub unsafe extern "C" fn subexpr(

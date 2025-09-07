@@ -76,7 +76,7 @@ impl New for FunctionState {
 pub unsafe extern "C" fn movegotosout(function_state: *mut FunctionState, block_control: *mut BlockControl) {
     unsafe {
         let gl: *mut LabelList = &mut (*(*(*function_state).lexical_state).dynamic_data).gt;
-        for i in (*block_control).first_goto..(*gl).n {
+        for i in (*block_control).first_goto..(*gl).length {
             let gt: *mut LabelDescription =
                 &mut *((*gl).pointer).offset(i as isize) as *mut LabelDescription;
             if reglevel(function_state, (*gt).count_active_variables as i32)
@@ -96,8 +96,8 @@ pub unsafe extern "C" fn enterblock(
     unsafe {
         (*block_control).is_loop = is_loop;
         (*block_control).count_active_variables = (*function_state).count_active_variables;
-        (*block_control).first_label = (*(*(*function_state).lexical_state).dynamic_data).label.n;
-        (*block_control).first_goto = (*(*(*function_state).lexical_state).dynamic_data).gt.n;
+        (*block_control).first_label = (*(*(*function_state).lexical_state).dynamic_data).label.length;
+        (*block_control).first_goto = (*(*(*function_state).lexical_state).dynamic_data).gt.length;
         (*block_control).count_upvalues = 0;
         (*block_control).is_inside_tbc =
             !((*function_state).block_control).is_null() && (*(*function_state).block_control).is_inside_tbc as i32 != 0;
@@ -132,11 +132,11 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
             luak_code_abck(function_state, OP_CLOSE, stklevel, 0, 0, 0);
         }
         (*function_state).freereg = stklevel as u8;
-        (*(*lexical_state).dynamic_data).label.n = (*block_control).first_label;
+        (*(*lexical_state).dynamic_data).label.length = (*block_control).first_label;
         (*function_state).block_control = (*block_control).previous;
         if !((*block_control).previous).is_null() {
             movegotosout(function_state, block_control);
-        } else if (*block_control).first_goto < (*(*lexical_state).dynamic_data).gt.n {
+        } else if (*block_control).first_goto < (*(*lexical_state).dynamic_data).gt.length {
             undefgoto(
                 lexical_state,
                 &mut *((*(*lexical_state).dynamic_data).gt.pointer)
@@ -920,7 +920,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         while old_size < (*prototype).size_k {
             let fresh135 = old_size;
             old_size = old_size + 1;
-            (*((*prototype).k).offset(fresh135 as isize)).set_tag(TAG_VARIANT_NIL_NIL);
+            (*((*prototype).k).offset(fresh135 as isize)).set_tag(TagVariant::NilNil as u8);
         }
         let io1: *mut TValue = &mut *((*prototype).k).offset(count_k as isize) as *mut TValue;
         let io2: *const TValue = v;
@@ -1040,7 +1040,7 @@ pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {
             },
             tag: 0,
         };
-        v.set_tag(TAG_VARIANT_NIL_NIL);
+        v.set_tag(TagVariant::NilNil as u8);
         let io: *mut TValue = &mut k;
         let x_: *mut Table = (*(*function_state).lexical_state).table;
         (*io).value.object = &mut (*(x_ as *mut Object));

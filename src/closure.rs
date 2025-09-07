@@ -116,7 +116,7 @@ impl Closure {
 pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
-            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
@@ -263,12 +263,12 @@ pub unsafe extern "C" fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut
         for i in 0..(*cl).count_upvalues {
             let object: *mut Object = luac_newobj(
                 interpreter,
-                TAG_TYPE_UPVALUE,
+                TAG_VARIANT_UPVALUE,
                 ::core::mem::size_of::<UpValue>(),
             );
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;
-            (*(*upvalue).v.p).set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*upvalue).v.p).set_tag(TagVariant::NilNil as u8);
             let ref mut fresh = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh = upvalue;
             if (*cl).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {

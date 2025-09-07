@@ -1,12 +1,5 @@
-use crate::user::*;
-use crate::prototype::*;
-use crate::table::*;
-use crate::interpreter::*;
-use crate::tstring::*;
-use crate::upvalue::*;
-use crate::closure::*;
 #[derive(Copy, Clone, PartialEq, Eq)]
-#[repr(C)]
+#[repr(u8)]
 pub enum TagType {
     Nil = 0x00,
     Boolean = 0x01,
@@ -32,89 +25,71 @@ pub const TAGTYPE_SIMPLE_: [TagType; 9] = [
     TagType::User,
     TagType::State,
 ];
+#[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
-pub enum TagVariantNil {
-    Nil,
-    Empty,
-    AbsentKey,
+pub enum TagVariantRaw {
+    Alpha = 0x00 << 0x04,
+    Beta = 0x01 << 0x04,
+    Gamma = 0x02 << 0x04,
 }
-#[repr(u8,C)]
-pub enum TagVariantNumeric {
-    Integer(i64),
-    Number(f64),
-}
-#[repr(u8,C)]
-pub enum TagVariantString {
-    Short(TString),
-    Long(TString),
-}
-#[repr(u8,C)]
-pub enum TagVariantClosure {
-    C(Closure),
-    L(Closure),
-}
-#[repr(u8,C)]
+#[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(u8)]
 pub enum TagVariant {
-    Nil(TagVariantNil) = 0x00,
-    Boolean(bool) = 0x01,
-    Pointer(*mut libc::c_void) = 0x02,
-    Numeric(TagVariantNumeric) = 0x03,
-    String(TagVariantString) = 0x04,
-    Table(Table) = 0x05,
-    Closure(TagVariantClosure) = 0x06,
-    User(User) = 0x07,
-    State(Interpreter) = 0x08,
-    UpValue(UpValue) = 0x09,
-    Prototype(Prototype) = 0x0A,
-    DeadKey() = 0x0B,
+    NilNil = TagType::Nil as u8 | TagVariantRaw::Alpha as u8,
+    NilEmpty = TagType::Nil as u8 | TagVariantRaw::Beta as u8,
+    NilAbsentKey = TagType::Nil as u8 | TagVariantRaw::Gamma as u8,
+    BooleanFalse = TagType::Boolean as u8 | TagVariantRaw::Alpha as u8,
+    BooleanTrue = TagType::Boolean as u8 | TagVariantRaw::Beta as u8,
+    Pointer = TagType::Pointer as u8 | TagVariantRaw::Alpha as u8,
+    NumericInteger = TagType::Numeric as u8 | TagVariantRaw::Alpha as u8,
+    NumericNumber = TagType::Numeric as u8 | TagVariantRaw::Beta as u8,
+    StringShort = TagType::String as u8 | TagVariantRaw::Alpha as u8,
+    StringLong = TagType::String as u8 | TagVariantRaw::Beta as u8,
+    Table = TagType::Table as u8 | TagVariantRaw::Alpha as u8,
+    ClosureL = TagType::Closure as u8 | TagVariantRaw::Alpha as u8,
+    ClosureCFunction = TagType::Closure as u8 | TagVariantRaw::Beta as u8,
+    ClosureC = TagType::Closure as u8 | TagVariantRaw::Gamma as u8,
+    User = TagType::User as u8 | TagVariantRaw::Alpha as u8,
+    State = TagType::State as u8 | TagVariantRaw::Alpha as u8,
+    UpValue = TagType::UpValue as u8 | TagVariantRaw::Alpha as u8,
+    Prototype = TagType::Prototype as u8 | TagVariantRaw::Alpha as u8,
+    DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
 }
-pub const TAG_TYPE_NIL: u8 = TagType::Nil as u8;
-pub const TAG_VARIANT_NIL_NIL: u8 = TagType::Nil as u8 | (0x00 << 0x04);
-pub const TAG_VARIANT_NIL_EMPTY: u8 = TagType::Nil as u8 | (0x01 << 0x04);
-pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagType::Nil as u8 | (0x02 << 0x04);
-pub const TAG_TYPE_BOOLEAN: u8 = TagType::Boolean as u8;
-pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TAG_TYPE_BOOLEAN | (0x00 << 0x04);
-pub const TAG_VARIANT_BOOLEAN_TRUE: u8 = TAG_TYPE_BOOLEAN | (0x01 << 0x04);
-pub const TAG_TYPE_POINTER: u8 = TagType::Pointer as u8;
-pub const TAG_VARIANT_POINTER: u8 = TAG_TYPE_POINTER;
-pub const TAG_TYPE_NUMERIC: u8 = TagType::Numeric as u8;
-pub const TAG_VARIANT_NUMERIC_INTEGER: u8 = TAG_TYPE_NUMERIC | (0x00 << 0x04);
-pub const TAG_VARIANT_NUMERIC_NUMBER: u8 = TAG_TYPE_NUMERIC | (0x01 << 0x04);
-pub const TAG_TYPE_STRING: u8 = TagType::String as u8;
-pub const TAG_VARIANT_STRING_SHORT: u8 = TAG_TYPE_STRING | (0x00 << 0x04);
-pub const TAG_VARIANT_STRING_LONG: u8 = TAG_TYPE_STRING | (0x01 << 0x04);
-pub const TAG_TYPE_TABLE: u8 = TagType::Table as u8;
-pub const TAG_VARIANT_TABLE: u8 = TAG_TYPE_TABLE;
-pub const TAG_TYPE_CLOSURE: u8 = TagType::Closure as u8;
-pub const TAG_VARIANT_CLOSURE_L: u8 = TAG_TYPE_CLOSURE | (0x00 << 0x04);
-pub const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TAG_TYPE_CLOSURE | (0x01 << 0x04);
-pub const TAG_VARIANT_CLOSURE_C: u8 = TAG_TYPE_CLOSURE | (0x02 << 0x04);
-pub const TAG_TYPE_USER: u8 = TagType::User as u8;
-pub const TAG_VARIANT_USER: u8 = TAG_TYPE_USER;
-pub const TAG_TYPE_STATE: u8 = TagType::State as u8;
-pub const TAG_VARIANT_STATE: u8 = TAG_TYPE_STATE;
-pub const TAG_TYPE_UPVALUE: u8 = TagType::UpValue as u8;
-pub const TAG_VARIANT_UPVALUE: u8 = TAG_TYPE_UPVALUE;
-pub const TAG_TYPE_PROTOTYPE: u8 = TagType::Prototype as u8;
-pub const TAG_VARIANT_PROTOTYPE: u8 = TAG_TYPE_PROTOTYPE;
-pub const TAG_TYPE_DEADKEY: u8 = TagType::DeadKey as u8;
-pub const TAG_VARIANT_DEADKEY: u8 = TAG_TYPE_DEADKEY;
+pub const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
+pub const TAG_VARIANT_NIL_EMPTY: u8 = TagVariant::NilEmpty as u8;
+pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagVariant::NilAbsentKey as u8;
+pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8 ;
+pub const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
+pub const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
+pub const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8 ;
+pub const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
+pub const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8 ;
+pub const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
+pub const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
+pub const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
+pub const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
+pub const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
+pub const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
+pub const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
+pub const TAG_VARIANT_UPVALUE: u8 = TagVariant::UpValue as u8;
+pub const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
+pub const TAG_VARIANT_DEADKEY: u8 = TagVariant::DeadKey as u8;
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
 pub const fn get_tag_type(tag: u8) -> TagType {
     match TAG_TYPE_MASK_ & tag  {
-        TAG_TYPE_NIL => TagType::Nil,
-        TAG_TYPE_BOOLEAN => TagType::Boolean,
-        TAG_TYPE_POINTER => TagType::Pointer,
-        TAG_TYPE_NUMERIC => TagType::Numeric,
-        TAG_TYPE_STRING => TagType::String,
-        TAG_TYPE_TABLE => TagType::Table,
-        TAG_TYPE_CLOSURE => TagType::Closure,
-        TAG_TYPE_USER => TagType::User,
-        TAG_TYPE_STATE => TagType::State,
-        TAG_TYPE_UPVALUE => TagType::UpValue,
-        TAG_TYPE_PROTOTYPE => TagType::Prototype,
-        TAG_TYPE_DEADKEY => TagType::DeadKey,
+        0 => TagType::Nil,
+        1 => TagType::Boolean,
+        2 => TagType::Pointer,
+        3 => TagType::Numeric,
+        4 => TagType::String,
+        5 => TagType::Table,
+        6 => TagType::Closure,
+        7 => TagType::User,
+        8 => TagType::State,
+        9 => TagType::UpValue,
+        10 => TagType::Prototype,
+        11 => TagType::DeadKey,
         _ => TagType::Nil,
     }
 }

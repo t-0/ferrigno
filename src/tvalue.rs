@@ -25,7 +25,7 @@ impl New for TValue {
     fn new() -> Self {
         TValue {
             value: Value::new(),
-            tag: TAG_VARIANT_NIL_NIL,
+            tag: TagVariant::NilNil as u8,
         }
     }
 }

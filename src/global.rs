@@ -20,7 +20,7 @@ pub struct Global {
     pub last_atomic: u64,
     pub string_table: StringTable,
     pub l_registry: TValue,
-    pub nil_value: TValue,
+    pub none_value: TValue,
     pub seed: u32,
     pub current_white: u8,
     pub gc_state: u8,

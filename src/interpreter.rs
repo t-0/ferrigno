@@ -106,7 +106,7 @@ impl Interpreter {
                     (*io).set_collectable();
                 }
                 0 => {
-                    (*old_top).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                    (*old_top).tvalue.set_tag(TagVariant::NilNil as u8);
                 }
                 _ => {
                     let io1: *mut TValue = &mut (*old_top).tvalue;
@@ -168,7 +168,7 @@ impl Interpreter {
     }
     pub unsafe extern "C" fn push_nil(&mut self) {
         unsafe {
-            (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*self.top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
@@ -416,7 +416,7 @@ impl Interpreter {
             let t: i32;
             let tvalue: *mut TValue = self.index2value(index);
             if n <= 0 || n > (*((*tvalue).value.object as *mut User)).count_upvalues as i32 {
-                (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                (*self.top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
                 t = -1;
             } else {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
@@ -437,7 +437,7 @@ impl Interpreter {
             if index > 0 {
                 let o: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(index as isize);
                 if o >= self.top.stkidrel_pointer {
-                    return &mut (*self.global).nil_value;
+                    return &mut (*self.global).none_value;
                 } else {
                     return &mut (*o).tvalue;
                 }
@@ -455,10 +455,10 @@ impl Interpreter {
                             c_tvalues.as_mut_ptr()
                             .offset((index - 1) as isize) as *mut TValue
                     } else {
-                        &mut (*self.global).nil_value
+                        &mut (*self.global).none_value
                     };
                 } else {
-                    return &mut (*self.global).nil_value;
+                    return &mut (*self.global).none_value;
                 }
             };
         }
@@ -572,7 +572,7 @@ pub unsafe extern "C" fn luad_reallocstack(
         for i in (old_size + 5)..(new_size + 5) {
             (*newstack.offset(i as isize))
                 .tvalue
-                .set_tag(TAG_VARIANT_NIL_NIL);
+                .set_tag(TagVariant::NilNil as u8);
         }
         return 1;
     }
@@ -777,7 +777,7 @@ pub unsafe extern "C" fn moveresults(
             }
             1 => {
                 if nres == 0 {
-                    (*res).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                    (*res).tvalue.set_tag(TagVariant::NilNil as u8);
                 } else {
                     let io1: *mut TValue = &mut (*res).tvalue;
                     let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(nres as isize))).tvalue;
@@ -822,7 +822,7 @@ pub unsafe extern "C" fn moveresults(
             (*io1_0).set_tag((*io2_0).get_tag());
         }
         for i in nres..wanted {
-            (*res.offset(i as isize)).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*res.offset(i as isize)).tvalue.set_tag(TagVariant::NilNil as u8);
         }
         (*interpreter).top.stkidrel_pointer = res.offset(wanted as isize);
     }
@@ -945,7 +945,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                     while narg1 <= nfixparams {
                         (*function.offset(narg1 as isize))
                             .tvalue
-                            .set_tag(TAG_VARIANT_NIL_NIL);
+                            .set_tag(TagVariant::NilNil as u8);
                         narg1 += 1;
                     }
                     (*call_info).top.stkidrel_pointer = function.offset(1 as isize).offset(fsize as isize);
@@ -1015,7 +1015,7 @@ pub unsafe extern "C" fn luad_precall(
                     while narg < nfixparams {
                         let fresh1 = (*interpreter).top.stkidrel_pointer;
                         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                        (*fresh1).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                        (*fresh1).tvalue.set_tag(TagVariant::NilNil as u8);
                         narg += 1;
                     }
                     return call_info;
@@ -1404,12 +1404,12 @@ pub unsafe extern "C" fn luad_protectedparser(
                 },
                 gt: LabelList {
                     pointer: std::ptr::null_mut(),
-                    n: 0,
+                    length: 0,
                     size: 0,
                 },
                 label: LabelList {
                     pointer: std::ptr::null_mut(),
-                    n: 0,
+                    length: 0,
                     size: 0,
                 },
             },
@@ -1536,7 +1536,7 @@ pub unsafe extern "C" fn lua_settop(interpreter: *mut Interpreter, index: i32) {
             while diff > 0 {
                 let fresh4 = (*interpreter).top.stkidrel_pointer;
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                (*fresh4).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                (*fresh4).tvalue.set_tag(TagVariant::NilNil as u8);
                 diff -= 1;
             }
         } else {
@@ -1553,7 +1553,7 @@ pub unsafe extern "C" fn lua_closeslot(interpreter: *mut Interpreter, index: i32
     unsafe {
         let mut level = index2stack(interpreter, index);
         level = luaf_close(interpreter, level, -1, 0);
-        (*level).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+        (*level).tvalue.set_tag(TagVariant::NilNil as u8);
     }
 }
 pub unsafe extern "C" fn reverse(mut _state: *mut Interpreter, mut from: StackValuePointer, mut to: StackValuePointer) {
@@ -1635,11 +1635,11 @@ pub unsafe extern "C" fn lua_pushvalue(interpreter: *mut Interpreter, index: i32
 }
 pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagType> {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
-        return if (get_tag_type((*o).get_tag()) != TagType::Nil)
-            || o != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue
+        let tvalue: *const TValue = (*interpreter).index2value(index);
+        return if (get_tag_type((*tvalue).get_tag()) != TagType::Nil)
+            || tvalue != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue
         {
-            return Some((*o).get_tag_type())
+            return Some((*tvalue).get_tag_type())
         } else {
             None
         };
@@ -1703,9 +1703,9 @@ pub unsafe extern "C" fn lua_rawequal(interpreter: *mut Interpreter, index1: i32
         let o1: *const TValue = (*interpreter).index2value(index1);
         let o2: *const TValue = (*interpreter).index2value(index2);
         return if (!(get_tag_type((*o1).get_tag()) == TagType::Nil)
-            || o1 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
+            || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
             && (!(get_tag_type((*o2).get_tag()) == TagType::Nil)
-                || o2 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
+                || o2 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
         {
             luav_equalobj(std::ptr::null_mut(), o1, o2)
         } else {
@@ -1738,9 +1738,9 @@ pub unsafe extern "C" fn lua_compare(interpreter: *mut Interpreter, index1: i32,
         let o2: *const TValue = (*interpreter).index2value(index2);
         let mut i: i32 = 0;
         if (!(get_tag_type((*o1).get_tag()) == TagType::Nil)
-            || o1 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
+            || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
             && (!(get_tag_type((*o2).get_tag()) == TagType::Nil)
-                || o2 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
+                || o2 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
         {
             match op {
                 0 => {
@@ -1892,7 +1892,7 @@ pub unsafe extern "C" fn lua_pushlstring(
 pub unsafe extern "C" fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) -> *const i8 {
     unsafe {
         if s.is_null() {
-            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
         } else {
             let ts: *mut TString = luas_new(interpreter, s);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -1976,7 +1976,7 @@ pub unsafe extern "C" fn lua_pushlightuserdata(interpreter: *mut Interpreter, p:
     unsafe {
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).value.pointer = p;
-        (*io).set_tag(TAG_TYPE_POINTER);
+        (*io).set_tag(TAG_VARIANT_POINTER);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
@@ -2120,7 +2120,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
 pub unsafe extern "C" fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> TagType {
     unsafe {
         if get_tag_type((*value).get_tag()) == TagType::Nil {
-            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
         } else {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             let io2: *const TValue = value;
@@ -2951,7 +2951,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut Interpreter, interpreter: 
         for i in 0..2 * 20 as i32 + 5 {
             (*((*other_state).stack.stkidrel_pointer).offset(i as isize))
                 .tvalue
-                .set_tag(TAG_VARIANT_NIL_NIL);
+                .set_tag(TagVariant::NilNil as u8);
         }
         (*other_state).top.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         (*other_state).stack_last.stkidrel_pointer = ((*other_state).stack.stkidrel_pointer).offset((2 * 20 as i32) as isize);
@@ -2962,7 +2962,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut Interpreter, interpreter: 
         (*call_info).function.stkidrel_pointer = (*other_state).top.stkidrel_pointer;
         (*call_info).u.c.context_function = None;
         (*call_info).count_results = 0;
-        (*(*other_state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+        (*(*other_state).top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
         (*other_state).top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(1);
         (*other_state).top.stkidrel_pointer;
         (*call_info).top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(20 as isize);
@@ -3013,7 +3013,7 @@ pub unsafe extern "C" fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut 
         luat_init(interpreter);
         luax_init(interpreter);
         (*global).gc_step = 0;
-        (*global).nil_value.set_tag(TAG_VARIANT_NIL_NIL);
+        (*global).none_value.set_tag(TagVariant::NilNil as u8);
     }
 }
 pub unsafe extern "C" fn preinit_thread(interpreter: *mut Interpreter, global: *mut Global) {
@@ -3039,7 +3039,7 @@ pub unsafe extern "C" fn preinit_thread(interpreter: *mut Interpreter, global: *
 pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if !(get_tag_type((*global).nil_value.get_tag()) == TagType::Nil) {
+        if !(get_tag_type((*global).none_value.get_tag()) == TagType::Nil) {
             luac_freeallobjects(interpreter);
         } else {
             (*interpreter).call_info = &mut (*interpreter).base_callinfo;
@@ -3072,7 +3072,7 @@ pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut In
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
         }
-        let ret = luac_newobj(interpreter, TAG_TYPE_STATE, ::core::mem::size_of::<Interpreter>()) as *mut Interpreter;
+        let ret = luac_newobj(interpreter, TAG_VARIANT_STATE, ::core::mem::size_of::<Interpreter>()) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).set_tag(TAG_VARIANT_STATE);
         (*io).value.object = &mut (*(ret as *mut Object));
@@ -3094,7 +3094,7 @@ pub unsafe extern "C" fn luae_resetthread(interpreter: *mut Interpreter, mut sta
     unsafe {
         (*interpreter).call_info = &mut (*interpreter).base_callinfo;
         let call_info: *mut CallInfo = (*interpreter).call_info;
-        (*(*interpreter).stack.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+        (*(*interpreter).stack.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
         (*call_info).function.stkidrel_pointer = (*interpreter).stack.stkidrel_pointer;
         (*call_info).call_status = (1 << 1) as u16;
         if status == 1 {
@@ -3578,7 +3578,7 @@ pub unsafe extern "C" fn tryagain(
 ) -> *mut libc::c_void {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if get_tag_type((*global).nil_value.get_tag()) == TagType::Nil && (*global).gcstopem == 0 {
+        if get_tag_type((*global).none_value.get_tag()) == TagType::Nil && (*global).gcstopem == 0 {
             luac_fullgc(interpreter, true);
             return raw_allocate(block, old_size, new_size);
         } else {
@@ -3980,7 +3980,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
             }
         }
         return if metatable.is_null() {
-            &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue
+            &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue
         } else {
             luah_getshortstr(metatable, (*(*interpreter).global).tm_name[event as usize])
         };
@@ -4267,7 +4267,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
             (*io1_0).set_tag((*io2_0).get_tag());
             (*((*call_info).function.stkidrel_pointer).offset(i as isize))
                 .tvalue
-                .set_tag(TAG_VARIANT_NIL_NIL);
+                .set_tag(TagVariant::NilNil as u8);
         }
         (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset((actual + 1) as isize);
         (*call_info).top.stkidrel_pointer = ((*call_info).top.stkidrel_pointer).offset((actual + 1) as isize);
@@ -4309,7 +4309,7 @@ pub unsafe extern "C" fn luat_getvarargs(
         for i in wanted.min(nextra)..wanted {
             (*where_0.offset(i as isize))
                 .tvalue
-                .set_tag(TAG_VARIANT_NIL_NIL);
+                .set_tag(TagVariant::NilNil as u8);
         }
     }
 }
@@ -4358,7 +4358,7 @@ pub unsafe extern "C" fn traverse_state(global: *mut Global, interpreter: *mut I
             }
             o = (*interpreter).top.stkidrel_pointer;
             while o < ((*interpreter).stack_last.stkidrel_pointer).offset(5 as isize) {
-                (*o).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                (*o).tvalue.set_tag(TagVariant::NilNil as u8);
                 o = o.offset(1);
             }
             if !((*interpreter).twups != interpreter) && !((*interpreter).open_upvalue).is_null() {
@@ -4530,14 +4530,14 @@ pub unsafe extern "C" fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *m
                 free_object(interpreter, curr);
             } else {
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
-                if (*curr).get_tag() == TAG_TYPE_STATE {
+                if (*curr).get_tag() == TAG_VARIANT_STATE {
                     let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
                     linkgclist_(
                         &mut (*(other_state as *mut Object)),
                         &mut (*other_state).gc_list,
                         &mut (*global).gray_again,
                     );
-                } else if (*curr).get_tag() == TAG_TYPE_UPVALUE
+                } else if (*curr).get_tag() == TAG_VARIANT_UPVALUE
                     && (*(curr as *mut UpValue)).v.p
                         != &mut (*(curr as *mut UpValue)).u.value as *mut TValue
                 {
@@ -4994,7 +4994,7 @@ pub unsafe extern "C" fn prepcallclosemth(interpreter: *mut Interpreter, level: 
         let uv: *mut TValue = &mut (*level).tvalue;
         let errobj: *mut TValue;
         if status == -1 {
-            errobj = &mut (*(*interpreter).global).nil_value;
+            errobj = &mut (*(*interpreter).global).none_value;
         } else {
             errobj = &mut (*level.offset(1 as isize)).tvalue;
             (*interpreter).set_error_object(status, level.offset(1 as isize));
@@ -5149,9 +5149,9 @@ pub unsafe extern "C" fn luay_parser(
         };
         lexstate.buffer = buffer;
         lexstate.dynamic_data = dynamic_data;
-        (*dynamic_data).label.n = 0;
-        (*dynamic_data).gt.n = (*dynamic_data).label.n;
-        (*dynamic_data).active_variable.length = (*dynamic_data).gt.n;
+        (*dynamic_data).label.length = 0;
+        (*dynamic_data).gt.length = (*dynamic_data).label.length;
+        (*dynamic_data).active_variable.length = (*dynamic_data).gt.length;
         luax_setinput(interpreter, &mut lexstate, zio, (*funcstate.prototype).source, firstchar);
         mainfunc(&mut lexstate, &mut funcstate);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -5406,7 +5406,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             loop {
                                 let fresh139 = ra_7;
                                 ra_7 = ra_7.offset(1);
-                                (*fresh139).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                                (*fresh139).tvalue.set_tag(TagVariant::NilNil as u8);
                                 let fresh140 = b_1;
                                 b_1 = b_1 - 1;
                                 if !(fresh140 != 0) {
@@ -7713,7 +7713,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 while ((nres > 0) as i32 != 0) as i64 != 0 {
                                     let fresh141 = (*interpreter).top.stkidrel_pointer;
                                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                                    (*fresh141).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                                    (*fresh141).tvalue.set_tag(TagVariant::NilNil as u8);
                                     nres -= 1;
                                 }
                             }
@@ -7745,7 +7745,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     while ((nres_0 > 1) as i32 != 0) as i64 != 0 {
                                         let fresh142 = (*interpreter).top.stkidrel_pointer;
                                         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                                        (*fresh142).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                                        (*fresh142).tvalue.set_tag(TagVariant::NilNil as u8);
                                         nres_0 -= 1;
                                     }
                                 }
@@ -8703,7 +8703,7 @@ pub unsafe extern "C" fn get_s(
         }
         *size = (*lexical_state).size;
         (*lexical_state).size = 0;
-        return (*lexical_state).s;
+        return (*lexical_state).pointer;
     }
 }
 pub unsafe extern "C" fn lual_loadbufferx(
@@ -8715,10 +8715,10 @@ pub unsafe extern "C" fn lual_loadbufferx(
 ) -> i32 {
     unsafe {
         let mut lexical_state: LoadS = LoadS {
-            s: std::ptr::null(),
+            pointer: std::ptr::null(),
             size: 0,
         };
-        lexical_state.s = buffer;
+        lexical_state.pointer = buffer;
         lexical_state.size = size;
         return lua_load(
             interpreter,
@@ -9074,7 +9074,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
             raw_allocate(interpreter as *mut u8 as *mut libc::c_void, ::core::mem::size_of::<Interpreter>(), 0);
             return std::ptr::null_mut();
         }
-        (*interpreter).set_tag(TAG_TYPE_STATE);
+        (*interpreter).set_tag(TAG_VARIANT_STATE);
         (*global).current_white = (1 << 3) as u8;
         (*interpreter).set_marked((*global).current_white & (1 << 3 | 1 << 4));
         preinit_thread(interpreter, global);
@@ -9090,7 +9090,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         (*global).string_table.length = 0;
         (*global).string_table.size = (*global).string_table.length;
         (*global).string_table.hash = std::ptr::null_mut();
-        (*global).l_registry.set_tag(TAG_VARIANT_NIL_NIL);
+        (*global).l_registry.set_tag(TagVariant::NilNil as u8);
         (*global).panic = None;
         (*global).gc_state = 8 as u8;
         (*global).gc_kind = 0;
@@ -9118,7 +9118,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         (*global).total_bytes += ::core::mem::size_of::<Global>() as i64;
         (*global).gc_debt = 0;
         (*global).last_atomic = 0;
-        let io: *mut TValue = &mut (*global).nil_value;
+        let io: *mut TValue = &mut (*global).none_value;
         (*io).value.integer = 0;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         (*global).gc_pause = 200 / 4;

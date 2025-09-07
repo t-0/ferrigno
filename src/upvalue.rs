@@ -63,7 +63,7 @@ pub unsafe extern "C" fn newupval(
 ) -> *mut UpValue {
     unsafe {
         let o: *mut Object =
-            luac_newobj(interpreter, TAG_TYPE_UPVALUE, ::core::mem::size_of::<UpValue>());
+            luac_newobj(interpreter, TAG_VARIANT_UPVALUE, ::core::mem::size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level).tvalue;

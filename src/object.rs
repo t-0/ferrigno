@@ -57,7 +57,7 @@ pub trait TObject {
 #[repr(C)]
 pub struct Object {
     pub next: *mut Object = std::ptr::null_mut(),
-    pub tag: u8 = TAG_VARIANT_NIL_NIL,
+    pub tag: u8 = TagVariant::NilNil as u8,
     pub marked: u8 = 0,
     pub _dummy0: u16 = 0,
     pub _dummy1: u32 = 0,
@@ -331,7 +331,7 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
                     (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);
                     (*curr).set_marked(((*curr).get_marked() ^ (5 ^ 6)) as u8);
                     current_block = 11248371660297272285;
-                } else if (*curr).get_tag() == TAG_TYPE_STATE {
+                } else if (*curr).get_tag() == TAG_VARIANT_STATE {
                     current_block = 11248371660297272285;
                 } else {
                     if (*curr).get_marked() & 7 == 6 {

@@ -3,6 +3,6 @@ use crate::labeldescription::*;
 #[repr(C)]
 pub struct LabelList {
     pub pointer: *mut LabelDescription,
-    pub n: i32,
+    pub length: i32,
     pub size: i32,
 }

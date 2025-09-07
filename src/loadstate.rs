@@ -197,14 +197,14 @@ impl LoadState {
             ) as *mut TValue;
             (*prototype).size_k = n;
             for i in 0..n {
-                (*((*prototype).k).offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
+                (*((*prototype).k).offset(i as isize)).set_tag(TagVariant::NilNil as u8);
             }
             for i in 0..n {
                 let tvalue: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
-                let t: u8 = self.load_byte() as u8;
+                let t = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
-                        (*tvalue).set_tag(TAG_VARIANT_NIL_NIL);
+                        (*tvalue).set_tag(TagVariant::NilNil as u8);
                     }
                     TAG_VARIANT_BOOLEAN_FALSE => {
                         (*tvalue).set_tag(TAG_VARIANT_BOOLEAN_FALSE);

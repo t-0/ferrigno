@@ -92,7 +92,7 @@ impl Table {
                 while self.last_free > self.node {
                     self.last_free = self.last_free.offset(-1);
                     self.last_free;
-                    if (*self.last_free).key.tag == TAG_VARIANT_NIL_NIL {
+                    if (*self.last_free).key.tag == TagVariant::NilNil as u8 {
                         return self.last_free;
                     }
                 }
@@ -830,7 +830,7 @@ pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
         let object: *mut Object = luac_newobj(
             interpreter,
-            TAG_TYPE_TABLE,
+            TAG_VARIANT_TABLE,
             ::core::mem::size_of::<Table>(),
         );
         let new_table: *mut Table = &mut (*(object as *mut Table));
@@ -1184,7 +1184,7 @@ pub unsafe extern "C" fn luav_finishget(
                     )
                 };
                 if tm.is_null() {
-                    (*value).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+                    (*value).tvalue.set_tag(TagVariant::NilNil as u8);
                     return;
                 }
             }

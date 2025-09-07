@@ -517,7 +517,7 @@ pub unsafe extern "C" fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Pr
     unsafe {
         let object: *mut Object = luac_newobj(
             interpreter,
-            TAG_TYPE_PROTOTYPE,
+            TAG_VARIANT_PROTOTYPE,
             ::core::mem::size_of::<Prototype>(),
         );
         let prototype: *mut Prototype = &mut (*(object as *mut Prototype));

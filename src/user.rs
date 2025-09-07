@@ -69,7 +69,7 @@ impl User {
             }
             let object: *mut Object = luac_newobj(
                 interpreter,
-                TAG_TYPE_USER,
+                TAG_VARIANT_USER,
                 User::user_get_size(count_bytes, count_upvalues),
             );
             let ret: *mut User = &mut (*(object as *mut User));
@@ -77,7 +77,7 @@ impl User {
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = std::ptr::null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag(TagVariant::NilNil as u8);
             }
             return ret;
         }

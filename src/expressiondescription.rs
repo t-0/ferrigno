@@ -87,7 +87,7 @@ pub unsafe extern "C" fn luak_exp2const(
                 return true;
             }
             ExpressionKind::VNIL => {
-                (*v).set_tag(TAG_VARIANT_NIL_NIL);
+                (*v).set_tag(TagVariant::NilNil as u8);
                 return true;
             }
             ExpressionKind::VKSTR => {
