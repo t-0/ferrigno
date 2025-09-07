@@ -116,40 +116,40 @@ impl Prototype {
             return (1 + (*prototype).size_k + (*prototype).size_upvalues + (*prototype).size_p + (*prototype).size_local_variables) as u64
         }
     }
-    pub unsafe extern "C" fn free_prototype(&mut self, state: *mut Interpreter) {
+    pub unsafe extern "C" fn free_prototype(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.code as *mut libc::c_void,
                 (self.size_code as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.p as *mut libc::c_void,
                 (self.size_p as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.k as *mut libc::c_void,
                 (self.size_k as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.line_info as *mut libc::c_void,
                 (self.size_line_info as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.absolute_line_info as *mut libc::c_void,
                 (self.size_absolute_line_info as u64)
                     .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.local_variables as *mut libc::c_void,
                 (self.size_local_variables as u64)
                     .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self.upvalues as *mut libc::c_void,
                 (self.size_upvalues as u64)
                     .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self as *mut Prototype as *mut libc::c_void,
                 ::core::mem::size_of::<Prototype>(),
             );
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn getobjname(
     }
 }
 pub unsafe extern "C" fn funcnamefromcode(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     p: *const Prototype,
     program_counter: i32,
     name: *mut *const i8,
@@ -487,7 +487,7 @@ pub unsafe extern "C" fn funcnamefromcode(
             }
             _ => return std::ptr::null(),
         }
-        *name = ((*(*(*state).global).tm_name[tm as usize]).get_contents())
+        *name = ((*(*(*interpreter).global).tm_name[tm as usize]).get_contents())
             .offset(2 as isize);
         return b"metamethod\0" as *const u8 as *const i8;
     }
@@ -519,10 +519,10 @@ pub unsafe extern "C" fn changedline(
         return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
     }
 }
-pub unsafe extern "C" fn luaf_newproto(state: *mut Interpreter) -> *mut Prototype {
+pub unsafe extern "C" fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
     unsafe {
         let object: *mut Object = luac_newobj(
-            state,
+            interpreter,
             TAG_TYPE_PROTOTYPE,
             ::core::mem::size_of::<Prototype>(),
         );

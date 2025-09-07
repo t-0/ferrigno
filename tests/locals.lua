@@ -1144,7 +1144,7 @@ do
         x = x - 1
         if x > 0 then return x end
       end,
-      nil,   -- state
+      nil,   -- interpreter
       nil,   -- control variable
       func2close(function () numopen = numopen - 1 end)   -- closing function
   end
@@ -1178,4 +1178,3 @@ print('OK')
 return 5,f
 
 end   -- }
-

@@ -186,20 +186,20 @@ pub unsafe extern "C" fn setvararg(function_state: *mut FunctionState, nparams: 
 }
 pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i32, what: *const i8) -> ! {
     unsafe {
-        let state: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
+        let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let message: *const i8;
         let line: i32 = (*(*function_state).prototype).line_defined;
         let where_0: *const i8 = if line == 0 {
             b"main function\0" as *const u8 as *const i8
         } else {
             luao_pushfstring(
-                state,
+                interpreter,
                 b"function at line %d\0" as *const u8 as *const i8,
                 line,
             )
         };
         message = luao_pushfstring(
-            state,
+            interpreter,
             b"too many %s (limit is %d) in %s\0" as *const u8 as *const i8,
             what,
             limit,
@@ -883,7 +883,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             },
             tag: 0,
         };
-        let state: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
+        let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
         let mut count_k: i32;
@@ -901,9 +901,9 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let io: *mut TValue = &mut value;
         (*io).value.integer = count_k as i64;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-        luah_finishset(state, (*(*function_state).lexical_state).table, key, index, &mut value);
+        luah_finishset(interpreter, (*(*function_state).lexical_state).table, key, index, &mut value);
         (*prototype).k = luam_growaux_(
-            state,
+            interpreter,
             (*prototype).k as *mut libc::c_void,
             count_k as usize,
             &mut (*prototype).size_k,
@@ -933,7 +933,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
                 && (*(*v).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
                 luac_barrier_(
-                    state,
+                    interpreter,
                     &mut (*(prototype as *mut Object)),
                     &mut (*((*v).value.object as *mut Object)),
                 );

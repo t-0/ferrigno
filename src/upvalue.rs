@@ -32,12 +32,12 @@ impl TObject for UpValue {
     }
 }
 impl UpValue {
-    pub unsafe extern "C" fn free_upvalue(&mut self, state: *mut Interpreter) {
+    pub unsafe extern "C" fn free_upvalue(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.v.p != &mut self.u.value as *mut TValue {
                 luaf_unlinkupval(self);
             }
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self as *mut UpValue as *mut libc::c_void,
                 ::core::mem::size_of::<UpValue>(),
             );
@@ -63,13 +63,13 @@ pub struct UpValueBA {
     pub previous: *mut *mut UpValue,
 }
 pub unsafe extern "C" fn newupval(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     level: StackValuePointer,
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
     unsafe {
         let o: *mut Object =
-            luac_newobj(state, TAG_TYPE_UPVALUE, ::core::mem::size_of::<UpValue>());
+            luac_newobj(interpreter, TAG_TYPE_UPVALUE, ::core::mem::size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level).tvalue;
@@ -79,19 +79,19 @@ pub unsafe extern "C" fn newupval(
             (*next).u.open.previous = &mut (*uv).u.open.next;
         }
         *previous = uv;
-        if !((*state).twups != state) {
-            (*state).twups = (*(*state).global).twups;
-            (*(*state).global).twups = state;
+        if !((*interpreter).twups != interpreter) {
+            (*interpreter).twups = (*(*interpreter).global).twups;
+            (*(*interpreter).global).twups = interpreter;
         }
         return uv;
     }
 }
 pub unsafe extern "C" fn luaf_findupval(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     level: StackValuePointer,
 ) -> *mut UpValue {
     unsafe {
-        let mut pp: *mut *mut UpValue = &mut (*state).open_upvalue;
+        let mut pp: *mut *mut UpValue = &mut (*interpreter).open_upvalue;
         loop {
             let p: *mut UpValue = *pp;
             if !(!p.is_null() && (*p).v.p as StackValuePointer >= level) {
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn luaf_findupval(
             }
             pp = &mut (*p).u.open.next;
         }
-        return newupval(state, level, pp);
+        return newupval(interpreter, level, pp);
     }
 }
 pub unsafe extern "C" fn luaf_unlinkupval(uv: *mut UpValue) {

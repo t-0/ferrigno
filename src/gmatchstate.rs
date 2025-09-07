@@ -11,17 +11,17 @@ pub struct GMatchState {
     pub match_state: MatchState,
 }
 impl GMatchState {
-    pub unsafe extern "C" fn gmatch_aux(state: *mut Interpreter) -> i32 {
+    pub unsafe extern "C" fn gmatch_aux(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let gmatch_state: *mut GMatchState =
-                lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
-            return (*gmatch_state).auxiliary(state);
+                lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
+            return (*gmatch_state).auxiliary(interpreter);
         }
     }
 
-    pub unsafe fn auxiliary(& mut self, state: *mut Interpreter) -> i32{
+    pub unsafe fn auxiliary(& mut self, interpreter: *mut Interpreter) -> i32{
         unsafe {
-            self.match_state.interpreter = state;
+            self.match_state.interpreter = interpreter;
             let mut src = self.source;
             while src <= self.match_state.src_end {
                 self.match_state.reprepstate();
@@ -36,26 +36,26 @@ impl GMatchState {
         }
         return 0;
     }
-    pub unsafe extern "C" fn gmatch(state: *mut Interpreter) -> i32 {
+    pub unsafe extern "C" fn gmatch(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let mut lexical_state: u64 = 0;
             let mut lp: u64 = 0;
-            let s: *const i8 = lual_checklstring(state, 1, &mut lexical_state);
-            let p: *const i8 = lual_checklstring(state, 2, &mut lp);
+            let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
+            let p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
             let mut init: u64 =
-                (get_position_relative(lual_optinteger(state, 3, 1 as i64), lexical_state)).wrapping_sub(1 as u64);
-            lua_settop(state, 2);
+                (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as u64);
+            lua_settop(interpreter, 2);
             if init > lexical_state {
                 init = lexical_state.wrapping_add(1 as u64);
             }
-            let gm: *mut GMatchState = User::lua_newuserdatauv(state, ::core::mem::size_of::<GMatchState>(), 0)
+            let gm: *mut GMatchState = User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<GMatchState>(), 0)
                 as *mut GMatchState;
-            (*gm).match_state.prepstate(state, s, lexical_state, p, lp);
+            (*gm).match_state.prepstate(interpreter, s, lexical_state, p, lp);
             (*gm).source = s.offset(init as isize);
             (*gm).pointer = p;
             (*gm).last_match = std::ptr::null();
             lua_pushcclosure(
-                state,
+                interpreter,
                 Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 3,
             );

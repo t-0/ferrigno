@@ -159,14 +159,14 @@ pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn luav_idiv(state: *mut Interpreter, m: i64, n: i64) -> i64 {
+pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
             != 0
         {
             if n == 0 {
                 luag_runerror(
-                    state,
+                    interpreter,
                     b"attempt to divide by zero\0" as *const u8 as *const i8,
                 );
             }
@@ -180,14 +180,14 @@ pub unsafe extern "C" fn luav_idiv(state: *mut Interpreter, m: i64, n: i64) -> i
         };
     }
 }
-pub unsafe extern "C" fn luav_mod(state: *mut Interpreter, m: i64, n: i64) -> i64 {
+pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
             != 0
         {
             if n == 0 {
                 luag_runerror(
-                    state,
+                    interpreter,
                     b"attempt to perform 'n%%0'\0" as *const u8 as *const i8,
                 );
             }

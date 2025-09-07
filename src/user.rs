@@ -65,16 +65,16 @@ impl User {
         }
     }
     pub unsafe extern "C" fn luas_newudata(
-        state: *mut Interpreter,
+        interpreter: *mut Interpreter,
         count_bytes: usize,
         count_upvalues: usize,
     ) -> *mut User {
         unsafe {
             if count_bytes > MAXIMUM_SIZE - User::user_get_size(0, count_upvalues) {
-                (*state).too_big();
+                (*interpreter).too_big();
             }
             let object: *mut Object = luac_newobj(
-                state,
+                interpreter,
                 TAG_TYPE_USER,
                 User::user_get_size(count_bytes, count_upvalues),
             );
@@ -89,19 +89,19 @@ impl User {
         }
     }
     pub unsafe extern "C" fn lua_newuserdatauv(
-        state: *mut Interpreter,
+        interpreter: *mut Interpreter,
         size: usize,
         count_upvalues: usize,
     ) -> *mut libc::c_void {
         unsafe {
-            let new_user: *mut User = User::luas_newudata(state, size, count_upvalues);
-            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+            let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
+            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(new_user as *mut Object));
             (*io).set_tag(TAG_VARIANT_USER);
             (*io).set_collectable();
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
-            if (*(*state).global).gc_debt > 0 {
-                luac_step(state);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+            if (*(*interpreter).global).gc_debt > 0 {
+                luac_step(interpreter);
             }
             return (*new_user).get_raw_memory_mut();
         }
@@ -117,9 +117,9 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn lua_topointer(state: *mut Interpreter, index: i32) -> *const libc::c_void {
+    pub unsafe extern "C" fn lua_topointer(interpreter: *mut Interpreter, index: i32) -> *const libc::c_void {
         unsafe {
-            let o: *const TValue = (*state).index2value(index);
+            let o: *const TValue = (*interpreter).index2value(index);
             match (*o).get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
                     return ::core::mem::transmute::<CFunction, u64>((*o).value.function)
@@ -136,9 +136,9 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn free_user(&mut self, state: *mut Interpreter) {
+    pub unsafe extern "C" fn free_user(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            (*state).free_memory(self as *mut User as *mut libc::c_void, self.get_size());
+            (*interpreter).free_memory(self as *mut User as *mut libc::c_void, self.get_size());
         }
     }
     pub unsafe extern "C" fn traverseudata(&mut self, global: *mut Global) -> i32 {

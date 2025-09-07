@@ -121,9 +121,9 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
         };
     }
 }
-pub unsafe extern "C" fn luac_barrier_(state: *mut Interpreter, object: *mut Object, v: *mut Object) {
+pub unsafe extern "C" fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, v: *mut Object) {
     unsafe {
-        let global: *mut Global = (*state).global;
+        let global: *mut Global = (*interpreter).global;
         if (*global).gc_state as i32 <= 2 {
             really_mark_object(global, v);
             if (*object).get_marked() & 7 > 1 {
@@ -137,9 +137,9 @@ pub unsafe extern "C" fn luac_barrier_(state: *mut Interpreter, object: *mut Obj
         }
     }
 }
-pub unsafe extern "C" fn luac_barrierback_(state: *mut Interpreter, object: *mut Object) {
+pub unsafe extern "C" fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
-        let global: *mut Global = (*state).global;
+        let global: *mut Global = (*interpreter).global;
         if (*object).get_marked() & 7 == 6 {
             (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
@@ -155,15 +155,15 @@ pub unsafe extern "C" fn luac_barrierback_(state: *mut Interpreter, object: *mut
     }
 }
 
-pub unsafe extern "C" fn fix_memory_error_message_state(state: *mut Interpreter) {
+pub unsafe extern "C" fn fix_memory_error_message_state(interpreter: *mut Interpreter) {
     unsafe {
-        let global: *mut Global = (*state).global;
+        let global: *mut Global = (*interpreter).global;
         (*global).fix_memory_error_message_global();
     }
 }
-pub unsafe extern "C" fn fix_object_state(state: *mut Interpreter, object: *mut Object) {
+pub unsafe extern "C" fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
-        let global: *mut Global = (*state).global;
+        let global: *mut Global = (*interpreter).global;
         fix_object_global(global, object);
     }
 }
@@ -248,36 +248,36 @@ pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object)
         }
     }
 }
-pub unsafe extern "C" fn free_object(state: *mut Interpreter, object: *mut Object) {
+pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         match (*object).get_tag() {
             TAG_VARIANT_PROTOTYPE => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
-                (*prototype).free_prototype(state);
+                (*prototype).free_prototype(interpreter);
             }
             TAG_VARIANT_UPVALUE => {
                 let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
-                (*upvalue).free_upvalue(state);
+                (*upvalue).free_upvalue(interpreter);
             }
             TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
                 let closure: *mut Closure = &mut (*(object as *mut Closure));
-                (*closure).free_closure(state);
+                (*closure).free_closure(interpreter);
             }
             TAG_VARIANT_TABLE => {
                 let table: *mut Table = &mut (*(object as *mut Table));
-                (*table).free_table(state);
+                (*table).free_table(interpreter);
             }
             TAG_VARIANT_STATE => {
                 let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
-                (*other).free_state(state);
+                (*other).free_state(interpreter);
             }
             TAG_VARIANT_USER => {
                 let user: *mut User = &mut (*(object as *mut User));
-                (*user).free_user(state);
+                (*user).free_user(interpreter);
             }
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 let tstring: *mut TString = &mut (*(object as *mut TString));
-                (*tstring).free_tstring(state);
+                (*tstring).free_tstring(interpreter);
             },
             _ => {}
         };
@@ -334,11 +334,11 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
         return objects;
     }
 }
-pub unsafe extern "C" fn delete_list(state: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
+pub unsafe extern "C" fn delete_list(interpreter: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
     unsafe {
         while object != limit {
             let next: *mut Object = (*object).next;
-            free_object(state, object);
+            free_object(interpreter, object);
             object = next;
         }
     }

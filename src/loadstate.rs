@@ -14,7 +14,7 @@ use crate::utility::c::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct LoadState {
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,
 }
@@ -22,12 +22,12 @@ impl LoadState {
     unsafe extern "C" fn error(& mut self, why: *const i8) -> ! {
         unsafe {
             luao_pushfstring(
-                self.state,
+                self.interpreter,
                 b"%s: bad binary format (%s)\0" as *const u8 as *const i8,
                 self.name,
                 why,
             );
-            luad_throw(self.state, 3);
+            luad_throw(self.interpreter, 3);
         }
     }
     unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: u64) {
@@ -106,7 +106,7 @@ impl LoadState {
         p: *mut Prototype,
     ) -> *mut TString {
         unsafe {
-            let state: *mut Interpreter = self.state;
+            let interpreter: *mut Interpreter = self.interpreter;
             let ts: *mut TString;
             let mut size: u64 = self.load_size();
             if size == 0 {
@@ -119,25 +119,25 @@ impl LoadState {
                         buffer.as_mut_ptr() as *mut libc::c_void,
                         size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
-                    ts = luas_newlstr(state, buffer.as_mut_ptr(), size);
+                    ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size);
                 } else {
-                    ts = TString::create_long(state, size);
-                    let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                    ts = TString::create_long(interpreter, size);
+                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let x_: *mut TString = ts;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag((*x_).get_tag());
                     (*io).set_collectable();
-                    (*state).luad_inctop();
+                    (*interpreter).luad_inctop();
                     self.load_block(
                         ((*ts).get_contents_mut()) as *mut libc::c_void,
                         size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
             }
             if (*p).get_marked() & 1 << 5 != 0 && (*ts).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(
-                    state,
+                    interpreter,
                     &mut (*(p as *mut Object)),
                     &mut (*(ts as *mut Object)),
                 );
@@ -167,11 +167,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).code = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<u32>()),
             ) as *mut u32;
             (*prototype).size_code = n;
@@ -188,11 +188,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).k = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
             ) as *mut TValue;
             (*prototype).size_k = n;
@@ -241,11 +241,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).p = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<*mut Prototype>()),
             ) as *mut *mut Prototype;
             (*prototype).size_p = n;
@@ -253,12 +253,12 @@ impl LoadState {
                 *((*prototype).p).offset(i as isize) = std::ptr::null_mut();
             }
             for i in 0..n {
-                *((*prototype).p).offset(i as isize) = luaf_newproto(self.state);
+                *((*prototype).p).offset(i as isize) = luaf_newproto(self.interpreter);
                 if (*prototype).get_marked() & 1 << 5 != 0
                     && (**((*prototype).p).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
                     luac_barrier_(
-                        self.state,
+                        self.interpreter,
                         &mut (*(prototype as *mut Object)),
                         &mut (*(*((*prototype).p).offset(i as isize) as *mut Object)),
                     );
@@ -276,11 +276,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).upvalues = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<UpValueDescription>()),
             ) as *mut UpValueDescription;
             (*prototype).size_upvalues = n;
@@ -303,11 +303,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).line_info = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             ) as *mut i8;
             (*prototype).size_line_info = n;
@@ -320,11 +320,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).absolute_line_info = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>()),
             ) as *mut AbsoluteLineInfo;
             (*prototype).size_absolute_line_info = n;
@@ -337,11 +337,11 @@ impl LoadState {
                 && (n as u64).wrapping_add(1u64)
                     > (!(0u64)).wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
             {
-                (*(self.state)).too_big();
+                (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).local_variables = luam_malloc_(
-                self.state,
+                self.interpreter,
                 (n as usize).wrapping_mul(::core::mem::size_of::<LocalVariable>()),
             ) as *mut LocalVariable;
             (*prototype).size_local_variables = n;
@@ -415,7 +415,7 @@ impl LoadState {
             if self.load_byte() as u64 != size {
                 self.error(
                     luao_pushfstring(
-                        self.state,
+                        self.interpreter,
                         b"%s size mismatch\0" as *const u8 as *const i8,
                         tname,
                     ),
@@ -467,13 +467,13 @@ impl LoadState {
     }
 }
 pub unsafe extern "C" fn load_closure(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,
 ) -> *mut Closure {
     unsafe {
         let mut load_state: LoadState = LoadState {
-            state: std::ptr::null_mut(),
+            interpreter: std::ptr::null_mut(),
             zio: std::ptr::null_mut(),
             name: std::ptr::null(),
         };
@@ -486,19 +486,19 @@ pub unsafe extern "C" fn load_closure(
         } else {
             load_state.name = name;
         }
-        load_state.state = state;
+        load_state.interpreter = interpreter;
         load_state.zio = zio;
         load_state.check_header();
-        let ret: *mut Closure = luaf_newlclosure(state, load_state.load_byte() as i32);
-        let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+        let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
+        let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).value.object = &mut (*(ret as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable();
-        (*state).luad_inctop();
-        (*ret).payload.l_prototype = luaf_newproto(state);
+        (*interpreter).luad_inctop();
+        (*ret).payload.l_prototype = luaf_newproto(interpreter);
         if (*ret).get_marked() & 1 << 5 != 0 && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
-                state,
+                interpreter,
                 &mut (*(ret as *mut Object)),
                 &mut (*((*ret).payload.l_prototype as *mut Object)),
             );

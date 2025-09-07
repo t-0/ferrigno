@@ -31,32 +31,32 @@ impl MatchState {
         tr: u8,
     ) -> i32 {
         unsafe {
-            let state: *mut Interpreter = self.interpreter;
+            let interpreter: *mut Interpreter = self.interpreter;
             match tr {
                 TAG_TYPE_CLOSURE => {
                     let n: i32;
-                    lua_pushvalue(state, 3);
+                    lua_pushvalue(interpreter, 3);
                     n = self.push_captures(s, e);
-                    lua_callk(state, n, 1, 0, None);
+                    lua_callk(interpreter, n, 1, 0, None);
                 }
                 TAG_TYPE_TABLE => {
                     self.push_onecapture(0, s, e);
-                    lua_gettable(state, 3);
+                    lua_gettable(interpreter, 3);
                 }
                 _ => {
                     self.add_s(b, s, e);
                     return 1;
                 }
             }
-            if lua_toboolean(state, -1) == 0 {
-                lua_settop(state, -1 - 1);
+            if lua_toboolean(interpreter, -1) == 0 {
+                lua_settop(interpreter, -1 - 1);
                 (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;
-            } else if ((!lua_isstring(state, -1)) as i32 != 0) as i64 != 0 {
+            } else if ((!lua_isstring(interpreter, -1)) as i32 != 0) as i64 != 0 {
                 return lual_error(
-                    state,
+                    interpreter,
                     b"invalid replacement value (a %s)\0" as *const u8 as *const i8,
-                    lua_typename(state, lua_type(state, -1)),
+                    lua_typename(interpreter, lua_type(interpreter, -1)),
                 );
             } else {
                 (*b).add_value();
@@ -641,13 +641,13 @@ impl MatchState {
     }
     pub unsafe extern "C" fn prepstate(
         & mut self,
-        state: *mut Interpreter,
+        interpreter: *mut Interpreter,
         s: *const i8,
         lexical_state: u64,
         p: *const i8,
         lp: u64,
     ) {
-        self.interpreter = state;
+        self.interpreter = interpreter;
         self.matchdepth = 200 as i32;
         self.src_init = s;
         unsafe {
@@ -661,8 +661,8 @@ impl MatchState {
     pub unsafe extern "C" fn add_s(& mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
         unsafe {
             let mut l: u64 = 0;
-            let state: *mut Interpreter = self.interpreter;
-            let mut news: *const i8 = lua_tolstring(state, 3, &mut l);
+            let interpreter: *mut Interpreter = self.interpreter;
+            let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
             let mut p: *const i8;
             loop {
                 p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l) as *mut i8;
@@ -691,7 +691,7 @@ impl MatchState {
                     }
                 } else {
                     lual_error(
-                        state,
+                        interpreter,
                         b"invalid use of '%c' in replacement string\0" as *const u8 as *const i8,
                         CHARACTER_PERCENT as i32,
                     );

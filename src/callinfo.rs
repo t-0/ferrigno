@@ -86,7 +86,7 @@ pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
     }
 }
 pub unsafe extern "C" fn luag_findlocal(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     n: i32,
     pos: *mut StackValuePointer,
@@ -106,8 +106,8 @@ pub unsafe extern "C" fn luag_findlocal(
             }
         }
         if name.is_null() {
-            let limit: StackValuePointer = if call_info == (*state).call_info {
-                (*state).top.stkidrel_pointer
+            let limit: StackValuePointer = if call_info == (*interpreter).call_info {
+                (*interpreter).top.stkidrel_pointer
             } else {
                 (*(*call_info).next).function.stkidrel_pointer
             };
@@ -149,20 +149,20 @@ pub unsafe extern "C" fn findvararg(
     }
 }
 pub unsafe extern "C" fn getfuncname(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
         if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 5 == 0 {
-            return funcnamefromcall(state, (*call_info).previous, name);
+            return funcnamefromcall(interpreter, (*call_info).previous, name);
         } else {
             return std::ptr::null();
         };
     }
 }
 pub unsafe extern "C" fn funcnamefromcall(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
 ) -> *const i8 {
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn funcnamefromcall(
             return b"metamethod\0" as *const u8 as *const i8;
         } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
-                state,
+                interpreter,
                 (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .payload.l_prototype,
                 currentpc(call_info),

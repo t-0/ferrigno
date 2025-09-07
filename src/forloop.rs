@@ -5,7 +5,7 @@ use crate::f2i::*;
 use crate::tag::*;
 use crate::stackvalue::*;
 pub unsafe extern "C" fn forlimit(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     init: i64,
     lim: *const TValue,
     p: *mut i64,
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn forlimit(
                 }
             } == 0
             {
-                luag_forerror(state, lim, b"limit\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, lim, b"limit\0" as *const u8 as *const i8);
             }
             if (0.0) < flim {
                 if step < 0 {
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn forlimit(
         };
     }
 }
-pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer) -> i32 {
+pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i32 {
     unsafe {
         let pinit: *mut TValue = &mut (*ra).tvalue;
         let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
@@ -58,12 +58,12 @@ pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer)
             let step: i64 = (*pstep).value.integer;
             let mut limit: i64 = 0;
             if step == 0 {
-                luag_runerror(state, b"'for' step is zero\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const i8);
             }
             let io: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io).value.integer = init;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-            if forlimit(state, init, plimit, &mut limit, step) != 0 {
+            if forlimit(interpreter, init, plimit, &mut limit, step) != 0 {
                 return 1;
             } else {
                 let mut count: u64;
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer)
                 != 0) as i64
                 != 0
             {
-                luag_forerror(state, plimit, b"limit\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, plimit, b"limit\0" as *const u8 as *const i8);
             }
             if (((if (*pstep).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                 step_0 = (*pstep).value.number;
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer)
                 != 0) as i64
                 != 0
             {
-                luag_forerror(state, pstep, b"step\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, pstep, b"step\0" as *const u8 as *const i8);
             }
             if (((if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
                 init_0 = (*pinit).value.number;
@@ -129,10 +129,10 @@ pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer)
                 != 0) as i64
                 != 0
             {
-                luag_forerror(state, pinit, b"initial value\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, pinit, b"initial value\0" as *const u8 as *const i8);
             }
             if step_0 == 0.0 {
-                luag_runerror(state, b"'for' step is zero\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const i8);
             }
             if if (0.0) < step_0 {
                 (limit_0 < init_0) as i32

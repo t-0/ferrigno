@@ -6,15 +6,15 @@ use crate::tvalue::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
 pub struct BuffFS {
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     is_pushed: bool,
     size: usize,
     block: [i8; BUFFFS_SIZE],
 }
 impl BuffFS {
-    pub fn new(state_: *mut Interpreter) -> Self {
+    pub fn new(interpreter: *mut Interpreter) -> Self {
         return BuffFS {
-            state: state_,
+            interpreter: interpreter,
             is_pushed: false,
             size: 0,
             block: [0; BUFFFS_SIZE],
@@ -22,15 +22,15 @@ impl BuffFS {
     }
     pub unsafe extern "C" fn clear(&mut self) {
         unsafe {
-            let io: *mut TValue = &mut (*(*self.state).top.stkidrel_pointer).tvalue;
+            let io: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer).tvalue;
             let ts: *mut TString =
-                luas_newlstr(self.state, self.block.as_mut_ptr(), self.size as u64);
+                luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size as u64);
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag((*ts).get_tag());
             (*io).set_collectable();
-            (*self.state).top.stkidrel_pointer = (*self.state).top.stkidrel_pointer.offset(1);
+            (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {
-                concatenate(self.state, 2);
+                concatenate(self.interpreter, 2);
             } else {
                 self.is_pushed = true;
             };
@@ -57,14 +57,14 @@ impl BuffFS {
                 self.size += length as usize;
             } else {
                 self.clear();
-                let io = &mut (*(*self.state).top.stkidrel_pointer).tvalue;
-                let ts = luas_newlstr(self.state, pointer, length);
+                let io = &mut (*(*self.interpreter).top.stkidrel_pointer).tvalue;
+                let ts = luas_newlstr(self.interpreter, pointer, length);
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag((*ts).get_tag());
                 (*io).set_collectable();
-                (*self.state).top.stkidrel_pointer = (*self.state).top.stkidrel_pointer.offset(1);
+                (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {
-                    concatenate(self.state, 2);
+                    concatenate(self.interpreter, 2);
                 } else {
                     self.is_pushed = true;
                 };

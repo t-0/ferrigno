@@ -1270,11 +1270,11 @@ end
 b = testamem("doing nothing", function () return 10 end)
 assert(b == 10)
 
--- testing memory errors when creating a new state
+-- testing memory errors when creating a new interpreter
 
-testamem("state creation", function ()
+testamem("interpreter creation", function ()
   local st = T.newstate()
-  if st then T.closestate(st) end   -- close new state
+  if st then T.closestate(st) end   -- close new interpreter
   return st
 end)
 
@@ -1441,7 +1441,7 @@ do   -- testing failing in 'lua_checkstack'
   assert(res == false)
 end
 
-do   -- closing state with no extra memory
+do   -- closing interpreter with no extra memory
   local L = T.newstate()
   T.alloccount(0)
   T.closestate(L)

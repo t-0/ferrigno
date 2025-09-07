@@ -6,7 +6,7 @@ use crate::tag::*;
 use crate::tvalue::*;
 #[repr(C)]
 struct DumpState {
-    pub state: *mut Interpreter,
+    pub interpreter: *mut Interpreter,
     pub write_function: WriteFunction,
     pub pointer: *mut libc::c_void,
     pub is_strip: bool,
@@ -14,13 +14,13 @@ struct DumpState {
 }
 impl DumpState {
     fn new(
-        state: *mut Interpreter,
+        interpreter: *mut Interpreter,
         write_function: WriteFunction,
         pointer: *mut libc::c_void,
         is_strip: bool,
     ) -> Self {
         return DumpState {
-            state: state,
+            interpreter: interpreter,
             write_function,
             pointer,
             is_strip: is_strip,
@@ -33,7 +33,7 @@ impl DumpState {
                 self.status =
                     (Some((self.write_function).expect("non-null function pointer")))
                         .expect("non-null function pointer")(
-                        self.state,
+                        self.interpreter,
                         pointer,
                         size as u64,
                         self.pointer,
@@ -285,14 +285,14 @@ impl DumpState {
     }
 }
 pub unsafe extern "C" fn save_prototype(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     prototype: *const Prototype,
     write_function: WriteFunction,
     data: *mut libc::c_void,
     is_strip: bool,
 ) -> i32 {
     unsafe {
-        let mut dump_state = DumpState::new(state, write_function, data, is_strip);
+        let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();
         dump_state.dump_byte((*prototype).size_upvalues as u8);
         dump_state.dump_function(prototype, std::ptr::null_mut());

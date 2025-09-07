@@ -46,16 +46,16 @@ pub union TStringExtension {
     pub hash_next: *mut TString,
 }
 impl TString {
-    pub unsafe fn free_tstring(&mut self, state: *mut Interpreter) {
+    pub unsafe fn free_tstring(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.get_tag_variant() == TAG_VARIANT_STRING_SHORT {
-                self.remove_from_state(state);
-                (*state).free_memory(
+                self.remove_from_state(interpreter);
+                (*interpreter).free_memory(
                     self as *mut TString as *mut libc::c_void,
                     core::mem::size_of::<TString>() + 1 + self.get_length() as usize,
                 );
             } else {
-                (*state).free_memory(
+                (*interpreter).free_memory(
                     self as *mut TString as *mut libc::c_void,
                     core::mem::size_of::<TString>() + 1 + self.get_length() as usize,
                 );
@@ -68,9 +68,9 @@ impl TString {
             (*stringtable).remove(self);
         }
     }
-    pub unsafe fn remove_from_state(&mut self, state: *mut Interpreter) {
+    pub unsafe fn remove_from_state(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            let global: *mut Global = &mut (*(*state).global);
+            let global: *mut Global = &mut (*(*interpreter).global);
             self.remove_from_global(global);
         }
     }
@@ -89,22 +89,22 @@ impl TString {
             }
         }
     }
-    pub unsafe fn create_long(state: *mut Interpreter, length: u64) -> *mut TString {
+    pub unsafe fn create_long(interpreter: *mut Interpreter, length: u64) -> *mut TString {
         unsafe {
             let ret: *mut TString = createstrobj(
-                state,
+                interpreter,
                 length,
                 TAG_VARIANT_STRING_LONG,
-                (*(*state).global).seed,
+                (*(*interpreter).global).seed,
             );
             (*ret).u.long_length = length;
             (*ret).short_length = 0xFF;
             return ret;
         }
     }
-    pub unsafe fn intern(state: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
+    pub unsafe fn intern(interpreter: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
         unsafe {
-            let global: *mut Global = (*state).global;
+            let global: *mut Global = (*interpreter).global;
             let tb: *mut StringTable = &mut (*global).string_table;
             let h: u32 = luas_hash(str, l, (*global).seed);
             let mut list: *mut *mut TString = &mut *((*tb).hash)
@@ -127,11 +127,11 @@ impl TString {
                 ts = (*ts).u.hash_next;
             }
             if (*tb).length >= (*tb).size {
-                growstrtab(state, tb);
+                growstrtab(interpreter, tb);
                 list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as isize)
                     as *mut *mut TString;
             }
-            ts = createstrobj(state, l, TAG_VARIANT_STRING_SHORT, h);
+            ts = createstrobj(interpreter, l, TAG_VARIANT_STRING_SHORT, h);
             (*ts).short_length = l as u8;
             memcpy(
                 (*ts).get_contents() as *mut libc::c_void,
@@ -187,10 +187,10 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
         return (*ts).hash;
     }
 }
-pub unsafe extern "C" fn createstrobj(state: *mut Interpreter, l: u64, tag: u8, h: u32) -> *mut TString {
+pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: u64, tag: u8, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
-        let o: *mut Object = luac_newobj(state, tag, total_size);
+        let o: *mut Object = luac_newobj(interpreter, tag, total_size);
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
@@ -198,10 +198,10 @@ pub unsafe extern "C" fn createstrobj(state: *mut Interpreter, l: u64, tag: u8, 
         return ts;
     }
 }
-pub unsafe extern "C" fn luas_newlstr(state: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
+pub unsafe extern "C" fn luas_newlstr(interpreter: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
     unsafe {
         if l <= STRING_SHORT_MAX {
-            return TString::intern(state, str, l);
+            return TString::intern(interpreter, str, l);
         } else {
             if ((l.wrapping_mul(::core::mem::size_of::<i8>() as u64)
         >= (if (::core::mem::size_of::<u64>() as u64) < ::core::mem::size_of::<i64>() as u64 {
@@ -213,9 +213,9 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut Interpreter, str: *const i8, l
             != 0) as i64
             != 0
         {
-            (*state).too_big();
+            (*interpreter).too_big();
         }
-            let ts: *mut TString = TString::create_long(state, l);
+            let ts: *mut TString = TString::create_long(interpreter, l);
             memcpy(
                 ((*ts).get_contents_mut()) as *mut libc::c_void,
                 str as *const libc::c_void,
@@ -225,14 +225,14 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut Interpreter, str: *const i8, l
         };
     }
 }
-pub unsafe extern "C" fn luas_new(state: *mut Interpreter, str: *const i8) -> *mut TString {
+pub unsafe extern "C" fn luas_new(interpreter: *mut Interpreter, str: *const i8) -> *mut TString {
     unsafe {
         let i: u32 = ((str as u64
             & (0x7FFFFFFF as u32)
                 .wrapping_mul(2 as u32)
                 .wrapping_add(1 as u32) as u64) as u32)
             .wrapping_rem(53 as u32);
-        let p: *mut *mut TString = ((*(*state).global).string_cache[i as usize]).as_mut_ptr();
+        let p: *mut *mut TString = ((*(*interpreter).global).string_cache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
             if strcmp(str, (**p.offset(j as isize)).get_contents_mut()) == 0 {
@@ -247,7 +247,7 @@ pub unsafe extern "C" fn luas_new(state: *mut Interpreter, str: *const i8) -> *m
             j -= 1;
         }
         let ref mut fresh24 = *p.offset(0 as isize);
-        *fresh24 = luas_newlstr(state, str, strlen(str));
+        *fresh24 = luas_newlstr(interpreter, str, strlen(str));
         return *p.offset(0 as isize);
     }
 }
@@ -299,13 +299,13 @@ pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *
         }
     }
 }
-pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
+pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
     unsafe {
         if total == 1 {
             return;
         }
         loop {
-            let top: StackValuePointer = (*state).top.stkidrel_pointer;
+            let top: StackValuePointer = (*interpreter).top.stkidrel_pointer;
             let mut n: i32 = 2;
             if !(get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TAG_TYPE_STRING
                 || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TAG_TYPE_NUMERIC)
@@ -313,11 +313,11 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                     || get_tag_type((*top.offset(-(1 as isize))).tvalue.get_tag())
                         == TAG_TYPE_NUMERIC
                         && {
-                            luao_tostring(state, &mut (*top.offset(-(1 as isize))).tvalue);
+                            luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
                             1 != 0
                         })
             {
-                luat_tryconcattm(state);
+                luat_tryconcattm(interpreter);
             } else if (*top.offset(-(1 as isize))).tvalue.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
                 && (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString))
@@ -328,7 +328,7 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                     || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag())
                         == TAG_TYPE_NUMERIC
                         && {
-                            luao_tostring(state, &mut (*top.offset(-(2 as isize))).tvalue);
+                            luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
                             1 != 0
                         }) as i32;
             } else if (*top.offset(-(2 as isize))).tvalue.get_tag_variant()
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                         ) == 3
                             && {
                                 luao_tostring(
-                                    state,
+                                    interpreter,
                                     &mut (*top.offset(-(n as isize)).offset(-(1 as isize))).tvalue,
                                 );
                                 1 != 0
@@ -384,8 +384,8 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                         != 0) as i64
                         != 0
                     {
-                        (*state).top.stkidrel_pointer = top.offset(-(total as isize));
-                        luag_runerror(state, b"string length overflow\0" as *const u8 as *const i8);
+                        (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
+                        luag_runerror(interpreter, b"string length overflow\0" as *const u8 as *const i8);
                     }
                     tl = (tl as u64).wrapping_add(l) as u64;
                     n += 1;
@@ -393,9 +393,9 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                 if tl <= 40 as u64 {
                     let mut buffer: [i8; 40] = [0; 40];
                     copy2buff(top, n, buffer.as_mut_ptr());
-                    ts = luas_newlstr(state, buffer.as_mut_ptr(), tl);
+                    ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), tl);
                 } else {
-                    ts = TString::create_long(state, tl);
+                    ts = TString::create_long(interpreter, tl);
                     copy2buff(top, n, (*ts).get_contents());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize))).tvalue;
@@ -405,8 +405,8 @@ pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
                 (*io).set_collectable();
             }
             total -= n - 1;
-            (*state).top.stkidrel_pointer =
-                (*state).top.stkidrel_pointer.offset(-((n - 1) as isize));
+            (*interpreter).top.stkidrel_pointer =
+                (*interpreter).top.stkidrel_pointer.offset(-((n - 1) as isize));
             if !(total > 1) {
                 break;
             }
@@ -425,13 +425,13 @@ pub unsafe extern "C" fn get_position_relative(pos: i64, length: u64) -> u64 {
     };
 }
 pub unsafe extern "C" fn get_position_end(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     arg: i32,
     def: i64,
     length: u64,
 ) -> u64 {
     unsafe {
-        let pos: i64 = lual_optinteger(state, arg, def);
+        let pos: i64 = lual_optinteger(interpreter, arg, def);
         if pos > length as i64 {
             return length;
         } else if pos >= 0 {

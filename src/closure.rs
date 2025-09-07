@@ -58,14 +58,14 @@ impl TObject for Closure {
     }
 }
 impl Closure {
-    pub unsafe fn free_closure(& mut self, state: * mut Interpreter) {
+    pub unsafe fn free_closure(& mut self, interpreter: * mut Interpreter) {
         unsafe {
             let size = match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_C => size_cclosure(self.count_upvalues as usize),
                 TAG_VARIANT_CLOSURE_L => size_lclosure(self.count_upvalues as usize),
                 _ => 0,
             };
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self as * mut Closure as *mut libc::c_void,
                 size,
             );
@@ -112,20 +112,20 @@ impl Closure {
         }
     }
 }
-pub unsafe extern "C" fn collectvalidlines(state: *mut Interpreter, closure: *mut Closure) {
+pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
-            (*(*state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
             let mut current_line: i32 = (*prototype).line_defined;
-            let table: *mut Table = luah_new(state);
-            let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+            let table: *mut Table = luah_new(interpreter);
+            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(table as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);
             (*io).set_collectable();
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).line_info).is_null() {
                 let mut v: TValue = TValue {
                     value: Value {
@@ -142,14 +142,14 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut Interpreter, closure: *mu
                 };
                 for i in start..(*prototype).size_line_info {
                     current_line = nextline(prototype, current_line, i);
-                    luah_setint(state, table, current_line as i64, &mut v);
+                    luah_setint(interpreter, table, current_line as i64, &mut v);
                 }
             }
         };
     }
 }
 pub unsafe extern "C" fn auxgetinfo(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,
     closure: *mut Closure,
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn auxgetinfo(
                     };
                 },
                 CHARACTER_LOWER_N => {
-                    (*ar).namewhat = getfuncname(state, call_info, &mut (*ar).name);
+                    (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
                         (*ar).namewhat = b"\0" as *const u8 as *const i8;
                         (*ar).name = std::ptr::null();
@@ -223,10 +223,10 @@ pub unsafe extern "C" fn size_cclosure(count_upvalues: usize) -> usize {
 pub unsafe extern "C" fn size_lclosure(count_upvalues: usize) -> usize {
     32usize + ::core::mem::size_of::<*mut TValue>() * count_upvalues
 }
-pub unsafe extern "C" fn luaf_newcclosure(state: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
+pub unsafe extern "C" fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
         let object: *mut Object = luac_newobj(
-            state,
+            interpreter,
             TAG_VARIANT_CLOSURE_C,
             size_cclosure(count_upvalues as usize),
         );
@@ -235,10 +235,10 @@ pub unsafe extern "C" fn luaf_newcclosure(state: *mut Interpreter, count_upvalue
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_newlclosure(state: *mut Interpreter, mut count_upvalues: i32) -> *mut Closure {
+pub unsafe extern "C" fn luaf_newlclosure(interpreter: *mut Interpreter, mut count_upvalues: i32) -> *mut Closure {
     unsafe {
         let object: *mut Object = luac_newobj(
-            state,
+            interpreter,
             TAG_VARIANT_CLOSURE_L,
             size_lclosure(count_upvalues as usize),
         );
@@ -257,11 +257,11 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut Interpreter, mut count_upv
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_initupvals(state: *mut Interpreter, cl: *mut Closure) {
+pub unsafe extern "C" fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut Closure) {
     unsafe {
         for i in 0..(*cl).count_upvalues {
             let object: *mut Object = luac_newobj(
-                state,
+                interpreter,
                 TAG_TYPE_UPVALUE,
                 ::core::mem::size_of::<UpValue>(),
             );
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn luaf_initupvals(state: *mut Interpreter, cl: *mut Closu
             *fresh = upvalue;
             if (*cl).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(
-                    state,
+                    interpreter,
                     &mut (*(cl as *mut Object)),
                     &mut (*(upvalue as *mut Object)),
                 );

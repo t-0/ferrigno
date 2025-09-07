@@ -635,7 +635,7 @@ if T then
 end
 
 
--- create an object to be collected when state is closed
+-- create an object to be collected when interpreter is closed
 do
   local setmetatable,assert,type,print,getmetatable =
         setmetatable,assert,type,print,getmetatable
@@ -646,13 +646,13 @@ do
     local a = 'xuxu'..(10+3)..'joao', {}
     ___Glob = o  -- ressurrect object!
     setmetatable({}, tt)  -- creates a new one with same metatable
-    print(">>> closing state " .. "<<<\n")
+    print(">>> closing interpreter " .. "<<<\n")
   end
   local u = setmetatable({}, tt)
   ___Glob = {u}   -- avoid object being collected before program end
 end
 
--- create several objects to raise errors when collected while closing state
+-- create several objects to raise errors when collected while closing interpreter
 if T then
   local error, assert, find, warn = error, assert, string.find, warn
   local n = 0

@@ -6,9 +6,9 @@ pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
     b"suspended\0" as *const u8 as *const i8,
     b"normal\0" as *const u8 as *const i8,
 ];
-pub unsafe extern "C" fn auxstatus(state: *mut Interpreter, co: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {
-        if state == co {
+        if interpreter == co {
             return 0;
         } else {
             match (*co).get_status() {

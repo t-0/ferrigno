@@ -27,15 +27,15 @@ impl StringTable {
         }
     }
 }
-pub unsafe extern "C" fn luas_resize(state: *mut Interpreter, new_size: usize) {
+pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
-        let tb: *mut StringTable = &mut (*(*state).global).string_table;
+        let tb: *mut StringTable = &mut (*(*interpreter).global).string_table;
         let old_size= (*tb).size as usize;
         if new_size < old_size {
             tablerehash((*tb).hash, old_size, new_size);
         }
         let newvect: *mut *mut TString = luam_realloc_(
-            state,
+            interpreter,
             (*tb).hash as *mut libc::c_void,
             old_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
             new_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
@@ -53,23 +53,23 @@ pub unsafe extern "C" fn luas_resize(state: *mut Interpreter, new_size: usize) {
         };
     }
 }
-pub unsafe extern "C" fn luas_init_state(state: *mut Interpreter) {
+pub unsafe extern "C" fn luas_init_state(interpreter: *mut Interpreter) {
     unsafe {
-        let global: *mut Global = (*state).global;
-        luas_init_global(global, state);
+        let global: *mut Global = (*interpreter).global;
+        luas_init_global(global, interpreter);
     }
 }
-pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut Interpreter) {
+pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut Interpreter) {
     unsafe {
         let tb: *mut StringTable = &mut (*global).string_table;
         (*tb).hash = luam_malloc_(
-            state,
+            interpreter,
             STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
         tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*global).memory_error_message = luas_newlstr(
-            state,
+            interpreter,
             b"not enough memory\0" as *const u8 as *const i8,
             (::core::mem::size_of::<[i8; 18]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -79,12 +79,12 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut Inter
         (*global).stringcache_set_error();
     }
 }
-pub unsafe extern "C" fn growstrtab(state: *mut Interpreter, tb: *mut StringTable) {
+pub unsafe extern "C" fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {
     unsafe {
         if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
-            luac_fullgc(state, true);
+            luac_fullgc(interpreter, true);
             if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
-                luad_throw(state, 4);
+                luad_throw(interpreter, 4);
             }
         }
         if (*tb).size
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn growstrtab(state: *mut Interpreter, tb: *mut StringTabl
             }) as i32
                 / 2
         {
-            luas_resize(state, ((*tb).size * 2) as usize);
+            luas_resize(interpreter, ((*tb).size * 2) as usize);
         }
     }
 }

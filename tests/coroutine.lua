@@ -714,24 +714,24 @@ else
 
 
   -- using a main thread as a coroutine  (dubious use!)
-  local state = T.newstate()
+  local interpreter = T.newstate()
 
   -- check that yielddable is working correctly
-  assert(T.testC(state, "newthread; isyieldable -1; remove 1; return 1"))
+  assert(T.testC(interpreter, "newthread; isyieldable -1; remove 1; return 1"))
 
   -- main thread is not yieldable
-  assert(not T.testC(state, "rawgeti R 1; isyieldable -1; remove 1; return 1"))
+  assert(not T.testC(interpreter, "rawgeti R 1; isyieldable -1; remove 1; return 1"))
 
-  T.testC(state, "settop 0")
+  T.testC(interpreter, "settop 0")
 
-  T.loadlib(state)
+  T.loadlib(interpreter)
 
-  assert(T.doremote(state, [[
+  assert(T.doremote(interpreter, [[
     coroutine = require'coroutine';
     X = function (x) coroutine.yield(x, 'BB'); return 'CC' end;
     return 'ok']]))
 
-  local t = table.pack(T.testC(state, [[
+  local t = table.pack(T.testC(interpreter, [[
     rawgeti R 1     # get main thread
     pushstring 'XX'
     getglobal X    # get function for body
@@ -748,11 +748,11 @@ else
     return *
   ]]))
   assert(t.n == 4 and t[2] == 'XX' and t[3] == 'CC' and t[4] == 'OK')
-  assert(T.doremote(state, "return T") == '2')
-  assert(T.doremote(state, "return A") == 'AA')
-  assert(T.doremote(state, "return B") == 'BB')
+  assert(T.doremote(interpreter, "return T") == '2')
+  assert(T.doremote(interpreter, "return A") == 'AA')
+  assert(T.doremote(interpreter, "return B") == 'BB')
 
-  T.closestate(state)
+  T.closestate(interpreter)
 
   print'+'
 

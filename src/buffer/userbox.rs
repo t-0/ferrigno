@@ -9,25 +9,25 @@ pub struct UserBox {
 }
 impl UserBox {
     pub unsafe extern "C" fn resize_userbox(
-        state: *mut Interpreter,
+        interpreter: *mut Interpreter,
         index: i32,
         new_size: usize,
     ) -> *mut libc::c_void {
         unsafe {
-            let user_box: *mut UserBox = lua_touserdata(state, index) as *mut UserBox;
+            let user_box: *mut UserBox = lua_touserdata(interpreter, index) as *mut UserBox;
             let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
             if ((temp.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
-                lua_pushstring(state, b"not enough memory\0" as *const u8 as *const i8);
-                lua_error(state);
+                lua_pushstring(interpreter, b"not enough memory\0" as *const u8 as *const i8);
+                lua_error(interpreter);
             }
             (*user_box).pointer = temp;
             (*user_box).size = new_size;
             return temp;
         }
     }
-    pub unsafe extern "C" fn userbox_gc(state: *mut Interpreter) -> i32 {
+    pub unsafe extern "C" fn userbox_gc(interpreter: *mut Interpreter) -> i32 {
         unsafe {
-            UserBox::resize_userbox(state, 1, 0);
+            UserBox::resize_userbox(interpreter, 1, 0);
             return 0;
         }
     }
@@ -53,16 +53,16 @@ impl UserBox {
             },
         ]
     };
-    pub unsafe extern "C" fn new_userbox(state: *mut Interpreter) {
+    pub unsafe extern "C" fn new_userbox(interpreter: *mut Interpreter) {
         unsafe {
             let box_0: *mut UserBox =
-                User::lua_newuserdatauv(state, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;
+                User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;
             (*box_0).pointer = std::ptr::null_mut();
             (*box_0).size = 0;
-            if lual_newmetatable(state, b"_UBOX*\0" as *const u8 as *const i8) != 0 {
-                lual_setfuncs(state, UserBox::USERBOX_METATABLE.as_ptr(), 0);
+            if lual_newmetatable(interpreter, b"_UBOX*\0" as *const u8 as *const i8) != 0 {
+                lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), 0);
             }
-            lua_setmetatable(state, -2);
+            lua_setmetatable(interpreter, -2);
         }
     }
 }

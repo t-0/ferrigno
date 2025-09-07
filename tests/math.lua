@@ -844,9 +844,9 @@ do
   -- testing return of 'randomseed'
   local x, y = math.randomseed()
   local res = math.random(0)
-  x, y = math.randomseed(x, y)    -- should repeat the state
+  x, y = math.randomseed(x, y)    -- should repeat the interpreter
   assert(math.random(0) == res)
-  math.randomseed(x, y)    -- again should repeat the state
+  math.randomseed(x, y)    -- again should repeat the interpreter
   assert(math.random(0) == res)
   -- keep the random seed for following tests
   print(string.format("random seeds: %d, %d", x, y))

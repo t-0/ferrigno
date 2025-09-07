@@ -90,12 +90,12 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
         },
     ]
 };
-pub unsafe extern "C" fn lual_openlibs(state: *mut Interpreter) {
+pub unsafe extern "C" fn lual_openlibs(interpreter: *mut Interpreter) {
     unsafe {
         let mut lib: *const RegisteredFunction = LOADED_FUNCTIONS.as_ptr();
         while ((*lib).function).is_some() {
-            lual_requiref(state, (*lib).name, (*lib).function, 1);
-            lua_settop(state, -1 - 1);
+            lual_requiref(interpreter, (*lib).name, (*lib).function, 1);
+            lua_settop(interpreter, -1 - 1);
             lib = lib.offset(1);
         }
     }

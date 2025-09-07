@@ -144,12 +144,12 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 
         return length;
     }
 }
-pub unsafe extern "C" fn luao_tostring(state: *mut Interpreter, obj: *mut TValue) {
+pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
     unsafe {
         let mut buffer: [i8; 44] = [0; 44];
         let length = tostringbuff(obj, buffer.as_mut_ptr());
         let io: *mut TValue = obj;
-        let x_: *mut TString = luas_newlstr(state, buffer.as_mut_ptr(), length);
+        let x_: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length);
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag((*x_).get_tag());
         (*io).set_collectable();
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool
     }
 }
 pub unsafe extern "C" fn lessthanothers(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> i32 {
@@ -248,12 +248,12 @@ pub unsafe extern "C" fn lessthanothers(
                 &mut (*((*r).value.object as *mut TString)),
             ) < 0) as i32;
         } else {
-            return luat_callordertm(state, l, r, TM_LT);
+            return luat_callordertm(interpreter, l, r, TM_LT);
         };
     }
 }
 pub unsafe extern "C" fn luav_lessthan(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -263,12 +263,12 @@ pub unsafe extern "C" fn luav_lessthan(
         {
             return ltnum(l, r);
         } else {
-            return 0 != lessthanothers(state, l, r);
+            return 0 != lessthanothers(interpreter, l, r);
         };
     }
 }
 pub unsafe extern "C" fn lessequalothers(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -281,12 +281,12 @@ pub unsafe extern "C" fn lessequalothers(
                 &mut (*((*r).value.object as *mut TString)),
             ) <= 0;
         } else {
-            return 0 != luat_callordertm(state, l, r, TM_LE);
+            return 0 != luat_callordertm(interpreter, l, r, TM_LE);
         }
     }
 }
 pub unsafe extern "C" fn luav_lessequal(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -296,12 +296,12 @@ pub unsafe extern "C" fn luav_lessequal(
         {
             return lenum(l, r);
         } else {
-            return lessequalothers(state, l, r);
+            return lessequalothers(interpreter, l, r);
         };
     }
 }
 pub unsafe extern "C" fn luav_equalobj(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     t1: *const TValue,
     t2: *const TValue,
 ) -> bool {
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     == &mut (*((*t2).value.object as *mut User)) as *mut User
                 {
                     return true;
-                } else if state.is_null() {
+                } else if interpreter.is_null() {
                     return false;
                 }
                 tm = if ((*((*t1).value.object as *mut User)).get_metatable()).is_null() {
@@ -355,7 +355,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     luat_gettm(
                         (*((*t1).value.object as *mut User)).get_metatable(),
                         TM_EQ,
-                        (*(*state).global).tm_name[TM_EQ as usize],
+                        (*(*interpreter).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn luav_equalobj(
                         luat_gettm(
                             (*((*t2).value.object as *mut User)).get_metatable(),
                             TM_EQ,
-                            (*(*state).global).tm_name[TM_EQ as usize],
+                            (*(*interpreter).global).tm_name[TM_EQ as usize],
                         )
                     };
                 }
@@ -380,7 +380,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     == &mut (*((*t2).value.object as *mut Table)) as *mut Table
                 {
                     return true;
-                } else if state.is_null() {
+                } else if interpreter.is_null() {
                     return false;
                 }
                 tm = if ((*((*t1).value.object as *mut Table)).get_metatable()).is_null() {
@@ -394,7 +394,7 @@ pub unsafe extern "C" fn luav_equalobj(
                     luat_gettm(
                         (*((*t1).value.object as *mut Table)).get_metatable(),
                         TM_EQ,
-                        (*(*state).global).tm_name[TM_EQ as usize],
+                        (*(*interpreter).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn luav_equalobj(
                         luat_gettm(
                             (*((*t2).value.object as *mut Table)).get_metatable(),
                             TM_EQ,
-                            (*(*state).global).tm_name[TM_EQ as usize],
+                            (*(*interpreter).global).tm_name[TM_EQ as usize],
                         )
                     };
                 }
@@ -419,13 +419,13 @@ pub unsafe extern "C" fn luav_equalobj(
         if tm.is_null() {
             return false;
         } else {
-            luat_calltmres(state, tm, t1, t2, (*state).top.stkidrel_pointer);
-            return !((*(*state).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*state).top.stkidrel_pointer).tvalue.get_tag()) == TAG_TYPE_NIL);
+            luat_calltmres(interpreter, tm, t1, t2, (*interpreter).top.stkidrel_pointer);
+            return !((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag()) == TAG_TYPE_NIL);
         };
     }
 }
-pub unsafe extern "C" fn luav_objlen(state: *mut Interpreter, ra: StackValuePointer, rb: *const TValue) {
+pub unsafe extern "C" fn luav_objlen(interpreter: *mut Interpreter, ra: StackValuePointer, rb: *const TValue) {
     unsafe {
         let tm: *const TValue;
         match (*rb).get_tag_variant() {
@@ -439,7 +439,7 @@ pub unsafe extern "C" fn luav_objlen(state: *mut Interpreter, ra: StackValuePoin
                     luat_gettm(
                         (*h).get_metatable(),
                         TM_LEN,
-                        (*(*state).global).tm_name[TM_LEN as usize],
+                        (*(*interpreter).global).tm_name[TM_LEN as usize],
                     )
                 };
                 if tm.is_null() {
@@ -462,13 +462,13 @@ pub unsafe extern "C" fn luav_objlen(state: *mut Interpreter, ra: StackValuePoin
                 return;
             }
             _ => {
-                tm = luat_gettmbyobj(state, rb, TM_LEN);
+                tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
                 if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
                 {
-                    luag_typeerror(state, rb, b"get length of\0" as *const u8 as *const i8);
+                    luag_typeerror(interpreter, rb, b"get length of\0" as *const u8 as *const i8);
                 }
             }
         }
-        luat_calltmres(state, tm, rb, rb, ra);
+        luat_calltmres(interpreter, tm, rb, rb, ra);
     }
 }

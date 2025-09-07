@@ -393,64 +393,64 @@ pub unsafe extern "C" fn open_func(
 }
 pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
     unsafe {
-        let state: *mut Interpreter = (*lexical_state).interpreter;
+        let interpreter: *mut Interpreter = (*lexical_state).interpreter;
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let prototype: *mut Prototype = (*function_state).prototype;
         luak_ret(function_state, luay_nvarstack(function_state), 0);
         leaveblock(function_state);
         luak_finish(function_state);
         (*prototype).code = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).code as *mut libc::c_void,
             &mut (*prototype).size_code,
             (*function_state).program_counter as usize,
             ::core::mem::size_of::<u32>(),
         ) as *mut u32;
         (*prototype).line_info = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).line_info as *mut libc::c_void,
             &mut (*prototype).size_line_info,
             (*function_state).program_counter as usize,
             ::core::mem::size_of::<i8>(),
         ) as *mut i8;
         (*prototype).absolute_line_info = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).absolute_line_info as *mut libc::c_void,
             &mut (*prototype).size_absolute_line_info,
             (*function_state).count_abslineinfo as usize,
             ::core::mem::size_of::<AbsoluteLineInfo>(),
         ) as *mut AbsoluteLineInfo;
         (*prototype).k = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).k as *mut libc::c_void,
             &mut (*prototype).size_k,
             (*function_state).count_k as usize,
             ::core::mem::size_of::<TValue>(),
         ) as *mut TValue;
         (*prototype).p = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).p as *mut libc::c_void,
             &mut (*prototype).size_p,
             (*function_state).count_p as usize,
             ::core::mem::size_of::<*mut Prototype>(),
         ) as *mut *mut Prototype;
         (*prototype).local_variables = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).local_variables as *mut libc::c_void,
             &mut (*prototype).size_local_variables,
             (*function_state).count_debug_variables as usize,
             ::core::mem::size_of::<LocalVariable>(),
         ) as *mut LocalVariable;
         (*prototype).upvalues = luam_shrinkvector_(
-            state,
+            interpreter,
             (*prototype).upvalues as *mut libc::c_void,
             &mut (*prototype).size_upvalues,
             (*function_state).count_upvalues as usize,
             ::core::mem::size_of::<UpValueDescription>(),
         ) as *mut UpValueDescription;
         (*lexical_state).function_state = (*function_state).previous;
-        if (*(*state).global).gc_debt > 0 {
-            luac_step(state);
+        if (*(*interpreter).global).gc_debt > 0 {
+            luac_step(interpreter);
         }
     }
 }
@@ -991,7 +991,7 @@ pub unsafe extern "C" fn registerlocalvar(
 }
 pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *mut TString) -> i32 {
     unsafe {
-        let state: *mut Interpreter = (*lexical_state).interpreter;
+        let interpreter: *mut Interpreter = (*lexical_state).interpreter;
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
         let var: *mut VariableDescription;
@@ -1002,7 +1002,7 @@ pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *m
             b"local variables\0" as *const u8 as *const i8,
         );
         (*dynamic_data).active_variable.pointer = luam_growaux_(
-            state,
+            interpreter,
             (*dynamic_data).active_variable.pointer as *mut libc::c_void,
             ((*dynamic_data).active_variable.length + 1) as usize,
             &mut (*dynamic_data).active_variable.size,
@@ -1511,35 +1511,18 @@ pub unsafe extern "C" fn fornum(
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let base: i32 = (*function_state).freereg as i32;
+        let s = b"(for interpreter)\0" as *const u8 as *const i8;
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(lexical_state, variable_name);
         checknext(lexical_state, CHARACTER_EQUAL as i32);
@@ -1567,45 +1550,22 @@ pub unsafe extern "C" fn forlist(lexical_state: *mut LexicalState, indexname: *m
         };
         let mut nvars: i32 = 5;
         let base: i32 = (*function_state).freereg as i32;
+        let s = b"(for interpreter)\0" as *const u8 as *const i8;
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(
             lexical_state,
-            luax_newstring(
-                lexical_state,
-                b"(for state)\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 12]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
-            ),
+            luax_newstring(lexical_state, s, strlen(s) as u64),
         );
         new_localvar(lexical_state, indexname);
         while testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
@@ -2052,25 +2012,25 @@ pub unsafe extern "C" fn luax_newstring(
     length: u64,
 ) -> *mut TString {
     unsafe {
-        let state: *mut Interpreter = (*lexical_state).interpreter;
-        let mut ts: *mut TString = luas_newlstr(state, str, length);
+        let interpreter: *mut Interpreter = (*lexical_state).interpreter;
+        let mut ts: *mut TString = luas_newlstr(interpreter, str, length);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
         if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) {
             ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
         } else {
-            let fresh50 = (*state).top.stkidrel_pointer;
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+            let fresh50 = (*interpreter).top.stkidrel_pointer;
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             let stv: *mut TValue = &mut (*fresh50).tvalue;
             let io: *mut TValue = stv;
             let x_: *mut TString = ts;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
             (*io).set_collectable();
-            luah_finishset(state, (*lexical_state).table, stv, o, stv);
-            if (*(*state).global).gc_debt > 0 {
-                luac_step(state);
+            luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
+            if (*(*interpreter).global).gc_debt > 0 {
+                luac_step(interpreter);
             }
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         }
         return ts;
     }
@@ -2111,7 +2071,7 @@ pub unsafe extern "C" fn inclinenumber(lexical_state: *mut LexicalState) {
     }
 }
 pub unsafe extern "C" fn luax_setinput(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     lexical_state: *mut LexicalState,
     zio: *mut ZIO,
     source: *mut TString,
@@ -2119,7 +2079,7 @@ pub unsafe extern "C" fn luax_setinput(
 ) {
     unsafe {
         (*lexical_state).token.token = 0;
-        (*lexical_state).interpreter = state;
+        (*lexical_state).interpreter = interpreter;
         (*lexical_state).current = firstchar;
         (*lexical_state).look_ahead.token = TK_EOS as i32;
         (*lexical_state).zio = zio;
@@ -2128,7 +2088,7 @@ pub unsafe extern "C" fn luax_setinput(
         (*lexical_state).last_line = 1;
         (*lexical_state).source = source;
         (*lexical_state).environment = luas_newlstr(
-            state,
+            interpreter,
             b"_ENV\0" as *const u8 as *const i8,
             (::core::mem::size_of::<[i8; 5]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)

@@ -5,209 +5,209 @@ use crate::tag::*;
 use crate::buffer::*;
 use crate::new::*;
 use crate::utility::c::*;
-pub unsafe extern "C" fn checkfield(state: *mut Interpreter, key: *const i8, n: i32) -> i32 {
+pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> i32 {
     unsafe {
-        lua_pushstring(state, key);
-        return (lua_rawget(state, -n) != 0) as i32;
+        lua_pushstring(interpreter, key);
+        return (lua_rawget(interpreter, -n) != 0) as i32;
     }
 }
-pub unsafe extern "C" fn checktab(state: *mut Interpreter, arg: i32, what: i32) {
+pub unsafe extern "C" fn checktab(interpreter: *mut Interpreter, arg: i32, what: i32) {
     unsafe {
-        if lua_type(state, arg) != Some(TAG_TYPE_TABLE) {
+        if lua_type(interpreter, arg) != Some(TAG_TYPE_TABLE) {
             let mut n: i32 = 1;
-            if (*state).lua_getmetatable(arg)
+            if (*interpreter).lua_getmetatable(arg)
                 && (what & 1 == 0 || {
                     n += 1;
-                    checkfield(state, b"__index\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__index\0" as *const u8 as *const i8, n) != 0
                 })
                 && (what & 2 == 0 || {
                     n += 1;
-                    checkfield(state, b"__newindex\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__newindex\0" as *const u8 as *const i8, n) != 0
                 })
                 && (what & 4 == 0 || {
                     n += 1;
-                    checkfield(state, b"__len\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__len\0" as *const u8 as *const i8, n) != 0
                 })
             {
-                lua_settop(state, -n - 1);
+                lua_settop(interpreter, -n - 1);
             } else {
-                lual_checktype(state, arg, TAG_TYPE_TABLE);
+                lual_checktype(interpreter, arg, TAG_TYPE_TABLE);
             }
         }
     }
 }
-pub unsafe extern "C" fn table_insert(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let pos: i64;
-        checktab(state, 1, 1 | 2 | 4);
-        let mut e: i64 = lual_len(state, 1);
+        checktab(interpreter, 1, 1 | 2 | 4);
+        let mut e: i64 = lual_len(interpreter, 1);
         e = (e as u64).wrapping_add(1 as u64) as i64;
-        match (*state).get_top() {
+        match (*interpreter).get_top() {
             2 => {
                 pos = e;
             }
             3 => {
                 let mut i: i64;
-                pos = lual_checkinteger(state, 2);
+                pos = lual_checkinteger(interpreter, 2);
                 ((((pos as u64).wrapping_sub(1 as u64) < e as u64) as i32 != 0) as i32
                     as i64
                     != 0
                     || lual_argerror(
-                        state,
+                        interpreter,
                         2,
                         b"position out of bounds\0" as *const u8 as *const i8,
                     ) != 0) as i32;
                 i = e;
                 while i > pos {
-                    lua_geti(state, 1, i - 1);
-                    lua_seti(state, 1, i);
+                    lua_geti(interpreter, 1, i - 1);
+                    lua_seti(interpreter, 1, i);
                     i -= 1;
                 }
             }
             _ => {
                 return lual_error(
-                    state,
+                    interpreter,
                     b"wrong number of arguments to 'insert'\0" as *const u8 as *const i8,
                 );
             }
         }
-        lua_seti(state, 1, pos);
+        lua_seti(interpreter, 1, pos);
         return 0;
     }
 }
-pub unsafe extern "C" fn table_remove(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_remove(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        checktab(state, 1, 1 | 2 | 4);
-        let size: i64 = lual_len(state, 1);
-        let mut pos: i64 = lual_optinteger(state, 2, size);
+        checktab(interpreter, 1, 1 | 2 | 4);
+        let size: i64 = lual_len(interpreter, 1);
+        let mut pos: i64 = lual_optinteger(interpreter, 2, size);
         if pos != size {
             ((((pos as u64).wrapping_sub(1 as u64) <= size as u64) as i32 != 0) as i32
                 as i64
                 != 0
                 || lual_argerror(
-                    state,
+                    interpreter,
                     2,
                     b"position out of bounds\0" as *const u8 as *const i8,
                 ) != 0) as i32;
         }
-        lua_geti(state, 1, pos);
+        lua_geti(interpreter, 1, pos);
         while pos < size {
-            lua_geti(state, 1, pos + 1);
-            lua_seti(state, 1, pos);
+            lua_geti(interpreter, 1, pos + 1);
+            lua_seti(interpreter, 1, pos);
             pos += 1;
         }
-        (*state).push_nil();
-        lua_seti(state, 1, pos);
+        (*interpreter).push_nil();
+        lua_seti(interpreter, 1, pos);
         return 1;
     }
 }
-pub unsafe extern "C" fn table_move(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_move(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let f: i64 = lual_checkinteger(state, 2);
-        let e: i64 = lual_checkinteger(state, 3);
-        let t: i64 = lual_checkinteger(state, 4);
-        let tag: i32 = match lua_type(state, 5) {
+        let f: i64 = lual_checkinteger(interpreter, 2);
+        let e: i64 = lual_checkinteger(interpreter, 3);
+        let t: i64 = lual_checkinteger(interpreter, 4);
+        let tag: i32 = match lua_type(interpreter, 5) {
             None | Some(TAG_TYPE_NIL) => 1,
             _ =>  5,
         };
-        checktab(state, 1, 1);
-        checktab(state, tag, 2);
+        checktab(interpreter, 1, 1);
+        checktab(interpreter, tag, 2);
         if e >= f {
             let n: i64;
             let mut i: i64;
             (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0
                 || lual_argerror(
-                    state,
+                    interpreter,
                     3,
                     b"too many elements to move\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             n = e - f + 1;
             (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
                 || lual_argerror(
-                    state,
+                    interpreter,
                     4,
                     b"destination wrap around\0" as *const u8 as *const i8,
                 ) != 0) as i32;
-            if t > e || t <= f || tag != 1 && lua_compare(state, 1, tag, 0) == 0 {
+            if t > e || t <= f || tag != 1 && lua_compare(interpreter, 1, tag, 0) == 0 {
                 for i in 0..n {
-                    lua_geti(state, 1, f + i);
-                    lua_seti(state, tag, t + i);
+                    lua_geti(interpreter, 1, f + i);
+                    lua_seti(interpreter, tag, t + i);
                 }
             } else {
                 i = n - 1;
                 while i >= 0 {
-                    lua_geti(state, 1, f + i);
-                    lua_seti(state, tag, t + i);
+                    lua_geti(interpreter, 1, f + i);
+                    lua_seti(interpreter, tag, t + i);
                     i -= 1;
                 }
             }
         }
-        lua_pushvalue(state, tag);
+        lua_pushvalue(interpreter, tag);
         return 1;
     }
 }
-pub unsafe extern "C" fn addfield(state: *mut Interpreter, b: *mut Buffer, i: i64) {
+pub unsafe extern "C" fn addfield(interpreter: *mut Interpreter, b: *mut Buffer, i: i64) {
     unsafe {
-        lua_geti(state, 1, i);
-        if !lua_isstring(state, -1) {
+        lua_geti(interpreter, 1, i);
+        if !lua_isstring(interpreter, -1) {
             lual_error(
-                state,
+                interpreter,
                 b"invalid value (%s) at index %I in table for 'concat'\0" as *const u8 as *const i8,
-                lua_typename(state, lua_type(state, -1)),
+                lua_typename(interpreter, lua_type(interpreter, -1)),
                 i,
             );
         }
         (*b).add_value();
     }
 }
-pub unsafe extern "C" fn table_concat(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_concat(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
-        checktab(state, 1, 1 | 4);
-        let mut last: i64 = lual_len(state, 1);
+        checktab(interpreter, 1, 1 | 4);
+        let mut last: i64 = lual_len(interpreter, 1);
         let mut lsep: u64 = 0;
-        let sep: *const i8 = lual_optlstring(state, 2, b"\0" as *const u8 as *const i8, &mut lsep);
-        let mut i: i64 = lual_optinteger(state, 3, 1);
-        last = lual_optinteger(state, 4, last);
-        b.initialize(state);
+        let sep: *const i8 = lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const i8, &mut lsep);
+        let mut i: i64 = lual_optinteger(interpreter, 3, 1);
+        last = lual_optinteger(interpreter, 4, last);
+        b.initialize(interpreter);
         while i < last {
-            addfield(state, &mut b, i);
+            addfield(interpreter, &mut b, i);
             b.add_string_with_length(sep, lsep as usize);
             i += 1;
         }
         if i == last {
-            addfield(state, &mut b, i);
+            addfield(interpreter, &mut b, i);
         }
         b.push_result();
         return 1;
     }
 }
-pub unsafe extern "C" fn table_pack(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut i: i32;
-        let n: i32 = (*state).get_top();
-        (*state).lua_createtable();
-        lua_rotate(state, 1, 1);
+        let n: i32 = (*interpreter).get_top();
+        (*interpreter).lua_createtable();
+        lua_rotate(interpreter, 1, 1);
         i = n;
         while i >= 1 {
-            lua_seti(state, 1, i as i64);
+            lua_seti(interpreter, 1, i as i64);
             i -= 1;
         }
-        (*state).push_integer(n as i64);
-        lua_setfield(state, 1, b"n\0" as *const u8 as *const i8);
+        (*interpreter).push_integer(n as i64);
+        lua_setfield(interpreter, 1, b"n\0" as *const u8 as *const i8);
         return 1;
     }
 }
-pub unsafe extern "C" fn table_unpack(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: u64;
-        let mut i: i64 = lual_optinteger(state, 2, 1);
-        let e = match lua_type(state, 3) {
+        let mut i: i64 = lual_optinteger(interpreter, 2, 1);
+        let e = match lua_type(interpreter, 3) {
             None | Some(TAG_TYPE_NIL) => {
-                lual_len(state, 1)
+                lual_len(interpreter, 1)
             },
             _ => {
-                lual_checkinteger(state, 3)
+                lual_checkinteger(interpreter, 3)
             },
         };
         if i > e {
@@ -216,21 +216,21 @@ pub unsafe extern "C" fn table_unpack(state: *mut Interpreter) -> i32 {
         n = (e as u64).wrapping_sub(i as u64);
         if ((n >= 0x7FFFFFFF as u64 || {
             n = n.wrapping_add(1);
-            lua_checkstack(state, n as i32) == 0
+            lua_checkstack(interpreter, n as i32) == 0
         }) as i32
             != 0) as i64
             != 0
         {
             return lual_error(
-                state,
+                interpreter,
                 b"too many results to unpack\0" as *const u8 as *const i8,
             );
         }
         while i < e {
-            lua_geti(state, 1, i);
+            lua_geti(interpreter, 1, i);
             i += 1;
         }
-        lua_geti(state, 1, e);
+        lua_geti(interpreter, 1, e);
         return n as i32;
     }
 }
@@ -269,67 +269,67 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
         return rnd;
     }
 }
-pub unsafe extern "C" fn set2(state: *mut Interpreter, i: u32, j: u32) {
+pub unsafe extern "C" fn set2(interpreter: *mut Interpreter, i: u32, j: u32) {
     unsafe {
-        lua_seti(state, 1, i as i64);
-        lua_seti(state, 1, j as i64);
+        lua_seti(interpreter, 1, i as i64);
+        lua_seti(interpreter, 1, j as i64);
     }
 }
-pub unsafe extern "C" fn sort_comp(state: *mut Interpreter, a: i32, b: i32) -> i32 {
+pub unsafe extern "C" fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> i32 {
     unsafe {
-        if lua_type(state, 2) == Some(TAG_TYPE_NIL) {
-            return lua_compare(state, a, b, 1);
+        if lua_type(interpreter, 2) == Some(TAG_TYPE_NIL) {
+            return lua_compare(interpreter, a, b, 1);
         } else {
             let res: i32;
-            lua_pushvalue(state, 2);
-            lua_pushvalue(state, a - 1);
-            lua_pushvalue(state, b - 2);
-            lua_callk(state, 2, 1, 0, None);
-            res = lua_toboolean(state, -1);
-            lua_settop(state, -2);
+            lua_pushvalue(interpreter, 2);
+            lua_pushvalue(interpreter, a - 1);
+            lua_pushvalue(interpreter, b - 2);
+            lua_callk(interpreter, 2, 1, 0, None);
+            res = lua_toboolean(interpreter, -1);
+            lua_settop(interpreter, -2);
             return res;
         };
     }
 }
-pub unsafe extern "C" fn partition(state: *mut Interpreter, lo: u32, up: u32) -> u32 {
+pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u32) -> u32 {
     unsafe {
         let mut i: u32 = lo;
         let mut j: u32 = up.wrapping_sub(1 as u32);
         loop {
             loop {
                 i = i.wrapping_add(1);
-                lua_geti(state, 1, i as i64);
-                if !(sort_comp(state, -1, -2) != 0) {
+                lua_geti(interpreter, 1, i as i64);
+                if !(sort_comp(interpreter, -1, -2) != 0) {
                     break;
                 }
                 if ((i == up.wrapping_sub(1 as u32)) as i32 != 0) as i64 != 0 {
                     lual_error(
-                        state,
+                        interpreter,
                         b"invalid order function for sorting\0" as *const u8 as *const i8,
                     );
                 }
-                lua_settop(state, -2);
+                lua_settop(interpreter, -2);
             }
             loop {
                 j = j.wrapping_sub(1);
-                lua_geti(state, 1, j as i64);
-                if !(sort_comp(state, -3, -1) != 0) {
+                lua_geti(interpreter, 1, j as i64);
+                if !(sort_comp(interpreter, -3, -1) != 0) {
                     break;
                 }
                 if ((j < i) as i32 != 0) as i64 != 0 {
                     lual_error(
-                        state,
+                        interpreter,
                         b"invalid order function for sorting\0" as *const u8 as *const i8,
                     );
                 }
-                lua_settop(state, -2);
+                lua_settop(interpreter, -2);
             }
             if j < i {
-                lua_settop(state, -2);
-                set2(state, up.wrapping_sub(1 as u32), i);
+                lua_settop(interpreter, -2);
+                set2(interpreter, up.wrapping_sub(1 as u32), i);
                 return i;
             }
-            set2(state, i, j);
+            set2(interpreter, i, j);
         }
     }
 }
@@ -340,17 +340,17 @@ pub unsafe extern "C" fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
         .wrapping_add(lo.wrapping_add(r4));
     return p;
 }
-pub unsafe extern "C" fn auxsort(state: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
+pub unsafe extern "C" fn auxsort(interpreter: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
     unsafe {
         while lo < up {
             let mut p: u32;
             let n: u32;
-            lua_geti(state, 1, lo as i64);
-            lua_geti(state, 1, up as i64);
-            if sort_comp(state, -1, -2) != 0 {
-                set2(state, lo, up);
+            lua_geti(interpreter, 1, lo as i64);
+            lua_geti(interpreter, 1, up as i64);
+            if sort_comp(interpreter, -1, -2) != 0 {
+                set2(interpreter, lo, up);
             } else {
-                lua_settop(state, -2 - 1);
+                lua_settop(interpreter, -2 - 1);
             }
             if up.wrapping_sub(lo) == 1 as u32 {
                 return;
@@ -360,33 +360,33 @@ pub unsafe extern "C" fn auxsort(state: *mut Interpreter, mut lo: u32, mut up: u
             } else {
                 p = choose_pivot(lo, up, rnd);
             }
-            lua_geti(state, 1, p as i64);
-            lua_geti(state, 1, lo as i64);
-            if sort_comp(state, -2, -1) != 0 {
-                set2(state, p, lo);
+            lua_geti(interpreter, 1, p as i64);
+            lua_geti(interpreter, 1, lo as i64);
+            if sort_comp(interpreter, -2, -1) != 0 {
+                set2(interpreter, p, lo);
             } else {
-                lua_settop(state, -2);
-                lua_geti(state, 1, up as i64);
-                if sort_comp(state, -1, -2) != 0 {
-                    set2(state, p, up);
+                lua_settop(interpreter, -2);
+                lua_geti(interpreter, 1, up as i64);
+                if sort_comp(interpreter, -1, -2) != 0 {
+                    set2(interpreter, p, up);
                 } else {
-                    lua_settop(state, -2 - 1);
+                    lua_settop(interpreter, -2 - 1);
                 }
             }
             if up.wrapping_sub(lo) == 2 as u32 {
                 return;
             }
-            lua_geti(state, 1, p as i64);
-            lua_pushvalue(state, -1);
-            lua_geti(state, 1, up.wrapping_sub(1 as u32) as i64);
-            set2(state, p, up.wrapping_sub(1 as u32));
-            p = partition(state, lo, up);
+            lua_geti(interpreter, 1, p as i64);
+            lua_pushvalue(interpreter, -1);
+            lua_geti(interpreter, 1, up.wrapping_sub(1 as u32) as i64);
+            set2(interpreter, p, up.wrapping_sub(1 as u32));
+            p = partition(interpreter, lo, up);
             if p.wrapping_sub(lo) < up.wrapping_sub(p) {
-                auxsort(state, lo, p.wrapping_sub(1 as u32), rnd);
+                auxsort(interpreter, lo, p.wrapping_sub(1 as u32), rnd);
                 n = p.wrapping_sub(lo);
                 lo = p.wrapping_add(1 as u32);
             } else {
-                auxsort(state, p.wrapping_add(1 as u32), up, rnd);
+                auxsort(interpreter, p.wrapping_add(1 as u32), up, rnd);
                 n = up.wrapping_sub(p);
                 up = p.wrapping_sub(1 as u32);
             }
@@ -396,23 +396,23 @@ pub unsafe extern "C" fn auxsort(state: *mut Interpreter, mut lo: u32, mut up: u
         }
     }
 }
-pub unsafe extern "C" fn table_sort(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn table_sort(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        checktab(state, 1, 1 | 2 | 4);
-        let n: i64 = lual_len(state, 1);
+        checktab(interpreter, 1, 1 | 2 | 4);
+        let n: i64 = lual_len(interpreter, 1);
         if n > 1 {
             if n >= 0x7FFFFFFF {
-                lual_argerror(state, 1, b"array too big\0" as *const u8 as *const i8);
+                lual_argerror(interpreter, 1, b"array too big\0" as *const u8 as *const i8);
             }
-            match lua_type(state, 2) {
+            match lua_type(interpreter, 2) {
                 None | Some(TAG_TYPE_NIL) => {
                 },
                 _ => {
-                    lual_checktype(state, 2, TAG_TYPE_CLOSURE);
+                    lual_checktype(interpreter, 2, TAG_TYPE_CLOSURE);
                 },
             }
-            lua_settop(state, 2);
-            auxsort(state, 1 as u32, n as u32, 0);
+            lua_settop(interpreter, 2);
+            auxsort(interpreter, 1 as u32, n as u32, 0);
         }
         return 0;
     }
@@ -469,17 +469,17 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_table(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
-            state,
+            interpreter,
             504.0,
             (::core::mem::size_of::<i64>() as u64)
                 .wrapping_mul(16 as u64)
                 .wrapping_add(::core::mem::size_of::<f64>() as u64),
         );
-        (*state).lua_createtable();
-        lual_setfuncs(state, TABLE_FUNCTIONS.as_ptr(), 0);
+        (*interpreter).lua_createtable();
+        lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), 0);
         return 1;
     }
 }

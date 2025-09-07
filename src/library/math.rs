@@ -6,7 +6,7 @@ use crate::user::*;
 use crate::registeredfunction::*;
 use crate::interpreter::*;
 pub const PI: f64 = 3.141592653589793238462643383279502884f64;
-pub unsafe extern "C" fn push_numericcc(state: *mut Interpreter, d: f64) {
+pub unsafe extern "C" fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
     unsafe {
         let mut n: i64 = 0;
         if d >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64
@@ -16,9 +16,9 @@ pub unsafe extern "C" fn push_numericcc(state: *mut Interpreter, d: f64) {
                 1 != 0
             }
         {
-            (*state).push_integer(n);
+            (*interpreter).push_integer(n);
         } else {
-            (*state).push_number(d);
+            (*interpreter).push_number(d);
         };
     }
 }
@@ -71,7 +71,7 @@ pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState
         };
     }
 }
-pub unsafe extern "C" fn set_seed(state: *mut Interpreter, randomstate: *mut u64, n1: u64, n2: u64) {
+pub unsafe extern "C" fn set_seed(interpreter: *mut Interpreter, randomstate: *mut u64, n1: u64, n2: u64) {
     unsafe {
         *randomstate.offset(0 as isize) = n1 as u64;
         *randomstate.offset(1 as isize) = 0xFF as u64;
@@ -80,161 +80,161 @@ pub unsafe extern "C" fn set_seed(state: *mut Interpreter, randomstate: *mut u64
         for _ in 0..16 {
             next_random(randomstate);
         }
-        (*state).push_integer(n1 as i64);
-        (*state).push_integer(n2 as i64);
+        (*interpreter).push_integer(n1 as i64);
+        (*interpreter).push_integer(n2 as i64);
     }
 }
-pub unsafe extern "C" fn random_seed(state: *mut Interpreter, randomstate: *mut RandomState) {
+pub unsafe extern "C" fn random_seed(interpreter: *mut Interpreter, randomstate: *mut RandomState) {
     unsafe {
         let seed1: u64 = time(std::ptr::null_mut()) as u64;
-        let seed2: u64 = state as u64;
-        set_seed(state, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
+        let seed2: u64 = interpreter as u64;
+        set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
     }
 }
-unsafe extern "C" fn math_abs(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_abs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_isinteger(state, 1) {
-            let mut n: i64 = lua_tointegerx(state, 1, std::ptr::null_mut());
+        if lua_isinteger(interpreter, 1) {
+            let mut n: i64 = lua_tointegerx(interpreter, 1, std::ptr::null_mut());
             if n < 0 {
                 n = (0u64).wrapping_sub(n as u64) as i64;
             }
-            (*state).push_integer(n);
+            (*interpreter).push_integer(n);
         } else {
-            (*state).push_number(lual_checknumber(state, 1).abs());
+            (*interpreter).push_number(lual_checknumber(interpreter, 1).abs());
         }
         1
     }
 }
-unsafe extern "C" fn math_sin(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_sin(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).sin());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).sin());
         1
     }
 }
-unsafe extern "C" fn math_cos(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_cos(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).cos());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).cos());
         1
     }
 }
-unsafe extern "C" fn math_tan(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_tan(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).tan());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).tan());
         1
     }
 }
-unsafe extern "C" fn math_asin(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_asin(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).asin());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).asin());
         1
     }
 }
-unsafe extern "C" fn math_acos(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_acos(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).acos());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).acos());
         1
     }
 }
-unsafe extern "C" fn math_atan(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_atan(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let y: f64 = lual_checknumber(state, 1);
-        let x: f64 = lual_optnumber(state, 2, 1.0);
-        (*state).push_number(y.atan2(x));
+        let y: f64 = lual_checknumber(interpreter, 1);
+        let x: f64 = lual_optnumber(interpreter, 2, 1.0);
+        (*interpreter).push_number(y.atan2(x));
         1
     }
 }
-unsafe extern "C" fn math_toint(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_toint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut is_number: bool = false;
-        let n: i64 = lua_tointegerx(state, 1, &mut is_number);
+        let n: i64 = lua_tointegerx(interpreter, 1, &mut is_number);
         if is_number {
-            (*state).push_integer(n);
+            (*interpreter).push_integer(n);
         } else {
-            lual_checkany(state, 1);
-            (*state).push_nil();
+            lual_checkany(interpreter, 1);
+            (*interpreter).push_nil();
         }
         1
     }
 }
-unsafe extern "C" fn math_floor(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_floor(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_isinteger(state, 1) {
-            lua_settop(state, 1);
+        if lua_isinteger(interpreter, 1) {
+            lua_settop(interpreter, 1);
         } else {
-            let d: f64 = lual_checknumber(state, 1).floor();
-            push_numericcc(state, d);
+            let d: f64 = lual_checknumber(interpreter, 1).floor();
+            push_numericcc(interpreter, d);
         }
         1
     }
 }
-unsafe extern "C" fn math_ceil(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_ceil(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_isinteger(state, 1) {
-            lua_settop(state, 1);
+        if lua_isinteger(interpreter, 1) {
+            lua_settop(interpreter, 1);
         } else {
-            let d: f64 = lual_checknumber(state, 1).ceil();
-            push_numericcc(state, d);
+            let d: f64 = lual_checknumber(interpreter, 1).ceil();
+            push_numericcc(interpreter, d);
         }
         1
     }
 }
-unsafe extern "C" fn math_fmod(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_fmod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_isinteger(state, 1) && lua_isinteger(state, 2) {
-            let d: i64 = lua_tointegerx(state, 2, std::ptr::null_mut());
+        if lua_isinteger(interpreter, 1) && lua_isinteger(interpreter, 2) {
+            let d: i64 = lua_tointegerx(interpreter, 2, std::ptr::null_mut());
             if (d as u64).wrapping_add(1 as u64) <= 1 as u64 {
                 (((d != 0) as i32 != 0) as i64 != 0
-                    || lual_argerror(state, 2, b"zero\0" as *const u8 as *const i8) != 0)
+                    || lual_argerror(interpreter, 2, b"zero\0" as *const u8 as *const i8) != 0)
                     as i32;
-                (*state).push_integer(0);
+                (*interpreter).push_integer(0);
             } else {
-                (*state).push_integer(lua_tointegerx(state, 1, std::ptr::null_mut()) % d);
+                (*interpreter).push_integer(lua_tointegerx(interpreter, 1, std::ptr::null_mut()) % d);
             }
         } else {
-            (*state).push_number(fmod(lual_checknumber(state, 1), lual_checknumber(state, 2)));
+            (*interpreter).push_number(fmod(lual_checknumber(interpreter, 1), lual_checknumber(interpreter, 2)));
         }
         1
     }
 }
-unsafe extern "C" fn math_modf(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_modf(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_isinteger(state, 1) {
-            lua_settop(state, 1);
-            (*state).push_number(0.0);
+        if lua_isinteger(interpreter, 1) {
+            lua_settop(interpreter, 1);
+            (*interpreter).push_number(0.0);
         } else {
-            let n: f64 = lual_checknumber(state, 1);
+            let n: f64 = lual_checknumber(interpreter, 1);
             let ip: f64 = if n < 0.0 { n.ceil() } else { n.floor() };
-            push_numericcc(state, ip);
-            (*state).push_number(if n == ip { 0.0 } else { n - ip });
+            push_numericcc(interpreter, ip);
+            (*interpreter).push_number(if n == ip { 0.0 } else { n - ip });
         }
         2
     }
 }
-unsafe extern "C" fn math_sqrt(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_sqrt(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).sqrt());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).sqrt());
         1
     }
 }
-unsafe extern "C" fn math_ult(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_ult(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let a: i64 = lual_checkinteger(state, 1);
-        let b: i64 = lual_checkinteger(state, 2);
-        (*state).push_boolean((a as u64) < (b as u64));
+        let a: i64 = lual_checkinteger(interpreter, 1);
+        let b: i64 = lual_checkinteger(interpreter, 2);
+        (*interpreter).push_boolean((a as u64) < (b as u64));
         1
     }
 }
-unsafe extern "C" fn math_log(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_log(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let x: f64 = lual_checknumber(state, 1);
+        let x: f64 = lual_checknumber(interpreter, 1);
         let res: f64;
 
-        match lua_type(state, 2) {
+        match lua_type(interpreter, 2) {
             None | Some(TAG_TYPE_NIL) => {
                 res = x.ln();
             },
             _ => {
-                let base: f64 = lual_checknumber(state, 2);
+                let base: f64 = lual_checknumber(interpreter, 2);
                 if base == 2.0f64 {
                     res = x.log2();
                 } else if base == 10.0f64 {
@@ -244,132 +244,132 @@ unsafe extern "C" fn math_log(state: *mut Interpreter) -> i32 {
                 }
             }
         }
-        (*state).push_number(res);
+        (*interpreter).push_number(res);
         1
     }
 }
-unsafe extern "C" fn math_exp(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_exp(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1).exp());
+        (*interpreter).push_number(lual_checknumber(interpreter, 1).exp());
         1
     }
 }
-unsafe extern "C" fn math_deg(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_deg(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1) * (180.0f64 / PI));
+        (*interpreter).push_number(lual_checknumber(interpreter, 1) * (180.0f64 / PI));
         1
     }
 }
-unsafe extern "C" fn math_rad(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_rad(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).push_number(lual_checknumber(state, 1) * (PI / 180.0f64));
+        (*interpreter).push_number(lual_checknumber(interpreter, 1) * (PI / 180.0f64));
         1
     }
 }
-unsafe extern "C" fn math_min(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_min(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let n: i32 = (*state).get_top();
+        let n: i32 = (*interpreter).get_top();
         let mut imin: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
         for i in 2..(1 + n) {
-            if lua_compare(state, i, imin, 1) != 0 {
+            if lua_compare(interpreter, i, imin, 1) != 0 {
                 imin = i;
             }
         }
-        lua_pushvalue(state, imin);
+        lua_pushvalue(interpreter, imin);
         1
     }
 }
-unsafe extern "C" fn math_max(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_max(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let n: i32 = (*state).get_top();
+        let n: i32 = (*interpreter).get_top();
         let mut imax: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(state, 1, b"value expected\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const i8) != 0)
             as i32;
         for i in 2..(1 + n) {
-            if lua_compare(state, imax, i, 1) != 0 {
+            if lua_compare(interpreter, imax, i, 1) != 0 {
                 imax = i;
             }
         }
-        lua_pushvalue(state, imax);
+        lua_pushvalue(interpreter, imax);
         1
     }
 }
-unsafe extern "C" fn math_type(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_type(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_type(state, 1) == Some(TAG_TYPE_NUMERIC) {
+        if lua_type(interpreter, 1) == Some(TAG_TYPE_NUMERIC) {
             lua_pushstring(
-                state,
-                if lua_isinteger(state, 1) {
+                interpreter,
+                if lua_isinteger(interpreter, 1) {
                     b"integer\0" as *const u8 as *const i8
                 } else {
                     b"float\0" as *const u8 as *const i8
                 },
             );
         } else {
-            lual_checkany(state, 1);
-            (*state).push_nil();
+            lual_checkany(interpreter, 1);
+            (*interpreter).push_nil();
         }
         1
     }
 }
-unsafe extern "C" fn math_random(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let low: i64;
         let up: i64;
         let p: u64;
         let ransate: *mut RandomState =
-            lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+            lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         let rv: u64 = next_random(((*ransate).data).as_mut_ptr());
-        match (*state).get_top() {
+        match (*interpreter).get_top() {
             0 => {
-                (*state).push_number(i2d(rv));
+                (*interpreter).push_number(i2d(rv));
                 return 1;
             }
             1 => {
                 low = 1;
-                up = lual_checkinteger(state, 1);
+                up = lual_checkinteger(interpreter, 1);
                 if up == 0 {
-                    (*state).push_integer((rv & 0xffffffffffffffff as u64) as i64);
+                    (*interpreter).push_integer((rv & 0xffffffffffffffff as u64) as i64);
                     return 1;
                 }
             }
             2 => {
-                low = lual_checkinteger(state, 1);
-                up = lual_checkinteger(state, 2);
+                low = lual_checkinteger(interpreter, 1);
+                up = lual_checkinteger(interpreter, 2);
             }
             _ => {
                 return lual_error(
-                    state,
+                    interpreter,
                     b"wrong number of arguments\0" as *const u8 as *const i8,
                 );
             }
         }
         (((low <= up) as i32 != 0) as i64 != 0
-            || lual_argerror(state, 1, b"interval is empty\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"interval is empty\0" as *const u8 as *const i8) != 0)
             as i32;
         p = project(
             (rv & 0xffffffffffffffff as u64) as u64,
             (up as u64).wrapping_sub(low as u64),
             ransate,
         );
-        (*state).push_integer(p.wrapping_add(low as u64) as i64);
+        (*interpreter).push_integer(p.wrapping_add(low as u64) as i64);
         return 1;
     }
 }
-unsafe extern "C" fn math_randomseed(state: *mut Interpreter) -> i32 {
+unsafe extern "C" fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let randomstate: *mut RandomState =
-            lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-        if lua_type(state, 1) == None {
-            random_seed(state, randomstate);
+            lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+        if lua_type(interpreter, 1) == None {
+            random_seed(interpreter, randomstate);
         } else {
-            let n1: i64 = lual_checkinteger(state, 1);
-            let n2: i64 = lual_optinteger(state, 2, 0);
-            set_seed(state, ((*randomstate).data).as_mut_ptr(), n1 as u64, n2 as u64);
+            let n1: i64 = lual_checkinteger(interpreter, 1);
+            let n2: i64 = lual_optinteger(interpreter, 2, 0);
+            set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), n1 as u64, n2 as u64);
         }
         return 2;
     }
@@ -396,14 +396,14 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
         },
     ]
 };
-unsafe extern "C" fn set_random_function(state: *mut Interpreter) {
+unsafe extern "C" fn set_random_function(interpreter: *mut Interpreter) {
     unsafe {
         let ranstate: *mut RandomState =
-            User::lua_newuserdatauv(state, ::core::mem::size_of::<RandomState>(), 0)
+            User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<RandomState>(), 0)
                 as *mut RandomState;
-        random_seed(state, ranstate);
-        lua_settop(state, -3);
-        lual_setfuncs(state, MATH_RANDOM_FUNCTIONS.as_ptr(), 1);
+        random_seed(interpreter, ranstate);
+        lua_settop(interpreter, -3);
+        lual_setfuncs(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), 1);
     }
 }
 const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
@@ -578,19 +578,19 @@ const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_math(state: *mut Interpreter) -> i32 {
+pub unsafe extern "C" fn luaopen_math(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*state).lua_createtable();
-        lual_setfuncs(state, MATH_FUNCTIONS.as_ptr(), 0);
-        (*state).push_number(PI);
-        lua_setfield(state, -2, b"pi\0" as *const u8 as *const i8);
-        (*state).push_number(::core::f64::INFINITY);
-        lua_setfield(state, -2, b"huge\0" as *const u8 as *const i8);
-        (*state).push_integer(::core::i64::MAX);
-        lua_setfield(state, -2, b"maxinteger\0" as *const u8 as *const i8);
-        (*state).push_integer(::core::i64::MIN);
-        lua_setfield(state, -2, b"mininteger\0" as *const u8 as *const i8);
-        set_random_function(state);
+        (*interpreter).lua_createtable();
+        lual_setfuncs(interpreter, MATH_FUNCTIONS.as_ptr(), 0);
+        (*interpreter).push_number(PI);
+        lua_setfield(interpreter, -2, b"pi\0" as *const u8 as *const i8);
+        (*interpreter).push_number(::core::f64::INFINITY);
+        lua_setfield(interpreter, -2, b"huge\0" as *const u8 as *const i8);
+        (*interpreter).push_integer(::core::i64::MAX);
+        lua_setfield(interpreter, -2, b"maxinteger\0" as *const u8 as *const i8);
+        (*interpreter).push_integer(::core::i64::MIN);
+        lua_setfield(interpreter, -2, b"mininteger\0" as *const u8 as *const i8);
+        set_random_function(interpreter);
         1
     }
 }

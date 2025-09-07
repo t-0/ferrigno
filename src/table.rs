@@ -66,14 +66,14 @@ impl New for Table {
     }
 }
 impl Table {
-    pub unsafe fn free_table(& mut self, state: *mut Interpreter) {
+    pub unsafe fn free_table(& mut self, interpreter: *mut Interpreter) {
         unsafe {
-            freehash(state, self);
-            (*state).free_memory(
+            freehash(interpreter, self);
+            (*interpreter).free_memory(
                 self.array as *mut libc::c_void,
                 (luah_realasize(self) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
             );
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 self as *mut Table as *mut libc::c_void,
                 ::core::mem::size_of::<Table>(),
             );
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn getgeneric(
     }
 }
 pub unsafe extern "C" fn findindex(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     key: *mut TValue,
     asize: u32,
@@ -521,7 +521,7 @@ pub unsafe extern "C" fn findindex(
             let n_value: *const TValue = getgeneric(table, key, 1);
             if (((*n_value).get_tag() == TAG_VARIANT_NIL_ABSENTKEY) as i32 != 0) as i64 != 0
             {
-                luag_runerror(state, b"invalid key to 'next'\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"invalid key to 'next'\0" as *const u8 as *const i8);
             }
             i = (n_value as *mut Node)
                 .offset_from(&mut *((*table).node).offset(0 as isize) as *mut Node)
@@ -530,10 +530,10 @@ pub unsafe extern "C" fn findindex(
         };
     }
 }
-pub unsafe extern "C" fn luah_next(state: *mut Interpreter, table: *mut Table, key: StackValuePointer) -> i32 {
+pub unsafe extern "C" fn luah_next(interpreter: *mut Interpreter, table: *mut Table, key: StackValuePointer) -> i32 {
     unsafe {
         let asize: u32 = luah_realasize(table);
-        let mut i: u32 = findindex(state, table, &mut (*key).tvalue, asize);
+        let mut i: u32 = findindex(interpreter, table, &mut (*key).tvalue, asize);
         while i < asize {
             if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
                 let io: *mut TValue = &mut (*key).tvalue;
@@ -567,10 +567,10 @@ pub unsafe extern "C" fn luah_next(state: *mut Interpreter, table: *mut Table, k
         return 0;
     }
 }
-pub unsafe extern "C" fn freehash(state: *mut Interpreter, table: *mut Table) {
+pub unsafe extern "C" fn freehash(interpreter: *mut Interpreter, table: *mut Table) {
     unsafe {
         if !((*table).last_free).is_null() {
-            (*state).free_memory(
+            (*interpreter).free_memory(
                 (*table).node as *mut libc::c_void,
                 ((1 << (*table).log_size_node as i32) as u64)
                     .wrapping_mul(::core::mem::size_of::<Node>() as u64) as usize,
@@ -674,7 +674,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
         return totaluse;
     }
 }
-pub unsafe extern "C" fn setnodevector(state: *mut Interpreter, table: *mut Table, mut size: u32) {
+pub unsafe extern "C" fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mut size: u32) {
     unsafe {
         if size == 0 {
             (*table).node = &DUMMY_NODE as *const Node as *mut Node;
@@ -704,11 +704,11 @@ pub unsafe extern "C" fn setnodevector(state: *mut Interpreter, table: *mut Tabl
                         (!(0u64)).wrapping_div(::core::mem::size_of::<Node>() as u64) as u32
                     })
             {
-                luag_runerror(state, b"table overflow\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const i8);
             }
             size = (1 << lsize) as u32;
             (*table).node = luam_malloc_(
-                state,
+                interpreter,
                 (size as usize).wrapping_mul(::core::mem::size_of::<Node>()),
             ) as *mut Node;
             for i in 0..size {
@@ -722,7 +722,7 @@ pub unsafe extern "C" fn setnodevector(state: *mut Interpreter, table: *mut Tabl
         };
     }
 }
-pub unsafe extern "C" fn reinsert(state: *mut Interpreter, ot: *mut Table, table: *mut Table) {
+pub unsafe extern "C" fn reinsert(interpreter: *mut Interpreter, ot: *mut Table, table: *mut Table) {
     unsafe {
         let mut j: i32;
         let size: i32 = 1 << (*ot).log_size_node as i32;
@@ -740,14 +740,14 @@ pub unsafe extern "C" fn reinsert(state: *mut Interpreter, ot: *mut Table, table
                 let node: *const Node = old;
                 (*io_).value = (*node).key.value;
                 (*io_).set_tag((*node).key.tag);
-                luah_set(state, table, &mut k, &mut (*old).value);
+                luah_set(interpreter, table, &mut k, &mut (*old).value);
             }
             j += 1;
         }
     }
 }
 pub unsafe extern "C" fn luah_resize(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
     new_table_size: usize,
@@ -756,14 +756,14 @@ pub unsafe extern "C" fn luah_resize(
         let mut new_table: Table = Table::new();
         let old_array_size = setlimittosize(table) as usize;
         let new_array: *mut TValue;
-        setnodevector(state, &mut new_table, new_table_size as u32);
+        setnodevector(interpreter, &mut new_table, new_table_size as u32);
         if new_array_size < old_array_size {
             (*table).array_limit = new_array_size as u32;
             Table::exchange_hash_part(table, &mut new_table);
             for i in new_array_size..old_array_size {
                 if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
                     luah_setint(
-                        state,
+                        interpreter,
                         table,
                         i.wrapping_add(1) as i64,
                         &mut *((*table).array).offset(i as isize),
@@ -774,14 +774,14 @@ pub unsafe extern "C" fn luah_resize(
             Table::exchange_hash_part(table, &mut new_table);
         }
         new_array = luam_realloc_(
-            state,
+            interpreter,
             (*table).array as *mut libc::c_void,
             (old_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
             (new_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
         ) as *mut TValue;
         if ((new_array.is_null() && new_array_size > 0) as i32 != 0) as i64 != 0 {
-            freehash(state, &mut new_table);
-            luad_throw(state, 4);
+            freehash(interpreter, &mut new_table);
+            luad_throw(interpreter, 4);
         }
         Table::exchange_hash_part(table, &mut new_table);
         (*table).array = new_array;
@@ -789,12 +789,12 @@ pub unsafe extern "C" fn luah_resize(
         for i in old_array_size..new_array_size {
             (*((*table).array).offset(i as isize)).set_tag(TAG_VARIANT_NIL_EMPTY);
         }
-        reinsert(state, &mut new_table, table);
-        freehash(state, &mut new_table);
+        reinsert(interpreter, &mut new_table, table);
+        freehash(interpreter, &mut new_table);
     }
 }
 pub unsafe extern "C" fn luah_resizearray(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
 ) {
@@ -804,10 +804,10 @@ pub unsafe extern "C" fn luah_resizearray(
         } else {
             1usize << (*table).log_size_node
         };
-        luah_resize(state, table, new_array_size, new_table_size);
+        luah_resize(interpreter, table, new_array_size, new_table_size);
     }
 }
-pub unsafe extern "C" fn rehash(state: *mut Interpreter, table: *mut Table, ek: *const TValue) {
+pub unsafe extern "C" fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *const TValue) {
     unsafe {
         let mut nums: [u32; 32] = [0; 32];
         let mut totaluse: i32;
@@ -829,13 +829,13 @@ pub unsafe extern "C" fn rehash(state: *mut Interpreter, table: *mut Table, ek: 
         }
         totaluse += 1;
         let asize: u32 = computesizes(nums.as_mut_ptr(), &mut na);
-        luah_resize(state, table, asize as usize, (totaluse as usize).wrapping_sub(na as usize));
+        luah_resize(interpreter, table, asize as usize, (totaluse as usize).wrapping_sub(na as usize));
     }
 }
-pub unsafe extern "C" fn luah_new(state: *mut Interpreter) -> *mut Table {
+pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
         let object: *mut Object = luac_newobj(
-            state,
+            interpreter,
             TAG_TYPE_TABLE,
             ::core::mem::size_of::<Table>(),
         );
@@ -844,12 +844,12 @@ pub unsafe extern "C" fn luah_new(state: *mut Interpreter) -> *mut Table {
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
         (*new_table).array = std::ptr::null_mut();
         (*new_table).array_limit = 0u32;
-        setnodevector(state, new_table, 0u32);
+        setnodevector(interpreter, new_table, 0u32);
         return new_table;
     }
 }
 pub unsafe extern "C" fn luah_newkey(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     mut key: *const TValue,
     value: *mut TValue,
@@ -863,7 +863,7 @@ pub unsafe extern "C" fn luah_newkey(
             tag: 0,
         };
         if ((get_tag_type((*key).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0 {
-            luag_runerror(state, b"table index is nil\0" as *const u8 as *const i8);
+            luag_runerror(interpreter, b"table index is nil\0" as *const u8 as *const i8);
         } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
             let mut k: i64 = 0;
@@ -872,7 +872,7 @@ pub unsafe extern "C" fn luah_newkey(
                 aux.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                 key = &mut aux;
             } else if number != number {
-                luag_runerror(state, b"table index is NaN\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"table index is NaN\0" as *const u8 as *const i8);
             }
         }
         if get_tag_type((*value).get_tag()) == TAG_TYPE_NIL {
@@ -883,8 +883,8 @@ pub unsafe extern "C" fn luah_newkey(
             let mut other_node: *mut Node;
             let f_0: *mut Node = (*table).get_free_position();
             if f_0.is_null() {
-                rehash(state, table, key);
-                luah_set(state, table, key, value);
+                rehash(interpreter, table, key);
+                luah_set(interpreter, table, key, value);
                 return;
             }
             other_node = mainpositionfromnode(table, mp);
@@ -915,7 +915,7 @@ pub unsafe extern "C" fn luah_newkey(
             if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
                 && (*(*key).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
             {
-                luac_barrierback_(state, &mut (*(table as *mut Object)));
+                luac_barrierback_(interpreter, &mut (*(table as *mut Object)));
             } else {
             };
         } else {
@@ -1013,7 +1013,7 @@ pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *con
     }
 }
 pub unsafe extern "C" fn luah_finishset(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
     slot: *const TValue,
@@ -1021,7 +1021,7 @@ pub unsafe extern "C" fn luah_finishset(
 ) {
     unsafe {
         if (*slot).get_tag() == TAG_VARIANT_NIL_ABSENTKEY {
-            luah_newkey(state, table, key, value);
+            luah_newkey(interpreter, table, key, value);
         } else {
             let io1: *mut TValue = slot as *mut TValue;
             let io2: *const TValue = value;
@@ -1031,18 +1031,18 @@ pub unsafe extern "C" fn luah_finishset(
     }
 }
 pub unsafe extern "C" fn luah_set(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
     value: *mut TValue,
 ) {
     unsafe {
         let slot: *const TValue = luah_get(table, key);
-        luah_finishset(state, table, key, slot, value);
+        luah_finishset(interpreter, table, key, slot, value);
     }
 }
 pub unsafe extern "C" fn luah_setint(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     table: *mut Table,
     key: i64,
     value: *mut TValue,
@@ -1059,7 +1059,7 @@ pub unsafe extern "C" fn luah_setint(
             let io: *mut TValue = &mut k;
             (*io).value.integer = key;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-            luah_newkey(state, table, &mut k, value);
+            luah_newkey(interpreter, table, &mut k, value);
         } else {
             let io1: *mut TValue = p as *mut TValue;
             let io2: *const TValue = value;
@@ -1160,7 +1160,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
     }
 }
 pub unsafe extern "C" fn luav_finishget(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
     value: StackValuePointer,
@@ -1171,10 +1171,10 @@ pub unsafe extern "C" fn luav_finishget(
         let mut tm: *const TValue;
         while loop_0 < 2000 as i32 {
             if slot.is_null() {
-                tm = luat_gettmbyobj(state, t, TM_INDEX);
+                tm = luat_gettmbyobj(interpreter, t, TM_INDEX);
                 if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
                 {
-                    luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
@@ -1188,7 +1188,7 @@ pub unsafe extern "C" fn luav_finishget(
                     luat_gettm(
                         (*((*t).value.object as *mut Table)).get_metatable(),
                         TM_INDEX,
-                        (*(*state).global).tm_name[TM_INDEX as usize],
+                        (*(*interpreter).global).tm_name[TM_INDEX as usize],
                     )
                 };
                 if tm.is_null() {
@@ -1197,7 +1197,7 @@ pub unsafe extern "C" fn luav_finishget(
                 }
             }
             if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
-                luat_calltmres(state, tm, t, key, value);
+                luat_calltmres(interpreter, tm, t, key, value);
                 return;
             }
             t = tm;
@@ -1218,13 +1218,13 @@ pub unsafe extern "C" fn luav_finishget(
             loop_0 += 1;
         }
         luag_runerror(
-            state,
+            interpreter,
             b"'__index' chain too long; possible loop\0" as *const u8 as *const i8,
         );
     }
 }
 pub unsafe extern "C" fn luav_finishset(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
     value: *mut TValue,
@@ -1244,24 +1244,24 @@ pub unsafe extern "C" fn luav_finishset(
                     luat_gettm(
                         (*h).get_metatable(),
                         TM_NEWINDEX,
-                        (*(*state).global).tm_name[TM_NEWINDEX as usize],
+                        (*(*interpreter).global).tm_name[TM_NEWINDEX as usize],
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let x_: *mut Table = h;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag(TAG_VARIANT_TABLE);
                     (*io).set_collectable();
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
-                    luah_finishset(state, h, key, slot, value);
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    luah_finishset(interpreter, h, key, slot, value);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
                         if (*(h as *mut Object)).get_marked() & 1 << 5 != 0
                             && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                         {
-                            luac_barrierback_(state, &mut (*(h as *mut Object)));
+                            luac_barrierback_(interpreter, &mut (*(h as *mut Object)));
                         } else {
                         };
                     } else {
@@ -1269,14 +1269,14 @@ pub unsafe extern "C" fn luav_finishset(
                     return;
                 }
             } else {
-                tm = luat_gettmbyobj(state, t, TM_NEWINDEX);
+                tm = luat_gettmbyobj(interpreter, t, TM_NEWINDEX);
                 if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
                 {
-                    luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
             }
             if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
-                luat_calltm(state, tm, t, key, value);
+                luat_calltm(interpreter, tm, t, key, value);
                 return;
             }
             t = tm;
@@ -1296,7 +1296,7 @@ pub unsafe extern "C" fn luav_finishset(
                     if (*(*t).value.object).get_marked() & 1 << 5 != 0
                         && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                     {
-                        luac_barrierback_(state, (*t).value.object);
+                        luac_barrierback_(interpreter, (*t).value.object);
                     } else {
                     };
                 } else {
@@ -1306,7 +1306,7 @@ pub unsafe extern "C" fn luav_finishset(
             loop_0 += 1;
         }
         luag_runerror(
-            state,
+            interpreter,
             b"'__newindex' chain too long; possible loop\0" as *const u8 as *const i8,
         );
     }

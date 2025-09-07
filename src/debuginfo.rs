@@ -31,11 +31,11 @@ pub struct DebugInfo {
     pub short_src: [i8; 60],
     pub i_ci: *mut CallInfo,
 }
-pub unsafe extern "C" fn lua_getlocal(state: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let name;
         if ar.is_null() {
-            if !((*(*state).top.stkidrel_pointer.offset(-(1 as isize)))
+            if !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue
                 .get_tag_variant()
                 == TAG_VARIANT_CLOSURE_L)
@@ -43,7 +43,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut Interpreter, ar: *const DebugI
                 name = std::ptr::null();
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
+                    (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
                         .payload.l_prototype,
                     n,
                     0,
@@ -51,28 +51,28 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut Interpreter, ar: *const DebugI
             }
         } else {
             let mut pos: StackValuePointer = std::ptr::null_mut();
-            name = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
+            name = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
             if !name.is_null() {
-                let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                 let io2: *const TValue = &mut (*pos).tvalue;
                 (*io1).value = (*io2).value;
                 (*io1).set_tag((*io2).get_tag());
-                (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+                (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             }
         }
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(state: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut pos: StackValuePointer = std::ptr::null_mut();
-        let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
+        let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
-            let io2: *const TValue = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         }
         return name;
     }
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     }
 }
 pub unsafe extern "C" fn lua_getinfo(
-    state: *mut Interpreter,
+    interpreter: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,
 ) -> i32 {
@@ -124,9 +124,9 @@ pub unsafe extern "C" fn lua_getinfo(
         let call_info;
         if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
             call_info = std::ptr::null_mut();
-            function = &mut (*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
+            function = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             what = what.offset(1);
-            (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
             call_info = (*ar).i_ci;
             function = &mut (*(*call_info).function.stkidrel_pointer).tvalue;
@@ -134,46 +134,46 @@ pub unsafe extern "C" fn lua_getinfo(
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
-                status = auxgetinfo(state, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
-                    collectvalidlines(state, cl);
+                    collectvalidlines(interpreter, cl);
                 }
                 return status;
             }
             TAG_VARIANT_CLOSURE_C => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
-                status = auxgetinfo(state, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
-                    collectvalidlines(state, cl);
+                    collectvalidlines(interpreter, cl);
                 }
                 return status;
             }
             _ => {
                 let cl: *mut Closure = std::ptr::null_mut();
-                status = auxgetinfo(state, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*state).top.stkidrel_pointer).tvalue;
+                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).value = (*io2).value;
                     (*io1).set_tag((*io2).get_tag());
-                    (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
-                    collectvalidlines(state, cl);
+                    collectvalidlines(interpreter, cl);
                 }
                 return status;
             }
