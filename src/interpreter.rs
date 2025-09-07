@@ -71,17 +71,11 @@ pub struct Interpreter {
     pub hook_mask: i32,
 }
 impl TObject for Interpreter {
-    fn get_tag(&self) -> u8 {
-        self.object.tag
+    fn as_object(&self) -> &Object {
+        &self.object
     }
-    fn set_tag(&mut self, tag: u8) {
-        self.object.tag = tag;
-    }
-    fn get_marked(&self) -> u8 {
-        self.object.marked
-    }
-    fn set_marked(&mut self, marked: u8) {
-        self.object.marked = marked;
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.object
     }
     fn get_class_name(&mut self) -> String {
         "interpreter".to_string()
@@ -1639,32 +1633,32 @@ pub unsafe extern "C" fn lua_pushvalue(interpreter: *mut Interpreter, index: i32
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
-pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<u8> {
+pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagType> {
     unsafe {
         let o: *const TValue = (*interpreter).index2value(index);
         return if (get_tag_type((*o).get_tag()) != TagType::Nil)
             || o != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue
         {
-            return Some((*o).get_tag_type() as u8)
+            return Some((*o).get_tag_type())
         } else {
             None
         };
     }
 }
-pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<u8>) -> *const i8 {
+pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> *const i8 {
     match t {
         None => b"no value\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_NIL) => b"nil\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_BOOLEAN) => b"boolean\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_POINTER) => b"userdata\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_NUMERIC) => b"number\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_STRING) => b"string\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_TABLE) => b"table\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_CLOSURE) => b"function\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_USER) => b"userdata\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_STATE) => b"thread\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_UPVALUE) => b"upvalue\0" as *const u8 as *const i8,
-        Some(TAG_TYPE_PROTOTYPE) => b"proto\0" as *const u8 as *const i8,
+        Some(TagType::Nil) => b"nil\0" as *const u8 as *const i8,
+        Some(TagType::Boolean) => b"boolean\0" as *const u8 as *const i8,
+        Some(TagType::Pointer) => b"userdata\0" as *const u8 as *const i8,
+        Some(TagType::Numeric) => b"number\0" as *const u8 as *const i8,
+        Some(TagType::String) => b"string\0" as *const u8 as *const i8,
+        Some(TagType::Table) => b"table\0" as *const u8 as *const i8,
+        Some(TagType::Closure) => b"function\0" as *const u8 as *const i8,
+        Some(TagType::User) => b"userdata\0" as *const u8 as *const i8,
+        Some(TagType::State) => b"thread\0" as *const u8 as *const i8,
+        Some(TagType::UpValue) => b"upvalue\0" as *const u8 as *const i8,
+        Some(TagType::Prototype) => b"proto\0" as *const u8 as *const i8,
         _ => b"unknown\0" as *const u8 as *const i8,
     }
 }
@@ -2123,7 +2117,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
         return (get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
     }
 }
-pub unsafe extern "C" fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> i32 {
+pub unsafe extern "C" fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> TagType {
     unsafe {
         if get_tag_type((*value).get_tag()) == TagType::Nil {
             (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
@@ -2134,7 +2128,7 @@ pub unsafe extern "C" fn finishrawget(interpreter: *mut Interpreter, value: *con
             (*io1).set_tag((*io2).get_tag());
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        return (get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())) as i32;
+        return get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag());
     }
 }
 pub unsafe extern "C" fn gettable(interpreter: *mut Interpreter, index: i32) -> *mut Table {
@@ -2143,7 +2137,7 @@ pub unsafe extern "C" fn gettable(interpreter: *mut Interpreter, index: i32) -> 
         return &mut (*((*t).value.object as *mut Table));
     }
 }
-pub unsafe extern "C" fn lua_rawget(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe extern "C" fn lua_rawget(interpreter: *mut Interpreter, index: i32) -> TagType {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         let value: *const TValue =
@@ -2152,7 +2146,7 @@ pub unsafe extern "C" fn lua_rawget(interpreter: *mut Interpreter, index: i32) -
         return finishrawget(interpreter, value);
     }
 }
-pub unsafe extern "C" fn lua_rawgeti(interpreter: *mut Interpreter, index: i32, n: i64) -> i32 {
+pub unsafe extern "C" fn lua_rawgeti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         return finishrawget(interpreter, luah_getint(table, n));
@@ -3078,13 +3072,7 @@ pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut In
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
         }
-        let object: *mut Object = luac_newobjdt(
-            interpreter,
-            TAG_TYPE_STATE,
-            ::core::mem::size_of::<Interpreter>() as u64,
-            0,
-        );
-        let ret: *mut Interpreter = &mut (*(object as *mut Interpreter));
+        let ret = luac_newobj(interpreter, TAG_TYPE_STATE, ::core::mem::size_of::<Interpreter>()) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).set_tag(TAG_VARIANT_STATE);
         (*io).value.object = &mut (*(ret as *mut Object));
@@ -4325,26 +4313,15 @@ pub unsafe extern "C" fn luat_getvarargs(
         }
     }
 }
-pub unsafe extern "C" fn luac_newobjdt(
-    interpreter: *mut Interpreter,
-    tag: u8,
-    size: u64,
-    offset: u64,
-) -> *mut Object {
+pub unsafe extern "C" fn luac_newobj(interpreter: *mut Interpreter, tag: u8, size: usize) -> *mut Object {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        let pointer: *mut i8 = luam_malloc_(interpreter, size as usize) as *mut i8;
-        let ret: *mut Object = pointer.offset(offset as isize) as *mut Object;
+        let ret = luam_malloc_(interpreter, size as usize)  as *mut Object;
         (*ret).set_tag(tag);
         (*ret).set_marked((*global).current_white & (1 << 3 | 1 << 4));
         (*ret).next = (*global).all_gc;
         (*global).all_gc = ret;
         return ret;
-    }
-}
-pub unsafe extern "C" fn luac_newobj(interpreter: *mut Interpreter, tag: u8, size: usize) -> *mut Object {
-    unsafe {
-        return luac_newobjdt(interpreter, tag, size as u64, 0u64);
     }
 }
 pub unsafe extern "C" fn traverse_state(global: *mut Global, interpreter: *mut Interpreter) -> i32 {
@@ -7991,12 +7968,12 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
 }
 pub unsafe extern "C" fn findfield(interpreter: *mut Interpreter, objidx: i32, level: i32) -> bool {
     unsafe {
-        if level == 0 || (lua_type(interpreter, -1) != Some(TAG_TYPE_TABLE)) {
+        if level == 0 || (lua_type(interpreter, -1) != Some(TagType::Table)) {
             return false;
         }
         (*interpreter).push_nil();
         while lua_next(interpreter, -2) != 0 {
-            if lua_type(interpreter, -2) == Some(TAG_TYPE_STRING) {
+            if lua_type(interpreter, -2) == Some(TagType::String) {
                 if lua_rawequal(interpreter, objidx, -1) {
                     lua_settop(interpreter, -2);
                     return true;
@@ -8259,9 +8236,9 @@ pub unsafe extern "C" fn lual_typeerror(interpreter: *mut Interpreter, arg: i32,
     unsafe {
         let message: *const i8;
         let typearg: *const i8;
-        if lual_getmetafield(interpreter, arg, b"__name\0" as *const u8 as *const i8) == 4 {
+        if lual_getmetafield(interpreter, arg, b"__name\0" as *const u8 as *const i8) == TagType::String {
             typearg = lua_tolstring(interpreter, -1, std::ptr::null_mut());
-        } else if lua_type(interpreter, arg) == Some(TAG_TYPE_POINTER) {
+        } else if lua_type(interpreter, arg) == Some(TagType::Pointer) {
             typearg = b"light userdata\0" as *const u8 as *const i8;
         } else {
             typearg = lua_typename(interpreter, lua_type(interpreter, arg));
@@ -8275,7 +8252,7 @@ pub unsafe extern "C" fn lual_typeerror(interpreter: *mut Interpreter, arg: i32,
         return lual_argerror(interpreter, arg, message);
     }
 }
-pub unsafe fn tag_error(interpreter: *mut Interpreter, arg: i32, tag: Option<u8>) {
+pub unsafe fn tag_error2(interpreter: *mut Interpreter, arg: i32, tag: Option<TagType>) {
     unsafe {
         lual_typeerror(interpreter, arg, lua_typename(interpreter, tag));
     }
@@ -8471,10 +8448,10 @@ pub unsafe extern "C" fn lual_checkstack(interpreter: *mut Interpreter, space: i
         }
     }
 }
-pub unsafe extern "C" fn lual_checktype(interpreter: *mut Interpreter, arg: i32, tag: u8) {
+pub unsafe extern "C" fn lual_checktype(interpreter: *mut Interpreter, arg: i32, tag: TagType) {
     unsafe {
         if lua_type(interpreter, arg) != Some(tag) {
-            tag_error(interpreter, arg, Some(tag));
+            tag_error2(interpreter, arg, Some(tag));
         }
     }
 }
@@ -8493,7 +8470,7 @@ pub unsafe extern "C" fn lual_checklstring(
     unsafe {
         let s: *const i8 = lua_tolstring(interpreter, arg, length);
         if (s.is_null() as i32 != 0) as i64 != 0 {
-            tag_error(interpreter, arg, Some(TAG_TYPE_STRING));
+            tag_error2(interpreter, arg, Some(TagType::String));
         }
         return s;
     }
@@ -8506,7 +8483,7 @@ pub unsafe extern "C" fn lual_optlstring(
 ) -> *const i8 {
     unsafe {
         match lua_type(interpreter, arg) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 if !length.is_null() {
                     *length = if !def.is_null() { strlen(def) } else { 0u64 };
                 }
@@ -8523,7 +8500,7 @@ pub unsafe extern "C" fn lual_checknumber(interpreter: *mut Interpreter, arg: i3
         let mut is_number: bool = false;
         let d: f64 = lua_tonumberx(interpreter, arg, &mut is_number);
         if !is_number {
-            tag_error(interpreter, arg, Some(TAG_TYPE_NUMERIC));
+            tag_error2(interpreter, arg, Some(TagType::Numeric));
         }
         return d;
     }
@@ -8531,7 +8508,7 @@ pub unsafe extern "C" fn lual_checknumber(interpreter: *mut Interpreter, arg: i3
 pub unsafe extern "C" fn lual_optnumber(interpreter: *mut Interpreter, arg: i32, def: f64) -> f64 {
     unsafe {
         match lua_type(interpreter, arg) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 def
             },
             _ => {
@@ -8549,7 +8526,7 @@ pub unsafe extern "C" fn interror(interpreter: *mut Interpreter, arg: i32) {
                 b"number has no integer representation\0" as *const u8 as *const i8,
             );
         } else {
-            tag_error(interpreter, arg, Some(TAG_TYPE_NUMERIC));
+            tag_error2(interpreter, arg, Some(TagType::Numeric));
         };
     }
 }
@@ -8566,7 +8543,7 @@ pub unsafe extern "C" fn lual_checkinteger(interpreter: *mut Interpreter, arg: i
 pub unsafe extern "C" fn lual_optinteger(interpreter: *mut Interpreter, arg: i32, def: i64) -> i64 {
     unsafe {
         return match lua_type(interpreter, arg) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 def
             },
             _ => {
@@ -8764,13 +8741,12 @@ pub unsafe extern "C" fn lual_loadbufferx(
         );
     }
 }
-pub unsafe extern "C" fn lual_getmetafield(interpreter: *mut Interpreter, obj: i32, event: *const i8) -> i32 {
+pub unsafe extern "C" fn lual_getmetafield(interpreter: *mut Interpreter, obj: i32, event: *const i8) -> TagType {
     unsafe {
         if (*interpreter).lua_getmetatable(obj) {
-            let tag: i32;
             lua_pushstring(interpreter, event);
-            tag = lua_rawget(interpreter, -2);
-            if tag == 0 {
+            let tag = lua_rawget(interpreter, -2);
+            if tag == TagType::Nil {
                 lua_settop(interpreter, -3);
             } else {
                 lua_rotate(interpreter, -2, -1);
@@ -8778,14 +8754,14 @@ pub unsafe extern "C" fn lual_getmetafield(interpreter: *mut Interpreter, obj: i
             }
             return tag;
         } else {
-            return 0;
+            return TagType::Nil;
         };
     }
 }
 pub unsafe extern "C" fn lual_callmeta(interpreter: *mut Interpreter, mut obj: i32, event: *const i8) -> i32 {
     unsafe {
         obj = lua_absindex(interpreter, obj);
-        if lual_getmetafield(interpreter, obj, event) == 0 {
+        if lual_getmetafield(interpreter, obj, event) == TagType::Nil {
             return 0;
         }
         lua_pushvalue(interpreter, obj);
@@ -8825,7 +8801,7 @@ pub unsafe extern "C" fn lual_tolstring(
             }
         } else {
             match lua_type(interpreter, index) {
-                Some(TAG_TYPE_NUMERIC) => {
+                Some(TagType::Numeric) => {
                     if lua_isinteger(interpreter, index) {
                         lua_pushfstring(
                             interpreter,
@@ -8840,10 +8816,10 @@ pub unsafe extern "C" fn lual_tolstring(
                         );
                     }
                 }
-                Some(TAG_TYPE_STRING) => {
+                Some(TagType::String) => {
                     lua_pushvalue(interpreter, index);
                 }
-                Some(TAG_TYPE_BOOLEAN) => {
+                Some(TagType::Boolean) => {
                     lua_pushstring(
                         interpreter,
                         if lua_toboolean(interpreter, index) != 0 {
@@ -8853,13 +8829,13 @@ pub unsafe extern "C" fn lual_tolstring(
                         },
                     );
                 }
-                Some(TAG_TYPE_NIL) => {
+                Some(TagType::Nil) => {
                     lua_pushstring(interpreter, b"nil\0" as *const u8 as *const i8);
                 }
                 _ => {
-                    let tag: i32 =
+                    let tag =
                         lual_getmetafield(interpreter, index, b"__name\0" as *const u8 as *const i8);
-                    let kind: *const i8 = if tag == 4 {
+                    let kind: *const i8 = if tag == TagType::String {
                         lua_tolstring(interpreter, -1, std::ptr::null_mut())
                     } else {
                         lua_typename(interpreter, lua_type(interpreter, index))
@@ -8870,7 +8846,7 @@ pub unsafe extern "C" fn lual_tolstring(
                         kind,
                         User::lua_topointer(interpreter, index),
                     );
-                    if tag != 0 {
+                    if tag != TagType::Nil {
                         lua_rotate(interpreter, -2, -1);
                         lua_settop(interpreter, -2);
                     }
@@ -9000,7 +8976,7 @@ pub unsafe extern "C" fn raw_allocate(
 }
 pub unsafe extern "C" fn panic(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let message: *const i8 = if lua_type(interpreter, -1) == Some(TAG_TYPE_STRING) {
+        let message: *const i8 = if lua_type(interpreter, -1) == Some(TagType::String) {
             lua_tolstring(interpreter, -1, std::ptr::null_mut())
         } else {
             b"error object is not a string\0" as *const u8 as *const i8
@@ -9371,7 +9347,7 @@ pub unsafe extern "C" fn msghandler(interpreter: *mut Interpreter) -> i32 {
         let mut message: *const i8 = lua_tolstring(interpreter, 1, std::ptr::null_mut());
         if message.is_null() {
             if lual_callmeta(interpreter, 1, b"__tostring\0" as *const u8 as *const i8) != 0
-                && lua_type(interpreter, -1) == Some(TAG_TYPE_STRING)
+                && lua_type(interpreter, -1) == Some(TagType::String)
             {
                 return 1;
             } else {
@@ -9789,7 +9765,7 @@ pub unsafe extern "C" fn checkstack(interpreter: *mut Interpreter, other_state: 
 }
 pub unsafe extern "C" fn getthread(interpreter: *mut Interpreter, arg: *mut i32) -> *mut Interpreter {
     unsafe {
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_STATE) {
+        if lua_type(interpreter, 1) == Some(TagType::State) {
             *arg = 1;
             return lua_tothread(interpreter, 1);
         } else {
@@ -9833,7 +9809,7 @@ pub unsafe extern "C" fn treatstackoption(
 pub unsafe extern "C" fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> i32 {
     unsafe {
         let n: i32 = lual_checkinteger(interpreter, 2) as i32;
-        lual_checktype(interpreter, 1, TAG_TYPE_CLOSURE);
+        lual_checktype(interpreter, 1, TagType::Closure);
         let name: *const i8 = if get != 0 {
             lua_getupvalue(interpreter, 1, n)
         } else {
@@ -9857,7 +9833,7 @@ pub unsafe extern "C" fn checkupval(
     unsafe {
         let id: *mut libc::c_void;
         let nup: i32 = lual_checkinteger(interpreter, argnup) as i32;
-        lual_checktype(interpreter, argf, TAG_TYPE_CLOSURE);
+        lual_checktype(interpreter, argf, TagType::Closure);
         id = lua_upvalueid(interpreter, argf, nup);
         if !pnup.is_null() {
             (((id != std::ptr::null_mut()) as i32 != 0) as i64 != 0
@@ -9882,7 +9858,7 @@ pub unsafe extern "C" fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo
         ];
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);
         (*interpreter).push_state();
-        if lua_rawget(interpreter, -2) == 6 {
+        if lua_rawget(interpreter, -2) == TagType::Closure {
             lua_pushstring(interpreter, HOOK_NAMES[(*ar).event as usize]);
             if (*ar).currentline >= 0 {
                 (*interpreter).push_integer((*ar).currentline as i64);

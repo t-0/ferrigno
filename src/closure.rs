@@ -33,17 +33,23 @@ pub struct Closure {
     pub upvalues: ClosureUpValue,
 }
 impl TObject for Closure {
-    fn get_tag(&self) -> u8 {
-        return self.object.tag;
+    fn as_object(&self) -> &Object {
+        &self.object
     }
-    fn set_tag(&mut self, tag: u8) {
-        self.object.tag = tag;
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.object
     }
     fn get_marked(&self) -> u8 {
-        self.object.marked
+        self.object.get_marked()
     }
-    fn set_marked(&mut self, marked_: u8) {
-        self.object.marked = marked_;
+    fn set_marked(&mut self, marked: u8) {
+        self.object.set_marked(marked);
+    }
+    fn get_tag(&self) -> u8 {
+        self.object.get_tag()
+    }
+    fn set_tag(&mut self, tag: u8) {
+        self.object.set_tag(tag);
     }
     fn get_class_name(&mut self) -> String {
         "closure".to_string()

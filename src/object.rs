@@ -24,15 +24,25 @@ use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
 pub trait TObject {
-    fn get_tag(&self) -> u8;
-    fn set_tag(&mut self, tag: u8);
-    fn get_marked(&self) -> u8;
-    fn set_marked(&mut self, marked_: u8);
+    fn as_object(&self) -> &Object;
+    fn as_object_mut(&mut self) -> &mut Object;
+    fn get_tag(&self) -> u8 {
+        self.as_object().get_tag()
+    }
+    fn set_tag(&mut self, tag: u8) {
+        self.as_object_mut().set_tag(tag);
+    }
+    fn get_marked(&self) -> u8 {
+        self.as_object().get_marked()
+    }
+    fn set_marked(&mut self, marked: u8) {
+        self.as_object_mut().set_marked(marked);
+    }
     fn is_collectable(&self) -> bool {
-        is_collectable(self.get_tag())
+        self.as_object().is_collectable()
     }
     fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
+        self.as_object_mut().set_collectable();
     }
     fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag())
@@ -53,11 +63,17 @@ pub struct Object {
     pub _dummy1: u32 = 0,
 }
 impl TObject for Object {
+    fn as_object(&self) -> &Object {
+        self
+    }
+    fn as_object_mut(&mut self) -> &mut Object {
+        self
+    }
     fn get_marked(&self) -> u8 {
         self.marked
     }
-    fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
+    fn set_marked(&mut self, marked: u8) {
+        self.marked = marked;
     }
     fn get_tag(&self) -> u8 {
         return self.tag;

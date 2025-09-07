@@ -5,33 +5,33 @@ use crate::tag::*;
 use crate::buffer::*;
 use crate::new::*;
 use crate::utility::c::*;
-pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> i32 {
+pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> bool {
     unsafe {
         lua_pushstring(interpreter, key);
-        return (lua_rawget(interpreter, -n) != 0) as i32;
+        return lua_rawget(interpreter, -n) != TagType::Nil;
     }
 }
 pub unsafe extern "C" fn checktab(interpreter: *mut Interpreter, arg: i32, what: i32) {
     unsafe {
-        if lua_type(interpreter, arg) != Some(TAG_TYPE_TABLE) {
+        if lua_type(interpreter, arg) != Some(TagType::Table) {
             let mut n: i32 = 1;
             if (*interpreter).lua_getmetatable(arg)
                 && (what & 1 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__index\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__index\0" as *const u8 as *const i8, n)
                 })
                 && (what & 2 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__newindex\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__newindex\0" as *const u8 as *const i8, n)
                 })
                 && (what & 4 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__len\0" as *const u8 as *const i8, n) != 0
+                    checkfield(interpreter, b"__len\0" as *const u8 as *const i8, n)
                 })
             {
                 lua_settop(interpreter, -n - 1);
             } else {
-                lual_checktype(interpreter, arg, TAG_TYPE_TABLE);
+                lual_checktype(interpreter, arg, TagType::Table);
             }
         }
     }
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn table_move(interpreter: *mut Interpreter) -> i32 {
         let e: i64 = lual_checkinteger(interpreter, 3);
         let t: i64 = lual_checkinteger(interpreter, 4);
         let tag: i32 = match lua_type(interpreter, 5) {
-            None | Some(TAG_TYPE_NIL) => 1,
+            None | Some(TagType::Nil) => 1,
             _ =>  5,
         };
         checktab(interpreter, 1, 1);
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
         let mut n: u64;
         let mut i: i64 = lual_optinteger(interpreter, 2, 1);
         let e = match lua_type(interpreter, 3) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 lual_len(interpreter, 1)
             },
             _ => {
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn set2(interpreter: *mut Interpreter, i: u32, j: u32) {
 }
 pub unsafe extern "C" fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> i32 {
     unsafe {
-        if lua_type(interpreter, 2) == Some(TAG_TYPE_NIL) {
+        if lua_type(interpreter, 2) == Some(TagType::Nil) {
             return lua_compare(interpreter, a, b, 1);
         } else {
             let res: i32;
@@ -405,10 +405,10 @@ pub unsafe extern "C" fn table_sort(interpreter: *mut Interpreter) -> i32 {
                 lual_argerror(interpreter, 1, b"array too big\0" as *const u8 as *const i8);
             }
             match lua_type(interpreter, 2) {
-                None | Some(TAG_TYPE_NIL) => {
+                None | Some(TagType::Nil) => {
                 },
                 _ => {
-                    lual_checktype(interpreter, 2, TAG_TYPE_CLOSURE);
+                    lual_checktype(interpreter, 2, TagType::Closure);
                 },
             }
             lua_settop(interpreter, 2);

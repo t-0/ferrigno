@@ -24,7 +24,7 @@ pub unsafe extern "C" fn db_getmetatable(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let t = lua_type(interpreter, 2);
-        (((t == Some(TAG_TYPE_NIL) || t == Some(TAG_TYPE_TABLE)) as i32 != 0) as i64 != 0
+        (((t == Some(TagType::Nil) || t == Some(TagType::Table)) as i32 != 0) as i64 != 0
             || lual_typeerror(interpreter, 2, b"nil or table\0" as *const u8 as *const i8) != 0)
             as i32;
         lua_settop(interpreter, 2);
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(interpreter, 2, 1) as i32;
-        if lua_type(interpreter, 1) != Some(TAG_TYPE_USER) {
+        if lua_type(interpreter, 1) != Some(TagType::User) {
             (*interpreter).push_nil();
         } else if (*interpreter).lua_getiuservalue(1, n) != -1 {
             (*interpreter).push_boolean(true);
@@ -47,7 +47,7 @@ pub unsafe extern "C" fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn db_setuservalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(interpreter, 3, 1) as i32;
-        lual_checktype(interpreter, 1, TAG_TYPE_USER);
+        lual_checktype(interpreter, 1, TagType::User);
         lual_checkany(interpreter, 2);
         lua_settop(interpreter, 2);
         if lua_setiuservalue(interpreter, 1, n) == 0 {
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
                 arg + 2,
                 b"invalid option CHARACTER_ANGLE_RIGHT\0" as *const u8 as *const i8,
             ) != 0) as i32;
-        if lua_type(interpreter, arg + 1) == Some(TAG_TYPE_CLOSURE) {
+        if lua_type(interpreter, arg + 1) == Some(TagType::Closure) {
             options = lua_pushfstring(interpreter, b">%s\0" as *const u8 as *const i8, options);
             lua_pushvalue(interpreter, arg + 1);
             lua_xmove(interpreter, other_state, 1);
@@ -205,7 +205,7 @@ pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let nvar: i32 = lual_checkinteger(interpreter, arg + 2) as i32;
-        if lua_type(interpreter, arg + 1) == Some(TAG_TYPE_CLOSURE) {
+        if lua_type(interpreter, arg + 1) == Some(TagType::Closure) {
             lua_pushvalue(interpreter, arg + 1);
             lua_pushstring(interpreter, lua_getlocal(interpreter, std::ptr::null(), nvar));
             return 1;
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
         let function: HookFunction;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         match lua_type(interpreter, arg + 1) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 lua_settop(interpreter, arg + 1);
                 function = None;
                 mask = 0;
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
             },
             _ => {
                 let smask: *const i8 = lual_checklstring(interpreter, arg + 2, std::ptr::null_mut());
-                lual_checktype(interpreter, arg + 1, TAG_TYPE_CLOSURE);
+                lual_checktype(interpreter, arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
                 function = Some(hookf as unsafe extern "C" fn(*mut Interpreter, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);

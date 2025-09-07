@@ -474,7 +474,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
         i = 1;
         loop {
             message.add_string(b"\n\t\0" as *const u8 as *const i8);
-            if ((lua_rawgeti(interpreter, 3, i as i64) == 0) as i32 != 0) as i64 != 0 {
+            if ((lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil) as i32 != 0) as i64 != 0 {
                 lua_settop(interpreter, -2);
                 message.length = message.length.wrapping_sub(2);
                 message.push_result();
@@ -487,7 +487,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
             }
             lua_pushstring(interpreter, name);
             lua_callk(interpreter, 1, 2, 0, None);
-            if lua_type(interpreter, -2) == Some(TAG_TYPE_CLOSURE) {
+            if lua_type(interpreter, -2) == Some(TagType::Closure) {
                 return;
             } else if lua_isstring(interpreter, -2) {
                 lua_settop(interpreter, -2);
@@ -519,7 +519,7 @@ pub unsafe extern "C" fn ll_require(interpreter: *mut Interpreter) -> i32 {
         lua_pushvalue(interpreter, 1);
         lua_pushvalue(interpreter, -3);
         lua_callk(interpreter, 2, 1, 0, None);
-        if !(lua_type(interpreter, -1) == Some(TAG_TYPE_NIL)) {
+        if !(lua_type(interpreter, -1) == Some(TagType::Nil)) {
             lua_setfield(interpreter, 2, name);
         } else {
             lua_settop(interpreter, -2);

@@ -300,7 +300,7 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
         if lua_type(interpreter, 1) == None {
             (*interpreter).push_nil();
         }
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_NIL) {
+        if lua_type(interpreter, 1) == Some(TagType::Nil) {
             lua_getfield(
                 interpreter,
                 -(1000000 as i32) - 1000 as i32,
@@ -552,7 +552,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
                 if !(fresh155 != 0 && success != 0) {
                     break;
                 }
-                if lua_type(interpreter, n) == Some(TAG_TYPE_NUMERIC) {
+                if lua_type(interpreter, n) == Some(TagType::Numeric) {
                     let l: u64 = lual_checkinteger(interpreter, n) as u64;
                     success = if l == 0 {
                         test_eof(interpreter, file)
@@ -662,7 +662,7 @@ pub unsafe extern "C" fn g_write(interpreter: *mut Interpreter, file: *mut FILE,
             if !(fresh156 != 0) {
                 break;
             }
-            if lua_type(interpreter, arg) == Some(TAG_TYPE_NUMERIC) {
+            if lua_type(interpreter, arg) == Some(TagType::Numeric) {
                 let length: i32 = if lua_isinteger(interpreter, arg) {
                     fprintf(
                         file,

@@ -4,7 +4,7 @@ use crate::registeredfunction::*;
 use crate::interpreter::*;
 unsafe extern "C" fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TAG_TYPE_CLOSURE);
+        lual_checktype(interpreter, 1, TagType::Closure);
         let nl: *mut Interpreter = lua_newthread(interpreter);
         lua_pushvalue(interpreter, 1);
         lua_xmove(interpreter, nl, 1);
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
                 stat = lua_closethread(co, interpreter);
                 lua_xmove(co, interpreter, 1);
             }
-            if stat != 4 && lua_type(interpreter, -1) == Some(TAG_TYPE_STRING) {
+            if stat != 4 && lua_type(interpreter, -1) == Some(TagType::String) {
                 lual_where(interpreter, 1);
                 lua_rotate(interpreter, -2, 1);
                 lua_concat(interpreter, 2);

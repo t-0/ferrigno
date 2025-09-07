@@ -230,7 +230,7 @@ unsafe extern "C" fn math_log(interpreter: *mut Interpreter) -> i32 {
         let res: f64;
 
         match lua_type(interpreter, 2) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 res = x.ln();
             },
             _ => {
@@ -300,7 +300,7 @@ unsafe extern "C" fn math_max(interpreter: *mut Interpreter) -> i32 {
 }
 unsafe extern "C" fn math_type(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_NUMERIC) {
+        if lua_type(interpreter, 1) == Some(TagType::Numeric) {
             lua_pushstring(
                 interpreter,
                 if lua_isinteger(interpreter, 1) {

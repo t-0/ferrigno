@@ -18,17 +18,11 @@ pub struct User {
     pub upvalues: [TValue; 0],
 }
 impl TObject for User {
-    fn get_tag(&self) -> u8 {
-        self.object.tag
+    fn as_object(&self) -> &Object {
+        &self.object
     }
-    fn set_tag(&mut self, tag: u8) {
-        self.object.tag = tag;
-    }
-    fn get_marked(&self) -> u8 {
-        self.object.marked
-    }
-    fn set_marked(&mut self, marked: u8) {
-        self.object.marked = marked;
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.object
     }
     fn get_class_name(&mut self) -> String {
         "user".to_string()

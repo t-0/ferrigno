@@ -314,7 +314,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let t: i64;
         match lua_type(interpreter, 1) {
-            None | Some(TAG_TYPE_NIL) => {
+            None | Some(TagType::Nil) => {
                 t = time(std::ptr::null_mut());
             },
             _ => {
@@ -331,7 +331,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
                     __tm_gmtoff: 0,
                     __tm_zone: std::ptr::null(),
                 };
-                lual_checktype(interpreter, 1, TAG_TYPE_TABLE);
+                lual_checktype(interpreter, 1, TagType::Table);
                 lua_settop(interpreter, 1);
                 ts.tm_year = getfield(interpreter, b"year\0" as *const u8 as *const i8, -1, 1900 as i32);
                 ts.tm_mon = getfield(interpreter, b"month\0" as *const u8 as *const i8, -1, 1);
@@ -389,7 +389,7 @@ pub unsafe extern "C" fn os_setlocale(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn os_exit(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_BOOLEAN) {
+        if lua_type(interpreter, 1) == Some(TagType::Boolean) {
             status = if lua_toboolean(interpreter, 1) != 0 { 0 } else { 1 };
         } else {
             status = lual_optinteger(interpreter, 1, 0) as i32;

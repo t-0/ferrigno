@@ -28,18 +28,18 @@ impl MatchState {
         b: *mut Buffer,
         s: *const i8,
         e: *const i8,
-        tr: u8,
+        tr: TagType,
     ) -> i32 {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
             match tr {
-                TAG_TYPE_CLOSURE => {
+                TagType::Closure => {
                     let n: i32;
                     lua_pushvalue(interpreter, 3);
                     n = self.push_captures(s, e);
                     lua_callk(interpreter, n, 1, 0, None);
                 }
-                TAG_TYPE_TABLE => {
+                TagType::Table => {
                     self.push_onecapture(0, s, e);
                     lua_gettable(interpreter, 3);
                 }

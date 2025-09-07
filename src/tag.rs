@@ -1,4 +1,5 @@
 #[derive(Copy, Clone, PartialEq, Eq)]
+#[repr(C)]
 pub enum TagType {
     Nil = 0x00,
     Boolean = 0x01,
@@ -78,9 +79,9 @@ pub const fn get_tag_variant(tag: u8) -> u8 {
     TAG_VARIANT_MASK_ & tag
 }
 const TAG_COLLECTABLE: u8 = 0x40;
-pub fn is_none_or_nil(tag: Option<u8>) -> bool {
+pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
     match tag {
-        None | Some(TAG_TYPE_NIL) => true,
+        None | Some(TagType::Nil) => true,
         _ => false,
     }
 }

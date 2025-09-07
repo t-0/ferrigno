@@ -42,17 +42,11 @@ pub struct Prototype {
     pub maximum_stack_size: u8,
 }
 impl TObject for Prototype {
-    fn get_marked(&self) -> u8 {
-        self.object.marked
+    fn as_object(&self) -> &Object {
+        &self.object
     }
-    fn set_marked(&mut self, marked_: u8) {
-        self.object.marked = marked_;
-    }
-    fn get_tag(&self) -> u8 {
-        self.object.tag
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.object.tag = tag;
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.object
     }
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()

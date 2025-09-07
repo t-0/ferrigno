@@ -7,8 +7,8 @@ use crate::tag::*;
 pub unsafe extern "C" fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         match lua_type(interpreter, 2) {
-            None | Some(TAG_TYPE_NIL) => {
-                if lua_type(interpreter, 1) == Some(TAG_TYPE_NUMERIC) {
+            None | Some(TagType::Nil) => {
+                if lua_type(interpreter, 1) == Some(TagType::Numeric) {
                     lua_settop(interpreter, 1);
                     return 1;
                 } else {
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
                 let s_0: *const i8;
                 let mut n: i64 = 0;
                 let base: i64 = lual_checkinteger(interpreter, 2);
-                lual_checktype(interpreter, 1, TAG_TYPE_STRING);
+                lual_checktype(interpreter, 1, TagType::String);
                 s_0 = lua_tolstring(interpreter, 1, &mut l_0);
                 (((2 as i64 <= base && base <= 36 as i64) as i32 != 0) as i64 != 0
                     || lual_argerror(interpreter, 2, b"base out of range\0" as *const u8 as *const i8) != 0)
@@ -44,7 +44,7 @@ pub unsafe extern "C" fn luab_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let level: i32 = lual_optinteger(interpreter, 2, 1) as i32;
         lua_settop(interpreter, 1);
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_STRING) && level > 0 {
+        if lua_type(interpreter, 1) == Some(TagType::String) && level > 0 {
             lual_where(interpreter, level);
             lua_pushvalue(interpreter, 1);
             lua_concat(interpreter, 2);
@@ -66,21 +66,18 @@ pub unsafe extern "C" fn luab_getmetatable(interpreter: *mut Interpreter) -> i32
 }
 pub unsafe extern "C" fn luab_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TAG_TYPE_TABLE);
+        lual_checktype(interpreter, 1, TagType::Table);
         match lua_type(interpreter, 2) {
-            Some(TAG_TYPE_NIL) | Some(TAG_TYPE_TABLE) => {
+            Some(TagType::Nil) | Some(TagType::Table) => {
             },
             _ => {
                 lual_typeerror(interpreter, 2, b"nil or table\0" as *const u8 as *const i8);
             },
         };
-        if ((lual_getmetafield(interpreter, 1, b"__metatable\0" as *const u8 as *const i8) != 0) as i32
-            != 0) as i64
-            != 0
-        {
+        if lual_getmetafield(interpreter, 1, b"__metatable\0" as *const u8 as *const i8) != TagType::Nil {
             return lual_error(
                 interpreter,
-                b"cannot change a protected metatable\0" as *const u8 as *const i8,
+                b"cannot change a protected metatable\0" as *const u8 as *const i8
             );
         }
         lua_settop(interpreter, 2);
@@ -99,7 +96,7 @@ pub unsafe extern "C" fn luab_rawequal(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         match lua_type(interpreter, 1) {
-            Some(TAG_TYPE_TABLE) | Some(TAG_TYPE_STRING) => {
+            Some(TagType::Table) | Some(TagType::String) => {
             },
             _ => {
                 lual_typeerror(interpreter, 1, b"table or string\0" as *const u8 as *const i8);
@@ -111,7 +108,7 @@ pub unsafe extern "C" fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TAG_TYPE_TABLE);
+        lual_checktype(interpreter, 1, TagType::Table);
         lual_checkany(interpreter, 2);
         lua_settop(interpreter, 2);
         lua_rawget(interpreter, 1);
@@ -120,7 +117,7 @@ pub unsafe extern "C" fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn luab_rawset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TAG_TYPE_TABLE);
+        lual_checktype(interpreter, 1, TagType::Table);
         lual_checkany(interpreter, 2);
         lual_checkany(interpreter, 3);
         lua_settop(interpreter, 3);
@@ -238,7 +235,7 @@ pub unsafe extern "C" fn luab_type(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn luab_next(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TAG_TYPE_TABLE);
+        lual_checktype(interpreter, 1, TagType::Table);
         lua_settop(interpreter, 2);
         if lua_next(interpreter, 1) != 0 {
             return 2;
@@ -254,7 +251,7 @@ pub unsafe extern "C" fn pairscont(mut _state: *mut Interpreter, mut _status: i3
 pub unsafe extern "C" fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
-        if lual_getmetafield(interpreter, 1, b"__pairs\0" as *const u8 as *const i8) == 0 {
+        if lual_getmetafield(interpreter, 1, b"__pairs\0" as *const u8 as *const i8) == TagType::Nil {
             lua_pushcclosure(
                 interpreter,
                 Some(luab_next as unsafe extern "C" fn(*mut Interpreter) -> i32),
@@ -335,7 +332,7 @@ pub unsafe extern "C" fn generic_reader(
         );
         lua_pushvalue(interpreter, 1);
         lua_callk(interpreter, 0, 1, 0, None);
-        if lua_type(interpreter, -1) == Some(TAG_TYPE_NIL) {
+        if lua_type(interpreter, -1) == Some(TagType::Nil) {
             lua_settop(interpreter, -2);
             *size = 0;
             return std::ptr::null();
@@ -372,7 +369,7 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
                 b"=(load)\0" as *const u8 as *const i8,
                 std::ptr::null_mut(),
             );
-            lual_checktype(interpreter, 1, TAG_TYPE_CLOSURE);
+            lual_checktype(interpreter, 1, TagType::Closure);
             lua_settop(interpreter, 5);
             status = lua_load(
                 interpreter,
@@ -431,7 +428,7 @@ pub unsafe extern "C" fn luab_assert(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn luab_select(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
-        if lua_type(interpreter, 1) == Some(TAG_TYPE_STRING)
+        if lua_type(interpreter, 1) == Some(TagType::String)
             && *lua_tolstring(interpreter, 1, std::ptr::null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32
         {
             (*interpreter).push_integer((n - 1) as i64);
@@ -454,7 +451,7 @@ pub unsafe extern "C" fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         let n: i32 = (*interpreter).get_top();
-        lual_checktype(interpreter, 2, TAG_TYPE_CLOSURE);
+        lual_checktype(interpreter, 2, TagType::Closure);
         (*interpreter).push_boolean(true);
         lua_pushvalue(interpreter, 1);
         lua_rotate(interpreter, 3, 2);

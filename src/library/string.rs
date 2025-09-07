@@ -210,7 +210,7 @@ pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
             buffer: Buffer::new(),
         };
         let is_strip = 0 != lua_toboolean(interpreter, 2);
-        lual_checktype(interpreter, 1, TAG_TYPE_CLOSURE);
+        lual_checktype(interpreter, 1, TagType::Closure);
         lua_settop(interpreter, 1);
         stream_writer.is_initialized = false;
         if ((lua_dump(
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
     unsafe {
-        if lua_type(interpreter, arg) == Some(TAG_TYPE_NUMERIC) {
+        if lua_type(interpreter, arg) == Some(TagType::Numeric) {
             lua_pushvalue(interpreter, arg);
             return 1;
         } else {
@@ -255,10 +255,7 @@ pub unsafe extern "C" fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
 pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
     unsafe {
         lua_settop(interpreter, 2);
-        if ((lua_type(interpreter, 2) == Some(TAG_TYPE_STRING) || lual_getmetafield(interpreter, 2, mtname) == 0) as i32 != 0)
-            as i64
-            != 0
-        {
+        if lua_type(interpreter, 2) == Some(TagType::String) || lual_getmetafield(interpreter, 2, mtname) == TagType::Nil {
             lual_error(
                 interpreter,
                 b"attempt to %s a '%s' with a '%s'\0" as *const u8 as *const i8,
@@ -546,7 +543,7 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             }; 32],
         };
         let mut b = Buffer::new();
-        (((tr == Some(TAG_TYPE_NUMERIC) || tr == Some(TAG_TYPE_STRING) || tr == Some(TAG_TYPE_CLOSURE) || tr == Some(TAG_TYPE_TABLE)) as i32 != 0) as i64 != 0
+        (((tr == Some(TagType::Numeric) || tr == Some(TagType::String) || tr == Some(TagType::Closure) || tr == Some(TagType::Table)) as i32 != 0) as i64 != 0
             || lual_typeerror(
                 interpreter,
                 3,
@@ -688,12 +685,12 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i
 pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
     unsafe {
         match lua_type(interpreter, arg) {
-            Some(TAG_TYPE_STRING) => {
+            Some(TagType::String) => {
                 let mut length: u64 = 0;
                 let s: *const i8 = lua_tolstring(interpreter, arg, &mut length);
                 addquoted(b, s, length);
             },
-            Some(TAG_TYPE_NUMERIC) => {
+            Some(TagType::Numeric) => {
                 let buffer: *mut i8 = (*b).prepare_with_size(120);
                 let nb: i32;
                 if lua_isinteger(interpreter, arg) {
@@ -713,7 +710,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                 }
                 (*b).length = (*b).length.wrapping_add(nb as usize);
             },
-            Some(TAG_TYPE_NIL) | Some(TAG_TYPE_BOOLEAN) => {
+            Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(interpreter, arg, std::ptr::null_mut());
                 (*b).add_value();
             },
