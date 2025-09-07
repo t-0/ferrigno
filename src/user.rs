@@ -143,9 +143,9 @@ impl User {
     }
     pub unsafe extern "C" fn traverseudata(&mut self, global: *mut Global) -> i32 {
         unsafe {
-            if !self.metatable.is_null() {
-                if (*self.metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, &mut (*(self.metatable as *mut Object)));
+            if !self.get_metatable().is_null() {
+                if (*self.get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(global, &mut (*(self.get_metatable() as *mut Object)));
                 }
             }
             for i in 0..self.count_upvalues {

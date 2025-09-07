@@ -13,28 +13,25 @@ pub const STRING_SHORT_MAX: u64 = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    //PROBLEM
+    pub object: Object,
+    pub hash: u32,
     pub extra: u8,
     pub short_length: u8,
-    pub hash: u32,
     pub u: TStringExtension,
-    pub contents: [i8; 1],
+    pub contents: [i8; 0],
 }
 impl TObject for TString {
     fn get_tag(&self) -> u8 {
-        return self.tag;
+        return self.object.tag;
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.tag = tag;
     }
     fn get_marked(&self) -> u8 {
-        self.marked
+        self.object.marked
     }
     fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
+        self.object.marked = marked_;
     }
     fn get_class_name(&mut self) -> String {
         "string".to_string()
@@ -55,19 +52,12 @@ impl TString {
                 self.remove_from_state(state);
                 (*state).free_memory(
                     self as *mut TString as *mut libc::c_void,
-                    (24 as u64).wrapping_add(
-                        ((self.get_length() as i32 + 1) as u64)
-                            .wrapping_mul(::core::mem::size_of::<i8>() as u64),
-                    ) as usize,
+                    core::mem::size_of::<TString>() + 1 + self.get_length() as usize,
                 );
             } else {
                 (*state).free_memory(
                     self as *mut TString as *mut libc::c_void,
-                    (24 as usize).wrapping_add(
-                        (self.get_length() as usize)
-                            .wrapping_add(1 as usize)
-                            .wrapping_mul(::core::mem::size_of::<i8>() as usize),
-                    ),
+                    core::mem::size_of::<TString>() + 1 + self.get_length() as usize,
                 );
             }
         }
@@ -199,11 +189,7 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
 }
 pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32) -> *mut TString {
     unsafe {
-        let total_size = (24 as usize).wrapping_add(
-            (l as usize)
-                .wrapping_add(1)
-                .wrapping_mul(::core::mem::size_of::<i8>()),
-        );
+        let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
         let o: *mut Object = luac_newobj(state, tag, total_size);
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;

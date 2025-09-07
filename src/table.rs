@@ -20,7 +20,7 @@ pub struct Table {
     pub object: Object,
     pub flags: u8,
     pub log_size_node: u8,
-    pub dummy3: u8 = 0,
+    pub _dummy3: u8 = 0,
     pub array_limit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
@@ -49,14 +49,9 @@ impl TObject for Table {
     }
 }
 impl New for Table {
-   fn new() -> Self {
+    fn new() -> Self {
         Table {
-            object: Object {
-                next: std::ptr::null_mut(),
-                tag: TAG_VARIANT_TABLE,
-                marked: 0,
-                ..
-            },
+            object: Object::new(TAG_VARIANT_TABLE),
             flags: 0,
             log_size_node: 0,
             array_limit: 0,
@@ -65,6 +60,7 @@ impl New for Table {
             last_free: std::ptr::null_mut(),
             metatable: std::ptr::null_mut(),
             gc_list: std::ptr::null_mut(),
+            _dummy3: 0,
             ..
         }
     }
@@ -283,21 +279,21 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u6
     unsafe {
         let mut weakkey: *const i8 = std::ptr::null();
         let mut weakvalue: *const i8 = std::ptr::null();
-        let mode: *const TValue = if ((*h).metatable).is_null() {
+        let mode: *const TValue = if ((*h).get_metatable()).is_null() {
             std::ptr::null()
-        } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
+        } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
             std::ptr::null()
         } else {
             luat_gettm(
-                (*h).metatable,
+                (*h).get_metatable(),
                 TM_MODE,
                 (*global).tm_name[TM_MODE as usize],
             )
         };
         let smode: *mut TString;
-        if !((*h).metatable).is_null() {
-            if (*(*h).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*((*h).metatable as *mut Object)));
+        if !((*h).get_metatable()).is_null() {
+            if (*(*h).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(global, &mut (*((*h).get_metatable() as *mut Object)));
             }
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TAG_VARIANT_STRING_SHORT && {
@@ -1181,16 +1177,16 @@ pub unsafe extern "C" fn luav_finishget(
                     luag_typeerror(state, t, b"index\0" as *const u8 as *const i8);
                 }
             } else {
-                tm = if ((*((*t).value.object as *mut Table)).metatable).is_null() {
+                tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
                     std::ptr::null()
-                } else if (*(*((*t).value.object as *mut Table)).metatable).flags as u32
+                } else if (*(*((*t).value.object as *mut Table)).get_metatable()).flags as u32
                     & (1 as u32) << TM_INDEX as i32
                     != 0
                 {
                     std::ptr::null()
                 } else {
                     luat_gettm(
-                        (*((*t).value.object as *mut Table)).metatable,
+                        (*((*t).value.object as *mut Table)).get_metatable(),
                         TM_INDEX,
                         (*(*state).global).tm_name[TM_INDEX as usize],
                     )
@@ -1240,13 +1236,13 @@ pub unsafe extern "C" fn luav_finishset(
             let tm: *const TValue;
             if !slot.is_null() {
                 let h: *mut Table = &mut (*((*t).value.object as *mut Table));
-                tm = if ((*h).metatable).is_null() {
+                tm = if ((*h).get_metatable()).is_null() {
                     std::ptr::null()
-                } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_NEWINDEX as i32 != 0 {
+                } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_NEWINDEX as i32 != 0 {
                     std::ptr::null()
                 } else {
                     luat_gettm(
-                        (*h).metatable,
+                        (*h).get_metatable(),
                         TM_NEWINDEX,
                         (*(*state).global).tm_name[TM_NEWINDEX as usize],
                     )

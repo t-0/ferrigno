@@ -72,74 +72,85 @@ impl TObject for Object {
         std::ptr::null_mut()
     }
 }
-pub unsafe extern "C" fn getgclist(o: *mut Object) -> *mut *mut Object {
+impl Object {
+    pub fn new (tag: u8) -> Object {
+        Object {
+            next: std::ptr::null_mut(),
+            tag: tag,
+            marked: 0,
+            _dummy0: 0,
+            _dummy1: 0,
+            ..
+        }
+    }
+}
+pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
     unsafe {
-        match (*o).get_tag() {
-            TAG_VARIANT_TABLE => return &mut (*(o as *mut Table)).gc_list,
-            TAG_VARIANT_CLOSURE_L => return &mut (*(o as *mut Closure)).gc_list,
-            TAG_VARIANT_CLOSURE_C => return &mut (*(o as *mut Closure)).gc_list,
-            TAG_VARIANT_STATE => return &mut (*(o as *mut State)).gc_list,
-            TAG_VARIANT_PROTOTYPE => return &mut (*(o as *mut Prototype)).gc_list,
-            TAG_VARIANT_USER => return &mut (*(o as *mut User)).gc_list,
+        match (*object).get_tag() {
+            TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
+            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
+            TAG_VARIANT_STATE => return &mut (*(object as *mut State)).gc_list,
+            TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).gc_list,
+            TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
             _ => return std::ptr::null_mut(),
         };
     }
 }
 pub unsafe extern "C" fn linkgclist_(
-    o: *mut Object,
+    object: *mut Object,
     pnext: *mut *mut Object,
     list: *mut *mut Object,
 ) {
     unsafe {
         *pnext = *list;
-        *list = o;
-        (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
+        *list = object;
+        (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
     }
 }
-pub unsafe extern "C" fn iscleared(global: *mut Global, o: *const Object) -> i32 {
+pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -> i32 {
     unsafe {
-        if o.is_null() {
+        if object.is_null() {
             return 0;
-        } else if get_tag_type((*o).get_tag()) == TAG_TYPE_STRING {
-            if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(o as *mut Object)));
+        } else if get_tag_type((*object).get_tag()) == TAG_TYPE_STRING {
+            if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(global, &mut (*(object as *mut Object)));
             }
             return 0;
         } else {
-            return ((*o).get_marked() & (1 << 3 | 1 << 4)) as i32;
+            return ((*object).get_marked() & (1 << 3 | 1 << 4)) as i32;
         };
     }
 }
-pub unsafe extern "C" fn luac_barrier_(state: *mut State, o: *mut Object, v: *mut Object) {
+pub unsafe extern "C" fn luac_barrier_(state: *mut State, object: *mut Object, v: *mut Object) {
     unsafe {
         let global: *mut Global = (*state).global;
         if (*global).gc_state as i32 <= 2 {
             really_mark_object(global, v);
-            if (*o).get_marked() & 7 > 1 {
+            if (*object).get_marked() & 7 > 1 {
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
         } else if (*global).gc_kind as i32 == 0 {
-            (*o).set_marked(
-                (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
+            (*object).set_marked(
+                (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
                     | ((*global).current_white & (1 << 3 | 1 << 4)),
             );
         }
     }
 }
-pub unsafe extern "C" fn luac_barrierback_(state: *mut State, o: *mut Object) {
+pub unsafe extern "C" fn luac_barrierback_(state: *mut State, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*state).global;
-        if (*o).get_marked() & 7 == 6 {
-            (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
+        if (*object).get_marked() & 7 == 6 {
+            (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
             linkgclist_(
-                &mut (*(o as *mut Object)),
-                getgclist(o),
+                &mut (*(object as *mut Object)),
+                getgclist(object),
                 &mut (*global).gray_again,
             );
         }
-        if (*o).get_marked() & 7 > 1 {
-            (*o).set_marked((*o).get_marked() & !7 | 5);
+        if (*object).get_marked() & 7 > 1 {
+            (*object).set_marked((*object).get_marked() & !7 | 5);
         }
     }
 }
@@ -165,16 +176,16 @@ pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Obj
         (*global).fixed_gc = object;
     }
 }
-pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: u64;
-        match (*o).get_tag() {
+        match (*object).get_tag() {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                (*o).set_marked((*o).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
+                (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
                 current_block_18 = 18317007320854588510;
             }
             TAG_VARIANT_UPVALUE => {
-                let uv: *mut UpValue = &mut (*(o as *mut UpValue));
+                let uv: *mut UpValue = &mut (*(object as *mut UpValue));
                 if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
                     (*uv).set_marked((*uv).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
@@ -188,11 +199,11 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object)
                 current_block_18 = 18317007320854588510;
             }
             TAG_VARIANT_USER => {
-                let u: *mut User = &mut (*(o as *mut User));
+                let u: *mut User = &mut (*(object as *mut User));
                 if (*u).count_upvalues as i32 == 0 {
-                    if !((*u).metatable).is_null() {
-                        if (*(*u).metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            really_mark_object(global, &mut (*((*u).metatable as *mut Object)));
+                    if !((*u).get_metatable()).is_null() {
+                        if (*(*u).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                            really_mark_object(global, &mut (*((*u).get_metatable() as *mut Object)));
                         }
                     }
                     (*u).set_marked((*u).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -215,8 +226,8 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object)
         match current_block_18 {
             15904375183555213903 => {
                 linkgclist_(
-                    &mut (*(o as *mut Object)),
-                    getgclist(o),
+                    &mut (*(object as *mut Object)),
+                    getgclist(object),
                     &mut (*global).gray,
                 );
             }
@@ -224,16 +235,16 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, o: *mut Object)
         };
     }
 }
-pub unsafe extern "C" fn generate_link(global: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
-        if (*o).get_marked() & 7 == 5 {
+        if (*object).get_marked() & 7 == 5 {
             linkgclist_(
-                &mut (*(o as *mut Object)),
-                getgclist(o),
+                &mut (*(object as *mut Object)),
+                getgclist(object),
                 &mut (*global).gray_again,
             );
-        } else if (*o).get_marked() & 7 == 6 {
-            (*o).set_marked(((*o).get_marked() ^ (6 ^ 4)) as u8);
+        } else if (*object).get_marked() & 7 == 6 {
+            (*object).set_marked(((*object).get_marked() ^ (6 ^ 4)) as u8);
         }
     }
 }

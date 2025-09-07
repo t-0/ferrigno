@@ -55,7 +55,7 @@ pub struct Global {
     pub main_state: *mut State,
     pub memory_error_message: *mut TString,
     pub tm_name: [*mut TString; 25],
-    pub metatable: [*mut Table; 9],
+    pub metatables: [*mut Table; 9],
     pub string_cache: [[*mut TString; 2]; 53],
     pub warn_function: WarnFunction,
     pub warn_userdata: *mut libc::c_void,
@@ -147,11 +147,11 @@ impl Global {
     pub unsafe extern "C" fn markmt(& mut self) {
         unsafe {
             for i in TAG_SIMPLE_ {
-                if !(self.metatable[i as usize]).is_null() {
-                    if (*self.metatable[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                if !(self.metatables[i as usize]).is_null() {
+                    if (*self.metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         really_mark_object(
                             self,
-                            &mut (*(*(self.metatable).as_mut_ptr().offset(i as isize) as *mut Object)),
+                            &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize) as *mut Object)),
                         );
                     }
                 }
@@ -162,13 +162,13 @@ impl Global {
 pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> u64 {
     unsafe {
         let mut count: u64 = 0;
-        let mut o: *mut Object = (*global).to_be_finalized;
-        while !o.is_null() {
+        let mut object: *mut Object = (*global).to_be_finalized;
+        while !object.is_null() {
             count = count.wrapping_add(1);
-            if (*o).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(o as *mut Object)));
+            if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(global, &mut (*(object as *mut Object)));
             }
-            o = (*o).next;
+            object = (*object).next;
         }
         return count;
     }
@@ -306,17 +306,17 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                 as *mut Node;
             let asize: u32 = luah_realasize(h);
             for i in 0..asize {
-                let o: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
                 if iscleared(
                     global,
-                    if (*o).is_collectable() {
-                        (*o).value.object
+                    if (*tvalue).is_collectable() {
+                        (*tvalue).value.object
                     } else {
                         std::ptr::null_mut()
                     },
                 ) != 0
                 {
-                    (*o).set_tag(TAG_VARIANT_NIL_EMPTY);
+                    (*tvalue).set_tag(TAG_VARIANT_NIL_EMPTY);
                 }
             }
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
@@ -343,51 +343,51 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
 }
 pub unsafe extern "C" fn udata2finalize(global: *mut Global) -> *mut Object {
     unsafe {
-        let o: *mut Object = (*global).to_be_finalized;
-        (*global).to_be_finalized = (*o).next;
-        (*o).next = (*global).all_gc;
-        (*global).all_gc = o;
-        (*o).set_marked((*o).get_marked() & !(1 << 6));
+        let object: *mut Object = (*global).to_be_finalized;
+        (*global).to_be_finalized = (*object).next;
+        (*object).next = (*global).all_gc;
+        (*global).all_gc = object;
+        (*object).set_marked((*object).get_marked() & !(1 << 6));
         if 3 <= (*global).gc_state as i32 && (*global).gc_state as i32 <= 6 {
-            (*o).set_marked(
-                (*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
+            (*object).set_marked(
+                (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
                     | ((*global).current_white & (1 << 3 | 1 << 4)),
             );
-        } else if (*o).get_marked() & 7 == 3 {
-            (*global).first_old1 = o;
+        } else if (*object).get_marked() & 7 == 3 {
+            (*global).first_old1 = object;
         }
-        return o;
+        return object;
     }
 }
 pub unsafe extern "C" fn separatetobefnz(global: *mut Global, all: i32) {
     unsafe {
         let mut p: *mut *mut Object = &mut (*global).finalized_objects;
-        let mut lastnext: *mut *mut Object = find_last(&mut (*global).to_be_finalized);
+        let mut last_next: *mut *mut Object = find_last(&mut (*global).to_be_finalized);
         loop {
-            let curr: *mut Object = *p;
-            if !(curr != (*global).finobjold1) {
+            let current: *mut Object = *p;
+            if current == (*global).finobjold1 {
                 break;
             }
-            if !((*curr).get_marked() & (1 << 3 | 1 << 4) != 0 || all != 0) {
-                p = &mut (*curr).next;
+            if !((*current).get_marked() & (1 << 3 | 1 << 4) != 0 || all != 0) {
+                p = &mut (*current).next;
             } else {
-                if curr == (*global).finobjsur {
-                    (*global).finobjsur = (*curr).next;
+                if current == (*global).finobjsur {
+                    (*global).finobjsur = (*current).next;
                 }
-                *p = (*curr).next;
-                (*curr).next = *lastnext;
-                *lastnext = curr;
-                lastnext = &mut (*curr).next;
+                *p = (*current).next;
+                (*current).next = *last_next;
+                *last_next = current;
+                last_next = &mut (*current).next;
             }
         }
     }
 }
-pub unsafe extern "C" fn correctpointers(global: *mut Global, o: *mut Object) {
+pub unsafe extern "C" fn correctpointers(global: *mut Global, object: *mut Object) {
     unsafe {
-        check_pointer(&mut (*global).survival, o);
-        check_pointer(&mut (*global).old1, o);
-        check_pointer(&mut (*global).really_old, o);
-        check_pointer(&mut (*global).first_old1, o);
+        check_pointer(&mut (*global).survival, object);
+        check_pointer(&mut (*global).old1, object);
+        check_pointer(&mut (*global).really_old, object);
+        check_pointer(&mut (*global).first_old1, object);
     }
 }
 pub unsafe extern "C" fn setpause(global: *mut Global) {

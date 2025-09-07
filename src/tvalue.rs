@@ -344,31 +344,31 @@ pub unsafe extern "C" fn luav_equalobj(
                 } else if state.is_null() {
                     return false;
                 }
-                tm = if ((*((*t1).value.object as *mut User)).metatable).is_null() {
+                tm = if ((*((*t1).value.object as *mut User)).get_metatable()).is_null() {
                     std::ptr::null()
-                } else if (*(*((*t1).value.object as *mut User)).metatable).flags as u32
+                } else if (*(*((*t1).value.object as *mut User)).get_metatable()).flags as u32
                     & (1 as u32) << TM_EQ as i32
                     != 0
                 {
                     std::ptr::null()
                 } else {
                     luat_gettm(
-                        (*((*t1).value.object as *mut User)).metatable,
+                        (*((*t1).value.object as *mut User)).get_metatable(),
                         TM_EQ,
                         (*(*state).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
-                    tm = if ((*((*t2).value.object as *mut User)).metatable).is_null() {
+                    tm = if ((*((*t2).value.object as *mut User)).get_metatable()).is_null() {
                         std::ptr::null()
-                    } else if (*(*((*t2).value.object as *mut User)).metatable).flags as u32
+                    } else if (*(*((*t2).value.object as *mut User)).get_metatable()).flags as u32
                         & (1 as u32) << TM_EQ as i32
                         != 0
                     {
                         std::ptr::null()
                     } else {
                         luat_gettm(
-                            (*((*t2).value.object as *mut User)).metatable,
+                            (*((*t2).value.object as *mut User)).get_metatable(),
                             TM_EQ,
                             (*(*state).global).tm_name[TM_EQ as usize],
                         )
@@ -383,31 +383,31 @@ pub unsafe extern "C" fn luav_equalobj(
                 } else if state.is_null() {
                     return false;
                 }
-                tm = if ((*((*t1).value.object as *mut Table)).metatable).is_null() {
+                tm = if ((*((*t1).value.object as *mut Table)).get_metatable()).is_null() {
                     std::ptr::null()
-                } else if (*(*((*t1).value.object as *mut Table)).metatable).flags as u32
+                } else if (*(*((*t1).value.object as *mut Table)).get_metatable()).flags as u32
                     & (1 as u32) << TM_EQ as i32
                     != 0
                 {
                     std::ptr::null()
                 } else {
                     luat_gettm(
-                        (*((*t1).value.object as *mut Table)).metatable,
+                        (*((*t1).value.object as *mut Table)).get_metatable(),
                         TM_EQ,
                         (*(*state).global).tm_name[TM_EQ as usize],
                     )
                 };
                 if tm.is_null() {
-                    tm = if ((*((*t2).value.object as *mut Table)).metatable).is_null() {
+                    tm = if ((*((*t2).value.object as *mut Table)).get_metatable()).is_null() {
                         std::ptr::null()
-                    } else if (*(*((*t2).value.object as *mut Table)).metatable).flags as u32
+                    } else if (*(*((*t2).value.object as *mut Table)).get_metatable()).flags as u32
                         & (1 as u32) << TM_EQ as i32
                         != 0
                     {
                         std::ptr::null()
                     } else {
                         luat_gettm(
-                            (*((*t2).value.object as *mut Table)).metatable,
+                            (*((*t2).value.object as *mut Table)).get_metatable(),
                             TM_EQ,
                             (*(*state).global).tm_name[TM_EQ as usize],
                         )
@@ -431,13 +431,13 @@ pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StackValuePointer, r
         match (*rb).get_tag_variant() {
             TAG_VARIANT_TABLE => {
                 let h: *mut Table = &mut (*((*rb).value.object as *mut Table));
-                tm = if ((*h).metatable).is_null() {
+                tm = if ((*h).get_metatable()).is_null() {
                     std::ptr::null()
-                } else if (*(*h).metatable).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
+                } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
                     std::ptr::null()
                 } else {
                     luat_gettm(
-                        (*h).metatable,
+                        (*h).get_metatable(),
                         TM_LEN,
                         (*(*state).global).tm_name[TM_LEN as usize],
                     )

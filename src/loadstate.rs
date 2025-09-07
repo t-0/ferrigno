@@ -200,30 +200,30 @@ impl LoadState {
                 (*((*prototype).k).offset(i as isize)).set_tag(TAG_VARIANT_NIL_NIL);
             }
             for i in 0..n {
-                let o: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
                 let t: u8 = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
-                        (*o).set_tag(TAG_VARIANT_NIL_NIL);
+                        (*tvalue).set_tag(TAG_VARIANT_NIL_NIL);
                     }
                     TAG_VARIANT_BOOLEAN_FALSE => {
-                        (*o).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+                        (*tvalue).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
                     }
                     TAG_VARIANT_BOOLEAN_TRUE => {
-                        (*o).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+                        (*tvalue).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                     }
                     TAG_VARIANT_NUMERIC_NUMBER => {
-                        let io: *mut TValue = o;
+                        let io: *mut TValue = tvalue;
                         (*io).value.number = self.load_number();
                         (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
                     }
                     TAG_VARIANT_NUMERIC_INTEGER => {
-                        let io_0: *mut TValue = o;
+                        let io_0: *mut TValue = tvalue;
                         (*io_0).value.integer = self.load_integer();
                         (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     }
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                        let io_1: *mut TValue = o;
+                        let io_1: *mut TValue = tvalue;
                         let x_: *mut TString = self.load_string(prototype);
                         (*io_1).value.object = &mut (*(x_ as *mut Object));
                         (*io_1).set_tag((*x_).get_tag());

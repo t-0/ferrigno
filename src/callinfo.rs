@@ -186,13 +186,13 @@ pub unsafe extern "C" fn funcnamefromcall(
         };
     }
 }
-pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, o: *const TValue) -> i32 {
+pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
         let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
         let mut pos: i32 = 0;
         loop {
             if base.offset(pos as isize) < (*call_info).top.stkidrel_pointer {
-                if o == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue {
+                if tvalue == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue {
                     return pos;
                 } else {
                     pos += 1;
@@ -205,14 +205,14 @@ pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, o: *const TValue) ->
 }
 pub unsafe extern "C" fn getupvalname(
     call_info: *mut CallInfo,
-    o: *const TValue,
+    tvalue: *const TValue,
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
         let c: *mut Closure =
             &mut (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure));
         for i in 0..(*c).count_upvalues {
-            if (**((*c).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).v.p == o as *mut TValue {
+            if (**((*c).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).v.p == tvalue as *mut TValue {
                 *name = upvalname((*c).payload.l_prototype, i as i32);
                 return STRING_UPVALUE.as_ptr();
             }

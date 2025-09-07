@@ -521,12 +521,12 @@ pub unsafe extern "C" fn changedline(
 }
 pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype {
     unsafe {
-        let o: *mut Object = luac_newobj(
+        let object: *mut Object = luac_newobj(
             state,
             TAG_TYPE_PROTOTYPE,
             ::core::mem::size_of::<Prototype>(),
         );
-        let prototype: *mut Prototype = &mut (*(o as *mut Prototype));
+        let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
         (*prototype).k = std::ptr::null_mut();
         (*prototype).size_k = 0;
         (*prototype).p = std::ptr::null_mut();

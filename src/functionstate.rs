@@ -960,73 +960,70 @@ pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TS
         return addk(function_state, &mut o, &mut o);
     }
 }
-pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, n: i64) -> i32 {
+pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer: i64) -> i32 {
     unsafe {
-        let mut o: TValue = TValue {
+        let mut tvalue: TValue = TValue {
             value: Value {
                 object: std::ptr::null_mut(),
             },
             tag: 0,
         };
-        let io: *mut TValue = &mut o;
-        (*io).value.integer = n;
-        (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-        return addk(function_state, &mut o, &mut o);
+        tvalue.value.integer = integer;
+        tvalue.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+        return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
-pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, r: f64) -> i32 {
+pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, number: f64) -> i32 {
     unsafe {
-        let mut o: TValue = TValue {
+        let mut tvalue: TValue = TValue {
             value: Value {
                 object: std::ptr::null_mut(),
             },
             tag: 0,
         };
         let mut ik: i64 = 0;
-        let io: *mut TValue = &mut o;
-        (*io).value.number = r;
-        (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-        if !luav_flttointeger(r, &mut ik, F2I::Equal) {
-            return addk(function_state, &mut o, &mut o);
+        tvalue.value.number = number;
+        tvalue.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+        if !luav_flttointeger(number, &mut ik, F2I::Equal) {
+            return addk(function_state, &mut tvalue, &mut tvalue);
         } else {
             let nbm: i32 = 53 as i32;
             let q: f64 = ldexp_(1.0f64, -nbm + 1);
-            let k: f64 = if ik == 0 { q } else { r + r * q };
+            let k: f64 = if ik == 0 { q } else { number + number * q };
             let mut kv: TValue = TValue {
                 value: Value {
                     object: std::ptr::null_mut(),
                 },
                 tag: 0,
             };
-            let io_0: *mut TValue = &mut kv;
-            (*io_0).value.number = k;
-            (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-            return addk(function_state, &mut kv, &mut o);
+            kv.value.number = k;
+            kv.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+            return addk(function_state, &mut kv, &mut tvalue);
         };
     }
 }
 pub unsafe extern "C" fn bool_false(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut o: TValue = TValue {
+        let mut tvalue: TValue = TValue {
             value: Value {
                 object: std::ptr::null_mut(),
             },
             tag: 0,
         };
-        o.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
-        return addk(function_state, &mut o, &mut o);
+        tvalue.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+        return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe extern "C" fn bool_true(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut o: TValue = TValue {
+        let mut tvalue: TValue = TValue {
             value: Value {
                 object: std::ptr::null_mut(),
             },
             tag: 0,
         };
-        o.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
-        return addk(function_state, &mut o, &mut o);
+        tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+        return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {

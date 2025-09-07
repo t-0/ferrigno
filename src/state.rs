@@ -300,9 +300,7 @@ impl State {
             let message: *mut TString = luas_newlstr(
                 self,
                 b"error in error handling\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 24]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
+                23,
             );
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(message as *mut Object));
@@ -386,11 +384,9 @@ impl State {
     }
     pub unsafe extern "C" fn lua_createtable(& mut self) {
         unsafe {
-            let table: *mut Table;
-            table = luah_new(self);
+            let table: *mut Table = luah_new(self);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
-            let x_: *mut Table = table;
-            (*io).value.object = &mut (*(x_ as *mut Object));
+            (*io).value.object = &mut (*(table as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);
             (*io).set_collectable();
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
@@ -405,13 +401,13 @@ impl State {
             let metatable: *mut Table;
             match (*object).get_tag_type() {
                 TAG_TYPE_TABLE => {
-                    metatable = (*((*object).value.object as *mut Table)).metatable;
+                    metatable = (*((*object).value.object as *mut Table)).get_metatable();
                 }
                 TAG_TYPE_USER => {
-                    metatable = (*((*object).value.object as *mut User)).metatable;
+                    metatable = (*((*object).value.object as *mut User)).get_metatable();
                 }
                 _ => {
-                    metatable = (*self.global).metatable[(get_tag_type((*object).get_tag())) as usize];
+                    metatable = (*self.global).metatables[(get_tag_type((*object).get_tag())) as usize];
                 }
             }
             if metatable.is_null() {
@@ -429,13 +425,13 @@ impl State {
     pub unsafe extern "C" fn lua_getiuservalue(& mut self, index: i32, n: i32) -> i32 {
         unsafe {
             let t: i32;
-            let o: *mut TValue = self.index2value(index);
-            if n <= 0 || n > (*((*o).value.object as *mut User)).count_upvalues as i32 {
+            let tvalue: *mut TValue = self.index2value(index);
+            if n <= 0 || n > (*((*tvalue).value.object as *mut User)).count_upvalues as i32 {
                 (*self.top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
                 t = -1;
             } else {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
-                let io2: *const TValue = &mut (*((*((*o).value.object as *mut User)).upvalues)
+                let io2: *const TValue = &mut (*((*((*tvalue).value.object as *mut User)).upvalues)
                     .as_mut_ptr()
                     .offset((n - 1) as isize));
                 (*io1).value = (*io2).value;
@@ -2346,54 +2342,52 @@ pub unsafe extern "C" fn lua_rawseti(state: *mut State, index: i32, n: i64) {
         (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
     }
 }
-pub unsafe extern "C" fn lua_setmetatable(state: *mut State, objindex: i32) -> i32 {
+pub unsafe extern "C" fn lua_setmetatable(state: *mut State, index: i32) -> i32 {
     unsafe {
-        let mt: *mut Table;
-        let obj: *mut TValue = (*state).index2value(objindex);
+        let metatable: *mut Table;
+        let object: *mut TValue = (*state).index2value(index);
         if get_tag_type((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()) == TAG_TYPE_NIL {
-            mt = std::ptr::null_mut();
+            metatable = std::ptr::null_mut();
         } else {
-            mt = &mut (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object
+            metatable = &mut (*((*(*state).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object
                 as *mut Table))
         }
-        match get_tag_type((*obj).get_tag()) {
-            5 => {
-                let ref mut fresh6 = (*((*obj).value.object as *mut Table)).metatable;
-                *fresh6 = mt;
-                if !mt.is_null() {
-                    if (*(*obj).value.object).get_marked() & 1 << 5 != 0
-                        && (*mt).get_marked() & (1 << 3 | 1 << 4) != 0
+        match get_tag_type((*object).get_tag()) {
+            TAG_TYPE_TABLE => {
+                (*((*object).value.object as *mut Table)).metatable = metatable;
+                if !metatable.is_null() {
+                    if (*(*object).value.object).get_marked() & 1 << 5 != 0
+                        && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0
                     {
                         luac_barrier_(
                             state,
-                            &mut (*((*obj).value.object as *mut Object)),
-                            &mut (*(mt as *mut Object)),
+                            &mut (*((*object).value.object as *mut Object)),
+                            &mut (*(metatable as *mut Object)),
                         );
                     } else {
                     };
-                    luac_checkfinalizer(state, (*obj).value.object, mt);
+                    luac_checkfinalizer(state, (*object).value.object, metatable);
                 }
             }
-            7 => {
-                let ref mut fresh7 = (*((*obj).value.object as *mut User)).metatable;
-                *fresh7 = mt;
-                if !mt.is_null() {
-                    if (*((*obj).value.object as *mut User)).get_marked() & 1 << 5 != 0
-                        && (*mt).get_marked() & (1 << 3 | 1 << 4) != 0
+            TAG_TYPE_USER => {
+                (*((*object).value.object as *mut User)).metatable = metatable;
+                if !metatable.is_null() {
+                    if (*((*object).value.object as *mut User)).get_marked() & 1 << 5 != 0
+                        && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0
                     {
                         luac_barrier_(
                             state,
-                            &mut (*(&mut (*((*obj).value.object as *mut User)) as *mut User
+                            &mut (*(&mut (*((*object).value.object as *mut User)) as *mut User
                                 as *mut Object)),
-                            &mut (*(mt as *mut Object)),
+                            &mut (*(metatable as *mut Object)),
                         );
                     } else {
                     };
-                    luac_checkfinalizer(state, (*obj).value.object, mt);
+                    luac_checkfinalizer(state, (*object).value.object, metatable);
                 }
             }
             _ => {
-                (*(*state).global).metatable[(get_tag_type((*obj).get_tag())) as usize] = mt;
+                (*(*state).global).metatables[(get_tag_type((*object).get_tag())) as usize] = metatable;
             }
         }
         (*state).top.stkidrel_pointer = (*state).top.stkidrel_pointer.offset(-1);
@@ -3995,37 +3989,37 @@ pub unsafe extern "C" fn luat_gettmbyobj(
     event: u32,
 ) -> *const TValue {
     unsafe {
-        let mt: *mut Table;
+        let metatable: *mut Table;
         match get_tag_type((*o).get_tag()) {
-            5 => {
-                mt = (*((*o).value.object as *mut Table)).metatable;
+            TAG_TYPE_TABLE => {
+                metatable = (*((*o).value.object as *mut Table)).metatable;
             }
-            7 => {
-                mt = (*((*o).value.object as *mut User)).metatable;
+            TAG_TYPE_USER => {
+                metatable = (*((*o).value.object as *mut User)).metatable;
             }
             _ => {
-                mt = (*(*state).global).metatable[(get_tag_type((*o).get_tag())) as usize];
+                metatable = (*(*state).global).metatables[(get_tag_type((*o).get_tag())) as usize];
             }
         }
-        return if mt.is_null() {
+        return if metatable.is_null() {
             &mut (*(*state).global).nil_value as *mut TValue as *const TValue
         } else {
-            luah_getshortstr(mt, (*(*state).global).tm_name[event as usize])
+            luah_getshortstr(metatable, (*(*state).global).tm_name[event as usize])
         };
     }
 }
 pub unsafe extern "C" fn luat_objtypename(state: *mut State, o: *const TValue) -> *const i8 {
     unsafe {
-        let mut mt: *mut Table;
+        let mut metatable: *mut Table;
         if (*o).get_tag_variant() == TAG_VARIANT_TABLE && {
-            mt = (*((*o).value.object as *mut Table)).metatable;
-            !mt.is_null()
+            metatable = (*((*o).value.object as *mut Table)).get_metatable();
+            !metatable.is_null()
         } || (*o).get_tag_variant() == TAG_VARIANT_USER && {
-            mt = (*((*o).value.object as *mut User)).metatable;
-            !mt.is_null()
+            metatable = (*((*o).value.object as *mut User)).get_metatable();
+            !metatable.is_null()
         } {
             let name: *const TValue =
-                luah_getshortstr(mt, luas_new(state, b"__name\0" as *const u8 as *const i8));
+                luah_getshortstr(metatable, luas_new(state, b"__name\0" as *const u8 as *const i8));
             if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
                 return (*((*name).value.object as *mut TString)).get_contents_mut();
             }
@@ -4516,17 +4510,17 @@ pub unsafe extern "C" fn callallpendingfinalizers(state: *mut State) {
         }
     }
 }
-pub unsafe extern "C" fn luac_checkfinalizer(state: *mut State, o: *mut Object, mt: *mut Table) {
+pub unsafe extern "C" fn luac_checkfinalizer(state: *mut State, o: *mut Object, metatable: *mut Table) {
     unsafe {
         let global: *mut Global = (*state).global;
         if (*o).get_marked() & 1 << 6 != 0
-            || (if mt.is_null() {
+            || (if metatable.is_null() {
                 std::ptr::null()
             } else {
-                if (*mt).flags as u32 & (1 as u32) << TM_GC as i32 != 0 {
+                if (*metatable).flags as u32 & (1 as u32) << TM_GC as i32 != 0 {
                     std::ptr::null()
                 } else {
-                    luat_gettm(mt, TM_GC, (*global).tm_name[TM_GC as usize])
+                    luat_gettm(metatable, TM_GC, (*global).tm_name[TM_GC as usize])
                 }
             })
             .is_null()
@@ -9168,7 +9162,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut State {
         (*global).generational_major_multiplier = 100 / 4;
         (*global).generational_minor_multiplier = 20;
         for i in 0..9 {
-            (*global).metatable[i as usize] = std::ptr::null_mut();
+            (*global).metatables[i as usize] = std::ptr::null_mut();
         }
         if luad_rawrunprotected(
             state,

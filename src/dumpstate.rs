@@ -141,18 +141,18 @@ impl DumpState {
             let n: i32 = (*prototype).size_k;
             self.dump_int(n);
             for i in 0..n {
-                let o: *const TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
-                let tag = (*o).get_tag_variant();
+                let tvalue: *const TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
+                let tag = (*tvalue).get_tag_variant();
                 self.dump_byte(tag);
                 match tag {
                     TAG_VARIANT_NUMERIC_NUMBER => {
-                        self.dump_number((*o).value.number);
+                        self.dump_number((*tvalue).value.number);
                     }
                     TAG_VARIANT_NUMERIC_INTEGER => {
-                        self.dump_integer((*o).value.integer);
+                        self.dump_integer((*tvalue).value.integer);
                     }
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                        self.dump_string(&mut (*((*o).value.object as *mut TString)));
+                        self.dump_string(&mut (*((*tvalue).value.object as *mut TString)));
                     }
                     _ => {}
                 }
