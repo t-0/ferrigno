@@ -1,5 +1,5 @@
 use crate::character::CHARACTER_EXCLAMATION;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::utility::c::*;
 use crate::character::*;
@@ -7,7 +7,7 @@ use crate::tag::*;
 use crate::new::*;
 use crate::buffer::*;
 use libc::{system,remove,rename,setlocale};
-pub unsafe extern "C" fn os_execute(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_execute(state: *mut Interpreter) -> i32 {
     unsafe {
         let cmd: *const i8 = lual_optlstring(state, 1, std::ptr::null(), std::ptr::null_mut());
         let stat: i32;
@@ -21,14 +21,14 @@ pub unsafe extern "C" fn os_execute(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn os_remove(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_remove(state: *mut Interpreter) -> i32 {
     unsafe {
         let filename: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         *__errno_location() = 0;
         return lual_fileresult(state, (remove(filename) == 0) as i32, filename);
     }
 }
-pub unsafe extern "C" fn os_rename(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_rename(state: *mut Interpreter) -> i32 {
     unsafe {
         let fromname: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let toname: *const i8 = lual_checklstring(state, 2, std::ptr::null_mut());
@@ -40,7 +40,7 @@ pub unsafe extern "C" fn os_rename(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn os_tmpname(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_tmpname(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut buffer: [i8; 32] = [0; 32];
         let mut err: i32;
@@ -63,7 +63,7 @@ pub unsafe extern "C" fn os_tmpname(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_getenv(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_getenv(state: *mut Interpreter) -> i32 {
     unsafe {
         lua_pushstring(
             state,
@@ -72,25 +72,25 @@ pub unsafe extern "C" fn os_getenv(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_clock(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_clock(state: *mut Interpreter) -> i32 {
     unsafe {
         (*state).push_number(clock() as f64 / 1000000 as f64);
         return 1;
     }
 }
-pub unsafe extern "C" fn setfield(state: *mut State, key: *const i8, value: i32, delta: i32) {
+pub unsafe extern "C" fn setfield(state: *mut Interpreter, key: *const i8, value: i32, delta: i32) {
     unsafe {
         (*state).push_integer(value as i64 + delta as i64);
         lua_setfield(state, -2, key);
     }
 }
-pub unsafe extern "C" fn setboolfield(state: *mut State, key: *const i8, value: bool) {
+pub unsafe extern "C" fn setboolfield(state: *mut Interpreter, key: *const i8, value: bool) {
     unsafe {
         (*state).push_boolean(value);
         lua_setfield(state, -2, key);
     }
 }
-pub unsafe extern "C" fn setallfields(state: *mut State, stm: *mut TM) {
+pub unsafe extern "C" fn setallfields(state: *mut Interpreter, stm: *mut TM) {
     unsafe {
         setfield(
             state,
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn setallfields(state: *mut State, stm: *mut TM) {
         );
     }
 }
-pub unsafe extern "C" fn getboolfield(state: *mut State, key: *const i8) -> i32 {
+pub unsafe extern "C" fn getboolfield(state: *mut Interpreter, key: *const i8) -> i32 {
     unsafe {
         let res: i32;
         res = if lua_getfield(state, -1, key) == 0 {
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn getboolfield(state: *mut State, key: *const i8) -> i32 
         return res;
     }
 }
-pub unsafe extern "C" fn getfield(state: *mut State, key: *const i8, d: i32, delta: i32) -> i32 {
+pub unsafe extern "C" fn getfield(state: *mut Interpreter, key: *const i8, d: i32, delta: i32) -> i32 {
     unsafe {
         let mut is_number: bool = false;
         let t: i32 = lua_getfield(state, -1, key);
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn getfield(state: *mut State, key: *const i8, d: i32, del
     }
 }
 pub unsafe extern "C" fn checkoption(
-    state: *mut State,
+    state: *mut Interpreter,
     conv: *const i8,
     convlen: i64,
     buffer: *mut i8,
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn checkoption(
         return conv;
     }
 }
-pub unsafe extern "C" fn l_checktime(state: *mut State, arg: i32) -> i64 {
+pub unsafe extern "C" fn l_checktime(state: *mut Interpreter, arg: i32) -> i64 {
     unsafe {
         let t: i64 = lual_checkinteger(state, arg);
         (((t as i64 == t) as i32 != 0) as i64 != 0
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn l_checktime(state: *mut State, arg: i32) -> i64 {
         return t as i64;
     }
 }
-pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_date(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: u64 = 0;
         let mut s: *const i8 =
@@ -310,7 +310,7 @@ pub unsafe extern "C" fn os_date(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_time(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_time(state: *mut Interpreter) -> i32 {
     unsafe {
         let t: i64;
         match lua_type(state, 1) {
@@ -355,7 +355,7 @@ pub unsafe extern "C" fn os_time(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_difftime(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_difftime(state: *mut Interpreter) -> i32 {
     unsafe {
         let t1: i64 = l_checktime(state, 1);
         let t2: i64 = l_checktime(state, 2);
@@ -363,7 +363,7 @@ pub unsafe extern "C" fn os_difftime(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_setlocale(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_setlocale(state: *mut Interpreter) -> i32 {
     unsafe {
         pub const CATEGORY: [i32; 6] = [6, 3, 0, 4, 1, 2];
         pub const CATEGORY_NAMES: [*const i8; 7] = [
@@ -386,7 +386,7 @@ pub unsafe extern "C" fn os_setlocale(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn os_exit(state: *mut State) -> i32 {
+pub unsafe extern "C" fn os_exit(state: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         if lua_type(state, 1) == Some(TAG_TYPE_BOOLEAN) {
@@ -408,67 +408,67 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
         {
             RegisteredFunction {
                 name: b"clock\0" as *const u8 as *const i8,
-                function: Some(os_clock as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_clock as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"date\0" as *const u8 as *const i8,
-                function: Some(os_date as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_date as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"difftime\0" as *const u8 as *const i8,
-                function: Some(os_difftime as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_difftime as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"execute\0" as *const u8 as *const i8,
-                function: Some(os_execute as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_execute as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"exit\0" as *const u8 as *const i8,
-                function: Some(os_exit as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_exit as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"getenv\0" as *const u8 as *const i8,
-                function: Some(os_getenv as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_getenv as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
-                function: Some(os_remove as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_remove as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"rename\0" as *const u8 as *const i8,
-                function: Some(os_rename as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_rename as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"setlocale\0" as *const u8 as *const i8,
-                function: Some(os_setlocale as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_setlocale as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"time\0" as *const u8 as *const i8,
-                function: Some(os_time as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_time as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"tmpname\0" as *const u8 as *const i8,
-                function: Some(os_tmpname as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(os_tmpname as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -479,7 +479,7 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_os(state: *mut State) -> i32 {
+pub unsafe extern "C" fn luaopen_os(state: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             state,

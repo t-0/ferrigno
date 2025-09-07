@@ -6,7 +6,7 @@ use crate::vm::opmode::*;
 use crate::functionstate::*;
 use crate::object::*;
 use crate::global::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
@@ -116,7 +116,7 @@ impl Prototype {
             return (1 + (*prototype).size_k + (*prototype).size_upvalues + (*prototype).size_p + (*prototype).size_local_variables) as u64
         }
     }
-    pub unsafe extern "C" fn free_prototype(&mut self, state: *mut State) {
+    pub unsafe extern "C" fn free_prototype(&mut self, state: *mut Interpreter) {
         unsafe {
             (*state).free_memory(
                 self.code as *mut libc::c_void,
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn getobjname(
     }
 }
 pub unsafe extern "C" fn funcnamefromcode(
-    state: *mut State,
+    state: *mut Interpreter,
     p: *const Prototype,
     program_counter: i32,
     name: *mut *const i8,
@@ -519,7 +519,7 @@ pub unsafe extern "C" fn changedline(
         return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
     }
 }
-pub unsafe extern "C" fn luaf_newproto(state: *mut State) -> *mut Prototype {
+pub unsafe extern "C" fn luaf_newproto(state: *mut Interpreter) -> *mut Prototype {
     unsafe {
         let object: *mut Object = luac_newobj(
             state,

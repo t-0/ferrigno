@@ -10,7 +10,7 @@ use crate::expressionkind::*;
 use crate::labellist::*;
 use crate::tvalue::*;
 use crate::tm::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::lexical::operatorunary::*;
 use crate::tstring::*;
 use crate::variabledescription::*;
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
         if (*block_control).is_loop {
             has_close = (*lexical_state).create_label(
                 luas_newlstr(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"break\0" as *const u8 as *const i8,
                     (::core::mem::size_of::<[i8; 6]>() as u64)
                         .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn setvararg(function_state: *mut FunctionState, nparams: 
 }
 pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i32, what: *const i8) -> ! {
     unsafe {
-        let state: *mut State = (*(*function_state).lexical_state).state;
+        let state: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let message: *const i8;
         let line: i32 = (*(*function_state).prototype).line_defined;
         let where_0: *const i8 = if line == 0 {
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn allocupvalue(function_state: *mut FunctionState) -> *mu
             b"upvalues\0" as *const u8 as *const i8,
         );
         (*prototype).upvalues = luam_growaux_(
-            (*(*function_state).lexical_state).state,
+            (*(*function_state).lexical_state).interpreter,
             (*prototype).upvalues as *mut libc::c_void,
             (*function_state).count_upvalues as usize,
             &mut (*prototype).size_upvalues,
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn newupvalue(
         (*up).name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
-                (*(*function_state).lexical_state).state,
+                (*(*function_state).lexical_state).interpreter,
                 &mut (*((*function_state).prototype as *mut Object)),
                 &mut (*(name as *mut Object)),
             );
@@ -670,7 +670,7 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             fresh132 as i32 >= 128 as i32
         } {
             (*prototype).absolute_line_info = luam_growaux_(
-                (*(*function_state).lexical_state).state,
+                (*(*function_state).lexical_state).interpreter,
                 (*prototype).absolute_line_info as *mut libc::c_void,
                 (*function_state).count_abslineinfo as usize,
                 &mut (*prototype).size_absolute_line_info,
@@ -693,7 +693,7 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             (*function_state).iwthabs = 1;
         }
         (*prototype).line_info = luam_growaux_(
-            (*(*function_state).lexical_state).state,
+            (*(*function_state).lexical_state).interpreter,
             (*prototype).line_info as *mut libc::c_void,
             program_counter as usize,
             &mut (*prototype).size_line_info,
@@ -737,7 +737,7 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
         (*prototype).code = luam_growaux_(
-            (*(*function_state).lexical_state).state,
+            (*(*function_state).lexical_state).interpreter,
             (*prototype).code as *mut libc::c_void,
             (*function_state).program_counter as usize,
             &mut (*prototype).size_code,
@@ -883,7 +883,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             },
             tag: 0,
         };
-        let state: *mut State = (*(*function_state).lexical_state).state;
+        let state: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
         let mut count_k: i32;
@@ -1613,7 +1613,7 @@ pub unsafe extern "C" fn constfolding(
         {
             return 0;
         }
-        luao_rawarith((*(*function_state).lexical_state).state, op, &mut v1, &mut v2, &mut res);
+        luao_rawarith((*(*function_state).lexical_state).interpreter, op, &mut v1, &mut v2, &mut res);
         if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
             (*e1).expression_kind = ExpressionKind::VKINT;
             (*e1).value.integer = res.value.integer;

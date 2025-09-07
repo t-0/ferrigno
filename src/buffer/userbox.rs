@@ -1,6 +1,6 @@
 #![allow(unpredictable_function_pointer_comparisons,unsafe_code)]
 use crate::registeredfunction::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::user::*;
 #[repr(C)]
 pub struct UserBox {
@@ -9,7 +9,7 @@ pub struct UserBox {
 }
 impl UserBox {
     pub unsafe extern "C" fn resize_userbox(
-        state: *mut State,
+        state: *mut Interpreter,
         index: i32,
         new_size: usize,
     ) -> *mut libc::c_void {
@@ -25,7 +25,7 @@ impl UserBox {
             return temp;
         }
     }
-    pub unsafe extern "C" fn userbox_gc(state: *mut State) -> i32 {
+    pub unsafe extern "C" fn userbox_gc(state: *mut Interpreter) -> i32 {
         unsafe {
             UserBox::resize_userbox(state, 1, 0);
             return 0;
@@ -36,13 +36,13 @@ impl UserBox {
             {
                 RegisteredFunction {
                     name: b"__gc\0" as *const u8 as *const i8,
-                    function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut State) -> i32),
+                    function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 }
             },
             {
                 RegisteredFunction {
                     name: b"__close\0" as *const u8 as *const i8,
-                    function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut State) -> i32),
+                    function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 }
             },
             {
@@ -53,7 +53,7 @@ impl UserBox {
             },
         ]
     };
-    pub unsafe extern "C" fn new_userbox(state: *mut State) {
+    pub unsafe extern "C" fn new_userbox(state: *mut Interpreter) {
         unsafe {
             let box_0: *mut UserBox =
                 User::lua_newuserdatauv(state, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;

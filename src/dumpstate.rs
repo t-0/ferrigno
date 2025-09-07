@@ -1,12 +1,12 @@
 use crate::functions::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::tstring::*;
 use crate::prototype::*;
 use crate::tag::*;
 use crate::tvalue::*;
 #[repr(C)]
 struct DumpState {
-    pub state: *mut State,
+    pub state: *mut Interpreter,
     pub write_function: WriteFunction,
     pub pointer: *mut libc::c_void,
     pub is_strip: bool,
@@ -14,7 +14,7 @@ struct DumpState {
 }
 impl DumpState {
     fn new(
-        state: *mut State,
+        state: *mut Interpreter,
         write_function: WriteFunction,
         pointer: *mut libc::c_void,
         is_strip: bool,
@@ -285,7 +285,7 @@ impl DumpState {
     }
 }
 pub unsafe extern "C" fn save_prototype(
-    state: *mut State,
+    state: *mut Interpreter,
     prototype: *const Prototype,
     write_function: WriteFunction,
     data: *mut libc::c_void,

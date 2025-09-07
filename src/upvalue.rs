@@ -1,6 +1,6 @@
 use crate::object::*;
 use crate::stackvalue::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
@@ -32,7 +32,7 @@ impl TObject for UpValue {
     }
 }
 impl UpValue {
-    pub unsafe extern "C" fn free_upvalue(&mut self, state: *mut State) {
+    pub unsafe extern "C" fn free_upvalue(&mut self, state: *mut Interpreter) {
         unsafe {
             if self.v.p != &mut self.u.value as *mut TValue {
                 luaf_unlinkupval(self);
@@ -63,7 +63,7 @@ pub struct UpValueBA {
     pub previous: *mut *mut UpValue,
 }
 pub unsafe extern "C" fn newupval(
-    state: *mut State,
+    state: *mut Interpreter,
     level: StackValuePointer,
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn newupval(
     }
 }
 pub unsafe extern "C" fn luaf_findupval(
-    state: *mut State,
+    state: *mut Interpreter,
     level: StackValuePointer,
 ) -> *mut UpValue {
     unsafe {

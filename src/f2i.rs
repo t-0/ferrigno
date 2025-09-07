@@ -3,7 +3,7 @@ use crate::tag::*;
 use crate::value::*;
 use crate::utility::*;
 use crate::character::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::utility::c::*;
 use libc::{toupper};
 #[derive(PartialEq)]
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn luav_idiv(state: *mut State, m: i64, n: i64) -> i64 {
+pub unsafe extern "C" fn luav_idiv(state: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
             != 0
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn luav_idiv(state: *mut State, m: i64, n: i64) -> i64 {
         };
     }
 }
-pub unsafe extern "C" fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 {
+pub unsafe extern "C" fn luav_mod(state: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
             != 0
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 {
         };
     }
 }
-pub unsafe extern "C" fn luav_modf(mut _state: *mut State, m: f64, n: f64) -> f64 {
+pub unsafe extern "C" fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
     unsafe {
         let mut r: f64 = fmod(m, n);
         if if r > 0.0 {

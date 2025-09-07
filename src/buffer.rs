@@ -2,7 +2,7 @@ pub mod userbox;
 use crate::utility::c::*;
 use crate::new::*;
 use crate::buffer::userbox::*;
-use crate::state::*;
+use crate::interpreter::*;
 impl Buffer {
     pub const INITIAL_SIZE: usize = 1024;
 }
@@ -12,7 +12,7 @@ pub struct Buffer {
     pub pointer: *mut i8,
     pub size: usize,
     pub length: usize,
-    pub state: *mut State,
+    pub state: *mut Interpreter,
     pub initial_data: [i8; Buffer::INITIAL_SIZE],
 }
 impl New for Buffer {
@@ -27,7 +27,7 @@ impl New for Buffer {
     }
 }
 impl Buffer {
-    pub unsafe fn initialize_with_size(&mut self, state: *mut State, size: usize) -> *mut i8 {
+    pub unsafe fn initialize_with_size(&mut self, state: *mut Interpreter, size: usize) -> *mut i8 {
         unsafe {
             self.initialize(state);
             return self.prepare_with_size_and_index(size, -1);
@@ -54,7 +54,7 @@ impl Buffer {
             if self.size - self.length >= size {
                 return self.pointer.offset(self.length as isize);
             } else {
-                let state: *mut State = self.state;
+                let state: *mut Interpreter = self.state;
                 let new_pointer: *mut i8;
                 let new_size = self.new_with_size(size);
                 if self.pointer != (self.initial_data).as_mut_ptr() {
@@ -103,7 +103,7 @@ impl Buffer {
     }
     pub unsafe fn push_result(&mut self) {
         unsafe {
-            let state: *mut State = self.state;
+            let state: *mut Interpreter = self.state;
             lua_pushlstring(state, self.pointer, self.length as u64);
             if self.pointer != (self.initial_data).as_mut_ptr() {
                 lua_closeslot(state, -2);
@@ -114,7 +114,7 @@ impl Buffer {
     }
     pub unsafe fn add_value(&mut self) {
         unsafe {
-            let state: *mut State = self.state;
+            let state: *mut Interpreter = self.state;
             let mut length: u64 = 0;
             let s: *const i8 = lua_tolstring(state, -1, &mut length);
             let b: *mut i8 = self.prepare_with_size_and_index(length as usize, -2);
@@ -127,7 +127,7 @@ impl Buffer {
             lua_settop(state, -1 - 1);
         }
     }
-    pub unsafe fn initialize(&mut self, state: *mut State) {
+    pub unsafe fn initialize(&mut self, state: *mut Interpreter) {
         unsafe {
             self.state = state;
             self.pointer = self.initial_data.as_mut_ptr();

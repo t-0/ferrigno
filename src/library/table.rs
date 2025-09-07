@@ -1,17 +1,17 @@
 use crate::registeredfunction::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::utility::*;
 use crate::tag::*;
 use crate::buffer::*;
 use crate::new::*;
 use crate::utility::c::*;
-pub unsafe extern "C" fn checkfield(state: *mut State, key: *const i8, n: i32) -> i32 {
+pub unsafe extern "C" fn checkfield(state: *mut Interpreter, key: *const i8, n: i32) -> i32 {
     unsafe {
         lua_pushstring(state, key);
         return (lua_rawget(state, -n) != 0) as i32;
     }
 }
-pub unsafe extern "C" fn checktab(state: *mut State, arg: i32, what: i32) {
+pub unsafe extern "C" fn checktab(state: *mut Interpreter, arg: i32, what: i32) {
     unsafe {
         if lua_type(state, arg) != Some(TAG_TYPE_TABLE) {
             let mut n: i32 = 1;
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn checktab(state: *mut State, arg: i32, what: i32) {
         }
     }
 }
-pub unsafe extern "C" fn table_insert(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_insert(state: *mut Interpreter) -> i32 {
     unsafe {
         let pos: i64;
         checktab(state, 1, 1 | 2 | 4);
@@ -75,7 +75,7 @@ pub unsafe extern "C" fn table_insert(state: *mut State) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn table_remove(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_remove(state: *mut Interpreter) -> i32 {
     unsafe {
         checktab(state, 1, 1 | 2 | 4);
         let size: i64 = lual_len(state, 1);
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn table_remove(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn table_move(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_move(state: *mut Interpreter) -> i32 {
     unsafe {
         let f: i64 = lual_checkinteger(state, 2);
         let e: i64 = lual_checkinteger(state, 3);
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn table_move(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
+pub unsafe extern "C" fn addfield(state: *mut Interpreter, b: *mut Buffer, i: i64) {
     unsafe {
         lua_geti(state, 1, i);
         if !lua_isstring(state, -1) {
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
         (*b).add_value();
     }
 }
-pub unsafe extern "C" fn table_concat(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_concat(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         checktab(state, 1, 1 | 4);
@@ -182,7 +182,7 @@ pub unsafe extern "C" fn table_concat(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn table_pack(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_pack(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut i: i32;
         let n: i32 = (*state).get_top();
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn table_pack(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn table_unpack(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_unpack(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: u64;
         let mut i: i64 = lual_optinteger(state, 2, 1);
@@ -269,13 +269,13 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
         return rnd;
     }
 }
-pub unsafe extern "C" fn set2(state: *mut State, i: u32, j: u32) {
+pub unsafe extern "C" fn set2(state: *mut Interpreter, i: u32, j: u32) {
     unsafe {
         lua_seti(state, 1, i as i64);
         lua_seti(state, 1, j as i64);
     }
 }
-pub unsafe extern "C" fn sort_comp(state: *mut State, a: i32, b: i32) -> i32 {
+pub unsafe extern "C" fn sort_comp(state: *mut Interpreter, a: i32, b: i32) -> i32 {
     unsafe {
         if lua_type(state, 2) == Some(TAG_TYPE_NIL) {
             return lua_compare(state, a, b, 1);
@@ -291,7 +291,7 @@ pub unsafe extern "C" fn sort_comp(state: *mut State, a: i32, b: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn partition(state: *mut State, lo: u32, up: u32) -> u32 {
+pub unsafe extern "C" fn partition(state: *mut Interpreter, lo: u32, up: u32) -> u32 {
     unsafe {
         let mut i: u32 = lo;
         let mut j: u32 = up.wrapping_sub(1 as u32);
@@ -340,7 +340,7 @@ pub unsafe extern "C" fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
         .wrapping_add(lo.wrapping_add(r4));
     return p;
 }
-pub unsafe extern "C" fn auxsort(state: *mut State, mut lo: u32, mut up: u32, mut rnd: u32) {
+pub unsafe extern "C" fn auxsort(state: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
     unsafe {
         while lo < up {
             let mut p: u32;
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn auxsort(state: *mut State, mut lo: u32, mut up: u32, mu
         }
     }
 }
-pub unsafe extern "C" fn table_sort(state: *mut State) -> i32 {
+pub unsafe extern "C" fn table_sort(state: *mut Interpreter) -> i32 {
     unsafe {
         checktab(state, 1, 1 | 2 | 4);
         let n: i64 = lual_len(state, 1);
@@ -422,43 +422,43 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
         {
             RegisteredFunction {
                 name: b"concat\0" as *const u8 as *const i8,
-                function: Some(table_concat as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_concat as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"insert\0" as *const u8 as *const i8,
-                function: Some(table_insert as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_insert as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"pack\0" as *const u8 as *const i8,
-                function: Some(table_pack as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_pack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"unpack\0" as *const u8 as *const i8,
-                function: Some(table_unpack as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_unpack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"remove\0" as *const u8 as *const i8,
-                function: Some(table_remove as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_remove as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"move\0" as *const u8 as *const i8,
-                function: Some(table_move as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_move as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"sort\0" as *const u8 as *const i8,
-                function: Some(table_sort as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(table_sort as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -469,7 +469,7 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_table(state: *mut State) -> i32 {
+pub unsafe extern "C" fn luaopen_table(state: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             state,

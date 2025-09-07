@@ -16,7 +16,7 @@ use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
 use crate::prototype::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
         match (*object).get_tag() {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
             TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
-            TAG_VARIANT_STATE => return &mut (*(object as *mut State)).gc_list,
+            TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
             TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).gc_list,
             TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
             _ => return std::ptr::null_mut(),
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
         };
     }
 }
-pub unsafe extern "C" fn luac_barrier_(state: *mut State, object: *mut Object, v: *mut Object) {
+pub unsafe extern "C" fn luac_barrier_(state: *mut Interpreter, object: *mut Object, v: *mut Object) {
     unsafe {
         let global: *mut Global = (*state).global;
         if (*global).gc_state as i32 <= 2 {
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn luac_barrier_(state: *mut State, object: *mut Object, v
         }
     }
 }
-pub unsafe extern "C" fn luac_barrierback_(state: *mut State, object: *mut Object) {
+pub unsafe extern "C" fn luac_barrierback_(state: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*state).global;
         if (*object).get_marked() & 7 == 6 {
@@ -155,13 +155,13 @@ pub unsafe extern "C" fn luac_barrierback_(state: *mut State, object: *mut Objec
     }
 }
 
-pub unsafe extern "C" fn fix_memory_error_message_state(state: *mut State) {
+pub unsafe extern "C" fn fix_memory_error_message_state(state: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*state).global;
         (*global).fix_memory_error_message_global();
     }
 }
-pub unsafe extern "C" fn fix_object_state(state: *mut State, object: *mut Object) {
+pub unsafe extern "C" fn fix_object_state(state: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*state).global;
         fix_object_global(global, object);
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object)
         }
     }
 }
-pub unsafe extern "C" fn free_object(state: *mut State, object: *mut Object) {
+pub unsafe extern "C" fn free_object(state: *mut Interpreter, object: *mut Object) {
     unsafe {
         match (*object).get_tag() {
             TAG_VARIANT_PROTOTYPE => {
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn free_object(state: *mut State, object: *mut Object) {
                 (*table).free_table(state);
             }
             TAG_VARIANT_STATE => {
-                let other: *mut State = &mut (*(object as *mut State));
+                let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
                 (*other).free_state(state);
             }
             TAG_VARIANT_USER => {
@@ -334,7 +334,7 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
         return objects;
     }
 }
-pub unsafe extern "C" fn delete_list(state: *mut State, mut object: *mut Object, limit: *mut Object) {
+pub unsafe extern "C" fn delete_list(state: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
     unsafe {
         while object != limit {
             let next: *mut Object = (*object).next;

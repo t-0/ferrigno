@@ -2,7 +2,7 @@ use crate::character::*;
 use crate::global::*;
 use crate::object::*;
 use crate::stackvalue::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
@@ -46,7 +46,7 @@ pub union TStringExtension {
     pub hash_next: *mut TString,
 }
 impl TString {
-    pub unsafe fn free_tstring(&mut self, state: *mut State) {
+    pub unsafe fn free_tstring(&mut self, state: *mut Interpreter) {
         unsafe {
             if self.get_tag_variant() == TAG_VARIANT_STRING_SHORT {
                 self.remove_from_state(state);
@@ -68,7 +68,7 @@ impl TString {
             (*stringtable).remove(self);
         }
     }
-    pub unsafe fn remove_from_state(&mut self, state: *mut State) {
+    pub unsafe fn remove_from_state(&mut self, state: *mut Interpreter) {
         unsafe {
             let global: *mut Global = &mut (*(*state).global);
             self.remove_from_global(global);
@@ -89,7 +89,7 @@ impl TString {
             }
         }
     }
-    pub unsafe fn create_long(state: *mut State, length: u64) -> *mut TString {
+    pub unsafe fn create_long(state: *mut Interpreter, length: u64) -> *mut TString {
         unsafe {
             let ret: *mut TString = createstrobj(
                 state,
@@ -102,7 +102,7 @@ impl TString {
             return ret;
         }
     }
-    pub unsafe fn intern(state: *mut State, str: *const i8, l: u64) -> *mut TString {
+    pub unsafe fn intern(state: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
         unsafe {
             let global: *mut Global = (*state).global;
             let tb: *mut StringTable = &mut (*global).string_table;
@@ -187,7 +187,7 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
         return (*ts).hash;
     }
 }
-pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32) -> *mut TString {
+pub unsafe extern "C" fn createstrobj(state: *mut Interpreter, l: u64, tag: u8, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
         let o: *mut Object = luac_newobj(state, tag, total_size);
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn createstrobj(state: *mut State, l: u64, tag: u8, h: u32
         return ts;
     }
 }
-pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64) -> *mut TString {
+pub unsafe extern "C" fn luas_newlstr(state: *mut Interpreter, str: *const i8, l: u64) -> *mut TString {
     unsafe {
         if l <= STRING_SHORT_MAX {
             return TString::intern(state, str, l);
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn luas_newlstr(state: *mut State, str: *const i8, l: u64)
         };
     }
 }
-pub unsafe extern "C" fn luas_new(state: *mut State, str: *const i8) -> *mut TString {
+pub unsafe extern "C" fn luas_new(state: *mut Interpreter, str: *const i8) -> *mut TString {
     unsafe {
         let i: u32 = ((str as u64
             & (0x7FFFFFFF as u32)
@@ -299,7 +299,7 @@ pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *
         }
     }
 }
-pub unsafe extern "C" fn concatenate(state: *mut State, mut total: i32) {
+pub unsafe extern "C" fn concatenate(state: *mut Interpreter, mut total: i32) {
     unsafe {
         if total == 1 {
             return;
@@ -425,7 +425,7 @@ pub unsafe extern "C" fn get_position_relative(pos: i64, length: u64) -> u64 {
     };
 }
 pub unsafe extern "C" fn get_position_end(
-    state: *mut State,
+    state: *mut Interpreter,
     arg: i32,
     def: i64,
     length: u64,

@@ -1,6 +1,6 @@
 use crate::functions::*;
 use crate::object::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
@@ -50,9 +50,9 @@ pub struct Global {
     pub finobjsur: *mut Object,
     pub finobjold1: *mut Object,
     pub finobjrold: *mut Object,
-    pub twups: *mut State,
+    pub twups: *mut Interpreter,
     pub panic: CFunction,
-    pub main_state: *mut State,
+    pub main_state: *mut Interpreter,
     pub memory_error_message: *mut TString,
     pub tm_name: [*mut TString; 25],
     pub metatables: [*mut Table; 9],
@@ -139,7 +139,7 @@ impl Global {
                 TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
                 TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
                 TAG_VARIANT_PROTOTYPE => return Prototype::traverseproto(self, &mut (*(object as *mut Prototype))),
-                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut State))) as u64,
+                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as u64,
                 _ => return 0,
             };
         }
@@ -175,10 +175,10 @@ pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> u64 {
 }
 pub unsafe extern "C" fn remarkupvals(global: *mut Global) -> i32 {
     unsafe {
-        let mut p: *mut *mut State = &mut (*global).twups;
+        let mut p: *mut *mut Interpreter = &mut (*global).twups;
         let mut work: i32 = 0;
         loop {
-            let thread: *mut State = *p;
+            let thread: *mut Interpreter = *p;
             if thread.is_null() {
                 break;
             }

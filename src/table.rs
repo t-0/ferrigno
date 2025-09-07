@@ -6,7 +6,7 @@ use crate::tag::*;
 use crate::tstring::*;
 use crate::tm::*;
 use crate::global::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::value::*;
 use crate::f2i::*;
 use crate::functions::*;
@@ -66,7 +66,7 @@ impl New for Table {
     }
 }
 impl Table {
-    pub unsafe fn free_table(& mut self, state: *mut State) {
+    pub unsafe fn free_table(& mut self, state: *mut Interpreter) {
         unsafe {
             freehash(state, self);
             (*state).free_memory(
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn getgeneric(
     }
 }
 pub unsafe extern "C" fn findindex(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     key: *mut TValue,
     asize: u32,
@@ -530,7 +530,7 @@ pub unsafe extern "C" fn findindex(
         };
     }
 }
-pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: StackValuePointer) -> i32 {
+pub unsafe extern "C" fn luah_next(state: *mut Interpreter, table: *mut Table, key: StackValuePointer) -> i32 {
     unsafe {
         let asize: u32 = luah_realasize(table);
         let mut i: u32 = findindex(state, table, &mut (*key).tvalue, asize);
@@ -567,7 +567,7 @@ pub unsafe extern "C" fn luah_next(state: *mut State, table: *mut Table, key: St
         return 0;
     }
 }
-pub unsafe extern "C" fn freehash(state: *mut State, table: *mut Table) {
+pub unsafe extern "C" fn freehash(state: *mut Interpreter, table: *mut Table) {
     unsafe {
         if !((*table).last_free).is_null() {
             (*state).free_memory(
@@ -674,7 +674,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
         return totaluse;
     }
 }
-pub unsafe extern "C" fn setnodevector(state: *mut State, table: *mut Table, mut size: u32) {
+pub unsafe extern "C" fn setnodevector(state: *mut Interpreter, table: *mut Table, mut size: u32) {
     unsafe {
         if size == 0 {
             (*table).node = &DUMMY_NODE as *const Node as *mut Node;
@@ -722,7 +722,7 @@ pub unsafe extern "C" fn setnodevector(state: *mut State, table: *mut Table, mut
         };
     }
 }
-pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, table: *mut Table) {
+pub unsafe extern "C" fn reinsert(state: *mut Interpreter, ot: *mut Table, table: *mut Table) {
     unsafe {
         let mut j: i32;
         let size: i32 = 1 << (*ot).log_size_node as i32;
@@ -747,7 +747,7 @@ pub unsafe extern "C" fn reinsert(state: *mut State, ot: *mut Table, table: *mut
     }
 }
 pub unsafe extern "C" fn luah_resize(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
     new_table_size: usize,
@@ -794,7 +794,7 @@ pub unsafe extern "C" fn luah_resize(
     }
 }
 pub unsafe extern "C" fn luah_resizearray(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
 ) {
@@ -807,7 +807,7 @@ pub unsafe extern "C" fn luah_resizearray(
         luah_resize(state, table, new_array_size, new_table_size);
     }
 }
-pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const TValue) {
+pub unsafe extern "C" fn rehash(state: *mut Interpreter, table: *mut Table, ek: *const TValue) {
     unsafe {
         let mut nums: [u32; 32] = [0; 32];
         let mut totaluse: i32;
@@ -832,7 +832,7 @@ pub unsafe extern "C" fn rehash(state: *mut State, table: *mut Table, ek: *const
         luah_resize(state, table, asize as usize, (totaluse as usize).wrapping_sub(na as usize));
     }
 }
-pub unsafe extern "C" fn luah_new(state: *mut State) -> *mut Table {
+pub unsafe extern "C" fn luah_new(state: *mut Interpreter) -> *mut Table {
     unsafe {
         let object: *mut Object = luac_newobj(
             state,
@@ -849,7 +849,7 @@ pub unsafe extern "C" fn luah_new(state: *mut State) -> *mut Table {
     }
 }
 pub unsafe extern "C" fn luah_newkey(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     mut key: *const TValue,
     value: *mut TValue,
@@ -1013,7 +1013,7 @@ pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *con
     }
 }
 pub unsafe extern "C" fn luah_finishset(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
     slot: *const TValue,
@@ -1031,7 +1031,7 @@ pub unsafe extern "C" fn luah_finishset(
     }
 }
 pub unsafe extern "C" fn luah_set(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
     value: *mut TValue,
@@ -1042,7 +1042,7 @@ pub unsafe extern "C" fn luah_set(
     }
 }
 pub unsafe extern "C" fn luah_setint(
-    state: *mut State,
+    state: *mut Interpreter,
     table: *mut Table,
     key: i64,
     value: *mut TValue,
@@ -1160,7 +1160,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
     }
 }
 pub unsafe extern "C" fn luav_finishget(
-    state: *mut State,
+    state: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
     value: StackValuePointer,
@@ -1224,7 +1224,7 @@ pub unsafe extern "C" fn luav_finishget(
     }
 }
 pub unsafe extern "C" fn luav_finishset(
-    state: *mut State,
+    state: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
     value: *mut TValue,

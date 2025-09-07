@@ -1,5 +1,5 @@
 use crate::tstring::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::global::*;
 use crate::table::*;
 pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
@@ -27,7 +27,7 @@ impl StringTable {
         }
     }
 }
-pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: usize) {
+pub unsafe extern "C" fn luas_resize(state: *mut Interpreter, new_size: usize) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*state).global).string_table;
         let old_size= (*tb).size as usize;
@@ -53,13 +53,13 @@ pub unsafe extern "C" fn luas_resize(state: *mut State, new_size: usize) {
         };
     }
 }
-pub unsafe extern "C" fn luas_init_state(state: *mut State) {
+pub unsafe extern "C" fn luas_init_state(state: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*state).global;
         luas_init_global(global, state);
     }
 }
-pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut State) {
+pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut Interpreter) {
     unsafe {
         let tb: *mut StringTable = &mut (*global).string_table;
         (*tb).hash = luam_malloc_(
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, state: *mut State
         (*global).stringcache_set_error();
     }
 }
-pub unsafe extern "C" fn growstrtab(state: *mut State, tb: *mut StringTable) {
+pub unsafe extern "C" fn growstrtab(state: *mut Interpreter, tb: *mut StringTable) {
     unsafe {
         if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
             luac_fullgc(state, true);

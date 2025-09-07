@@ -1,18 +1,18 @@
 use crate::utility::c::*;
 use crate::object::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
 pub struct BuffFS {
-    state: *mut State,
+    state: *mut Interpreter,
     is_pushed: bool,
     size: usize,
     block: [i8; BUFFFS_SIZE],
 }
 impl BuffFS {
-    pub fn new(state_: *mut State) -> Self {
+    pub fn new(state_: *mut Interpreter) -> Self {
         return BuffFS {
             state: state_,
             is_pushed: false,

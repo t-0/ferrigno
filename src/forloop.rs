@@ -1,11 +1,11 @@
 use crate::tvalue::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::utility::*;
 use crate::f2i::*;
 use crate::tag::*;
 use crate::stackvalue::*;
 pub unsafe extern "C" fn forlimit(
-    state: *mut State,
+    state: *mut Interpreter,
     init: i64,
     lim: *const TValue,
     p: *mut i64,
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn forlimit(
         };
     }
 }
-pub unsafe extern "C" fn forprep(state: *mut State, ra: StackValuePointer) -> i32 {
+pub unsafe extern "C" fn forprep(state: *mut Interpreter, ra: StackValuePointer) -> i32 {
     unsafe {
         let pinit: *mut TValue = &mut (*ra).tvalue;
         let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;

@@ -4,7 +4,7 @@ use crate::prototype::*;
 use crate::tvalue::*;
 use crate::closure::*;
 use crate::tag::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::stackvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
     }
 }
 pub unsafe extern "C" fn luag_findlocal(
-    state: *mut State,
+    state: *mut Interpreter,
     call_info: *mut CallInfo,
     n: i32,
     pos: *mut StackValuePointer,
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn findvararg(
     }
 }
 pub unsafe extern "C" fn getfuncname(
-    state: *mut State,
+    state: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
 ) -> *const i8 {
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn getfuncname(
     }
 }
 pub unsafe extern "C" fn funcnamefromcall(
-    state: *mut State,
+    state: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
 ) -> *const i8 {

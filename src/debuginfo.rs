@@ -1,7 +1,7 @@
 #![allow(unpredictable_function_pointer_comparisons)]
 use crate::callinfo::*;
 use crate::utility::c::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::character::*;
 use crate::utility::*;
 use crate::closure::*;
@@ -31,7 +31,7 @@ pub struct DebugInfo {
     pub short_src: [i8; 60],
     pub i_ci: *mut CallInfo,
 }
-pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_getlocal(state: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let name;
         if ar.is_null() {
@@ -63,7 +63,7 @@ pub unsafe extern "C" fn lua_getlocal(state: *mut State, ar: *const DebugInfo, n
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(state: *mut State, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_setlocal(state: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut pos: StackValuePointer = std::ptr::null_mut();
         let name: *const i8 = luag_findlocal(state, (*ar).i_ci, n, &mut pos);
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     }
 }
 pub unsafe extern "C" fn lua_getinfo(
-    state: *mut State,
+    state: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,
 ) -> i32 {

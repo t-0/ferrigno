@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::interpreter::*;
 use crate::buffer::*;
 use crate::tag::*;
 use crate::character::*;
@@ -17,7 +17,7 @@ pub struct MatchState {
     pub src_init: *const i8,
     pub src_end: *const i8,
     pub p_end: *const i8,
-    pub state: *mut State,
+    pub interpreter: *mut Interpreter,
     pub matchdepth: i32,
     pub level: usize,
     pub capture: [MatchStateCapture; MAX_CAPTURES],
@@ -31,7 +31,7 @@ impl MatchState {
         tr: u8,
     ) -> i32 {
         unsafe {
-            let state: *mut State = self.state;
+            let state: *mut Interpreter = self.interpreter;
             match tr {
                 TAG_TYPE_CLOSURE => {
                     let n: i32;
@@ -72,7 +72,7 @@ impl MatchState {
                 self.level as i32
             };
             lual_checkstack(
-                self.state,
+                self.interpreter,
                 nlevels,
                 b"too many captures\0" as *const u8 as *const i8,
             );
@@ -87,7 +87,7 @@ impl MatchState {
             let mut cap: *const i8 = std::ptr::null();
             let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
             if level != -2 as i64 {
-                lua_pushlstring(self.state, cap, level as u64);
+                lua_pushlstring(self.interpreter, cap, level as u64);
             }
         }
     }
@@ -101,7 +101,7 @@ impl MatchState {
             if i >= self.level as i32 {
                 if ((i != 0) as i32 != 0) as i64 != 0 {
                     lual_error(
-                        self.state,
+                        self.interpreter,
                         b"invalid capture index %%%d\0" as *const u8 as *const i8,
                         i + 1,
                     );
@@ -113,11 +113,11 @@ impl MatchState {
                 *cap = self.capture[i as usize].init;
                 if ((capl == -1 as i64) as i32 != 0) as i64 != 0 {
                     lual_error(
-                        self.state,
+                        self.interpreter,
                         b"unfinished capture\0" as *const u8 as *const i8,
                     );
                 } else if capl == -2 as i64 {
-                    (*(self.state)).push_integer(
+                    (*(self.interpreter)).push_integer(
                         ((self.capture[i as usize].init).offset_from(self.src_init) as i64 + 1)
                             as i64,
                     );
@@ -135,7 +135,7 @@ impl MatchState {
                 != 0
             {
                 return lual_error(
-                    self.state,
+                    self.interpreter,
                     b"invalid capture index %%%d\0" as *const u8 as *const i8,
                     l + 1,
                 );
@@ -154,7 +154,7 @@ impl MatchState {
                 level -= 1;
             }
             return lual_error(
-                self.state,
+                self.interpreter,
                 b"invalid pattern capture\0" as *const u8 as *const i8,
             );
         }
@@ -167,7 +167,7 @@ impl MatchState {
                 37 => {
                     if ((p == self.p_end) as i32 != 0) as i64 != 0 {
                         lual_error(
-                            self.state,
+                            self.interpreter,
                             b"malformed pattern (ends with '%%')\0" as *const u8 as *const i8,
                         );
                     }
@@ -180,7 +180,7 @@ impl MatchState {
                     loop {
                         if ((p == self.p_end) as i32 != 0) as i64 != 0 {
                             lual_error(
-                                self.state,
+                                self.interpreter,
                                 b"malformed pattern (missing CHARACTER_BRACKET_RIGHT)\0" as *const u8 as *const i8,
                             );
                         }
@@ -229,7 +229,7 @@ impl MatchState {
         unsafe {
             if ((p >= (self.p_end).offset(-(1 as isize))) as i32 != 0) as i64 != 0 {
                 lual_error(
-                    self.state,
+                    self.interpreter,
                     b"malformed pattern (missing arguments to '%%b')\0" as *const u8 as *const i8,
                 );
             }
@@ -308,7 +308,7 @@ impl MatchState {
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
                 lual_error(
-                    self.state,
+                    self.interpreter,
                     b"too many captures\0" as *const u8 as *const i8,
                 );
             }
@@ -365,7 +365,7 @@ impl MatchState {
             self.matchdepth = self.matchdepth - 1;
             if ((fresh162 == 0) as i32 != 0) as i64 != 0 {
                 lual_error(
-                    self.state,
+                    self.interpreter,
                     b"pattern too complex\0" as *const u8 as *const i8,
                 );
             }
@@ -419,7 +419,7 @@ impl MatchState {
                                     p = p.offset(2 as isize);
                                     if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
-                                            self.state,
+                                            self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
@@ -478,7 +478,7 @@ impl MatchState {
                                     p = p.offset(2 as isize);
                                     if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
-                                            self.state,
+                                            self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
@@ -537,7 +537,7 @@ impl MatchState {
                                     p = p.offset(2 as isize);
                                     if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
                                         lual_error(
-                                            self.state,
+                                            self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0" as *const u8
                                                 as *const i8,
                                         );
@@ -641,13 +641,13 @@ impl MatchState {
     }
     pub unsafe extern "C" fn prepstate(
         & mut self,
-        state: *mut State,
+        state: *mut Interpreter,
         s: *const i8,
         lexical_state: u64,
         p: *const i8,
         lp: u64,
     ) {
-        self.state = state;
+        self.interpreter = state;
         self.matchdepth = 200 as i32;
         self.src_init = s;
         unsafe {
@@ -661,7 +661,7 @@ impl MatchState {
     pub unsafe extern "C" fn add_s(& mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
         unsafe {
             let mut l: u64 = 0;
-            let state: *mut State = self.state;
+            let state: *mut Interpreter = self.interpreter;
             let mut news: *const i8 = lua_tolstring(state, 3, &mut l);
             let mut p: *const i8;
             loop {

@@ -7,7 +7,7 @@ use crate::object::*;
 use crate::tstring::*;
 use crate::closure::*;
 use crate::stackvalue::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::prototype::*;
 use crate::tm::*;
 use crate::table::*;
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 
         return length;
     }
 }
-pub unsafe extern "C" fn luao_tostring(state: *mut State, obj: *mut TValue) {
+pub unsafe extern "C" fn luao_tostring(state: *mut Interpreter, obj: *mut TValue) {
     unsafe {
         let mut buffer: [i8; 44] = [0; 44];
         let length = tostringbuff(obj, buffer.as_mut_ptr());
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool
     }
 }
 pub unsafe extern "C" fn lessthanothers(
-    state: *mut State,
+    state: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> i32 {
@@ -253,7 +253,7 @@ pub unsafe extern "C" fn lessthanothers(
     }
 }
 pub unsafe extern "C" fn luav_lessthan(
-    state: *mut State,
+    state: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn luav_lessthan(
     }
 }
 pub unsafe extern "C" fn lessequalothers(
-    state: *mut State,
+    state: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn lessequalothers(
     }
 }
 pub unsafe extern "C" fn luav_lessequal(
-    state: *mut State,
+    state: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
 ) -> bool {
@@ -301,7 +301,7 @@ pub unsafe extern "C" fn luav_lessequal(
     }
 }
 pub unsafe extern "C" fn luav_equalobj(
-    state: *mut State,
+    state: *mut Interpreter,
     t1: *const TValue,
     t2: *const TValue,
 ) -> bool {
@@ -425,7 +425,7 @@ pub unsafe extern "C" fn luav_equalobj(
         };
     }
 }
-pub unsafe extern "C" fn luav_objlen(state: *mut State, ra: StackValuePointer, rb: *const TValue) {
+pub unsafe extern "C" fn luav_objlen(state: *mut Interpreter, ra: StackValuePointer, rb: *const TValue) {
     unsafe {
         let tm: *const TValue;
         match (*rb).get_tag_variant() {

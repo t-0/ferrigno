@@ -1,6 +1,6 @@
 use crate::utility::c::*;
 use crate::io::stream::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::character::*;
 use crate::functions::*;
 use crate::tag::*;
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 {
             as i32;
     }
 }
-pub unsafe extern "C" fn io_type(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_type(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream;
         lual_checkany(state, 1);
@@ -40,7 +40,7 @@ pub unsafe extern "C" fn io_type(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn f_tostring(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_tostring(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -52,7 +52,7 @@ pub unsafe extern "C" fn f_tostring(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn tofile(state: *mut State) -> *mut FILE {
+pub unsafe extern "C" fn tofile(state: *mut Interpreter) -> *mut FILE {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn tofile(state: *mut State) -> *mut FILE {
         return (*p).file;
     }
 }
-pub unsafe extern "C" fn newprefile(state: *mut State) -> *mut Stream {
+pub unsafe extern "C" fn newprefile(state: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream =
             User::lua_newuserdatauv(state, ::core::mem::size_of::<Stream>(), 0) as *mut Stream;
@@ -74,7 +74,7 @@ pub unsafe extern "C" fn newprefile(state: *mut State) -> *mut Stream {
         return p;
     }
 }
-pub unsafe extern "C" fn aux_close(state: *mut State) -> i32 {
+pub unsafe extern "C" fn aux_close(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -85,13 +85,13 @@ pub unsafe extern "C" fn aux_close(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn f_close(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_close(state: *mut Interpreter) -> i32 {
     unsafe {
         tofile(state);
         return aux_close(state);
     }
 }
-pub unsafe extern "C" fn io_close(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_close(state: *mut Interpreter) -> i32 {
     unsafe {
         if lua_type(state, 1) == None {
             lua_getfield(
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn io_close(state: *mut State) -> i32 {
         return f_close(state);
     }
 }
-pub unsafe extern "C" fn f_gc(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_gc(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn f_gc(state: *mut State) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn io_fclose(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_fclose(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -121,15 +121,15 @@ pub unsafe extern "C" fn io_fclose(state: *mut State) -> i32 {
         return lual_fileresult(state, (fclose((*p).file) == 0) as i32, std::ptr::null());
     }
 }
-pub unsafe extern "C" fn newfile(state: *mut State) -> *mut Stream {
+pub unsafe extern "C" fn newfile(state: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream = newprefile(state);
         (*p).file = std::ptr::null_mut();
-        (*p).close_function = Some(io_fclose as unsafe extern "C" fn(*mut State) -> i32);
+        (*p).close_function = Some(io_fclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         return p;
     }
 }
-pub unsafe extern "C" fn opencheck(state: *mut State, fname: *const i8, mode: *const i8) {
+pub unsafe extern "C" fn opencheck(state: *mut Interpreter, fname: *const i8, mode: *const i8) {
     unsafe {
         let p: *mut Stream = newfile(state);
         (*p).file = fopen(fname, mode);
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn opencheck(state: *mut State, fname: *const i8, mode: *c
         }
     }
 }
-pub unsafe extern "C" fn io_open(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_open(state: *mut Interpreter) -> i32 {
     unsafe {
         let filename: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mode: *const i8 = lual_optlstring(
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn io_open(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn io_pclose(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_pclose(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn io_pclose(state: *mut State) -> i32 {
         return lual_execresult(state, pclose((*p).file));
     }
 }
-pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_popen(state: *mut Interpreter) -> i32 {
     unsafe {
         let filename: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
         let mode: *const i8 = lual_optlstring(
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
         *__errno_location() = 0;
         fflush(std::ptr::null_mut());
         (*p).file = popen(filename, mode);
-        (*p).close_function = Some(io_pclose as unsafe extern "C" fn(*mut State) -> i32);
+        (*p).close_function = Some(io_pclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         return if ((*p).file).is_null() {
             lual_fileresult(state, 0, filename)
         } else {
@@ -202,7 +202,7 @@ pub unsafe extern "C" fn io_popen(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn io_tmpfile(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_tmpfile(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream = newfile(state);
         *__errno_location() = 0;
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn io_tmpfile(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn getiofile(state: *mut State, findex: *const i8) -> *mut FILE {
+pub unsafe extern "C" fn getiofile(state: *mut Interpreter, findex: *const i8) -> *mut FILE {
     unsafe {
         let p: *mut Stream;
         lua_getfield(state, -(1000000 as i32) - 1000 as i32, findex);
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn getiofile(state: *mut State, findex: *const i8) -> *mut
         return (*p).file;
     }
 }
-pub unsafe extern "C" fn g_iofile(state: *mut State, f: *const i8, mode: *const i8) -> i32 {
+pub unsafe extern "C" fn g_iofile(state: *mut Interpreter, f: *const i8, mode: *const i8) -> i32 {
     unsafe {
         if !(is_none_or_nil(lua_type(state, 1))) {
             let filename: *const i8 = lua_tolstring(state, 1, std::ptr::null_mut());
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn g_iofile(state: *mut State, f: *const i8, mode: *const 
         return 1;
     }
 }
-pub unsafe extern "C" fn io_input(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_input(state: *mut Interpreter) -> i32 {
     unsafe {
         return g_iofile(
             state,
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn io_input(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn io_output(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_output(state: *mut Interpreter) -> i32 {
     unsafe {
         return g_iofile(
             state,
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn io_output(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn aux_lines(state: *mut State, to_close: bool) {
+pub unsafe extern "C" fn aux_lines(state: *mut Interpreter, to_close: bool) {
     unsafe {
         let n: i32 = (*state).get_top() - 1;
         (((n <= 250 as i32) as i32 != 0) as i64 != 0
@@ -282,19 +282,19 @@ pub unsafe extern "C" fn aux_lines(state: *mut State, to_close: bool) {
         lua_rotate(state, 2, 3);
         lua_pushcclosure(
             state,
-            Some(io_readline as unsafe extern "C" fn(*mut State) -> i32),
+            Some(io_readline as unsafe extern "C" fn(*mut Interpreter) -> i32),
             3 + n,
         );
     }
 }
-pub unsafe extern "C" fn f_lines(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_lines(state: *mut Interpreter) -> i32 {
     unsafe {
         tofile(state);
         aux_lines(state, false);
         return 1;
     }
 }
-pub unsafe extern "C" fn io_lines(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_lines(state: *mut Interpreter) -> i32 {
     unsafe {
         let to_close: bool;
         if lua_type(state, 1) == None {
@@ -366,7 +366,7 @@ pub unsafe extern "C" fn readdigits(rn: *mut RN, hex: i32) -> i32 {
         return count;
     }
 }
-pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 {
+pub unsafe extern "C" fn read_number(state: *mut Interpreter, file: *mut FILE) -> i32 {
     unsafe {
         let mut rn: RN = RN {
             file: std::ptr::null_mut(),
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn read_number(state: *mut State, file: *mut FILE) -> i32 
         };
     }
 }
-pub unsafe extern "C" fn test_eof(state: *mut State, file: *mut FILE) -> i32 {
+pub unsafe extern "C" fn test_eof(state: *mut Interpreter, file: *mut FILE) -> i32 {
     unsafe {
         let c: i32 = getc(file);
         ungetc(c, file);
@@ -434,7 +434,7 @@ pub unsafe extern "C" fn test_eof(state: *mut State, file: *mut FILE) -> i32 {
         return (c != -1) as i32;
     }
 }
-pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32) -> i32 {
+pub unsafe extern "C" fn read_line(state: *mut Interpreter, file: *mut FILE, chop: i32) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         let mut c: i32 = 0;
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn read_line(state: *mut State, file: *mut FILE, chop: i32
         return (c == CHARACTER_LF as i32 || get_length_raw(state, -1) > 0) as u64 as u32 as i32;
     }
 }
-pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
+pub unsafe extern "C" fn read_all(state: *mut Interpreter, file: *mut FILE) {
     unsafe {
         let mut nr: u64;
         let mut b = Buffer::new();
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn read_all(state: *mut State, file: *mut FILE) {
         b.push_result();
     }
 }
-pub unsafe extern "C" fn read_chars(state: *mut State, file: *mut FILE, n: u64) -> i32 {
+pub unsafe extern "C" fn read_chars(state: *mut Interpreter, file: *mut FILE, n: u64) -> i32 {
     unsafe {
         let nr: u64;
         let p: *mut i8;
@@ -528,7 +528,7 @@ pub unsafe extern "C" fn read_chars(state: *mut State, file: *mut FILE, n: u64) 
         return (nr > 0) as i32;
     }
 }
-pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) -> i32 {
+pub unsafe extern "C" fn g_read(state: *mut Interpreter, file: *mut FILE, first: i32) -> i32 {
     unsafe {
         let mut nargs: i32 = (*state).get_top() - 1;
         let mut n: i32;
@@ -600,7 +600,7 @@ pub unsafe extern "C" fn g_read(state: *mut State, file: *mut FILE, first: i32) 
         return n - first;
     }
 }
-pub unsafe extern "C" fn io_read(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_read(state: *mut Interpreter) -> i32 {
     unsafe {
         return g_read(
             state,
@@ -609,12 +609,12 @@ pub unsafe extern "C" fn io_read(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn f_read(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_read(state: *mut Interpreter) -> i32 {
     unsafe {
         return g_read(state, tofile(state), 2);
     }
 }
-pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_readline(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 1) as *mut Stream;
@@ -651,7 +651,7 @@ pub unsafe extern "C" fn io_readline(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn g_write(state: *mut State, file: *mut FILE, mut arg: i32) -> i32 {
+pub unsafe extern "C" fn g_write(state: *mut Interpreter, file: *mut FILE, mut arg: i32) -> i32 {
     unsafe {
         let mut nargs: i32 = (*state).get_top() - arg;
         let mut status: i32 = 1;
@@ -697,7 +697,7 @@ pub unsafe extern "C" fn g_write(state: *mut State, file: *mut FILE, mut arg: i3
         };
     }
 }
-pub unsafe extern "C" fn io_write(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_write(state: *mut Interpreter) -> i32 {
     unsafe {
         return g_write(
             state,
@@ -706,14 +706,14 @@ pub unsafe extern "C" fn io_write(state: *mut State) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn f_write(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_write(state: *mut Interpreter) -> i32 {
     unsafe {
         let file: *mut FILE = tofile(state);
         lua_pushvalue(state, 1);
         return g_write(state, file, 2);
     }
 }
-pub unsafe extern "C" fn f_seek(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_seek(state: *mut Interpreter) -> i32 {
     unsafe {
         pub const MODE: [i32; 3] = [0, 1, 2];
         pub const MODE_NAMES: [*const i8; 4] = [
@@ -747,7 +747,7 @@ pub unsafe extern "C" fn f_seek(state: *mut State) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn f_setvbuf(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_setvbuf(state: *mut Interpreter) -> i32 {
     unsafe {
         pub const MODE: [i32; 3] = [2, 0, 1];
         pub const MODE_NAMES: [*const i8; 4] = [
@@ -771,14 +771,14 @@ pub unsafe extern "C" fn f_setvbuf(state: *mut State) -> i32 {
         return lual_fileresult(state, (res == 0) as i32, std::ptr::null());
     }
 }
-pub unsafe extern "C" fn io_flush(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_flush(state: *mut Interpreter) -> i32 {
     unsafe {
         let file: *mut FILE = getiofile(state, b"_IO_output\0" as *const u8 as *const i8);
         *__errno_location() = 0;
         return lual_fileresult(state, (fflush(file) == 0) as i32, std::ptr::null());
     }
 }
-pub unsafe extern "C" fn f_flush(state: *mut State) -> i32 {
+pub unsafe extern "C" fn f_flush(state: *mut Interpreter) -> i32 {
     unsafe {
         let file: *mut FILE = tofile(state);
         *__errno_location() = 0;
@@ -790,67 +790,67 @@ pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
         {
             RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
-                function: Some(io_close as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
-                function: Some(io_flush as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_flush as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"input\0" as *const u8 as *const i8,
-                function: Some(io_input as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_input as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
-                function: Some(io_lines as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_lines as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"open\0" as *const u8 as *const i8,
-                function: Some(io_open as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_open as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"output\0" as *const u8 as *const i8,
-                function: Some(io_output as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_output as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"popen\0" as *const u8 as *const i8,
-                function: Some(io_popen as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_popen as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
-                function: Some(io_read as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_read as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"tmpfile\0" as *const u8 as *const i8,
-                function: Some(io_tmpfile as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_tmpfile as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"type\0" as *const u8 as *const i8,
-                function: Some(io_type as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_type as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
-                function: Some(io_write as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(io_write as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -866,43 +866,43 @@ pub const IO_METHODS: [RegisteredFunction; 8] = {
         {
             RegisteredFunction {
                 name: b"read\0" as *const u8 as *const i8,
-                function: Some(f_read as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_read as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"write\0" as *const u8 as *const i8,
-                function: Some(f_write as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_write as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"lines\0" as *const u8 as *const i8,
-                function: Some(f_lines as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_lines as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"flush\0" as *const u8 as *const i8,
-                function: Some(f_flush as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_flush as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"seek\0" as *const u8 as *const i8,
-                function: Some(f_seek as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_seek as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"close\0" as *const u8 as *const i8,
-                function: Some(f_close as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"setvbuf\0" as *const u8 as *const i8,
-                function: Some(f_setvbuf as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_setvbuf as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -924,19 +924,19 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
         {
             RegisteredFunction {
                 name: b"__gc\0" as *const u8 as *const i8,
-                function: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"__close\0" as *const u8 as *const i8,
-                function: Some(f_gc as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"__tostring\0" as *const u8 as *const i8,
-                function: Some(f_tostring as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(f_tostring as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -947,7 +947,7 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
         },
     ]
 };
-pub unsafe extern "C" fn createmeta(state: *mut State) {
+pub unsafe extern "C" fn createmeta(state: *mut Interpreter) {
     unsafe {
         lual_newmetatable(state, b"FILE*\0" as *const u8 as *const i8);
         lual_setfuncs(state, IO_METAMETHODS.as_ptr(), 0);
@@ -957,11 +957,11 @@ pub unsafe extern "C" fn createmeta(state: *mut State) {
         lua_settop(state, -2);
     }
 }
-pub unsafe extern "C" fn io_noclose(state: *mut State) -> i32 {
+pub unsafe extern "C" fn io_noclose(state: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(state, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
-        (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut State) -> i32);
+        (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         (*state).push_nil();
         lua_pushstring(
             state,
@@ -971,7 +971,7 @@ pub unsafe extern "C" fn io_noclose(state: *mut State) -> i32 {
     }
 }
 pub unsafe extern "C" fn createstdfile(
-    state: *mut State,
+    state: *mut Interpreter,
     file: *mut FILE,
     k: *const i8,
     fname: *const i8,
@@ -979,7 +979,7 @@ pub unsafe extern "C" fn createstdfile(
     unsafe {
         let p: *mut Stream = newprefile(state);
         (*p).file = file;
-        (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut State) -> i32);
+        (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         if !k.is_null() {
             lua_pushvalue(state, -1);
             lua_setfield(state, -(1000000 as i32) - 1000 as i32, k);
@@ -987,7 +987,7 @@ pub unsafe extern "C" fn createstdfile(
         lua_setfield(state, -2, fname);
     }
 }
-pub unsafe extern "C" fn luaopen_io(state: *mut State) -> i32 {
+pub unsafe extern "C" fn luaopen_io(state: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             state,

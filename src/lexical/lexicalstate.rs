@@ -20,7 +20,7 @@ use crate::new::*;
 use crate::variabledescription::*;
 use crate::object::*;
 use crate::prototype::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::lexical::blockcontrol::*;
 use crate::debugger::absolutelineinfo::*;
 use crate::tvalue::*;
@@ -41,7 +41,7 @@ pub struct LexicalState {
     pub token: Token,
     pub look_ahead: Token,
     pub function_state: *mut FunctionState,
-    pub state: *mut State,
+    pub interpreter: *mut Interpreter,
     pub zio: *mut ZIO,
     pub buffer: *mut Buffer,
     pub table: *mut Table,
@@ -58,7 +58,7 @@ impl New for LexicalState {
             token: Token::new(),
             look_ahead: Token::new(),
             function_state: std::ptr::null_mut(),
-            state: std::ptr::null_mut(),
+            interpreter: std::ptr::null_mut(),
             zio: std::ptr::null_mut(),
             buffer: std::ptr::null_mut(),
             table: std::ptr::null_mut(),
@@ -72,7 +72,7 @@ impl LexicalState {
     pub unsafe fn parse_statement(& mut self) {
         unsafe {
             let line: i32 = self.line_number;
-            (*(self.state)).luae_inccstack();
+            (*(self.interpreter)).luae_inccstack();
             match self.token.token {
                 CHARACTER_SEMICOLON => {
                     luax_next(self);
@@ -125,9 +125,9 @@ impl LexicalState {
                 }
             }
             (*self.function_state).freereg = luay_nvarstack(self.function_state) as u8;
-            (*self.state).count_c_calls =
-                (*self.state).count_c_calls.wrapping_sub(1);
-            (*self.state).count_c_calls;
+            (*self.interpreter).count_c_calls =
+                (*self.interpreter).count_c_calls.wrapping_sub(1);
+            (*self.interpreter).count_c_calls;
         }
     }
     pub unsafe fn create_label(
@@ -185,7 +185,7 @@ impl LexicalState {
             if (*function_state).count_p >= (*prototype).size_p {
                 let mut old_size: i32 = (*prototype).size_p;
                 (*prototype).p = luam_growaux_(
-                    self.state,
+                    self.interpreter,
                     (*prototype).p as *mut libc::c_void,
                     (*function_state).count_p as usize,
                     &mut (*prototype).size_p,
@@ -207,14 +207,14 @@ impl LexicalState {
                     *fresh46 = std::ptr::null_mut();
                 }
             }
-            let clp: *mut Prototype = luaf_newproto(self.state);
+            let clp: *mut Prototype = luaf_newproto(self.interpreter);
             let np = (*function_state).count_p;
             (*function_state).count_p = (*function_state).count_p + 1;
             let ref mut target = *((*prototype).p).offset(np as isize);
             *target = clp;
             if (*prototype).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(
-                    self.state,
+                    self.interpreter,
                     &mut (*(prototype as *mut Object)),
                     &mut (*(clp as *mut Object)),
                 );
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn newlabelentry(
     unsafe {
         let n: i32 = (*l).n;
         (*l).pointer = luam_growaux_(
-            (*lexical_state).state,
+            (*lexical_state).interpreter,
             (*l).pointer as *mut libc::c_void,
             n as usize,
             &mut (*l).size,
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn undefgoto(
         let mut message: *const i8;
         if (*gt).name
             == luas_newlstr(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 b"break\0" as *const u8 as *const i8,
                 (::core::mem::size_of::<[i8; 6]>() as u64)
                     .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -326,11 +326,11 @@ pub unsafe extern "C" fn undefgoto(
             )
         {
             message = b"break outside loop at line %d\0" as *const u8 as *const i8;
-            message = luao_pushfstring((*lexical_state).state, message, (*gt).line);
+            message = luao_pushfstring((*lexical_state).interpreter, message, (*gt).line);
         } else {
             message = b"no visible label '%s' for <goto> at line %d\0" as *const u8 as *const i8;
             message = luao_pushfstring(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 message,
                 (*(*gt).name).get_contents_mut(),
                 (*gt).line,
@@ -381,7 +381,7 @@ pub unsafe extern "C" fn open_func(
         (*prototype).source = (*lexical_state).source;
         if (*prototype).get_marked() & 1 << 5 != 0 && (*(*prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 &mut (*(prototype as *mut Object)),
                 &mut (*((*prototype).source as *mut Object)),
             );
@@ -393,7 +393,7 @@ pub unsafe extern "C" fn open_func(
 }
 pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
     unsafe {
-        let state: *mut State = (*lexical_state).state;
+        let state: *mut Interpreter = (*lexical_state).interpreter;
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let prototype: *mut Prototype = (*function_state).prototype;
         luak_ret(function_state, luay_nvarstack(function_state), 0);
@@ -873,7 +873,7 @@ pub unsafe extern "C" fn error_expected(lexical_state: *mut LexicalState, token:
         luax_syntaxerror(
             lexical_state,
             luao_pushfstring(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 b"%s expected\0" as *const u8 as *const i8,
                 luax_token2str(lexical_state, token),
             ),
@@ -917,7 +917,7 @@ pub unsafe extern "C" fn check_match(
                 luax_syntaxerror(
                     lexical_state,
                     luao_pushfstring(
-                        (*lexical_state).state,
+                        (*lexical_state).interpreter,
                         b"%s expected (to close %s at line %d)\0" as *const u8 as *const i8,
                         luax_token2str(lexical_state, what),
                         luax_token2str(lexical_state, who),
@@ -950,7 +950,7 @@ pub unsafe extern "C" fn registerlocalvar(
         let prototype: *mut Prototype = (*function_state).prototype;
         let mut old_size: i32 = (*prototype).size_local_variables;
         (*prototype).local_variables = luam_growaux_(
-            (*lexical_state).state,
+            (*lexical_state).interpreter,
             (*prototype).local_variables as *mut libc::c_void,
             (*function_state).count_debug_variables as usize,
             &mut (*prototype).size_local_variables,
@@ -978,7 +978,7 @@ pub unsafe extern "C" fn registerlocalvar(
         if (*prototype).get_marked() & 1 << 5 != 0 && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 &mut (*(prototype as *mut Object)),
                 &mut (*(variable_name as *mut Object)),
             );
@@ -991,7 +991,7 @@ pub unsafe extern "C" fn registerlocalvar(
 }
 pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *mut TString) -> i32 {
     unsafe {
-        let state: *mut State = (*lexical_state).state;
+        let state: *mut Interpreter = (*lexical_state).interpreter;
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
         let var: *mut VariableDescription;
@@ -1056,7 +1056,7 @@ pub unsafe extern "C" fn check_readonly(
         }
         if !variable_name.is_null() {
             let message: *const i8 = luao_pushfstring(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 b"attempt to assign to const variable '%s'\0" as *const u8 as *const i8,
                 (*variable_name).get_contents_mut(),
             );
@@ -1145,7 +1145,7 @@ pub unsafe extern "C" fn jumpscopeerror(
         let mut message: *const i8 =
             b"<goto %s> at line %d jumps into the scope of local '%s'\0" as *const u8 as *const i8;
         message = luao_pushfstring(
-            (*lexical_state).state,
+            (*lexical_state).interpreter,
             message,
             (*(*gt).name).get_contents_mut(),
             (*gt).line,
@@ -1188,7 +1188,7 @@ pub unsafe extern "C" fn subexpr(
     limit: i32,
 ) -> u32 {
     unsafe {
-        (*((*lexical_state).state)).luae_inccstack();
+        (*((*lexical_state).interpreter)).luae_inccstack();
         let uop = getunopr((*lexical_state).token.token);
         if uop as u32 != OperatorUnary::None_ as u32 {
             let line: i32 = (*lexical_state).line_number;
@@ -1213,9 +1213,9 @@ pub unsafe extern "C" fn subexpr(
             luak_posfix((*lexical_state).function_state, op, v, &mut v2, line_0);
             op = nextop;
         }
-        (*(*lexical_state).state).count_c_calls =
-            ((*(*lexical_state).state).count_c_calls).wrapping_sub(1);
-        (*(*lexical_state).state).count_c_calls;
+        (*(*lexical_state).interpreter).count_c_calls =
+            ((*(*lexical_state).interpreter).count_c_calls).wrapping_sub(1);
+        (*(*lexical_state).interpreter).count_c_calls;
         return op;
     }
 }
@@ -1312,11 +1312,11 @@ pub unsafe extern "C" fn restassign(
             {
                 check_conflict(lexical_state, lh, &mut nv.expression_description);
             }
-            (*((*lexical_state).state)).luae_inccstack();
+            (*((*lexical_state).interpreter)).luae_inccstack();
             restassign(lexical_state, &mut nv, nvars + 1);
-            (*(*lexical_state).state).count_c_calls =
-                ((*(*lexical_state).state).count_c_calls).wrapping_sub(1);
-            (*(*lexical_state).state).count_c_calls;
+            (*(*lexical_state).interpreter).count_c_calls =
+                ((*(*lexical_state).interpreter).count_c_calls).wrapping_sub(1);
+            (*(*lexical_state).interpreter).count_c_calls;
         } else {
             checknext(lexical_state, CHARACTER_EQUAL as i32);
             let nexps: i32 = (*lexical_state).parse_expression_list(&mut expression_description);
@@ -1372,7 +1372,7 @@ pub unsafe extern "C" fn breakstat(lexical_state: *mut LexicalState) {
         newgotoentry(
             lexical_state,
             luas_newlstr(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 b"break\0" as *const u8 as *const i8,
                 (::core::mem::size_of::<[i8; 6]>() as u64)
                     .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -1390,7 +1390,7 @@ pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *
             let mut message: *const i8 =
                 b"label '%s' already defined on line %d\0" as *const u8 as *const i8;
             message = luao_pushfstring(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 message,
                 (*name).get_contents_mut(),
                 (*lb).line,
@@ -1668,7 +1668,7 @@ pub unsafe extern "C" fn test_then_block(lexical_state: *mut LexicalState, escap
             newgotoentry(
                 lexical_state,
                 luas_newlstr(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"break\0" as *const u8 as *const i8,
                     (::core::mem::size_of::<[i8; 6]>() as u64)
                         .wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -1743,7 +1743,7 @@ pub unsafe extern "C" fn getlocalattribute(lexical_state: *mut LexicalState) -> 
                 luak_semerror(
                     lexical_state,
                     luao_pushfstring(
-                        (*lexical_state).state,
+                        (*lexical_state).interpreter,
                         b"unknown attribute '%s'\0" as *const u8 as *const i8,
                         attr,
                     ),
@@ -1925,7 +1925,7 @@ pub unsafe extern "C" fn mainfunc(lexical_state: *mut LexicalState, function_sta
             && (*(*env).name).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 &mut (*((*function_state).prototype as *mut Object)),
                 &mut (*((*env).name as *mut Object)),
             );
@@ -1958,7 +1958,7 @@ pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
             }
             let new_size = (*b).size.wrapping_mul(2);
             (*b).pointer = luam_saferealloc_(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 (*b).pointer as *mut libc::c_void,
                 (*b).size.wrapping_mul(::core::mem::size_of::<i8>()),
                 new_size.wrapping_mul(::core::mem::size_of::<i8>()),
@@ -1975,13 +1975,13 @@ pub unsafe extern "C" fn luax_token2str(lexical_state: *mut LexicalState, token:
         if token < 127 as i32 * 2 + 1 + 1 {
             if is_printable(token + 1) {
                 return luao_pushfstring(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"'%c'\0" as *const u8 as *const i8,
                     token,
                 );
             } else {
                 return luao_pushfstring(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"'<\\%d>'\0" as *const u8 as *const i8,
                     token,
                 );
@@ -1990,7 +1990,7 @@ pub unsafe extern "C" fn luax_token2str(lexical_state: *mut LexicalState, token:
             let s: *const i8 = TOKENS[(token - (127 as i32 * 2 + 1 + 1)) as usize];
             if token < TK_EOS as i32 {
                 return luao_pushfstring(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"'%s'\0" as *const u8 as *const i8,
                     s,
                 );
@@ -2006,7 +2006,7 @@ pub unsafe extern "C" fn text_token(lexical_state: *mut LexicalState, token: i32
             TK_NAME | TK_STRING | TK_FLT | TK_INT => {
                 save(lexical_state, CHARACTER_NUL as i32);
                 return luao_pushfstring(
-                    (*lexical_state).state,
+                    (*lexical_state).interpreter,
                     b"'%s'\0" as *const u8 as *const i8,
                     (*(*lexical_state).buffer).pointer,
                 );
@@ -2022,20 +2022,20 @@ pub unsafe extern "C" fn lexerror(
 ) -> ! {
     unsafe {
         message = luag_addinfo(
-            (*lexical_state).state,
+            (*lexical_state).interpreter,
             message,
             (*lexical_state).source,
             (*lexical_state).line_number,
         );
         if token != 0 {
             luao_pushfstring(
-                (*lexical_state).state,
+                (*lexical_state).interpreter,
                 b"%s near %s\0" as *const u8 as *const i8,
                 message,
                 text_token(lexical_state, token),
             );
         }
-        luad_throw((*lexical_state).state, 3);
+        luad_throw((*lexical_state).interpreter, 3);
     }
 }
 pub unsafe extern "C" fn luax_syntaxerror(
@@ -2052,7 +2052,7 @@ pub unsafe extern "C" fn luax_newstring(
     length: u64,
 ) -> *mut TString {
     unsafe {
-        let state: *mut State = (*lexical_state).state;
+        let state: *mut Interpreter = (*lexical_state).interpreter;
         let mut ts: *mut TString = luas_newlstr(state, str, length);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
         if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) {
@@ -2111,7 +2111,7 @@ pub unsafe extern "C" fn inclinenumber(lexical_state: *mut LexicalState) {
     }
 }
 pub unsafe extern "C" fn luax_setinput(
-    state: *mut State,
+    state: *mut Interpreter,
     lexical_state: *mut LexicalState,
     zio: *mut ZIO,
     source: *mut TString,
@@ -2119,7 +2119,7 @@ pub unsafe extern "C" fn luax_setinput(
 ) {
     unsafe {
         (*lexical_state).token.token = 0;
-        (*lexical_state).state = state;
+        (*lexical_state).interpreter = state;
         (*lexical_state).current = firstchar;
         (*lexical_state).look_ahead.token = TK_EOS as i32;
         (*lexical_state).zio = zio;
@@ -2135,7 +2135,7 @@ pub unsafe extern "C" fn luax_setinput(
                 .wrapping_sub(1 as u64),
         );
         (*(*lexical_state).buffer).pointer = luam_saferealloc_(
-            (*lexical_state).state,
+            (*lexical_state).interpreter,
             (*(*lexical_state).buffer).pointer as *mut libc::c_void,
             ((*(*lexical_state).buffer).size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             (32 as usize).wrapping_mul(::core::mem::size_of::<i8>()),
@@ -2322,7 +2322,7 @@ pub unsafe extern "C" fn read_long_string(
                         b"comment\0" as *const u8 as *const i8
                     };
                     let message: *const i8 = luao_pushfstring(
-                        (*lexical_state).state,
+                        (*lexical_state).interpreter,
                         b"unfinished long %s (starting at line %d)\0" as *const u8 as *const i8,
                         what,
                         line,

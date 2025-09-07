@@ -1,5 +1,5 @@
 use crate::functions::*;
-use crate::state::*;
+use crate::interpreter::*;
 use libc::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -8,11 +8,11 @@ pub struct ZIO {
     pub pointer: *const i8,
     pub reader: ReadFunction,
     pub data: *mut libc::c_void,
-    pub state: *mut State,
+    pub state: *mut Interpreter,
 }
 impl ZIO {
     pub fn new(
-        state: *mut State,
+        state: *mut Interpreter,
         reader: ReadFunction,
         data: *mut libc::c_void,
     ) -> ZIO {
@@ -28,7 +28,7 @@ impl ZIO {
 pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: u64 = 0;
-        let state: *mut State = (*zio).state;
+        let state: *mut Interpreter = (*zio).state;
         let buffer: *const i8 =
             ((*zio).reader).expect("non-null function pointer")(state, (*zio).data, &mut size);
         if buffer.is_null() || size == 0 {

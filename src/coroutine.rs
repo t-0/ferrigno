@@ -1,12 +1,12 @@
 use crate::debuginfo::*;
-use crate::state::*;
+use crate::interpreter::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
     b"running\0" as *const u8 as *const i8,
     b"dead\0" as *const u8 as *const i8,
     b"suspended\0" as *const u8 as *const i8,
     b"normal\0" as *const u8 as *const i8,
 ];
-pub unsafe extern "C" fn auxstatus(state: *mut State, co: *mut State) -> i32 {
+pub unsafe extern "C" fn auxstatus(state: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {
         if state == co {
             return 0;

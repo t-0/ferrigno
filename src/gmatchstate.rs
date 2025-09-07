@@ -1,5 +1,5 @@
 use crate::matchstate::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::tstring::*;
 use crate::user::*;
 #[derive(Copy, Clone)]
@@ -11,7 +11,7 @@ pub struct GMatchState {
     pub match_state: MatchState,
 }
 impl GMatchState {
-    pub unsafe extern "C" fn gmatch_aux(state: *mut State) -> i32 {
+    pub unsafe extern "C" fn gmatch_aux(state: *mut Interpreter) -> i32 {
         unsafe {
             let gmatch_state: *mut GMatchState =
                 lua_touserdata(state, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
@@ -19,9 +19,9 @@ impl GMatchState {
         }
     }
 
-    pub unsafe fn auxiliary(& mut self, state: *mut State) -> i32{
+    pub unsafe fn auxiliary(& mut self, state: *mut Interpreter) -> i32{
         unsafe {
-            self.match_state.state = state;
+            self.match_state.interpreter = state;
             let mut src = self.source;
             while src <= self.match_state.src_end {
                 self.match_state.reprepstate();
@@ -36,7 +36,7 @@ impl GMatchState {
         }
         return 0;
     }
-    pub unsafe extern "C" fn gmatch(state: *mut State) -> i32 {
+    pub unsafe extern "C" fn gmatch(state: *mut Interpreter) -> i32 {
         unsafe {
             let mut lexical_state: u64 = 0;
             let mut lp: u64 = 0;
@@ -56,7 +56,7 @@ impl GMatchState {
             (*gm).last_match = std::ptr::null();
             lua_pushcclosure(
                 state,
-                Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut State) -> i32),
+                Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 3,
             );
             return 1;

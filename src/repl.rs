@@ -1,7 +1,7 @@
-use crate::state::*;
+use crate::interpreter::*;
 use crate::library::*;
 use libc::{isatty,};
-pub unsafe extern "C" fn pmain(state: *mut State) -> i32 {
+pub unsafe extern "C" fn pmain(state: *mut Interpreter) -> i32 {
     unsafe {
         let argc: i32 = lua_tointegerx(state, 1, std::ptr::null_mut()) as i32;
         let argv: *mut *mut i8 = lua_touserdata(state, 2) as *mut *mut i8;
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn pmain(state: *mut State) -> i32 {
 }
 pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
-        let state: *mut State = lual_newstate();
+        let state: *mut Interpreter = lual_newstate();
         if state.is_null() {
             l_message(
                 *argv.offset(0),
@@ -70,7 +70,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             lua_gc(state, 0);
             lua_pushcclosure(
                 state,
-                Some(pmain as unsafe extern "C" fn(*mut State) -> i32),
+                Some(pmain as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 0,
             );
             (*state).push_integer(argc as i64);

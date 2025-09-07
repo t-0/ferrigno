@@ -1,5 +1,5 @@
 use crate::registeredfunction::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::buffer::*;
 use crate::new::*;
 pub unsafe extern "C" fn u_posrelat(pos: i64, length: u64) -> i64 {
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: 
         return s.offset(1 as isize);
     }
 }
-pub unsafe extern "C" fn utflen(state: *mut State) -> i32 {
+pub unsafe extern "C" fn utflen(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: i64 = 0;
         let mut length: u64 = 0;
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn utflen(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn codepoint(state: *mut State) -> i32 {
+pub unsafe extern "C" fn codepoint(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: u64 = 0;
         let mut s: *const i8 = lual_checklstring(state, 1, &mut length);
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn codepoint(state: *mut State) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn pushutfchar(state: *mut State, arg: i32) {
+pub unsafe extern "C" fn pushutfchar(state: *mut Interpreter, arg: i32) {
     unsafe {
         let code: u64 = lual_checkinteger(state, arg) as u64;
         (((code <= 0x7fffffff as u64) as i32 != 0) as i64 != 0
@@ -151,7 +151,7 @@ pub unsafe extern "C" fn pushutfchar(state: *mut State, arg: i32) {
         lua_pushfstring(state, b"%U\0" as *const u8 as *const i8, code as i64);
     }
 }
-pub unsafe extern "C" fn utfchar(state: *mut State) -> i32 {
+pub unsafe extern "C" fn utfchar(state: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*state).get_top();
         if n == 1 {
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn utfchar(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn byteoffset(state: *mut State) -> i32 {
+pub unsafe extern "C" fn byteoffset(state: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: u64 = 0;
         let s: *const i8 = lual_checklstring(state, 1, &mut length);
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn byteoffset(state: *mut State) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn iter_aux(state: *mut State, strict: i32) -> i32 {
+pub unsafe extern "C" fn iter_aux(state: *mut Interpreter, strict: i32) -> i32 {
     unsafe {
         let mut length: u64 = 0;
         let s: *const i8 = lual_checklstring(state, 1, &mut length);
@@ -258,17 +258,17 @@ pub unsafe extern "C" fn iter_aux(state: *mut State, strict: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn iter_auxstrict(state: *mut State) -> i32 {
+pub unsafe extern "C" fn iter_auxstrict(state: *mut Interpreter) -> i32 {
     unsafe {
         return iter_aux(state, 1);
     }
 }
-pub unsafe extern "C" fn iter_auxlax(state: *mut State) -> i32 {
+pub unsafe extern "C" fn iter_auxlax(state: *mut Interpreter) -> i32 {
     unsafe {
         return iter_aux(state, 0);
     }
 }
-pub unsafe extern "C" fn iter_codes(state: *mut State) -> i32 {
+pub unsafe extern "C" fn iter_codes(state: *mut Interpreter) -> i32 {
     unsafe {
         let lax: i32 = lua_toboolean(state, 2);
         let s: *const i8 = lual_checklstring(state, 1, std::ptr::null_mut());
@@ -278,9 +278,9 @@ pub unsafe extern "C" fn iter_codes(state: *mut State) -> i32 {
         lua_pushcclosure(
             state,
             if lax != 0 {
-                Some(iter_auxlax as unsafe extern "C" fn(*mut State) -> i32)
+                Some(iter_auxlax as unsafe extern "C" fn(*mut Interpreter) -> i32)
             } else {
-                Some(iter_auxstrict as unsafe extern "C" fn(*mut State) -> i32)
+                Some(iter_auxstrict as unsafe extern "C" fn(*mut Interpreter) -> i32)
             },
             0,
         );
@@ -294,31 +294,31 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
         {
             RegisteredFunction {
                 name: b"offset\0" as *const u8 as *const i8,
-                function: Some(byteoffset as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(byteoffset as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"codepoint\0" as *const u8 as *const i8,
-                function: Some(codepoint as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(codepoint as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"char\0" as *const u8 as *const i8,
-                function: Some(utfchar as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(utfchar as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"len\0" as *const u8 as *const i8,
-                function: Some(utflen as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(utflen as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: b"codes\0" as *const u8 as *const i8,
-                function: Some(iter_codes as unsafe extern "C" fn(*mut State) -> i32),
+                function: Some(iter_codes as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -335,7 +335,7 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_utf8(state: *mut State) -> i32 {
+pub unsafe extern "C" fn luaopen_utf8(state: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             state,

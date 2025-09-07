@@ -1,4 +1,4 @@
-use crate::state::*;
+use crate::interpreter::*;
 use crate::zio::*;
 use crate::character::*;
 use crate::closure::*;
@@ -14,7 +14,7 @@ use crate::utility::c::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 struct LoadState {
-    state: *mut State,
+    state: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,
 }
@@ -106,7 +106,7 @@ impl LoadState {
         p: *mut Prototype,
     ) -> *mut TString {
         unsafe {
-            let state: *mut State = self.state;
+            let state: *mut Interpreter = self.state;
             let ts: *mut TString;
             let mut size: u64 = self.load_size();
             if size == 0 {
@@ -467,7 +467,7 @@ impl LoadState {
     }
 }
 pub unsafe extern "C" fn load_closure(
-    state: *mut State,
+    state: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,
 ) -> *mut Closure {

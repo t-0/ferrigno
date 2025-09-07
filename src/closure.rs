@@ -1,6 +1,6 @@
 use crate::tag::*;
 use crate::object::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::global::*;
 use crate::debuginfo::*;
 use crate::value::*;
@@ -58,7 +58,7 @@ impl TObject for Closure {
     }
 }
 impl Closure {
-    pub unsafe fn free_closure(& mut self, state: * mut State) {
+    pub unsafe fn free_closure(& mut self, state: * mut Interpreter) {
         unsafe {
             let size = match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_C => size_cclosure(self.count_upvalues as usize),
@@ -112,7 +112,7 @@ impl Closure {
         }
     }
 }
-pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Closure) {
+pub unsafe extern "C" fn collectvalidlines(state: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
             (*(*state).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn collectvalidlines(state: *mut State, closure: *mut Clos
     }
 }
 pub unsafe extern "C" fn auxgetinfo(
-    state: *mut State,
+    state: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,
     closure: *mut Closure,
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn size_cclosure(count_upvalues: usize) -> usize {
 pub unsafe extern "C" fn size_lclosure(count_upvalues: usize) -> usize {
     32usize + ::core::mem::size_of::<*mut TValue>() * count_upvalues
 }
-pub unsafe extern "C" fn luaf_newcclosure(state: *mut State, count_upvalues: i32) -> *mut Closure {
+pub unsafe extern "C" fn luaf_newcclosure(state: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
         let object: *mut Object = luac_newobj(
             state,
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn luaf_newcclosure(state: *mut State, count_upvalues: i32
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut count_upvalues: i32) -> *mut Closure {
+pub unsafe extern "C" fn luaf_newlclosure(state: *mut Interpreter, mut count_upvalues: i32) -> *mut Closure {
     unsafe {
         let object: *mut Object = luac_newobj(
             state,
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn luaf_newlclosure(state: *mut State, mut count_upvalues:
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_initupvals(state: *mut State, cl: *mut Closure) {
+pub unsafe extern "C" fn luaf_initupvals(state: *mut Interpreter, cl: *mut Closure) {
     unsafe {
         for i in 0..(*cl).count_upvalues {
             let object: *mut Object = luac_newobj(

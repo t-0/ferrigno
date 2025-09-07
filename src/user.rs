@@ -2,7 +2,7 @@
 use crate::functions::*;
 use crate::global::*;
 use crate::object::*;
-use crate::state::*;
+use crate::interpreter::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
@@ -65,7 +65,7 @@ impl User {
         }
     }
     pub unsafe extern "C" fn luas_newudata(
-        state: *mut State,
+        state: *mut Interpreter,
         count_bytes: usize,
         count_upvalues: usize,
     ) -> *mut User {
@@ -89,7 +89,7 @@ impl User {
         }
     }
     pub unsafe extern "C" fn lua_newuserdatauv(
-        state: *mut State,
+        state: *mut Interpreter,
         size: usize,
         count_upvalues: usize,
     ) -> *mut libc::c_void {
@@ -117,7 +117,7 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn lua_topointer(state: *mut State, index: i32) -> *const libc::c_void {
+    pub unsafe extern "C" fn lua_topointer(state: *mut Interpreter, index: i32) -> *const libc::c_void {
         unsafe {
             let o: *const TValue = (*state).index2value(index);
             match (*o).get_tag_variant() {
@@ -136,7 +136,7 @@ impl User {
             };
         }
     }
-    pub unsafe extern "C" fn free_user(&mut self, state: *mut State) {
+    pub unsafe extern "C" fn free_user(&mut self, state: *mut Interpreter) {
         unsafe {
             (*state).free_memory(self as *mut User as *mut libc::c_void, self.get_size());
         }
