@@ -34,7 +34,7 @@ pub trait TObject {
     fn set_collectable(&mut self) {
         self.set_tag(set_collectable(self.get_tag()));
     }
-    fn get_tag_type(&self) -> u8 {
+    fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag())
     }
     fn get_tag_variant(&self) -> u8 {
@@ -61,6 +61,9 @@ impl TObject for Object {
     }
     fn get_tag(&self) -> u8 {
         return self.tag;
+    }
+    fn get_tag_type(&self) -> TagType {
+        get_tag_type(self.tag)
     }
     fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
@@ -111,7 +114,7 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
     unsafe {
         if object.is_null() {
             return 0;
-        } else if get_tag_type((*object).get_tag()) == TAG_TYPE_STRING {
+        } else if get_tag_type((*object).get_tag()) == TagType::String {
             if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(global, &mut (*(object as *mut Object)));
             }

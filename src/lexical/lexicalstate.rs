@@ -2015,7 +2015,7 @@ pub unsafe extern "C" fn luax_newstring(
         let interpreter: *mut Interpreter = (*lexical_state).interpreter;
         let mut ts: *mut TString = luas_newlstr(interpreter, str, length);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
-        if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) {
+        if !(get_tag_type((*o).get_tag()) == TagType::Nil) {
             ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
         } else {
             let fresh50 = (*interpreter).top.stkidrel_pointer;

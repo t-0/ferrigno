@@ -114,7 +114,7 @@ pub unsafe extern "C" fn luat_gettm(
 ) -> *const TValue {
     unsafe {
         let tm: *const TValue = luah_getshortstr(events, ename);
-        if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*tm).get_tag()) == TagType::Nil {
             (*events).flags =
                 ((*events).flags as i32 | ((1 as u32) << event as u32) as u8 as i32) as u8;
             return std::ptr::null();
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
         let mut hasclears: i32 = ((*h).array_limit > 0u32) as i32;
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
         while node < limit {
-            if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
+            if get_tag_type((*node).value.get_tag()) == TagType::Nil {
                 (*node).clearkey();
             } else {
                 if is_collectable((*node).key.tag)
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
             } else {
                 &mut *((*h).node).offset(i as isize) as *mut Node
             };
-            if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
+            if get_tag_type((*node).value.get_tag()) == TagType::Nil {
                 (*node).clearkey();
             } else if iscleared(
                 global,
@@ -256,7 +256,7 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
         }
         let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
         while node < limit {
-            if get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL {
+            if get_tag_type((*node).value.get_tag()) == TagType::Nil {
                 (*node).clearkey();
             } else {
                 if is_collectable((*node).key.tag)
@@ -507,7 +507,7 @@ pub unsafe extern "C" fn findindex(
 ) -> u32 {
     unsafe {
         let mut i: u32;
-        if get_tag_type((*key).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*key).get_tag()) == TagType::Nil {
             return 0u32;
         }
         i = if (*key).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
@@ -535,7 +535,7 @@ pub unsafe extern "C" fn luah_next(interpreter: *mut Interpreter, table: *mut Ta
         let asize: u32 = luah_realasize(table);
         let mut i: u32 = findindex(interpreter, table, &mut (*key).tvalue, asize);
         while i < asize {
-            if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
+            if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TagType::Nil {
                 let io: *mut TValue = &mut (*key).tvalue;
                 (*io).value.integer = i.wrapping_add(1 as u32) as i64;
                 (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
@@ -550,7 +550,7 @@ pub unsafe extern "C" fn luah_next(interpreter: *mut Interpreter, table: *mut Ta
         i = i.wrapping_sub(asize);
         while (i as i32) < 1 << (*table).log_size_node as i32 {
             if !(get_tag_type((*((*table).node).offset(i as isize)).value.get_tag())
-                == TAG_TYPE_NIL)
+                == TagType::Nil)
             {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
                 let io_: *mut TValue = &mut (*key).tvalue;
@@ -636,7 +636,7 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
             }
             while i <= lim {
                 if get_tag_type((*((*t).array).offset(i.wrapping_sub(1 as u32) as isize)).get_tag())
-                    != 0
+                    != TagType::Nil
                 {
                     lc = lc.wrapping_add(1);
                 }
@@ -663,7 +663,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
                 break;
             }
             let node: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
-            if !(get_tag_type((*node).value.get_tag()) == TAG_TYPE_NIL) {
+            if !(get_tag_type((*node).value.get_tag()) == TagType::Nil) {
                 if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER {
                     ause += countint((*node).key.value.integer, nums);
                 }
@@ -729,7 +729,7 @@ pub unsafe extern "C" fn reinsert(interpreter: *mut Interpreter, ot: *mut Table,
         j = 0;
         while j < size {
             let old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
-            if !(get_tag_type((*old).value.get_tag()) == TAG_TYPE_NIL) {
+            if !(get_tag_type((*old).value.get_tag()) == TagType::Nil) {
                 let mut k: TValue = TValue {
                     value: Value {
                         object: std::ptr::null_mut(),
@@ -761,7 +761,7 @@ pub unsafe extern "C" fn luah_resize(
             (*table).array_limit = new_array_size as u32;
             Table::exchange_hash_part(table, &mut new_table);
             for i in new_array_size..old_array_size {
-                if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TAG_TYPE_NIL {
+                if get_tag_type((*((*table).array).offset(i as isize)).get_tag()) != TagType::Nil {
                     luah_setint(
                         interpreter,
                         table,
@@ -862,7 +862,7 @@ pub unsafe extern "C" fn luah_newkey(
             },
             tag: 0,
         };
-        if ((get_tag_type((*key).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0 {
+        if ((get_tag_type((*key).get_tag()) == TagType::Nil) as i32 != 0) as i64 != 0 {
             luag_runerror(interpreter, b"table index is nil\0" as *const u8 as *const i8);
         } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
@@ -875,11 +875,11 @@ pub unsafe extern "C" fn luah_newkey(
                 luag_runerror(interpreter, b"table index is NaN\0" as *const u8 as *const i8);
             }
         }
-        if get_tag_type((*value).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*value).get_tag()) == TagType::Nil {
             return;
         }
         mp = mainpositiontv(table, key);
-        if (get_tag_type((*mp).value.get_tag()) != TAG_TYPE_NIL) || ((*table).last_free).is_null() {
+        if (get_tag_type((*mp).value.get_tag()) != TagType::Nil) || ((*table).last_free).is_null() {
             let mut other_node: *mut Node;
             let f_0: *mut Node = (*table).get_free_position();
             if f_0.is_null() {
@@ -1078,12 +1078,12 @@ pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
             i = j;
             if j <= (MAXIMUM_SIZE as u64).wrapping_div(2 as u64) {
                 j = (j as u64).wrapping_mul(2 as u64) as u64;
-                if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TAG_TYPE_NIL {
+                if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TagType::Nil {
                     break;
                 }
             } else {
                 j = MAXIMUM_SIZE as u64;
-                if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TAG_TYPE_NIL {
+                if get_tag_type((*luah_getint(table, j as i64)).get_tag()) == TagType::Nil {
                     break;
                 }
                 return j;
@@ -1091,7 +1091,7 @@ pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
         }
         while j.wrapping_sub(i) > 1 as u64 {
             let m: u64 = i.wrapping_add(j).wrapping_div(2 as u64);
-            if get_tag_type((*luah_getint(table, m as i64)).get_tag()) == TAG_TYPE_NIL {
+            if get_tag_type((*luah_getint(table, m as i64)).get_tag()) == TagType::Nil {
                 j = m;
             } else {
                 i = m;
@@ -1106,12 +1106,10 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
         if limit > 0u32
             && get_tag_type(
                 (*((*table).array).offset(limit.wrapping_sub(1 as u32) as isize)).get_tag(),
-            ) == TAG_TYPE_NIL
+            ) == TagType::Nil
         {
             if limit >= 2 as u32
-                && !get_tag_type(
-                    (*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag(),
-                ) == TAG_TYPE_NIL
+                && (*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag_type() != TagType::Nil
             {
                 if ispow2realasize(table) != 0
                     && !(limit.wrapping_sub(1 as u32)
@@ -1136,13 +1134,13 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
         if !((*table).flags as i32 & 1 << 7 == 0
             || (*table).array_limit & ((*table).array_limit).wrapping_sub(1 as u32) == 0)
         {
-            if get_tag_type((*((*table).array).offset(limit as isize)).get_tag()) == TAG_TYPE_NIL {
+            if get_tag_type((*((*table).array).offset(limit as isize)).get_tag()) == TagType::Nil {
                 return limit as u64;
             }
             limit = luah_realasize(table);
             if get_tag_type(
                 (*((*table).array).offset(limit.wrapping_sub(1 as u32) as isize)).get_tag(),
-            ) == TAG_TYPE_NIL
+            ) == TagType::Nil
             {
                 let boundary_0: u32 = binsearch((*table).array, (*table).array_limit, limit);
                 (*table).array_limit = boundary_0;
@@ -1151,7 +1149,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
         }
         if ((*table).last_free).is_null()
             || get_tag_type((*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag())
-                == TAG_TYPE_NIL
+                == TagType::Nil
         {
             return limit as u64;
         } else {
@@ -1172,7 +1170,7 @@ pub unsafe extern "C" fn luav_finishget(
         while loop_0 < 2000 as i32 {
             if slot.is_null() {
                 tm = luat_gettmbyobj(interpreter, t, TM_INDEX);
-                if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
+                if ((get_tag_type((*tm).get_tag()) == TagType::Nil) as i32 != 0) as i64 != 0
                 {
                     luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
@@ -1196,7 +1194,7 @@ pub unsafe extern "C" fn luav_finishget(
                     return;
                 }
             }
-            if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
+            if get_tag_type((*tm).get_tag()) == TagType::Closure {
                 luat_calltmres(interpreter, tm, t, key, value);
                 return;
             }
@@ -1206,7 +1204,7 @@ pub unsafe extern "C" fn luav_finishget(
                 0
             } else {
                 slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);
-                (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+                (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
             } != 0
             {
                 let io1: *mut TValue = &mut (*value).tvalue;
@@ -1270,12 +1268,12 @@ pub unsafe extern "C" fn luav_finishset(
                 }
             } else {
                 tm = luat_gettmbyobj(interpreter, t, TM_NEWINDEX);
-                if ((get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) as i32 != 0) as i64 != 0
+                if ((get_tag_type((*tm).get_tag()) == TagType::Nil) as i32 != 0) as i64 != 0
                 {
                     luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
             }
-            if get_tag_type((*tm).get_tag()) == TAG_TYPE_CLOSURE {
+            if get_tag_type((*tm).get_tag()) == TagType::Closure {
                 luat_calltm(interpreter, tm, t, key, value);
                 return;
             }
@@ -1285,7 +1283,7 @@ pub unsafe extern "C" fn luav_finishset(
                 0
             } else {
                 slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);
-                (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+                (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
             } != 0
             {
                 let io1: *mut TValue = slot as *mut TValue;

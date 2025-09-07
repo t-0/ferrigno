@@ -1,4 +1,5 @@
-enum TagType {
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum TagType {
     Nil = 0x00,
     Boolean = 0x01,
     Pointer = 0x02,
@@ -12,16 +13,16 @@ enum TagType {
     Prototype = 0x0A,
     DeadKey = 0x0B,
 }
-pub const TAG_SIMPLE_: [u8 ; 9] = [
-    TAG_TYPE_NIL,
-    TAG_TYPE_BOOLEAN,
-    TAG_TYPE_POINTER,
-    TAG_TYPE_NUMERIC,
-    TAG_TYPE_STRING,
-    TAG_TYPE_TABLE,
-    TAG_TYPE_CLOSURE,
-    TAG_TYPE_USER,
-    TAG_TYPE_STATE,
+pub const TAG_SIMPLE_: [TagType; 9] = [
+    TagType::Nil,
+    TagType::Boolean,
+    TagType::Pointer,
+    TagType::Numeric,
+    TagType::String,
+    TagType::Table,
+    TagType::Closure,
+    TagType::User,
+    TagType::State,
 ];
 pub const TAG_TYPE_NIL: u8 = TagType::Nil as u8;
 pub const TAG_VARIANT_NIL_NIL: u8 = TAG_TYPE_NIL | (0x00 << 0x04);
@@ -56,8 +57,22 @@ pub const TAG_TYPE_DEADKEY: u8 = TagType::DeadKey as u8;
 pub const TAG_VARIANT_DEADKEY: u8 = TAG_TYPE_DEADKEY;
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
-pub const fn get_tag_type(tag: u8) -> u8 {
-    TAG_TYPE_MASK_ & tag
+pub const fn get_tag_type(tag: u8) -> TagType {
+    match TAG_TYPE_MASK_ & tag  {
+        TAG_TYPE_NIL => TagType::Nil,
+        TAG_TYPE_BOOLEAN => TagType::Boolean,
+        TAG_TYPE_POINTER => TagType::Pointer,
+        TAG_TYPE_NUMERIC => TagType::Numeric,
+        TAG_TYPE_STRING => TagType::String,
+        TAG_TYPE_TABLE => TagType::Table,
+        TAG_TYPE_CLOSURE => TagType::Closure,
+        TAG_TYPE_USER => TagType::User,
+        TAG_TYPE_STATE => TagType::State,
+        TAG_TYPE_UPVALUE => TagType::UpValue,
+        TAG_TYPE_PROTOTYPE => TagType::Prototype,
+        TAG_TYPE_DEADKEY => TagType::DeadKey,
+        _ => TagType::Nil,
+    }
 }
 pub const fn get_tag_variant(tag: u8) -> u8 {
     TAG_VARIANT_MASK_ & tag

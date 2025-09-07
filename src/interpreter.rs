@@ -395,10 +395,10 @@ impl Interpreter {
             let object: *const TValue = self.index2value(object_index);
             let metatable: *mut Table;
             match (*object).get_tag_type() {
-                TAG_TYPE_TABLE => {
+                TagType::Table => {
                     metatable = (*((*object).value.object as *mut Table)).get_metatable();
                 }
-                TAG_TYPE_USER => {
+                TagType::User => {
                     metatable = (*((*object).value.object as *mut User)).get_metatable();
                 }
                 _ => {
@@ -749,7 +749,7 @@ pub unsafe extern "C" fn tryfunctm(interpreter: *mut Interpreter, mut function: 
             function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as StackValuePointer;
         }
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*function).tvalue, TM_CALL);
-        if (*tm).get_tag_type() == TAG_TYPE_NIL {
+        if (*tm).get_tag_type() == TagType::Nil {
             luag_callerror(interpreter, &mut (*function).tvalue);
         }
         p = (*interpreter).top.stkidrel_pointer;
@@ -1642,10 +1642,10 @@ pub unsafe extern "C" fn lua_pushvalue(interpreter: *mut Interpreter, index: i32
 pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<u8> {
     unsafe {
         let o: *const TValue = (*interpreter).index2value(index);
-        return if (get_tag_type((*o).get_tag()) != TAG_TYPE_NIL)
+        return if (get_tag_type((*o).get_tag()) != TagType::Nil)
             || o != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue
         {
-            return Some((*o).get_tag_type())
+            return Some((*o).get_tag_type() as u8)
         } else {
             None
         };
@@ -1698,8 +1698,8 @@ pub unsafe extern "C" fn lua_isstring(interpreter: *mut Interpreter, index: i32)
     unsafe {
         let o: *const TValue = (*interpreter).index2value(index);
         return match get_tag_type((*o).get_tag()) {
-            TAG_TYPE_NUMERIC => true,
-            TAG_TYPE_STRING => true,
+            TagType::Numeric => true,
+            TagType::String => true,
             _ => false,
         };
     }
@@ -1708,9 +1708,9 @@ pub unsafe extern "C" fn lua_rawequal(interpreter: *mut Interpreter, index1: i32
     unsafe {
         let o1: *const TValue = (*interpreter).index2value(index1);
         let o2: *const TValue = (*interpreter).index2value(index2);
-        return if (!(get_tag_type((*o1).get_tag()) == TAG_TYPE_NIL)
+        return if (!(get_tag_type((*o1).get_tag()) == TagType::Nil)
             || o1 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
-            && (!(get_tag_type((*o2).get_tag()) == TAG_TYPE_NIL)
+            && (!(get_tag_type((*o2).get_tag()) == TagType::Nil)
                 || o2 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
         {
             luav_equalobj(std::ptr::null_mut(), o1, o2)
@@ -1743,9 +1743,9 @@ pub unsafe extern "C" fn lua_compare(interpreter: *mut Interpreter, index1: i32,
         let o1: *const TValue = (*interpreter).index2value(index1);
         let o2: *const TValue = (*interpreter).index2value(index2);
         let mut i: i32 = 0;
-        if (!(get_tag_type((*o1).get_tag()) == TAG_TYPE_NIL)
+        if (!(get_tag_type((*o1).get_tag()) == TagType::Nil)
             || o1 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
-            && (!(get_tag_type((*o2).get_tag()) == TAG_TYPE_NIL)
+            && (!(get_tag_type((*o2).get_tag()) == TagType::Nil)
                 || o2 != &mut (*(*interpreter).global).nil_value as *mut TValue as *const TValue)
         {
             match op {
@@ -1814,7 +1814,7 @@ pub unsafe extern "C" fn lua_toboolean(interpreter: *mut Interpreter, index: i32
     unsafe {
         let o: *const TValue = (*interpreter).index2value(index);
         return !((*o).get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-            || get_tag_type((*o).get_tag()) == TAG_TYPE_NIL) as i32;
+            || get_tag_type((*o).get_tag()) == TagType::Nil) as i32;
     }
 }
 pub unsafe extern "C" fn lua_tolstring(
@@ -1824,8 +1824,8 @@ pub unsafe extern "C" fn lua_tolstring(
 ) -> *const i8 {
     unsafe {
         let mut o: *mut TValue = (*interpreter).index2value(index);
-        if !(get_tag_type((*o).get_tag()) == TAG_TYPE_STRING) {
-            if !(get_tag_type((*o).get_tag()) == TAG_TYPE_NUMERIC) {
+        if !(get_tag_type((*o).get_tag()) == TagType::String) {
+            if !(get_tag_type((*o).get_tag()) == TagType::Numeric) {
                 if !length.is_null() {
                     *length = 0;
                 }
@@ -1995,7 +1995,7 @@ pub unsafe extern "C" fn auxgetstr(interpreter: *mut Interpreter, t: *const TVal
             0
         } else {
             slot = luah_getstr(&mut (*((*t).value.object as *mut Table)), str);
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -2042,7 +2042,7 @@ pub unsafe extern "C" fn lua_gettable(interpreter: *mut Interpreter, index: i32)
                 &mut (*((*t).value.object as *mut Table)),
                 &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue,
             );
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
@@ -2100,7 +2100,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
             } else {
                 luah_getint(&mut (*((*t).value.object as *mut Table)), n)
             };
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -2125,7 +2125,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
 }
 pub unsafe extern "C" fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> i32 {
     unsafe {
-        if get_tag_type((*value).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*value).get_tag()) == TagType::Nil {
             (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TAG_VARIANT_NIL_NIL);
         } else {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -2167,7 +2167,7 @@ pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TVal
             0
         } else {
             slot = luah_getstr(&mut (*((*t).value.object as *mut Table)), str);
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
@@ -2238,7 +2238,7 @@ pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: 
             } else {
                 luah_getint(&mut (*((*t).value.object as *mut Table)), n)
             };
-            (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+            (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
@@ -2341,14 +2341,14 @@ pub unsafe extern "C" fn lua_setmetatable(interpreter: *mut Interpreter, index: 
     unsafe {
         let metatable: *mut Table;
         let object: *mut TValue = (*interpreter).index2value(index);
-        if get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()) == TagType::Nil {
             metatable = std::ptr::null_mut();
         } else {
             metatable = &mut (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object
                 as *mut Table))
         }
         match get_tag_type((*object).get_tag()) {
-            TAG_TYPE_TABLE => {
+            TagType::Table => {
                 (*((*object).value.object as *mut Table)).metatable = metatable;
                 if !metatable.is_null() {
                     if (*(*object).value.object).get_marked() & 1 << 5 != 0
@@ -2364,7 +2364,7 @@ pub unsafe extern "C" fn lua_setmetatable(interpreter: *mut Interpreter, index: 
                     luac_checkfinalizer(interpreter, (*object).value.object, metatable);
                 }
             }
-            TAG_TYPE_USER => {
+            TagType::User => {
                 (*((*object).value.object as *mut User)).metatable = metatable;
                 if !metatable.is_null() {
                     if (*((*object).value.object as *mut User)).get_marked() & 1 << 5 != 0
@@ -3045,7 +3045,7 @@ pub unsafe extern "C" fn preinit_thread(interpreter: *mut Interpreter, global: *
 pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if !(get_tag_type((*global).nil_value.get_tag()) == TAG_TYPE_NIL) {
+        if !(get_tag_type((*global).nil_value.get_tag()) == TagType::Nil) {
             luac_freeallobjects(interpreter);
         } else {
             (*interpreter).call_info = &mut (*interpreter).base_callinfo;
@@ -3158,7 +3158,7 @@ pub unsafe extern "C" fn luae_warning(interpreter: *mut Interpreter, message: *c
 pub unsafe extern "C" fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
-        let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TAG_TYPE_STRING {
+        let message: *const i8 = if get_tag_type((*errobj).get_tag()) == TagType::String {
             ((*((*errobj).value.object as *mut TString)).get_contents_mut()) as *const i8
         } else {
             b"error object is not a string\0" as *const u8 as *const i8
@@ -3313,8 +3313,8 @@ pub unsafe extern "C" fn luag_concaterror(
     p2: *const TValue,
 ) -> ! {
     unsafe {
-        if get_tag_type((*p1).get_tag()) == TAG_TYPE_STRING
-            || get_tag_type((*p1).get_tag()) == TAG_TYPE_NUMERIC
+        if get_tag_type((*p1).get_tag()) == TagType::String
+            || get_tag_type((*p1).get_tag()) == TagType::Numeric
         {
             p1 = p2;
         }
@@ -3328,7 +3328,7 @@ pub unsafe extern "C" fn luag_opinterror(
     message: *const i8,
 ) -> ! {
     unsafe {
-        if get_tag_type((*p1).get_tag()) != 3 {
+        if (*p1).get_tag_type() != TagType::Numeric {
             p2 = p1;
         }
         luag_typeerror(interpreter, p2, message);
@@ -3590,7 +3590,7 @@ pub unsafe extern "C" fn tryagain(
 ) -> *mut libc::c_void {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if get_tag_type((*global).nil_value.get_tag()) == TAG_TYPE_NIL && (*global).gcstopem == 0 {
+        if get_tag_type((*global).nil_value.get_tag()) == TagType::Nil && (*global).gcstopem == 0 {
             luac_fullgc(interpreter, true);
             return raw_allocate(block, old_size, new_size);
         } else {
@@ -3981,10 +3981,10 @@ pub unsafe extern "C" fn luat_gettmbyobj(
     unsafe {
         let metatable: *mut Table;
         match get_tag_type((*o).get_tag()) {
-            TAG_TYPE_TABLE => {
+            TagType::Table => {
                 metatable = (*((*o).value.object as *mut Table)).metatable;
             }
-            TAG_TYPE_USER => {
+            TagType::User => {
                 metatable = (*((*o).value.object as *mut User)).metatable;
             }
             _ => {
@@ -4010,11 +4010,11 @@ pub unsafe extern "C" fn luat_objtypename(interpreter: *mut Interpreter, o: *con
         } {
             let name: *const TValue =
                 luah_getshortstr(metatable, luas_new(interpreter, b"__name\0" as *const u8 as *const i8));
-            if get_tag_type((*name).get_tag()) == TAG_TYPE_STRING {
+            if get_tag_type((*name).get_tag()) == TagType::String {
                 return (*((*name).value.object as *mut TString)).get_contents_mut();
             }
         }
-        return TYPE_NAMES[(((*o).get_tag_type()) + 1) as usize];
+        return TYPE_NAMES[((*o).get_tag_type() as usize + 1) as usize];
     }
 }
 pub unsafe extern "C" fn luat_calltm(
@@ -4094,10 +4094,10 @@ pub unsafe extern "C" fn callbintm(
 ) -> i32 {
     unsafe {
         let mut tm: *const TValue = luat_gettmbyobj(interpreter, p1, event);
-        if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*tm).get_tag()) == TagType::Nil {
             tm = luat_gettmbyobj(interpreter, p2, event);
         }
-        if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*tm).get_tag()) == TagType::Nil {
             return 0;
         }
         luat_calltmres(interpreter, tm, p1, p2, res);
@@ -4115,8 +4115,8 @@ pub unsafe extern "C" fn luat_trybintm(
         if ((callbintm(interpreter, p1, p2, res, event) == 0) as i32 != 0) as i64 != 0 {
             match event as u32 {
                 TM_BAND | TM_BOR | TM_BXOR | TM_SHL | TM_SHR | TM_BNOT => {
-                    if get_tag_type((*p1).get_tag()) == TAG_TYPE_NUMERIC
-                        && get_tag_type((*p2).get_tag()) == TAG_TYPE_NUMERIC
+                    if get_tag_type((*p1).get_tag()) == TagType::Numeric
+                        && get_tag_type((*p2).get_tag()) == TagType::Numeric
                     {
                         luag_tointerror(interpreter, p1, p2);
                     } else {
@@ -4207,7 +4207,7 @@ pub unsafe extern "C" fn luat_callordertm(
     unsafe {
         if callbintm(interpreter, p1, p2, (*interpreter).top.stkidrel_pointer, event) != 0 {
             return !((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag()) == TAG_TYPE_NIL)
+                || get_tag_type((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag()) == TagType::Nil)
                 as i32;
         }
         luag_ordererror(interpreter, p1, p2);
@@ -4441,7 +4441,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
         (*io).set_tag((*i_g).get_tag());
         (*io).set_collectable();
         tm = luat_gettmbyobj(interpreter, &mut v, TM_GC);
-        if !(get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL) {
+        if !(get_tag_type((*tm).get_tag()) == TagType::Nil) {
             let status: i32;
             let oldah: u8 = (*interpreter).allow_hook;
             let oldgcstp: i32 = (*global).gc_step as i32;
@@ -4997,7 +4997,7 @@ pub unsafe extern "C" fn callclosemethod(
 pub unsafe extern "C" fn checkclosemth(interpreter: *mut Interpreter, level: StackValuePointer) {
     unsafe {
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*level).tvalue, TM_CLOSE);
-        if get_tag_type((*tm).get_tag()) == TAG_TYPE_NIL {
+        if get_tag_type((*tm).get_tag()) == TagType::Nil {
             let index: i32 = level.offset_from((*(*interpreter).call_info).function.stkidrel_pointer) as i32;
             let mut vname: *const i8 =
                 luag_findlocal(interpreter, (*interpreter).call_info, index, std::ptr::null_mut());
@@ -5028,7 +5028,7 @@ pub unsafe extern "C" fn prepcallclosemth(interpreter: *mut Interpreter, level: 
 pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: StackValuePointer) {
     unsafe {
         if (*level).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-            || get_tag_type((*level).tvalue.get_tag()) == TAG_TYPE_NIL
+            || get_tag_type((*level).tvalue.get_tag()) == TagType::Nil
         {
             return;
         }
@@ -5275,7 +5275,7 @@ pub unsafe extern "C" fn luav_finishop(interpreter: *mut Interpreter) {
                 let res: i32 = !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag()
                     == TAG_VARIANT_BOOLEAN_FALSE
                     || get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.get_tag())
-                        == TAG_TYPE_NIL) as i32;
+                        == TagType::Nil) as i32;
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 if res != (inst >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
                     (*call_info).u.l.saved_program_counter =
@@ -5498,7 +5498,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*count_upvalues).value.object as *mut Table)),
                                     key,
                                 );
-                                (get_tag_type((*slot).get_tag()) != TAG_TYPE_NIL) as i32
+                                (get_tag_type((*slot).get_tag()) != TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_4: *mut TValue = &mut (*ra_10).tvalue;
@@ -5546,7 +5546,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                             n as i64,
                                         )
                                     };
-                                    !(get_tag_type((*slot_0).get_tag()) == TAG_TYPE_NIL) as i32
+                                    !(get_tag_type((*slot_0).get_tag()) == TagType::Nil) as i32
                                 }
                             } else if !((*rb_1).get_tag_variant() == TAG_VARIANT_TABLE) {
                                 slot_0 = std::ptr::null();
@@ -5556,7 +5556,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*rb_1).value.object as *mut Table)),
                                     rc_0,
                                 );
-                                !(get_tag_type((*slot_0).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_0).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_5: *mut TValue = &mut (*ra_11).tvalue;
@@ -5597,7 +5597,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                         c as i64,
                                     )
                                 };
-                                !(get_tag_type((*slot_1).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_1).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_6: *mut TValue = &mut (*ra_12).tvalue;
@@ -5642,7 +5642,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*rb_3).value.object as *mut Table)),
                                     key_1,
                                 );
-                                !(get_tag_type((*slot_2).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_2).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_7: *mut TValue = &mut (*ra_13).tvalue;
@@ -5687,7 +5687,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*upval_0).value.object as *mut Table)),
                                     key_2,
                                 );
-                                !(get_tag_type((*slot_3).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_3).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_8: *mut TValue = slot_3 as *mut TValue;
@@ -5753,7 +5753,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                             n_0 as i64,
                                         )
                                     };
-                                    (get_tag_type((*slot_4).get_tag()) != TAG_TYPE_NIL) as i32
+                                    (get_tag_type((*slot_4).get_tag()) != TagType::Nil) as i32
                                 }
                             } else if !((*ra_14).tvalue.get_tag_variant() == TAG_VARIANT_TABLE) {
                                 slot_4 = std::ptr::null();
@@ -5763,7 +5763,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*ra_14).tvalue.value.object as *mut Table)),
                                     rb_5,
                                 );
-                                !(get_tag_type((*slot_4).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_4).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_9: *mut TValue = slot_4 as *mut TValue;
@@ -5821,7 +5821,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                         c_0 as i64,
                                     )
                                 };
-                                !(get_tag_type((*slot_5).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_5).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_10: *mut TValue = slot_5 as *mut TValue;
@@ -5888,7 +5888,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*ra_16).tvalue.value.object as *mut Table)),
                                     key_4,
                                 );
-                                !(get_tag_type((*slot_6).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_6).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_11: *mut TValue = slot_6 as *mut TValue;
@@ -5980,7 +5980,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     &mut (*((*rb_7).value.object as *mut Table)),
                                     key_5,
                                 );
-                                !(get_tag_type((*slot_7).get_tag()) == TAG_TYPE_NIL) as i32
+                                !(get_tag_type((*slot_7).get_tag()) == TagType::Nil) as i32
                             } != 0
                             {
                                 let io1_13: *mut TValue = &mut (*ra_18).tvalue;
@@ -7216,7 +7216,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             ))
                             .tvalue;
                             if (*rb_13).get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                                || get_tag_type((*rb_13).get_tag()) == TAG_TYPE_NIL
+                                || get_tag_type((*rb_13).get_tag()) == TagType::Nil
                             {
                                 (*ra_49).tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                             } else {
@@ -7321,8 +7321,8 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 let ia: i64 = (*ra_55).tvalue.value.integer;
                                 let ib_3: i64 = (*rb_15).value.integer;
                                 cond_1 = (ia < ib_3) as i32;
-                            } else if get_tag_type((*ra_55).tvalue.get_tag()) == TAG_TYPE_NUMERIC
-                                && get_tag_type((*rb_15).get_tag()) == TAG_TYPE_NUMERIC
+                            } else if get_tag_type((*ra_55).tvalue.get_tag()) == TagType::Numeric
+                                && get_tag_type((*rb_15).get_tag()) == TagType::Numeric
                             {
                                 cond_1 = if ltnum(&mut (*ra_55).tvalue, rb_15) { 1 } else { 0 };
                             } else {
@@ -7358,8 +7358,8 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 let ia_0: i64 = (*ra_56).tvalue.value.integer;
                                 let ib_4: i64 = (*rb_16).value.integer;
                                 cond_2 = (ia_0 <= ib_4) as i32;
-                            } else if get_tag_type((*ra_56).tvalue.get_tag()) == TAG_TYPE_NUMERIC
-                                && get_tag_type((*rb_16).get_tag()) == TAG_TYPE_NUMERIC
+                            } else if get_tag_type((*ra_56).tvalue.get_tag()) == TagType::Numeric
+                                && get_tag_type((*rb_16).get_tag()) == TagType::Numeric
                             {
                                 cond_2 = if lenum(&mut (*ra_56).tvalue, rb_16) { 1 } else { 0 };
                             } else {
@@ -7593,7 +7593,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let cond_9: i32 = !((*ra_63).tvalue.get_tag()
                                 == TAG_VARIANT_BOOLEAN_FALSE
-                                || get_tag_type((*ra_63).tvalue.get_tag()) == TAG_TYPE_NIL)
+                                || get_tag_type((*ra_63).tvalue.get_tag()) == TagType::Nil)
                                 as i32;
                             if cond_9 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
@@ -7616,7 +7616,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             ))
                             .tvalue;
                             if ((*rb_18).get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                                || get_tag_type((*rb_18).get_tag()) == TAG_TYPE_NIL)
+                                || get_tag_type((*rb_18).get_tag()) == TagType::Nil)
                                 as i32
                                 == (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32
                             {
@@ -7970,7 +7970,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                     }
                     let ra_75: StackValuePointer =
                         base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                    if get_tag_type((*ra_75.offset(4 as isize)).tvalue.get_tag()) != TAG_TYPE_NIL {
+                    if get_tag_type((*ra_75.offset(4 as isize)).tvalue.get_tag()) != TagType::Nil {
                         let io1_16: *mut TValue = &mut (*ra_75.offset(2 as isize)).tvalue;
                         let io2_16: *const TValue = &mut (*ra_75.offset(4 as isize)).tvalue;
                         (*io1_16).value = (*io2_16).value;

@@ -109,10 +109,10 @@ impl User {
     pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
         unsafe {
             match get_tag_type((*o).get_tag()) {
-                TAG_VARIANT_USER => {
+                TagType::User => {
                     return (*((*o).value.object as *mut User)).get_raw_memory_mut();
                 }
-                TAG_VARIANT_POINTER => return (*o).value.pointer,
+                TagType::Pointer => return (*o).value.pointer,
                 _ => return std::ptr::null_mut(),
             };
         }
