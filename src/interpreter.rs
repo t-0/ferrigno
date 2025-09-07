@@ -69,7 +69,6 @@ pub struct Interpreter {
     pub base_hook_count: i32,
     pub hook_count: i32,
     pub hook_mask: i32,
-    pub extra: [u8; 8],
 }
 impl TObject for Interpreter {
     fn get_tag(&self) -> u8 {

@@ -14,8 +14,8 @@ use crate::upvalue::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union ClosureUpValue{
-    pub c_tvalues: [TValue; 1],
-    pub l_upvalues: [*mut UpValue; 1],
+    pub c_tvalues: [TValue; 0],
+    pub l_upvalues: [*mut UpValue; 0],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -26,29 +26,24 @@ pub union ClosurePayload {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Closure {
-    pub next: *mut Object,
-    pub tag: u8,
-    pub marked: u8,
-    //PROBLEM
+    pub object: Object,
     pub count_upvalues: u8,
-    pub dummy1: u8,
-    pub dummy2: u32,
     pub gc_list: *mut Object,
     pub payload: ClosurePayload,
     pub upvalues: ClosureUpValue,
 }
 impl TObject for Closure {
     fn get_tag(&self) -> u8 {
-        return self.tag;
+        return self.object.tag;
     }
     fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        self.object.tag = tag;
     }
     fn get_marked(&self) -> u8 {
-        self.marked
+        self.object.marked
     }
     fn set_marked(&mut self, marked_: u8) {
-        self.marked = marked_;
+        self.object.marked = marked_;
     }
     fn get_class_name(&mut self) -> String {
         "closure".to_string()
@@ -218,10 +213,10 @@ pub unsafe extern "C" fn auxgetinfo(
     }
 }
 pub unsafe extern "C" fn size_cclosure(count_upvalues: usize) -> usize {
-    32usize + ::core::mem::size_of::<TValue>() * count_upvalues
+    core::mem::size_of::<Closure>() + ::core::mem::size_of::<TValue>() * count_upvalues
 }
 pub unsafe extern "C" fn size_lclosure(count_upvalues: usize) -> usize {
-    32usize + ::core::mem::size_of::<*mut TValue>() * count_upvalues
+    core::mem::size_of::<Closure>() + ::core::mem::size_of::<*mut TValue>() * count_upvalues
 }
 pub unsafe extern "C" fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
