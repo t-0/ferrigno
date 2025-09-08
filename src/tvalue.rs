@@ -1,6 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
 use crate::character::*;
-use crate::new::*;
 use crate::tag::*;
 use crate::value::*;
 use crate::object::*;
@@ -19,28 +18,34 @@ use libc::*;
 #[repr(C)]
 pub struct TValue {
     pub value: Value,
-    pub tag: u8,
-}
-impl New for TValue {
-    fn new() -> Self {
-        TValue {
-            value: Value::new(),
-            tag: TagVariant::NilNil as u8,
-        }
-    }
+    tag: u8,
 }
 impl TValue {
+    pub const fn new(tag: u8) -> Self {
+        TValue {
+            value: Value::new(),
+            tag: tag,
+        }
+    }
     pub fn get_tag(&self) -> u8 {
         self.tag
     }
     pub fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
+        if 0 == TAG_COLLECTABLE & tag {
+            self.tag = tag;
+        } else {
+            self.tag = tag;
+        }
     }
     pub fn is_collectable(&self) -> bool {
         return is_collectable(self.get_tag());
     }
     pub fn set_collectable(&mut self) {
-        self.set_tag(set_collectable(self.get_tag()));
+        if 0 == TAG_COLLECTABLE & self.get_tag() {
+            self.set_tag(set_collectable(self.get_tag()));
+        } else {
+            self.set_tag(set_collectable(self.get_tag()));
+        }
     }
     pub fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag())

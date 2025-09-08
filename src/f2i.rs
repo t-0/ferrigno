@@ -1,6 +1,5 @@
 use crate::tvalue::*;
 use crate::tag::*;
-use crate::value::*;
 use crate::utility::*;
 use crate::character::*;
 use crate::interpreter::*;
@@ -45,12 +44,7 @@ pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode:
 }
 pub unsafe extern "C" fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
-        let mut v: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         if l_strton(obj, &mut v) != 0 {
             obj = &mut v;
         }

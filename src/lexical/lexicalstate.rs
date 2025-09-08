@@ -2147,12 +2147,7 @@ pub unsafe extern "C" fn read_numeral(
     semantic_info: *mut Value,
 ) -> i32 {
     unsafe {
-        let mut obj: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut obj: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let mut expo: *const i8 = b"Ee\0" as *const u8 as *const i8;
         let first: i32 = (*lexical_state).current;
         save(lexical_state, (*lexical_state).current);

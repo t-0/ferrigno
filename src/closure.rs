@@ -3,7 +3,6 @@ use crate::object::*;
 use crate::interpreter::*;
 use crate::global::*;
 use crate::debuginfo::*;
-use crate::value::*;
 use crate::table::*;
 use crate::character::*;
 use crate::callinfo::*;
@@ -128,12 +127,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             (*io).set_collectable();
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).line_info).is_null() {
-                let mut v: TValue = TValue {
-                    value: Value {
-                        object: std::ptr::null_mut(),
-                    },
-                    tag: 0,
-                };
+                let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                 v.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
                 let start: i32 = if !(*prototype).is_variable_arguments {
                     0

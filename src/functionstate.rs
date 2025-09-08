@@ -877,12 +877,7 @@ pub unsafe extern "C" fn freeexps(
 }
 pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TValue, v: *mut TValue) -> i32 {
     unsafe {
-        let mut value: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut value: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
@@ -946,12 +941,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
 }
 pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TString) -> i32 {
     unsafe {
-        let mut o: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut o: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut o;
         let x_: *mut TString = s;
         (*io).value.object = &mut (*(x_ as *mut Object));
@@ -962,12 +952,7 @@ pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TS
 }
 pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer: i64) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         tvalue.value.integer = integer;
         tvalue.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
         return addk(function_state, &mut tvalue, &mut tvalue);
@@ -975,12 +960,7 @@ pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer:
 }
 pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, number: f64) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let mut ik: i64 = 0;
         tvalue.value.number = number;
         tvalue.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
@@ -990,12 +970,7 @@ pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, numbe
             let nbm: i32 = 53 as i32;
             let q: f64 = ldexp_(1.0f64, -nbm + 1);
             let k: f64 = if ik == 0 { q } else { number + number * q };
-            let mut kv: TValue = TValue {
-                value: Value {
-                    object: std::ptr::null_mut(),
-                },
-                tag: 0,
-            };
+            let mut kv: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             kv.value.number = k;
             kv.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             return addk(function_state, &mut kv, &mut tvalue);
@@ -1004,42 +979,22 @@ pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, numbe
 }
 pub unsafe extern "C" fn bool_false(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         tvalue.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe extern "C" fn bool_true(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut k: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        let mut v: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut k: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         v.set_tag(TagVariant::NilNil as u8);
         let io: *mut TValue = &mut k;
         let x_: *mut Table = (*(*function_state).lexical_state).table;
@@ -1589,24 +1544,9 @@ pub unsafe extern "C" fn constfolding(
     e2: *const ExpressionDescription,
 ) -> i32 {
     unsafe {
-        let mut v1: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        let mut v2: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        let mut res: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut v1: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+        let mut v2: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+        let mut res: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         if !tonumeral(e1, &mut v1)
             || !tonumeral(e2, &mut v2)
             || validop(op, &mut v1, &mut v2) == 0

@@ -7,7 +7,6 @@ use crate::tstring::*;
 use crate::tm::*;
 use crate::global::*;
 use crate::interpreter::*;
-use crate::value::*;
 use crate::f2i::*;
 use crate::functions::*;
 use crate::stackvalue::*;
@@ -92,7 +91,7 @@ impl Table {
                 while self.last_free > self.node {
                     self.last_free = self.last_free.offset(-1);
                     self.last_free;
-                    if (*self.last_free).key.tag == TagVariant::NilNil as u8 {
+                    if (*self.last_free).key.get_tag() == TagVariant::NilNil as u8 {
                         return self.last_free;
                     }
                 }
@@ -127,7 +126,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
             if get_tag_type((*node).value.get_tag()) == TagType::Nil {
                 (*node).clearkey();
             } else {
-                if is_collectable((*node).key.tag)
+                if is_collectable((*node).key.get_tag())
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
                     really_mark_object(global, (*node).key.value.object);
@@ -190,7 +189,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
                 (*node).clearkey();
             } else if iscleared(
                 global,
-                if is_collectable((*node).key.tag) {
+                if is_collectable((*node).key.get_tag()) {
                     (*node).key.value.object
                 } else {
                     std::ptr::null_mut()
@@ -253,7 +252,7 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
             if get_tag_type((*node).value.get_tag()) == TagType::Nil {
                 (*node).clearkey();
             } else {
-                if is_collectable((*node).key.tag)
+                if is_collectable((*node).key.get_tag())
                     && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
                     really_mark_object(global, (*node).key.value.object);
@@ -428,16 +427,11 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
 }
 pub unsafe extern "C" fn mainpositionfromnode(t: *const Table, nd: *mut Node) -> *mut Node {
     unsafe {
-        let mut key: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut key: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io_: *mut TValue = &mut key;
         let node: *const Node = nd;
         (*io_).value = (*node).key.value;
-        (*io_).set_tag((*node).key.tag);
+        (*io_).set_tag((*node).key.get_tag());
         return mainpositiontv(t, &mut key);
     }
 }
@@ -549,7 +543,7 @@ pub unsafe extern "C" fn luah_next(interpreter: *mut Interpreter, table: *mut Ta
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
                 let io_: *mut TValue = &mut (*key).tvalue;
                 (*io_).value = (*node).key.value;
-                (*io_).set_tag((*node).key.tag);
+                (*io_).set_tag((*node).key.get_tag());
                 let io1_0: *mut TValue = &mut (*key.offset(1 as isize)).tvalue;
                 let io2_0: *const TValue = &mut (*node).value;
                 (*io1_0).value = (*io2_0).value;
@@ -658,7 +652,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
             }
             let node: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
             if !(get_tag_type((*node).value.get_tag()) == TagType::Nil) {
-                if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER {
+                if (*node).key.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
                     ause += countint((*node).key.value.integer, nums);
                 }
                 totaluse += 1;
@@ -708,7 +702,7 @@ pub unsafe extern "C" fn setnodevector(interpreter: *mut Interpreter, table: *mu
             for i in 0..size {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
                 (*node).next = 0;
-                (*node).key.tag = 0;
+                (*node).key.set_tag(TAG_VARIANT_NIL_NIL);
                 (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
             }
             (*table).log_size_node = lsize as u8;
@@ -724,16 +718,11 @@ pub unsafe extern "C" fn reinsert(interpreter: *mut Interpreter, ot: *mut Table,
         while j < size {
             let old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
             if !(get_tag_type((*old).value.get_tag()) == TagType::Nil) {
-                let mut k: TValue = TValue {
-                    value: Value {
-                        object: std::ptr::null_mut(),
-                    },
-                    tag: 0,
-                };
+                let mut k: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                 let io_: *mut TValue = &mut k;
                 let node: *const Node = old;
                 (*io_).value = (*node).key.value;
-                (*io_).set_tag((*node).key.tag);
+                (*io_).set_tag((*node).key.get_tag());
                 luah_set(interpreter, table, &mut k, &mut (*old).value);
             }
             j += 1;
@@ -850,12 +839,7 @@ pub unsafe extern "C" fn luah_newkey(
 ) {
     unsafe {
         let mut mp;
-        let mut aux: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         if ((get_tag_type((*key).get_tag()) == TagType::Nil) as i32 != 0) as i64 != 0 {
             luag_runerror(interpreter, b"table index is nil\0" as *const u8 as *const i8);
         } else if (*key).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
@@ -904,7 +888,7 @@ pub unsafe extern "C" fn luah_newkey(
         let node: *mut Node = mp;
         let io_: *const TValue = key;
         (*node).key.value = (*io_).value;
-        (*node).key.tag = (*io_).get_tag();
+        (*node).key.set_tag((*io_).get_tag());
         if (*key).is_collectable() {
             if (*(table as *mut Object)).get_marked() & 1 << 5 != 0
                 && (*(*key).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -935,7 +919,7 @@ pub unsafe extern "C" fn luah_getint(table: *mut Table, key: i64) -> *const TVal
         } else {
             let mut node: *mut Node = hashint(table, key);
             loop {
-                if (*node).key.tag == TAG_VARIANT_NUMERIC_INTEGER && (*node).key.value.integer == key {
+                if (*node).key.get_tag() == TAG_VARIANT_NUMERIC_INTEGER && (*node).key.value.integer == key {
                     return &mut (*node).value;
                 } else {
                     let nx: i32 = (*node).next;
@@ -955,7 +939,7 @@ pub unsafe extern "C" fn luah_getshortstr(table: *mut Table, key: *mut TString) 
             ((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize,
         ) as *mut Node;
         loop {
-            if get_tag_variant((*node).key.tag) == TAG_VARIANT_STRING_SHORT
+            if get_tag_variant((*node).key.get_tag()) == TAG_VARIANT_STRING_SHORT
                 && &mut (*((*node).key.value.object as *mut TString)) as *mut TString == key
             {
                 return &mut (*node).value;
@@ -974,12 +958,7 @@ pub unsafe extern "C" fn luah_getstr(table: *mut Table, key: *mut TString) -> *c
         if (*key).get_tag() == TAG_VARIANT_STRING_SHORT {
             return luah_getshortstr(table, key);
         } else {
-            let mut ko: TValue = TValue {
-                value: Value {
-                    object: std::ptr::null_mut(),
-                },
-                tag: 0,
-            };
+            let mut ko: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             let io: *mut TValue = &mut ko;
             let x_: *mut TString = key;
             (*io).value.object = &mut (*(x_ as *mut Object));
@@ -1044,12 +1023,7 @@ pub unsafe extern "C" fn luah_setint(
     unsafe {
         let p: *const TValue = luah_getint(table, key);
         if (*p).get_tag() == TAG_VARIANT_NIL_ABSENTKEY {
-            let mut k: TValue = TValue {
-                value: Value {
-                    object: std::ptr::null_mut(),
-                },
-                tag: 0,
-            };
+            let mut k: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             let io: *mut TValue = &mut k;
             (*io).value.integer = key;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);

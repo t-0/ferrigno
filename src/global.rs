@@ -279,7 +279,7 @@ pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
             while node < limit {
                 if iscleared(
                     global,
-                    if is_collectable((*node).key.tag) {
+                    if (*node).key.is_collectable() {
                         (*node).key.value.object
                     } else {
                         std::ptr::null_mut()

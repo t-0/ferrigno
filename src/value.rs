@@ -1,5 +1,4 @@
 use crate::functions::*;
-use crate::new::*;
 use crate::object::*;
 use crate::tstring::*;
 #[derive(Copy, Clone)]
@@ -15,8 +14,8 @@ pub union Value {
     pub index: ValueReference,
     pub variable: ValueRegister,
 }
-impl New for Value {
-    fn new() -> Self {
+impl Value {
+    pub const fn new() -> Self {
         Value {
             object: std::ptr::null_mut(),
         }

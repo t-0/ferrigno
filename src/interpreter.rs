@@ -31,7 +31,6 @@ use crate::sparser::*;
 use crate::closep::*;
 use crate::new::*;
 use crate::f2i::*;
-use crate::value::*;
 use crate::labeldescription::*;
 use crate::registeredfunction::*;
 use crate::labellist::*;
@@ -1559,12 +1558,7 @@ pub unsafe extern "C" fn lua_closeslot(interpreter: *mut Interpreter, index: i32
 pub unsafe extern "C" fn reverse(mut _state: *mut Interpreter, mut from: StackValuePointer, mut to: StackValuePointer) {
     unsafe {
         while from < to {
-            let mut temp: TValue = TValue {
-                value: Value {
-                    object: std::ptr::null_mut(),
-                },
-                tag: 0,
-            };
+            let mut temp: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             let io1: *mut TValue = &mut temp;
             let io2: *const TValue = &mut (*from).tvalue;
             (*io1).value = (*io2).value;
@@ -2102,12 +2096,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
             (*io1).value = (*io2).value;
             (*io1).set_tag((*io2).get_tag());
         } else {
-            let mut aux: TValue = TValue {
-                value: Value {
-                    object: std::ptr::null_mut(),
-                },
-                tag: 0,
-            };
+            let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             let io: *mut TValue = &mut aux;
             (*io).value.integer = n;
             (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
@@ -2254,9 +2243,8 @@ pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: 
             } else {
             };
         } else {
-            let mut aux: TValue = TValue::new();
+            let mut aux: TValue = TValue::new(TAG_VARIANT_NUMERIC_INTEGER);
             aux.value.integer = n;
-            aux.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
             luav_finishset(
                 interpreter,
                 t,
@@ -3835,36 +3823,21 @@ pub unsafe extern "C" fn luao_pushvfstring(
                     buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as u64);
                 }
                 100 => {
-                    let mut num: TValue = TValue {
-                        value: Value {
-                            object: std::ptr::null_mut(),
-                        },
-                        tag: 0,
-                    };
+                    let mut num: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     let io: *mut TValue = &mut num;
                     (*io).value.integer = argp.arg::<i32>() as i64;
                     (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     buff_fs.add_number(&mut num);
                 }
                 73 => {
-                    let mut num_0: TValue = TValue {
-                        value: Value {
-                            object: std::ptr::null_mut(),
-                        },
-                        tag: 0,
-                    };
+                    let mut num_0: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     let io_0: *mut TValue = &mut num_0;
                     (*io_0).value.integer = argp.arg::<i64>();
                     (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
                     buff_fs.add_number(&mut num_0);
                 }
                 102 => {
-                    let mut num_1: TValue = TValue {
-                        value: Value {
-                            object: std::ptr::null_mut(),
-                        },
-                        tag: 0,
-                    };
+                    let mut num_1: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     let io_1: *mut TValue = &mut num_1;
                     (*io_1).value.number = argp.arg::<f64>();
                     (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
@@ -4174,12 +4147,7 @@ pub unsafe extern "C" fn luat_trybinitm(
     event: u32,
 ) {
     unsafe {
-        let mut aux: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut aux;
         (*io).value.integer = i2;
         (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
@@ -4210,12 +4178,7 @@ pub unsafe extern "C" fn luat_callorderitm(
     event: u32,
 ) -> i32 {
     unsafe {
-        let mut aux: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let p2: *const TValue;
         if is_float {
             let io: *mut TValue = &mut aux;
@@ -4406,12 +4369,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         let tm: *const TValue;
-        let mut v: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
+        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut v;
         let i_g: *mut Object = udata2finalize(global);
         (*io).value.object = i_g;
@@ -5582,12 +5540,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 (*io1_6).value = (*io2_6).value;
                                 (*io1_6).set_tag((*io2_6).get_tag());
                             } else {
-                                let mut key_0: TValue = TValue {
-                                    value: Value {
-                                        object: std::ptr::null_mut(),
-                                    },
-                                    tag: 0,
-                                };
+                                let mut key_0: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                                 let io_1: *mut TValue = &mut key_0;
                                 (*io_1).value.integer = c as i64;
                                 (*io_1).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
@@ -5816,12 +5769,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 } else {
                                 };
                             } else {
-                                let mut key_3: TValue = TValue {
-                                    value: Value {
-                                        object: std::ptr::null_mut(),
-                                    },
-                                    tag: 0,
-                                };
+                                let mut key_3: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                                 let io_2: *mut TValue = &mut key_3;
                                 (*io_2).value.integer = c_0 as i64;
                                 (*io_2).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
