@@ -23,12 +23,12 @@ impl Node {
 }
 pub unsafe extern "C" fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
-        return if (*k1).get_tag() != (*node).key.get_tag()
-            && !(deadok != 0 && (*node).key.get_tag() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable()))
+        return if (*k1).get_tag2() != (*node).key.get_tag2()
+            && !(deadok != 0 && (*node).key.get_tag2() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable()))
         {
             false
         } else {
-            match get_tag_variant((*node).key.get_tag()) {
+            match get_tag_variant((*node).key.get_tag2()) {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
                 TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.integer == (*node).key.value.integer,
                 TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.number == (*node).key.value.number,

@@ -27,7 +27,7 @@ impl BuffFS {
                 luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size as u64);
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag((*ts).get_tag());
-            (*io).set_collectable();
+            (*io).set_collectable(true);
             (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {
                 concatenate(self.interpreter, 2);
@@ -61,7 +61,7 @@ impl BuffFS {
                 let ts = luas_newlstr(self.interpreter, pointer, length);
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag((*ts).get_tag());
-                (*io).set_collectable();
+                (*io).set_collectable(true);
                 (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {
                     concatenate(self.interpreter, 2);

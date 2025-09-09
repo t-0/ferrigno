@@ -301,10 +301,10 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
         loop {
             let top: StackValuePointer = (*interpreter).top.stkidrel_pointer;
             let mut n: i32 = 2;
-            if !(get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TagType::String
-                || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TagType::Numeric)
-                || !(get_tag_type((*top.offset(-(1 as isize))).tvalue.get_tag()) == TagType::String
-                    || get_tag_type((*top.offset(-(1 as isize))).tvalue.get_tag())
+            if !(get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag2()) == TagType::String
+                || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag2()) == TagType::Numeric)
+                || !(get_tag_type((*top.offset(-(1 as isize))).tvalue.get_tag2()) == TagType::String
+                    || get_tag_type((*top.offset(-(1 as isize))).tvalue.get_tag2())
                         == TagType::Numeric
                         && {
                             luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
@@ -318,8 +318,8 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                     .get_length() as i32
                     == 0
             {
-                (get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag()) == TagType::String
-                    || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag())
+                (get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag2()) == TagType::String
+                    || get_tag_type((*top.offset(-(2 as isize))).tvalue.get_tag2())
                         == TagType::Numeric
                         && {
                             luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
@@ -334,7 +334,7 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).tvalue;
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize))).tvalue;
                 (*io1).value = (*io2).value;
-                (*io1).set_tag((*io2).get_tag());
+                (*io1).set_tag((*io2).get_tag2());
             } else {
                 let mut tl: u64 = (*((*top.offset(-(1 as isize))).tvalue.value.object
                     as *mut TString))
@@ -345,12 +345,12 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                     && (get_tag_type(
                         (*top.offset(-(n as isize)).offset(-(1 as isize)))
                             .tvalue
-                            .get_tag(),
+                            .get_tag2(),
                     ) == TagType::String
                         || get_tag_type(
                             (*top.offset(-(n as isize)).offset(-(1 as isize)))
                                 .tvalue
-                                .get_tag(),
+                                .get_tag2(),
                         ) == TagType::Numeric
                             && {
                                 luao_tostring(
@@ -396,7 +396,7 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                 let x_: *mut TString = ts;
                 (*io).value.object = &mut (*(x_ as *mut Object));
                 (*io).set_tag((*x_).get_tag());
-                (*io).set_collectable();
+                (*io).set_collectable(true);
             }
             total -= n - 1;
             (*interpreter).top.stkidrel_pointer =

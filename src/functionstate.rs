@@ -882,7 +882,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
         let mut count_k: i32;
-        if (*index).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+        if (*index).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
             count_k = (*index).value.integer as i32;
             if count_k < (*function_state).count_k
                 && (*((*prototype).k).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
@@ -920,7 +920,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let io1: *mut TValue = &mut *((*prototype).k).offset(count_k as isize) as *mut TValue;
         let io2: *const TValue = v;
         (*io1).value = (*io2).value;
-        (*io1).set_tag((*io2).get_tag());
+        (*io1).set_tag((*io2).get_tag2());
         (*function_state).count_k += 1;
         (*function_state).count_k;
         if (*v).is_collectable() {
@@ -946,7 +946,7 @@ pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TS
         let x_: *mut TString = s;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag((*x_).get_tag());
-        (*io).set_collectable();
+        (*io).set_collectable(true);
         return addk(function_state, &mut o, &mut o);
     }
 }
@@ -970,38 +970,32 @@ pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, numbe
             let nbm: i32 = 53 as i32;
             let q: f64 = ldexp_(1.0f64, -nbm + 1);
             let k: f64 = if ik == 0 { q } else { number + number * q };
-            let mut kv: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+            let mut kv: TValue = TValue::new(TAG_VARIANT_NUMERIC_NUMBER);
             kv.value.number = k;
-            kv.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
             return addk(function_state, &mut kv, &mut tvalue);
         };
     }
 }
 pub unsafe extern "C" fn bool_false(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        tvalue.set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+        let mut tvalue: TValue = TValue::new(TAG_VARIANT_BOOLEAN_FALSE);
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe extern "C" fn bool_true(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        tvalue.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
-        return addk(function_state, &mut tvalue, &mut tvalue);
+        let mut value: TValue = TValue::new(TAG_VARIANT_BOOLEAN_TRUE);
+        return addk(function_state, &mut value, &mut value);
     }
 }
 pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut k: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        v.set_tag(TagVariant::NilNil as u8);
-        let io: *mut TValue = &mut k;
-        let x_: *mut Table = (*(*function_state).lexical_state).table;
-        (*io).value.object = &mut (*(x_ as *mut Object));
-        (*io).set_tag(TAG_VARIANT_TABLE);
-        (*io).set_collectable();
-        return addk(function_state, &mut k, &mut v);
+        let mut key: TValue = TValue::new(TAG_VARIANT_TABLE);
+        let mut value: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+        let table: *mut Table = (*(*function_state).lexical_state).table;
+        key.value.object = &mut (*(table as *mut Object));
+        key.set_collectable(true);
+        return addk(function_state, &mut key, &mut value);
     }
 }
 pub unsafe extern "C" fn luak_int(function_state: *mut FunctionState, reg: i32, i: i64) {
@@ -1554,7 +1548,7 @@ pub unsafe extern "C" fn constfolding(
             return 0;
         }
         luao_rawarith((*(*function_state).lexical_state).interpreter, op, &mut v1, &mut v2, &mut res);
-        if res.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+        if res.get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
             (*e1).expression_kind = ExpressionKind::VKINT;
             (*e1).value.integer = res.value.integer;
         } else {

@@ -332,7 +332,7 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                 {
                     (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
                 }
-                if get_tag_type((*node).value.get_tag()) == TagType::Nil {
+                if get_tag_type((*node).value.get_tag2()) == TagType::Nil {
                     (*node).clearkey();
                 }
                 node = node.offset(1);

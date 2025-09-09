@@ -41,8 +41,8 @@ pub trait TObject {
     fn is_collectable(&self) -> bool {
         self.as_object().is_collectable()
     }
-    fn set_collectable(&mut self) {
-        self.as_object_mut().set_collectable();
+    fn set_collectable(&mut self, value: bool) {
+        self.as_object_mut().set_collectable(value);
     }
     fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag())

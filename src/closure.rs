@@ -124,11 +124,10 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(table as *mut Object));
             (*io).set_tag(TAG_VARIANT_TABLE);
-            (*io).set_collectable();
+            (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).line_info).is_null() {
-                let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-                v.set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+                let mut v: TValue = TValue::new(TAG_VARIANT_BOOLEAN_TRUE);
                 let start: i32 = if !(*prototype).is_variable_arguments {
                     0
                 } else {

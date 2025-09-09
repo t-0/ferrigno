@@ -94,13 +94,13 @@ pub unsafe extern "C" fn luak_exp2const(
                 let x_: *mut TString = (*e).value.tstring;
                 (*v).value.object = &mut (*(x_ as *mut Object));
                 (*v).set_tag((*x_).get_tag());
-                (*v).set_collectable();
+                (*v).set_collectable(true);
                 return true;
             }
             ExpressionKind::VCONST => {
                 let io2: *const TValue = const2val(function_state, e);
                 (*v).value = (*io2).value;
-                (*v).set_tag((*io2).get_tag());
+                (*v).set_tag((*io2).get_tag2());
                 return true;
             }
             _ => return tonumeral(e, v),

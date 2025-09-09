@@ -126,7 +126,7 @@ impl LoadState {
                     let x_: *mut TString = ts;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag((*x_).get_tag());
-                    (*io).set_collectable();
+                    (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
                     self.load_block(
                         ((*ts).get_contents_mut()) as *mut libc::c_void,
@@ -227,7 +227,7 @@ impl LoadState {
                         let x_: *mut TString = self.load_string(prototype);
                         (*io_1).value.object = &mut (*(x_ as *mut Object));
                         (*io_1).set_tag((*x_).get_tag());
-                        (*io_1).set_collectable();
+                        (*io_1).set_collectable(true);
                     }
                     _ => {}
                 }
@@ -493,7 +493,7 @@ pub unsafe extern "C" fn load_closure(
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).value.object = &mut (*(ret as *mut Object));
         (*io).set_tag(TAG_VARIANT_CLOSURE_L);
-        (*io).set_collectable();
+        (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);
         if (*ret).get_marked() & 1 << 5 != 0 && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {

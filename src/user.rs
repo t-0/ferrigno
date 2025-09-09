@@ -92,7 +92,7 @@ impl User {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(new_user as *mut Object));
             (*io).set_tag(TAG_VARIANT_USER);
-            (*io).set_collectable();
+            (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {
                 luac_step(interpreter);
@@ -102,7 +102,7 @@ impl User {
     }
     pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
         unsafe {
-            match get_tag_type((*o).get_tag()) {
+            match get_tag_type((*o).get_tag2()) {
                 TagType::User => {
                     return (*((*o).value.object as *mut User)).get_raw_memory_mut();
                 }

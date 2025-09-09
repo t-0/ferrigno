@@ -2015,7 +2015,7 @@ pub unsafe extern "C" fn luax_newstring(
         let interpreter: *mut Interpreter = (*lexical_state).interpreter;
         let mut ts: *mut TString = luas_newlstr(interpreter, str, length);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
-        if !(get_tag_type((*o).get_tag()) == TagType::Nil) {
+        if !(get_tag_type((*o).get_tag2()) == TagType::Nil) {
             ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
         } else {
             let fresh50 = (*interpreter).top.stkidrel_pointer;
@@ -2025,7 +2025,7 @@ pub unsafe extern "C" fn luax_newstring(
             let x_: *mut TString = ts;
             (*io).value.object = &mut (*(x_ as *mut Object));
             (*io).set_tag((*x_).get_tag());
-            (*io).set_collectable();
+            (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
             if (*(*interpreter).global).gc_debt > 0 {
                 luac_step(interpreter);
@@ -2205,7 +2205,7 @@ pub unsafe extern "C" fn read_numeral(
                 TK_FLT as i32,
             );
         }
-        if obj.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+        if obj.get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
             (*semantic_info).integer = obj.value.integer;
             return TK_INT as i32;
         } else {

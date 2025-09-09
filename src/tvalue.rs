@@ -19,39 +19,45 @@ use libc::*;
 pub struct TValue {
     pub value: Value,
     tag: u8,
+    collectable: bool,
 }
 impl TValue {
     pub const fn new(tag: u8) -> Self {
         TValue {
             value: Value::new(),
             tag: tag,
+            collectable: false,
         }
     }
-    pub fn get_tag(&self) -> u8 {
+    pub fn get_tag2(&self) -> u8 {
         self.tag
     }
     pub fn set_tag(&mut self, tag: u8) {
         if 0 == TAG_COLLECTABLE & tag {
             self.tag = tag;
+            self.collectable = false;
         } else {
             self.tag = tag;
+            self.collectable = true;
         }
     }
     pub fn is_collectable(&self) -> bool {
-        return is_collectable(self.get_tag());
+        self.collectable
     }
-    pub fn set_collectable(&mut self) {
-        if 0 == TAG_COLLECTABLE & self.get_tag() {
-            self.set_tag(set_collectable(self.get_tag()));
+    pub fn set_collectable(&mut self, value: bool) {
+        if value {
+            self.set_tag(set_collectable(self.get_tag2()));
+            self.collectable = true;
         } else {
-            self.set_tag(set_collectable(self.get_tag()));
+            self.set_tag(self.get_tag2() & !TAG_COLLECTABLE);
+            self.collectable = false;
         }
     }
     pub fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.get_tag())
+        get_tag_type(self.get_tag2())
     }
     pub fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+        get_tag_variant(self.get_tag2())
     }
 }
 pub unsafe extern "C" fn aux_upvalue(
@@ -120,7 +126,7 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 {
 pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 {
     unsafe {
         let mut length: u64;
-        if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+        if (*obj).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
             length = snprintf(
                 buffer,
                 44,
@@ -157,17 +163,11 @@ pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut 
         let x_: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length);
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag((*x_).get_tag());
-        (*io).set_collectable();
+        (*io).set_collectable(true);
     }
 }
 pub const ABSENT_KEY: TValue = {
-    let init = TValue {
-        value: Value {
-            object: std::ptr::null_mut(),
-        },
-        tag: TAG_VARIANT_NIL_ABSENTKEY,
-    };
-    init
+    TValue::new(TAG_VARIANT_NIL_ABSENTKEY)
 };
 pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
     if (k as u64).wrapping_sub(1 as u64)
@@ -194,7 +194,7 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
     unsafe {
         while j.wrapping_sub(i) > 1 as u32 {
             let m: u32 = i.wrapping_add(j).wrapping_div(2 as u32);
-            if get_tag_type((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag())
+            if get_tag_type((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag2())
                 == TagType::Nil
             {
                 j = m;
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
 }
 pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i32 {
     unsafe {
-        if !(get_tag_type((*obj).get_tag()) == TagType::String) {
+        if !(get_tag_type((*obj).get_tag2()) == TagType::String) {
             return 0;
         } else {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
@@ -218,17 +218,12 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
 }
 pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool {
     unsafe {
-        let mut v: TValue = TValue {
-            value: Value {
-                object: std::ptr::null_mut(),
-            },
-            tag: 0,
-        };
-        if (*obj).get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+        if (*obj).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
             *n = (*obj).value.integer as f64;
             return true;
         } else if l_strton(obj, &mut v) != 0 {
-            *n = if v.get_tag() == TAG_VARIANT_NUMERIC_INTEGER {
+            *n = if v.get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
                 v.value.integer as f64
             } else {
                 v.value.number
@@ -245,8 +240,8 @@ pub unsafe extern "C" fn lessthanothers(
     r: *const TValue,
 ) -> i32 {
     unsafe {
-        if get_tag_type((*l).get_tag()) == TagType::String
-            && get_tag_type((*r).get_tag()) == TagType::String
+        if get_tag_type((*l).get_tag2()) == TagType::String
+            && get_tag_type((*r).get_tag2()) == TagType::String
         {
             return (l_strcmp(
                 &mut (*((*l).value.object as *mut TString)),
@@ -263,8 +258,8 @@ pub unsafe extern "C" fn luav_lessthan(
     r: *const TValue,
 ) -> bool {
     unsafe {
-        if get_tag_type((*l).get_tag()) == TagType::Numeric
-            && get_tag_type((*r).get_tag()) == TagType::Numeric
+        if get_tag_type((*l).get_tag2()) == TagType::Numeric
+            && get_tag_type((*r).get_tag2()) == TagType::Numeric
         {
             return ltnum(l, r);
         } else {
@@ -278,8 +273,8 @@ pub unsafe extern "C" fn lessequalothers(
     r: *const TValue,
 ) -> bool {
     unsafe {
-        if get_tag_type((*l).get_tag()) == TagType::String
-            && get_tag_type((*r).get_tag()) == TagType::String
+        if get_tag_type((*l).get_tag2()) == TagType::String
+            && get_tag_type((*r).get_tag2()) == TagType::String
         {
             return l_strcmp(
                 &mut (*((*l).value.object as *mut TString)),
@@ -296,8 +291,8 @@ pub unsafe extern "C" fn luav_lessequal(
     r: *const TValue,
 ) -> bool {
     unsafe {
-        if get_tag_type((*l).get_tag()) == TagType::Numeric
-            && get_tag_type((*r).get_tag()) == TagType::Numeric
+        if get_tag_type((*l).get_tag2()) == TagType::Numeric
+            && get_tag_type((*r).get_tag2()) == TagType::Numeric
         {
             return lenum(l, r);
         } else {
@@ -425,8 +420,8 @@ pub unsafe extern "C" fn luav_equalobj(
             return false;
         } else {
             luat_calltmres(interpreter, tm, t1, t2, (*interpreter).top.stkidrel_pointer);
-            return !((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag() == TAG_VARIANT_BOOLEAN_FALSE
-                || get_tag_type((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag()) == TagType::Nil);
+            return !((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag2() == TAG_VARIANT_BOOLEAN_FALSE
+                || get_tag_type((*(*interpreter).top.stkidrel_pointer).tvalue.get_tag2()) == TagType::Nil);
         };
     }
 }
@@ -468,7 +463,7 @@ pub unsafe extern "C" fn luav_objlen(interpreter: *mut Interpreter, ra: StackVal
             }
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
-                if ((get_tag_type((*tm).get_tag()) == TagType::Nil) as i32 != 0) as i64 != 0
+                if ((get_tag_type((*tm).get_tag2()) == TagType::Nil) as i32 != 0) as i64 != 0
                 {
                     luag_typeerror(interpreter, rb, b"get length of\0" as *const u8 as *const i8);
                 }

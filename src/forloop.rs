@@ -14,7 +14,7 @@ pub unsafe extern "C" fn forlimit(
     unsafe {
         if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
             let mut flim: f64 = 0.0;
-            if if (*lim).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+            if if (*lim).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
                 flim = (*lim).value.number;
                 1
             } else {
@@ -51,8 +51,8 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
         let pinit: *mut TValue = &mut (*ra).tvalue;
         let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
         let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).tvalue;
-        if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
-            && (*pstep).get_tag() == TAG_VARIANT_NUMERIC_INTEGER
+        if (*pinit).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER
+            && (*pstep).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER
         {
             let init: i64 = (*pinit).value.integer;
             let step: i64 = (*pstep).value.integer;
@@ -86,7 +86,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             let mut init_0: f64 = 0.0;
             let mut limit_0: f64 = 0.0;
             let mut step_0: f64 = 0.0;
-            if (((if (*plimit).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*plimit).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
                 limit_0 = (*plimit).value.number;
                 1
             } else {
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             {
                 luag_forerror(interpreter, plimit, b"limit\0" as *const u8 as *const i8);
             }
-            if (((if (*pstep).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*pstep).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
                 step_0 = (*pstep).value.number;
                 1
             } else {
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             {
                 luag_forerror(interpreter, pstep, b"step\0" as *const u8 as *const i8);
             }
-            if (((if (*pinit).get_tag() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*pinit).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
                 init_0 = (*pinit).value.number;
                 1
             } else {
