@@ -3367,7 +3367,7 @@ pub unsafe extern "C" fn luag_addinfo(
             );
         } else {
             buffer[0] = CHARACTER_QUESTION as i8;
-            buffer[1] = CHARACTER_NUL as i8;
+            buffer[1] = Character::Null as i8;
         }
         return luao_pushfstring(
             interpreter,
@@ -3811,39 +3811,36 @@ pub unsafe extern "C" fn luao_pushvfstring(
             }
             buff_fs.add_string(fmt, e.offset_from(fmt) as u64);
             match *e.offset(1 as isize) as i32 {
-                115 => {
+                CHARACTER_LOWER_S => {
                     let mut s: *const i8 = argp.arg::<*mut i8>();
                     if s.is_null() {
                         s = b"(null)\0" as *const u8 as *const i8;
                     }
                     buff_fs.add_string(s, strlen(s));
                 }
-                99 => {
+                CHARACTER_LOWER_C => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
                     buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as u64);
                 }
-                100 => {
-                    let mut num: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-                    let io: *mut TValue = &mut num;
-                    (*io).value.integer = argp.arg::<i32>() as i64;
-                    (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-                    buff_fs.add_number(&mut num);
+                CHARACTER_LOWER_D => {
+                    let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+                    tvalue.value.integer = argp.arg::<i32>() as i64;
+                    tvalue.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    buff_fs.add_number(&mut tvalue);
                 }
-                73 => {
-                    let mut num_0: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-                    let io_0: *mut TValue = &mut num_0;
-                    (*io_0).value.integer = argp.arg::<i64>();
-                    (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
-                    buff_fs.add_number(&mut num_0);
+                CHARACTER_UPPER_I => {
+                    let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+                    tvalue.value.integer = argp.arg::<i64>();
+                    tvalue.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                    buff_fs.add_number(&mut tvalue);
                 }
-                102 => {
-                    let mut num_1: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-                    let io_1: *mut TValue = &mut num_1;
-                    (*io_1).value.number = argp.arg::<f64>();
-                    (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
-                    buff_fs.add_number(&mut num_1);
+                CHARACTER_LOWER_F => {
+                    let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+                    tvalue.value.number = argp.arg::<f64>();
+                    tvalue.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                    buff_fs.add_number(&mut tvalue);
                 }
-                112 => {
+                CHARACTER_LOWER_P => {
                     let size = (3 as usize)
                         .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
                         .wrapping_add(8);
@@ -3853,7 +3850,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                         snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p) as u64;
                     buff_fs.add_length(length as usize);
                 }
-                85 => {
+                CHARACTER_UPPER_U => {
                     let mut bf_0: [i8; 8] = [0; 8];
                     let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as u64);
                     buff_fs.add_string(
@@ -3863,7 +3860,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                         length_0 as u64,
                     );
                 }
-                37 => {
+                CHARACTER_PERCENT => {
                     buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as u64);
                 }
                 _ => {
@@ -7700,7 +7697,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             }
                             break;
                         }
-                        73 => {
+                        OP_FORLOOP => {
                             let ra_71: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             if (*ra_71.offset(2 as isize)).tvalue.get_tag2()
@@ -7974,7 +7971,7 @@ pub unsafe extern "C" fn pushfuncname(interpreter: *mut Interpreter, ar: *mut De
             );
             lua_rotate(interpreter, -2, -1);
             lua_settop(interpreter, -2);
-        } else if *(*ar).namewhat as i32 != CHARACTER_NUL as i32 {
+        } else if *(*ar).namewhat as i32 != Character::Null as i32 {
             lua_pushfstring(
                 interpreter,
                 b"%s '%s'\0" as *const u8 as *const i8,
@@ -9363,7 +9360,7 @@ pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut
             modname = globname;
             suffix = strchr(modname, *(b"-\0" as *const u8 as *const i8) as i32);
         } else {
-            *modname = CHARACTER_NUL as i8;
+            *modname = Character::Null as i8;
             modname = modname.offset(1);
         }
         lua_getglobal(interpreter, b"require\0" as *const u8 as *const i8);
@@ -9371,7 +9368,7 @@ pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut
         status = docall(interpreter, 1, 1);
         if status == 0 {
             if !suffix.is_null() {
-                *suffix = CHARACTER_NUL as i8;
+                *suffix = Character::Null as i8;
             }
             lua_setglobal(interpreter, globname);
         }
@@ -9436,7 +9433,7 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
             let current_block_31: u64;
             match *(*argv.offset(i as isize)).offset(1 as isize) as i32 {
                 45 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     *first = i + 1;
@@ -9444,14 +9441,14 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
                 }
                 0 => return args,
                 69 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     args |= 16 as i32;
                     current_block_31 = 4761528863920922185;
                 }
                 87 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     current_block_31 = 4761528863920922185;
@@ -9474,13 +9471,13 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
             }
             match current_block_31 {
                 6636775023221328366 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != CHARACTER_NUL as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     args |= 4;
                 }
                 15172496195422792753 => {
-                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 == CHARACTER_NUL as i32 {
+                    if *(*argv.offset(i as isize)).offset(2 as isize) as i32 == Character::Null as i32 {
                         i += 1;
                         if (*argv.offset(i as isize)).is_null()
                             || *(*argv.offset(i as isize)).offset(0 as isize) as i32 == CHARACTER_HYPHEN as i32
@@ -9505,7 +9502,7 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
                 CHARACTER_LOWER_E | CHARACTER_LOWER_L => {
                     let status: i32;
                     let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
-                    if *extra as i32 == CHARACTER_NUL as i32 {
+                    if *extra as i32 == Character::Null as i32 {
                         continue;
                     }
                     status = if option == CHARACTER_LOWER_E as i32 {
@@ -9590,7 +9587,7 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
         let mut l: u64 = strlen(b);
         if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
             l = l.wrapping_sub(1);
-            *b.offset(l as isize) = CHARACTER_NUL as i8;
+            *b.offset(l as isize) = Character::Null as i8;
         }
         if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
             lua_pushfstring(
@@ -9842,7 +9839,7 @@ pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
             i = i + 1;
             *smask.offset(fresh192 as isize) = CHARACTER_LOWER_L as i8;
         }
-        *smask.offset(i as isize) = CHARACTER_NUL as i8;
+        *smask.offset(i as isize) = Character::Null as i8;
         return smask;
     }
 }

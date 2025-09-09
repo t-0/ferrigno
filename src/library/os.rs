@@ -194,7 +194,7 @@ pub unsafe extern "C" fn checkoption(
             b"aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy\0"
                 as *const u8 as *const i8;
         let mut oplen: i32 = 1;
-        while *option as i32 != CHARACTER_NUL as i32 && oplen as i64 <= convlen {
+        while *option as i32 != Character::Null as i32 && oplen as i64 <= convlen {
             if *option as i32 == '|' as i32 {
                 oplen += 1;
             } else if memcmp(
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn checkoption(
                     conv as *const libc::c_void,
                     oplen as u64,
                 );
-                *buffer.offset(oplen as isize) = CHARACTER_NUL as i8;
+                *buffer.offset(oplen as isize) = Character::Null as i8;
                 return conv.offset(oplen as isize);
             }
             option = option.offset(oplen as isize);

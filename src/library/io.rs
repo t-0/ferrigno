@@ -11,7 +11,7 @@ use crate::new::*;
 use crate::buffer::*;
 pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 {
     unsafe {
-        return (*mode as i32 != CHARACTER_NUL as i32
+        return (*mode as i32 != Character::Null as i32
             && {
                 let fresh151 = mode;
                 mode = mode.offset(1);
@@ -186,7 +186,7 @@ pub unsafe extern "C" fn io_popen(interpreter: *mut Interpreter) -> i32 {
         let p: *mut Stream = newprefile(interpreter);
         ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32
             || *mode.offset(0 as isize) as i32 == CHARACTER_LOWER_W as i32)
-            && *mode.offset(1 as isize) as i32 == CHARACTER_NUL as i32) as i32
+            && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32
             != 0) as i64
             != 0
             || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
@@ -331,7 +331,7 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn nextc(rn: *mut RN) -> i32 {
     unsafe {
         if (((*rn).n >= 200 as i32) as i32 != 0) as i64 != 0 {
-            (*rn).buffer[0] = CHARACTER_NUL as i8;
+            (*rn).buffer[0] = Character::Null as i8;
             return 0;
         } else {
             let fresh152 = (*rn).n;
@@ -417,7 +417,7 @@ pub unsafe extern "C" fn read_number(interpreter: *mut Interpreter, file: *mut F
         }
         ungetc(rn.c, rn.file);
         funlockfile(rn.file);
-        rn.buffer[rn.n as usize] = CHARACTER_NUL as i8;
+        rn.buffer[rn.n as usize] = Character::Null as i8;
         if (lua_stringtonumber(interpreter, (rn.buffer).as_mut_ptr()) != 0) as i64 != 0 {
             return 1;
         } else {

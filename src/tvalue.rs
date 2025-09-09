@@ -142,7 +142,7 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 
             ) as u64;
             if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
                 as i32
-                == CHARACTER_NUL as i32
+                == Character::Null as i32
             {
                 let fresh10 = length;
                 length = length + 1;

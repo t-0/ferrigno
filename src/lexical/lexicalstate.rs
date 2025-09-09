@@ -1964,7 +1964,7 @@ pub unsafe extern "C" fn text_token(lexical_state: *mut LexicalState, token: i32
     unsafe {
         match token {
             TK_NAME | TK_STRING | TK_FLT | TK_INT => {
-                save(lexical_state, CHARACTER_NUL as i32);
+                save(lexical_state, Character::Null as i32);
                 return luao_pushfstring(
                     (*lexical_state).interpreter,
                     b"'%s'\0" as *const u8 as *const i8,
@@ -2197,7 +2197,7 @@ pub unsafe extern "C" fn read_numeral(
                 luaz_fill((*lexical_state).zio)
             };
         }
-        save(lexical_state, CHARACTER_NUL as i32);
+        save(lexical_state, Character::Null as i32);
         if luao_str2num((*(*lexical_state).buffer).pointer, &mut obj) == 0 {
             lexerror(
                 lexical_state,

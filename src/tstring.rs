@@ -188,7 +188,7 @@ pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: u64, tag
         let ts: *mut TString = &mut (*(o as *mut TString));
         (*ts).hash = h;
         (*ts).extra = 0;
-        *((*ts).get_contents()).offset(l as isize) = CHARACTER_NUL as i8;
+        *((*ts).get_contents()).offset(l as isize) = Character::Null as i8;
         return ts;
     }
 }

@@ -36,7 +36,7 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
         while is_whitespace(*endptr as i32 + 1) {
             endptr = endptr.offset(1);
         }
-        return if *endptr as i32 == CHARACTER_NUL as i32 {
+        return if *endptr as i32 == Character::Null as i32 {
             endptr
         } else {
             std::ptr::null_mut()
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
         while is_whitespace(*s as i32 + 1) {
             s = s.offset(1);
         }
-        if empty != 0 || *s as i32 != CHARACTER_NUL as i32 {
+        if empty != 0 || *s as i32 != Character::Null as i32 {
             return std::ptr::null();
         } else {
             *result = (if is_negative_ {
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                         .wrapping_mul(::core::mem::size_of::<i8>()),
                 );
                 out = out.offset(bufflen.wrapping_sub(1 as u64) as isize);
-                *out = CHARACTER_NUL as i8;
+                *out = Character::Null as i8;
             }
         } else if *source as i32 == CHARACTER_AT as i32 {
             if source_length <= bufflen {

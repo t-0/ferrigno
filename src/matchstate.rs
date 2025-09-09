@@ -420,7 +420,7 @@ impl MatchState {
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        CHARACTER_NUL as i32
+                                        Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -478,7 +478,7 @@ impl MatchState {
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        CHARACTER_NUL as i32
+                                        Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -536,7 +536,7 @@ impl MatchState {
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init {
-                                        CHARACTER_NUL as i32
+                                        Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
@@ -700,41 +700,41 @@ pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
     unsafe {
         let res: i32;
         match tolower(cl) {
-            97 => {
+            CHARACTER_LOWER_A => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA as i32;
             }
-            99 => {
+            CHARACTER_LOWER_C => {
                 res =
                     *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL as i32;
             }
-            100 => {
+            CHARACTER_LOWER_D => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISDIGIT as i32;
             }
-            103 => {
+            CHARACTER_LOWER_G => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH as i32;
             }
-            108 => {
+            CHARACTER_LOWER_L => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISLOWER as i32;
             }
-            112 => {
+            CHARACTER_LOWER_P => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32
                     & _ISPUNCTUATION as i32;
             }
-            115 => {
+            CHARACTER_LOWER_S => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISSPACE as i32;
             }
-            117 => {
+            CHARACTER_LOWER_U => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISUPPER as i32;
             }
-            119 => {
+            CHARACTER_LOWER_W => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32
                     & _ISALPHANUMERIC as i32;
             }
-            120 => {
+            CHARACTER_LOWER_X => {
                 res =
                     *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT as i32;
             }
-            122 => {
+            CHARACTER_LOWER_Z => {
                 res = (c == 0) as i32;
             }
             _ => return (cl == c) as i32,

@@ -202,7 +202,7 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
         let mut name: *mut i8 = *path;
         if name == end {
             return std::ptr::null();
-        } else if *name as i32 == CHARACTER_NUL as i32 {
+        } else if *name as i32 == Character::Null as i32 {
             *name = *(b";\0" as *const u8 as *const i8);
             name = name.offset(1);
         }
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
         if sep.is_null() {
             sep = end;
         }
-        *sep = CHARACTER_NUL as i8;
+        *sep = Character::Null as i8;
         *path = sep;
         return name;
     }
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn searchpath(
         let mut pathname;
         let endpathname;
         let mut filename;
-        if *sep as i32 != CHARACTER_NUL as i32 && !(strchr(name, *sep as i32)).is_null() {
+        if *sep as i32 != Character::Null as i32 && !(strchr(name, *sep as i32)).is_null() {
             name = lual_gsub(interpreter, name, sep, dirsep);
         }
         let mut buffer = Buffer::new();
@@ -250,7 +250,7 @@ pub unsafe extern "C" fn searchpath(
         (buffer.length < buffer.size || !(buffer.prepare_with_size(1)).is_null()) as i32;
         let fresh195 = buffer.length;
         buffer.length = (buffer.length).wrapping_add(1);
-        *(buffer.pointer).offset(fresh195 as isize) = CHARACTER_NUL as i8;
+        *(buffer.pointer).offset(fresh195 as isize) = Character::Null as i8;
         pathname = buffer.pointer;
         endpathname = pathname
             .offset(buffer.length as isize)
