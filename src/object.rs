@@ -53,6 +53,21 @@ pub trait TObject {
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
     }
+    fn is_tagtype_nil(&self) -> bool {
+        self.get_tag_type() == TagType::Nil
+    }
+    fn is_tagtype_boolean(&self) -> bool {
+        self.get_tag_type() == TagType::Boolean
+    }
+    fn is_tagtype_string(&self) -> bool {
+        self.get_tag_type() == TagType::String
+    }
+    fn is_tagtype_numeric(&self) -> bool {
+        self.get_tag_type() == TagType::Numeric
+    }
+    fn is_tagtype_closure(&self) -> bool {
+        self.get_tag_type() == TagType::Closure
+    }
     fn get_class_name(&mut self) -> String;
     fn get_metatable(&mut self) -> *mut Table;
 }
@@ -111,7 +126,7 @@ impl Object {
 }
 pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
     unsafe {
-        match (*object).get_tag() {
+        match (*object).get_tag_variant() {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
             TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
             TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
@@ -136,7 +151,7 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
     unsafe {
         if object.is_null() {
             return 0;
-        } else if get_tag_type((*object).get_tag()) == TagType::String {
+        } else if (*object).is_tagtype_string() {
             if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(global, &mut (*(object as *mut Object)));
             }
@@ -204,7 +219,7 @@ pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Obj
 pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: u64;
-        match (*object).get_tag() {
+        match (*object).get_tag_variant() {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
                 current_block_18 = 18317007320854588510;
@@ -275,7 +290,7 @@ pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object)
 }
 pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
-        match (*object).get_tag() {
+        match (*object).get_tag_variant() {
             TAG_VARIANT_PROTOTYPE => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
                 (*prototype).prototype_free(interpreter);
@@ -337,7 +352,7 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
                     (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);
                     (*curr).set_marked(((*curr).get_marked() ^ (5 ^ 6)) as u8);
                     current_block = 11248371660297272285;
-                } else if (*curr).get_tag() == TAG_VARIANT_STATE {
+                } else if (*curr).get_tag_variant() == TAG_VARIANT_STATE {
                     current_block = 11248371660297272285;
                 } else {
                     if (*curr).get_marked() & 7 == 6 {

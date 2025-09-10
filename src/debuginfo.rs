@@ -77,7 +77,7 @@ pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const 
 }
 pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
-        if !(!cl.is_null() && (*cl).get_tag() == TAG_VARIANT_CLOSURE_L) {
+        if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = b"=[C]\0" as *const u8 as *const i8;
             (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
                 .wrapping_div(::core::mem::size_of::<i8>() as u64)

@@ -1972,9 +1972,7 @@ pub unsafe extern "C" fn luax_newstring(
         let interpreter: *mut Interpreter = (*lexical_state).interpreter;
         let mut ts: *mut TString = luas_newlstr(interpreter, str, length);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
-        if !(((*o).get_tag_type()) == TagType::Nil) {
-            ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
-        } else {
+        if (*o).is_tagtype_nil() {
             let fresh50 = (*interpreter).top.stkidrel_pointer;
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             let stv: *mut TValue = &mut (*fresh50).tvalue;
@@ -1988,6 +1986,8 @@ pub unsafe extern "C" fn luax_newstring(
                 luac_step(interpreter);
             }
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
+        } else {
+            ts = &mut (*((*(o as *mut Node)).key.value.object as *mut TString));
         }
         return ts;
     }
@@ -2880,7 +2880,7 @@ pub unsafe extern "C" fn llex(
                             (*(*lexical_state).buffer).vector.length as u64,
                         );
                         (*semantic_info).tstring = ts;
-                        if (*ts).get_tag() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
+                        if (*ts).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
                             return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
                         } else {
                             return TK_NAME as i32;

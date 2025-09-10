@@ -301,12 +301,11 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
         loop {
             let top: StackValuePointer = (*interpreter).top.stkidrel_pointer;
             let mut n: i32 = 2;
-            if !(((*top.offset(-(2 as isize))).tvalue.get_tag_type()) == TagType::String
-                || ((*top.offset(-(2 as isize))).tvalue.get_tag_type()) == TagType::Numeric)
-                || !(((*top.offset(-(1 as isize))).tvalue.get_tag_type()) == TagType::String
-                    || ((*top.offset(-(1 as isize))).tvalue.get_tag_type())
-                        == TagType::Numeric
-                        && {
+            if !((*top.offset(-(2 as isize))).tvalue.is_tagtype_string()
+                || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric())
+                || !((*top.offset(-(1 as isize))).tvalue.is_tagtype_string()
+                    || (*top.offset(-(1 as isize))).tvalue.is_tagtype_numeric()
+                    && {
                             luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
                             1 != 0
                         })
@@ -318,9 +317,8 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                     .get_length() as i32
                     == 0
             {
-                (((*top.offset(-(2 as isize))).tvalue.get_tag_type()) == TagType::String
-                    || ((*top.offset(-(2 as isize))).tvalue.get_tag_type())
-                        == TagType::Numeric
+                (((*top.offset(-(2 as isize))).tvalue.is_tagtype_string())
+                    || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric()
                         && {
                             luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
                             1 != 0
@@ -341,16 +339,14 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                 let ts: *mut TString;
                 n = 1;
                 while n < total
-                    && ((
+                    && (
                         (*top.offset(-(n as isize)).offset(-(1 as isize)))
                             .tvalue
-                            .get_tag_type()
-                    ) == TagType::String
-                        || (
+                            .is_tagtype_string()
+                        ||
                             (*top.offset(-(n as isize)).offset(-(1 as isize)))
                                 .tvalue
-                                .get_tag_type()
-                        ) == TagType::Numeric
+                                .is_tagtype_numeric()
                             && {
                                 luao_tostring(
                                     interpreter,

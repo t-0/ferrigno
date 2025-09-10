@@ -102,7 +102,7 @@ impl Closure {
 }
 pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
+        if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag_variant(TagVariant::NilNil as u8);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn auxgetinfo(
                     } else {
                         (*closure).count_upvalues as i32
                     }) as u8;
-                    if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
+                    if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
                         (*ar).is_variable_arguments = true;
                         (*ar).nparams = 0;
                     } else {
