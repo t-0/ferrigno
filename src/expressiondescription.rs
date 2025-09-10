@@ -38,14 +38,14 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
                 ExpressionKind::VKINT => {
                     if !v.is_null() {
                         (*v).value.integer = (*e).value.integer;
-                        (*v).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                        (*v).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     }
                     return true;
                 }
                 ExpressionKind::VKFLT => {
                     if !v.is_null() {
                         (*v).value.number = (*e).value.number;
-                        (*v).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                        (*v).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                     }
                     return true;
                 }
@@ -79,28 +79,27 @@ pub unsafe extern "C" fn luak_exp2const(
         }
         match (*e).expression_kind {
             ExpressionKind::VFALSE => {
-                (*v).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+                (*v).set_tag_variant(TAG_VARIANT_BOOLEAN_FALSE);
                 return true;
             }
             ExpressionKind::VTRUE => {
-                (*v).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+                (*v).set_tag_variant(TAG_VARIANT_BOOLEAN_TRUE);
                 return true;
             }
             ExpressionKind::VNIL => {
-                (*v).set_tag(TagVariant::NilNil as u8);
+                (*v).set_tag_variant(TagVariant::NilNil as u8);
                 return true;
             }
             ExpressionKind::VKSTR => {
-                let x_: *mut TString = (*e).value.tstring;
-                (*v).value.object = &mut (*(x_ as *mut Object));
-                (*v).set_tag((*x_).get_tag());
+                let ts: *mut TString = (*e).value.tstring;
+                (*v).value.object = &mut (*(ts as *mut Object));
+                (*v).set_tag_variant((*ts).get_tag_variant());
                 (*v).set_collectable(true);
                 return true;
             }
             ExpressionKind::VCONST => {
                 let io2: *const TValue = const2val(function_state, e);
-                (*v).value = (*io2).value;
-                (*v).set_tag((*io2).get_tag2());
+                (*v).copy_from(&*io2);
                 return true;
             }
             _ => return tonumeral(e, v),

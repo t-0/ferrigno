@@ -271,7 +271,7 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
 pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).k).offset(index as isize) as *mut TValue;
-        if get_tag_type((*kvalue).get_tag2()) == TagType::String {
+        if ((*kvalue).get_tag_type()) == TagType::String {
             *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
             return b"constant\0" as *const u8 as *const i8;
         } else {

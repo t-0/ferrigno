@@ -77,7 +77,7 @@ impl User {
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = std::ptr::null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag(TagVariant::NilNil as u8);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
             }
             return ret;
         }
@@ -91,7 +91,7 @@ impl User {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(new_user as *mut Object));
-            (*io).set_tag(TAG_VARIANT_USER);
+            (*io).set_tag_variant(TAG_VARIANT_USER);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {
@@ -102,7 +102,7 @@ impl User {
     }
     pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
         unsafe {
-            match get_tag_type((*o).get_tag2()) {
+            match (*o).get_tag_type() {
                 TagType::User => {
                     return (*((*o).value.object as *mut User)).get_raw_memory_mut();
                 }

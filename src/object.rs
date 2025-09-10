@@ -32,6 +32,9 @@ pub trait TObject {
     fn set_tag(&mut self, tag: u8) {
         self.as_object_mut().set_tag(tag);
     }
+    fn set_tag_variant(&mut self, tag: u8) {
+        self.as_object_mut().set_tag_variant(tag);
+    }
     fn get_marked(&self) -> u8 {
         self.as_object().get_marked()
     }
@@ -79,9 +82,12 @@ impl TObject for Object {
         return self.tag;
     }
     fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.tag)
+        get_tag_type(self.get_tag())
     }
     fn set_tag(&mut self, tag: u8) {
+        self.tag = tag;
+    }
+    fn set_tag_variant(&mut self, tag: u8) {
         self.tag = tag;
     }
     fn get_class_name(&mut self) -> String {

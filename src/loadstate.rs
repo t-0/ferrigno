@@ -123,9 +123,8 @@ impl LoadState {
                 } else {
                     ts = TString::create_long(interpreter, size);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
-                    let x_: *mut TString = ts;
-                    (*io).value.object = &mut (*(x_ as *mut Object));
-                    (*io).set_tag((*x_).get_tag());
+                    (*io).value.object = &mut (*(ts as *mut Object));
+                    (*io).set_tag_variant((*ts).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
                     self.load_block(
@@ -197,36 +196,36 @@ impl LoadState {
             ) as *mut TValue;
             (*prototype).size_k = n;
             for i in 0..n {
-                (*((*prototype).k).offset(i as isize)).set_tag(TagVariant::NilNil as u8);
+                (*((*prototype).k).offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
             }
             for i in 0..n {
                 let tvalue: *mut TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
                 let t = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
-                        (*tvalue).set_tag(TagVariant::NilNil as u8);
+                        (*tvalue).set_tag_variant(TagVariant::NilNil as u8);
                     }
                     TAG_VARIANT_BOOLEAN_FALSE => {
-                        (*tvalue).set_tag(TAG_VARIANT_BOOLEAN_FALSE);
+                        (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_FALSE);
                     }
                     TAG_VARIANT_BOOLEAN_TRUE => {
-                        (*tvalue).set_tag(TAG_VARIANT_BOOLEAN_TRUE);
+                        (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_TRUE);
                     }
                     TAG_VARIANT_NUMERIC_NUMBER => {
                         let io: *mut TValue = tvalue;
                         (*io).value.number = self.load_number();
-                        (*io).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                        (*io).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                     }
                     TAG_VARIANT_NUMERIC_INTEGER => {
                         let io_0: *mut TValue = tvalue;
                         (*io_0).value.integer = self.load_integer();
-                        (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                        (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     }
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = tvalue;
-                        let x_: *mut TString = self.load_string(prototype);
-                        (*io_1).value.object = &mut (*(x_ as *mut Object));
-                        (*io_1).set_tag((*x_).get_tag());
+                        let ts: *mut TString = self.load_string(prototype);
+                        (*io_1).value.object = &mut (*(ts as *mut Object));
+                        (*io_1).set_tag_variant((*ts).get_tag_variant());
                         (*io_1).set_collectable(true);
                     }
                     _ => {}
@@ -492,7 +491,7 @@ pub unsafe extern "C" fn load_closure(
         let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).value.object = &mut (*(ret as *mut Object));
-        (*io).set_tag(TAG_VARIANT_CLOSURE_L);
+        (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);

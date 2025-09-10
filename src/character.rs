@@ -1,5 +1,5 @@
 #![allow(unused)]
-#[repr(u8)]
+#[repr(i32)]
 pub enum Character {
     Null = 00,
     StartOfHeader = 01,

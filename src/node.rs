@@ -17,18 +17,18 @@ pub const DUMMY_NODE: Node = Node {
 impl Node {
     pub fn clearkey(& mut self) {
         if self.key.is_collectable() {
-            self.key.set_tag(TAG_VARIANT_DEADKEY);
+            self.key.set_tag_variant(TAG_VARIANT_DEADKEY);
         }
     }
 }
 pub unsafe extern "C" fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
-        return if (*k1).get_tag2() != (*node).key.get_tag2()
-            && !(deadok != 0 && (*node).key.get_tag2() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable()))
+        return if (*k1).get_tag_variant() != (*node).key.get_tag_variant()
+            && !(deadok != 0 && (*node).key.get_tag_variant() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable()))
         {
             false
         } else {
-            match get_tag_variant((*node).key.get_tag2()) {
+            match (*node).key.get_tag_variant() {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
                 TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.integer == (*node).key.value.integer,
                 TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.number == (*node).key.value.number,

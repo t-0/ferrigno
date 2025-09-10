@@ -55,8 +55,7 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
             if !name.is_null() {
                 let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                 let io2: *const TValue = &mut (*pos).tvalue;
-                (*io1).value = (*io2).value;
-                (*io1).set_tag((*io2).get_tag2());
+                (*io1).copy_from(&*io2);
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             }
         }
@@ -70,8 +69,7 @@ pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const 
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
             let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
-            (*io1).value = (*io2).value;
-            (*io1).set_tag((*io2).get_tag2());
+            (*io1).copy_from(&*io2);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         }
         return name;
@@ -138,8 +136,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
-                    (*io1).value = (*io2).value;
-                    (*io1).set_tag((*io2).get_tag2());
+                    (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
@@ -153,8 +150,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
-                    (*io1).value = (*io2).value;
-                    (*io1).set_tag((*io2).get_tag2());
+                    (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
@@ -168,8 +164,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
-                    (*io1).value = (*io2).value;
-                    (*io1).set_tag((*io2).get_tag2());
+                    (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {

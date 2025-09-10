@@ -106,9 +106,6 @@ pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
 pub const fn set_collectable(tag: u8) -> u8 {
     tag | TAG_COLLECTABLE
 }
-pub const fn is_collectable(tag: u8) -> bool {
-    0 != (TAG_COLLECTABLE & tag)
-}
 pub const STRING_LOCAL: [i8; 6] =
     unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
 pub const STRING_UPVALUE: [i8; 8] =

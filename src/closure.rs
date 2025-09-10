@@ -38,18 +38,6 @@ impl TObject for Closure {
     fn as_object_mut(&mut self) -> &mut Object {
         &mut self.object
     }
-    fn get_marked(&self) -> u8 {
-        self.object.get_marked()
-    }
-    fn set_marked(&mut self, marked: u8) {
-        self.object.set_marked(marked);
-    }
-    fn get_tag(&self) -> u8 {
-        self.object.get_tag()
-    }
-    fn set_tag(&mut self, tag: u8) {
-        self.object.set_tag(tag);
-    }
     fn get_class_name(&mut self) -> String {
         "closure".to_string()
     }
@@ -115,7 +103,7 @@ impl Closure {
 pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag() == TAG_VARIANT_CLOSURE_L) {
-            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag(TagVariant::NilNil as u8);
+            (*(*interpreter).top.stkidrel_pointer).tvalue.set_tag_variant(TagVariant::NilNil as u8);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
@@ -123,7 +111,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             let table: *mut Table = luah_new(interpreter);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(table as *mut Object));
-            (*io).set_tag(TAG_VARIANT_TABLE);
+            (*io).set_tag_variant(TAG_VARIANT_TABLE);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).line_info).is_null() {
@@ -261,7 +249,7 @@ pub unsafe extern "C" fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut
             );
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;
-            (*(*upvalue).v.p).set_tag(TagVariant::NilNil as u8);
+            (*(*upvalue).v.p).set_tag_variant(TagVariant::NilNil as u8);
             let ref mut fresh = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh = upvalue;
             if (*cl).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {

@@ -882,7 +882,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
         let mut count_k: i32;
-        if (*index).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
+        if (*index).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             count_k = (*index).value.integer as i32;
             if count_k < (*function_state).count_k
                 && (*((*prototype).k).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
@@ -895,7 +895,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         count_k = (*function_state).count_k;
         let io: *mut TValue = &mut value;
         (*io).value.integer = count_k as i64;
-        (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+        (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(interpreter, (*(*function_state).lexical_state).table, key, index, &mut value);
         (*prototype).k = luam_growaux_(
             interpreter,
@@ -915,12 +915,11 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         while old_size < (*prototype).size_k {
             let fresh135 = old_size;
             old_size = old_size + 1;
-            (*((*prototype).k).offset(fresh135 as isize)).set_tag(TagVariant::NilNil as u8);
+            (*((*prototype).k).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil as u8);
         }
         let io1: *mut TValue = &mut *((*prototype).k).offset(count_k as isize) as *mut TValue;
         let io2: *const TValue = v;
-        (*io1).value = (*io2).value;
-        (*io1).set_tag((*io2).get_tag2());
+        (*io1).copy_from(&*io2);
         (*function_state).count_k += 1;
         (*function_state).count_k;
         if (*v).is_collectable() {
@@ -943,9 +942,8 @@ pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TS
     unsafe {
         let mut o: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut o;
-        let x_: *mut TString = s;
-        (*io).value.object = &mut (*(x_ as *mut Object));
-        (*io).set_tag((*x_).get_tag());
+        (*io).value.object = &mut (*(s as *mut Object));
+        (*io).set_tag_variant((*s).get_tag_variant());
         (*io).set_collectable(true);
         return addk(function_state, &mut o, &mut o);
     }
@@ -954,7 +952,7 @@ pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer:
     unsafe {
         let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         tvalue.value.integer = integer;
-        tvalue.set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+        tvalue.set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
@@ -963,7 +961,7 @@ pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, numbe
         let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let mut ik: i64 = 0;
         tvalue.value.number = number;
-        tvalue.set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+        tvalue.set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
         if !luav_flttointeger(number, &mut ik, F2I::Equal) {
             return addk(function_state, &mut tvalue, &mut tvalue);
         } else {
@@ -1548,7 +1546,7 @@ pub unsafe extern "C" fn constfolding(
             return 0;
         }
         luao_rawarith((*(*function_state).lexical_state).interpreter, op, &mut v1, &mut v2, &mut res);
-        if res.get_tag2() == TAG_VARIANT_NUMERIC_INTEGER {
+        if res.get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             (*e1).expression_kind = ExpressionKind::VKINT;
             (*e1).value.integer = res.value.integer;
         } else {

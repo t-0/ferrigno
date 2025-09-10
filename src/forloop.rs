@@ -14,7 +14,7 @@ pub unsafe extern "C" fn forlimit(
     unsafe {
         if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
             let mut flim: f64 = 0.0;
-            if if (*lim).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
+            if if (*lim).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 flim = (*lim).value.number;
                 1
             } else {
@@ -51,8 +51,8 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
         let pinit: *mut TValue = &mut (*ra).tvalue;
         let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
         let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).tvalue;
-        if (*pinit).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER
-            && (*pstep).get_tag2() == TAG_VARIANT_NUMERIC_INTEGER
+        if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
+            && (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
         {
             let init: i64 = (*pinit).value.integer;
             let step: i64 = (*pstep).value.integer;
@@ -62,7 +62,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             }
             let io: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io).value.integer = init;
-            (*io).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+            (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
             if forlimit(interpreter, init, plimit, &mut limit, step) != 0 {
                 return 1;
             } else {
@@ -80,13 +80,13 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 }
                 let io_0: *mut TValue = plimit;
                 (*io_0).value.integer = count as i64;
-                (*io_0).set_tag(TAG_VARIANT_NUMERIC_INTEGER);
+                (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
             }
         } else {
             let mut init_0: f64 = 0.0;
             let mut limit_0: f64 = 0.0;
             let mut step_0: f64 = 0.0;
-            if (((if (*plimit).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*plimit).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 limit_0 = (*plimit).value.number;
                 1
             } else {
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             {
                 luag_forerror(interpreter, plimit, b"limit\0" as *const u8 as *const i8);
             }
-            if (((if (*pstep).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 step_0 = (*pstep).value.number;
                 1
             } else {
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             {
                 luag_forerror(interpreter, pstep, b"step\0" as *const u8 as *const i8);
             }
-            if (((if (*pinit).get_tag2() == TAG_VARIANT_NUMERIC_NUMBER {
+            if (((if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 init_0 = (*pinit).value.number;
                 1
             } else {
@@ -144,16 +144,16 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             } else {
                 let io_1: *mut TValue = plimit;
                 (*io_1).value.number = limit_0;
-                (*io_1).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                (*io_1).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                 let io_2: *mut TValue = pstep;
                 (*io_2).value.number = step_0;
-                (*io_2).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                (*io_2).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                 let io_3: *mut TValue = &mut (*ra).tvalue;
                 (*io_3).value.number = init_0;
-                (*io_3).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                (*io_3).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                 let io_4: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
                 (*io_4).value.number = init_0;
-                (*io_4).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+                (*io_4).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
             }
         }
         return 0;
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn floatforloop(ra: StackValuePointer) -> i32 {
             (*io).value.number = index;
             let io_0: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io_0).value.number = index;
-            (*io_0).set_tag(TAG_VARIANT_NUMERIC_NUMBER);
+            (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
             return 1;
         } else {
             return 0;

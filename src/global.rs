@@ -286,7 +286,7 @@ pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
                     },
                 ) != 0
                 {
-                    (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
+                    (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
                 if (*node).value.get_tag_type() == TagType::Nil {
                     (*node).clearkey();
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                     },
                 ) != 0
                 {
-                    (*tvalue).set_tag(TAG_VARIANT_NIL_EMPTY);
+                    (*tvalue).set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
             }
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
@@ -330,9 +330,9 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                     },
                 ) != 0
                 {
-                    (*node).value.set_tag(TAG_VARIANT_NIL_EMPTY);
+                    (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
-                if get_tag_type((*node).value.get_tag2()) == TagType::Nil {
+                if ((*node).value.get_tag_type()) == TagType::Nil {
                     (*node).clearkey();
                 }
                 node = node.offset(1);
