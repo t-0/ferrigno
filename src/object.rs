@@ -115,7 +115,7 @@ pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
             TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
             TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
-            TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).gc_list,
+            TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).prototype_gc_list,
             TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
             _ => return std::ptr::null_mut(),
         };
@@ -278,7 +278,7 @@ pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut
         match (*object).get_tag() {
             TAG_VARIANT_PROTOTYPE => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
-                (*prototype).free_prototype(interpreter);
+                (*prototype).prototype_free(interpreter);
             }
             TAG_VARIANT_UPVALUE => {
                 let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));

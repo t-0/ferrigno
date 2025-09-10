@@ -7,7 +7,7 @@ use crate::vm::opmode::*;
 use crate::vm::opcode::*;
 use crate::lexical::constructorcontrol::*;
 use crate::expressionkind::*;
-use crate::labellist::*;
+use crate::vectort::*;
 use crate::tvalue::*;
 use crate::tm::*;
 use crate::interpreter::*;
@@ -75,7 +75,7 @@ impl New for FunctionState {
 }
 pub unsafe extern "C" fn movegotosout(function_state: *mut FunctionState, block_control: *mut BlockControl) {
     unsafe {
-        let gl: *mut LabelList = &mut (*(*(*function_state).lexical_state).dynamic_data).gt;
+        let gl: *mut VectorT<LabelDescription> = &mut (*(*(*function_state).lexical_state).dynamic_data).gt;
         for i in (*block_control).first_goto..(*gl).length {
             let gt: *mut LabelDescription =
                 &mut *((*gl).pointer).offset(i as isize) as *mut LabelDescription;
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn lastlistfield(function_state: *mut FunctionState, cc: *
 }
 pub unsafe extern "C" fn setvararg(function_state: *mut FunctionState, nparams: i32) {
     unsafe {
-        (*(*function_state).prototype).is_variable_arguments = true;
+        (*(*function_state).prototype).prototype_is_variable_arguments = true;
         luak_code_abck(function_state, OP_VARARGPREP, nparams, 0, 0, 0);
     }
 }
@@ -188,7 +188,7 @@ pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i
     unsafe {
         let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let message: *const i8;
-        let line: i32 = (*(*function_state).prototype).line_defined;
+        let line: i32 = (*(*function_state).prototype).prototype_line_defined;
         let where_0: *const i8 = if line == 0 {
             b"main function\0" as *const u8 as *const i8
         } else {
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn localdebuginfo(function_state: *mut FunctionState, vidx
             return std::ptr::null_mut();
         } else {
             let index: i32 = (*variable_description).content.pidx as i32;
-            return &mut *((*(*function_state).prototype).local_variables).offset(index as isize) as *mut LocalVariable;
+            return (*(*function_state).prototype).prototype_local_variables.at_mut(index as isize);
         };
     }
 }
@@ -286,7 +286,7 @@ pub unsafe extern "C" fn removevars(function_state: *mut FunctionState, tolevel:
 }
 pub unsafe extern "C" fn searchupvalue(function_state: *mut FunctionState, name: *mut TString) -> i32 {
     unsafe {
-        let up: *mut UpValueDescription = (*(*function_state).prototype).upvalues;
+        let up: *mut UpValueDescription = (*(*function_state).prototype).prototype_upvalues.pointer;
         for i in 0..(*function_state).count_upvalues {
             if (*up.offset(i as isize)).name == name {
                 return i as i32;
@@ -295,21 +295,21 @@ pub unsafe extern "C" fn searchupvalue(function_state: *mut FunctionState, name:
         return -1;
     }
 }
-pub unsafe extern "C" fn allocupvalue(function_state: *mut FunctionState) -> *mut UpValueDescription {
+pub unsafe extern "C" fn allocate_upvalue_description(function_state: *mut FunctionState) -> *mut UpValueDescription {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
-        let mut old_size: i32 = (*prototype).size_upvalues;
+        let mut old_size: i32 = (*prototype).prototype_upvalues.size;
         checklimit(
             function_state,
             (*function_state).count_upvalues as i32 + 1,
             255 as i32,
             b"upvalues\0" as *const u8 as *const i8,
         );
-        (*prototype).upvalues = luam_growaux_(
+        (*prototype).prototype_upvalues.pointer = luam_growaux_(
             (*(*function_state).lexical_state).interpreter,
-            (*prototype).upvalues as *mut libc::c_void,
+            (*prototype).prototype_upvalues.pointer as *mut libc::c_void,
             (*function_state).count_upvalues as usize,
-            &mut (*prototype).size_upvalues,
+            &mut (*prototype).prototype_upvalues.size,
             ::core::mem::size_of::<UpValueDescription>(),
             (if 255 as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
@@ -320,15 +320,15 @@ pub unsafe extern "C" fn allocupvalue(function_state: *mut FunctionState) -> *mu
             }) as i32,
             b"upvalues\0" as *const u8 as *const i8,
         ) as *mut UpValueDescription;
-        while old_size < (*prototype).size_upvalues {
+        while old_size < (*prototype).prototype_upvalues.size {
             let fresh41 = old_size;
             old_size = old_size + 1;
-            let ref mut fresh42 = (*((*prototype).upvalues).offset(fresh41 as isize)).name;
+            let ref mut fresh42 = (*((*prototype).prototype_upvalues.pointer).offset(fresh41 as isize)).name;
             *fresh42 = std::ptr::null_mut();
         }
         let fresh43 = (*function_state).count_upvalues;
         (*function_state).count_upvalues = ((*function_state).count_upvalues).wrapping_add(1);
-        return &mut *((*prototype).upvalues).offset(fresh43 as isize) as *mut UpValueDescription;
+        return &mut *((*prototype).prototype_upvalues.pointer).offset(fresh43 as isize) as *mut UpValueDescription;
     }
 }
 pub unsafe extern "C" fn newupvalue(
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn newupvalue(
     v: *mut ExpressionDescription,
 ) -> i32 {
     unsafe {
-        let up: *mut UpValueDescription = allocupvalue(function_state);
+        let up: *mut UpValueDescription = allocate_upvalue_description(function_state);
         let previous: *mut FunctionState = (*function_state).previous;
         if (*v).expression_kind as u32 == ExpressionKind::VLOCAL as u32 {
             (*up).is_in_stack = true;
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn newupvalue(
         } else {
             (*up).is_in_stack = false;
             (*up).index = (*v).value.info as u8;
-            (*up).kind = (*((*(*previous).prototype).upvalues).offset((*v).value.info as isize)).kind;
+            (*up).kind = (*((*(*previous).prototype).prototype_upvalues.pointer).offset((*v).value.info as isize)).kind;
         }
         (*up).name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -440,7 +440,7 @@ pub unsafe extern "C" fn fixforjump(
     back: i32,
 ) {
     unsafe {
-        let jmp: *mut u32 = &mut *((*(*function_state).prototype).code).offset(program_counter as isize) as *mut u32;
+        let jmp: *mut u32 = &mut *((*(*function_state).prototype).prototype_code.pointer).offset(program_counter as isize) as *mut u32;
         let mut offset: i32 = dest - (program_counter + 1);
         if back != 0 {
             offset = -offset;
@@ -467,7 +467,7 @@ pub unsafe extern "C" fn previousinstruction(function_state: *mut FunctionState)
     unsafe {
         pub const INVALID_INSTRUCTION: u32 = !(0u32);
         if (*function_state).program_counter > (*function_state).last_target {
-            return &mut *((*(*function_state).prototype).code).offset(((*function_state).program_counter - 1) as isize)
+            return &mut *((*(*function_state).prototype).prototype_code.pointer).offset(((*function_state).program_counter - 1) as isize)
                 as *mut u32;
         } else {
             return &INVALID_INSTRUCTION as *const u32 as *mut u32;
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: 
 }
 pub unsafe extern "C" fn getjump(function_state: *mut FunctionState, program_counter: i32) -> i32 {
     unsafe {
-        let offset: i32 = (*((*(*function_state).prototype).code).offset(program_counter as isize) >> POSITION_A
+        let offset: i32 = (*((*(*function_state).prototype).prototype_code.pointer).offset(program_counter as isize) >> POSITION_A
             & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
             - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
         if offset == -1 {
@@ -512,7 +512,7 @@ pub unsafe extern "C" fn getjump(function_state: *mut FunctionState, program_cou
 }
 pub unsafe extern "C" fn fixjump(function_state: *mut FunctionState, program_counter: i32, dest: i32) {
     unsafe {
-        let jmp: *mut u32 = &mut *((*(*function_state).prototype).code).offset(program_counter as isize) as *mut u32;
+        let jmp: *mut u32 = &mut *((*(*function_state).prototype).prototype_code.pointer).offset(program_counter as isize) as *mut u32;
         let offset: i32 = dest - (program_counter + 1);
         if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset
             && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1))
@@ -590,7 +590,7 @@ pub unsafe extern "C" fn luak_getlabel(function_state: *mut FunctionState) -> i3
 }
 pub unsafe extern "C" fn getjumpcontrol(function_state: *mut FunctionState, program_counter: i32) -> *mut u32 {
     unsafe {
-        let pi: *mut u32 = &mut *((*(*function_state).prototype).code).offset(program_counter as isize) as *mut u32;
+        let pi: *mut u32 = &mut *((*(*function_state).prototype).prototype_code.pointer).offset(program_counter as isize) as *mut u32;
         if program_counter >= 1
             && OPMODES[(*pi.offset(-(1 as isize)) >> 0 & !(!(0u32) << 7) << 0) as usize]
                 as i32
@@ -669,11 +669,11 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             (*function_state).iwthabs = ((*function_state).iwthabs).wrapping_add(1);
             fresh132 as i32 >= 128 as i32
         } {
-            (*prototype).absolute_line_info = luam_growaux_(
+            (*prototype).prototype_absolute_line_info.pointer = luam_growaux_(
                 (*(*function_state).lexical_state).interpreter,
-                (*prototype).absolute_line_info as *mut libc::c_void,
+                (*prototype).prototype_absolute_line_info.pointer as *mut libc::c_void,
                 (*function_state).count_abslineinfo as usize,
-                &mut (*prototype).size_absolute_line_info,
+                &mut (*prototype).prototype_absolute_line_info.size,
                 ::core::mem::size_of::<AbsoluteLineInfo>(),
                 (if 0x7FFFFFFF as u64
                     <= (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
@@ -684,19 +684,19 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
                 }) as i32,
                 b"lines\0" as *const u8 as *const i8,
             ) as *mut AbsoluteLineInfo;
-            (*((*prototype).absolute_line_info).offset((*function_state).count_abslineinfo as isize)).program_counter =
+            (*((*prototype).prototype_absolute_line_info.pointer).offset((*function_state).count_abslineinfo as isize)).program_counter =
                 program_counter;
             let fresh133 = (*function_state).count_abslineinfo;
             (*function_state).count_abslineinfo = (*function_state).count_abslineinfo + 1;
-            (*((*prototype).absolute_line_info).offset(fresh133 as isize)).line = line;
+            (*((*prototype).prototype_absolute_line_info.pointer).offset(fresh133 as isize)).line = line;
             linedif = -(0x80 as i32);
             (*function_state).iwthabs = 1;
         }
-        (*prototype).line_info = luam_growaux_(
+        (*prototype).prototype_line_info.pointer = luam_growaux_(
             (*(*function_state).lexical_state).interpreter,
-            (*prototype).line_info as *mut libc::c_void,
+            (*prototype).prototype_line_info.pointer as *mut libc::c_void,
             program_counter as usize,
-            &mut (*prototype).size_line_info,
+            &mut (*prototype).prototype_line_info.size,
             ::core::mem::size_of::<i8>(),
             (if 0x7FFFFFFF as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
@@ -707,7 +707,7 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             }) as i32,
             b"opcodes\0" as *const u8 as *const i8,
         ) as *mut i8;
-        *((*prototype).line_info).offset(program_counter as isize) = linedif as i8;
+        *((*prototype).prototype_line_info.pointer).offset(program_counter as isize) = linedif as i8;
         (*function_state).previous_line = line;
     }
 }
@@ -715,8 +715,8 @@ pub unsafe extern "C" fn removelastlineinfo(function_state: *mut FunctionState) 
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
         let program_counter: i32 = (*function_state).program_counter - 1;
-        if *((*prototype).line_info).offset(program_counter as isize) as i32 != -(0x80 as i32) {
-            (*function_state).previous_line -= *((*prototype).line_info).offset(program_counter as isize) as i32;
+        if *((*prototype).prototype_line_info.pointer).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+            (*function_state).previous_line -= *((*prototype).prototype_line_info.pointer).offset(program_counter as isize) as i32;
             (*function_state).iwthabs = ((*function_state).iwthabs).wrapping_sub(1);
             (*function_state).iwthabs;
         } else {
@@ -736,11 +736,11 @@ pub unsafe extern "C" fn removelastinstruction(function_state: *mut FunctionStat
 pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -> i32 {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
-        (*prototype).code = luam_growaux_(
+        (*prototype).prototype_code.pointer = luam_growaux_(
             (*(*function_state).lexical_state).interpreter,
-            (*prototype).code as *mut libc::c_void,
+            (*prototype).prototype_code.pointer as *mut libc::c_void,
             (*function_state).program_counter as usize,
-            &mut (*prototype).size_code,
+            &mut (*prototype).prototype_code.size,
             ::core::mem::size_of::<u32>(),
             (if 0x7FFFFFFF as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
         ) as *mut u32;
         let fresh134 = (*function_state).program_counter;
         (*function_state).program_counter = (*function_state).program_counter + 1;
-        *((*prototype).code).offset(fresh134 as isize) = i;
+        *((*prototype).prototype_code.pointer).offset(fresh134 as isize) = i;
         savelineinfo(function_state, prototype, (*(*function_state).lexical_state).last_line);
         return (*function_state).program_counter - 1;
     }
@@ -813,14 +813,14 @@ pub unsafe extern "C" fn luak_codek(function_state: *mut FunctionState, reg: i32
 pub unsafe extern "C" fn luak_checkstack(function_state: *mut FunctionState, n: i32) {
     unsafe {
         let newstack: i32 = (*function_state).freereg as i32 + n;
-        if newstack > (*(*function_state).prototype).maximum_stack_size as i32 {
+        if newstack > (*(*function_state).prototype).prototype_maximum_stack_size as i32 {
             if newstack >= 255 as i32 {
                 luax_syntaxerror(
                     (*function_state).lexical_state,
                     b"function or expression needs too many registers\0" as *const u8 as *const i8,
                 );
             }
-            (*(*function_state).prototype).maximum_stack_size = newstack as u8;
+            (*(*function_state).prototype).prototype_maximum_stack_size = newstack as u8;
         }
     }
 }
@@ -885,23 +885,23 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         if (*index).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             count_k = (*index).value.integer as i32;
             if count_k < (*function_state).count_k
-                && (*((*prototype).k).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
-                && luav_equalobj(std::ptr::null_mut(), &mut *((*prototype).k).offset(count_k as isize), v)
+                && (*((*prototype).prototype_constants.pointer).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
+                && luav_equalobj(std::ptr::null_mut(), &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize), v)
             {
                 return count_k;
             }
         }
-        let mut old_size: i32 = (*prototype).size_k;
+        let mut old_size: i32 = (*prototype).prototype_constants.size;
         count_k = (*function_state).count_k;
         let io: *mut TValue = &mut value;
         (*io).value.integer = count_k as i64;
         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(interpreter, (*(*function_state).lexical_state).table, key, index, &mut value);
-        (*prototype).k = luam_growaux_(
+        (*prototype).prototype_constants.pointer = luam_growaux_(
             interpreter,
-            (*prototype).k as *mut libc::c_void,
+            (*prototype).prototype_constants.pointer as *mut libc::c_void,
             count_k as usize,
-            &mut (*prototype).size_k,
+            &mut (*prototype).prototype_constants.size,
             ::core::mem::size_of::<TValue>(),
             (if ((1 << 8 + 8 + 1 + 8) - 1) as u64
                 <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
@@ -912,12 +912,12 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             }) as i32,
             b"constants\0" as *const u8 as *const i8,
         ) as *mut TValue;
-        while old_size < (*prototype).size_k {
+        while old_size < (*prototype).prototype_constants.size {
             let fresh135 = old_size;
             old_size = old_size + 1;
-            (*((*prototype).k).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil as u8);
+            (*((*prototype).prototype_constants.pointer).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil as u8);
         }
-        let io1: *mut TValue = &mut *((*prototype).k).offset(count_k as isize) as *mut TValue;
+        let io1: *mut TValue = &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize) as *mut TValue;
         let io2: *const TValue = v;
         (*io1).copy_from(&*io2);
         (*function_state).count_k += 1;
@@ -1022,7 +1022,7 @@ pub unsafe extern "C" fn luak_setreturns(
 ) {
     unsafe {
         let program_counter: *mut u32 =
-            &mut *((*(*function_state).prototype).code).offset((*e).value.info as isize) as *mut u32;
+            &mut *((*(*function_state).prototype).prototype_code.pointer).offset((*e).value.info as isize) as *mut u32;
         if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
             *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
                 | ((count_results + 1) as u32) << POSITION_C
@@ -1047,10 +1047,10 @@ pub unsafe extern "C" fn luak_setoneret(function_state: *mut FunctionState, e: *
     unsafe {
         if (*e).expression_kind as u32 == ExpressionKind::VCALL as u32 {
             (*e).expression_kind = ExpressionKind::VNONRELOC;
-            (*e).value.info = (*((*(*function_state).prototype).code).offset((*e).value.info as isize) >> POSITION_A
+            (*e).value.info = (*((*(*function_state).prototype).prototype_code.pointer).offset((*e).value.info as isize) >> POSITION_A
                 & !(!(0u32) << 8) << 0) as i32;
         } else if (*e).expression_kind as u32 == ExpressionKind::VVARARG as u32 {
-            *((*(*function_state).prototype).code).offset((*e).value.info as isize) = *((*(*function_state).prototype).code)
+            *((*(*function_state).prototype).prototype_code.pointer).offset((*e).value.info as isize) = *((*(*function_state).prototype).prototype_code.pointer)
                 .offset((*e).value.info as isize)
                 & !(!(!(0u32) << 8) << POSITION_C)
                 | (2 as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
@@ -1165,7 +1165,7 @@ pub unsafe extern "C" fn discharge2reg(
             }
             17 => {
                 let program_counter: *mut u32 =
-                    &mut *((*(*function_state).prototype).code).offset((*e).value.info as isize) as *mut u32;
+                    &mut *((*(*function_state).prototype).prototype_code.pointer).offset((*e).value.info as isize) as *mut u32;
                 *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_A)
                     | (reg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
                 current_block_14 = 13242334135786603907;
@@ -1434,7 +1434,7 @@ pub unsafe extern "C" fn jumponcond(
 ) -> i32 {
     unsafe {
         if (*e).expression_kind as u32 == ExpressionKind::VRELOC as u32 {
-            let ie: u32 = *((*(*function_state).prototype).code).offset((*e).value.info as isize);
+            let ie: u32 = *((*(*function_state).prototype).prototype_code.pointer).offset((*e).value.info as isize);
             if (ie >> 0 & !(!(0u32) << 7) << 0) as u32 == OP_NOT as u32 {
                 removelastinstruction(function_state);
                 return condjump(
@@ -1525,7 +1525,7 @@ pub unsafe extern "C" fn is_k_string(function_state: *mut FunctionState, e: *mut
         return (*e).expression_kind == ExpressionKind::VK
             && !((*e).t != (*e).f)
             && (*e).value.info <= ((1 << 8) - 1)
-            && (*((*(*function_state).prototype).k).offset((*e).value.info as isize)).get_tag_variant()
+            && (*((*(*function_state).prototype).prototype_constants.pointer).offset((*e).value.info as isize)).get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT;
     }
 }
@@ -1666,8 +1666,8 @@ pub unsafe extern "C" fn finishbinexpneg(
                     OP_MMBINI,
                     event,
                 );
-                *((*(*function_state).prototype).code).offset(((*function_state).program_counter - 1) as isize) =
-                    *((*(*function_state).prototype).code).offset(((*function_state).program_counter - 1) as isize)
+                *((*(*function_state).prototype).prototype_code.pointer).offset(((*function_state).program_counter - 1) as isize) =
+                    *((*(*function_state).prototype).prototype_code.pointer).offset(((*function_state).program_counter - 1) as isize)
                         & !(!(!(0u32) << 8) << POSITION_B)
                         | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << POSITION_B
                             & !(!(0u32) << 8) << POSITION_B;
@@ -2039,7 +2039,7 @@ pub unsafe extern "C" fn luak_settablesize(
     hsize: i32,
 ) {
     unsafe {
-        let inst: *mut u32 = &mut *((*(*function_state).prototype).code).offset(program_counter as isize) as *mut u32;
+        let inst: *mut u32 = &mut *((*(*function_state).prototype).prototype_code.pointer).offset(program_counter as isize) as *mut u32;
         let rb: i32 = if hsize == 0 {
             0
         } else {
@@ -2081,11 +2081,11 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
     unsafe {
         let p: *mut Prototype = (*function_state).prototype;
         for i in 0..(*function_state).program_counter {
-            let program_counter: *mut u32 = &mut *((*p).code).offset(i as isize) as *mut u32;
+            let program_counter: *mut u32 = &mut *((*p).prototype_code.pointer).offset(i as isize) as *mut u32;
             let current_block_7: u64;
             match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
                 OP_RETURN0 | OP_RETURN1 => {
-                    if !((*function_state).needs_close || (*p).is_variable_arguments as i32 != 0) {
+                    if !((*function_state).needs_close || (*p).prototype_is_variable_arguments as i32 != 0) {
                         current_block_7 = 12599329904712511516;
                     } else {
                         *program_counter = *program_counter & !(!(!(0u32) << 7) << 0)
@@ -2097,7 +2097,7 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
                     current_block_7 = 11006700562992250127;
                 }
                 OP_JMP => {
-                    let target: i32 = final_target((*p).code, i);
+                    let target: i32 = final_target((*p).prototype_code.pointer, i);
                     fixjump(function_state, i, target);
                     current_block_7 = 12599329904712511516;
                 }
@@ -2111,10 +2111,10 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
                         *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
                             | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
                     }
-                    if (*p).is_variable_arguments {
+                    if (*p).prototype_is_variable_arguments {
                         *program_counter = *program_counter
                             & !(!(!(0u32) << 8) << POSITION_C)
-                            | (((*p).count_parameters as i32 + 1) as u32) << POSITION_C
+                            | (((*p).prototype_count_parameters as i32 + 1) as u32) << POSITION_C
                                 & !(!(0u32) << 8) << POSITION_C;
                     }
                 }

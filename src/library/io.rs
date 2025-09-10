@@ -462,16 +462,16 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
             funlockfile(file);
-            b.length = b.length.wrapping_add(i as usize);
+            b.vector.length = (b.vector.length as usize).wrapping_add(i as usize) as i32;
             if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
         if chop == 0 && c == CHARACTER_LF as i32 {
-            (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh154 = b.length;
-            b.length = (b.length).wrapping_add(1);
-            *(b.pointer).offset(fresh154 as isize) = c as i8;
+            (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh154 = b.vector.length;
+            b.vector.length = (b.vector.length).wrapping_add(1);
+            *(b.vector.pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
         return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as u64 as u32 as i32;
@@ -497,7 +497,7 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
                     as u64,
                 file,
             );
-            b.length = b.length.wrapping_add(nr as usize);
+            b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
             if !(nr
                 == (16 as u64)
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FI
             n,
             file,
         );
-        b.length = b.length.wrapping_add(nr as usize);
+        b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
         b.push_result();
         return (nr > 0) as i32;
     }

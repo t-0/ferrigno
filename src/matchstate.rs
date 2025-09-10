@@ -664,10 +664,10 @@ impl MatchState {
                 (*b).add_string_with_length(news, p.offset_from(news) as usize);
                 p = p.offset(1);
                 if *p as i32 == CHARACTER_PERCENT as i32 {
-                    ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                    let fresh164 = (*b).length;
-                    (*b).length = ((*b).length).wrapping_add(1);
-                    *((*b).pointer).offset(fresh164 as isize) = *p;
+                    ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                    let fresh164 = (*b).vector.length;
+                    (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+                    *((*b).vector.pointer).offset(fresh164 as isize) = *p;
                 } else if *p as i32 == CHARACTER_0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32

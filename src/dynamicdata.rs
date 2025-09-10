@@ -1,11 +1,12 @@
-use crate::labellist::*;
+use crate::vectort::*;
 use crate::variabledescription::*;
+use crate::labeldescription::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DynamicData {
     pub active_variable: DynamicDataActiveVariable,
-    pub gt: LabelList,
-    pub label: LabelList,
+    pub gt: VectorT<LabelDescription>,
+    pub label: VectorT<LabelDescription>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

@@ -138,7 +138,7 @@ impl Global {
                 TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as u64,
                 TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
                 TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
-                TAG_VARIANT_PROTOTYPE => return Prototype::traverseproto(self, &mut (*(object as *mut Prototype))),
+                TAG_VARIANT_PROTOTYPE => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
                 TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as u64,
                 _ => return 0,
             };

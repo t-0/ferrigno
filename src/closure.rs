@@ -107,22 +107,22 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
-            let mut current_line: i32 = (*prototype).line_defined;
+            let mut current_line: i32 = (*prototype).prototype_line_defined;
             let table: *mut Table = luah_new(interpreter);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(table as *mut Object));
             (*io).set_tag_variant(TAG_VARIANT_TABLE);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-            if !((*prototype).line_info).is_null() {
+            if !((*prototype).prototype_line_info.pointer).is_null() {
                 let mut v: TValue = TValue::new(TAG_VARIANT_BOOLEAN_TRUE);
-                let start: i32 = if !(*prototype).is_variable_arguments {
+                let start: i32 = if !(*prototype).prototype_is_variable_arguments {
                     0
                 } else {
                     current_line = nextline(prototype, current_line, 0);
                     1
                 };
-                for i in start..(*prototype).size_line_info {
+                for i in start..(*prototype).prototype_line_info.size {
                     current_line = nextline(prototype, current_line, i);
                     luah_setint(interpreter, table, current_line as i64, &mut v);
                 }
@@ -162,8 +162,8 @@ pub unsafe extern "C" fn auxgetinfo(
                         (*ar).is_variable_arguments = true;
                         (*ar).nparams = 0;
                     } else {
-                        (*ar).is_variable_arguments = (*(*closure).payload.l_prototype).is_variable_arguments;
-                        (*ar).nparams = (*(*closure).payload.l_prototype).count_parameters;
+                        (*ar).is_variable_arguments = (*(*closure).payload.l_prototype).prototype_is_variable_arguments;
+                        (*ar).nparams = (*(*closure).payload.l_prototype).prototype_count_parameters;
                     }
                 },
                 CHARACTER_LOWER_T => {

@@ -90,7 +90,7 @@ pub unsafe extern "C" fn aux_upvalue(
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
-                if !((n as u32).wrapping_sub(1 as u32) < (*p).size_upvalues as u32) {
+                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.size as u32) {
                     return std::ptr::null();
                 }
                 *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize))
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn aux_upvalue(
                     *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
                         as *mut Object));
                 }
-                let name: *mut TString = (*((*p).upvalues).offset((n - 1) as isize)).name;
+                let name: *mut TString = (*((*p).prototype_upvalues.pointer).offset((n - 1) as isize)).name;
                 return if name.is_null() {
                     b"(no name)\0" as *const u8 as *const i8
                 } else {

@@ -85,17 +85,17 @@ pub unsafe extern "C" fn setpath(
                 b.initialize(interpreter);
                 if path < dftmark {
                     b.add_string_with_length(path, dftmark.offset_from(path) as usize);
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh193 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh193 as isize) = *(b";\0" as *const u8 as *const i8);
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh193 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh193 as isize) = *(b";\0" as *const u8 as *const i8);
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh194 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh194 as isize) = *(b";\0" as *const u8 as *const i8);
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh194 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh194 as isize) = *(b";\0" as *const u8 as *const i8);
                     b.add_string_with_length(
                         dftmark.offset(2 as isize),
                         path.offset(length as isize)
@@ -247,13 +247,13 @@ pub unsafe extern "C" fn searchpath(
         let mut buffer = Buffer::new();
         buffer.initialize(interpreter);
         lual_addgsub(&mut buffer, path, b"?\0" as *const u8 as *const i8, name);
-        (buffer.length < buffer.size || !(buffer.prepare_with_size(1)).is_null()) as i32;
-        let fresh195 = buffer.length;
-        buffer.length = (buffer.length).wrapping_add(1);
-        *(buffer.pointer).offset(fresh195 as isize) = Character::Null as i8;
-        pathname = buffer.pointer;
+        (buffer.vector.length < buffer.vector.size || !(buffer.prepare_with_size(1)).is_null()) as i32;
+        let fresh195 = buffer.vector.length;
+        buffer.vector.length = (buffer.vector.length).wrapping_add(1);
+        *(buffer.vector.pointer).offset(fresh195 as isize) = Character::Null as i8;
+        pathname = buffer.vector.pointer;
         endpathname = pathname
-            .offset(buffer.length as isize)
+            .offset(buffer.vector.length as isize)
             .offset(-(1 as isize));
         loop {
             filename = getnextfilename(&mut pathname, endpathname);
@@ -476,7 +476,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
             message.add_string(b"\n\t\0" as *const u8 as *const i8);
             if ((lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil) as i32 != 0) as i64 != 0 {
                 lua_settop(interpreter, -2);
-                message.length = message.length.wrapping_sub(2);
+                message.vector.length = message.vector.length.wrapping_sub(2);
                 message.push_result();
                 lual_error(
                     interpreter,
@@ -494,7 +494,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
                 message.add_value();
             } else {
                 lua_settop(interpreter, -2 - 1);
-                message.length = message.length.wrapping_sub(2);
+                message.vector.length = message.vector.length.wrapping_sub(2);
             }
             i += 1;
         }

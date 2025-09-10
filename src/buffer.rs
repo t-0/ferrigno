@@ -3,24 +3,25 @@ use crate::utility::c::*;
 use crate::new::*;
 use crate::buffer::userbox::*;
 use crate::interpreter::*;
+use crate::vectort::*;
 impl Buffer {
     pub const INITIAL_SIZE: usize = 1024;
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Buffer {
-    pub pointer: *mut i8,
-    pub size: usize,
-    pub length: usize,
+    pub vector: VectorT<i8>,
     pub interpreter: *mut Interpreter,
     pub initial_data: [i8; Buffer::INITIAL_SIZE],
 }
 impl New for Buffer {
     fn new() -> Self {
         return Buffer {
-            pointer: std::ptr::null_mut(),
-            size: 0,
-            length: 0,
+            vector: VectorT {
+                pointer: std::ptr::null_mut(),
+                size: 0,
+                length: 0,
+            },
             interpreter: std::ptr::null_mut(),
             initial_data: [0; Buffer::INITIAL_SIZE],
         };
@@ -35,29 +36,29 @@ impl Buffer {
     }
     pub unsafe fn push_result_with_size(&mut self, size: usize) {
         unsafe {
-            self.length += size;
+            self.vector.length += size as i32;
             self.push_result();
         }
     }
     pub unsafe fn new_with_size(&mut self, size: usize) -> usize {
         unsafe {
-            let mut new_size = 2 * self.size;
-            if (!0usize).wrapping_sub(size) < self.length {
+            let mut new_size = 2 * self.vector.size;
+            if (!0usize).wrapping_sub(size) < self.vector.length as usize{
                 return lual_error(self.interpreter, b"buffer too large\0".as_ptr()) as usize;
             }
-            new_size = new_size.max(self.length + size);
-            return new_size;
+            new_size = new_size.max(self.vector.length + size as i32);
+            return new_size as usize;
         }
     }
     pub unsafe fn prepare_with_size_and_index(&mut self, size: usize, boxidx: i32) -> *mut i8 {
         unsafe {
-            if self.size - self.length >= size {
-                return self.pointer.offset(self.length as isize);
+            if self.vector.size - self.vector.length >= size as i32 {
+                return self.vector.pointer.offset(self.vector.length as isize);
             } else {
                 let interpreter: *mut Interpreter = self.interpreter;
                 let new_pointer: *mut i8;
                 let new_size = self.new_with_size(size);
-                if self.pointer != (self.initial_data).as_mut_ptr() {
+                if self.vector.pointer != (self.initial_data).as_mut_ptr() {
                     new_pointer = UserBox::resize_userbox(interpreter, boxidx, new_size) as *mut i8;
                 } else {
                     lua_rotate(interpreter, boxidx, -1);
@@ -68,13 +69,13 @@ impl Buffer {
                     new_pointer = UserBox::resize_userbox(interpreter, boxidx, new_size) as *mut i8;
                     memcpy(
                         new_pointer as *mut libc::c_void,
-                        self.pointer as *const libc::c_void,
-                        self.length.wrapping_mul(::core::mem::size_of::<i8>()) as u64,
+                        self.vector.pointer as *const libc::c_void,
+                        (self.vector.length as usize).wrapping_mul(::core::mem::size_of::<i8>()) as u64,
                     );
                 }
-                self.pointer = new_pointer;
-                self.size = new_size;
-                return new_pointer.offset(self.length as isize);
+                self.vector.pointer = new_pointer;
+                self.vector.size = new_size as i32;
+                return new_pointer.offset(self.vector.length as isize);
             };
         }
     }
@@ -92,7 +93,7 @@ impl Buffer {
                     s as *const libc::c_void,
                     length.wrapping_mul(::core::mem::size_of::<i8>()) as u64,
                 );
-                self.length = self.length.wrapping_add(length as usize);
+                self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
             }
         }
     }
@@ -104,8 +105,8 @@ impl Buffer {
     pub unsafe fn push_result(&mut self) {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
-            lua_pushlstring(interpreter, self.pointer, self.length as u64);
-            if self.pointer != (self.initial_data).as_mut_ptr() {
+            lua_pushlstring(interpreter, self.vector.pointer, self.vector.length as u64);
+            if self.vector.pointer != (self.initial_data).as_mut_ptr() {
                 lua_closeslot(interpreter, -2);
             }
             lua_rotate(interpreter, -2, -1);
@@ -123,18 +124,18 @@ impl Buffer {
                 s as *const libc::c_void,
                 length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
             );
-            self.length = self.length.wrapping_add(length as usize);
+            self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
             lua_settop(interpreter, -1 - 1);
         }
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             self.interpreter = interpreter;
-            self.pointer = self.initial_data.as_mut_ptr();
-            self.length = 0;
-            self.size = 16usize
+            self.vector.pointer = self.initial_data.as_mut_ptr();
+            self.vector.length = 0;
+            self.vector.size = 16usize
                 .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
-                .wrapping_mul(::core::mem::size_of::<f64>());
+                .wrapping_mul(::core::mem::size_of::<f64>()) as i32;
             lua_pushlightuserdata(interpreter, self as *mut Buffer as *mut libc::c_void);
         }
     }

@@ -87,17 +87,17 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
             (*ar).what = b"C\0" as *const u8 as *const i8;
         } else {
             let p: *const Prototype = (*cl).payload.l_prototype;
-            if !((*p).source).is_null() {
-                (*ar).source = (*(*p).source).get_contents_mut();
-                (*ar).source_length = (*(*p).source).get_length();
+            if !((*p).prototype_source).is_null() {
+                (*ar).source = (*(*p).prototype_source).get_contents_mut();
+                (*ar).source_length = (*(*p).prototype_source).get_length();
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;
                 (*ar).source_length = (::core::mem::size_of::<[i8; 3]>() as u64)
                     .wrapping_div(::core::mem::size_of::<i8>() as u64)
                     .wrapping_sub(1 as u64);
             }
-            (*ar).line_defined = (*p).line_defined;
-            (*ar).last_line_defined = (*p).last_line_defined;
+            (*ar).line_defined = (*p).prototype_line_defined;
+            (*ar).last_line_defined = (*p).prototype_last_line_defined;
             (*ar).what = if (*ar).line_defined == 0 {
                 b"main\0" as *const u8 as *const i8
             } else {

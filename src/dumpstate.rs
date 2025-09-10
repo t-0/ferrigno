@@ -2,10 +2,8 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::tstring::*;
 use crate::prototype::*;
-use crate::tag::*;
-use crate::tvalue::*;
 #[repr(C)]
-struct DumpState {
+pub struct DumpState {
     pub interpreter: *mut Interpreter,
     pub write_function: WriteFunction,
     pub pointer: *mut libc::c_void,
@@ -13,7 +11,7 @@ struct DumpState {
     pub status: i32,
 }
 impl DumpState {
-    fn new(
+    pub fn new(
         interpreter: *mut Interpreter,
         write_function: WriteFunction,
         pointer: *mut libc::c_void,
@@ -27,7 +25,7 @@ impl DumpState {
             status: 0,
         };
     }
-    unsafe extern "C" fn dump_block(& mut self, pointer: *const libc::c_void, size: usize) {
+    pub unsafe extern "C" fn dump_block(& mut self, pointer: *const libc::c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
                 self.status =
@@ -41,7 +39,7 @@ impl DumpState {
             }
         }
     }
-    unsafe extern "C" fn dump_byte(& mut self, integer: u8) {
+    pub unsafe extern "C" fn dump_byte(& mut self, integer: u8) {
         unsafe {
             let mut x: u8 = integer;
             self.dump_block(
@@ -50,7 +48,7 @@ impl DumpState {
             );
         }
     }
-    unsafe extern "C" fn dump_size(& mut self, mut integer: u64) {
+    pub unsafe extern "C" fn dump_size(& mut self, mut integer: u64) {
         unsafe {
             let mut buffer: [u8; 10] = [0; 10];
             let mut n: usize = 0;
@@ -91,12 +89,12 @@ impl DumpState {
             );
         }
     }
-    unsafe extern "C" fn dump_int(& mut self, integer: i32) {
+    pub unsafe extern "C" fn dump_int(& mut self, integer: i32) {
         unsafe {
             self.dump_size(integer as u64);
         }
     }
-    unsafe extern "C" fn dump_number(& mut self, mut number: f64) {
+    pub unsafe extern "C" fn dump_number(& mut self, mut number: f64) {
         unsafe {
             self.dump_block(
                 &mut number as *mut f64 as *const libc::c_void,
@@ -104,7 +102,7 @@ impl DumpState {
             );
         }
     }
-    unsafe extern "C" fn dump_integer(& mut self, mut integer: i64) {
+    pub unsafe extern "C" fn dump_integer(& mut self, mut integer: i64) {
         unsafe {
             self.dump_block(
                 &mut integer as *mut i64 as *const libc::c_void,
@@ -112,7 +110,7 @@ impl DumpState {
             );
         }
     }
-    unsafe extern "C" fn dump_string(& mut self, tstring: *const TString) {
+    pub unsafe extern "C" fn dump_string(& mut self, tstring: *const TString) {
         unsafe {
             if tstring.is_null() {
                 self.dump_size(0);
@@ -127,142 +125,7 @@ impl DumpState {
             };
         }
     }
-    unsafe extern "C" fn dump_code(& mut self, prototype: *const Prototype) {
-        unsafe {
-            self.dump_int((*prototype).size_code);
-            self.dump_block(
-                (*prototype).code as *const libc::c_void,
-                ((*prototype).size_code as usize).wrapping_mul(::core::mem::size_of::<u32>()),
-            );
-        }
-    }
-    unsafe extern "C" fn dump_constants(& mut self, prototype: *const Prototype) {
-        unsafe {
-            let n: i32 = (*prototype).size_k;
-            self.dump_int(n);
-            for i in 0..n {
-                let tvalue: *const TValue = &mut *((*prototype).k).offset(i as isize) as *mut TValue;
-                let tag = (*tvalue).get_tag_variant();
-                self.dump_byte(tag);
-                match tag {
-                    TAG_VARIANT_NUMERIC_NUMBER => {
-                        self.dump_number((*tvalue).value.number);
-                    }
-                    TAG_VARIANT_NUMERIC_INTEGER => {
-                        self.dump_integer((*tvalue).value.integer);
-                    }
-                    TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                        self.dump_string(&mut (*((*tvalue).value.object as *mut TString)));
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
-    unsafe extern "C" fn dump_prototypes(& mut self, prototype: *const Prototype) {
-        unsafe {
-            let n: i32 = (*prototype).size_p;
-            self.dump_int(n);
-            for i in 0..n {
-                self.dump_function(*((*prototype).p).offset(i as isize), (*prototype).source);
-            }
-        }
-    }
-    unsafe extern "C" fn dump_upvalues(& mut self, prototype: *const Prototype) {
-        unsafe {
-            let n: i32 = (*prototype).size_upvalues;
-            self.dump_int(n);
-            for i in 0..n {
-                self.dump_byte(
-                    if (*((*prototype).upvalues).offset(i as isize)).is_in_stack {
-                        1
-                    } else {
-                        0
-                    },
-                );
-                self.dump_byte((*((*prototype).upvalues).offset(i as isize)).index);
-                self.dump_byte((*((*prototype).upvalues).offset(i as isize)).kind);
-            }
-        }
-    }
-    unsafe extern "C" fn dump_debug(& mut self, prototype: *const Prototype) {
-        unsafe {
-            let mut n: usize = if self.is_strip {
-                0
-            } else {
-                (*prototype).size_line_info as usize
-            };
-            self.dump_int(n as i32);
-            self.dump_block(
-                (*prototype).line_info as *const libc::c_void,
-                n.wrapping_mul(::core::mem::size_of::<i8>()),
-            );
-            n = if self.is_strip {
-                0
-            } else {
-                (*prototype).size_absolute_line_info as usize
-            };
-            self.dump_int(n as i32);
-            for i in 0..n {
-                self.dump_int(
-                    (*((*prototype).absolute_line_info).offset(i as isize)).program_counter,
-                );
-                self.dump_int(
-                    (*((*prototype).absolute_line_info).offset(i as isize)).line,
-                );
-            }
-            n = if self.is_strip {
-                0
-            } else {
-                (*prototype).size_local_variables as usize
-            };
-            self.dump_int(n as i32);
-            for i in 0..n {
-                self.dump_string(
-                    (*((*prototype).local_variables).offset(i as isize)).variable_name,
-                );
-                self.dump_int(
-                    (*((*prototype).local_variables).offset(i as isize)).start_program_counter,
-                );
-                self.dump_int(
-                    (*((*prototype).local_variables).offset(i as isize)).end_program_counter,
-                );
-            }
-            n = if self.is_strip {
-                0
-            } else {
-                (*prototype).size_upvalues as usize
-            };
-            self.dump_int(n as i32);
-            for i in 0..n {
-                self.dump_string((*((*prototype).upvalues).offset(i as isize)).name);
-            }
-        }
-    }
-    unsafe extern "C" fn dump_function(
-        & mut self,
-        prototype: *const Prototype,
-        psource: *mut TString,
-    ) {
-        unsafe {
-            if self.is_strip || (*prototype).source == psource {
-                self.dump_string(std::ptr::null());
-            } else {
-                self.dump_string((*prototype).source);
-            }
-            self.dump_int((*prototype).line_defined);
-            self.dump_int((*prototype).last_line_defined);
-            self.dump_byte((*prototype).count_parameters);
-            self.dump_byte(if (*prototype).is_variable_arguments { 1 } else { 0 });
-            self.dump_byte((*prototype).maximum_stack_size);
-            self.dump_code(prototype);
-            self.dump_constants(prototype);
-            self.dump_upvalues(prototype);
-            self.dump_prototypes(prototype);
-            self.dump_debug(prototype);
-        }
-    }
-    unsafe extern "C" fn dump_header(& mut self) {
+    pub unsafe extern "C" fn dump_header(& mut self) {
         unsafe {
             self.dump_block(
                 b"\x1BLua\0" as *const u8 as *const i8 as *const libc::c_void,
@@ -294,8 +157,8 @@ pub unsafe extern "C" fn save_prototype(
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();
-        dump_state.dump_byte((*prototype).size_upvalues as u8);
-        dump_state.dump_function(prototype, std::ptr::null_mut());
+        dump_state.dump_byte((*prototype).prototype_upvalues.size as u8);
+        (*prototype).dump_function(&mut dump_state, std::ptr::null_mut());
         return dump_state.status;
     }
 }

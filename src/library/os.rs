@@ -284,12 +284,12 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
             b.initialize(interpreter);
             while s < se {
                 if *s as i32 != CHARACTER_PERCENT as i32 {
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh157 = s;
                     s = s.offset(1);
-                    let fresh158 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh158 as isize) = *fresh157;
+                    let fresh158 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
                     let reslen: u64;
                     let buffer: *mut i8 = b.prepare_with_size(250);
@@ -301,7 +301,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
                         cc.as_mut_ptr().offset(1 as isize),
                     );
                     reslen = strftime(buffer, 250 as u64, cc.as_mut_ptr(), stm);
-                    b.length = b.length.wrapping_add(reslen as usize);
+                    b.vector.length = (b.vector.length as usize).wrapping_add(reslen as usize) as i32;
                 }
             }
             b.push_result();

@@ -57,7 +57,7 @@ pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
         return ((*call_info).u.l.saved_program_counter).offset_from(
             (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                 .payload.l_prototype)
-                .code,
+                .prototype_code.pointer,
         ) as i32
             - 1;
     }
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn findvararg(
     unsafe {
         if (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
             .payload.l_prototype)
-            .is_variable_arguments
+            .prototype_is_variable_arguments
         {
             let nextra: i32 = (*call_info).u.l.count_extra_arguments;
             if n >= -nextra {

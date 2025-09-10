@@ -1,5 +1,6 @@
 use crate::callinfo::*;
 use crate::functions::*;
+use crate::vectort::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::debuginfo::*;
@@ -33,7 +34,6 @@ use crate::new::*;
 use crate::f2i::*;
 use crate::labeldescription::*;
 use crate::registeredfunction::*;
-use crate::labellist::*;
 use crate::stackvalue::*;
 use crate::variabledescription::*;
 use crate::stkidrel::*;
@@ -688,7 +688,7 @@ pub unsafe extern "C" fn luad_hookcall(interpreter: *mut Interpreter, call_info:
             (*call_info).u.l.saved_program_counter =
                 ((*call_info).u.l.saved_program_counter).offset(1);
             (*call_info).u.l.saved_program_counter;
-            luad_hook(interpreter, event, -1, 1, (*p).count_parameters as i32);
+            luad_hook(interpreter, event, -1, 1, (*p).prototype_count_parameters as i32);
             (*call_info).u.l.saved_program_counter =
                 ((*call_info).u.l.saved_program_counter).offset(-1);
             (*call_info).u.l.saved_program_counter;
@@ -703,9 +703,9 @@ pub unsafe extern "C" fn rethook(interpreter: *mut Interpreter, mut call_info: *
             if (*call_info).call_status as i32 & 1 << 1 == 0 {
                 let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object
                     as *mut Closure)).payload.l_prototype;
-                if (*p).is_variable_arguments {
+                if (*p).prototype_is_variable_arguments {
                     delta =
-                        (*call_info).u.l.count_extra_arguments + (*p).count_parameters as i32 + 1;
+                        (*call_info).u.l.count_extra_arguments + (*p).prototype_count_parameters as i32 + 1;
                 }
             }
             (*call_info).function.stkidrel_pointer = ((*call_info).function.stkidrel_pointer).offset(delta as isize);
@@ -718,7 +718,7 @@ pub unsafe extern "C" fn rethook(interpreter: *mut Interpreter, mut call_info: *
             (*interpreter).old_program_counter = ((*call_info).u.l.saved_program_counter).offset_from(
                 (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
-                    .code,
+                    .prototype_code.pointer,
             ) as i32
                 - 1;
         }
@@ -909,8 +909,8 @@ pub unsafe extern "C" fn luad_pretailcall(
                 TAG_VARIANT_CLOSURE_L => {
                     let p: *mut Prototype =
                         (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
-                    let fsize: i32 = (*p).maximum_stack_size as i32;
-                    let nfixparams: i32 = (*p).count_parameters as i32;
+                    let fsize: i32 = (*p).prototype_maximum_stack_size as i32;
+                    let nfixparams: i32 = (*p).prototype_count_parameters as i32;
                     if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64
                         <= (fsize - delta) as i64) as i32
                         != 0) as i64
@@ -939,7 +939,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                         narg1 += 1;
                     }
                     (*call_info).top.stkidrel_pointer = function.offset(1 as isize).offset(fsize as isize);
-                    (*call_info).u.l.saved_program_counter = (*p).code;
+                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.pointer;
                     (*call_info).call_status = ((*call_info).call_status as i32 | 1 << 5) as u16;
                     (*interpreter).top.stkidrel_pointer = function.offset(narg1 as isize);
                     return -1;
@@ -978,8 +978,8 @@ pub unsafe extern "C" fn luad_precall(
                     let p: *mut Prototype =
                         (*((*function).tvalue.value.object as *mut Closure)).payload.l_prototype;
                     let mut narg: i32 = ((*interpreter).top.stkidrel_pointer).offset_from(function) as i32 - 1;
-                    let nfixparams: i32 = (*p).count_parameters as i32;
-                    let fsize: i32 = (*p).maximum_stack_size as i32;
+                    let nfixparams: i32 = (*p).prototype_count_parameters as i32;
+                    let fsize: i32 = (*p).prototype_maximum_stack_size as i32;
                     if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= fsize as i64)
                         as i32
                         != 0) as i64
@@ -1001,7 +1001,7 @@ pub unsafe extern "C" fn luad_precall(
                         function.offset(1 as isize).offset(fsize as isize),
                     );
                     (*interpreter).call_info = call_info;
-                    (*call_info).u.l.saved_program_counter = (*p).code;
+                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.pointer;
                     while narg < nfixparams {
                         let fresh1 = (*interpreter).top.stkidrel_pointer;
                         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1392,12 +1392,12 @@ pub unsafe extern "C" fn luad_protectedparser(
                     length: 0,
                     size: 0,
                 },
-                gt: LabelList {
+                gt: VectorT::<LabelDescription> {
                     pointer: std::ptr::null_mut(),
                     length: 0,
                     size: 0,
                 },
-                label: LabelList {
+                label: VectorT::<LabelDescription> {
                     pointer: std::ptr::null_mut(),
                     length: 0,
                     size: 0,
@@ -1417,8 +1417,8 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.dynamic_data.gt.size = 0;
         p.dynamic_data.label.pointer = std::ptr::null_mut();
         p.dynamic_data.label.size = 0;
-        p.buffer.pointer = std::ptr::null_mut();
-        p.buffer.size = 0;
+        p.buffer.vector.pointer = std::ptr::null_mut();
+        p.buffer.vector.size = 0;
         let status = luad_pcall(
             interpreter,
             Some(f_parser as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
@@ -1426,13 +1426,13 @@ pub unsafe extern "C" fn luad_protectedparser(
             ((*interpreter).top.stkidrel_pointer as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
             (*interpreter).error_function,
         );
-        p.buffer.pointer = luam_saferealloc_(
+        p.buffer.vector.pointer = luam_saferealloc_(
             interpreter,
-            p.buffer.pointer as *mut libc::c_void,
-            p.buffer.size.wrapping_mul(::core::mem::size_of::<i8>()),
+            p.buffer.vector.pointer as *mut libc::c_void,
+            (p.buffer.vector.size as usize).wrapping_mul(::core::mem::size_of::<i8>()),
             0,
         ) as *mut i8;
-        p.buffer.size = 0;
+        p.buffer.vector.size = 0;
         (*interpreter).free_memory(
             p.dynamic_data.active_variable.pointer as *mut libc::c_void,
             (p.dynamic_data.active_variable.size as u64)
@@ -2757,7 +2757,7 @@ pub unsafe extern "C" fn getupvalref(
         if !pf.is_null() {
             *pf = closure;
         }
-        if 1 <= n && n <= (*(*closure).payload.l_prototype).size_upvalues {
+        if 1 <= n && n <= (*(*closure).payload.l_prototype).prototype_upvalues.size {
             return &mut *((*closure).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
                 as *mut *mut UpValue;
         } else {
@@ -3380,7 +3380,7 @@ pub unsafe extern "C" fn luag_runerror(interpreter: *mut Interpreter, fmt: *cons
                 message,
                 (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
                     .payload.l_prototype)
-                    .source,
+                    .prototype_source,
                 getcurrentline(call_info),
             );
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(2 as isize))).tvalue;
@@ -3397,8 +3397,8 @@ pub unsafe extern "C" fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
         let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
             .payload.l_prototype;
         ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
-        if (*call_info).u.l.saved_program_counter == (*p).code as *const u32 {
-            if (*p).is_variable_arguments {
+        if (*call_info).u.l.saved_program_counter == (*p).prototype_code.pointer as *const u32 {
+            if (*p).prototype_is_variable_arguments {
                 return 0;
             } else if (*call_info).call_status as i32 & 1 << 6 == 0 {
                 luad_hookcall(interpreter, call_info);
@@ -3447,12 +3447,12 @@ pub unsafe extern "C" fn luag_traceexec(interpreter: *mut Interpreter, mut progr
             luad_hook(interpreter, 3, -1, 0, 0);
         }
         if mask as i32 & 1 << 2 != 0 {
-            let old_program_counter: i32 = if (*interpreter).old_program_counter < (*p).size_code {
+            let old_program_counter: i32 = if (*interpreter).old_program_counter < (*p).prototype_code.size {
                 (*interpreter).old_program_counter
             } else {
                 0
             };
-            let npci: i32 = program_counter.offset_from((*p).code) as i32 - 1;
+            let npci: i32 = program_counter.offset_from((*p).prototype_code.pointer) as i32 - 1;
             if npci <= old_program_counter || changedline(p, old_program_counter, npci) != 0 {
                 let newline: i32 = luag_getfuncline(p, npci);
                 luad_hook(interpreter, 2, newline, 0, 0);
@@ -3506,21 +3506,6 @@ pub unsafe extern "C" fn luam_growaux_(
             (size as usize).wrapping_mul(element_size),
         );
         *total_size = size;
-        return new_block;
-    }
-}
-pub unsafe extern "C" fn luam_shrinkvector_(
-    interpreter: *mut Interpreter,
-    block: *mut libc::c_void,
-    size: *mut i32,
-    count_elements: usize,
-    element_size: usize,
-) -> *mut libc::c_void {
-    unsafe {
-        let old_size = *size as usize * element_size;
-        let new_size = count_elements * element_size;
-        let new_block: *mut libc::c_void = luam_saferealloc_(interpreter, block, old_size, new_size);
-        *size = count_elements as i32;
         return new_block;
     }
 }
@@ -4164,11 +4149,11 @@ pub unsafe extern "C" fn luat_adjustvarargs(
         let nextra: i32 = actual - nfixparams;
         (*call_info).u.l.count_extra_arguments = nextra;
         if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64
-            <= ((*p).maximum_stack_size as i32 + 1) as i64) as i32
+            <= ((*p).prototype_maximum_stack_size as i32 + 1) as i64) as i32
             != 0) as i64
             != 0
         {
-            luad_growstack(interpreter, (*p).maximum_stack_size as i32 + 1, true);
+            luad_growstack(interpreter, (*p).prototype_maximum_stack_size as i32 + 1, true);
         }
         let fresh12 = (*interpreter).top.stkidrel_pointer;
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -5040,14 +5025,14 @@ pub unsafe extern "C" fn luay_parser(
             );
         } else {
         };
-        (*funcstate.prototype).source = luas_new(interpreter, name);
+        (*funcstate.prototype).prototype_source = luas_new(interpreter, name);
         if (*funcstate.prototype).get_marked() & 1 << 5 != 0
-            && (*(*funcstate.prototype).source).get_marked() & (1 << 3 | 1 << 4) != 0
+            && (*(*funcstate.prototype).prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
                 interpreter,
                 &mut (*(funcstate.prototype as *mut Object)),
-                &mut (*((*funcstate.prototype).source as *mut Object)),
+                &mut (*((*funcstate.prototype).prototype_source as *mut Object)),
             );
         } else {
         };
@@ -5056,7 +5041,7 @@ pub unsafe extern "C" fn luay_parser(
         (*dynamic_data).label.length = 0;
         (*dynamic_data).gt.length = (*dynamic_data).label.length;
         (*dynamic_data).active_variable.length = (*dynamic_data).gt.length;
-        luax_setinput(interpreter, &mut lexstate, zio, (*funcstate.prototype).source, firstchar);
+        luax_setinput(interpreter, &mut lexstate, zio, (*funcstate.prototype).prototype_source, firstchar);
         mainfunc(&mut lexstate, &mut funcstate);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         return cl;
@@ -5090,8 +5075,8 @@ pub unsafe extern "C" fn pushclosure(
     ra: StackValuePointer,
 ) {
     unsafe {
-        let nup: i32 = (*p).size_upvalues;
-        let uv: *mut UpValueDescription = (*p).upvalues;
+        let nup: i32 = (*p).prototype_upvalues.size;
+        let uv: *mut UpValueDescription = (*p).prototype_upvalues.pointer;
         let ncl: *mut Closure = luaf_newlclosure(interpreter, nup);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra).tvalue;
@@ -5207,7 +5192,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
             trap = (*interpreter).hook_mask;
             '_returning: loop {
                 cl = &mut (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure));
-                k = (*(*cl).payload.l_prototype).k;
+                k = (*(*cl).payload.l_prototype).prototype_constants.pointer;
                 program_counter = (*call_info).u.l.saved_program_counter;
                 if (trap != 0) as i64 != 0 {
                     trap = luag_tracecall(interpreter);
@@ -7745,7 +7730,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                         79 => {
                             let ra_77: StackValuePointer =
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let p: *mut Prototype = *((*(*cl).payload.l_prototype).p).offset(
+                            let p: *mut Prototype = *((*(*cl).payload.l_prototype).prototype_prototypes.pointer).offset(
                                 (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize,
                             );
                             (*call_info).u.l.saved_program_counter = program_counter;
@@ -7993,10 +7978,10 @@ pub unsafe extern "C" fn lual_traceback(
         b.initialize(interpreter);
         if !message.is_null() {
             b.add_string(message);
-            (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh145 = b.length;
-            b.length = (b.length).wrapping_add(1);
-            *(b.pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
+            (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh145 = b.vector.length;
+            b.vector.length = (b.vector.length).wrapping_add(1);
+            *(b.vector.pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
         }
         b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
         loop {

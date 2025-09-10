@@ -578,12 +578,12 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
                 if !(src < match_state.src_end) {
                     break;
                 }
-                (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh165 = src;
                 src = src.offset(1);
-                let fresh166 = b.length;
-                b.length = (b.length).wrapping_add(1);
-                *(b.pointer).offset(fresh166 as isize) = *fresh165;
+                let fresh166 = b.vector.length;
+                b.vector.length = (b.vector.length).wrapping_add(1);
+                *(b.vector.pointer).offset(fresh166 as isize) = *fresh165;
             }
             if anchor != 0 {
                 break;
@@ -601,10 +601,10 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: u64) {
     unsafe {
-        ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh167 = (*b).length;
-        (*b).length = ((*b).length).wrapping_add(1);
-        *((*b).pointer).offset(fresh167 as isize) = '"' as i8;
+        ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh167 = (*b).vector.length;
+        (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+        *((*b).vector.pointer).offset(fresh167 as isize) = '"' as i8;
         loop {
             let fresh168 = length;
             length = length.wrapping_sub(1);
@@ -615,14 +615,14 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                 || *s as i32 == CHARACTER_BACKSLASH as i32
                 || *s as i32 == CHARACTER_LF as i32
             {
-                ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh169 = (*b).length;
-                (*b).length = ((*b).length).wrapping_add(1);
-                *((*b).pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
-                ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh170 = (*b).length;
-                (*b).length = ((*b).length).wrapping_add(1);
-                *((*b).pointer).offset(fresh170 as isize) = *s;
+                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh169 = (*b).vector.length;
+                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+                *((*b).vector.pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
+                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh170 = (*b).vector.length;
+                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+                *((*b).vector.pointer).offset(fresh170 as isize) = *s;
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0
             {
                 let mut buffer: [i8; 10] = [0; 10];
@@ -646,17 +646,17 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
-                ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh171 = (*b).length;
-                (*b).length = ((*b).length).wrapping_add(1);
-                *((*b).pointer).offset(fresh171 as isize) = *s;
+                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh171 = (*b).vector.length;
+                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+                *((*b).vector.pointer).offset(fresh171 as isize) = *s;
             }
             s = s.offset(1);
         }
-        ((*b).length < (*b).size || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh172 = (*b).length;
-        (*b).length = ((*b).length).wrapping_add(1);
-        *((*b).pointer).offset(fresh172 as isize) = '"' as i8;
+        ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh172 = (*b).vector.length;
+        (*b).vector.length = ((*b).vector.length).wrapping_add(1);
+        *((*b).vector.pointer).offset(fresh172 as isize) = '"' as i8;
     }
 }
 pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) -> i32 {
@@ -715,7 +715,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                         lua_tonumberx(interpreter, arg, std::ptr::null_mut()),
                     );
                 }
-                (*b).length = (*b).length.wrapping_add(nb as usize);
+                (*b).vector.length = ((*b).vector.length as usize).wrapping_add(nb as usize) as i32;
             }
             Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(interpreter, arg, std::ptr::null_mut());
@@ -813,21 +813,21 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
             if *strfrmt as i32 != CHARACTER_PERCENT as i32 {
-                (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
-                let fresh175 = b.length;
-                b.length = (b.length).wrapping_add(1);
-                *(b.pointer).offset(fresh175 as isize) = *fresh174;
+                let fresh175 = b.vector.length;
+                b.vector.length = (b.vector.length).wrapping_add(1);
+                *(b.vector.pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
                 if *strfrmt as i32 == CHARACTER_PERCENT as i32 {
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
-                    let fresh177 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh177 as isize) = *fresh176;
+                    let fresh177 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh177 as isize) = *fresh176;
                 } else {
                     let mut form: [i8; 32] = [0; 32];
                     let mut maxitem: i32 = 120 as i32;
@@ -979,7 +979,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         }
                         _ => {}
                     }
-                    b.length = b.length.wrapping_add(nb as usize);
+                    b.vector.length = (b.vector.length as usize).wrapping_add(nb as usize) as i32;
                 }
             }
         }
@@ -1207,7 +1207,7 @@ pub unsafe extern "C" fn packint(
                     ((1 << 8) - 1) as i8;
             }
         }
-        (*b).length = (*b).length.wrapping_add(size as usize);
+        (*b).vector.length = ((*b).vector.length as usize).wrapping_add(size as usize) as i32;
     }
 }
 pub unsafe extern "C" fn copywithendian(
@@ -1265,10 +1265,10 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 if !(fresh184 > 0) {
                     break;
                 }
-                (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                let fresh185 = b.length;
-                b.length = (b.length).wrapping_add(1);
-                *(b.pointer).offset(fresh185 as isize) = 0 as i8;
+                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                let fresh185 = b.vector.length;
+                b.vector.length = (b.vector.length).wrapping_add(1);
+                *(b.vector.pointer).offset(fresh185 as isize) = 0 as i8;
             }
             arg += 1;
             let current_block_33: u64;
@@ -1310,7 +1310,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         ::core::mem::size_of::<libc::c_float>() as i32,
                         h.is_little_endian,
                     );
-                    b.length = b.length.wrapping_add(size as usize);
+                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 3 => {
@@ -1322,7 +1322,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         ::core::mem::size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.length = b.length.wrapping_add(size as usize);
+                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 4 => {
@@ -1334,7 +1334,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         ::core::mem::size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.length = b.length.wrapping_add(size as usize);
+                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 5 => {
@@ -1353,10 +1353,10 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         if !(fresh186 < size as u64) {
                             break;
                         }
-                        (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                        let fresh187 = b.length;
-                        b.length = (b.length).wrapping_add(1);
-                        *(b.pointer).offset(fresh187 as isize) = 0 as i8;
+                        (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                        let fresh187 = b.vector.length;
+                        b.vector.length = (b.vector.length).wrapping_add(1);
+                        *(b.vector.pointer).offset(fresh187 as isize) = 0 as i8;
                     }
                     current_block_33 = 3222590281903869779;
                 }
@@ -1387,19 +1387,19 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                             b"string contains zeros\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     b.add_string_with_length(s_1, length as usize);
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh188 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh188 as isize) = Character::Null as i8;
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh188 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh188 as isize) = Character::Null as i8;
                     totalsize =
                         (totalsize as u64).wrapping_add(length.wrapping_add(1 as u64)) as u64;
                     current_block_33 = 3222590281903869779;
                 }
                 8 => {
-                    (b.length < b.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh189 = b.length;
-                    b.length = (b.length).wrapping_add(1);
-                    *(b.pointer).offset(fresh189 as isize) = 0 as i8;
+                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh189 = b.vector.length;
+                    b.vector.length = (b.vector.length).wrapping_add(1);
+                    *(b.vector.pointer).offset(fresh189 as isize) = 0 as i8;
                     current_block_33 = 7383952003695197780;
                 }
                 9 | 10 => {
