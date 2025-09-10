@@ -1343,7 +1343,7 @@ pub unsafe extern "C" fn breakstat(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *mut TString) {
     unsafe {
         let lb: *mut LabelDescription = findlabel(lexical_state, name);
-        if lb != std::ptr::null_mut() {
+        if !lb.is_null() {
             let mut message: *const i8 =
                 b"label '%s' already defined on line %d\0" as *const u8 as *const i8;
             message = luao_pushfstring(
@@ -1731,7 +1731,7 @@ pub unsafe extern "C" fn funcname(
     v: *mut ExpressionDescription,
 ) -> bool {
     unsafe {
-        let mut is_method: bool = false;
+        let mut is_method= false;
         singlevar(lexical_state, v);
         while (*lexical_state).token.token == CHARACTER_PERIOD as i32 {
             fieldsel(lexical_state, v);

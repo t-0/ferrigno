@@ -1757,7 +1757,7 @@ pub unsafe extern "C" fn codeorder(
         let r1: i32;
         let r2: i32;
         let mut im: i32 = 0;
-        let mut is_float: bool = false;
+        let mut is_float= false;
         let op: u32;
         if is_sc_number(e2, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(function_state, e1);
@@ -1787,7 +1787,7 @@ pub unsafe extern "C" fn codeeq(
         let r1: i32;
         let r2: i32;
         let mut im: i32 = 0;
-        let mut is_float: bool = false;
+        let mut is_float= false;
         let op: u32;
         if (*e1).expression_kind as u32 != ExpressionKind::VNONRELOC as u32 {
             swapexps(e1, e2);
@@ -1895,7 +1895,7 @@ pub unsafe extern "C" fn luak_infix(
             }
             OP_GETFIELD | OP_SETTABUP | OP_SETI | OP_SETFIELD => {
                 let mut dummy: i32 = 0;
-                let mut dummy2: bool = false;
+                let mut dummy2= false;
                 if is_sc_number(v, &mut dummy, &mut dummy2) == 0 {
                     luak_exp2anyreg(function_state, v);
                 }

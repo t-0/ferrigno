@@ -145,7 +145,7 @@ unsafe extern "C" fn math_atan(interpreter: *mut Interpreter) -> i32 {
 }
 unsafe extern "C" fn math_toint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut is_number: bool = false;
+        let mut is_number= false;
         let n: i64 = lua_tointegerx(interpreter, 1, &mut is_number);
         if is_number {
             (*interpreter).push_integer(n);

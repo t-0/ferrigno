@@ -22,8 +22,8 @@ pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bo
                 number += 1.0;
             }
         }
-        return number >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64
-            && number < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64)
+        return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64
+            && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64)
             && {
                 *p = number as i64;
                 true

@@ -146,7 +146,7 @@ pub unsafe extern "C" fn getboolfield(interpreter: *mut Interpreter, key: *const
 }
 pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, delta: i32) -> i32 {
     unsafe {
-        let mut is_number: bool = false;
+        let mut is_number= false;
         let t = lua_getfield(interpreter, -1, key);
         let mut res: i64 = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {

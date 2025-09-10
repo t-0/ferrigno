@@ -40,7 +40,7 @@ pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: us
             old_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
             new_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
         ) as *mut *mut TString;
-        if newvect == std::ptr::null_mut() {
+        if newvect.is_null() {
             if new_size < old_size {
                 tablerehash((*tb).hash, new_size, old_size);
             }

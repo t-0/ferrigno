@@ -8885,8 +8885,9 @@ pub unsafe extern "C" fn lual_checkudata(
 ) -> *mut libc::c_void {
     unsafe {
         let p: *mut libc::c_void = lual_testudata(interpreter, arbitrary_data, tname);
-        (((p != std::ptr::null_mut()) as i32 != 0) as i64 != 0
-            || lual_typeerror(interpreter, arbitrary_data, tname) != 0) as i32;
+        if p.is_null() {
+            lual_typeerror(interpreter, arbitrary_data, tname);
+        }
         return p;
     }
 }
@@ -8928,10 +8929,10 @@ pub unsafe extern "C" fn lual_checkstack(
 ) {
     unsafe {
         if lua_checkstack(interpreter, space) == 0 {
-            if !message.is_null() {
-                lual_error(interpreter, b"stack overflow (%s)\0".as_ptr(), message);
-            } else {
+            if message.is_null() {
                 lual_error(interpreter, b"stack overflow\0".as_ptr());
+            } else {
+                lual_error(interpreter, b"stack overflow (%s)\0".as_ptr(), message);
             }
         }
     }
@@ -8989,7 +8990,7 @@ pub unsafe extern "C" fn lual_optlstring(
 }
 pub unsafe extern "C" fn lual_checknumber(interpreter: *mut Interpreter, arg: i32) -> f64 {
     unsafe {
-        let mut is_number: bool = false;
+        let mut is_number= false;
         let d: f64 = lua_tonumberx(interpreter, arg, &mut is_number);
         if !is_number {
             tag_error2(interpreter, arg, Some(TagType::Numeric));
@@ -9020,7 +9021,7 @@ pub unsafe extern "C" fn interror(interpreter: *mut Interpreter, arg: i32) {
 }
 pub unsafe extern "C" fn lual_checkinteger(interpreter: *mut Interpreter, arg: i32) -> i64 {
     unsafe {
-        let mut is_number: bool = false;
+        let mut is_number= false;
         let ret: i64 = lua_tointegerx(interpreter, arg, &mut is_number);
         if !is_number {
             interror(interpreter, arg);
@@ -9283,7 +9284,7 @@ pub unsafe extern "C" fn lual_callmeta(
 pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> i64 {
     unsafe {
         let l: i64;
-        let mut is_number: bool = false;
+        let mut is_number= false;
         lua_len(interpreter, index);
         l = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
@@ -9679,7 +9680,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
             close_state(interpreter);
             interpreter = std::ptr::null_mut();
         }
-        if (interpreter != std::ptr::null_mut()) as i64 != 0 {
+        if !interpreter.is_null() {
             lua_atpanic(
                 interpreter,
                 Some(panic as unsafe extern "C" fn(*mut Interpreter) -> i32),
@@ -10201,34 +10202,34 @@ pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) 
         return 0;
     }
 }
-pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32) -> i32 {
+pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
     unsafe {
         let mut buffer: [i8; 512] = [0; 512];
         let b: *mut i8 = buffer.as_mut_ptr();
         let prmt: *const i8 = get_prompt(interpreter, firstline);
         fputs(prmt, stdout);
         fflush(stdout);
-        let readstatus: i32 =
-            (fgets(b, 512 as i32, stdin) != std::ptr::null_mut() as *mut i8) as i32;
+        let readstatus = !fgets(b, 512 as i32, stdin).is_null();
         lua_settop(interpreter, 0);
-        if readstatus == 0 {
-            return 0;
-        }
-        let mut l: u64 = strlen(b);
-        if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
-            l = l.wrapping_sub(1);
-            *b.offset(l as isize) = Character::Null as i8;
-        }
-        if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
-            lua_pushfstring(
-                interpreter,
-                b"return %s\0" as *const u8 as *const i8,
-                b.offset(1 as isize),
-            );
+        if !readstatus {
+            return false;
         } else {
-            lua_pushlstring(interpreter, b, l);
+            let mut l: u64 = strlen(b);
+            if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
+                l = l.wrapping_sub(1);
+                *b.offset(l as isize) = Character::Null as i8;
+            }
+            if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
+                lua_pushfstring(
+                    interpreter,
+                    b"return %s\0" as *const u8 as *const i8,
+                    b.offset(1 as isize),
+                );
+            } else {
+                lua_pushlstring(interpreter, b, l);
+            }
+            return true;
         }
-        return 1;
     }
 }
 pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
@@ -10264,7 +10265,7 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
                 b"=stdin\0" as *const u8 as *const i8,
                 std::ptr::null(),
             );
-            if incomplete(interpreter, status) == 0 || pushline(interpreter, 0) == 0 {
+            if incomplete(interpreter, status) == 0 || !pushline(interpreter, 0) {
                 return status;
             }
             lua_rotate(interpreter, -2, -1);
@@ -10278,7 +10279,7 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn loadline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_settop(interpreter, 0);
-        if pushline(interpreter, 1) == 0 {
+        if !pushline(interpreter, 1) {
             return -1;
         }
         let mut status: i32 = addreturn(interpreter);
@@ -10414,12 +10415,9 @@ pub unsafe extern "C" fn checkupval(
         lual_checktype(interpreter, argf, TagType::Closure);
         id = lua_upvalueid(interpreter, argf, nup);
         if !pnup.is_null() {
-            (((id != std::ptr::null_mut()) as i32 != 0) as i64 != 0
-                || lual_argerror(
-                    interpreter,
-                    argnup,
-                    b"invalid upvalue index\0" as *const u8 as *const i8,
-                ) != 0) as i32;
+            if id.is_null() {
+                lual_argerror(interpreter, argnup, b"invalid upvalue index\0" as *const u8 as *const i8);
+            }
             *pnup = nup;
         }
         return id;

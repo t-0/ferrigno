@@ -167,8 +167,9 @@ pub unsafe extern "C" fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32
 pub unsafe extern "C" fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, 1);
-        ((co != std::ptr::null_mut()) as i64 != 0
-            || lual_typeerror(interpreter, 1, b"thread\0" as *const u8 as *const i8) != 0) as i32;
+        if co.is_null() {
+            lual_typeerror(interpreter, 1, b"thread\0" as *const u8 as *const i8);
+        }
         return co;
     }
 }

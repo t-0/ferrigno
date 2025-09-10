@@ -23,7 +23,7 @@ pub unsafe extern "C" fn lsys_load(
             path,
             0x2 as i32 | (if seeglb != 0 { 0x100 as i32 } else { 0 }),
         );
-        if lib == std::ptr::null_mut() {
+        if lib.is_null() {
             lua_pushstring(interpreter, dlerror());
         }
         return lib;
