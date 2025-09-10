@@ -26,7 +26,7 @@ unsafe extern "C" fn luab_coresume(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
         let r: i32 = auxresume(interpreter, co, (*interpreter).get_top() - 1);
-        if ((r < 0) as i32 != 0) as i64 != 0 {
+        if r < 0 {
             (*interpreter).push_boolean(false);
             lua_rotate(interpreter, -2, 1);
             return 2;
@@ -176,7 +176,7 @@ pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Inter
     unsafe {
         let status: i32;
         let mut nres: i32 = 0;
-        if ((lua_checkstack(co, narg) == 0) as i32 != 0) as i64 != 0 {
+        if lua_checkstack(co, narg) == 0 {
             lua_pushstring(
                 interpreter,
                 b"too many arguments to resume\0" as *const u8 as *const i8,
@@ -185,8 +185,8 @@ pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Inter
         }
         lua_xmove(interpreter, co, narg);
         status = lua_resume(co, interpreter, narg, &mut nres);
-        if ((status == 0 || status == 1) as i32 != 0) as i64 != 0 {
-            if ((lua_checkstack(interpreter, nres + 1) == 0) as i32 != 0) as i64 != 0 {
+        if status == 0 || status == 1 {
+            if lua_checkstack(interpreter, nres + 1) == 0 {
                 lua_settop(co, -nres - 1);
                 lua_pushstring(
                     interpreter,
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, -(1000000 as i32) - 1000 as i32 - 1);
         let r: i32 = auxresume(interpreter, co, (*interpreter).get_top());
-        if ((r < 0) as i32 != 0) as i64 != 0 {
+        if r < 0 {
             let mut stat: i32 = (*co).get_status();
             if stat != 0 && stat != 1 {
                 stat = lua_closethread(co, interpreter);

@@ -478,8 +478,7 @@ pub unsafe extern "C" fn luav_objlen(interpreter: *mut Interpreter, ra: StackVal
             }
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
-                if ((((*tm).get_tag_type()) == TagType::Nil) as i32 != 0) as i64 != 0
-                {
+                if ((*tm).get_tag_type()) == TagType::Nil {
                     luag_typeerror(interpreter, rb, b"get length of\0" as *const u8 as *const i8);
                 }
             }

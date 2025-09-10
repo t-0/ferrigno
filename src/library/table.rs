@@ -292,7 +292,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if !(sort_comp(interpreter, -1, -2) != 0) {
                     break;
                 }
-                if ((i == up.wrapping_sub(1 as u32)) as i32 != 0) as i64 != 0 {
+                if i == up.wrapping_sub(1) {
                     lual_error(
                         interpreter,
                         b"invalid order function for sorting\0".as_ptr(),
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if !(sort_comp(interpreter, -3, -1) != 0) {
                     break;
                 }
-                if ((j < i) as i32 != 0) as i64 != 0 {
+                if j < i {
                     lual_error(
                         interpreter,
                         b"invalid order function for sorting\0".as_ptr(),

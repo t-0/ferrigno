@@ -420,15 +420,15 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe extern "C" fn lua_getiuservalue(&mut self, index: i32, n: i32) -> i32 {
+    pub unsafe fn lua_getiuservalue(&mut self, index: i32, n: i32) -> Option<TagType> {
         unsafe {
-            let t: i32;
+            let t: Option<TagType>;
             let tvalue: *mut TValue = self.index2value(index);
             if n <= 0 || n > (*((*tvalue).value.object as *mut User)).count_upvalues as i32 {
                 (*self.top.stkidrel_pointer)
                     .tvalue
                     .set_tag_variant(TagVariant::NilNil as u8);
-                t = -1;
+                t = None;
             } else {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
                 let io2: *const TValue = &mut (*((*((*tvalue).value.object as *mut User))
@@ -436,7 +436,7 @@ impl Interpreter {
                     .as_mut_ptr()
                     .offset((n - 1) as isize));
                 (*io1).copy_from(&*io2);
-                t = (*self.top.stkidrel_pointer).tvalue.get_tag_type() as i32;
+                t = Some ((*self.top.stkidrel_pointer).tvalue.get_tag_type());
             }
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             return t;
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn luad_reallocstack(
             ((new_size + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>() as usize),
         ) as *mut StackValue;
         (*(*interpreter).global).gcstopem = oldgcstop as u8;
-        if ((newstack == std::ptr::null_mut() as StackValuePointer) as i32 != 0) as i64 != 0 {
+        if newstack.is_null() {
             (*interpreter).correct_stack();
             if should_raise_error {
                 luad_throw(interpreter, 4);
@@ -908,7 +908,7 @@ pub unsafe extern "C" fn luad_poscall(
 ) {
     unsafe {
         let wanted: i32 = (*call_info).count_results as i32;
-        if (((*interpreter).hook_mask != 0 && !(wanted < -1)) as i32 != 0) as i64 != 0 {
+        if (*interpreter).hook_mask != 0 && (wanted >= -1) {
             rethook(interpreter, call_info, nres);
         }
         moveresults(
@@ -1197,7 +1197,7 @@ pub unsafe extern "C" fn finishpcallk(
 ) -> i32 {
     unsafe {
         let mut status: i32 = (*call_info).call_status as i32 >> 10 as i32 & 7;
-        if ((status == 0) as i32 != 0) as i64 != 0 {
+        if status == 0 {
             status = 1;
         } else {
             let mut function: StackValuePointer = ((*interpreter).stack.stkidrel_pointer as *mut i8)
@@ -1377,7 +1377,7 @@ pub unsafe extern "C" fn lua_resume(
             &mut nargs as *mut i32 as *mut libc::c_void,
         );
         status = precover(interpreter, status);
-        if !((!(status > 1) as i32 != 0) as i64 != 0) {
+        if status >1 {
             (*interpreter).status = status as u8;
             (*interpreter).set_error_object(status, (*interpreter).top.stkidrel_pointer);
             (*(*interpreter).call_info).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
@@ -1401,7 +1401,7 @@ pub unsafe extern "C" fn lua_yieldk(
     unsafe {
         let call_info;
         call_info = (*interpreter).call_info;
-        if (!((*interpreter).count_c_calls & 0xffff0000 as u32 == 0) as i32 != 0) as i64 != 0 {
+        if (*interpreter).count_c_calls & 0xffff0000 as u32 != 0 {
             if interpreter != (*(*interpreter).global).main_state {
                 luag_runerror(
                     interpreter,
@@ -1454,7 +1454,7 @@ pub unsafe extern "C" fn luad_closeprotected(
                 Some(closepaux as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 &mut closep as *mut CloseP as *mut libc::c_void,
             );
-            if ((status == 0) as i32 != 0) as i64 != 0 {
+            if status == 0 {
                 return closep.status;
             } else {
                 (*interpreter).call_info = old_call_info;
@@ -1477,7 +1477,7 @@ pub unsafe extern "C" fn luad_pcall(
         let old_error_function: i64 = (*interpreter).error_function;
         (*interpreter).error_function = ef;
         status = luad_rawrunprotected(interpreter, function, u);
-        if ((status != 0) as i32 != 0) as i64 != 0 {
+        if status != 0 {
             (*interpreter).call_info = old_call_info;
             (*interpreter).allow_hook = old_allowhooks;
             status = luad_closeprotected(interpreter, old_top, status);
@@ -1997,7 +1997,7 @@ pub unsafe extern "C" fn lua_tointegerx(
         let mut res: i64 = 0;
         let o: *const TValue = (*interpreter).index2value(index);
         let is_number_: bool =
-            if (((*o).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER) as i32 != 0) as i64 != 0 {
+            if (*o).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
                 res = (*o).value.integer;
                 true
             } else {
@@ -3945,7 +3945,7 @@ pub unsafe extern "C" fn luam_growaux_(
             return block;
         }
         if size >= limit / 2 {
-            if ((size >= limit) as i32 != 0) as i64 != 0 {
+            if size >= limit {
                 luag_runerror(
                     interpreter,
                     b"too many %s (limit is %d)\0" as *const u8 as *const i8,
@@ -4491,7 +4491,7 @@ pub unsafe extern "C" fn luat_trybintm(
     event: u32,
 ) {
     unsafe {
-        if ((callbintm(interpreter, p1, p2, res, event) == 0) as i32 != 0) as i64 != 0 {
+        if callbintm(interpreter, p1, p2, res, event) == 0 {
             match event as u32 {
                 TM_BAND | TM_BOR | TM_BXOR | TM_SHL | TM_SHR | TM_BNOT => {
                     if (*p1).is_tagtype_numeric() && (*p2).is_tagtype_numeric() {
@@ -4855,7 +4855,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
                 ((*(*interpreter).call_info).call_status as i32 & !(1 << 7)) as u16;
             (*interpreter).allow_hook = oldah;
             (*global).gc_step = oldgcstp as u8;
-            if ((status != 0) as i32 != 0) as i64 != 0 {
+            if status != 0 {
                 luae_warnerror(interpreter, b"__gc\0" as *const u8 as *const i8);
                 (*interpreter).top.stkidrel_pointer =
                     (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -8927,7 +8927,7 @@ pub unsafe extern "C" fn lual_checkstack(
     message: *const i8,
 ) {
     unsafe {
-        if ((lua_checkstack(interpreter, space) == 0) as i32 != 0) as i64 != 0 {
+        if lua_checkstack(interpreter, space) == 0 {
             if !message.is_null() {
                 lual_error(interpreter, b"stack overflow (%s)\0".as_ptr(), message);
             } else {
@@ -8961,7 +8961,7 @@ pub unsafe extern "C" fn lual_checklstring(
 ) -> *const i8 {
     unsafe {
         let s: *const i8 = lua_tolstring(interpreter, arg, length);
-        if (s.is_null() as i32 != 0) as i64 != 0 {
+        if s.is_null() {
             tag_error2(interpreter, arg, Some(TagType::String));
         }
         return s;
@@ -10296,13 +10296,16 @@ pub unsafe extern "C" fn finishpcall(
     extra: i64,
 ) -> i32 {
     unsafe {
-        if ((status != 0 && status != 1) as i32 != 0) as i64 != 0 {
-            (*interpreter).push_boolean(false);
-            lua_pushvalue(interpreter, -2);
-            return 2;
-        } else {
-            return (*interpreter).get_top() - extra as i32;
-        };
+        match status {
+            0 | 1 => {
+                (*interpreter).get_top() - extra as i32
+            },
+            _ => {
+                (*interpreter).push_boolean(false);
+                lua_pushvalue(interpreter, -2);
+                2
+            },
+        }
     }
 }
 pub unsafe extern "C" fn luab_pcall(interpreter: *mut Interpreter) -> i32 {

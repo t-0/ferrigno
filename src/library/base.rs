@@ -295,7 +295,7 @@ pub unsafe extern "C" fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn load_aux(interpreter: *mut Interpreter, status: i32, envidx: i32) -> i32 {
     unsafe {
-        if ((status == 0) as i32 != 0) as i64 != 0 {
+        if status == 0 {
             if envidx != 0 {
                 lua_pushvalue(interpreter, envidx);
                 if (lua_setupvalue(interpreter, -2, 1)).is_null() {
@@ -398,7 +398,7 @@ pub unsafe extern "C" fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(interpreter, 1, std::ptr::null(), std::ptr::null_mut());
         lua_settop(interpreter, 1);
-        if ((lual_loadfilex(interpreter, fname, std::ptr::null()) != 0) as i32 != 0) as i64 != 0 {
+        if lual_loadfilex(interpreter, fname, std::ptr::null()) != 0 {
             return lua_error(interpreter);
         }
         lua_callk(

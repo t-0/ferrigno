@@ -153,7 +153,7 @@ pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
         if posi > pose {
             return 0;
         }
-        if ((pose.wrapping_sub(posi) >= 0x7FFFFFFF as u64) as i32 != 0) as i64 != 0 {
+        if pose.wrapping_sub(posi) >= 0x7FFFFFFF as u64 {
             return lual_error(interpreter, b"string slice too long\0".as_ptr());
         }
         n = pose.wrapping_sub(posi) as i32 + 1;
@@ -1019,7 +1019,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
 pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         let size: i32 = getnum(fmt, df);
-        if ((size > 16 as i32 || size <= 0) as i32 != 0) as i64 != 0 {
+        if size > 16 as i32 || size <= 0 {
             return lual_error(
                 (*h).interpreter,
                 b"integral size (%d) out of limits [1,%d]\0".as_ptr(),
@@ -1106,7 +1106,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
             }
             CHARACTER_LOWER_C => {
                 *size = getnum(fmt, -1);
-                if ((*size == -1) as i32 != 0) as i64 != 0 {
+                if *size == -1 {
                     lual_error(
                         (*h).interpreter,
                         b"missing size for format option CHARACTER_LOWER_C\0".as_ptr(),
@@ -1173,7 +1173,7 @@ pub unsafe extern "C" fn getdetails(
             if align > (*h).maxmimum_alignment {
                 align = (*h).maxmimum_alignment;
             }
-            if ((align & align - 1 != 0) as i32 != 0) as i64 != 0 {
+            if align & align - 1 != 0 {
                 lual_argerror(
                     (*h).interpreter,
                     1,

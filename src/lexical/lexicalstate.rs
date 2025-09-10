@@ -867,7 +867,7 @@ pub unsafe extern "C" fn check_match(
     where_0: i32,
 ) {
     unsafe {
-        if ((testnext(lexical_state, what) == 0) as i32 != 0) as i64 != 0 {
+        if testnext(lexical_state, what) == 0 {
             if where_0 == (*lexical_state).line_number {
                 error_expected(lexical_state, what);
             } else {
@@ -1343,7 +1343,7 @@ pub unsafe extern "C" fn breakstat(lexical_state: *mut LexicalState) {
 pub unsafe extern "C" fn checkrepeated(lexical_state: *mut LexicalState, name: *mut TString) {
     unsafe {
         let lb: *mut LabelDescription = findlabel(lexical_state, name);
-        if ((lb != std::ptr::null_mut() as *mut LabelDescription) as i32 != 0) as i64 != 0 {
+        if lb != std::ptr::null_mut() {
             let mut message: *const i8 =
                 b"label '%s' already defined on line %d\0" as *const u8 as *const i8;
             message = luao_pushfstring(

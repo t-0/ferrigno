@@ -16,7 +16,7 @@ impl UserBox {
         unsafe {
             let user_box: *mut UserBox = lua_touserdata(interpreter, index) as *mut UserBox;
             let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
-            if ((temp.is_null() && new_size > 0) as i32 != 0) as i64 != 0 {
+            if temp.is_null() && new_size > 0 {
                 lua_pushstring(interpreter, b"not enough memory\0" as *const u8 as *const i8);
                 lua_error(interpreter);
             }

@@ -156,7 +156,7 @@ pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8,
                     b"field '%s' is not an integer\0".as_ptr(),
                     key,
                 );
-            } else if ((d < 0) as i32 != 0) as i64 != 0 {
+            } else if d < 0 {
                 return lual_error(
                     interpreter,
                     b"field '%s' missing in date table\0".as_ptr(),
@@ -228,12 +228,13 @@ pub unsafe extern "C" fn checkoption(
 pub unsafe extern "C" fn l_checktime(interpreter: *mut Interpreter, arg: i32) -> i64 {
     unsafe {
         let t: i64 = lual_checkinteger(interpreter, arg);
-        (((t as i64 == t) as i32 != 0) as i64 != 0
-            || lual_argerror(
+        if t as i64 != t {
+            lual_argerror(
                 interpreter,
                 arg,
                 b"time out-of-bounds\0" as *const u8 as *const i8,
-            ) != 0) as i32;
+            );
+        }
         return t as i64;
     }
 }

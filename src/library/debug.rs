@@ -37,7 +37,7 @@ pub unsafe extern "C" fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = lual_optinteger(interpreter, 2, 1) as i32;
         if lua_type(interpreter, 1) != Some(TagType::User) {
             (*interpreter).push_nil();
-        } else if (*interpreter).lua_getiuservalue(1, n) != -1 {
+        } else if (*interpreter).lua_getiuservalue(1, n) != None {
             (*interpreter).push_boolean(true);
             return 2;
         }
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
                 i_ci: std::ptr::null_mut(),
             };
             let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
-            if ((lua_getstack(other_state, level, &mut ar) == 0) as i32 != 0) as i64 != 0 {
+            if lua_getstack(other_state, level, &mut ar) == 0 {
                 return lual_argerror(
                     interpreter,
                     arg + 1,
@@ -277,7 +277,7 @@ pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
         };
         let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
         let nvar: i32 = lual_checkinteger(interpreter, arg + 2) as i32;
-        if ((lua_getstack(other_state, level, &mut ar) == 0) as i32 != 0) as i64 != 0 {
+        if lua_getstack(other_state, level, &mut ar) == 0 {
             return lual_argerror(
                 interpreter,
                 arg + 1,

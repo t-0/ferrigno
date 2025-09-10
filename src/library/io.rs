@@ -56,7 +56,7 @@ pub unsafe extern "C" fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
     unsafe {
         let p: *mut Stream =
             lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
-        if (((*p).close_function).is_none() as i32 != 0) as i64 != 0 {
+        if (*p).close_function.is_none() {
             lual_error(
                 interpreter,
                 b"attempt to use a closed file\0".as_ptr(),
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const 
     unsafe {
         let p: *mut Stream = newfile(interpreter);
         (*p).file = fopen(fname, mode);
-        if (((*p).file == std::ptr::null_mut() as *mut FILE) as i32 != 0) as i64 != 0 {
+        if (*p).file.is_null() {
             lual_error(
                 interpreter,
                 b"cannot open file '%s' (%s)\0".as_ptr(),
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
         let p: *mut Stream;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, findex);
         p = lua_touserdata(interpreter, -1) as *mut Stream;
-        if (((*p).close_function).is_none() as i32 != 0) as i64 != 0 {
+        if (*p).close_function.is_none() {
             lual_error(
                 interpreter,
                 b"default %s file is closed\0".as_ptr(),
@@ -330,7 +330,7 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn nextc(rn: *mut RN) -> i32 {
     unsafe {
-        if (((*rn).n >= 200 as i32) as i32 != 0) as i64 != 0 {
+        if (*rn).n >= 200 {
             (*rn).buffer[0] = Character::Null as i8;
             return 0;
         } else {

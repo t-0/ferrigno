@@ -51,7 +51,7 @@ impl MatchState {
                 lua_settop(interpreter, -1 - 1);
                 (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;
-            } else if ((!lua_isstring(interpreter, -1)) as i32 != 0) as i64 != 0 {
+            } else if !lua_isstring(interpreter, -1) {
                 return lual_error(interpreter,  b"invalid replacement value (a %s)\0".as_ptr(), lua_typename(interpreter, lua_type(interpreter, -1)));
             } else {
                 (*b).add_value();
@@ -94,7 +94,7 @@ impl MatchState {
     ) -> u64 {
         unsafe {
             if i >= self.level as i32 {
-                if ((i != 0) as i32 != 0) as i64 != 0 {
+                if i != 0 {
                     lual_error(
                         self.interpreter,
                         b"invalid capture index %%%d\0".as_ptr(),
@@ -106,7 +106,7 @@ impl MatchState {
             } else {
                 let capl: i64 = self.capture[i as usize].length;
                 *cap = self.capture[i as usize].init;
-                if ((capl == -1 as i64) as i32 != 0) as i64 != 0 {
+                if capl == -1 {
                     lual_error(
                         self.interpreter,
                         b"unfinished capture\0".as_ptr(),
@@ -160,7 +160,7 @@ impl MatchState {
             p = p.offset(1);
             match *fresh160 as i32 {
                 37 => {
-                    if ((p == self.p_end) as i32 != 0) as i64 != 0 {
+                    if p == self.p_end {
                         lual_error(
                             self.interpreter,
                             b"malformed pattern (ends with '%%')\0".as_ptr(),
@@ -173,7 +173,7 @@ impl MatchState {
                         p = p.offset(1);
                     }
                     loop {
-                        if ((p == self.p_end) as i32 != 0) as i64 != 0 {
+                        if p == self.p_end {
                             lual_error(
                                 self.interpreter,
                                 b"malformed pattern (missing CHARACTER_BRACKET_RIGHT)\0".as_ptr(),
@@ -222,7 +222,7 @@ impl MatchState {
         p: *const i8,
     ) -> *const i8 {
         unsafe {
-            if ((p >= (self.p_end).offset(-(1 as isize))) as i32 != 0) as i64 != 0 {
+            if p >= self.p_end.offset(-1) {
                 lual_error(
                     self.interpreter,
                     b"malformed pattern (missing arguments to '%%b')\0".as_ptr(),
@@ -358,7 +358,7 @@ impl MatchState {
             let mut current_block: u64;
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
-            if ((fresh162 == 0) as i32 != 0) as i64 != 0 {
+            if fresh162 == 0 {
                 lual_error(
                     self.interpreter,
                     b"pattern too complex\0".as_ptr(),
@@ -412,7 +412,7 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
+                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),
@@ -470,7 +470,7 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
+                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),
@@ -528,7 +528,7 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if ((*p as i32 != CHARACTER_BRACKET_LEFT as i32) as i32 != 0) as i64 != 0 {
+                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
                                             b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),

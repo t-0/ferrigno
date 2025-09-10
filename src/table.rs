@@ -507,8 +507,7 @@ pub unsafe extern "C" fn findindex(
             return i;
         } else {
             let n_value: *const TValue = getgeneric(table, key, 1);
-            if (((*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY) as i32 != 0) as i64 != 0
-            {
+            if (*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
                 luag_runerror(
                     interpreter,
                     b"invalid key to 'next'\0" as *const u8 as *const i8,
@@ -773,7 +772,7 @@ pub unsafe extern "C" fn luah_resize(
             (old_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
             (new_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
         ) as *mut TValue;
-        if ((new_array.is_null() && new_array_size > 0) as i32 != 0) as i64 != 0 {
+        if new_array.is_null() && new_array_size > 0 {
             freehash(interpreter, &mut new_table);
             luad_throw(interpreter, 4);
         }

@@ -23,7 +23,7 @@ pub unsafe extern "C" fn lsys_load(
             path,
             0x2 as i32 | (if seeglb != 0 { 0x100 as i32 } else { 0 }),
         );
-        if ((lib == std::ptr::null_mut()) as i32 != 0) as i64 != 0 {
+        if lib == std::ptr::null_mut() {
             lua_pushstring(interpreter, dlerror());
         }
         return lib;
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn lsys_sym(
 ) -> CFunction {
     unsafe {
         let cfunction: CFunction = ::core::mem::transmute::<*mut libc::c_void, CFunction>(dlsym(lib, sym));
-        if (cfunction.is_none() as i32 != 0) as i64 != 0 {
+        if cfunction.is_none() {
             lua_pushstring(interpreter, dlerror());
         }
         return cfunction;
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
         let path: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
         let init: *const i8 = lual_checklstring(interpreter, 2, std::ptr::null_mut());
         let stat: i32 = lookforfunc(interpreter, path, init);
-        if ((stat == 0) as i32 != 0) as i64 != 0 {
+        if stat == 0 {
             return 1;
         } else {
             (*interpreter).push_nil();
@@ -306,7 +306,7 @@ pub unsafe extern "C" fn findfile(
     unsafe {
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, pname);
         let path: *const i8 = lua_tolstring(interpreter, -1, std::ptr::null_mut());
-        if ((path == std::ptr::null_mut() as *const i8) as i32 != 0) as i64 != 0 {
+        if path.is_null() {
             lual_error(
                 interpreter,
                 b"'package.%s' must be a string\0".as_ptr(),
@@ -474,7 +474,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
         i = 1;
         loop {
             message.add_string(b"\n\t\0" as *const u8 as *const i8);
-            if ((lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil) as i32 != 0) as i64 != 0 {
+            if lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil {
                 lua_settop(interpreter, -2);
                 message.vector.length = message.vector.length.wrapping_sub(2);
                 message.push_result();

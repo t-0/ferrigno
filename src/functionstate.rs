@@ -445,7 +445,7 @@ pub unsafe extern "C" fn fixforjump(
         if back != 0 {
             offset = -offset;
         }
-        if ((offset > (1 << 8 + 8 + 1) - 1) as i32 != 0) as i64 != 0 {
+        if offset > (1 << 8 + 8 + 1) - 1 {
             luax_syntaxerror(
                 (*function_state).lexical_state,
                 b"control structure too long\0" as *const u8 as *const i8,
