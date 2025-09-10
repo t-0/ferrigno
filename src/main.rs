@@ -27,7 +27,6 @@ mod labeldescription;
 mod lexical;
 mod library;
 mod loadf;
-mod loads;
 mod loadstate;
 mod localvariable;
 mod longjump;

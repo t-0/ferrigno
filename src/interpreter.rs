@@ -6,7 +6,6 @@ use crate::vm::opmode::*;
 use crate::debuginfo::*;
 use crate::loadstate::*;
 use crate::loadf::*;
-use crate::loads::*;
 use crate::token::*;
 use crate::character::*;
 use crate::upvaluedescription::*;
@@ -1387,7 +1386,7 @@ pub unsafe extern "C" fn luad_protectedparser(
             zio: std::ptr::null_mut(),
             buffer: Buffer::new(),
             dynamic_data: DynamicData {
-                active_variable: DynamicDataActiveVariable {
+                active_variable: VectorT::<VariableDescription> {
                     pointer: std::ptr::null_mut(),
                     length: 0,
                     size: 0,
@@ -8554,13 +8553,13 @@ pub unsafe extern "C" fn get_s(
     size: *mut u64,
 ) -> *const i8 {
     unsafe {
-        let lexical_state: *mut LoadS = arbitrary_data as *mut LoadS;
-        if (*lexical_state).size == 0 {
+        let load_s: *mut VectorT::<i8> = arbitrary_data as *mut VectorT::<i8>;
+        if (*load_s).size == 0 {
             return std::ptr::null();
         }
-        *size = (*lexical_state).size;
-        (*lexical_state).size = 0;
-        return (*lexical_state).pointer;
+        *size = (*load_s).size as u64;
+        (*load_s).size = 0;
+        return (*load_s).pointer;
     }
 }
 pub unsafe extern "C" fn lual_loadbufferx(
@@ -8571,18 +8570,19 @@ pub unsafe extern "C" fn lual_loadbufferx(
     mode: *const i8,
 ) -> i32 {
     unsafe {
-        let mut lexical_state: LoadS = LoadS {
-            pointer: std::ptr::null(),
+        let mut load_s: VectorT::<i8> = VectorT::<i8> {
+            pointer: std::ptr::null_mut(),
             size: 0,
+            length: 0,
         };
-        lexical_state.pointer = buffer;
-        lexical_state.size = size;
+        load_s.pointer = buffer as *mut i8;
+        load_s.size = size as i32;
         return lua_load(
             interpreter,
             Some(
                 get_s as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void, *mut u64) -> *const i8,
             ),
-            &mut lexical_state as *mut LoadS as *mut libc::c_void,
+            &mut load_s as *mut VectorT::<i8> as *mut libc::c_void,
             name,
             mode,
         );
