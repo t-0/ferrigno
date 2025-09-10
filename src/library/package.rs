@@ -440,7 +440,7 @@ pub unsafe extern "C" fn searcher_preload(interpreter: *mut Interpreter) -> i32 
             -(1000000 as i32) - 1000 as i32,
             b"_PRELOAD\0" as *const u8 as *const i8,
         );
-        if lua_getfield(interpreter, -1, name) == 0 {
+        if lua_getfield(interpreter, -1, name) == TagType::Nil {
             lua_pushfstring(
                 interpreter,
                 b"no field package.preload['%s']\0" as *const u8 as *const i8,
@@ -461,7 +461,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
             interpreter,
             -(1000000 as i32) - 1000 as i32 - 1,
             b"searchers\0" as *const u8 as *const i8,
-        ) != 5) as i32
+        ) != TagType::Table) as i32
             != 0) as i64
             != 0
         {
@@ -524,7 +524,7 @@ pub unsafe extern "C" fn ll_require(interpreter: *mut Interpreter) -> i32 {
         } else {
             lua_settop(interpreter, -2);
         }
-        if lua_getfield(interpreter, 2, name) == 0 {
+        if lua_getfield(interpreter, 2, name) == TagType::Nil {
             (*interpreter).push_boolean(true);
             lua_copy(interpreter, -1, -2);
             lua_setfield(interpreter, 2, name);

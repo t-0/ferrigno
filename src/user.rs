@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 use crate::functions::*;
 use crate::global::*;
-use crate::object::*;
 use crate::interpreter::*;
+use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
@@ -77,7 +77,8 @@ impl User {
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = std::ptr::null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize))
+                    .set_tag_variant(TagVariant::NilNil as u8);
             }
             return ret;
         }
@@ -103,15 +104,16 @@ impl User {
     pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
         unsafe {
             match (*o).get_tag_type() {
-                TagType::User => {
-                    return (*((*o).value.object as *mut User)).get_raw_memory_mut();
-                }
-                TagType::Pointer => return (*o).value.pointer,
-                _ => return std::ptr::null_mut(),
-            };
+                TagType::User => (*((*o).value.object as *mut User)).get_raw_memory_mut(),
+                TagType::Pointer => (*o).value.pointer,
+                _ => std::ptr::null_mut(),
+            }
         }
     }
-    pub unsafe extern "C" fn lua_topointer(interpreter: *mut Interpreter, index: i32) -> *const libc::c_void {
+    pub unsafe extern "C" fn lua_topointer(
+        interpreter: *mut Interpreter,
+        index: i32,
+    ) -> *const libc::c_void {
         unsafe {
             let o: *const TValue = (*interpreter).index2value(index);
             match (*o).get_tag_variant() {
@@ -144,13 +146,18 @@ impl User {
             }
             for i in 0..self.count_upvalues {
                 if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable())
-                    && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object).get_marked()
+                    && (*(*(self.upvalues).as_mut_ptr().offset(i as isize))
+                        .value
+                        .object)
+                        .get_marked()
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
                     really_mark_object(
                         global,
-                        (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object,
+                        (*(self.upvalues).as_mut_ptr().offset(i as isize))
+                            .value
+                            .object,
                     );
                 }
             }

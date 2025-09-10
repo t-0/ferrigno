@@ -277,7 +277,7 @@ pub unsafe extern "C" fn ipairsaux(interpreter: *mut Interpreter) -> i32 {
         let mut i: i64 = lual_checkinteger(interpreter, 2);
         i = (i as u64).wrapping_add(1 as u64) as i64;
         (*interpreter).push_integer(i);
-        return if lua_geti(interpreter, 1, i) == 0 { 1 } else { 2 };
+        return if lua_geti(interpreter, 1, i) == TagType::Nil { 1 } else { 2 };
     }
 }
 pub unsafe extern "C" fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {

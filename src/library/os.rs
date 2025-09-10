@@ -135,7 +135,7 @@ pub unsafe extern "C" fn setallfields(interpreter: *mut Interpreter, stm: *mut T
 pub unsafe extern "C" fn getboolfield(interpreter: *mut Interpreter, key: *const i8) -> i32 {
     unsafe {
         let res: i32;
-        res = if lua_getfield(interpreter, -1, key) == 0 {
+        res = if lua_getfield(interpreter, -1, key) == TagType::Nil {
             -1
         } else {
             lua_toboolean(interpreter, -1)
@@ -147,10 +147,10 @@ pub unsafe extern "C" fn getboolfield(interpreter: *mut Interpreter, key: *const
 pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, delta: i32) -> i32 {
     unsafe {
         let mut is_number: bool = false;
-        let t: i32 = lua_getfield(interpreter, -1, key);
+        let t = lua_getfield(interpreter, -1, key);
         let mut res: i64 = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
-            if ((t != 0) as i32 != 0) as i64 != 0 {
+            if t != TagType::Nil {
                 return lual_error(
                     interpreter,
                     b"field '%s' is not an integer\0".as_ptr(),
