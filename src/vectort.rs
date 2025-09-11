@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::interpreter::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -8,10 +9,10 @@ pub struct VectorT<T> {
 }
 impl <T> VectorT<T> {
     pub fn initialize(&mut self) {
-        self.pointer = std::ptr::null_mut();
+        self.pointer = null_mut();
         self.size = 0;
     }
-    pub unsafe fn shrink (&mut self, interpreter: *mut Interpreter, length: usize) { unsafe {
+    pub unsafe fn shrink (&mut self, interpreter: &mut Interpreter, length: usize) { unsafe {
         let old_total = self.size as usize * ::core::mem::size_of::<T>();
         let new_total = length * ::core::mem::size_of::<T>();
         self.pointer = luam_saferealloc_(interpreter, self.pointer as *mut libc::c_void, old_total, new_total) as *mut T;

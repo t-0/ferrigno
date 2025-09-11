@@ -1,9 +1,10 @@
+use std::ptr::*;
 use crate::interpreter::*;
 use crate::library::*;
 use libc::{isatty,};
 pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let argc: i32 = lua_tointegerx(interpreter, 1, std::ptr::null_mut()) as i32;
+        let argc: i32 = lua_tointegerx(interpreter, 1, null_mut()) as i32;
         let argv: *mut *mut i8 = lua_touserdata(interpreter, 2) as *mut *mut i8;
         let mut script: i32 = 0;
         let args: i32 = collectargs(argv, &mut script);
@@ -50,7 +51,7 @@ pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
             if isatty(0) != 0 {
                 do_repl(interpreter);
             } else {
-                dofile(interpreter, std::ptr::null());
+                dofile(interpreter, null());
             }
         }
         (*interpreter).push_boolean(true);

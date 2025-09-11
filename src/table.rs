@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::character::*;
 use crate::f2i::*;
 use crate::functions::*;
@@ -48,11 +49,11 @@ impl New for Table {
             flags: 0,
             log_size_node: 0,
             array_limit: 0,
-            array: std::ptr::null_mut(),
-            node: std::ptr::null_mut(),
-            last_free: std::ptr::null_mut(),
-            metatable: std::ptr::null_mut(),
-            gc_list: std::ptr::null_mut(),
+            array: null_mut(),
+            node: null_mut(),
+            last_free: null_mut(),
+            metatable: null_mut(),
+            gc_list: null_mut(),
             _dummy3: 0,
             ..
         }
@@ -97,7 +98,7 @@ impl Table {
                     }
                 }
             }
-            return std::ptr::null_mut();
+            return null_mut();
         }
     }
 }
@@ -111,7 +112,7 @@ pub unsafe extern "C" fn luat_gettm(
         if (*tm).is_tagtype_nil() {
             (*events).flags =
                 ((*events).flags as i32 | ((1 as u32) << event as u32) as u8 as i32) as u8;
-            return std::ptr::null();
+            return null();
         } else {
             return tm;
         };
@@ -138,7 +139,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
                         if (*node).value.is_collectable() {
                             (*node).value.value.object
                         } else {
-                            std::ptr::null_mut()
+                            null_mut()
                         },
                     ) != 0
                 {
@@ -193,7 +194,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
                 if (*node).key.is_collectable() {
                     (*node).key.value.object
                 } else {
-                    std::ptr::null_mut()
+                    null_mut()
                 },
             ) != 0
             {
@@ -271,12 +272,12 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
 }
 pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u64 {
     unsafe {
-        let mut weakkey: *const i8 = std::ptr::null();
-        let mut weakvalue: *const i8 = std::ptr::null();
+        let mut weakkey: *const i8 = null();
+        let mut weakvalue: *const i8 = null();
         let mode: *const TValue = if ((*h).get_metatable()).is_null() {
-            std::ptr::null()
+            null()
         } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
-            std::ptr::null()
+            null()
         } else {
             luat_gettm(
                 (*h).get_metatable(),
@@ -323,12 +324,12 @@ pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, n
     unsafe {
         for i in old_size..new_size {
             let ref mut fresh = *vect.offset(i as isize);
-            *fresh = std::ptr::null_mut();
+            *fresh = null_mut();
         }
         for i in 0..old_size {
             let mut p: *mut TString = *vect.offset(i as isize);
             let ref mut fresh21 = *vect.offset(i as isize);
-            *fresh21 = std::ptr::null_mut();
+            *fresh21 = null_mut();
             while !p.is_null() {
                 let hash_next: *mut TString = (*p).u.hash_next;
                 let h: u32 = ((*p).hash & (new_size - 1) as u32) as u32;
@@ -674,7 +675,7 @@ pub unsafe extern "C" fn setnodevector(
         if size == 0 {
             (*table).node = &DUMMY_NODE as *const Node as *mut Node;
             (*table).log_size_node = 0;
-            (*table).last_free = std::ptr::null_mut();
+            (*table).last_free = null_mut();
         } else {
             let lsize: i32 = ceiling_log2(size as u64) as i32;
             if lsize
@@ -842,9 +843,9 @@ pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
             ::core::mem::size_of::<Table>(),
         );
         let new_table: *mut Table = &mut (*(object as *mut Table));
-        (*new_table).metatable = std::ptr::null_mut();
+        (*new_table).metatable = null_mut();
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
-        (*new_table).array = std::ptr::null_mut();
+        (*new_table).array = null_mut();
         (*new_table).array_limit = 0u32;
         setnodevector(interpreter, new_table, 0u32);
         return new_table;
@@ -1164,12 +1165,12 @@ pub unsafe extern "C" fn luav_finishget(
                 }
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
-                    std::ptr::null()
+                    null()
                 } else if (*(*((*t).value.object as *mut Table)).get_metatable()).flags as u32
                     & (1 as u32) << TM_INDEX as i32
                     != 0
                 {
-                    std::ptr::null()
+                    null()
                 } else {
                     luat_gettm(
                         (*((*t).value.object as *mut Table)).get_metatable(),
@@ -1188,7 +1189,7 @@ pub unsafe extern "C" fn luav_finishget(
             }
             t = tm;
             if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
-                slot = std::ptr::null();
+                slot = null();
                 0
             } else {
                 slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);
@@ -1222,11 +1223,11 @@ pub unsafe extern "C" fn luav_finishset(
             if !slot.is_null() {
                 let h: *mut Table = &mut (*((*t).value.object as *mut Table));
                 tm = if ((*h).get_metatable()).is_null() {
-                    std::ptr::null()
+                    null()
                 } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_NEWINDEX as i32
                     != 0
                 {
-                    std::ptr::null()
+                    null()
                 } else {
                     luat_gettm(
                         (*h).get_metatable(),
@@ -1269,7 +1270,7 @@ pub unsafe extern "C" fn luav_finishset(
             }
             t = tm;
             if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
-                slot = std::ptr::null();
+                slot = null();
                 0
             } else {
                 slot = luah_get(&mut (*((*t).value.object as *mut Table)), key);

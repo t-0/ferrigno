@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::buffer::*;
 use crate::interpreter::*;
 use crate::new::*;
@@ -31,20 +32,20 @@ pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: 
                 count += 1;
                 let cc: u32 = *s.offset(count as isize) as u8 as u32;
                 if !(cc & 0xc0 as u32 == 0x80 as u32) {
-                    return std::ptr::null();
+                    return null();
                 }
                 res = res << 6 | cc & 0x3f as u32;
                 c <<= 1;
             }
             res |= (c & 0x7f as u32) << count * 5;
             if count > 5 || res > 0x7fffffff as u32 || res < LIMITS[count as usize] {
-                return std::ptr::null();
+                return null();
             }
             s = s.offset(count as isize);
         }
         if strict != 0 {
             if res > 0x10ffff as u32 || 0xd800 as u32 <= res && res <= 0xdfff as u32 {
-                return std::ptr::null();
+                return null();
             }
         }
         if !value.is_null() {
@@ -82,7 +83,7 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
         while posi <= posj {
             let s1: *const i8 = utf8_decode(
                 s.offset(posi as isize),
-                std::ptr::null_mut(),
+                null_mut(),
                 (lax == 0) as i32,
             );
             if s1.is_null() {
@@ -238,7 +239,7 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
     unsafe {
         let mut length: u64 = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
-        let mut n: u64 = lua_tointegerx(interpreter, 2, std::ptr::null_mut()) as u64;
+        let mut n: u64 = lua_tointegerx(interpreter, 2, null_mut()) as u64;
         if n < length as u64 {
             while *s.offset(n as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
                 n = n.wrapping_add(1);
@@ -271,7 +272,7 @@ pub unsafe extern "C" fn iter_auxlax(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn iter_codes(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let lax: i32 = lua_toboolean(interpreter, 2);
-        let s: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let s: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0
             || lual_argerror(
                 interpreter,
@@ -332,7 +333,7 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

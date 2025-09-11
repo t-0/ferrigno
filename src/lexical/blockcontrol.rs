@@ -1,4 +1,5 @@
 use crate::new::*;
+use std::ptr::*;
 #[repr(C)]
 pub struct BlockControl {
     pub previous: *mut BlockControl,
@@ -13,7 +14,7 @@ pub struct BlockControl {
 impl New for BlockControl {
     fn new() -> Self {
         return BlockControl {
-            previous: std::ptr::null_mut(),
+            previous: null_mut(),
             first_label: 0,
             first_goto: 0,
             count_active_variables: 0,

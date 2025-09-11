@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::object::*;
 use crate::stackvalue::*;
 use crate::interpreter::*;
@@ -22,7 +23,7 @@ impl TObject for UpValue {
         "upvalue".to_string()
     }
     fn get_metatable(&mut self) -> *mut Table {
-        std::ptr::null_mut()
+        null_mut()
     }
 }
 impl UpValue {

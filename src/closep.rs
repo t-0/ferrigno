@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::new::*;
 use crate::stackvalue::*;
 #[repr(C)]
@@ -8,7 +9,7 @@ pub struct CloseP {
 impl New for CloseP {
     fn new() -> Self {
         return CloseP {
-            level: std::ptr::null_mut(),
+            level: null_mut(),
             status: 0,
         };
     }

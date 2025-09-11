@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::character::CHARACTER_EXCLAMATION;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
@@ -9,7 +10,7 @@ use crate::buffer::*;
 use libc::{system,remove,rename,setlocale};
 pub unsafe extern "C" fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let cmd: *const i8 = lual_optlstring(interpreter, 1, std::ptr::null(), std::ptr::null_mut());
+        let cmd: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let stat: i32;
         *__errno_location() = 0;
         stat = system(cmd);
@@ -23,20 +24,20 @@ pub unsafe extern "C" fn os_execute(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn os_remove(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let filename: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         *__errno_location() = 0;
         return lual_fileresult(interpreter, (remove(filename) == 0) as i32, filename);
     }
 }
 pub unsafe extern "C" fn os_rename(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let fromname: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
-        let toname: *const i8 = lual_checklstring(interpreter, 2, std::ptr::null_mut());
+        let fromname: *const i8 = lual_checklstring(interpreter, 1, null_mut());
+        let toname: *const i8 = lual_checklstring(interpreter, 2, null_mut());
         *__errno_location() = 0;
         return lual_fileresult(
             interpreter,
             (rename(fromname, toname) == 0) as i32,
-            std::ptr::null(),
+            null(),
         );
     }
 }
@@ -67,7 +68,7 @@ pub unsafe extern "C" fn os_getenv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_pushstring(
             interpreter,
-            getenv(lual_checklstring(interpreter, 1, std::ptr::null_mut())),
+            getenv(lual_checklstring(interpreter, 1, null_mut())),
         );
         return 1;
     }
@@ -244,7 +245,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
         let mut s: *const i8 =
             lual_optlstring(interpreter, 1, b"%c\0" as *const u8 as *const i8, &mut slen);
         let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) {
-            time(std::ptr::null_mut())
+            time(null_mut())
         } else {
             l_checktime(interpreter, 2)
         };
@@ -260,7 +261,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
             tm_yday: 0,
             tm_isdst: 0,
             __tm_gmtoff: 0,
-            __tm_zone: std::ptr::null(),
+            __tm_zone: null(),
         };
         let stm: *mut TM;
         if *s as i32 == CHARACTER_EXCLAMATION as i32 {
@@ -315,7 +316,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
         let t: i64;
         match lua_type(interpreter, 1) {
             None | Some(TagType::Nil) => {
-                t = time(std::ptr::null_mut());
+                t = time(null_mut());
             },
             _ => {
                 let mut ts: TM = TM {
@@ -329,7 +330,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
                     tm_yday: 0,
                     tm_isdst: 0,
                     __tm_gmtoff: 0,
-                    __tm_zone: std::ptr::null(),
+                    __tm_zone: null(),
                 };
                 lual_checktype(interpreter, 1, TagType::Table);
                 lua_settop(interpreter, 1);
@@ -372,9 +373,9 @@ pub unsafe extern "C" fn os_setlocale(interpreter: *mut Interpreter) -> i32 {
             b"monetary\0" as *const u8 as *const i8,
             b"numeric\0" as *const u8 as *const i8,
             b"time\0" as *const u8 as *const i8,
-            std::ptr::null(),
+            null(),
         ];
-        let l: *const i8 = lual_optlstring(interpreter, 1, std::ptr::null(), std::ptr::null_mut());
+        let l: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let op: i32 = lual_checkoption(
             interpreter,
             2,
@@ -472,7 +473,7 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

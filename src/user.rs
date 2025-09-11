@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::functions::*;
+use std::ptr::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
@@ -75,7 +75,7 @@ impl User {
             let ret: *mut User = &mut (*(object as *mut User));
             (*ret).count_bytes = count_bytes;
             (*ret).count_upvalues = count_upvalues as i32;
-            (*ret).metatable = std::ptr::null_mut();
+            (*ret).metatable = null_mut();
             for i in 0..count_upvalues {
                 (*((*ret).upvalues).as_mut_ptr().offset(i as isize))
                     .set_tag_variant(TagVariant::NilNil as u8);
@@ -99,37 +99,6 @@ impl User {
                 luac_step(interpreter);
             }
             return (*new_user).get_raw_memory_mut();
-        }
-    }
-    pub unsafe extern "C" fn touserdata(o: *const TValue) -> *mut libc::c_void {
-        unsafe {
-            match (*o).get_tag_type() {
-                TagType::User => (*((*o).value.object as *mut User)).get_raw_memory_mut(),
-                TagType::Pointer => (*o).value.pointer,
-                _ => std::ptr::null_mut(),
-            }
-        }
-    }
-    pub unsafe extern "C" fn lua_topointer(
-        interpreter: *mut Interpreter,
-        index: i32,
-    ) -> *const libc::c_void {
-        unsafe {
-            let o: *const TValue = (*interpreter).index2value(index);
-            match (*o).get_tag_variant() {
-                TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return ::core::mem::transmute::<CFunction, u64>((*o).value.function)
-                        as *mut libc::c_void;
-                }
-                TAG_VARIANT_USER | TAG_VARIANT_POINTER => return User::touserdata(o),
-                _ => {
-                    if (*o).is_collectable() {
-                        return (*o).value.object as *const libc::c_void;
-                    } else {
-                        return std::ptr::null();
-                    }
-                }
-            };
         }
     }
     pub unsafe extern "C" fn free_user(&mut self, interpreter: *mut Interpreter) {

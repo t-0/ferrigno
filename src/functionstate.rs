@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::lexical::blockcontrol::*;
 use crate::lexical::lexicalstate::*;
 use crate::operator_::*;
@@ -52,10 +53,10 @@ pub struct FunctionState {
 impl New for FunctionState {
     fn new() -> Self {
         return FunctionState {
-            prototype: std::ptr::null_mut(),
-            previous: std::ptr::null_mut(),
-            lexical_state: std::ptr::null_mut(),
-            block_control: std::ptr::null_mut(),
+            prototype: null_mut(),
+            previous: null_mut(),
+            lexical_state: null_mut(),
+            block_control: null_mut(),
             program_counter: 0,
             last_target: 0,
             previous_line: 0,
@@ -251,7 +252,7 @@ pub unsafe extern "C" fn localdebuginfo(function_state: *mut FunctionState, vidx
     unsafe {
         let variable_description: *mut VariableDescription = getlocalvardesc(function_state, vidx);
         if (*variable_description).content.kind as i32 == 3 {
-            return std::ptr::null_mut();
+            return null_mut();
         } else {
             let index: i32 = (*variable_description).content.pidx as i32;
             return (*(*function_state).prototype).prototype_local_variables.at_mut(index as isize);
@@ -324,7 +325,7 @@ pub unsafe extern "C" fn allocate_upvalue_description(function_state: *mut Funct
             let fresh41 = old_size;
             old_size = old_size + 1;
             let ref mut fresh42 = (*((*prototype).prototype_upvalues.pointer).offset(fresh41 as isize)).name;
-            *fresh42 = std::ptr::null_mut();
+            *fresh42 = null_mut();
         }
         let fresh43 = (*function_state).count_upvalues;
         (*function_state).count_upvalues = ((*function_state).count_upvalues).wrapping_add(1);
@@ -886,7 +887,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             count_k = (*index).value.integer as i32;
             if count_k < (*function_state).count_k
                 && (*((*prototype).prototype_constants.pointer).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
-                && luav_equalobj(std::ptr::null_mut(), &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize), v)
+                && luav_equalobj(null_mut(), &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize), v)
             {
                 return count_k;
             }
@@ -1700,7 +1701,7 @@ pub unsafe extern "C" fn codearith(
     line: i32,
 ) {
     unsafe {
-        if tonumeral(e2, std::ptr::null_mut()) && luak_exp2k(function_state, e2) != 0{
+        if tonumeral(e2, null_mut()) && luak_exp2k(function_state, e2) != 0{
             codebink(function_state, opr, e1, e2, flip, line);
         } else {
             codebinnok(function_state, opr, e1, e2, flip, line);
@@ -1716,7 +1717,7 @@ pub unsafe extern "C" fn codecommutative(
 ) {
     unsafe {
         let mut flip: i32 = 0;
-        if tonumeral(e1, std::ptr::null_mut()) {
+        if tonumeral(e1, null_mut()) {
             swapexps(e1, e2);
             flip = 1;
         }
@@ -1884,12 +1885,12 @@ pub unsafe extern "C" fn luak_infix(
                 luak_exp2nextreg(function_state, v);
             }
             OP_MOVE | OP_LOADI | OP_LOADF | OP_LOADFALSE | OP_LFALSESKIP | OP_LOADK | OP_LOADKX | OP_LOADTRUE | OP_LOADNIL | OP_GETUPVAL | OP_SETUPVAL | OP_GETTABUP => {
-                if !tonumeral(v, std::ptr::null_mut()) {
+                if !tonumeral(v, null_mut()) {
                     luak_exp2anyreg(function_state, v);
                 }
             }
             OP_GETI | OP_SETTABLE => {
-                if !tonumeral(v, std::ptr::null_mut()) {
+                if !tonumeral(v, null_mut()) {
                     exp2rk(function_state, v);
                 }
             }

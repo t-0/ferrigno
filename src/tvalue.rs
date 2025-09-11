@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use std::ptr::*;
 use crate::character::*;
 use crate::tag::*;
 use crate::value::*;
@@ -12,6 +13,7 @@ use crate::tm::*;
 use crate::table::*;
 use crate::user::*;
 use crate::f2i::*;
+use crate::functions::*;
 use crate::utility::*;
 use libc::*;
 #[derive(Copy, Clone)]
@@ -22,6 +24,25 @@ pub struct TValue {
     collectable: bool,
 }
 impl TValue {
+    pub unsafe extern "C" fn touserdata(&self) -> *mut libc::c_void {
+        unsafe {
+            match self.get_tag_variant() {
+                TAG_VARIANT_CLOSURE_CFUNCTION => {
+                    return ::core::mem::transmute::<CFunction, u64>(self.value.function)
+                        as *mut libc::c_void;
+                }
+                TAG_VARIANT_USER => (*(self.value.object as *mut User)).get_raw_memory_mut(),
+                TAG_VARIANT_POINTER => self.value.pointer,
+                _ => {
+                    if self.is_collectable() {
+                        return self.value.object as *mut libc::c_void;
+                    } else {
+                        return null_mut();
+                    }
+                },
+            }
+        }
+    }
     pub const fn new(tag: u8) -> Self {
         TValue {
             value: Value::new(),
@@ -94,7 +115,7 @@ pub unsafe extern "C" fn aux_upvalue(
             TAG_VARIANT_CLOSURE_C => {
                 let closure: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 if !((n as u32).wrapping_sub(1 as u32) < (*closure).count_upvalues as u32) {
-                    return std::ptr::null();
+                    return null();
                 }
                 *value = &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
                 if !owner.is_null() {
@@ -106,7 +127,7 @@ pub unsafe extern "C" fn aux_upvalue(
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
                 if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.size as u32) {
-                    return std::ptr::null();
+                    return null();
                 }
                 *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize))
                     .v
@@ -122,7 +143,7 @@ pub unsafe extern "C" fn aux_upvalue(
                     ((*name).get_contents_mut()) as *const i8
                 };
             }
-            _ => return std::ptr::null(),
+            _ => return null(),
         };
     }
 }
@@ -360,12 +381,12 @@ pub unsafe extern "C" fn luav_equalobj(
                     return false;
                 }
                 tm = if ((*((*t1).value.object as *mut User)).get_metatable()).is_null() {
-                    std::ptr::null()
+                    null()
                 } else if (*(*((*t1).value.object as *mut User)).get_metatable()).flags as u32
                     & (1 as u32) << TM_EQ as i32
                     != 0
                 {
-                    std::ptr::null()
+                    null()
                 } else {
                     luat_gettm(
                         (*((*t1).value.object as *mut User)).get_metatable(),
@@ -375,12 +396,12 @@ pub unsafe extern "C" fn luav_equalobj(
                 };
                 if tm.is_null() {
                     tm = if ((*((*t2).value.object as *mut User)).get_metatable()).is_null() {
-                        std::ptr::null()
+                        null()
                     } else if (*(*((*t2).value.object as *mut User)).get_metatable()).flags as u32
                         & (1 as u32) << TM_EQ as i32
                         != 0
                     {
-                        std::ptr::null()
+                        null()
                     } else {
                         luat_gettm(
                             (*((*t2).value.object as *mut User)).get_metatable(),
@@ -399,12 +420,12 @@ pub unsafe extern "C" fn luav_equalobj(
                     return false;
                 }
                 tm = if ((*((*t1).value.object as *mut Table)).get_metatable()).is_null() {
-                    std::ptr::null()
+                    null()
                 } else if (*(*((*t1).value.object as *mut Table)).get_metatable()).flags as u32
                     & (1 as u32) << TM_EQ as i32
                     != 0
                 {
-                    std::ptr::null()
+                    null()
                 } else {
                     luat_gettm(
                         (*((*t1).value.object as *mut Table)).get_metatable(),
@@ -414,12 +435,12 @@ pub unsafe extern "C" fn luav_equalobj(
                 };
                 if tm.is_null() {
                     tm = if ((*((*t2).value.object as *mut Table)).get_metatable()).is_null() {
-                        std::ptr::null()
+                        null()
                     } else if (*(*((*t2).value.object as *mut Table)).get_metatable()).flags as u32
                         & (1 as u32) << TM_EQ as i32
                         != 0
                     {
-                        std::ptr::null()
+                        null()
                     } else {
                         luat_gettm(
                             (*((*t2).value.object as *mut Table)).get_metatable(),
@@ -447,9 +468,9 @@ pub unsafe extern "C" fn luav_objlen(interpreter: *mut Interpreter, ra: StackVal
             TAG_VARIANT_TABLE => {
                 let h: *mut Table = &mut (*((*rb).value.object as *mut Table));
                 tm = if ((*h).get_metatable()).is_null() {
-                    std::ptr::null()
+                    null()
                 } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
-                    std::ptr::null()
+                    null()
                 } else {
                     luat_gettm(
                         (*h).get_metatable(),

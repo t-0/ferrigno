@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::utility::c::*;
 use crate::new::*;
 #[repr(C)]
@@ -9,7 +10,7 @@ pub struct LongJump {
 impl New for LongJump {
     fn new() -> Self {
         return LongJump {
-            previous: std::ptr::null_mut(),
+            previous: null_mut(),
             jbt: [JumpBufferTag {
                 __mask_was_saved: 0,
                 __saved_mask: SIgnalSet { __val: [0; 16] },

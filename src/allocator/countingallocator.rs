@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use std::ptr::*;
 use crate::allocator::*;
 use libc::{free, malloc, realloc};
 pub struct CountingAllocator {
@@ -15,7 +16,7 @@ impl Allocator for CountingAllocator {
     unsafe fn allocate(&mut self, new_size: usize) -> *mut libc::c_void {
         unsafe {
             if 0 == new_size {
-                return std::ptr::null_mut();
+                return null_mut();
             } else {
                 let ret = malloc(new_size);
                 if !ret.is_null() {
@@ -37,17 +38,17 @@ impl Allocator for CountingAllocator {
         unsafe {
             if 0 == new_size {
                 self.free(pointer, old_size);
-                return std::ptr::null_mut();
+                return null_mut();
             } else if pointer.is_null() {
                 if 0 == old_size {
                     return self.allocate(new_size);
                 } else {
-                    return std::ptr::null_mut();
+                    return null_mut();
                 }
             } else {
                 let ret = realloc(pointer, new_size);
                 if ret.is_null() {
-                    return std::ptr::null_mut();
+                    return null_mut();
                 } else {
                     self.allocated -= old_size;
                     self.allocated += new_size;

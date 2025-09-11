@@ -6,6 +6,7 @@ use crate::closure::*;
 use crate::tag::*;
 use crate::interpreter::*;
 use crate::stackvalue::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallInfo {
@@ -93,7 +94,7 @@ pub unsafe extern "C" fn luag_findlocal(
 ) -> *const i8 {
     unsafe {
         let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
-        let mut name: *const i8 = std::ptr::null();
+        let mut name: *const i8 = null();
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
                 return findvararg(call_info, n, pos);
@@ -118,7 +119,7 @@ pub unsafe extern "C" fn luag_findlocal(
                     b"(C temporary)\0" as *const u8 as *const i8
                 };
             } else {
-                return std::ptr::null();
+                return null();
             }
         }
         if !pos.is_null() {
@@ -137,7 +138,7 @@ pub unsafe extern "C" fn findvararg(
             .payload.l_prototype)
             .prototype_is_variable_arguments
         {
-            let nextra: i32 = (*call_info).u.l.count_extra_arguments;
+            let nextra = (*call_info).u.l.count_extra_arguments;
             if n >= -nextra {
                 *pos = ((*call_info).function.stkidrel_pointer)
                     .offset(-nextra as isize)
@@ -145,7 +146,7 @@ pub unsafe extern "C" fn findvararg(
                 return b"(vararg)\0" as *const u8 as *const i8;
             }
         }
-        return std::ptr::null();
+        return null();
     }
 }
 pub unsafe extern "C" fn getfuncname(
@@ -157,7 +158,7 @@ pub unsafe extern "C" fn getfuncname(
         if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 5 == 0 {
             return funcnamefromcall(interpreter, (*call_info).previous, name);
         } else {
-            return std::ptr::null();
+            return null();
         };
     }
 }
@@ -182,7 +183,7 @@ pub unsafe extern "C" fn funcnamefromcall(
                 name,
             );
         } else {
-            return std::ptr::null();
+            return null();
         };
     }
 }
@@ -217,6 +218,6 @@ pub unsafe extern "C" fn getupvalname(
                 return STRING_UPVALUE.as_ptr();
             }
         }
-        return std::ptr::null();
+        return null();
     }
 }

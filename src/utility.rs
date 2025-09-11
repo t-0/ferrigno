@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::character::*;
 use libc::*;
 pub mod c;
@@ -24,14 +25,14 @@ pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
 }
 pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
     unsafe {
-        let mut endptr: *mut i8 = std::ptr::null_mut();
+        let mut endptr: *mut i8 = null_mut();
         *result = if mode == CHARACTER_LOWER_X as i32 {
             strtod(s, &mut endptr)
         } else {
             strtod(s, &mut endptr)
         };
         if endptr == s as *mut i8 {
-            return std::ptr::null();
+            return null();
         }
         while is_whitespace(*endptr as i32 + 1) {
             endptr = endptr.offset(1);
@@ -39,7 +40,7 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
         return if *endptr as i32 == Character::Null as i32 {
             endptr
         } else {
-            std::ptr::null_mut()
+            null_mut()
         };
     }
 }
@@ -52,14 +53,14 @@ pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
             0
         };
         if mode == CHARACTER_LOWER_N as i32 {
-            return std::ptr::null();
+            return null();
         }
         let mut endptr: *const i8 = l_str2dloc(s, result, mode);
         if endptr.is_null() {
             let mut buffer: [i8; 201] = [0; 201];
             let pdot: *const i8 = strchr(s, CHARACTER_PERIOD as i32);
             if pdot.is_null() || strlen(s) > 200 {
-                return std::ptr::null();
+                return null();
             }
             strcpy(buffer.as_mut_ptr(), s);
             buffer[pdot.offset_from(s) as usize] = CHARACTER_PERIOD as i8;
@@ -99,7 +100,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
                         || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32
                             + if is_negative_ { 1 } else { 0 })
                 {
-                    return std::ptr::null();
+                    return null();
                 }
                 a = a.wrapping_mul(10 as u64).wrapping_add(d as u64);
                 empty = 0;
@@ -110,7 +111,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
             s = s.offset(1);
         }
         if empty != 0 || *s as i32 != Character::Null as i32 {
-            return std::ptr::null();
+            return null();
         } else {
             *result = (if is_negative_ {
                 (0u64).wrapping_sub(a)

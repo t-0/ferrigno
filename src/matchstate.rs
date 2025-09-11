@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::interpreter::*;
 use crate::buffer::*;
 use crate::tag::*;
@@ -79,7 +80,7 @@ impl MatchState {
     }
     pub unsafe extern "C" fn push_onecapture(& mut self, i: i32, s: *const i8, e: *const i8) {
         unsafe {
-            let mut cap: *const i8 = std::ptr::null();
+            let mut cap: *const i8 = null();
             let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
             if level != -2 as i64 {
                 lua_pushlstring(self.interpreter, cap, level as u64);
@@ -229,7 +230,7 @@ impl MatchState {
                 );
             }
             if *s as i32 != *p as i32 {
-                return std::ptr::null();
+                return null();
             } else {
                 let b: i32 = *p as i32;
                 let e: i32 = *p.offset(1 as isize) as i32;
@@ -249,7 +250,7 @@ impl MatchState {
                     }
                 }
             }
-            return std::ptr::null();
+            return null();
         }
     }
     pub unsafe extern "C" fn max_expand(
@@ -270,7 +271,7 @@ impl MatchState {
                 }
                 i -= 1;
             }
-            return std::ptr::null();
+            return null();
         }
     }
     pub unsafe extern "C" fn min_expand(
@@ -287,7 +288,7 @@ impl MatchState {
                 } else if self.singlematch(s, p, ep) != 0 {
                     s = s.offset(1);
                 } else {
-                    return std::ptr::null();
+                    return null();
                 }
             }
         }
@@ -344,7 +345,7 @@ impl MatchState {
             {
                 return s.offset(length as isize);
             } else {
-                return std::ptr::null();
+                return null();
             };
         }
     }
@@ -354,7 +355,7 @@ impl MatchState {
         mut p: *const i8,
     ) -> *const i8 {
         unsafe {
-            let mut ep_0: *const i8 = std::ptr::null();
+            let mut ep_0: *const i8 = null();
             let mut current_block: u64;
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
@@ -389,7 +390,7 @@ impl MatchState {
                             s = if s == self.src_end {
                                 s
                             } else {
-                                std::ptr::null()
+                                null()
                             };
                             current_block = 6476622998065200121;
                             break;
@@ -438,7 +439,7 @@ impl MatchState {
                                         p = ep;
                                         continue;
                                     } else {
-                                        s = std::ptr::null();
+                                        s = null();
                                         current_block = 6476622998065200121;
                                         break;
                                     }
@@ -496,7 +497,7 @@ impl MatchState {
                                         p = ep;
                                         continue;
                                     } else {
-                                        s = std::ptr::null();
+                                        s = null();
                                         current_block = 6476622998065200121;
                                         break;
                                     }
@@ -554,7 +555,7 @@ impl MatchState {
                                         p = ep;
                                         continue;
                                     } else {
-                                        s = std::ptr::null();
+                                        s = null();
                                         current_block = 6476622998065200121;
                                         break;
                                     }
@@ -582,7 +583,7 @@ impl MatchState {
                     {
                         p = ep_0.offset(1 as isize);
                     } else {
-                        s = std::ptr::null();
+                        s = null();
                         current_block = 6476622998065200121;
                         break;
                     }
@@ -674,7 +675,7 @@ impl MatchState {
                     & _ISDIGIT as i32
                     != 0
                 {
-                    let mut cap: *const i8 = std::ptr::null();
+                    let mut cap: *const i8 = null();
                     let resl: i64 = self.get_onecapture(*p as i32 - CHARACTER_1 as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
                         (*b).add_value();

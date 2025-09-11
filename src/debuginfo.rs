@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use std::ptr::*;
 use crate::callinfo::*;
 use crate::utility::c::*;
 use crate::interpreter::*;
@@ -40,7 +41,7 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
                 .get_tag_variant()
                 == TAG_VARIANT_CLOSURE_L)
             {
-                name = std::ptr::null();
+                name = null();
             } else {
                 name = luaf_getlocalname(
                     (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
@@ -50,7 +51,7 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
                 );
             }
         } else {
-            let mut pos: StackValuePointer = std::ptr::null_mut();
+            let mut pos: StackValuePointer = null_mut();
             name = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
             if !name.is_null() {
                 let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -64,7 +65,7 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
 }
 pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
-        let mut pos: StackValuePointer = std::ptr::null_mut();
+        let mut pos: StackValuePointer = null_mut();
         let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
@@ -121,7 +122,7 @@ pub unsafe extern "C" fn lua_getinfo(
         let function;
         let call_info;
         if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
-            call_info = std::ptr::null_mut();
+            call_info = null_mut();
             function = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             what = what.offset(1);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -159,7 +160,7 @@ pub unsafe extern "C" fn lua_getinfo(
                 return status;
             }
             _ => {
-                let cl: *mut Closure = std::ptr::null_mut();
+                let cl: *mut Closure = null_mut();
                 status = auxgetinfo(interpreter, what, ar, cl, call_info);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;

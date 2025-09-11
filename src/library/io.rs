@@ -1,4 +1,5 @@
 use crate::utility::c::*;
+use std::ptr::*;
 use crate::io::stream::*;
 use crate::interpreter::*;
 use crate::character::*;
@@ -118,13 +119,13 @@ pub unsafe extern "C" fn io_fclose(interpreter: *mut Interpreter) -> i32 {
         let p: *mut Stream =
             lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         *__errno_location() = 0;
-        return lual_fileresult(interpreter, (fclose((*p).file) == 0) as i32, std::ptr::null());
+        return lual_fileresult(interpreter, (fclose((*p).file) == 0) as i32, null());
     }
 }
 pub unsafe extern "C" fn newfile(interpreter: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream = newprefile(interpreter);
-        (*p).file = std::ptr::null_mut();
+        (*p).file = null_mut();
         (*p).close_function = Some(io_fclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         return p;
     }
@@ -145,12 +146,12 @@ pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const 
 }
 pub unsafe extern "C" fn io_open(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let filename: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mode: *const i8 = lual_optlstring(
             interpreter,
             2,
             b"r\0" as *const u8 as *const i8,
-            std::ptr::null_mut(),
+            null_mut(),
         );
         let p: *mut Stream = newfile(interpreter);
         let md: *const i8 = mode;
@@ -176,12 +177,12 @@ pub unsafe extern "C" fn io_pclose(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn io_popen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let filename: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mode: *const i8 = lual_optlstring(
             interpreter,
             2,
             b"r\0" as *const u8 as *const i8,
-            std::ptr::null_mut(),
+            null_mut(),
         );
         let p: *mut Stream = newprefile(interpreter);
         ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn io_popen(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
             as i32;
         *__errno_location() = 0;
-        fflush(std::ptr::null_mut());
+        fflush(null_mut());
         (*p).file = popen(filename, mode);
         (*p).close_function = Some(io_pclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         return if ((*p).file).is_null() {
@@ -208,7 +209,7 @@ pub unsafe extern "C" fn io_tmpfile(interpreter: *mut Interpreter) -> i32 {
         *__errno_location() = 0;
         (*p).file = tmpfile();
         return if ((*p).file).is_null() {
-            lual_fileresult(interpreter, 0, std::ptr::null())
+            lual_fileresult(interpreter, 0, null())
         } else {
             1
         };
@@ -236,7 +237,7 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
 pub unsafe extern "C" fn g_iofile(interpreter: *mut Interpreter, f: *const i8, mode: *const i8) -> i32 {
     unsafe {
         if !(is_none_or_nil(lua_type(interpreter, 1))) {
-            let filename: *const i8 = lua_tolstring(interpreter, 1, std::ptr::null_mut());
+            let filename: *const i8 = lua_tolstring(interpreter, 1, null_mut());
             if !filename.is_null() {
                 opencheck(interpreter, filename, mode);
             } else {
@@ -311,7 +312,7 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
             tofile(interpreter);
             to_close = false;
         } else {
-            let filename: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+            let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
             opencheck(interpreter, filename, b"r\0" as *const u8 as *const i8);
             lua_copy(interpreter, -1, 1);
             lua_settop(interpreter, -2);
@@ -369,7 +370,7 @@ pub unsafe extern "C" fn readdigits(rn: *mut RN, hex: i32) -> i32 {
 pub unsafe extern "C" fn read_number(interpreter: *mut Interpreter, file: *mut FILE) -> i32 {
     unsafe {
         let mut rn: RN = RN {
-            file: std::ptr::null_mut(),
+            file: null_mut(),
             c: 0,
             n: 0,
             buffer: [0; 201],
@@ -560,7 +561,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
                         read_chars(interpreter, file, l)
                     };
                 } else {
-                    let mut p: *const i8 = lual_checklstring(interpreter, n, std::ptr::null_mut());
+                    let mut p: *const i8 = lual_checklstring(interpreter, n, null_mut());
                     if *p as i32 == CHARACTER_ASTERISK as i32 {
                         p = p.offset(1);
                     }
@@ -591,7 +592,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
             }
         }
         if ferror(file) != 0 {
-            return lual_fileresult(interpreter, 0, std::ptr::null());
+            return lual_fileresult(interpreter, 0, null());
         }
         if success == 0 {
             lua_settop(interpreter, -2);
@@ -621,7 +622,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
         let mut n: i32 = lua_tointegerx(
             interpreter,
             -(1000000 as i32) - 1000 as i32 - 2,
-            std::ptr::null_mut(),
+            null_mut(),
         ) as i32;
         if ((*p).close_function).is_none() {
             return lual_error(interpreter, b"file is already closed\0".as_ptr());
@@ -639,7 +640,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
                 return lual_error(
                     interpreter,
                     b"%s\0".as_ptr(),
-                    lua_tolstring(interpreter, -n + 1, std::ptr::null_mut()),
+                    lua_tolstring(interpreter, -n + 1, null_mut()),
                 );
             }
             if lua_toboolean(interpreter, -(1000000 as i32) - 1000 as i32 - 3) != 0 {
@@ -667,13 +668,13 @@ pub unsafe extern "C" fn g_write(interpreter: *mut Interpreter, file: *mut FILE,
                     fprintf(
                         file,
                         b"%lld\0" as *const u8 as *const i8,
-                        lua_tointegerx(interpreter, arg, std::ptr::null_mut()),
+                        lua_tointegerx(interpreter, arg, null_mut()),
                     )
                 } else {
                     fprintf(
                         file,
                         b"%.14g\0" as *const u8 as *const i8,
-                        lua_tonumberx(interpreter, arg, std::ptr::null_mut()),
+                        lua_tonumberx(interpreter, arg, null_mut()),
                     )
                 };
                 status = (status != 0 && length > 0) as i32;
@@ -693,7 +694,7 @@ pub unsafe extern "C" fn g_write(interpreter: *mut Interpreter, file: *mut FILE,
         if (status != 0) as i64 != 0 {
             return 1;
         } else {
-            return lual_fileresult(interpreter, status, std::ptr::null());
+            return lual_fileresult(interpreter, status, null());
         };
     }
 }
@@ -720,7 +721,7 @@ pub unsafe extern "C" fn f_seek(interpreter: *mut Interpreter) -> i32 {
             b"set\0" as *const u8 as *const i8,
             b"cur\0" as *const u8 as *const i8,
             b"end\0" as *const u8 as *const i8,
-            std::ptr::null(),
+            null(),
         ];
         let file: *mut FILE = tofile(interpreter);
         let mut op: i32 = lual_checkoption(
@@ -740,7 +741,7 @@ pub unsafe extern "C" fn f_seek(interpreter: *mut Interpreter) -> i32 {
         *__errno_location() = 0;
         op = fseeko(file, offset, MODE[op as usize]);
         if (op != 0) as i64 != 0 {
-            return lual_fileresult(interpreter, 0, std::ptr::null());
+            return lual_fileresult(interpreter, 0, null());
         } else {
             (*interpreter).push_integer(ftello(file) as i64);
             return 1;
@@ -754,10 +755,10 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
             b"no\0" as *const u8 as *const i8,
             b"full\0" as *const u8 as *const i8,
             b"line\0" as *const u8 as *const i8,
-            std::ptr::null(),
+            null(),
         ];
         let file: *mut FILE = tofile(interpreter);
-        let op: i32 = lual_checkoption(interpreter, 2, std::ptr::null(), MODE_NAMES.as_ptr());
+        let op: i32 = lual_checkoption(interpreter, 2, null(), MODE_NAMES.as_ptr());
         let size: i64 = lual_optinteger(
             interpreter,
             3,
@@ -767,22 +768,22 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
         );
         let res: i32;
         *__errno_location() = 0;
-        res = setvbuf(file, std::ptr::null_mut(), MODE[op as usize], size as u64);
-        return lual_fileresult(interpreter, (res == 0) as i32, std::ptr::null());
+        res = setvbuf(file, null_mut(), MODE[op as usize], size as u64);
+        return lual_fileresult(interpreter, (res == 0) as i32, null());
     }
 }
 pub unsafe extern "C" fn io_flush(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let file: *mut FILE = getiofile(interpreter, b"_IO_output\0" as *const u8 as *const i8);
         *__errno_location() = 0;
-        return lual_fileresult(interpreter, (fflush(file) == 0) as i32, std::ptr::null());
+        return lual_fileresult(interpreter, (fflush(file) == 0) as i32, null());
     }
 }
 pub unsafe extern "C" fn f_flush(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let file: *mut FILE = tofile(interpreter);
         *__errno_location() = 0;
-        return lual_fileresult(interpreter, (fflush(file) == 0) as i32, std::ptr::null());
+        return lual_fileresult(interpreter, (fflush(file) == 0) as i32, null());
     }
 }
 pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
@@ -855,7 +856,7 @@ pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -907,7 +908,7 @@ pub const IO_METHODS: [RegisteredFunction; 8] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -941,7 +942,7 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -1014,7 +1015,7 @@ pub unsafe extern "C" fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
         createstdfile(
             interpreter,
             stderr,
-            std::ptr::null(),
+            null(),
             b"stderr\0" as *const u8 as *const i8,
         );
         return 1;

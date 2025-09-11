@@ -1,3 +1,4 @@
+use std::ptr::*;
 mod debug;
 mod math;
 mod base;
@@ -84,7 +85,7 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

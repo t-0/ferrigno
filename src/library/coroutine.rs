@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::coroutine::*;
 use crate::tag::*;
 use crate::registeredfunction::*;
@@ -144,7 +145,7 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

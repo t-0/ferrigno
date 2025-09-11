@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use std::ptr::*;
 use crate::utility::c::*;
 use crate::character::*;
 use crate::interpreter::*;
@@ -71,10 +72,10 @@ pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut ar: DebugInfo = DebugInfo {
             event: 0,
-            name: std::ptr::null(),
-            namewhat: std::ptr::null(),
-            what: std::ptr::null(),
-            source: std::ptr::null(),
+            name: null(),
+            namewhat: null(),
+            what: null(),
+            source: null(),
             source_length: 0,
             currentline: 0,
             line_defined: 0,
@@ -86,7 +87,7 @@ pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
-            i_ci: std::ptr::null_mut(),
+            i_ci: null_mut(),
         };
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
@@ -94,7 +95,7 @@ pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             arg + 2,
             b"flnSrtu\0" as *const u8 as *const i8,
-            std::ptr::null_mut(),
+            null_mut(),
         );
         checkstack(interpreter, other_state, 3);
         (((*options.offset(0 as isize) as i32 != CHARACTER_ANGLE_RIGHT as i32) as i32 != 0) as i64 != 0
@@ -207,15 +208,15 @@ pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
         let nvar: i32 = lual_checkinteger(interpreter, arg + 2) as i32;
         if lua_type(interpreter, arg + 1) == Some(TagType::Closure) {
             lua_pushvalue(interpreter, arg + 1);
-            lua_pushstring(interpreter, lua_getlocal(interpreter, std::ptr::null(), nvar));
+            lua_pushstring(interpreter, lua_getlocal(interpreter, null(), nvar));
             return 1;
         } else {
             let mut ar: DebugInfo = DebugInfo {
                 event: 0,
-                name: std::ptr::null(),
-                namewhat: std::ptr::null(),
-                what: std::ptr::null(),
-                source: std::ptr::null(),
+                name: null(),
+                namewhat: null(),
+                what: null(),
+                source: null(),
                 source_length: 0,
                 currentline: 0,
                 line_defined: 0,
@@ -227,7 +228,7 @@ pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
                 ftransfer: 0,
                 ntransfer: 0,
                 short_src: [0; 60],
-                i_ci: std::ptr::null_mut(),
+                i_ci: null_mut(),
             };
             let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
             if lua_getstack(other_state, level, &mut ar) == 0 {
@@ -258,10 +259,10 @@ pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let mut ar: DebugInfo = DebugInfo {
             event: 0,
-            name: std::ptr::null(),
-            namewhat: std::ptr::null(),
-            what: std::ptr::null(),
-            source: std::ptr::null(),
+            name: null(),
+            namewhat: null(),
+            what: null(),
+            source: null(),
             source_length: 0,
             currentline: 0,
             line_defined: 0,
@@ -273,7 +274,7 @@ pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
             ftransfer: 0,
             ntransfer: 0,
             short_src: [0; 60],
-            i_ci: std::ptr::null_mut(),
+            i_ci: null_mut(),
         };
         let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
         let nvar: i32 = lual_checkinteger(interpreter, arg + 2) as i32;
@@ -298,7 +299,7 @@ pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn db_upvalueid(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let id: *mut libc::c_void = checkupval(interpreter, 1, 2, std::ptr::null_mut());
+        let id: *mut libc::c_void = checkupval(interpreter, 1, 2, null_mut());
         if !id.is_null() {
             lua_pushlightuserdata(interpreter, id);
         } else {
@@ -344,7 +345,7 @@ pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
                 count = 0;
             },
             _ => {
-                let smask: *const i8 = lual_checklstring(interpreter, arg + 2, std::ptr::null_mut());
+                let smask: *const i8 = lual_checklstring(interpreter, arg + 2, null_mut());
                 lual_checktype(interpreter, arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
                 function = Some(hookf as unsafe extern "C" fn(*mut Interpreter, *mut DebugInfo) -> ());
@@ -417,14 +418,14 @@ pub unsafe extern "C" fn db_debug(interpreter: *mut Interpreter) -> i32 {
                 buffer.as_mut_ptr(),
                 strlen(buffer.as_mut_ptr()),
                 b"=(debug command)\0" as *const u8 as *const i8,
-                std::ptr::null(),
+                null(),
             ) != 0
                 || lua_pcallk(interpreter, 0, 0, 0, 0, None) != 0
             {
                 fprintf(
                     stderr,
                     b"%s\n\0" as *const u8 as *const i8,
-                    lual_tolstring(interpreter, -1, std::ptr::null_mut()),
+                    lual_tolstring(interpreter, -1, null_mut()),
                 );
                 fflush(stderr);
             }
@@ -436,7 +437,7 @@ pub unsafe extern "C" fn db_traceback(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
-        let message: *const i8 = lua_tolstring(interpreter, arg + 1, std::ptr::null_mut());
+        let message: *const i8 = lua_tolstring(interpreter, arg + 1, null_mut());
         if message.is_null() && !(is_none_or_nil (lua_type(interpreter, arg + 1))) {
             lua_pushvalue(interpreter, arg + 1);
         } else {
@@ -550,7 +551,7 @@ pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

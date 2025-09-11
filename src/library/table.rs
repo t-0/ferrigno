@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::buffer::*;
 use crate::interpreter::*;
 use crate::new::*;
@@ -227,7 +228,7 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn l_randomizepivot() -> u32 {
     unsafe {
         let mut c: i64 = clock();
-        let mut t: i64 = time(std::ptr::null_mut());
+        let mut t: i64 = time(null_mut());
         let mut buffer: [u32; 4] = [0; 4];
         let mut i: u32;
         let mut rnd: u32 = 0u32;
@@ -457,7 +458,7 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::interpreter::*;
 use crate::zio::*;
 use crate::character::*;
@@ -111,7 +112,7 @@ impl LoadState {
             let ts: *mut TString;
             let mut size: u64 = self.load_size();
             if size == 0 {
-                return std::ptr::null_mut();
+                return null_mut();
             } else {
                 size = size.wrapping_sub(1);
                 if size <= 40 as u64 {
@@ -250,7 +251,7 @@ impl LoadState {
             ) as *mut *mut Prototype;
             (*prototype).prototype_prototypes.size = n;
             for i in 0..n {
-                *((*prototype).prototype_prototypes.pointer).offset(i as isize) = std::ptr::null_mut();
+                *((*prototype).prototype_prototypes.pointer).offset(i as isize) = null_mut();
             }
             for i in 0..n {
                 *((*prototype).prototype_prototypes.pointer).offset(i as isize) = luaf_newproto(self.interpreter);
@@ -286,7 +287,7 @@ impl LoadState {
             (*prototype).prototype_upvalues.size = n;
             for i in 0..n {
                 let ref mut fresh29 = (*((*prototype).prototype_upvalues.pointer).offset(i as isize)).name;
-                *fresh29 = std::ptr::null_mut();
+                *fresh29 = null_mut();
             }
             for i in 0..n {
                 let upvalue_description = & mut *((*prototype).prototype_upvalues.at_mut(i as isize));
@@ -346,7 +347,7 @@ impl LoadState {
             (*prototype).prototype_local_variables.size = n;
             for i in 0..n {
                 let ref mut fresh30 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
-                *fresh30 = std::ptr::null_mut();
+                *fresh30 = null_mut();
             }
             for i in 0..n {
                 let ref mut fresh31 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
@@ -472,9 +473,9 @@ pub unsafe extern "C" fn load_closure(
 ) -> *mut Closure {
     unsafe {
         let mut load_state: LoadState = LoadState {
-            interpreter: std::ptr::null_mut(),
-            zio: std::ptr::null_mut(),
-            name: std::ptr::null(),
+            interpreter: null_mut(),
+            zio: null_mut(),
+            name: null(),
         };
         if *name as i32 == CHARACTER_AT as i32 || *name as i32 == CHARACTER_EQUAL as i32 {
             load_state.name = name.offset(1 as isize);
@@ -503,7 +504,7 @@ pub unsafe extern "C" fn load_closure(
             );
         } else {
         };
-        load_state.load_function((*ret).payload.l_prototype, std::ptr::null_mut());
+        load_state.load_function((*ret).payload.l_prototype, null_mut());
         return ret;
     }
 }

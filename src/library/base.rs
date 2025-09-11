@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons,unsafe_code)]
+use std::ptr::*;
 use crate::f2i::*;
 use crate::registeredfunction::*;
 use crate::interpreter::*;
@@ -155,7 +156,7 @@ pub unsafe extern "C" fn luab_collectgarbage(interpreter: *mut Interpreter) -> i
             b"isrunning\0" as *const u8 as *const i8,
             b"generational\0" as *const u8 as *const i8,
             b"incremental\0" as *const u8 as *const i8,
-            std::ptr::null(),
+            null(),
         ];
         pub const OPTS_NUMBERS: [i32; 10] = [0, 1, 2, 3, 5, 6, 7, 9 as i32, 10 as i32, 11 as i32];
         let o: i32 = OPTS_NUMBERS[lual_checkoption(
@@ -312,8 +313,8 @@ pub unsafe extern "C" fn load_aux(interpreter: *mut Interpreter, status: i32, en
 }
 pub unsafe extern "C" fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let fname: *const i8 = lual_optlstring(interpreter, 1, std::ptr::null(), std::ptr::null_mut());
-        let mode: *const i8 = lual_optlstring(interpreter, 2, std::ptr::null(), std::ptr::null_mut());
+        let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
+        let mode: *const i8 = lual_optlstring(interpreter, 2, null(), null_mut());
         let env: i32 = if lua_type(interpreter, 3) == None { 0 } else { 3 };
         let status: i32 = lual_loadfilex(interpreter, fname, mode);
         return load_aux(interpreter, status, env);
@@ -335,7 +336,7 @@ pub unsafe extern "C" fn generic_reader(
         if lua_type(interpreter, -1) == Some(TagType::Nil) {
             lua_settop(interpreter, -2);
             *size = 0;
-            return std::ptr::null();
+            return null();
         } else if !lua_isstring(interpreter, -1) {
             lual_error(
                 interpreter,
@@ -356,18 +357,18 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             3,
             b"bt\0" as *const u8 as *const i8,
-            std::ptr::null_mut(),
+            null_mut(),
         );
         let env: i32 = if !(lua_type(interpreter, 4) == None) { 4 } else { 0 };
         if !s.is_null() {
-            let chunkname: *const i8 = lual_optlstring(interpreter, 2, s, std::ptr::null_mut());
+            let chunkname: *const i8 = lual_optlstring(interpreter, 2, s, null_mut());
             status = lual_loadbufferx(interpreter, s, l, chunkname, mode);
         } else {
             let chunkname_0: *const i8 = lual_optlstring(
                 interpreter,
                 2,
                 b"=(load)\0" as *const u8 as *const i8,
-                std::ptr::null_mut(),
+                null_mut(),
             );
             lual_checktype(interpreter, 1, TagType::Closure);
             lua_settop(interpreter, 5);
@@ -381,7 +382,7 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
                             *mut u64,
                         ) -> *const i8,
                 ),
-                std::ptr::null_mut(),
+                null_mut(),
                 chunkname_0,
                 mode,
             );
@@ -396,9 +397,9 @@ pub unsafe extern "C" fn dofilecont(interpreter: *mut Interpreter, mut _d1: i32,
 }
 pub unsafe extern "C" fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let fname: *const i8 = lual_optlstring(interpreter, 1, std::ptr::null(), std::ptr::null_mut());
+        let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         lua_settop(interpreter, 1);
-        if lual_loadfilex(interpreter, fname, std::ptr::null()) != 0 {
+        if lual_loadfilex(interpreter, fname, null()) != 0 {
             return lua_error(interpreter);
         }
         lua_callk(
@@ -427,14 +428,14 @@ pub unsafe extern "C" fn luab_assert(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn luab_select(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let n: i32 = (*interpreter).get_top();
+        let n = (*interpreter).get_top();
         if lua_type(interpreter, 1) == Some(TagType::String)
-            && *lua_tolstring(interpreter, 1, std::ptr::null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32
+            && *lua_tolstring(interpreter, 1, null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32
         {
             (*interpreter).push_integer((n - 1) as i64);
             return 1;
         } else {
-            let mut i: i64 = lual_checkinteger(interpreter, 1);
+            let mut i = lual_checkinteger(interpreter, 1);
             if i < 0 {
                 i = n as i64 + i;
             } else if i > n as i64 {
@@ -469,7 +470,7 @@ pub unsafe extern "C" fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn luab_tostring(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
-        lual_tolstring(interpreter, 1, std::ptr::null_mut());
+        lual_tolstring(interpreter, 1, null_mut());
         return 1;
     }
 }
@@ -627,7 +628,7 @@ pub const BASE_FUNCTIONS: [RegisteredFunction; 26] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

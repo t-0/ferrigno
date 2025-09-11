@@ -12,6 +12,7 @@
 //         }
 //     }
 // }
+use std::ptr::*;
 use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
@@ -74,7 +75,7 @@ pub trait TObject {
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Object {
-    pub next: *mut Object = std::ptr::null_mut(),
+    pub next: *mut Object = null_mut(),
     pub tag: u8 = TagVariant::NilNil as u8,
     pub marked: u8 = 0,
     pub _dummy0: u16 = 0,
@@ -109,13 +110,13 @@ impl TObject for Object {
         "object".to_string()
     }
     fn get_metatable(&mut self) -> *mut Table {
-        std::ptr::null_mut()
+        null_mut()
     }
 }
 impl Object {
     pub fn new (tag: u8) -> Object {
         Object {
-            next: std::ptr::null_mut(),
+            next: null_mut(),
             tag: tag,
             marked: 0,
             _dummy0: 0,
@@ -132,7 +133,7 @@ pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
             TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
             TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).prototype_gc_list,
             TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
-            _ => return std::ptr::null_mut(),
+            _ => return null_mut(),
         };
     }
 }
@@ -309,7 +310,7 @@ pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut
             }
             TAG_VARIANT_STATE => {
                 let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
-                (*other).free_state(interpreter);
+                (*other).free_interpreter (interpreter);
             }
             TAG_VARIANT_USER => {
                 let user: *mut User = &mut (*(object as *mut User));

@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::buffer::*;
 use crate::character::*;
 use crate::gmatchstate::*;
@@ -11,7 +12,6 @@ use crate::registeredfunction::*;
 use crate::streamwriter::*;
 use crate::tag::*;
 use crate::tstring::*;
-use crate::user::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::{memcpy, tolower, toupper};
@@ -380,7 +380,7 @@ pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -396,9 +396,9 @@ pub unsafe extern "C" fn lmemfind(
         if l2 == 0 {
             return s1;
         } else if l2 > l1 {
-            return std::ptr::null();
+            return null();
         } else {
-            let mut init: *const i8 = std::ptr::null();
+            let mut init: *const i8 = null();
             l2 = l2.wrapping_sub(1);
             l1 = l1.wrapping_sub(l2);
             while l1 > 0 && {
@@ -418,7 +418,7 @@ pub unsafe extern "C" fn lmemfind(
                     s1 = init;
                 }
             }
-            return std::ptr::null();
+            return null();
         };
     }
 }
@@ -471,14 +471,14 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
             }
         } else {
             let mut match_state: MatchState = MatchState {
-                src_init: std::ptr::null(),
-                src_end: std::ptr::null(),
-                p_end: std::ptr::null(),
-                interpreter: std::ptr::null_mut(),
+                src_init: null(),
+                src_end: null(),
+                p_end: null(),
+                interpreter: null_mut(),
                 matchdepth: 0,
                 level: 0,
                 capture: [MatchStateCapture {
-                    init: std::ptr::null(),
+                    init: null(),
                     length: 0,
                 }; 32],
             };
@@ -497,7 +497,7 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
                     if find != 0 {
                         (*interpreter).push_integer((s1.offset_from(s) as i64 + 1) as i64);
                         (*interpreter).push_integer(res.offset_from(s) as i64);
-                        return match_state.push_captures(std::ptr::null(), std::ptr::null()) + 2;
+                        return match_state.push_captures(null(), null()) + 2;
                     } else {
                         return match_state.push_captures(s1, res);
                     }
@@ -529,21 +529,21 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
         let mut lp: u64 = 0;
         let mut src: *const i8 = lual_checklstring(interpreter, 1, &mut srcl);
         let mut p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
-        let mut lastmatch: *const i8 = std::ptr::null();
+        let mut lastmatch: *const i8 = null();
         let tr = lua_type(interpreter, 3);
         let max_s: i64 = lual_optinteger(interpreter, 4, srcl.wrapping_add(1 as u64) as i64);
         let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
         let mut n: i64 = 0;
         let mut changed: i32 = 0;
         let mut match_state: MatchState = MatchState {
-            src_init: std::ptr::null(),
-            src_end: std::ptr::null(),
-            p_end: std::ptr::null(),
-            interpreter: std::ptr::null_mut(),
+            src_init: null(),
+            src_end: null(),
+            p_end: null(),
+            interpreter: null_mut(),
             matchdepth: 0,
             level: 0,
             capture: [MatchStateCapture {
-                init: std::ptr::null(),
+                init: null(),
                 length: 0,
             }; 32],
         };
@@ -701,7 +701,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                 let buffer: *mut i8 = (*b).prepare_with_size(120);
                 let nb: i32;
                 if lua_isinteger(interpreter, arg) {
-                    let n: i64 = lua_tointegerx(interpreter, arg, std::ptr::null_mut());
+                    let n: i64 = lua_tointegerx(interpreter, arg, null_mut());
                     let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
                         b"0x%llx\0" as *const u8 as *const i8
                     } else {
@@ -712,13 +712,13 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                     nb = quotefloat(
                         interpreter,
                         buffer,
-                        lua_tonumberx(interpreter, arg, std::ptr::null_mut()),
+                        lua_tonumberx(interpreter, arg, null_mut()),
                     );
                 }
                 (*b).vector.length = ((*b).vector.length as usize).wrapping_add(nb as usize) as i32;
             }
             Some(TagType::Nil) | Some(TagType::Boolean) => {
-                lual_tolstring(interpreter, arg, std::ptr::null_mut());
+                lual_tolstring(interpreter, arg, null_mut());
                 (*b).add_value();
             }
             _ => {
@@ -808,7 +808,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
         let mut sfl: u64 = 0;
         let mut strfrmt: *const i8 = lual_checklstring(interpreter, arg, &mut sfl);
         let strfrmt_end: *const i8 = strfrmt.offset(sfl as isize);
-        let mut flags: *const i8 = std::ptr::null();
+        let mut flags: *const i8 = null();
         let mut b = Buffer::new();
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
@@ -897,7 +897,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             current_block = 6669252993407410313;
                         }
                         CHARACTER_LOWER_P => {
-                            let mut p: *const libc::c_void = User::lua_topointer(interpreter, arg);
+                            let mut p: *const libc::c_void = (*interpreter).lua_topointer(arg);
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
@@ -1244,11 +1244,11 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         let mut h: Header = Header {
-            interpreter: std::ptr::null_mut(),
+            interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut arg: i32 = 1;
         let mut totalsize: u64 = 0;
         initheader(interpreter, &mut h);
@@ -1423,11 +1423,11 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
-            interpreter: std::ptr::null_mut(),
+            interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut totalsize: u64 = 0;
         initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
@@ -1517,11 +1517,11 @@ pub unsafe extern "C" fn unpackint(
 pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
-            interpreter: std::ptr::null_mut(),
+            interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut ld: u64 = 0;
         let data: *const i8 = lual_checklstring(interpreter, 2, &mut ld);
         let mut pos: u64 = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), ld))
@@ -1750,7 +1750,7 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

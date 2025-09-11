@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use libc::*;
@@ -21,7 +22,7 @@ impl ZIO {
             reader: reader,
             data: data,
             length: 0,
-            pointer: std::ptr::null(),
+            pointer: null(),
         }
     }
 }

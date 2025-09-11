@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::debugger::absolutelineinfo::*;
 use crate::dumpstate::*;
 use crate::vm::opcode::*;
@@ -48,7 +49,7 @@ impl TObject for Prototype {
         "prototype".to_string()
     }
     fn get_metatable(&mut self) -> *mut Table {
-        std::ptr::null_mut()
+        null_mut()
     }
 }
 impl Prototype {
@@ -68,7 +69,7 @@ impl Prototype {
     ) {
         unsafe {
             if dump_state.is_strip || self.prototype_source == source {
-                dump_state.dump_string(std::ptr::null());
+                dump_state.dump_string(null());
             } else {
                 dump_state.dump_string(self.prototype_source);
             }
@@ -406,7 +407,7 @@ pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *cons
             return b"constant\0" as *const u8 as *const i8;
         } else {
             *name = b"?\0" as *const u8 as *const i8;
-            return std::ptr::null();
+            return null();
         };
     }
 }
@@ -456,7 +457,7 @@ pub unsafe extern "C" fn basicgetobjname(
                 _ => {}
             }
         }
-        return std::ptr::null();
+        return null();
     }
 }
 pub unsafe extern "C" fn rname(
@@ -495,13 +496,13 @@ pub unsafe extern "C" fn is_environment(
 ) -> *const i8 {
     unsafe {
         let t: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-        let mut name: *const i8 = std::ptr::null();
+        let mut name: *const i8 = null();
         if isup != 0 {
             name = upvalname(p, t);
         } else {
             let what: *const i8 = basicgetobjname(p, &mut program_counter, t, &mut name);
             if what != STRING_LOCAL.as_ptr() && what != STRING_UPVALUE.as_ptr() {
-                name = std::ptr::null();
+                name = null();
             }
         }
         return if !name.is_null() && strcmp(name, b"_ENV\0" as *const u8 as *const i8) == 0 {
@@ -551,7 +552,7 @@ pub unsafe extern "C" fn getobjname(
                 _ => {}
             }
         }
-        return std::ptr::null();
+        return null();
     }
 }
 pub unsafe extern "C" fn funcnamefromcode(
@@ -609,7 +610,7 @@ pub unsafe extern "C" fn funcnamefromcode(
             OP_CLOSE | OP_RETURN => {
                 tm = TM_CLOSE;
             }
-            _ => return std::ptr::null(),
+            _ => return null(),
         }
         *name = ((*(*(*interpreter).global).tm_name[tm as usize]).get_contents())
             .offset(2 as isize);
@@ -663,7 +664,7 @@ pub unsafe extern "C" fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Pr
         (*prototype).prototype_local_variables.initialize();
         (*prototype).prototype_line_defined = 0;
         (*prototype).prototype_last_line_defined = 0;
-        (*prototype).prototype_source = std::ptr::null_mut();
+        (*prototype).prototype_source = null_mut();
         return prototype;
     }
 }
@@ -675,7 +676,7 @@ pub unsafe extern "C" fn luaf_getlocalname(
     unsafe {
         for i in 0..(*prototype).prototype_local_variables.size {
             if (*((*prototype).prototype_local_variables.pointer).offset(i as isize)).start_program_counter > program_counter {
-                return std::ptr::null();
+                return null();
             } else if program_counter < (*((*prototype).prototype_local_variables.pointer).offset(i as isize)).end_program_counter {
                 local_number -= 1;
                 if local_number == 0 {
@@ -684,6 +685,6 @@ pub unsafe extern "C" fn luaf_getlocalname(
                 }
             }
         }
-        return std::ptr::null();
+        return null();
     }
 }

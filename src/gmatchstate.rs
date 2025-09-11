@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::matchstate::*;
 use crate::interpreter::*;
 use crate::tstring::*;
@@ -53,7 +54,7 @@ impl GMatchState {
             (*gm).match_state.prepstate(interpreter, s, lexical_state, p, lp);
             (*gm).source = s.offset(init as isize);
             (*gm).pointer = p;
-            (*gm).last_match = std::ptr::null();
+            (*gm).last_match = null();
             lua_pushcclosure(
                 interpreter,
                 Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut Interpreter) -> i32),

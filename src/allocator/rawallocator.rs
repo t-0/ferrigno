@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use crate::allocator::*;
 use libc::{free, malloc, realloc};
+use std::ptr::*;
 pub struct RawAllocator {}
 impl RawAllocator {
     pub fn new() -> Self {
@@ -27,7 +28,7 @@ impl Allocator for RawAllocator {
         unsafe {
             if 0 == new_size {
                 free(pointer);
-                return std::ptr::null_mut();
+                return null_mut();
             } else {
                 return realloc(pointer, new_size);
             };

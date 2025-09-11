@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::functions::*;
 use crate::object::*;
 use crate::tstring::*;
@@ -17,7 +18,7 @@ pub union Value {
 impl Value {
     pub const fn new() -> Self {
         Value {
-            object: std::ptr::null_mut(),
+            object: null_mut(),
         }
     }
 }

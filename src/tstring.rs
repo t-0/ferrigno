@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::character::*;
 use crate::global::*;
 use crate::object::*;
@@ -31,7 +32,7 @@ impl TObject for TString {
         "string".to_string()
     }
     fn get_metatable(&mut self) -> *mut Table {
-        std::ptr::null_mut()
+        null_mut()
     }
 }
 #[derive(Copy, Clone)]

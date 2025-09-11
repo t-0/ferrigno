@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::tag::*;
 use crate::object::*;
 use crate::interpreter::*;
@@ -42,7 +43,7 @@ impl TObject for Closure {
         "closure".to_string()
     }
     fn get_metatable(&mut self) -> *mut Table {
-        std::ptr::null_mut()
+        null_mut()
     }
 }
 impl Closure {
@@ -107,7 +108,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
-            let mut current_line: i32 = (*prototype).prototype_line_defined;
+            let mut current_line = (*prototype).prototype_line_defined;
             let table: *mut Table = luah_new(interpreter);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(table as *mut Object));
@@ -177,7 +178,7 @@ pub unsafe extern "C" fn auxgetinfo(
                     (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
                         (*ar).namewhat = b"\0" as *const u8 as *const i8;
-                        (*ar).name = std::ptr::null();
+                        (*ar).name = null();
                     }
                 },
                 CHARACTER_LOWER_R => {
@@ -225,7 +226,7 @@ pub unsafe extern "C" fn luaf_newlclosure(interpreter: *mut Interpreter, mut cou
             size_lclosure(count_upvalues as usize),
         );
         let ret: *mut Closure = &mut (*(object as *mut Closure));
-        (*ret).payload.l_prototype = std::ptr::null_mut();
+        (*ret).payload.l_prototype = null_mut();
         (*ret).count_upvalues = count_upvalues as u8;
         loop {
             let fresh = count_upvalues;
@@ -234,7 +235,7 @@ pub unsafe extern "C" fn luaf_newlclosure(interpreter: *mut Interpreter, mut cou
                 break;
             }
             let ref mut fresh18 = *((*ret).upvalues).l_upvalues.as_mut_ptr().offset(count_upvalues as isize);
-            *fresh18 = std::ptr::null_mut();
+            *fresh18 = null_mut();
         }
         return ret;
     }

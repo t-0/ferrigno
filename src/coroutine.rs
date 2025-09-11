@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
@@ -16,10 +17,10 @@ pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Inter
                 0 => {
                     let mut ar: DebugInfo = DebugInfo {
                         event: 0,
-                        name: std::ptr::null(),
-                        namewhat: std::ptr::null(),
-                        what: std::ptr::null(),
-                        source: std::ptr::null(),
+                        name: null(),
+                        namewhat: null(),
+                        what: null(),
+                        source: null(),
                         source_length: 0,
                         currentline: 0,
                         line_defined: 0,
@@ -31,7 +32,7 @@ pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Inter
                         ftransfer: 0,
                         ntransfer: 0,
                         short_src: [0; 60],
-                        i_ci: std::ptr::null_mut(),
+                        i_ci: null_mut(),
                     };
                     if lua_getstack(co, 0, &mut ar) != 0 {
                         return 3;

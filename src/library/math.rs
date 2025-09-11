@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::utility::c::*;
 use crate::randomstate::*;
 use crate::utility::*;
@@ -86,7 +87,7 @@ pub unsafe extern "C" fn set_seed(interpreter: *mut Interpreter, randomstate: *m
 }
 pub unsafe extern "C" fn random_seed(interpreter: *mut Interpreter, randomstate: *mut RandomState) {
     unsafe {
-        let seed1: u64 = time(std::ptr::null_mut()) as u64;
+        let seed1: u64 = time(null_mut()) as u64;
         let seed2: u64 = interpreter as u64;
         set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
     }
@@ -94,7 +95,7 @@ pub unsafe extern "C" fn random_seed(interpreter: *mut Interpreter, randomstate:
 unsafe extern "C" fn math_abs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         if lua_isinteger(interpreter, 1) {
-            let mut n: i64 = lua_tointegerx(interpreter, 1, std::ptr::null_mut());
+            let mut n: i64 = lua_tointegerx(interpreter, 1, null_mut());
             if n < 0 {
                 n = (0u64).wrapping_sub(n as u64) as i64;
             }
@@ -181,14 +182,14 @@ unsafe extern "C" fn math_ceil(interpreter: *mut Interpreter) -> i32 {
 unsafe extern "C" fn math_fmod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         if lua_isinteger(interpreter, 1) && lua_isinteger(interpreter, 2) {
-            let d: i64 = lua_tointegerx(interpreter, 2, std::ptr::null_mut());
+            let d: i64 = lua_tointegerx(interpreter, 2, null_mut());
             if (d as u64).wrapping_add(1 as u64) <= 1 as u64 {
                 (((d != 0) as i32 != 0) as i64 != 0
                     || lual_argerror(interpreter, 2, b"zero\0" as *const u8 as *const i8) != 0)
                     as i32;
                 (*interpreter).push_integer(0);
             } else {
-                (*interpreter).push_integer(lua_tointegerx(interpreter, 1, std::ptr::null_mut()) % d);
+                (*interpreter).push_integer(lua_tointegerx(interpreter, 1, null_mut()) % d);
             }
         } else {
             (*interpreter).push_number(fmod(lual_checknumber(interpreter, 1), lual_checknumber(interpreter, 2)));
@@ -390,7 +391,7 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -572,7 +573,7 @@ const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

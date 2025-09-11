@@ -1,3 +1,4 @@
+use std::ptr::*;
 use libc::*;
 use crate::buffer::*;
 use crate::utility::*;
@@ -56,14 +57,14 @@ impl New for LexicalState {
             last_line: 0,
             token: Token::new(),
             look_ahead: Token::new(),
-            function_state: std::ptr::null_mut(),
-            interpreter: std::ptr::null_mut(),
-            zio: std::ptr::null_mut(),
-            buffer: std::ptr::null_mut(),
-            table: std::ptr::null_mut(),
-            dynamic_data: std::ptr::null_mut(),
-            source: std::ptr::null_mut(),
-            environment: std::ptr::null_mut(),
+            function_state: null_mut(),
+            interpreter: null_mut(),
+            zio: null_mut(),
+            buffer: null_mut(),
+            table: null_mut(),
+            dynamic_data: null_mut(),
+            source: null_mut(),
+            environment: null_mut(),
         };
     }
 }
@@ -203,7 +204,7 @@ impl LexicalState {
                     let fresh45 = old_size;
                     old_size = old_size + 1;
                     let ref mut fresh46 = *((*prototype).prototype_prototypes.pointer).offset(fresh45 as isize);
-                    *fresh46 = std::ptr::null_mut();
+                    *fresh46 = null_mut();
                 }
             }
             let clp: *mut Prototype = luaf_newproto(self.interpreter);
@@ -236,7 +237,7 @@ pub unsafe extern "C" fn findlabel(
                 return lb;
             }
         }
-        return std::ptr::null_mut();
+        return null_mut();
     }
 }
 pub unsafe extern "C" fn newlabelentry(
@@ -376,7 +377,7 @@ pub unsafe extern "C" fn open_func(
         (*function_state).needs_close = false;
         (*function_state).first_local = (*(*lexical_state).dynamic_data).active_variable.length;
         (*function_state).first_label = (*(*lexical_state).dynamic_data).label.length;
-        (*function_state).block_control = std::ptr::null_mut();
+        (*function_state).block_control = null_mut();
         (*prototype).prototype_source = (*lexical_state).source;
         if (*prototype).get_marked() & 1 << 5 != 0 && (*(*prototype).prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(
@@ -392,19 +393,19 @@ pub unsafe extern "C" fn open_func(
 }
 pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
     unsafe {
-        let interpreter: *mut Interpreter = (*lexical_state).interpreter;
+        let interpreter  = & mut (*(*lexical_state).interpreter);
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let prototype: *mut Prototype = (*function_state).prototype;
         luak_ret(function_state, luay_nvarstack(function_state), 0);
         leaveblock(function_state);
         luak_finish(function_state);
-        (*prototype).prototype_code.shrink(interpreter, (*function_state).program_counter as usize);
-        (*prototype).prototype_line_info.shrink(interpreter, (*function_state).program_counter as usize);
-        (*prototype).prototype_absolute_line_info.shrink(interpreter, (*function_state).count_abslineinfo as usize);
-        (*prototype).prototype_constants.shrink(interpreter, (*function_state).count_k as usize);
-        (*prototype).prototype_prototypes.shrink(interpreter, (*function_state).count_p as usize);
-        (*prototype).prototype_local_variables.shrink(interpreter, (*function_state).count_debug_variables as usize);
-        (*prototype).prototype_upvalues.shrink(interpreter, (*function_state).count_upvalues as usize);
+        (*prototype).prototype_code.shrink(&mut *interpreter, (*function_state).program_counter as usize);
+        (*prototype).prototype_line_info.shrink(&mut *interpreter, (*function_state).program_counter as usize);
+        (*prototype).prototype_absolute_line_info.shrink(&mut *interpreter, (*function_state).count_abslineinfo as usize);
+        (*prototype).prototype_constants.shrink(&mut *interpreter, (*function_state).count_k as usize);
+        (*prototype).prototype_prototypes.shrink(&mut *interpreter, (*function_state).count_p as usize);
+        (*prototype).prototype_local_variables.shrink(&mut *interpreter, (*function_state).count_debug_variables as usize);
+        (*prototype).prototype_upvalues.shrink(&mut *interpreter, (*function_state).count_upvalues as usize);
         (*lexical_state).function_state = (*function_state).previous;
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
@@ -524,7 +525,7 @@ pub unsafe extern "C" fn constructor(
                 t: 0,
                 f: 0,
             },
-            t: std::ptr::null_mut(),
+            t: null_mut(),
             nh: 0,
             na: 0,
             to_store: 0,
@@ -597,10 +598,10 @@ pub unsafe extern "C" fn body(
 ) {
     unsafe {
         let mut new_fs: FunctionState = FunctionState {
-            prototype: std::ptr::null_mut(),
-            previous: std::ptr::null_mut(),
-            lexical_state: std::ptr::null_mut(),
-            block_control: std::ptr::null_mut(),
+            prototype: null_mut(),
+            previous: null_mut(),
+            lexical_state: null_mut(),
+            block_control: null_mut(),
             program_counter: 0,
             last_target: 0,
             previous_line: 0,
@@ -925,7 +926,7 @@ pub unsafe extern "C" fn registerlocalvar(
             let fresh33 = old_size;
             old_size = old_size + 1;
             let ref mut fresh34 = (*((*prototype).prototype_local_variables.pointer).offset(fresh33 as isize)).variable_name;
-            *fresh34 = std::ptr::null_mut();
+            *fresh34 = null_mut();
         }
         let ref mut fresh35 =
             (*((*prototype).prototype_local_variables.pointer).offset((*function_state).count_debug_variables as isize)).variable_name;
@@ -988,7 +989,7 @@ pub unsafe extern "C" fn check_readonly(
 ) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let mut variable_name: *mut TString = std::ptr::null_mut();
+        let mut variable_name: *mut TString = null_mut();
         match (*e).expression_kind {
             ExpressionKind::VCONST => {
                 variable_name = (*((*(*lexical_state).dynamic_data).active_variable.pointer)
@@ -1254,7 +1255,7 @@ pub unsafe extern "C" fn restassign(
         check_readonly(lexical_state, &mut (*lh).expression_description);
         if testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
             let mut nv: LHSAssign = LHSAssign {
-                previous: std::ptr::null_mut(),
+                previous: null_mut(),
                 expression_description: ExpressionDescription {
                     expression_kind: ExpressionKind::VVOID,
                     value: Value { integer: 0 },
@@ -1769,7 +1770,7 @@ pub unsafe extern "C" fn exprstat(lexical_state: *mut LexicalState) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut v: LHSAssign = LHSAssign {
-            previous: std::ptr::null_mut(),
+            previous: null_mut(),
             expression_description: ExpressionDescription {
                 expression_kind: ExpressionKind::VVOID,
                 value: Value { integer: 0 },
@@ -1779,7 +1780,7 @@ pub unsafe extern "C" fn exprstat(lexical_state: *mut LexicalState) {
         };
         suffixedexp(lexical_state, &mut v.expression_description);
         if (*lexical_state).token.token == CHARACTER_EQUAL as i32 || (*lexical_state).token.token == CHARACTER_COMMA as i32 {
-            v.previous = std::ptr::null_mut();
+            v.previous = null_mut();
             restassign(lexical_state, &mut v, 1);
         } else {
             if !(v.expression_description.expression_kind as u32 == ExpressionKind::VCALL as u32) {
@@ -2040,7 +2041,7 @@ pub unsafe extern "C" fn luax_setinput(
         (*lexical_state).current = firstchar;
         (*lexical_state).look_ahead.token = TK_EOS as i32;
         (*lexical_state).zio = zio;
-        (*lexical_state).function_state = std::ptr::null_mut();
+        (*lexical_state).function_state = null_mut();
         (*lexical_state).line_number = 1;
         (*lexical_state).last_line = 1;
         (*lexical_state).source = source;
@@ -2680,7 +2681,7 @@ pub unsafe extern "C" fn llex(
                         let sep: u64 = skip_sep(lexical_state);
                         (*(*lexical_state).buffer).vector.length = 0;
                         if sep >= 2 as u64 {
-                            read_long_string(lexical_state, std::ptr::null_mut(), sep);
+                            read_long_string(lexical_state, null_mut(), sep);
                             (*(*lexical_state).buffer).vector.length = 0;
                             current_block_85 = 10512632378975961025;
                         } else {

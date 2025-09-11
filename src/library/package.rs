@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::utility::c::*;
 use crate::interpreter::*;
 use crate::character::*;
@@ -167,8 +168,8 @@ pub unsafe extern "C" fn lookforfunc(interpreter: *mut Interpreter, path: *const
 }
 pub unsafe extern "C" fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let path: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
-        let init: *const i8 = lual_checklstring(interpreter, 2, std::ptr::null_mut());
+        let path: *const i8 = lual_checklstring(interpreter, 1, null_mut());
+        let init: *const i8 = lual_checklstring(interpreter, 2, null_mut());
         let stat: i32 = lookforfunc(interpreter, path, init);
         if stat == 0 {
             return 1;
@@ -201,7 +202,7 @@ pub unsafe extern "C" fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *c
     unsafe {
         let mut name: *mut i8 = *path;
         if name == end {
-            return std::ptr::null();
+            return null();
         } else if *name as i32 == Character::Null as i32 {
             *name = *(b";\0" as *const u8 as *const i8);
             name = name.offset(1);
@@ -265,27 +266,27 @@ pub unsafe extern "C" fn searchpath(
             }
         }
         buffer.push_result();
-        pusherrornotfound(interpreter, lua_tolstring(interpreter, -1, std::ptr::null_mut()));
-        return std::ptr::null();
+        pusherrornotfound(interpreter, lua_tolstring(interpreter, -1, null_mut()));
+        return null();
     }
 }
 pub unsafe extern "C" fn ll_searchpath(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let f: *const i8 = searchpath(
             interpreter,
-            lual_checklstring(interpreter, 1, std::ptr::null_mut()),
-            lual_checklstring(interpreter, 2, std::ptr::null_mut()),
+            lual_checklstring(interpreter, 1, null_mut()),
+            lual_checklstring(interpreter, 2, null_mut()),
             lual_optlstring(
                 interpreter,
                 3,
                 b".\0" as *const u8 as *const i8,
-                std::ptr::null_mut(),
+                null_mut(),
             ),
             lual_optlstring(
                 interpreter,
                 4,
                 b"/\0" as *const u8 as *const i8,
-                std::ptr::null_mut(),
+                null_mut(),
             ),
         );
         if !f.is_null() {
@@ -305,7 +306,7 @@ pub unsafe extern "C" fn findfile(
 ) -> *const i8 {
     unsafe {
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, pname);
-        let path: *const i8 = lua_tolstring(interpreter, -1, std::ptr::null_mut());
+        let path: *const i8 = lua_tolstring(interpreter, -1, null_mut());
         if path.is_null() {
             lual_error(
                 interpreter,
@@ -325,16 +326,16 @@ pub unsafe extern "C" fn checkload(interpreter: *mut Interpreter, stat: i32, fil
             return lual_error(
                 interpreter,
                 b"error loading module '%s' from file '%s':\n\t%s\0".as_ptr(),
-                lua_tolstring(interpreter, 1, std::ptr::null_mut()),
+                lua_tolstring(interpreter, 1, null_mut()),
                 filename,
-                lua_tolstring(interpreter, -1, std::ptr::null_mut()),
+                lua_tolstring(interpreter, -1, null_mut()),
             );
         };
     }
 }
 pub unsafe extern "C" fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let name: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let filename: *const i8 = findfile(
             interpreter,
             name,
@@ -346,7 +347,7 @@ pub unsafe extern "C" fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
         }
         return checkload(
             interpreter,
-            (lual_loadfilex(interpreter, filename, std::ptr::null()) == 0) as i32,
+            (lual_loadfilex(interpreter, filename, null()) == 0) as i32,
             filename,
         );
     }
@@ -380,7 +381,7 @@ pub unsafe extern "C" fn loadfunc(
 }
 pub unsafe extern "C" fn searcher_c(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let name: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let filename: *const i8 = findfile(
             interpreter,
             name,
@@ -399,7 +400,7 @@ pub unsafe extern "C" fn searcher_c(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let name: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let p: *const i8 = strchr(name, CHARACTER_PERIOD as i32);
         if p.is_null() {
             return 0;
@@ -407,7 +408,7 @@ pub unsafe extern "C" fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
         lua_pushlstring(interpreter, name, p.offset_from(name) as u64);
         let filename: *const i8 = findfile(
             interpreter,
-            lua_tolstring(interpreter, -1, std::ptr::null_mut()),
+            lua_tolstring(interpreter, -1, null_mut()),
             b"cpath\0" as *const u8 as *const i8,
             b"/\0" as *const u8 as *const i8,
         );
@@ -434,7 +435,7 @@ pub unsafe extern "C" fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn searcher_preload(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let name: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         lua_getfield(
             interpreter,
             -(1000000 as i32) - 1000 as i32,
@@ -482,7 +483,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
                     interpreter,
                     b"module '%s' not found:%s\0".as_ptr(),
                     name,
-                    lua_tolstring(interpreter, -1, std::ptr::null_mut()),
+                    lua_tolstring(interpreter, -1, null_mut()),
                 );
             }
             lua_pushstring(interpreter, name);
@@ -502,7 +503,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
 }
 pub unsafe extern "C" fn ll_require(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let name: *const i8 = lual_checklstring(interpreter, 1, std::ptr::null_mut());
+        let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         lua_settop(interpreter, 1);
         lua_getfield(
             interpreter,
@@ -579,7 +580,7 @@ pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 8] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },
@@ -595,7 +596,7 @@ pub const LL_FUNCTIONS: [RegisteredFunction; 2] = {
         },
         {
             RegisteredFunction {
-                name: std::ptr::null(),
+                name: null(),
                 function: None,
             }
         },

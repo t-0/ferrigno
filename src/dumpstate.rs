@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::tstring::*;
@@ -158,7 +159,7 @@ pub unsafe extern "C" fn save_prototype(
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();
         dump_state.dump_byte((*prototype).prototype_upvalues.size as u8);
-        (*prototype).dump_function(&mut dump_state, std::ptr::null_mut());
+        (*prototype).dump_function(&mut dump_state, null_mut());
         return dump_state.status;
     }
 }

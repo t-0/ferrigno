@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::functions::*;
 use crate::object::*;
 use crate::interpreter::*;
@@ -100,12 +101,12 @@ impl Global {
     pub unsafe extern "C" fn enter_incremental(&mut self) {
         unsafe {
             self.white_list(self.all_gc);
-            self.survival = std::ptr::null_mut();
+            self.survival = null_mut();
             self.old1 = self.survival;
             self.really_old = self.old1;
             self.white_list(self.finalized_objects);
             self.white_list(self.to_be_finalized);
-            self.finobjsur = std::ptr::null_mut();
+            self.finobjsur = null_mut();
             self.finobjold1 = self.finobjsur;
             self.finobjrold = self.finobjold1;
             self.gc_state = 8i32 as u8;
@@ -209,9 +210,9 @@ pub unsafe extern "C" fn remarkupvals(global: *mut Global) -> i32 {
 }
 pub unsafe extern "C" fn cleargraylists(global: *mut Global) {
     unsafe {
-        (*global).gray_again = std::ptr::null_mut();
+        (*global).gray_again = null_mut();
         (*global).gray = (*global).gray_again;
-        (*global).ephemeron = std::ptr::null_mut();
+        (*global).ephemeron = null_mut();
         (*global).all_weak = (*global).ephemeron;
         (*global).weak = (*global).all_weak;
     }
@@ -246,7 +247,7 @@ pub unsafe extern "C" fn convergeephemerons(global: *mut Global) {
         let mut dir: i32 = 0;
         loop {
             let mut next: *mut Object = (*global).ephemeron;
-            (*global).ephemeron = std::ptr::null_mut();
+            (*global).ephemeron = null_mut();
             changed = 0;
             loop {
                 let w: *mut Object = next;
@@ -282,7 +283,7 @@ pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
                     if (*node).key.is_collectable() {
                         (*node).key.value.object
                     } else {
-                        std::ptr::null_mut()
+                        null_mut()
                     },
                 ) != 0
                 {
@@ -312,7 +313,7 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                     if (*tvalue).is_collectable() {
                         (*tvalue).value.object
                     } else {
-                        std::ptr::null_mut()
+                        null_mut()
                     },
                 ) != 0
                 {
@@ -326,7 +327,7 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
                     if (*node).value.is_collectable() {
                         (*node).value.value.object
                     } else {
-                        std::ptr::null_mut()
+                        null_mut()
                     },
                 ) != 0
                 {
@@ -411,13 +412,13 @@ pub unsafe extern "C" fn correctgraylists(global: *mut Global) {
     unsafe {
         let mut list: *mut *mut Object = correct_gray_list(&mut (*global).gray_again);
         *list = (*global).weak;
-        (*global).weak = std::ptr::null_mut();
+        (*global).weak = null_mut();
         list = correct_gray_list(list);
         *list = (*global).all_weak;
-        (*global).all_weak = std::ptr::null_mut();
+        (*global).all_weak = null_mut();
         list = correct_gray_list(list);
         *list = (*global).ephemeron;
-        (*global).ephemeron = std::ptr::null_mut();
+        (*global).ephemeron = null_mut();
         correct_gray_list(list);
     }
 }

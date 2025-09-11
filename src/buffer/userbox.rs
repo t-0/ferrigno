@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons,unsafe_code)]
+use std::ptr::*;
 use crate::registeredfunction::*;
 use crate::interpreter::*;
 use crate::user::*;
@@ -47,7 +48,7 @@ impl UserBox {
             },
             {
                 RegisteredFunction {
-                    name: std::ptr::null(),
+                    name: null(),
                     function: None,
                 }
             },
@@ -57,7 +58,7 @@ impl UserBox {
         unsafe {
             let box_0: *mut UserBox =
                 User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;
-            (*box_0).pointer = std::ptr::null_mut();
+            (*box_0).pointer = null_mut();
             (*box_0).size = 0;
             if lual_newmetatable(interpreter, b"_UBOX*\0" as *const u8 as *const i8) != 0 {
                 lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), 0);

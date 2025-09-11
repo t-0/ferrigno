@@ -1,3 +1,4 @@
+use std::ptr::*;
 use crate::tvalue::*;
 use crate::tag::*;
 use crate::utility::*;
@@ -237,7 +238,7 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
             & _ISALPHANUMERIC as i32
             == 0
         {
-            return std::ptr::null();
+            return null();
         }
         loop {
             let digit_0: i32 = if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
@@ -249,7 +250,7 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
                 toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
             };
             if digit_0 >= base {
-                return std::ptr::null();
+                return null();
             }
             n = n.wrapping_mul(base as u64).wrapping_add(digit_0 as u64);
             s = s.offset(1);
