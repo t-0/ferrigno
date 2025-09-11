@@ -4,8 +4,8 @@ use crate::interpreter::*;
 #[repr(C)]
 pub struct VectorT<T> {
     pub vectort_pointer: *mut T,
-    pub vectort_length: i32,
-    pub vectort_size: i32,
+    vectort_length: i32,
+    vectort_size: i32,
 }
 impl <T> VectorT<T> {
     pub fn capitulate(&mut self) -> (* mut T, usize) {
@@ -14,6 +14,11 @@ impl <T> VectorT<T> {
         self.vectort_size = 0;
         self.vectort_length = 0;
         ret
+    }
+    pub fn inject(&mut self, pointer: *mut T, size: usize) {
+        self.vectort_pointer = pointer;
+        self.vectort_size = size as i32;
+        self.vectort_length = 0;
     }
     pub fn new() -> VectorT::<T> {
         VectorT::<T> {

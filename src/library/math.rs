@@ -323,7 +323,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
         let up: i64;
         let p: usize;
         let ransate: *mut RandomState =
-            lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+            (*interpreter).to_pointer (-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         let rv: usize = next_random(((*ransate).data).as_mut_ptr());
         match (*interpreter).get_top() {
             0 => {
@@ -364,7 +364,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
 unsafe extern "C" fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let randomstate: *mut RandomState =
-            lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+            (*interpreter).to_pointer (-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         if lua_type(interpreter, 1) == None {
             random_seed(interpreter, randomstate);
         } else {

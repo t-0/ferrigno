@@ -219,7 +219,7 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
     unsafe {
         let p: *mut Stream;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, findex);
-        p = lua_touserdata(interpreter, -1) as *mut Stream;
+        p = (*interpreter).to_pointer (-1) as *mut Stream;
         if (*p).close_function.is_none() {
             lual_error(
                 interpreter,
@@ -463,16 +463,16 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
             funlockfile(file);
-            b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(i as usize) as i32) as usize);
+            b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(i as usize) as i32) as usize);
             if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
         if chop == 0 && c == CHARACTER_LF as i32 {
-            (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh154 = b.vector.get_length();
-            b.vector.set_length(((b.vector.get_length()).wrapping_add(1)) as usize);
-            *(b.vector.vectort_pointer).offset(fresh154 as isize) = c as i8;
+            (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh154 = b.loads.get_length();
+            b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+            *(b.loads.loads_pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
         return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as usize as u32 as i32;
@@ -497,7 +497,7 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
                     .wrapping_mul(size_of::<f64>()),
                 file,
             ) as usize;
-            b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
+            b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
             if !(nr
                 == (16 as usize)
                     .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FI
             n as usize,
             file,
         ) as usize;
-        b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
+        b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
         b.push_result();
         return (nr > 0) as i32;
     }
@@ -617,7 +617,7 @@ pub unsafe extern "C" fn f_read(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut Stream;
+            (*interpreter).to_pointer (-(1000000 as i32) - 1000 as i32 - 1) as *mut Stream;
         let mut n: i32 = lua_tointegerx(
             interpreter,
             -(1000000 as i32) - 1000 as i32 - 2,

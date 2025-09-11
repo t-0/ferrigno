@@ -24,7 +24,7 @@ pub struct TValue {
     collectable: bool,
 }
 impl TValue {
-    pub unsafe extern "C" fn touserdata(&self) -> *mut libc::c_void {
+    pub unsafe extern "C" fn to_pointer(&self) -> *mut libc::c_void {
         unsafe {
             match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {

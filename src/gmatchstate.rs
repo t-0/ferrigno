@@ -15,7 +15,7 @@ impl GMatchState {
     pub unsafe extern "C" fn gmatch_aux(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let gmatch_state: *mut GMatchState =
-                lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 3) as *mut GMatchState;
+                (*interpreter).to_pointer(-1000000 - 1000 - 3) as *mut GMatchState;
             return (*gmatch_state).auxiliary(interpreter);
         }
     }

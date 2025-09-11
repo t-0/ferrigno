@@ -83,11 +83,19 @@ impl TObject for Interpreter {
         null_mut()
     }
 }
+pub unsafe extern "C" fn lua_touserdata(
+    interpreter: *mut Interpreter,
+    index: i32,
+) -> *mut libc::c_void {
+    unsafe {
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        return (*tvalue).to_pointer();
+    }
+}
 impl Interpreter {
-    pub unsafe extern "C" fn lua_topointer(& mut self, index: i32) -> *const libc::c_void {
+    pub unsafe fn to_pointer(& mut self, index: i32) -> *mut libc::c_void {
         unsafe {
-            let tvalue: *const TValue = self.index2value(index);
-            (*tvalue).touserdata()
+            self.index_to_value(index).to_pointer()
         }
     }
     pub unsafe extern "C" fn free_interpreter (&mut self, interpreter: *mut Interpreter) {
@@ -409,7 +417,7 @@ impl Interpreter {
     }
     pub unsafe extern "C" fn lua_getmetatable(&mut self, object_index: i32) -> bool {
         unsafe {
-            let object: *const TValue = self.index2value(object_index);
+            let object: *const TValue = self.index_to_value(object_index);
             let metatable: *mut Table = match (*object).get_tag_type() {
                 TagType::Table => (*((*object).value.object as *mut Table)).get_metatable(),
                 TagType::User => (*((*object).value.object as *mut User)).get_metatable(),
@@ -430,7 +438,7 @@ impl Interpreter {
     pub unsafe fn lua_getiuservalue(&mut self, index: i32, n: i32) -> Option<TagType> {
         unsafe {
             let t: Option<TagType>;
-            let tvalue: *mut TValue = self.index2value(index);
+            let tvalue: *mut TValue = self.index_to_value(index);
             if n <= 0 || n > (*((*tvalue).value.object as *mut User)).count_upvalues as i32 {
                 (*self.top.stkidrel_pointer)
                     .tvalue
@@ -449,7 +457,7 @@ impl Interpreter {
             return t;
         }
     }
-    pub unsafe extern "C" fn index2value(&mut self, mut index: i32) -> *mut TValue {
+    pub unsafe fn index_to_value(&mut self, mut index: i32) -> &mut TValue {
         unsafe {
             let call_info: *mut CallInfo = self.call_info;
             if index > 0 {
@@ -473,7 +481,7 @@ impl Interpreter {
                         &mut *((*function).upvalues)
                             .c_tvalues
                             .as_mut_ptr()
-                            .offset((index - 1) as isize) as *mut TValue
+                            .offset((index - 1) as isize) as &mut TValue
                     } else {
                         &mut (*self.global).none_value
                     };
@@ -1575,7 +1583,7 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.dynamic_data.active_variable.initialize();
         p.dynamic_data.gt.initialize();
         p.dynamic_data.label.initialize();
-        p.buffer.vector.initialize();
+        p.buffer.loads.initialize();
         let status = luad_pcall(
             interpreter,
             Some(f_parser as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
@@ -1584,7 +1592,7 @@ pub unsafe extern "C" fn luad_protectedparser(
                 .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
             (*interpreter).error_function,
         );
-        p.buffer.vector.destroy(interpreter);
+        p.buffer.loads.destroy(interpreter);
         (*interpreter).free_memory(
             p.dynamic_data.active_variable.vectort_pointer as *mut libc::c_void,
             (p.dynamic_data.active_variable.get_size() as usize)
@@ -1756,8 +1764,8 @@ pub unsafe extern "C" fn lua_rotate(interpreter: *mut Interpreter, index: i32, n
 }
 pub unsafe extern "C" fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, toidx: i32) {
     unsafe {
-        let fr: *mut TValue = (*interpreter).index2value(fromidx);
-        let to: *mut TValue = (*interpreter).index2value(toidx);
+        let fr: *mut TValue = (*interpreter).index_to_value(fromidx);
+        let to: *mut TValue = (*interpreter).index_to_value(toidx);
         let io1: *mut TValue = to;
         let io2: *const TValue = fr;
         (*io1).copy_from(&*io2);
@@ -1792,14 +1800,14 @@ pub unsafe extern "C" fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, t
 pub unsafe extern "C" fn lua_pushvalue(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
-        let io2: *const TValue = (*interpreter).index2value(index);
+        let io2: *const TValue = (*interpreter).index_to_value(index);
         (*io1).copy_from(&*io2);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
 pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagType> {
     unsafe {
-        let tvalue: *const TValue = (*interpreter).index2value(index);
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
         return if !(*tvalue).is_tagtype_nil()
             || tvalue != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue
         {
@@ -1828,7 +1836,7 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> 
 }
 pub unsafe extern "C" fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         match (*o).get_tag_variant() {
             TAG_VARIANT_CLOSURE_CFUNCTION => return true,
             TAG_VARIANT_CLOSURE_C => return true,
@@ -1838,13 +1846,13 @@ pub unsafe extern "C" fn lua_iscfunction(interpreter: *mut Interpreter, index: i
 }
 pub unsafe extern "C" fn lua_isinteger(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        return (*(*interpreter).index2value(index)).get_tag_variant()
+        return (*(*interpreter).index_to_value(index)).get_tag_variant()
             == TAG_VARIANT_NUMERIC_INTEGER;
     }
 }
 pub unsafe extern "C" fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         return if (*o).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             true
         } else {
@@ -1855,7 +1863,7 @@ pub unsafe extern "C" fn lua_isnumber(interpreter: *mut Interpreter, index: i32)
 }
 pub unsafe extern "C" fn lua_isstring(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         return match (*o).get_tag_type() {
             TagType::Numeric => true,
             TagType::String => true,
@@ -1869,8 +1877,8 @@ pub unsafe extern "C" fn lua_rawequal(
     index2: i32,
 ) -> bool {
     unsafe {
-        let o1: *const TValue = (*interpreter).index2value(index1);
-        let o2: *const TValue = (*interpreter).index2value(index2);
+        let o1: *const TValue = (*interpreter).index_to_value(index1);
+        let o2: *const TValue = (*interpreter).index_to_value(index2);
         return if (!((*o1).is_tagtype_nil())
             || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
             && (!((*o2).is_tagtype_nil())
@@ -1908,8 +1916,8 @@ pub unsafe extern "C" fn lua_compare(
     op: i32,
 ) -> i32 {
     unsafe {
-        let o1: *const TValue = (*interpreter).index2value(index1);
-        let o2: *const TValue = (*interpreter).index2value(index2);
+        let o1: *const TValue = (*interpreter).index_to_value(index1);
+        let o2: *const TValue = (*interpreter).index_to_value(index2);
         let mut i: i32 = 0;
         if (!((*o1).is_tagtype_nil())
             || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue)
@@ -1960,7 +1968,7 @@ pub unsafe extern "C" fn lua_tonumberx(
 ) -> f64 {
     unsafe {
         let mut n: f64 = 0.0;
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         let is_number_: bool = if (*o).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             n = (*o).value.number;
             true
@@ -1980,7 +1988,7 @@ pub unsafe extern "C" fn lua_tointegerx(
 ) -> i64 {
     unsafe {
         let mut res: i64 = 0;
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         let is_number_: bool =
             if (*o).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
                 res = (*o).value.integer;
@@ -1996,7 +2004,7 @@ pub unsafe extern "C" fn lua_tointegerx(
 }
 pub unsafe extern "C" fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         return !((*o).get_tag_variant() == TAG_VARIANT_BOOLEAN_FALSE || (*o).is_tagtype_nil())
             as i32;
     }
@@ -2007,7 +2015,7 @@ pub unsafe extern "C" fn lua_tolstring(
     length: *mut usize,
 ) -> *const i8 {
     unsafe {
-        let mut o: *mut TValue = (*interpreter).index2value(index);
+        let mut o: *mut TValue = (*interpreter).index_to_value(index);
         if !((*o).is_tagtype_string()) {
             if !((*o).is_tagtype_numeric()) {
                 if !length.is_null() {
@@ -2019,7 +2027,7 @@ pub unsafe extern "C" fn lua_tolstring(
             if (*(*interpreter).global).gc_debt > 0 {
                 luac_step(interpreter);
             }
-            o = (*interpreter).index2value(index);
+            o = (*interpreter).index_to_value(index);
         }
         if !length.is_null() {
             *length = (*((*o).value.object as *mut TString)).get_length() as usize;
@@ -2029,7 +2037,7 @@ pub unsafe extern "C" fn lua_tolstring(
 }
 pub unsafe extern "C" fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize {
     unsafe {
-        let tvalue: *const TValue = (*interpreter).index2value(index);
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
         match (*tvalue).get_tag_variant() {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 return (*((*tvalue).value.object as *mut TString)).get_length() as usize;
@@ -2042,21 +2050,12 @@ pub unsafe extern "C" fn get_length_raw(interpreter: *mut Interpreter, index: i3
         };
     }
 }
-pub unsafe extern "C" fn lua_touserdata(
-    interpreter: *mut Interpreter,
-    index: i32,
-) -> *mut libc::c_void {
-    unsafe {
-        let tvalue: *const TValue = (*interpreter).index2value(index);
-        return (*tvalue).touserdata();
-    }
-}
 pub unsafe extern "C" fn lua_tothread(
     interpreter: *mut Interpreter,
     index: i32,
 ) -> *mut Interpreter {
     unsafe {
-        let o: *const TValue = (*interpreter).index2value(index);
+        let o: *const TValue = (*interpreter).index_to_value(index);
         return if !((*o).get_tag_variant() == TAG_VARIANT_STATE) {
             null_mut()
         } else {
@@ -2239,7 +2238,7 @@ pub unsafe extern "C" fn lua_getglobal(interpreter: *mut Interpreter, name: *con
 pub unsafe extern "C" fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let slot;
-        let t: *mut TValue = (*interpreter).index2value(index);
+        let t: *mut TValue = (*interpreter).index_to_value(index);
         if if (*t).get_tag_variant() != TAG_VARIANT_TABLE {
             slot = null();
             0
@@ -2292,14 +2291,14 @@ pub unsafe extern "C" fn lua_getfield(
     k: *const i8,
 ) -> TagType {
     unsafe {
-        return auxgetstr(interpreter, (*interpreter).index2value(index), k);
+        return auxgetstr(interpreter, (*interpreter).index_to_value(index), k);
     }
 }
 pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
     unsafe {
         let t: *mut TValue;
         let slot: *const TValue;
-        t = (*interpreter).index2value(index);
+        t = (*interpreter).index_to_value(index);
         if if (*t).get_tag_variant() != TAG_VARIANT_TABLE {
             slot = null();
             0
@@ -2359,7 +2358,7 @@ pub unsafe extern "C" fn finishrawget(
 }
 pub unsafe extern "C" fn gettable(interpreter: *mut Interpreter, index: i32) -> *mut Table {
     unsafe {
-        let t: *mut TValue = (*interpreter).index2value(index);
+        let t: *mut TValue = (*interpreter).index_to_value(index);
         return &mut (*((*t).value.object as *mut Table));
     }
 }
@@ -2443,14 +2442,14 @@ pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *con
 }
 pub unsafe extern "C" fn lua_setfield(interpreter: *mut Interpreter, index: i32, k: *const i8) {
     unsafe {
-        auxsetstr(interpreter, (*interpreter).index2value(index), k);
+        auxsetstr(interpreter, (*interpreter).index_to_value(index), k);
     }
 }
 pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
     unsafe {
         let t: *mut TValue;
         let slot: *const TValue;
-        t = (*interpreter).index2value(index);
+        t = (*interpreter).index_to_value(index);
         if if !((*t).get_tag_variant() == TAG_VARIANT_TABLE) {
             slot = null();
             0
@@ -2582,7 +2581,7 @@ pub unsafe extern "C" fn lua_rawseti(interpreter: *mut Interpreter, index: i32, 
 pub unsafe extern "C" fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let metatable: *mut Table;
-        let object: *mut TValue = (*interpreter).index2value(index);
+        let object: *mut TValue = (*interpreter).index_to_value(index);
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue
             .is_tagtype_nil()
@@ -2644,7 +2643,7 @@ pub unsafe extern "C" fn lua_setiuservalue(
 ) -> i32 {
     unsafe {
         let res: i32;
-        let o: *mut TValue = (*interpreter).index2value(index);
+        let o: *mut TValue = (*interpreter).index_to_value(index);
         if !((n as u32).wrapping_sub(1 as u32)
             < (*((*o).value.object as *mut User)).count_upvalues as u32)
         {
@@ -3022,7 +3021,7 @@ pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
 }
 pub unsafe extern "C" fn lua_len(interpreter: *mut Interpreter, index: i32) {
     unsafe {
-        let t: *mut TValue = (*interpreter).index2value(index);
+        let t: *mut TValue = (*interpreter).index_to_value(index);
         luav_objlen(interpreter, (*interpreter).top.stkidrel_pointer, t);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
@@ -3054,7 +3053,7 @@ pub unsafe extern "C" fn lua_getupvalue(
     unsafe {
         let mut value: *mut TValue = null_mut();
         let name: *const i8 = aux_upvalue(
-            (*interpreter).index2value(funcindex),
+            (*interpreter).index_to_value(funcindex),
             n,
             &mut value,
             null_mut(),
@@ -3076,7 +3075,7 @@ pub unsafe extern "C" fn lua_setupvalue(
     unsafe {
         let mut value: *mut TValue = null_mut();
         let mut owner: *mut Object = null_mut();
-        let fi: *mut TValue = (*interpreter).index2value(funcindex);
+        let fi: *mut TValue = (*interpreter).index_to_value(funcindex);
         let name: *const i8 = aux_upvalue(fi, n, &mut value, &mut owner);
         if !name.is_null() {
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -3108,7 +3107,7 @@ pub unsafe extern "C" fn getupvalref(
     pf: *mut *mut Closure,
 ) -> *mut *mut UpValue {
     unsafe {
-        let fi: *mut TValue = (*interpreter).index2value(fidx);
+        let fi: *mut TValue = (*interpreter).index_to_value(fidx);
         let closure: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
         if !pf.is_null() {
             *pf = closure;
@@ -3129,7 +3128,7 @@ pub unsafe extern "C" fn lua_upvalueid(
     n: i32,
 ) -> *mut libc::c_void {
     unsafe {
-        let fi: *mut TValue = (*interpreter).index2value(fidx);
+        let fi: *mut TValue = (*interpreter).index_to_value(fidx);
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
                 return *getupvalref(interpreter, fidx, n, null_mut())
@@ -8535,10 +8534,10 @@ pub unsafe extern "C" fn lual_traceback(
         b.initialize(interpreter);
         if !message.is_null() {
             b.add_string(message);
-            (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh145 = b.vector.get_length();
-            b.vector.set_length((b.vector.get_length()).wrapping_add(1) as usize);
-            *(b.vector.vectort_pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
+            (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh145 = b.loads.get_length();
+            b.loads.set_length((b.loads.get_length()).wrapping_add(1) as usize);
+            *(b.loads.loads_pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
         }
         b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
         loop {
@@ -8809,7 +8808,7 @@ pub unsafe extern "C" fn lual_testudata(
     tname: *const i8,
 ) -> *mut libc::c_void {
     unsafe {
-        let mut p: *mut libc::c_void = lua_touserdata(interpreter, arbitrary_data);
+        let mut p: *mut libc::c_void = (*interpreter).to_pointer (arbitrary_data);
         if !p.is_null() {
             if (*interpreter).lua_getmetatable(arbitrary_data) {
                 lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
@@ -9169,8 +9168,7 @@ pub unsafe extern "C" fn lual_loadbufferx(
 ) -> i32 {
     unsafe {
         let mut load_s: VectorT<i8> = VectorT::<i8>::new ();
-        load_s.vectort_pointer = buffer as *mut i8;
-        load_s.vectort_size = size as i32;
+        load_s.inject(buffer as *mut i8, size);
         return lua_load(
             interpreter,
             Some(
@@ -9299,7 +9297,7 @@ pub unsafe extern "C" fn lual_tolstring(
                         interpreter,
                         b"%s: %p\0" as *const u8 as *const i8,
                         kind,
-                        (*interpreter).lua_topointer(index),
+                        (*interpreter).to_pointer(index),
                     );
                     if tag != TagType::Nil {
                         lua_rotate(interpreter, -2, -1);
