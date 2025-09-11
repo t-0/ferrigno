@@ -95,7 +95,7 @@ impl Buffer {
                     s as *const libc::c_void,
                     length.wrapping_mul(::core::mem::size_of::<BufferElement>()),
                 );
-                self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
+                self.vector.length += length as i32;
             }
         }
     }
@@ -126,7 +126,7 @@ impl Buffer {
                 s as *const libc::c_void,
                 (length as usize).wrapping_mul(::core::mem::size_of::<BufferElement>()),
             );
-            self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
+            self.vector.length += length as i32;
             lua_settop(interpreter, -1 - 1);
         }
     }

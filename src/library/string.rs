@@ -790,12 +790,12 @@ pub unsafe extern "C" fn getformat(
 }
 pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) {
     unsafe {
-        let l: usize = strlen(form) as usize;
-        let lm: usize = strlen(lenmod) as usize;
-        let spec: i8 = *form.offset(l.wrapping_sub(1 as usize) as isize);
-        strcpy(form.offset(l as isize).offset(-(1 as isize)), lenmod);
-        *form.offset(l.wrapping_add(lm).wrapping_sub(1 as usize) as isize) = spec;
-        *form.offset(l.wrapping_add(lm) as isize) = Character::Null as i8;
+        let length: usize = strlen(form) as usize;
+        let mode_length: usize = strlen(lenmod) as usize;
+        let spec: i8 = *form.offset(length.wrapping_sub(1 as usize) as isize);
+        strcpy(form.offset(length as isize).offset(-(1 as isize)), lenmod);
+        *form.offset(length.wrapping_add(mode_length).wrapping_sub(1 as usize) as isize) = spec;
+        *form.offset(length.wrapping_add(mode_length) as isize) = Character::Null as i8;
     }
 }
 pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
@@ -1469,7 +1469,7 @@ pub unsafe extern "C" fn unpackint(
     issigned: i32,
 ) -> i64 {
     unsafe {
-        let mut res: usize = 0;
+        let mut res: u64 = 0;
         let mut i: i32;
         let limit: i32 = if size <= ::core::mem::size_of::<i64>() as i32 {
             size
@@ -1480,12 +1480,12 @@ pub unsafe extern "C" fn unpackint(
         while i >= 0 {
             res <<= 8;
             res |=
-                *str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as usize;
+                *str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as u64;
             i -= 1;
         }
         if size < ::core::mem::size_of::<i64>() as i32 {
             if issigned != 0 {
-                let mask: usize = (1 as usize) << size * 8 - 1;
+                let mask: u64 = 1u64 << size * 8 - 1;
                 res = (res ^ mask).wrapping_sub(mask);
             }
         } else if size > ::core::mem::size_of::<i64>() as i32 {
