@@ -7,6 +7,6 @@ pub struct SParser {
     pub zio: *mut ZIO,
     pub buffer: Buffer,
     pub dynamic_data: DynamicData,
-    pub mode: *const i8,
-    pub name: *const i8,
+    pub mode: *const libc::c_char,
+    pub name: *const libc::c_char,
 }

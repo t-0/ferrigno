@@ -133,7 +133,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
 }
 pub unsafe extern "C" fn auxgetinfo(
     interpreter: *mut Interpreter,
-    mut what: *const i8,
+    mut what: *const libc::c_char,
     ar: *mut DebugInfo,
     closure: *mut Closure,
     call_info: *mut CallInfo,
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn auxgetinfo(
                 CHARACTER_LOWER_N => {
                     (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
-                        (*ar).namewhat = b"\0" as *const u8 as *const i8;
+                        (*ar).namewhat = b"\0" as *const u8 as *const libc::c_char;
                         (*ar).name = null();
                     }
                 },

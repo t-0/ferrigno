@@ -25,7 +25,7 @@ pub unsafe extern "C" fn forlimit(
                 }
             } == 0
             {
-                luag_forerror(interpreter, lim, b"limit\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, lim, b"limit\0" as *const u8 as *const libc::c_char);
             }
             if (0.0) < flim {
                 if step < 0 {
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             let step: i64 = (*pstep).value.integer;
             let mut limit: i64 = 0;
             if step == 0 {
-                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const libc::c_char);
             }
             let io: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
             (*io).value.integer = init;
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, plimit, b"limit\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, plimit, b"limit\0" as *const u8 as *const libc::c_char);
             }
             if (((if (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 step_0 = (*pstep).value.number;
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, pstep, b"step\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, pstep, b"step\0" as *const u8 as *const libc::c_char);
             }
             if (((if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 init_0 = (*pinit).value.number;
@@ -129,10 +129,10 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, pinit, b"initial value\0" as *const u8 as *const i8);
+                luag_forerror(interpreter, pinit, b"initial value\0" as *const u8 as *const libc::c_char);
             }
             if step_0 == 0.0 {
-                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"'for' step is zero\0" as *const u8 as *const libc::c_char);
             }
             if if (0.0) < step_0 {
                 (limit_0 < init_0) as i32

@@ -91,10 +91,10 @@ pub unsafe extern "C" fn luag_findlocal(
     call_info: *mut CallInfo,
     n: i32,
     pos: *mut StackValuePointer,
-) -> *const i8 {
+) -> *const libc::c_char {
     unsafe {
         let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
-        let mut name: *const i8 = null();
+        let mut name: *const libc::c_char = null();
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
                 return findvararg(call_info, n, pos);
@@ -114,9 +114,9 @@ pub unsafe extern "C" fn luag_findlocal(
             };
             if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
                 name = if (*call_info).call_status as i32 & 1 << 1 == 0 {
-                    b"(temporary)\0" as *const u8 as *const i8
+                    b"(temporary)\0" as *const u8 as *const libc::c_char
                 } else {
-                    b"(C temporary)\0" as *const u8 as *const i8
+                    b"(C temporary)\0" as *const u8 as *const libc::c_char
                 };
             } else {
                 return null();
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn findvararg(
     call_info: *mut CallInfo,
     n: i32,
     pos: *mut StackValuePointer,
-) -> *const i8 {
+) -> *const libc::c_char {
     unsafe {
         if (*(*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure))
             .payload.l_prototype)
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn findvararg(
                 *pos = ((*call_info).function.stkidrel_pointer)
                     .offset(-nextra as isize)
                     .offset(-((n + 1) as isize));
-                return b"(vararg)\0" as *const u8 as *const i8;
+                return b"(vararg)\0" as *const u8 as *const libc::c_char;
             }
         }
         return null();
@@ -152,8 +152,8 @@ pub unsafe extern "C" fn findvararg(
 pub unsafe extern "C" fn getfuncname(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
         if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 5 == 0 {
             return funcnamefromcall(interpreter, (*call_info).previous, name);
@@ -165,15 +165,15 @@ pub unsafe extern "C" fn getfuncname(
 pub unsafe extern "C" fn funcnamefromcall(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
         if (*call_info).call_status as i32 & 1 << 3 != 0 {
-            *name = b"?\0" as *const u8 as *const i8;
-            return b"hook\0" as *const u8 as *const i8;
+            *name = b"?\0" as *const u8 as *const libc::c_char;
+            return b"hook\0" as *const u8 as *const libc::c_char;
         } else if (*call_info).call_status as i32 & 1 << 7 != 0 {
-            *name = b"__gc\0" as *const u8 as *const i8;
-            return b"metamethod\0" as *const u8 as *const i8;
+            *name = b"__gc\0" as *const u8 as *const libc::c_char;
+            return b"metamethod\0" as *const u8 as *const libc::c_char;
         } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
                 interpreter,
@@ -207,8 +207,8 @@ pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, tvalue: *const TValu
 pub unsafe extern "C" fn getupvalname(
     call_info: *mut CallInfo,
     tvalue: *const TValue,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
         let c: *mut Closure =
             &mut (*((*(*call_info).function.stkidrel_pointer).tvalue.value.object as *mut Closure));

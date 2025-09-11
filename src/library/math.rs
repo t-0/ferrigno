@@ -185,7 +185,7 @@ unsafe extern "C" fn math_fmod(interpreter: *mut Interpreter) -> i32 {
             let d: i64 = lua_tointegerx(interpreter, 2, null_mut());
             if (d as usize).wrapping_add(1 as usize) <= 1 as usize {
                 (((d != 0) as i32 != 0) as i64 != 0
-                    || lual_argerror(interpreter, 2, b"zero\0" as *const u8 as *const i8) != 0)
+                    || lual_argerror(interpreter, 2, b"zero\0" as *const u8 as *const libc::c_char) != 0)
                     as i32;
                 (*interpreter).push_integer(0);
             } else {
@@ -272,7 +272,7 @@ unsafe extern "C" fn math_min(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = (*interpreter).get_top();
         let mut imin: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const libc::c_char) != 0)
             as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, i, imin, 1) != 0 {
@@ -288,7 +288,7 @@ unsafe extern "C" fn math_max(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = (*interpreter).get_top();
         let mut imax: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"value expected\0" as *const u8 as *const libc::c_char) != 0)
             as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, imax, i, 1) != 0 {
@@ -305,9 +305,9 @@ unsafe extern "C" fn math_type(interpreter: *mut Interpreter) -> i32 {
             lua_pushstring(
                 interpreter,
                 if lua_isinteger(interpreter, 1) {
-                    b"integer\0" as *const u8 as *const i8
+                    b"integer\0" as *const u8 as *const libc::c_char
                 } else {
-                    b"float\0" as *const u8 as *const i8
+                    b"float\0" as *const u8 as *const libc::c_char
                 },
             );
         } else {
@@ -350,7 +350,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
             }
         }
         (((low <= up) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, b"interval is empty\0" as *const u8 as *const i8) != 0)
+            || lual_argerror(interpreter, 1, b"interval is empty\0" as *const u8 as *const libc::c_char) != 0)
             as i32;
         p = project(
             (rv & 0xffffffffffffffff as usize) as usize,
@@ -379,13 +379,13 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
     [
         {
             RegisteredFunction {
-                name: b"random\0" as *const u8 as *const i8,
+                name: b"random\0" as *const u8 as *const libc::c_char,
                 function: Some(math_random as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"randomseed\0" as *const u8 as *const i8,
+                name: b"randomseed\0" as *const u8 as *const libc::c_char,
                 function: Some(math_randomseed as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -411,163 +411,163 @@ const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
     [
         {
             RegisteredFunction {
-                name: b"abs\0" as *const u8 as *const i8,
+                name: b"abs\0" as *const u8 as *const libc::c_char,
                 function: Some(math_abs as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"acos\0" as *const u8 as *const i8,
+                name: b"acos\0" as *const u8 as *const libc::c_char,
                 function: Some(math_acos as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"asin\0" as *const u8 as *const i8,
+                name: b"asin\0" as *const u8 as *const libc::c_char,
                 function: Some(math_asin as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"atan\0" as *const u8 as *const i8,
+                name: b"atan\0" as *const u8 as *const libc::c_char,
                 function: Some(math_atan as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"ceil\0" as *const u8 as *const i8,
+                name: b"ceil\0" as *const u8 as *const libc::c_char,
                 function: Some(math_ceil as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"cos\0" as *const u8 as *const i8,
+                name: b"cos\0" as *const u8 as *const libc::c_char,
                 function: Some(math_cos as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"deg\0" as *const u8 as *const i8,
+                name: b"deg\0" as *const u8 as *const libc::c_char,
                 function: Some(math_deg as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"exp\0" as *const u8 as *const i8,
+                name: b"exp\0" as *const u8 as *const libc::c_char,
                 function: Some(math_exp as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"tointeger\0" as *const u8 as *const i8,
+                name: b"tointeger\0" as *const u8 as *const libc::c_char,
                 function: Some(math_toint as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"floor\0" as *const u8 as *const i8,
+                name: b"floor\0" as *const u8 as *const libc::c_char,
                 function: Some(math_floor as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"fmod\0" as *const u8 as *const i8,
+                name: b"fmod\0" as *const u8 as *const libc::c_char,
                 function: Some(math_fmod as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"ult\0" as *const u8 as *const i8,
+                name: b"ult\0" as *const u8 as *const libc::c_char,
                 function: Some(math_ult as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"log\0" as *const u8 as *const i8,
+                name: b"log\0" as *const u8 as *const libc::c_char,
                 function: Some(math_log as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"max\0" as *const u8 as *const i8,
+                name: b"max\0" as *const u8 as *const libc::c_char,
                 function: Some(math_max as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"min\0" as *const u8 as *const i8,
+                name: b"min\0" as *const u8 as *const libc::c_char,
                 function: Some(math_min as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"modf\0" as *const u8 as *const i8,
+                name: b"modf\0" as *const u8 as *const libc::c_char,
                 function: Some(math_modf as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"rad\0" as *const u8 as *const i8,
+                name: b"rad\0" as *const u8 as *const libc::c_char,
                 function: Some(math_rad as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"sin\0" as *const u8 as *const i8,
+                name: b"sin\0" as *const u8 as *const libc::c_char,
                 function: Some(math_sin as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"sqrt\0" as *const u8 as *const i8,
+                name: b"sqrt\0" as *const u8 as *const libc::c_char,
                 function: Some(math_sqrt as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"tan\0" as *const u8 as *const i8,
+                name: b"tan\0" as *const u8 as *const libc::c_char,
                 function: Some(math_tan as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"type\0" as *const u8 as *const i8,
+                name: b"type\0" as *const u8 as *const libc::c_char,
                 function: Some(math_type as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"random\0" as *const u8 as *const i8,
+                name: b"random\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"randomseed\0" as *const u8 as *const i8,
+                name: b"randomseed\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"pi\0" as *const u8 as *const i8,
+                name: b"pi\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"huge\0" as *const u8 as *const i8,
+                name: b"huge\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"maxinteger\0" as *const u8 as *const i8,
+                name: b"maxinteger\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"mininteger\0" as *const u8 as *const i8,
+                name: b"mininteger\0" as *const u8 as *const libc::c_char,
                 function: None,
             }
         },
@@ -584,13 +584,13 @@ pub unsafe extern "C" fn luaopen_math(interpreter: *mut Interpreter) -> i32 {
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, MATH_FUNCTIONS.as_ptr(), 0);
         (*interpreter).push_number(PI);
-        lua_setfield(interpreter, -2, b"pi\0" as *const u8 as *const i8);
+        lua_setfield(interpreter, -2, b"pi\0" as *const u8 as *const libc::c_char);
         (*interpreter).push_number(::core::f64::INFINITY);
-        lua_setfield(interpreter, -2, b"huge\0" as *const u8 as *const i8);
+        lua_setfield(interpreter, -2, b"huge\0" as *const u8 as *const libc::c_char);
         (*interpreter).push_integer(::core::i64::MAX);
-        lua_setfield(interpreter, -2, b"maxinteger\0" as *const u8 as *const i8);
+        lua_setfield(interpreter, -2, b"maxinteger\0" as *const u8 as *const libc::c_char);
         (*interpreter).push_integer(::core::i64::MIN);
-        lua_setfield(interpreter, -2, b"mininteger\0" as *const u8 as *const i8);
+        lua_setfield(interpreter, -2, b"mininteger\0" as *const u8 as *const libc::c_char);
         set_random_function(interpreter);
         1
     }

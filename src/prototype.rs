@@ -35,7 +35,7 @@ pub struct Prototype {
     pub prototype_local_variables: VectorT<LocalVariable>,
     pub prototype_line_defined: i32,
     pub prototype_last_line_defined: i32,
-    pub prototype_line_info: VectorT<i8>,
+    pub prototype_line_info: VectorT<libc::c_char>,
     pub prototype_absolute_line_info: VectorT<AbsoluteLineInfo>,
 }
 impl TObject for Prototype {
@@ -95,7 +95,7 @@ impl Prototype {
             dump_state.dump_int(n as i32);
             dump_state.dump_block(
                 self.prototype_line_info.pointer as *const libc::c_void,
-                n.wrapping_mul(::core::mem::size_of::<i8>()),
+                n.wrapping_mul(::core::mem::size_of::<libc::c_char>()),
             );
         }
         unsafe {
@@ -257,7 +257,7 @@ impl Prototype {
             );
             (*interpreter).free_memory(
                 self.prototype_line_info.pointer as *mut libc::c_void,
-                (self.prototype_line_info.size as usize).wrapping_mul(::core::mem::size_of::<i8>() as usize) as usize,
+                (self.prototype_line_info.size as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_absolute_line_info.pointer as *mut libc::c_void,
@@ -326,11 +326,11 @@ pub unsafe extern "C" fn luag_getfuncline(prototype: *const Prototype, program_c
         };
     }
 }
-pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
+pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const libc::c_char {
     unsafe {
         let s: *mut TString = (*((*p).prototype_upvalues.pointer).offset(uv as isize)).name;
         if s.is_null() {
-            return b"?\0" as *const u8 as *const i8;
+            return b"?\0" as *const u8 as *const libc::c_char;
         } else {
             return (*s).get_contents_mut();
         };
@@ -399,14 +399,14 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
         return setreg;
     }
 }
-pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
+pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *const libc::c_char) -> *const libc::c_char {
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).prototype_constants.pointer).offset(index as isize) as *mut TValue;
         if (*kvalue).is_tagtype_string() {
             *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
-            return b"constant\0" as *const u8 as *const i8;
+            return b"constant\0" as *const u8 as *const libc::c_char;
         } else {
-            *name = b"?\0" as *const u8 as *const i8;
+            *name = b"?\0" as *const u8 as *const libc::c_char;
             return null();
         };
     }
@@ -415,8 +415,8 @@ pub unsafe extern "C" fn basicgetobjname(
     p: *const Prototype,
     ppc: *mut i32,
     reg: i32,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
         let mut program_counter: i32 = *ppc;
         *name = luaf_getlocalname(p, reg + 1, program_counter);
@@ -464,12 +464,12 @@ pub unsafe extern "C" fn rname(
     p: *const Prototype,
     mut program_counter: i32,
     c: i32,
-    name: *mut *const i8,
+    name: *mut *const libc::c_char,
 ) {
     unsafe {
-        let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
+        let what: *const libc::c_char = basicgetobjname(p, &mut program_counter, c, name);
         if !(!what.is_null() && *what as i32 == CHARACTER_LOWER_C as i32) {
-            *name = b"?\0" as *const u8 as *const i8;
+            *name = b"?\0" as *const u8 as *const libc::c_char;
         }
     }
 }
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn rkname(
     p: *const Prototype,
     program_counter: i32,
     i: u32,
-    name: *mut *const i8,
+    name: *mut *const libc::c_char,
 ) {
     unsafe {
         let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
@@ -493,22 +493,22 @@ pub unsafe extern "C" fn is_environment(
     mut program_counter: i32,
     i: u32,
     isup: i32,
-) -> *const i8 {
+) -> *const libc::c_char {
     unsafe {
         let t: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-        let mut name: *const i8 = null();
+        let mut name: *const libc::c_char = null();
         if isup != 0 {
             name = upvalname(p, t);
         } else {
-            let what: *const i8 = basicgetobjname(p, &mut program_counter, t, &mut name);
+            let what: *const libc::c_char = basicgetobjname(p, &mut program_counter, t, &mut name);
             if what != STRING_LOCAL.as_ptr() && what != STRING_UPVALUE.as_ptr() {
                 name = null();
             }
         }
-        return if !name.is_null() && strcmp(name, b"_ENV\0" as *const u8 as *const i8) == 0 {
-            b"global\0" as *const u8 as *const i8
+        return if !name.is_null() && strcmp(name, b"_ENV\0" as *const u8 as *const libc::c_char) == 0 {
+            b"global\0" as *const u8 as *const libc::c_char
         } else {
-            b"field\0" as *const u8 as *const i8
+            b"field\0" as *const u8 as *const libc::c_char
         };
     }
 }
@@ -516,10 +516,10 @@ pub unsafe extern "C" fn getobjname(
     p: *const Prototype,
     mut lastpc: i32,
     reg: i32,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
-        let kind: *const i8 = basicgetobjname(p, &mut lastpc, reg, name);
+        let kind: *const libc::c_char = basicgetobjname(p, &mut lastpc, reg, name);
         if !kind.is_null() {
             return kind;
         } else if lastpc != -1 {
@@ -537,8 +537,8 @@ pub unsafe extern "C" fn getobjname(
                     return is_environment(p, lastpc, i, 0);
                 }
                 13 => {
-                    *name = b"integer index\0" as *const u8 as *const i8;
-                    return b"field\0" as *const u8 as *const i8;
+                    *name = b"integer index\0" as *const u8 as *const libc::c_char;
+                    return b"field\0" as *const u8 as *const libc::c_char;
                 }
                 14 => {
                     let k_1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
@@ -547,7 +547,7 @@ pub unsafe extern "C" fn getobjname(
                 }
                 20 => {
                     rkname(p, lastpc, i, name);
-                    return b"method\0" as *const u8 as *const i8;
+                    return b"method\0" as *const u8 as *const libc::c_char;
                 }
                 _ => {}
             }
@@ -559,8 +559,8 @@ pub unsafe extern "C" fn funcnamefromcode(
     interpreter: *mut Interpreter,
     p: *const Prototype,
     program_counter: i32,
-    name: *mut *const i8,
-) -> *const i8 {
+    name: *mut *const libc::c_char,
+) -> *const libc::c_char {
     unsafe {
         let tm: u32;
         let i: u32 = *((*p).prototype_code.pointer).offset(program_counter as isize);
@@ -574,8 +574,8 @@ pub unsafe extern "C" fn funcnamefromcode(
                 );
             }
             OP_TFORCALL => {
-                *name = b"for iterator\0" as *const u8 as *const i8;
-                return b"for iterator\0" as *const u8 as *const i8;
+                *name = b"for iterator\0" as *const u8 as *const libc::c_char;
+                return b"for iterator\0" as *const u8 as *const libc::c_char;
             }
             OP_SELF | OP_GETTABUP | OP_GETTABLE | OP_GETI | OP_GETFIELD => {
                 tm = TM_INDEX;
@@ -614,7 +614,7 @@ pub unsafe extern "C" fn funcnamefromcode(
         }
         *name = ((*(*(*interpreter).global).tm_name[tm as usize]).get_contents())
             .offset(2 as isize);
-        return b"metamethod\0" as *const u8 as *const i8;
+        return b"metamethod\0" as *const u8 as *const libc::c_char;
     }
 }
 pub unsafe extern "C" fn changedline(
@@ -672,7 +672,7 @@ pub unsafe extern "C" fn luaf_getlocalname(
     prototype: *const Prototype,
     mut local_number: i32,
     program_counter: i32,
-) -> *const i8 {
+) -> *const libc::c_char {
     unsafe {
         for i in 0..(*prototype).prototype_local_variables.size {
             if (*((*prototype).prototype_local_variables.pointer).offset(i as isize)).start_program_counter > program_counter {

@@ -117,9 +117,9 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
             has_close = (*lexical_state).create_label(
                 luas_newlstr(
                     (*lexical_state).interpreter,
-                    b"break\0" as *const u8 as *const i8,
-                    (::core::mem::size_of::<[i8; 6]>())
-                        .wrapping_div(::core::mem::size_of::<i8>())
+                    b"break\0" as *const u8 as *const libc::c_char,
+                    (::core::mem::size_of::<[libc::c_char; 6]>())
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>())
                         .wrapping_sub(1),
                 ),
                 0,
@@ -185,23 +185,23 @@ pub unsafe extern "C" fn setvararg(function_state: *mut FunctionState, nparams: 
         luak_code_abck(function_state, OP_VARARGPREP, nparams, 0, 0, 0);
     }
 }
-pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i32, what: *const i8) -> ! {
+pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i32, what: *const libc::c_char) -> ! {
     unsafe {
         let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
-        let message: *const i8;
+        let message: *const libc::c_char;
         let line: i32 = (*(*function_state).prototype).prototype_line_defined;
-        let where_0: *const i8 = if line == 0 {
-            b"main function\0" as *const u8 as *const i8
+        let where_0: *const libc::c_char = if line == 0 {
+            b"main function\0" as *const u8 as *const libc::c_char
         } else {
             luao_pushfstring(
                 interpreter,
-                b"function at line %d\0" as *const u8 as *const i8,
+                b"function at line %d\0" as *const u8 as *const libc::c_char,
                 line,
             )
         };
         message = luao_pushfstring(
             interpreter,
-            b"too many %s (limit is %d) in %s\0" as *const u8 as *const i8,
+            b"too many %s (limit is %d) in %s\0" as *const u8 as *const libc::c_char,
             what,
             limit,
             where_0,
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn errorlimit(function_state: *mut FunctionState, limit: i
         luax_syntaxerror((*function_state).lexical_state, message);
     }
 }
-pub unsafe extern "C" fn checklimit(function_state: *mut FunctionState, v: i32, length: i32, what: *const i8) {
+pub unsafe extern "C" fn checklimit(function_state: *mut FunctionState, v: i32, length: i32, what: *const libc::c_char) {
     unsafe {
         if v > length {
             errorlimit(function_state, length, what);
@@ -304,7 +304,7 @@ pub unsafe extern "C" fn allocate_upvalue_description(function_state: *mut Funct
             function_state,
             (*function_state).count_upvalues as i32 + 1,
             255 as i32,
-            b"upvalues\0" as *const u8 as *const i8,
+            b"upvalues\0" as *const u8 as *const libc::c_char,
         );
         (*prototype).prototype_upvalues.pointer = luam_growaux_(
             (*(*function_state).lexical_state).interpreter,
@@ -319,7 +319,7 @@ pub unsafe extern "C" fn allocate_upvalue_description(function_state: *mut Funct
             } else {
                 (!(0usize)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as usize) as u32
             }) as i32,
-            b"upvalues\0" as *const u8 as *const i8,
+            b"upvalues\0" as *const u8 as *const libc::c_char,
         ) as *mut UpValueDescription;
         while old_size < (*prototype).prototype_upvalues.size {
             let fresh41 = old_size;
@@ -449,7 +449,7 @@ pub unsafe extern "C" fn fixforjump(
         if offset > (1 << 8 + 8 + 1) - 1 {
             luax_syntaxerror(
                 (*function_state).lexical_state,
-                b"control structure too long\0" as *const u8 as *const i8,
+                b"control structure too long\0" as *const u8 as *const libc::c_char,
             );
         }
         *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1) << POSITION_K)
@@ -520,7 +520,7 @@ pub unsafe extern "C" fn fixjump(function_state: *mut FunctionState, program_cou
         {
             luax_syntaxerror(
                 (*function_state).lexical_state,
-                b"control structure too long\0" as *const u8 as *const i8,
+                b"control structure too long\0" as *const u8 as *const libc::c_char,
             );
         }
         *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A)
@@ -683,7 +683,7 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
                 } else {
                     (!(0usize)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as usize) as u32
                 }) as i32,
-                b"lines\0" as *const u8 as *const i8,
+                b"lines\0" as *const u8 as *const libc::c_char,
             ) as *mut AbsoluteLineInfo;
             (*((*prototype).prototype_absolute_line_info.pointer).offset((*function_state).count_abslineinfo as isize)).program_counter =
                 program_counter;
@@ -698,17 +698,17 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             (*prototype).prototype_line_info.pointer as *mut libc::c_void,
             program_counter as usize,
             &mut (*prototype).prototype_line_info.size,
-            ::core::mem::size_of::<i8>(),
+            ::core::mem::size_of::<libc::c_char>(),
             (if 0x7FFFFFFF as usize
-                <= (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize)
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
             {
                 0x7FFFFFFF as u32
             } else {
-                (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<libc::c_char>() as usize) as u32
             }) as i32,
-            b"opcodes\0" as *const u8 as *const i8,
-        ) as *mut i8;
-        *((*prototype).prototype_line_info.pointer).offset(program_counter as isize) = linedif as i8;
+            b"opcodes\0" as *const u8 as *const libc::c_char,
+        ) as *mut libc::c_char;
+        *((*prototype).prototype_line_info.pointer).offset(program_counter as isize) = linedif as libc::c_char;
         (*function_state).previous_line = line;
     }
 }
@@ -750,7 +750,7 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
             } else {
                 (!(0usize)).wrapping_div(::core::mem::size_of::<u32>() as usize) as u32
             }) as i32,
-            b"opcodes\0" as *const u8 as *const i8,
+            b"opcodes\0" as *const u8 as *const libc::c_char,
         ) as *mut u32;
         let fresh134 = (*function_state).program_counter;
         (*function_state).program_counter = (*function_state).program_counter + 1;
@@ -818,7 +818,7 @@ pub unsafe extern "C" fn luak_checkstack(function_state: *mut FunctionState, n: 
             if newstack >= 255 as i32 {
                 luax_syntaxerror(
                     (*function_state).lexical_state,
-                    b"function or expression needs too many registers\0" as *const u8 as *const i8,
+                    b"function or expression needs too many registers\0" as *const u8 as *const libc::c_char,
                 );
             }
             (*(*function_state).prototype).prototype_maximum_stack_size = newstack as u8;
@@ -911,7 +911,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             } else {
                 (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize) as u32
             }) as i32,
-            b"constants\0" as *const u8 as *const i8,
+            b"constants\0" as *const u8 as *const libc::c_char,
         ) as *mut TValue;
         while old_size < (*prototype).prototype_constants.size {
             let fresh135 = old_size;

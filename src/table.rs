@@ -272,8 +272,8 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
 }
 pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
-        let mut weakkey: *const i8 = null();
-        let mut weakvalue: *const i8 = null();
+        let mut weakkey: *const libc::c_char = null();
+        let mut weakvalue: *const libc::c_char = null();
         let mode: *const TValue = if ((*h).get_metatable()).is_null() {
             null()
         } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn findindex(
             if (*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
                 luag_runerror(
                     interpreter,
-                    b"invalid key to 'next'\0" as *const u8 as *const i8,
+                    b"invalid key to 'next'\0" as *const u8 as *const libc::c_char,
                 );
             }
             i = (n_value as *mut Node)
@@ -700,7 +700,7 @@ pub unsafe extern "C" fn setnodevector(
                         (!(0usize)).wrapping_div(::core::mem::size_of::<Node>() as usize) as u32
                     })
             {
-                luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const i8);
+                luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const libc::c_char);
             }
             size = (1 << lsize) as u32;
             (*table).node = luam_malloc_(
@@ -863,7 +863,7 @@ pub unsafe extern "C" fn luah_newkey(
         if (*key).is_tagtype_nil() {
             luag_runerror(
                 interpreter,
-                b"table index is nil\0" as *const u8 as *const i8,
+                b"table index is nil\0" as *const u8 as *const libc::c_char,
             );
         } else if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
@@ -875,7 +875,7 @@ pub unsafe extern "C" fn luah_newkey(
             } else if number != number {
                 luag_runerror(
                     interpreter,
-                    b"table index is NaN\0" as *const u8 as *const i8,
+                    b"table index is NaN\0" as *const u8 as *const libc::c_char,
                 );
             }
         }
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn luav_finishget(
             if slot.is_null() {
                 tm = luat_gettmbyobj(interpreter, t, TM_INDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const libc::c_char);
                 }
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
@@ -1205,7 +1205,7 @@ pub unsafe extern "C" fn luav_finishget(
         }
         luag_runerror(
             interpreter,
-            b"'__index' chain too long; possible loop\0" as *const u8 as *const i8,
+            b"'__index' chain too long; possible loop\0" as *const u8 as *const libc::c_char,
         );
     }
 }
@@ -1261,7 +1261,7 @@ pub unsafe extern "C" fn luav_finishset(
             } else {
                 tm = luat_gettmbyobj(interpreter, t, TM_NEWINDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const libc::c_char);
                 }
             }
             if (*tm).is_tagtype_closure() {
@@ -1295,7 +1295,7 @@ pub unsafe extern "C" fn luav_finishset(
         }
         luag_runerror(
             interpreter,
-            b"'__newindex' chain too long; possible loop\0" as *const u8 as *const i8,
+            b"'__newindex' chain too long; possible loop\0" as *const u8 as *const libc::c_char,
         );
     }
 }

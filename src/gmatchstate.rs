@@ -6,9 +6,9 @@ use crate::user::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GMatchState {
-    pub source: *const i8,
-    pub pointer: *const i8,
-    pub last_match: *const i8,
+    pub source: *const libc::c_char,
+    pub pointer: *const libc::c_char,
+    pub last_match: *const libc::c_char,
     pub match_state: MatchState,
 }
 impl GMatchState {
@@ -41,8 +41,8 @@ impl GMatchState {
         unsafe {
             let mut lexical_state: usize = 0;
             let mut lp: usize = 0;
-            let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
-            let p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
+            let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut lexical_state);
+            let p: *const libc::c_char = lual_checklstring(interpreter, 2, &mut lp);
             let mut init: usize =
                 (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
             lua_settop(interpreter, 2);

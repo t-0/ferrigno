@@ -97,49 +97,49 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
     [
         {
             RegisteredFunction {
-                name: b"create\0" as *const u8 as *const i8,
+                name: b"create\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_cocreate as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"resume\0" as *const u8 as *const i8,
+                name: b"resume\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_coresume as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"running\0" as *const u8 as *const i8,
+                name: b"running\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_corunning as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"status\0" as *const u8 as *const i8,
+                name: b"status\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_costatus as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"wrap\0" as *const u8 as *const i8,
+                name: b"wrap\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_cowrap as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"yield\0" as *const u8 as *const i8,
+                name: b"yield\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_yield as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"isyieldable\0" as *const u8 as *const i8,
+                name: b"isyieldable\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_yieldable as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"close\0" as *const u8 as *const i8,
+                name: b"close\0" as *const u8 as *const libc::c_char,
                 function: Some(luab_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn getco(interpreter: *mut Interpreter) -> *mut Interprete
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, 1);
         if co.is_null() {
-            lual_typeerror(interpreter, 1, b"thread\0" as *const u8 as *const i8);
+            lual_typeerror(interpreter, 1, b"thread\0" as *const u8 as *const libc::c_char);
         }
         return co;
     }
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Inter
         if lua_checkstack(co, narg) == 0 {
             lua_pushstring(
                 interpreter,
-                b"too many arguments to resume\0" as *const u8 as *const i8,
+                b"too many arguments to resume\0" as *const u8 as *const libc::c_char,
             );
             return -1;
         }
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Inter
                 lua_settop(co, -nres - 1);
                 lua_pushstring(
                     interpreter,
-                    b"too many results to resume\0" as *const u8 as *const i8,
+                    b"too many results to resume\0" as *const u8 as *const libc::c_char,
                 );
                 return -1;
             }

@@ -564,25 +564,25 @@ const CHARACTER_TYPE: [u8; 257] = [
     CHARACTER_TYPE_NONE,
     CHARACTER_TYPE_NONE,
 ];
-pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
+pub unsafe extern "C" fn luao_utf8esc(buffer: *mut libc::c_char, mut x: usize) -> i32 {
     unsafe {
         let mut n: i32 = 1;
         if x < 0x80 {
-            *buffer.offset((8 - 1) as isize) = x as i8;
+            *buffer.offset((8 - 1) as isize) = x as libc::c_char;
         } else {
             let mut mfb: usize = 0x3f;
             loop {
                 let fresh9 = n;
                 n += 1;
                 *buffer.offset((8 - fresh9) as isize) =
-                    (0x80 as usize | x & 0x3f as usize) as i8;
+                    (0x80 as usize | x & 0x3f as usize) as libc::c_char;
                 x >>= 6;
                 mfb >>= 1;
                 if !(x > mfb) {
                     break;
                 }
             }
-            *buffer.offset((8 - n) as isize) = ((!mfb << 1) as usize | x) as i8;
+            *buffer.offset((8 - n) as isize) = ((!mfb << 1) as usize | x) as libc::c_char;
         }
         return n;
     }

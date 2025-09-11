@@ -5,7 +5,7 @@ use std::ptr::*;
 use crate::buffer::userbox::*;
 use crate::interpreter::*;
 use crate::vectort::*;
-pub type BufferElement = i8;
+pub type BufferElement = libc::c_char;
 impl Buffer {
     pub const INITIAL_SIZE: usize = 1024;
 }

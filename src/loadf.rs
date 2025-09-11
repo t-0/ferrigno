@@ -3,5 +3,5 @@ use crate::utility::c::*;
 pub struct LoadF {
     pub n: i32,
     pub file: *mut FILE,
-    pub buffer: [i8; 8192],
+    pub buffer: [libc::c_char; 8192],
 }

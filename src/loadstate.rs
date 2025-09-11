@@ -18,14 +18,14 @@ use crate::utility::c::*;
 pub struct LoadState {
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
-    name: *const i8,
+    name: *const libc::c_char,
 }
 impl LoadState {
-    pub unsafe extern "C" fn error(& mut self, why: *const i8) -> ! {
+    pub unsafe extern "C" fn error(& mut self, why: *const libc::c_char) -> ! {
         unsafe {
             luao_pushfstring(
                 self.interpreter,
-                b"%s: bad binary format (%s)\0" as *const u8 as *const i8,
+                b"%s: bad binary format (%s)\0" as *const u8 as *const libc::c_char,
                 self.name,
                 why,
             );
@@ -35,7 +35,7 @@ impl LoadState {
     pub unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
             if luaz_read(self.zio, b, size) != 0 {
-                self.error(b"truncated chunk\0" as *const u8 as *const i8);
+                self.error(b"truncated chunk\0" as *const u8 as *const libc::c_char);
             }
         }
     }
@@ -51,7 +51,7 @@ impl LoadState {
                 luaz_fill(self.zio)
             };
             if ret == -1 {
-                self.error(b"truncated chunk\0" as *const u8 as *const i8);
+                self.error(b"truncated chunk\0" as *const u8 as *const libc::c_char);
             }
             return ret as u8;
         }
@@ -63,7 +63,7 @@ impl LoadState {
             loop {
                 let b: i32 = self.load_byte() as i32;
                 if ret >= limit {
-                    self.error(b"integer overflow\0" as *const u8 as *const i8);
+                    self.error(b"integer overflow\0" as *const u8 as *const libc::c_char);
                 }
                 ret = ret << 7 | (b & 0x7f as i32) as usize;
                 if !(b & 0x80 as i32 == 0) {
@@ -116,10 +116,10 @@ impl LoadState {
             } else {
                 size = size.wrapping_sub(1);
                 if size <= 40 as usize {
-                    let mut buffer: [i8; 40] = [0; 40];
+                    let mut buffer: [libc::c_char; 40] = [0; 40];
                     self.load_block(
                         buffer.as_mut_ptr() as *mut libc::c_void,
-                        size.wrapping_mul(::core::mem::size_of::<i8>() as usize),
+                        size.wrapping_mul(::core::mem::size_of::<libc::c_char>() as usize),
                     );
                     ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
@@ -131,7 +131,7 @@ impl LoadState {
                     (*interpreter).luad_inctop();
                     self.load_block(
                         ((*ts).get_contents_mut()) as *mut libc::c_void,
-                        size.wrapping_mul(::core::mem::size_of::<i8>() as usize),
+                        size.wrapping_mul(::core::mem::size_of::<libc::c_char>() as usize),
                     );
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
@@ -155,7 +155,7 @@ impl LoadState {
             let st: *mut TString = self.load_string_n(p);
             if st.is_null() {
                 self.error(
-                    b"bad format for constant string\0" as *const u8 as *const i8,
+                    b"bad format for constant string\0" as *const u8 as *const libc::c_char,
                 );
             }
             return st;
@@ -301,19 +301,19 @@ impl LoadState {
             n = self.load_int();
             if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
                 && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).prototype_line_info.pointer = luam_malloc_(
                 self.interpreter,
-                (n as usize).wrapping_mul(::core::mem::size_of::<i8>()),
-            ) as *mut i8;
+                (n as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+            ) as *mut libc::c_char;
             (*prototype).prototype_line_info.size = n;
             self.load_block(
                 (*prototype).prototype_line_info.pointer as *mut libc::c_void,
-                (n as usize).wrapping_mul(::core::mem::size_of::<i8>() as usize),
+                (n as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>() as usize),
             );
             n = self.load_int();
             if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
@@ -390,15 +390,15 @@ impl LoadState {
     }
     pub unsafe extern "C" fn check_literal(
         & mut self,
-        s: *const i8,
-        message: *const i8,
+        s: *const libc::c_char,
+        message: *const libc::c_char,
     ) {
         unsafe {
-            let mut buffer: [i8; 12] = [0; 12];
+            let mut buffer: [libc::c_char; 12] = [0; 12];
             let length: usize = strlen(s) as usize;
             self.load_block(
                 buffer.as_mut_ptr() as *mut libc::c_void,
-                length.wrapping_mul(::core::mem::size_of::<i8>() as usize),
+                length.wrapping_mul(::core::mem::size_of::<libc::c_char>() as usize),
             );
             if memcmp(
                 s as *const libc::c_void,
@@ -410,13 +410,13 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn f_check_size(& mut self, size: usize, tname: *const i8) {
+    pub unsafe extern "C" fn f_check_size(& mut self, size: usize, tname: *const libc::c_char) {
         unsafe {
             if self.load_byte() as usize != size {
                 self.error(
                     luao_pushfstring(
                         self.interpreter,
-                        b"%s size mismatch\0" as *const u8 as *const i8,
+                        b"%s size mismatch\0" as *const u8 as *const libc::c_char,
                         tname,
                     ),
                 );
@@ -426,41 +426,41 @@ impl LoadState {
     pub unsafe extern "C" fn check_header(& mut self) {
         unsafe {
             self.check_literal(
-                &*(b"\x1BLua\0" as *const u8 as *const i8).offset(1 as isize),
-                b"not a binary chunk\0" as *const u8 as *const i8,
+                &*(b"\x1BLua\0" as *const u8 as *const libc::c_char).offset(1 as isize),
+                b"not a binary chunk\0" as *const u8 as *const libc::c_char,
             );
             if self.load_byte() as i32
                 != 504 as i32 / 100 as i32 * 16 as i32 + 504 as i32 % 100 as i32
             {
-                self.error(b"version mismatch\0" as *const u8 as *const i8);
+                self.error(b"version mismatch\0" as *const u8 as *const libc::c_char);
             }
             if self.load_byte() as i32 != 0 {
-                self.error(b"format mismatch\0" as *const u8 as *const i8);
+                self.error(b"format mismatch\0" as *const u8 as *const libc::c_char);
             }
             self.check_literal(
-                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const i8,
-                b"corrupted chunk\0" as *const u8 as *const i8,
+                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char,
+                b"corrupted chunk\0" as *const u8 as *const libc::c_char,
             );
             self.f_check_size(
                 ::core::mem::size_of::<u32>() as usize,
-                b"u32\0" as *const u8 as *const i8,
+                b"u32\0" as *const u8 as *const libc::c_char,
             );
             self.f_check_size(
                 ::core::mem::size_of::<i64>() as usize,
-                b"i64\0" as *const u8 as *const i8,
+                b"i64\0" as *const u8 as *const libc::c_char,
             );
             self.f_check_size(
                 ::core::mem::size_of::<f64>() as usize,
-                b"f64\0" as *const u8 as *const i8,
+                b"f64\0" as *const u8 as *const libc::c_char,
             );
             if self.load_integer() != 0x5678 as i64 {
                 self.error(
-                    b"integer format mismatch\0" as *const u8 as *const i8,
+                    b"integer format mismatch\0" as *const u8 as *const libc::c_char,
                 );
             }
             if self.load_number() != 370.5f64 {
                 self.error(
-                    b"float format mismatch\0" as *const u8 as *const i8,
+                    b"float format mismatch\0" as *const u8 as *const libc::c_char,
                 );
             }
         }
@@ -469,7 +469,7 @@ impl LoadState {
 pub unsafe extern "C" fn load_closure(
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
-    name: *const i8,
+    name: *const libc::c_char,
 ) -> *mut Closure {
     unsafe {
         let mut load_state: LoadState = LoadState {
@@ -480,9 +480,9 @@ pub unsafe extern "C" fn load_closure(
         if *name as i32 == CHARACTER_AT as i32 || *name as i32 == CHARACTER_EQUAL as i32 {
             load_state.name = name.offset(1 as isize);
         } else if *name as i32
-            == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32
+            == (*::core::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"\x1BLua\0"))[0] as i32
         {
-            load_state.name = b"binary string\0" as *const u8 as *const i8;
+            load_state.name = b"binary string\0" as *const u8 as *const libc::c_char;
         } else {
             load_state.name = name;
         }

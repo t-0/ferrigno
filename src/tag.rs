@@ -106,23 +106,23 @@ pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
 pub const fn set_collectable(tag: u8) -> u8 {
     tag | TAG_COLLECTABLE
 }
-pub const STRING_LOCAL: [i8; 6] =
-    unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
-pub const STRING_UPVALUE: [i8; 8] =
-    unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
-pub const UDATA_TYPE_NAME: [i8; 9] =
-    unsafe { *::core::mem::transmute::<&[u8; 9], &[i8; 9]>(b"userdata\0") };
-pub const TYPE_NAMES: [*const i8; 12] = [
-    b"no value\0" as *const u8 as *const i8,
-    b"nil\0" as *const u8 as *const i8,
-    b"boolean\0" as *const u8 as *const i8,
+pub const STRING_LOCAL: [libc::c_char; 6] =
+    unsafe { *::core::mem::transmute::<&[u8; 6], &[libc::c_char; 6]>(b"local\0") };
+pub const STRING_UPVALUE: [libc::c_char; 8] =
+    unsafe { *::core::mem::transmute::<&[u8; 8], &[libc::c_char; 8]>(b"upvalue\0") };
+pub const UDATA_TYPE_NAME: [libc::c_char; 9] =
+    unsafe { *::core::mem::transmute::<&[u8; 9], &[libc::c_char; 9]>(b"userdata\0") };
+pub const TYPE_NAMES: [*const libc::c_char; 12] = [
+    b"no value\0" as *const u8 as *const libc::c_char,
+    b"nil\0" as *const u8 as *const libc::c_char,
+    b"boolean\0" as *const u8 as *const libc::c_char,
     UDATA_TYPE_NAME.as_ptr(),
-    b"number\0" as *const u8 as *const i8,
-    b"string\0" as *const u8 as *const i8,
-    b"table\0" as *const u8 as *const i8,
-    b"function\0" as *const u8 as *const i8,
+    b"number\0" as *const u8 as *const libc::c_char,
+    b"string\0" as *const u8 as *const libc::c_char,
+    b"table\0" as *const u8 as *const libc::c_char,
+    b"function\0" as *const u8 as *const libc::c_char,
     UDATA_TYPE_NAME.as_ptr(),
-    b"thread\0" as *const u8 as *const i8,
-    b"upvalue\0" as *const u8 as *const i8,
-    b"proto\0" as *const u8 as *const i8,
+    b"thread\0" as *const u8 as *const libc::c_char,
+    b"upvalue\0" as *const u8 as *const libc::c_char,
+    b"proto\0" as *const u8 as *const libc::c_char,
 ];

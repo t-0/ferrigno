@@ -46,14 +46,14 @@ impl User {
     }
     pub unsafe fn get_raw_memory(&self) -> *const libc::c_void {
         unsafe {
-            return (self as *const User as *mut i8)
+            return (self as *const User as *mut libc::c_char)
                 .offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *const libc::c_void;
         }
     }
     pub unsafe fn get_raw_memory_mut(&mut self) -> *mut libc::c_void {
         unsafe {
-            return (self as *mut User as *mut i8)
+            return (self as *mut User as *mut libc::c_char)
                 .offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *mut libc::c_void;
         }

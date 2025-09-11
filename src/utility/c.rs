@@ -15,15 +15,15 @@ unsafe extern "C" {
     pub fn fclose(__stream: *mut FILE) -> i32;
     pub fn tmpfile() -> *mut FILE;
     pub fn fflush(__stream: *mut FILE) -> i32;
-    pub fn fopen(_: *const i8, _: *const i8) -> *mut FILE;
-    pub fn freopen(__filename: *const i8, __modes: *const i8, __stream: *mut FILE) -> *mut FILE;
-    pub fn setvbuf(__stream: *mut FILE, __buf: *mut i8, __modes: i32, __n: usize) -> i32;
-    pub fn fprintf(_: *mut FILE, _: *const i8, _: ...) -> i32;
-    pub fn snprintf(_: *mut i8, _: usize, _: *const i8, _: ...) -> i32;
+    pub fn fopen(_: *const libc::c_char, _: *const libc::c_char) -> *mut FILE;
+    pub fn freopen(__filename: *const libc::c_char, __modes: *const libc::c_char, __stream: *mut FILE) -> *mut FILE;
+    pub fn setvbuf(__stream: *mut FILE, __buf: *mut libc::c_char, __modes: i32, __n: usize) -> i32;
+    pub fn fprintf(_: *mut FILE, _: *const libc::c_char, _: ...) -> i32;
+    pub fn snprintf(_: *mut libc::c_char, _: usize, _: *const libc::c_char, _: ...) -> i32;
     pub fn getc(__stream: *mut FILE) -> i32;
     pub fn getc_unlocked(__stream: *mut FILE) -> i32;
-    pub fn fgets(s: *mut i8, __n: i32, __stream: *mut FILE) -> *mut i8;
-    pub fn fputs(s: *const i8, __stream: *mut FILE) -> i32;
+    pub fn fgets(s: *mut libc::c_char, __n: i32, __stream: *mut FILE) -> *mut libc::c_char;
+    pub fn fputs(s: *const libc::c_char, __stream: *mut FILE) -> i32;
     pub fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
     pub fn fread(_: *mut libc::c_void, _: usize, _: usize, _: *mut FILE) -> usize;
     pub fn fwrite(_: *const libc::c_void, _: usize, _: usize, _: *mut FILE) -> usize;
@@ -33,33 +33,33 @@ unsafe extern "C" {
     pub fn feof(__stream: *mut FILE) -> i32;
     pub fn ferror(__stream: *mut FILE) -> i32;
     pub fn pclose(__stream: *mut FILE) -> i32;
-    pub fn popen(__command: *const i8, __modes: *const i8) -> *mut FILE;
+    pub fn popen(__command: *const libc::c_char, __modes: *const libc::c_char) -> *mut FILE;
     pub fn flockfile(__stream: *mut FILE);
     pub fn funlockfile(__stream: *mut FILE);
     pub fn realloc(_: *mut libc::c_void, _: usize) -> *mut libc::c_void;
     pub fn free(_: *mut libc::c_void);
     pub fn abort() -> !;
     pub fn exit(_: i32) -> !;
-    pub fn getenv(__name: *const i8) -> *mut i8;
-    pub fn mkstemp(__template: *mut i8) -> i32;
+    pub fn getenv(__name: *const libc::c_char) -> *mut libc::c_char;
+    pub fn mkstemp(__template: *mut libc::c_char) -> i32;
     pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: usize) -> *mut libc::c_void;
     pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void, _: usize) -> i32;
     pub fn memchr(_: *const libc::c_void, _: i32, _: usize) -> *mut libc::c_void;
-    pub fn strcpy(_: *mut i8, _: *const i8) -> *mut i8;
-    pub fn strcmp(_: *const i8, _: *const i8) -> i32;
-    pub fn strncmp(_: *const i8, _: *const i8, _: usize) -> i32;
-    pub fn strcoll(__s1: *const i8, __s2: *const i8) -> i32;
-    pub fn strchr(_: *const i8, _: i32) -> *mut i8;
-    pub fn strspn(_: *const i8, _: *const i8) -> usize;
-    pub fn strpbrk(_: *const i8, _: *const i8) -> *mut i8;
-    pub fn strstr(_: *const i8, _: *const i8) -> *mut i8;
-    pub fn strlen(_: *const i8) -> usize;
-    pub fn strerror(_: i32) -> *mut i8;
+    pub fn strcpy(_: *mut libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
+    pub fn strcmp(_: *const libc::c_char, _: *const libc::c_char) -> i32;
+    pub fn strncmp(_: *const libc::c_char, _: *const libc::c_char, _: usize) -> i32;
+    pub fn strcoll(__s1: *const libc::c_char, __s2: *const libc::c_char) -> i32;
+    pub fn strchr(_: *const libc::c_char, _: i32) -> *mut libc::c_char;
+    pub fn strspn(_: *const libc::c_char, _: *const libc::c_char) -> usize;
+    pub fn strpbrk(_: *const libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
+    pub fn strstr(_: *const libc::c_char, _: *const libc::c_char) -> *mut libc::c_char;
+    pub fn strlen(_: *const libc::c_char) -> usize;
+    pub fn strerror(_: i32) -> *mut libc::c_char;
     pub fn clock() -> i64;
     pub fn time(timer: *mut i64) -> i64;
     pub fn difftime(time1: i64, time0: i64) -> f64;
     pub fn mktime(tp: *mut TM) -> i64;
-    pub fn strftime(s: *mut i8, __maxsize: usize, __format: *const i8, tp: *const TM) -> usize;
+    pub fn strftime(s: *mut libc::c_char, __maxsize: usize, __format: *const libc::c_char, tp: *const TM) -> usize;
     pub fn gmtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
     pub fn localtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
     pub fn close(fd: i32) -> i32;
@@ -193,25 +193,25 @@ pub union SigActionA {
 #[repr(C)]
 pub struct FILE {
     pub _flags: i32,
-    pub _io_read_pointer: *mut i8,
-    pub _io_read_end: *mut i8,
-    pub _io_read_base: *mut i8,
-    pub _io_write_base: *mut i8,
-    pub _io_write_pointer: *mut i8,
-    pub _io_write_end: *mut i8,
-    pub _io_buf_base: *mut i8,
-    pub _io_buf_end: *mut i8,
-    pub _io_save_base: *mut i8,
-    pub _io_backup_base: *mut i8,
-    pub _io_save_end: *mut i8,
+    pub _io_read_pointer: *mut libc::c_char,
+    pub _io_read_end: *mut libc::c_char,
+    pub _io_read_base: *mut libc::c_char,
+    pub _io_write_base: *mut libc::c_char,
+    pub _io_write_pointer: *mut libc::c_char,
+    pub _io_write_end: *mut libc::c_char,
+    pub _io_buf_base: *mut libc::c_char,
+    pub _io_buf_end: *mut libc::c_char,
+    pub _io_save_base: *mut libc::c_char,
+    pub _io_backup_base: *mut libc::c_char,
+    pub _io_save_end: *mut libc::c_char,
     pub _markers: *mut _IOMarker,
     pub _chain: *mut FILE,
     pub _fileno: i32,
     pub _flags2: i32,
     pub _old_offset: i64,
     pub _cur_column: u16,
-    pub _vtable_offset: i8,
-    pub _shortbuf: [i8; 1],
+    pub _vtable_offset: libc::c_char,
+    pub _shortbuf: [libc::c_char; 1],
     pub _lock: *mut libc::c_void,
     pub _offset: i64,
     pub _codecvt: *mut _IOCodeConvert,
@@ -220,7 +220,7 @@ pub struct FILE {
     pub _freeres_buf: *mut libc::c_void,
     pub __pad5: usize,
     pub _mode: i32,
-    pub _unused2: [i8; 20],
+    pub _unused2: [libc::c_char; 20],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -235,5 +235,5 @@ pub struct TM {
     pub tm_yday: i32,
     pub tm_isdst: i32,
     pub __tm_gmtoff: i64,
-    pub __tm_zone: *const i8,
+    pub __tm_zone: *const libc::c_char,
 }

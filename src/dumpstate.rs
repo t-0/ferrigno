@@ -117,11 +117,11 @@ impl DumpState {
                 self.dump_size(0);
             } else {
                 let size: usize = (*tstring).get_length() as usize;
-                let str: *const i8 = (*tstring).get_contents_mut();
+                let str: *const libc::c_char = (*tstring).get_contents_mut();
                 self.dump_size(size.wrapping_add(1) as usize);
                 self.dump_block(
                     str as *const libc::c_void,
-                    size.wrapping_mul(::core::mem::size_of::<i8>()),
+                    size.wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
             };
         }
@@ -129,16 +129,16 @@ impl DumpState {
     pub unsafe extern "C" fn dump_header(& mut self) {
         unsafe {
             self.dump_block(
-                b"\x1BLua\0" as *const u8 as *const i8 as *const libc::c_void,
-                (::core::mem::size_of::<[i8; 5]>())
-                    .wrapping_sub(::core::mem::size_of::<i8>()),
+                b"\x1BLua\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                (::core::mem::size_of::<[libc::c_char; 5]>())
+                    .wrapping_sub(::core::mem::size_of::<libc::c_char>()),
             );
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
             self.dump_block(
-                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const i8 as *const libc::c_void,
-                (::core::mem::size_of::<[i8; 7]>())
-                    .wrapping_sub(::core::mem::size_of::<i8>()),
+                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                (::core::mem::size_of::<[libc::c_char; 7]>())
+                    .wrapping_sub(::core::mem::size_of::<libc::c_char>()),
             );
             self.dump_byte(::core::mem::size_of::<u32>() as u8);
             self.dump_byte(::core::mem::size_of::<i64>() as u8);

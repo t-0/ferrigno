@@ -10,7 +10,7 @@ pub fn ceiling_log2(input: usize) -> usize {
         return 1 + input.ilog2() as usize;
     }
 }
-pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
+pub unsafe extern "C" fn is_negative(s: *mut *const libc::c_char) -> bool {
     unsafe {
         if **s as i32 == CHARACTER_HYPHEN {
             *s = (*s).offset(1);
@@ -23,15 +23,15 @@ pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
         }
     }
 }
-pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
+pub unsafe extern "C" fn l_str2dloc(s: *const libc::c_char, result: *mut f64, mode: i32) -> *const libc::c_char {
     unsafe {
-        let mut endptr: *mut i8 = null_mut();
+        let mut endptr: *mut libc::c_char = null_mut();
         *result = if mode == CHARACTER_LOWER_X as i32 {
             strtod(s, &mut endptr)
         } else {
             strtod(s, &mut endptr)
         };
-        if endptr == s as *mut i8 {
+        if endptr == s as *mut libc::c_char {
             return null();
         }
         while is_whitespace(*endptr as i32 + 1) {
@@ -44,9 +44,9 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
         };
     }
 }
-pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
+pub unsafe extern "C" fn l_str2d(s: *const libc::c_char, result: *mut f64) -> *const libc::c_char {
     unsafe {
-        let pmode: *const i8 = strpbrk(s, b".xXnN\0" as *const u8 as *const i8);
+        let pmode: *const libc::c_char = strpbrk(s, b".xXnN\0" as *const u8 as *const libc::c_char);
         let mode: i32 = if !pmode.is_null() {
             *pmode as u8 as i32 | CHARACTER_UPPER_A as i32 ^ CHARACTER_LOWER_A as i32
         } else {
@@ -55,15 +55,15 @@ pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
         if mode == CHARACTER_LOWER_N as i32 {
             return null();
         }
-        let mut endptr: *const i8 = l_str2dloc(s, result, mode);
+        let mut endptr: *const libc::c_char = l_str2dloc(s, result, mode);
         if endptr.is_null() {
-            let mut buffer: [i8; 201] = [0; 201];
-            let pdot: *const i8 = strchr(s, CHARACTER_PERIOD as i32);
+            let mut buffer: [libc::c_char; 201] = [0; 201];
+            let pdot: *const libc::c_char = strchr(s, CHARACTER_PERIOD as i32);
             if pdot.is_null() || strlen(s) > 200 {
                 return null();
             }
             strcpy(buffer.as_mut_ptr(), s);
-            buffer[pdot.offset_from(s) as usize] = CHARACTER_PERIOD as i8;
+            buffer[pdot.offset_from(s) as usize] = CHARACTER_PERIOD as libc::c_char;
             endptr = l_str2dloc(buffer.as_mut_ptr(), result, mode);
             if !endptr.is_null() {
                 endptr = s.offset(endptr.offset_from(buffer.as_mut_ptr()) as isize);
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
         return endptr;
     }
 }
-pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
+pub unsafe extern "C" fn l_str2int(mut s: *const libc::c_char, result: *mut i64) -> *const libc::c_char {
     unsafe {
         let mut a: usize = 0;
         let mut empty: i32 = 1;
@@ -122,7 +122,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
         };
     }
 }
-pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_length: usize) {
+pub unsafe extern "C" fn luao_chunkid(mut out: *mut libc::c_char, source: *const libc::c_char, mut source_length: usize) {
     unsafe {
         let mut bufflen: usize = 60 as usize;
         if *source as i32 == CHARACTER_EQUAL as i32 {
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                 memcpy(
                     out as *mut libc::c_void,
                     source.offset(1 as isize) as *const libc::c_void,
-                    (source_length as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+                    (source_length as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
             } else {
                 memcpy(
@@ -138,35 +138,35 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                     source.offset(1 as isize) as *const libc::c_void,
                     (bufflen as usize)
                         .wrapping_sub(1)
-                        .wrapping_mul(::core::mem::size_of::<i8>()),
+                        .wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
                 out = out.offset(bufflen.wrapping_sub(1 as usize) as isize);
-                *out = Character::Null as i8;
+                *out = Character::Null as libc::c_char;
             }
         } else if *source as i32 == CHARACTER_AT as i32 {
             if source_length <= bufflen {
                 memcpy(
                     out as *mut libc::c_void,
                     source.offset(1 as isize) as *const libc::c_void,
-                    (source_length as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+                    (source_length as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
             } else {
                 memcpy(
                     out as *mut libc::c_void,
-                    b"...\0" as *const u8 as *const i8 as *const libc::c_void,
-                    (::core::mem::size_of::<[i8; 4]>())
-                        .wrapping_div(::core::mem::size_of::<i8>())
+                    b"...\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                    (::core::mem::size_of::<[libc::c_char; 4]>())
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>())
                         .wrapping_sub(1)
-                        .wrapping_mul(::core::mem::size_of::<i8>()),
+                        .wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
                 out = out.offset(
-                    (::core::mem::size_of::<[i8; 4]>() as usize)
-                        .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    (::core::mem::size_of::<[libc::c_char; 4]>() as usize)
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
                         .wrapping_sub(1 as usize) as isize,
                 );
                 bufflen = (bufflen as usize).wrapping_sub(
-                    (::core::mem::size_of::<[i8; 4]>() as usize)
-                        .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    (::core::mem::size_of::<[libc::c_char; 4]>() as usize)
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
                         .wrapping_sub(1 as usize),
                 ) as usize;
                 memcpy(
@@ -175,27 +175,27 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                         .offset(1 as isize)
                         .offset(source_length as isize)
                         .offset(-(bufflen as isize)) as *const libc::c_void,
-                    (bufflen as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+                    (bufflen as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
             }
         } else {
-            let nl: *const i8 = strchr(source, CHARACTER_LF as i32);
+            let nl: *const libc::c_char = strchr(source, CHARACTER_LF as i32);
             memcpy(
                 out as *mut libc::c_void,
-                b"[string \"\0" as *const u8 as *const i8 as *const libc::c_void,
-                (::core::mem::size_of::<[i8; 10]>())
-                    .wrapping_div(::core::mem::size_of::<i8>())
+                b"[string \"\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                (::core::mem::size_of::<[libc::c_char; 10]>())
+                    .wrapping_div(::core::mem::size_of::<libc::c_char>())
                     .wrapping_sub(1)
-                    .wrapping_mul(::core::mem::size_of::<i8>()),
+                    .wrapping_mul(::core::mem::size_of::<libc::c_char>()),
             );
             out = out.offset(
-                (::core::mem::size_of::<[i8; 10]>() as usize)
-                    .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                (::core::mem::size_of::<[libc::c_char; 10]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
                     .wrapping_sub(1 as usize) as isize,
             );
             bufflen = (bufflen as usize).wrapping_sub(
-                (::core::mem::size_of::<[i8; 15]>() as usize)
-                    .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                (::core::mem::size_of::<[libc::c_char; 15]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
                     .wrapping_sub(1 as usize)
                     .wrapping_add(1 as usize),
             ) as usize;
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                 memcpy(
                     out as *mut libc::c_void,
                     source as *const libc::c_void,
-                    (source_length as usize).wrapping_mul(::core::mem::size_of::<i8>()),
+                    (source_length as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
                 out = out.offset(source_length as isize);
             } else {
@@ -216,31 +216,31 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                 memcpy(
                     out as *mut libc::c_void,
                     source as *const libc::c_void,
-                    (source_length as usize).wrapping_mul(::core::mem::size_of::<i8>())
+                    (source_length as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>())
                 );
                 out = out.offset(source_length as isize);
                 memcpy(
                     out as *mut libc::c_void,
-                    b"...\0" as *const u8 as *const i8 as *const libc::c_void,
-                    (::core::mem::size_of::<[i8; 4]>())
-                        .wrapping_div(::core::mem::size_of::<i8>())
+                    b"...\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                    (::core::mem::size_of::<[libc::c_char; 4]>())
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>())
                         .wrapping_sub(1)
-                        .wrapping_mul(::core::mem::size_of::<i8>()),
+                        .wrapping_mul(::core::mem::size_of::<libc::c_char>()),
                 );
                 out = out.offset(
-                    (::core::mem::size_of::<[i8; 4]>() as usize)
-                        .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    (::core::mem::size_of::<[libc::c_char; 4]>() as usize)
+                        .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
                         .wrapping_sub(1 as usize) as isize,
                 );
             }
             memcpy(
                 out as *mut libc::c_void,
-                b"\"]\0" as *const u8 as *const i8 as *const libc::c_void,
-                (::core::mem::size_of::<[i8; 3]>())
-                    .wrapping_div(::core::mem::size_of::<i8>())
+                b"\"]\0" as *const u8 as *const libc::c_char as *const libc::c_void,
+                (::core::mem::size_of::<[libc::c_char; 3]>())
+                    .wrapping_div(::core::mem::size_of::<libc::c_char>())
                     .wrapping_sub(1)
                     .wrapping_add(1)
-                    .wrapping_mul(::core::mem::size_of::<i8>()),
+                    .wrapping_mul(::core::mem::size_of::<libc::c_char>()),
             );
         };
     }

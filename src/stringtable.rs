@@ -70,9 +70,9 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*global).memory_error_message = luas_newlstr(
             interpreter,
-            b"not enough memory\0" as *const u8 as *const i8,
-            (::core::mem::size_of::<[i8; 18]>())
-                .wrapping_div(::core::mem::size_of::<i8>())
+            b"not enough memory\0" as *const u8 as *const libc::c_char,
+            (::core::mem::size_of::<[libc::c_char; 18]>())
+                .wrapping_div(::core::mem::size_of::<libc::c_char>())
                 .wrapping_sub(1),
         );
         (*global).fix_memory_error_message_global();
