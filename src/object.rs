@@ -219,7 +219,7 @@ pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Obj
 }
 pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
-        let current_block_18: u64;
+        let current_block_18: usize;
         match (*object).get_tag_variant() {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -341,7 +341,7 @@ pub unsafe extern "C" fn check_pointer(objects: *mut *mut Object, object: *mut O
 }
 pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
-        let mut current_block: u64;
+        let mut current_block: usize;
         loop {
             let curr: *mut Object = *objects;
             if curr.is_null() {

@@ -187,7 +187,7 @@ impl Prototype {
             }
         }
     }
-    pub unsafe extern "C" fn prototype_traverse(&mut self, global: &mut Global) -> u64 {
+    pub unsafe extern "C" fn prototype_traverse(&mut self, global: &mut Global) -> usize {
         unsafe {
             if !self.prototype_source.is_null() {
                 if (*self.prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -238,41 +238,41 @@ impl Prototype {
                     }
                 }
             }
-            return (1 + self.prototype_constants.size + self.prototype_upvalues.size + self.prototype_prototypes.size + self.prototype_local_variables.size) as u64
+            return (1 + self.prototype_constants.size + self.prototype_upvalues.size + self.prototype_prototypes.size + self.prototype_local_variables.size) as usize
         }
     }
     pub unsafe extern "C" fn prototype_free(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             (*interpreter).free_memory(
                 self.prototype_code.pointer as *mut libc::c_void,
-                (self.prototype_code.size as u64).wrapping_mul(::core::mem::size_of::<u32>() as u64) as usize,
+                (self.prototype_code.size as usize).wrapping_mul(::core::mem::size_of::<u32>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_prototypes.pointer as *mut libc::c_void,
-                (self.prototype_prototypes.size as u64).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as u64) as usize,
+                (self.prototype_prototypes.size as usize).wrapping_mul(::core::mem::size_of::<*mut Prototype>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_constants.pointer as *mut libc::c_void,
-                (self.prototype_constants.size as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64) as usize,
+                (self.prototype_constants.size as usize).wrapping_mul(::core::mem::size_of::<TValue>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_line_info.pointer as *mut libc::c_void,
-                (self.prototype_line_info.size as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64) as usize,
+                (self.prototype_line_info.size as usize).wrapping_mul(::core::mem::size_of::<i8>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_absolute_line_info.pointer as *mut libc::c_void,
-                (self.prototype_absolute_line_info.size as u64)
-                    .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as u64) as usize,
+                (self.prototype_absolute_line_info.size as usize)
+                    .wrapping_mul(::core::mem::size_of::<AbsoluteLineInfo>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_local_variables.pointer as *mut libc::c_void,
-                (self.prototype_local_variables.size as u64)
-                    .wrapping_mul(::core::mem::size_of::<LocalVariable>() as u64) as usize,
+                (self.prototype_local_variables.size as usize)
+                    .wrapping_mul(::core::mem::size_of::<LocalVariable>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_upvalues.pointer as *mut libc::c_void,
-                (self.prototype_upvalues.size as u64)
-                    .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as u64) as usize,
+                (self.prototype_upvalues.size as usize)
+                    .wrapping_mul(::core::mem::size_of::<UpValueDescription>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self as *mut Prototype as *mut libc::c_void,

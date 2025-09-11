@@ -81,7 +81,7 @@ pub unsafe extern "C" fn setpath(
             if dftmark.is_null() {
                 lua_pushstring(interpreter, path);
             } else {
-                let length: u64 = strlen(path) as u64;
+                let length: usize = strlen(path) as usize;
                 let mut b = Buffer::new();
                 b.initialize(interpreter);
                 if path < dftmark {
@@ -367,7 +367,7 @@ pub unsafe extern "C" fn loadfunc(
         let mut openfunc: *const i8;
         let mark: *const i8 = strchr(modname, *(b"-\0" as *const u8 as *const i8) as i32);
         if !mark.is_null() {
-            openfunc = lua_pushlstring(interpreter, modname, mark.offset_from(modname) as u64);
+            openfunc = lua_pushlstring(interpreter, modname, mark.offset_from(modname) as usize);
             openfunc = lua_pushfstring(interpreter, b"luaopen_%s\0" as *const u8 as *const i8, openfunc);
             let stat: i32 = lookforfunc(interpreter, filename, openfunc);
             if stat != 2 {
@@ -405,7 +405,7 @@ pub unsafe extern "C" fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
         if p.is_null() {
             return 0;
         }
-        lua_pushlstring(interpreter, name, p.offset_from(name) as u64);
+        lua_pushlstring(interpreter, name, p.offset_from(name) as usize);
         let filename: *const i8 = findfile(
             interpreter,
             lua_tolstring(interpreter, -1, null_mut()),
@@ -644,9 +644,9 @@ pub unsafe extern "C" fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), 0);

@@ -34,7 +34,7 @@ impl DumpState {
                         .expect("non-null function pointer")(
                         self.interpreter,
                         pointer,
-                        size as u64,
+                        size as usize,
                         self.pointer,
                     );
             }
@@ -49,13 +49,13 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_size(& mut self, mut integer: u64) {
+    pub unsafe extern "C" fn dump_size(& mut self, mut integer: usize) {
         unsafe {
             let mut buffer: [u8; 10] = [0; 10];
             let mut n: usize = 0;
             loop {
                 n += 1;
-                buffer[::core::mem::size_of::<u64>()
+                buffer[::core::mem::size_of::<usize>()
                     .wrapping_mul(8)
                     .wrapping_add(6)
                     .wrapping_div(7)
@@ -65,11 +65,11 @@ impl DumpState {
                     break;
                 }
             }
-            buffer[::core::mem::size_of::<u64>()
+            buffer[::core::mem::size_of::<usize>()
                 .wrapping_mul(8)
                 .wrapping_add(6)
                 .wrapping_div(7)
-                .wrapping_sub(1)] = (buffer[::core::mem::size_of::<u64>()
+                .wrapping_sub(1)] = (buffer[::core::mem::size_of::<usize>()
                 .wrapping_mul(8)
                 .wrapping_add(6)
                 .wrapping_div(7)
@@ -80,10 +80,10 @@ impl DumpState {
                 buffer
                     .as_mut_ptr()
                     .offset(
-                        (::core::mem::size_of::<u64>() as u64)
-                            .wrapping_mul(8 as u64)
-                            .wrapping_add(6 as u64)
-                            .wrapping_div(7 as u64) as isize,
+                        (::core::mem::size_of::<usize>() as usize)
+                            .wrapping_mul(8 as usize)
+                            .wrapping_add(6 as usize)
+                            .wrapping_div(7 as usize) as isize,
                     )
                     .offset(-(n as isize)) as *const libc::c_void,
                 n.wrapping_mul(::core::mem::size_of::<u8>()),
@@ -92,7 +92,7 @@ impl DumpState {
     }
     pub unsafe extern "C" fn dump_int(& mut self, integer: i32) {
         unsafe {
-            self.dump_size(integer as u64);
+            self.dump_size(integer as usize);
         }
     }
     pub unsafe extern "C" fn dump_number(& mut self, mut number: f64) {
@@ -118,7 +118,7 @@ impl DumpState {
             } else {
                 let size: usize = (*tstring).get_length() as usize;
                 let str: *const i8 = (*tstring).get_contents_mut();
-                self.dump_size(size.wrapping_add(1) as u64);
+                self.dump_size(size.wrapping_add(1) as usize);
                 self.dump_block(
                     str as *const libc::c_void,
                     size.wrapping_mul(::core::mem::size_of::<i8>()),

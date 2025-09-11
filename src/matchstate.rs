@@ -83,7 +83,7 @@ impl MatchState {
             let mut cap: *const i8 = null();
             let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
             if level != -2 as i64 {
-                lua_pushlstring(self.interpreter, cap, level as u64);
+                lua_pushlstring(self.interpreter, cap, level as usize);
             }
         }
     }
@@ -92,7 +92,7 @@ impl MatchState {
         s: *const i8,
         e: *const i8,
         cap: *mut *const i8,
-    ) -> u64 {
+    ) -> usize {
         unsafe {
             if i >= self.level as i32 {
                 if i != 0 {
@@ -103,7 +103,7 @@ impl MatchState {
                     );
                 }
                 *cap = s;
-                return e.offset_from(s) as u64;
+                return e.offset_from(s) as usize;
             } else {
                 let capl: i64 = self.capture[i as usize].length;
                 *cap = self.capture[i as usize].init;
@@ -118,7 +118,7 @@ impl MatchState {
                             as i64,
                     );
                 }
-                return capl as u64;
+                return capl as usize;
             };
         }
     }
@@ -333,10 +333,10 @@ impl MatchState {
     }
     pub unsafe extern "C" fn match_capture(& mut self, s: *const i8, mut l: i32) -> *const i8 {
         unsafe {
-            let length: u64;
+            let length: usize;
             l = self.check_capture(l);
-            length = self.capture[l as usize].length as u64;
-            if (self.src_end).offset_from(s) as u64 >= length
+            length = self.capture[l as usize].length as usize;
+            if (self.src_end).offset_from(s) as usize >= length
                 && memcmp(
                     self.capture[l as usize].init as *const libc::c_void,
                     s as *const libc::c_void,
@@ -356,7 +356,7 @@ impl MatchState {
     ) -> *const i8 {
         unsafe {
             let mut ep_0: *const i8 = null();
-            let mut current_block: u64;
+            let mut current_block: usize;
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
             if fresh162 == 0 {
@@ -636,9 +636,9 @@ impl MatchState {
         & mut self,
         interpreter: *mut Interpreter,
         s: *const i8,
-        lexical_state: u64,
+        lexical_state: usize,
         p: *const i8,
-        lp: u64,
+        lp: usize,
     ) {
         self.interpreter = interpreter;
         self.matchdepth = 200 as i32;
@@ -653,7 +653,7 @@ impl MatchState {
     }
     pub unsafe extern "C" fn add_s(& mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
         unsafe {
-            let mut l: u64 = 0;
+            let mut l: usize = 0;
             let interpreter: *mut Interpreter = self.interpreter;
             let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
             let mut p: *const i8;
@@ -689,8 +689,8 @@ impl MatchState {
                         CHARACTER_PERCENT as i32,
                     );
                 }
-                l = (l as u64).wrapping_sub(p.offset(1 as isize).offset_from(news) as u64) as u64
-                    as u64;
+                l = (l as usize).wrapping_sub(p.offset(1 as isize).offset_from(news) as usize) as usize
+                    as usize;
                 news = p.offset(1 as isize);
             }
             (*b).add_string_with_length(news, l as usize);

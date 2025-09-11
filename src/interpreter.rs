@@ -258,7 +258,7 @@ impl Interpreter {
         unsafe {
             raw_allocate(block, old_size, 0);
             (*(self.global)).gc_debt =
-                ((*(self.global)).gc_debt as u64).wrapping_sub(old_size as u64) as i64;
+                ((*(self.global)).gc_debt as usize).wrapping_sub(old_size as usize) as i64;
         }
     }
     pub unsafe extern "C" fn too_big(&mut self) -> ! {
@@ -1609,20 +1609,20 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.buffer.vector.size = 0;
         (*interpreter).free_memory(
             p.dynamic_data.active_variable.pointer as *mut libc::c_void,
-            (p.dynamic_data.active_variable.size as u64)
-                .wrapping_mul(::core::mem::size_of::<VariableDescription>() as u64)
+            (p.dynamic_data.active_variable.size as usize)
+                .wrapping_mul(::core::mem::size_of::<VariableDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
             p.dynamic_data.gt.pointer as *mut libc::c_void,
-            (p.dynamic_data.gt.size as u64)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64)
+            (p.dynamic_data.gt.size as usize)
+                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
             p.dynamic_data.label.pointer as *mut libc::c_void,
-            (p.dynamic_data.label.size as u64)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as u64)
+            (p.dynamic_data.label.size as usize)
+                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as usize)
                 as usize,
         );
         (*interpreter).count_c_calls =
@@ -1966,9 +1966,9 @@ pub unsafe extern "C" fn lua_compare(
         return i;
     }
 }
-pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) -> u64 {
+pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) -> usize {
     unsafe {
-        let size: u64 = luao_str2num(s, &mut (*(*interpreter).top.stkidrel_pointer).tvalue);
+        let size: usize = luao_str2num(s, &mut (*(*interpreter).top.stkidrel_pointer).tvalue);
         if size != 0 {
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         }
@@ -2026,7 +2026,7 @@ pub unsafe extern "C" fn lua_toboolean(interpreter: *mut Interpreter, index: i32
 pub unsafe extern "C" fn lua_tolstring(
     interpreter: *mut Interpreter,
     index: i32,
-    length: *mut u64,
+    length: *mut usize,
 ) -> *const i8 {
     unsafe {
         let mut o: *mut TValue = (*interpreter).index2value(index);
@@ -2044,7 +2044,7 @@ pub unsafe extern "C" fn lua_tolstring(
             o = (*interpreter).index2value(index);
         }
         if !length.is_null() {
-            *length = (*((*o).value.object as *mut TString)).get_length() as u64;
+            *length = (*((*o).value.object as *mut TString)).get_length() as usize;
         }
         return (*((*o).value.object as *mut TString)).get_contents_mut();
     }
@@ -2089,7 +2089,7 @@ pub unsafe extern "C" fn lua_tothread(
 pub unsafe extern "C" fn lua_pushlstring(
     interpreter: *mut Interpreter,
     s: *const i8,
-    length: u64,
+    length: usize,
 ) -> *const i8 {
     unsafe {
         let ts: *mut TString = if length == 0 {
@@ -2326,8 +2326,8 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
             slot = null();
             0
         } else {
-            slot = if (n as u64).wrapping_sub(1 as u64)
-                < (*((*t).value.object as *mut Table)).array_limit as u64
+            slot = if (n as usize).wrapping_sub(1 as usize)
+                < (*((*t).value.object as *mut Table)).array_limit as usize
             {
                 &mut *((*((*t).value.object as *mut Table)).array).offset((n - 1) as isize)
                     as *mut TValue as *const TValue
@@ -2477,8 +2477,8 @@ pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: 
             slot = null();
             0
         } else {
-            slot = if (n as u64).wrapping_sub(1 as u64)
-                < (*((*t).value.object as *mut Table)).array_limit as u64
+            slot = if (n as usize).wrapping_sub(1 as usize)
+                < (*((*t).value.object as *mut Table)).array_limit as usize
             {
                 &mut *((*((*t).value.object as *mut Table)).array).offset((n - 1) as isize)
                     as *mut TValue as *const TValue
@@ -2903,10 +2903,10 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 luac_fullgc(interpreter, false);
             }
             3 => {
-                res = (((*global).total_bytes + (*global).gc_debt) as u64 >> 10 as i32) as i32;
+                res = (((*global).total_bytes + (*global).gc_debt) as usize >> 10 as i32) as i32;
             }
             4 => {
-                res = (((*global).total_bytes + (*global).gc_debt) as u64 & 0x3ff as u64) as i32;
+                res = (((*global).total_bytes + (*global).gc_debt) as usize & 0x3ff as usize) as i32;
             }
             5 => {
                 let data: i32 = argp.arg::<i32>();
@@ -2950,10 +2950,10 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                     11 as i32
                 };
                 if minormul != 0 {
-                    (*global).generational_minor_multiplier = minormul as u64;
+                    (*global).generational_minor_multiplier = minormul as usize;
                 }
                 if majormul != 0 {
-                    (*global).generational_major_multiplier = (majormul / 4) as u64;
+                    (*global).generational_major_multiplier = (majormul / 4) as usize;
                 }
                 luac_changemode(interpreter, 1);
             }
@@ -3200,31 +3200,31 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         let mut buffer: [i8; 24] = [0; 24];
         let mut h: u32 = time(null_mut()) as u32;
         let mut p: i32 = 0;
-        let mut t: u64 = interpreter as u64;
+        let mut t: usize = interpreter as usize;
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
-            &mut t as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>(),
+            &mut t as *mut usize as *const libc::c_void,
+            ::core::mem::size_of::<usize>(),
         );
-        p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
-        let mut t_0: u64 = &mut h as *mut u32 as u64;
+        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        let mut t_0: usize = &mut h as *mut u32 as usize;
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
-            &mut t_0 as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>(),
+            &mut t_0 as *mut usize as *const libc::c_void,
+            ::core::mem::size_of::<usize>(),
         );
-        p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
-        let mut t_1: u64 =
-            ::core::mem::transmute::<Option<unsafe fn(interpreter: *mut Interpreter) -> u32>, u64>(
+        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        let mut t_1: usize =
+            ::core::mem::transmute::<Option<unsafe fn(interpreter: *mut Interpreter) -> u32>, usize>(
                 Some(luai_makeseed as unsafe fn(interpreter: *mut Interpreter) -> u32),
             );
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
-            &mut t_1 as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>(),
+            &mut t_1 as *mut usize as *const libc::c_void,
+            ::core::mem::size_of::<usize>(),
         );
-        p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
-        return luas_hash(buffer.as_mut_ptr(), p as u64, h);
+        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        return luas_hash(buffer.as_mut_ptr(), p as usize, h);
     }
 }
 pub unsafe extern "C" fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
@@ -3329,8 +3329,8 @@ pub unsafe extern "C" fn freestack(interpreter: *mut Interpreter) {
             (*interpreter).stack.stkidrel_pointer as *mut libc::c_void,
             ((((*interpreter).stack_last.stkidrel_pointer)
                 .offset_from((*interpreter).stack.stkidrel_pointer) as i32
-                + 5) as u64)
-                .wrapping_mul(::core::mem::size_of::<StackValue>() as u64) as usize,
+                + 5) as usize)
+                .wrapping_mul(::core::mem::size_of::<StackValue>() as usize) as usize,
         );
     }
 }
@@ -3404,8 +3404,8 @@ pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
         }
         (*interpreter).free_memory(
             (*(*interpreter).global).string_table.hash as *mut libc::c_void,
-            ((*(*interpreter).global).string_table.size as u64)
-                .wrapping_mul(::core::mem::size_of::<*mut TString>() as u64) as usize,
+            ((*(*interpreter).global).string_table.size as usize)
+                .wrapping_mul(::core::mem::size_of::<*mut TString>() as usize) as usize,
         );
         freestack(interpreter);
         raw_allocate(
@@ -3771,7 +3771,7 @@ pub unsafe extern "C" fn luag_addinfo(
             luao_chunkid(
                 buffer.as_mut_ptr(),
                 (*src).get_contents_mut(),
-                (*src).get_length() as u64,
+                (*src).get_length() as usize,
             );
         } else {
             buffer[0] = CHARACTER_QUESTION as i8;
@@ -4052,23 +4052,23 @@ pub unsafe extern "C" fn luam_malloc_(
 pub unsafe extern "C" fn intarith(interpreter: *mut Interpreter, op: i32, v1: i64, v2: i64) -> i64 {
     unsafe {
         match op {
-            0 => return (v1 as u64).wrapping_add(v2 as u64) as i64,
-            1 => return (v1 as u64).wrapping_sub(v2 as u64) as i64,
-            2 => return (v1 as u64).wrapping_mul(v2 as u64) as i64,
+            0 => return (v1 as usize).wrapping_add(v2 as usize) as i64,
+            1 => return (v1 as usize).wrapping_sub(v2 as usize) as i64,
+            2 => return (v1 as usize).wrapping_mul(v2 as usize) as i64,
             3 => return luav_mod(interpreter, v1, v2),
             6 => return luav_idiv(interpreter, v1, v2),
-            7 => return (v1 as u64 & v2 as u64) as i64,
-            8 => return (v1 as u64 | v2 as u64) as i64,
-            9 => return (v1 as u64 ^ v2 as u64) as i64,
+            7 => return (v1 as usize & v2 as usize) as i64,
+            8 => return (v1 as usize | v2 as usize) as i64,
+            9 => return (v1 as usize ^ v2 as usize) as i64,
             10 => return luav_shiftl(v1, v2),
             11 => {
-                return luav_shiftl(v1, (0u64).wrapping_sub(v2 as u64) as i64);
+                return luav_shiftl(v1, (0usize).wrapping_sub(v2 as usize) as i64);
             }
             12 => {
-                return (0u64).wrapping_sub(v1 as u64) as i64;
+                return (0usize).wrapping_sub(v1 as usize) as i64;
             }
             13 => {
-                return (!(0u64) ^ v1 as u64) as i64;
+                return (!(0usize) ^ v1 as usize) as i64;
             }
             _ => return 0,
         };
@@ -4232,18 +4232,18 @@ pub unsafe extern "C" fn luao_pushvfstring(
             if e.is_null() {
                 break;
             }
-            buff_fs.add_string(fmt, e.offset_from(fmt) as u64);
+            buff_fs.add_string(fmt, e.offset_from(fmt) as usize);
             match *e.offset(1 as isize) as i32 {
                 CHARACTER_LOWER_S => {
                     let mut s: *const i8 = argp.arg::<*mut i8>();
                     if s.is_null() {
                         s = b"(null)\0" as *const u8 as *const i8;
                     }
-                    buff_fs.add_string(s, strlen(s) as u64);
+                    buff_fs.add_string(s, strlen(s) as usize);
                 }
                 CHARACTER_LOWER_C => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
-                    buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as u64);
+                    buff_fs.add_string(&mut c, ::core::mem::size_of::<i8>() as usize);
                 }
                 CHARACTER_LOWER_D => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
@@ -4275,16 +4275,16 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 }
                 CHARACTER_UPPER_U => {
                     let mut bf_0: [i8; 8] = [0; 8];
-                    let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as u64);
+                    let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as usize);
                     buff_fs.add_string(
                         bf_0.as_mut_ptr()
                             .offset(8 as isize)
                             .offset(-(length_0 as isize)),
-                        length_0 as u64,
+                        length_0 as usize,
                     );
                 }
                 CHARACTER_PERCENT => {
-                    buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as u64);
+                    buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as usize);
                 }
                 _ => {
                     luag_runerror(
@@ -4296,7 +4296,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
             }
             fmt = e.offset(2 as isize);
         }
-        buff_fs.add_string(fmt, strlen(fmt) as u64);
+        buff_fs.add_string(fmt, strlen(fmt) as usize);
         buff_fs.clear();
         return (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue
@@ -4804,9 +4804,9 @@ pub unsafe extern "C" fn check_sizes(interpreter: *mut Interpreter, global: *mut
             if (*global).string_table.length < (*global).string_table.size / 4 {
                 let olddebt: i64 = (*global).gc_debt;
                 luas_resize(interpreter, ((*global).string_table.size / 2) as usize);
-                (*global).gc_estimate = ((*global).gc_estimate as u64)
-                    .wrapping_add(((*global).gc_debt - olddebt) as u64)
-                    as u64;
+                (*global).gc_estimate = ((*global).gc_estimate as usize)
+                    .wrapping_add(((*global).gc_debt - olddebt) as usize)
+                    as usize;
             }
         }
     }
@@ -5084,15 +5084,15 @@ pub unsafe extern "C" fn atomic2gen(interpreter: *mut Interpreter, global: *mut 
         sweep2old(interpreter, &mut (*global).to_be_finalized);
         (*global).gc_kind = 1;
         (*global).last_atomic = 0;
-        (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
+        (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
         finishgencycle(interpreter, global);
     }
 }
-pub unsafe extern "C" fn entergen(interpreter: *mut Interpreter, global: *mut Global) -> u64 {
+pub unsafe extern "C" fn entergen(interpreter: *mut Interpreter, global: *mut Global) -> usize {
     unsafe {
         luac_runtilstate(interpreter, 1 << 8);
         luac_runtilstate(interpreter, 1 << 0);
-        let numobjs: u64 = atomic(interpreter);
+        let numobjs: usize = atomic(interpreter);
         atomic2gen(interpreter, global);
         (*global).set_minor_debt();
         return numobjs;
@@ -5111,7 +5111,7 @@ pub unsafe extern "C" fn luac_changemode(interpreter: *mut Interpreter, newmode:
         (*global).last_atomic = 0;
     }
 }
-pub unsafe extern "C" fn fullgen(interpreter: *mut Interpreter, global: *mut Global) -> u64 {
+pub unsafe extern "C" fn fullgen(interpreter: *mut Interpreter, global: *mut Global) -> usize {
     unsafe {
         (*global).enter_incremental();
         return entergen(interpreter, global);
@@ -5119,17 +5119,17 @@ pub unsafe extern "C" fn fullgen(interpreter: *mut Interpreter, global: *mut Glo
 }
 pub unsafe extern "C" fn stepgenfull(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
-        let lastatomic: u64 = (*global).last_atomic;
+        let lastatomic: usize = (*global).last_atomic;
         if (*global).gc_kind as i32 == 1 {
             (*global).enter_incremental();
         }
         luac_runtilstate(interpreter, 1 << 0);
-        let newatomic: u64 = atomic(interpreter);
+        let newatomic: usize = atomic(interpreter);
         if newatomic < lastatomic.wrapping_add(lastatomic >> 3) {
             atomic2gen(interpreter, global);
             (*global).set_minor_debt();
         } else {
-            (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
+            (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
             entersweep(interpreter);
             luac_runtilstate(interpreter, 1 << 8);
             setpause(global);
@@ -5142,17 +5142,17 @@ pub unsafe extern "C" fn genstep(interpreter: *mut Interpreter, global: *mut Glo
         if (*global).last_atomic != 0 {
             stepgenfull(interpreter, global);
         } else {
-            let majorbase: u64 = (*global).gc_estimate;
-            let majorinc: u64 = majorbase
-                .wrapping_div(100 as u64)
+            let majorbase: usize = (*global).gc_estimate;
+            let majorinc: usize = majorbase
+                .wrapping_div(100 as usize)
                 .wrapping_mul((*global).generational_major_multiplier * 4);
             if (*global).gc_debt > 0
-                && ((*global).total_bytes + (*global).gc_debt) as u64
+                && ((*global).total_bytes + (*global).gc_debt) as usize
                     > majorbase.wrapping_add(majorinc)
             {
-                let numobjs: u64 = fullgen(interpreter, global);
-                if !((((*global).total_bytes + (*global).gc_debt) as u64)
-                    < majorbase.wrapping_add(majorinc.wrapping_div(2 as u64)))
+                let numobjs: usize = fullgen(interpreter, global);
+                if !((((*global).total_bytes + (*global).gc_debt) as usize)
+                    < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize)))
                 {
                     (*global).last_atomic = numobjs;
                     setpause(global);
@@ -5187,10 +5187,10 @@ pub unsafe extern "C" fn luac_freeallobjects(interpreter: *mut Interpreter) {
         delete_list(interpreter, (*global).fixed_gc, null_mut());
     }
 }
-pub unsafe extern "C" fn atomic(interpreter: *mut Interpreter) -> u64 {
+pub unsafe extern "C" fn atomic(interpreter: *mut Interpreter) -> usize {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        let mut work: u64 = 0;
+        let mut work: usize = 0;
         let grayagain: *mut Object = (*global).gray_again;
         (*global).gray_again = null_mut();
         (*global).gc_state = 2 as u8;
@@ -5203,19 +5203,19 @@ pub unsafe extern "C" fn atomic(interpreter: *mut Interpreter) -> u64 {
             really_mark_object(global, (*global).l_registry.value.object);
         }
         (*global).markmt();
-        work = (work as u64).wrapping_add(propagateall(global)) as u64;
-        work = (work as u64).wrapping_add(remarkupvals(global) as u64) as u64;
-        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        work = (work as usize).wrapping_add(propagateall(global)) as usize;
+        work = (work as usize).wrapping_add(remarkupvals(global) as usize) as usize;
+        work = (work as usize).wrapping_add(propagateall(global)) as usize;
         (*global).gray = grayagain;
-        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        work = (work as usize).wrapping_add(propagateall(global)) as usize;
         convergeephemerons(global);
         clearbyvalues(global, (*global).weak, null_mut());
         clearbyvalues(global, (*global).all_weak, null_mut());
         let origweak: *mut Object = (*global).weak;
         let origall: *mut Object = (*global).all_weak;
         separatetobefnz(global, 0);
-        work = (work as u64).wrapping_add(markbeingfnz(global)) as u64;
-        work = (work as u64).wrapping_add(propagateall(global)) as u64;
+        work = (work as usize).wrapping_add(markbeingfnz(global)) as usize;
+        work = (work as usize).wrapping_add(propagateall(global)) as usize;
         convergeephemerons(global);
         clearbykeys(global, (*global).ephemeron);
         clearbykeys(global, (*global).all_weak);
@@ -5238,9 +5238,9 @@ pub unsafe extern "C" fn sweepstep(
             let mut count: i32 = 0;
             (*global).sweep_gc =
                 (*interpreter).sweep_list((*global).sweep_gc, 100 as i32, &mut count);
-            (*global).gc_estimate = ((*global).gc_estimate as u64)
-                .wrapping_add(((*global).gc_debt - olddebt) as u64)
-                as u64 as u64;
+            (*global).gc_estimate = ((*global).gc_estimate as usize)
+                .wrapping_add(((*global).gc_debt - olddebt) as usize)
+                as usize as usize;
             return count;
         } else {
             (*global).gc_state = nextstate as u8;
@@ -5249,16 +5249,16 @@ pub unsafe extern "C" fn sweepstep(
         };
     }
 }
-pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> u64 {
+pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> usize {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        let work: u64;
+        let work: usize;
         (*global).gcstopem = 1;
         match (*global).gc_state as i32 {
             8 => {
                 restartcollection(global);
                 (*global).gc_state = 0;
-                work = 1 as u64;
+                work = 1 as usize;
             }
             0 => {
                 if ((*global).gray).is_null() {
@@ -5271,16 +5271,16 @@ pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> u64 {
             1 => {
                 work = atomic(interpreter);
                 entersweep(interpreter);
-                (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as u64;
+                (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
             }
             3 => {
-                work = sweepstep(interpreter, global, 4, &mut (*global).finalized_objects) as u64;
+                work = sweepstep(interpreter, global, 4, &mut (*global).finalized_objects) as usize;
             }
             4 => {
-                work = sweepstep(interpreter, global, 5, &mut (*global).to_be_finalized) as u64;
+                work = sweepstep(interpreter, global, 5, &mut (*global).to_be_finalized) as usize;
             }
             5 => {
-                work = sweepstep(interpreter, global, 6, null_mut()) as u64;
+                work = sweepstep(interpreter, global, 6, null_mut()) as usize;
             }
             6 => {
                 check_sizes(interpreter, global);
@@ -5290,13 +5290,13 @@ pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> u64 {
             7 => {
                 if !((*global).to_be_finalized).is_null() && !(*global).is_emergency {
                     (*global).gcstopem = 0;
-                    work = (runafewfinalizers(interpreter, 10 as i32) * 50 as i32) as u64;
+                    work = (runafewfinalizers(interpreter, 10 as i32) * 50 as i32) as usize;
                 } else {
                     (*global).gc_state = 8 as u8;
                     work = 0;
                 }
             }
-            _ => return 0u64,
+            _ => return 0usize,
         }
         (*global).gcstopem = 0;
         return work;
@@ -5313,23 +5313,23 @@ pub unsafe extern "C" fn luac_runtilstate(interpreter: *mut Interpreter, statesm
 pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
         let stepmul: i32 = (*global).gc_step_multiplier as i32 * 4 | 1;
-        let mut debt: i64 = ((*global).gc_debt as u64)
-            .wrapping_div(::core::mem::size_of::<TValue>() as u64)
-            .wrapping_mul(stepmul as u64) as i64;
-        let stepsize: i64 = (if (*global).gc_step_size as u64
-            <= (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(8 as u64)
-                .wrapping_sub(2 as u64)
+        let mut debt: i64 = ((*global).gc_debt as usize)
+            .wrapping_div(::core::mem::size_of::<TValue>() as usize)
+            .wrapping_mul(stepmul as usize) as i64;
+        let stepsize: i64 = (if (*global).gc_step_size as usize
+            <= (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(8 as usize)
+                .wrapping_sub(2 as usize)
         {
-            ((1 << (*global).gc_step_size as i32) as u64)
-                .wrapping_div(::core::mem::size_of::<TValue>() as u64)
-                .wrapping_mul(stepmul as u64)
+            ((1 << (*global).gc_step_size as i32) as usize)
+                .wrapping_div(::core::mem::size_of::<TValue>() as usize)
+                .wrapping_mul(stepmul as usize)
         } else {
-            (!(0u64) >> 1) as u64
+            (!(0usize) >> 1) as usize
         }) as i64;
         loop {
-            let work: u64 = singlestep(interpreter);
-            debt = (debt as u64).wrapping_sub(work) as i64;
+            let work: usize = singlestep(interpreter);
+            debt = (debt as usize).wrapping_sub(work) as i64;
             if !(debt > -stepsize && (*global).gc_state as i32 != 8) {
                 break;
             }
@@ -5337,8 +5337,8 @@ pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Glo
         if (*global).gc_state as i32 == 8 {
             setpause(global);
         } else {
-            debt = ((debt / stepmul as i64) as u64)
-                .wrapping_mul(::core::mem::size_of::<TValue>() as u64) as i64;
+            debt = ((debt / stepmul as i64) as usize)
+                .wrapping_mul(::core::mem::size_of::<TValue>() as usize) as i64;
             (*global).set_debt(debt);
         };
     }
@@ -5454,20 +5454,20 @@ pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: 
             return;
         }
         checkclosemth(interpreter, level);
-        while level.offset_from((*interpreter).tbc_list.stkidrel_pointer) as u64
-            > ((256 as u64)
-                << (::core::mem::size_of::<u16>() as u64)
-                    .wrapping_sub(1 as u64)
-                    .wrapping_mul(8 as u64))
-            .wrapping_sub(1 as u64)
+        while level.offset_from((*interpreter).tbc_list.stkidrel_pointer) as usize
+            > ((256 as usize)
+                << (::core::mem::size_of::<u16>() as usize)
+                    .wrapping_sub(1 as usize)
+                    .wrapping_mul(8 as usize))
+            .wrapping_sub(1 as usize)
         {
             (*interpreter).tbc_list.stkidrel_pointer = ((*interpreter).tbc_list.stkidrel_pointer)
                 .offset(
-                    ((256 as u64)
-                        << (::core::mem::size_of::<u16>() as u64)
-                            .wrapping_sub(1 as u64)
-                            .wrapping_mul(8 as u64))
-                    .wrapping_sub(1 as u64) as isize,
+                    ((256 as usize)
+                        << (::core::mem::size_of::<u16>() as usize)
+                            .wrapping_sub(1 as usize)
+                            .wrapping_mul(8 as usize))
+                    .wrapping_sub(1 as usize) as isize,
                 );
             (*(*interpreter).tbc_list.stkidrel_pointer).delta = 0;
         }
@@ -5517,11 +5517,11 @@ pub unsafe extern "C" fn poptbclist(interpreter: *mut Interpreter) {
         tbc = tbc.offset(-((*tbc).delta as isize));
         while tbc > (*interpreter).stack.stkidrel_pointer && (*tbc).delta == 0 {
             tbc = tbc.offset(
-                -(((256 as u64)
-                    << (::core::mem::size_of::<u16>() as u64)
-                        .wrapping_sub(1 as u64)
-                        .wrapping_mul(8 as u64))
-                .wrapping_sub(1 as u64) as isize),
+                -(((256 as usize)
+                    << (::core::mem::size_of::<u16>() as usize)
+                        .wrapping_sub(1 as usize)
+                        .wrapping_mul(8 as usize))
+                .wrapping_sub(1 as usize) as isize),
             );
         }
         (*interpreter).tbc_list.stkidrel_pointer = tbc;
@@ -5759,7 +5759,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
         let mut new_call_info: *mut CallInfo;
         let mut b_4: i32;
         let mut count_results: i32;
-        let mut current_block: u64;
+        let mut current_block: usize;
         let mut cl: *mut Closure;
         let mut k: *mut TValue;
         let mut base: StackValuePointer;
@@ -5963,18 +5963,18 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             let rc_0: *mut TValue = &mut (*base
                                 .offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                             .tvalue;
-                            let n: u64;
+                            let n: usize;
                             if if (*rc_0).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-                                n = (*rc_0).value.integer as u64;
+                                n = (*rc_0).value.integer as usize;
                                 if !((*rb_1).get_tag_variant() == TAG_VARIANT_TABLE) {
                                     slot_0 = null();
                                     0
                                 } else {
-                                    slot_0 = if n.wrapping_sub(1 as u64)
-                                        < (*((*rb_1).value.object as *mut Table)).array_limit as u64
+                                    slot_0 = if n.wrapping_sub(1 as usize)
+                                        < (*((*rb_1).value.object as *mut Table)).array_limit as usize
                                     {
                                         &mut *((*((*rb_1).value.object as *mut Table)).array)
-                                            .offset(n.wrapping_sub(1 as u64) as isize)
+                                            .offset(n.wrapping_sub(1 as usize) as isize)
                                             as *mut TValue
                                             as *const TValue
                                     } else {
@@ -6018,8 +6018,8 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 slot_1 = null();
                                 0
                             } else {
-                                slot_1 = if (c as u64).wrapping_sub(1 as u64)
-                                    < (*((*rb_2).value.object as *mut Table)).array_limit as u64
+                                slot_1 = if (c as usize).wrapping_sub(1 as usize)
+                                    < (*((*rb_2).value.object as *mut Table)).array_limit as usize
                                 {
                                     &mut *((*((*rb_2).value.object as *mut Table)).array)
                                         .offset((c - 1) as isize)
@@ -6150,21 +6150,21 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                     .offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                                 .tvalue
                             };
-                            let n_0: u64;
+                            let n_0: usize;
                             if if (*rb_5).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-                                n_0 = (*rb_5).value.integer as u64;
+                                n_0 = (*rb_5).value.integer as usize;
                                 if !((*ra_14).tvalue.get_tag_variant() == TAG_VARIANT_TABLE) {
                                     slot_4 = null();
                                     0
                                 } else {
-                                    slot_4 = if n_0.wrapping_sub(1 as u64)
+                                    slot_4 = if n_0.wrapping_sub(1 as usize)
                                         < (*((*ra_14).tvalue.value.object as *mut Table))
                                             .array_limit
-                                            as u64
+                                            as usize
                                     {
                                         &mut *((*((*ra_14).tvalue.value.object as *mut Table))
                                             .array)
-                                            .offset(n_0.wrapping_sub(1 as u64) as isize)
+                                            .offset(n_0.wrapping_sub(1 as usize) as isize)
                                             as *mut TValue
                                             as *const TValue
                                     } else {
@@ -6233,9 +6233,9 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 slot_5 = null();
                                 0
                             } else {
-                                slot_5 = if (c_0 as u64).wrapping_sub(1 as u64)
+                                slot_5 = if (c_0 as usize).wrapping_sub(1 as usize)
                                     < (*((*ra_15).tvalue.value.object as *mut Table)).array_limit
-                                        as u64
+                                        as usize
                                 {
                                     &mut *((*((*ra_15).tvalue.value.object as *mut Table)).array)
                                         .offset((c_0 - 1) as isize)
@@ -6434,7 +6434,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_4: *mut TValue = &mut (*ra_19).tvalue;
                                 (*io_4).value.integer =
-                                    (iv1 as u64).wrapping_add(imm as u64) as i64;
+                                    (iv1 as usize).wrapping_add(imm as usize) as i64;
                                 (*io_4).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else if (*v1).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                                 let nb: f64 = (*v1).value.number;
@@ -6461,7 +6461,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 let i2: i64 = (*v2).value.integer;
                                 program_counter = program_counter.offset(1);
                                 let io_6: *mut TValue = &mut (*ra_20).tvalue;
-                                (*io_6).value.integer = (i1 as u64).wrapping_add(i2 as u64) as i64;
+                                (*io_6).value.integer = (i1 as usize).wrapping_add(i2 as usize) as i64;
                                 (*io_6).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1: f64 = 0.0;
@@ -6513,7 +6513,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_8: *mut TValue = &mut (*ra_21).tvalue;
                                 (*io_8).value.integer =
-                                    (i1_0 as u64).wrapping_sub(i2_0 as u64) as i64;
+                                    (i1_0 as usize).wrapping_sub(i2_0 as usize) as i64;
                                 (*io_8).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1_0: f64 = 0.0;
@@ -6566,7 +6566,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_10: *mut TValue = &mut (*ra_22).tvalue;
                                 (*io_10).value.integer =
-                                    (i1_1 as u64).wrapping_mul(i2_1 as u64) as i64;
+                                    (i1_1 as usize).wrapping_mul(i2_1 as usize) as i64;
                                 (*io_10).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1_1: f64 = 0.0;
@@ -6818,7 +6818,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_18: *mut TValue = &mut (*ra_27).tvalue;
-                                (*io_18).value.integer = (i1_4 as u64 & i2_4 as u64) as i64;
+                                (*io_18).value.integer = (i1_4 as usize & i2_4 as usize) as i64;
                                 (*io_18).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -6846,7 +6846,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_19: *mut TValue = &mut (*ra_28).tvalue;
-                                (*io_19).value.integer = (i1_5 as u64 | i2_5 as u64) as i64;
+                                (*io_19).value.integer = (i1_5 as usize | i2_5 as usize) as i64;
                                 (*io_19).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -6874,7 +6874,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_20: *mut TValue = &mut (*ra_29).tvalue;
-                                (*io_20).value.integer = (i1_6 as u64 ^ i2_6 as u64) as i64;
+                                (*io_20).value.integer = (i1_6 as usize ^ i2_6 as usize) as i64;
                                 (*io_20).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -6950,7 +6950,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_23: *mut TValue = &mut (*ra_32).tvalue;
                                 (*io_23).value.integer =
-                                    (i1_7 as u64).wrapping_add(i2_7 as u64) as i64;
+                                    (i1_7 as usize).wrapping_add(i2_7 as usize) as i64;
                                 (*io_23).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1_6: f64 = 0.0;
@@ -7004,7 +7004,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_25: *mut TValue = &mut (*ra_33).tvalue;
                                 (*io_25).value.integer =
-                                    (i1_8 as u64).wrapping_sub(i2_8 as u64) as i64;
+                                    (i1_8 as usize).wrapping_sub(i2_8 as usize) as i64;
                                 (*io_25).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1_7: f64 = 0.0;
@@ -7059,7 +7059,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_27: *mut TValue = &mut (*ra_34).tvalue;
                                 (*io_27).value.integer =
-                                    (i1_9 as u64).wrapping_mul(i2_9 as u64) as i64;
+                                    (i1_9 as usize).wrapping_mul(i2_9 as usize) as i64;
                                 (*io_27).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 let mut n1_8: f64 = 0.0;
@@ -7329,7 +7329,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_35: *mut TValue = &mut (*ra_39).tvalue;
-                                (*io_35).value.integer = (i1_12 as u64 & i2_12 as u64) as i64;
+                                (*io_35).value.integer = (i1_12 as usize & i2_12 as usize) as i64;
                                 (*io_35).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -7368,7 +7368,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_36: *mut TValue = &mut (*ra_40).tvalue;
-                                (*io_36).value.integer = (i1_13 as u64 | i2_13 as u64) as i64;
+                                (*io_36).value.integer = (i1_13 as usize | i2_13 as usize) as i64;
                                 (*io_36).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -7407,7 +7407,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             {
                                 program_counter = program_counter.offset(1);
                                 let io_37: *mut TValue = &mut (*ra_41).tvalue;
-                                (*io_37).value.integer = (i1_14 as u64 ^ i2_14 as u64) as i64;
+                                (*io_37).value.integer = (i1_14 as usize ^ i2_14 as usize) as i64;
                                 (*io_37).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -7447,7 +7447,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 program_counter = program_counter.offset(1);
                                 let io_38: *mut TValue = &mut (*ra_42).tvalue;
                                 (*io_38).value.integer =
-                                    luav_shiftl(i1_15, (0u64).wrapping_sub(i2_15 as u64) as i64);
+                                    luav_shiftl(i1_15, (0usize).wrapping_sub(i2_15 as usize) as i64);
                                 (*io_38).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             }
                             continue;
@@ -7563,7 +7563,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             if (*rb_11).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
                                 let ib_1: i64 = (*rb_11).value.integer;
                                 let io_40: *mut TValue = &mut (*ra_47).tvalue;
-                                (*io_40).value.integer = (0u64).wrapping_sub(ib_1 as u64) as i64;
+                                (*io_40).value.integer = (0usize).wrapping_sub(ib_1 as usize) as i64;
                                 (*io_40).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else if if (*rb_11).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                                 nb_0 = (*rb_11).value.number;
@@ -7606,7 +7606,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             } != 0
                             {
                                 let io_42: *mut TValue = &mut (*ra_48).tvalue;
-                                (*io_42).value.integer = (!(0u64) ^ ib_2 as u64) as i64;
+                                (*io_42).value.integer = (!(0usize) ^ ib_2 as usize) as i64;
                                 (*io_42).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                             } else {
                                 (*call_info).u.l.saved_program_counter = program_counter;
@@ -8220,16 +8220,16 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             if (*ra_71.offset(2 as isize)).tvalue.get_tag_variant()
                                 == TAG_VARIANT_NUMERIC_INTEGER
                             {
-                                let count: u64 =
-                                    (*ra_71.offset(1 as isize)).tvalue.value.integer as u64;
+                                let count: usize =
+                                    (*ra_71.offset(1 as isize)).tvalue.value.integer as usize;
                                 if count > 0 {
                                     let step: i64 =
                                         (*ra_71.offset(2 as isize)).tvalue.value.integer;
                                     let mut index: i64 = (*ra_71).tvalue.value.integer;
                                     let io_43: *mut TValue =
                                         &mut (*ra_71.offset(1 as isize)).tvalue;
-                                    (*io_43).value.integer = count.wrapping_sub(1 as u64) as i64;
-                                    index = (index as u64).wrapping_add(step as u64) as i64;
+                                    (*io_43).value.integer = count.wrapping_sub(1 as usize) as i64;
+                                    index = (index as usize).wrapping_add(step as usize) as i64;
                                     let io_44: *mut TValue = &mut (*ra_71).tvalue;
                                     (*io_44).value.integer = index;
                                     let io_45: *mut TValue =
@@ -8965,7 +8965,7 @@ pub unsafe extern "C" fn lual_checkany(interpreter: *mut Interpreter, arg: i32) 
 pub unsafe extern "C" fn lual_checklstring(
     interpreter: *mut Interpreter,
     arg: i32,
-    length: *mut u64,
+    length: *mut usize,
 ) -> *const i8 {
     unsafe {
         let s: *const i8 = lua_tolstring(interpreter, arg, length);
@@ -8979,13 +8979,13 @@ pub unsafe extern "C" fn lual_optlstring(
     interpreter: *mut Interpreter,
     arg: i32,
     def: *const i8,
-    length: *mut u64,
+    length: *mut usize,
 ) -> *const i8 {
     unsafe {
         match lua_type(interpreter, arg) {
             None | Some(TagType::Nil) => {
                 if !length.is_null() {
-                    *length = if !def.is_null() { strlen(def) as u64 } else { 0u64 };
+                    *length = if !def.is_null() { strlen(def) as usize } else { 0usize };
                 }
                 return def;
             }
@@ -9047,12 +9047,12 @@ pub unsafe extern "C" fn lual_optinteger(interpreter: *mut Interpreter, arg: i32
 pub unsafe extern "C" fn get_f(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
-    size: *mut u64,
+    size: *mut usize,
 ) -> *const i8 {
     unsafe {
         let lf: *mut LoadF = arbitrary_data as *mut LoadF;
         if (*lf).n > 0 {
-            *size = (*lf).n as u64;
+            *size = (*lf).n as usize;
             (*lf).n = 0;
         } else {
             if feof((*lf).file) != 0 {
@@ -9063,7 +9063,7 @@ pub unsafe extern "C" fn get_f(
                 1,
                 ::core::mem::size_of::<[i8; 8192]>(),
                 (*lf).file,
-            ) as u64;
+            ) as usize;
         }
         return ((*lf).buffer).as_mut_ptr();
     }
@@ -9186,7 +9186,7 @@ pub unsafe extern "C" fn lual_loadfilex(
                     as unsafe extern "C" fn(
                         *mut Interpreter,
                         *mut libc::c_void,
-                        *mut u64,
+                        *mut usize,
                     ) -> *const i8,
             ),
             &mut lf as *mut LoadF as *mut libc::c_void,
@@ -9209,14 +9209,14 @@ pub unsafe extern "C" fn lual_loadfilex(
 pub unsafe extern "C" fn get_s(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
-    size: *mut u64,
+    size: *mut usize,
 ) -> *const i8 {
     unsafe {
         let load_s: *mut VectorT<i8> = arbitrary_data as *mut VectorT<i8>;
         if (*load_s).size == 0 {
             return null();
         }
-        *size = (*load_s).size as u64;
+        *size = (*load_s).size as usize;
         (*load_s).size = 0;
         return (*load_s).pointer;
     }
@@ -9224,7 +9224,7 @@ pub unsafe extern "C" fn get_s(
 pub unsafe extern "C" fn lual_loadbufferx(
     interpreter: *mut Interpreter,
     buffer: *const i8,
-    size: u64,
+    size: usize,
     name: *const i8,
     mode: *const i8,
 ) -> i32 {
@@ -9243,7 +9243,7 @@ pub unsafe extern "C" fn lual_loadbufferx(
                     as unsafe extern "C" fn(
                         *mut Interpreter,
                         *mut libc::c_void,
-                        *mut u64,
+                        *mut usize,
                     ) -> *const i8,
             ),
             &mut load_s as *mut VectorT<i8> as *mut libc::c_void,
@@ -9304,7 +9304,7 @@ pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> 
 pub unsafe extern "C" fn lual_tolstring(
     interpreter: *mut Interpreter,
     mut index: i32,
-    length: *mut u64,
+    length: *mut usize,
 ) -> *const i8 {
     unsafe {
         index = lua_absindex(interpreter, index);
@@ -9704,14 +9704,14 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
 pub unsafe extern "C" fn lual_checkversion_(
     interpreter: *mut Interpreter,
     version: f64,
-    size: u64,
+    size: usize,
 ) {
     unsafe {
         let v: f64 = 504.0;
         if size
-            != (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64)
+            != (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize)
         {
             lual_error(
                 interpreter,
@@ -9731,7 +9731,7 @@ pub unsafe extern "C" fn luab_print(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         for i in 1..(1 + n) {
-            let mut l: u64 = 0;
+            let mut l: usize = 0;
             let s: *const i8 = lual_tolstring(interpreter, i, &mut l);
             if i > 1 {
                 fwrite(
@@ -9970,7 +9970,7 @@ pub unsafe extern "C" fn dostring(
     unsafe {
         return dochunk(
             interpreter,
-            lual_loadbufferx(interpreter, s, strlen(s) as u64, name, null()),
+            lual_loadbufferx(interpreter, s, strlen(s) as usize, name, null()),
         );
     }
 }
@@ -10053,7 +10053,7 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
             if *(*argv.offset(i as isize)).offset(0 as isize) as i32 != CHARACTER_HYPHEN as i32 {
                 return args;
             }
-            let current_block_31: u64;
+            let current_block_31: usize;
             match *(*argv.offset(i as isize)).offset(1 as isize) as i32 {
                 45 => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32
@@ -10188,17 +10188,17 @@ pub unsafe extern "C" fn get_prompt(interpreter: *mut Interpreter, firstline: i3
 pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) -> i32 {
     unsafe {
         if status == 3 {
-            let mut lmsg: u64 = 0;
+            let mut lmsg: usize = 0;
             let message: *const i8 = lua_tolstring(interpreter, -1, &mut lmsg);
             if lmsg
-                >= (::core::mem::size_of::<[i8; 6]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64)
+                >= (::core::mem::size_of::<[i8; 6]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    .wrapping_sub(1 as usize)
                 && strcmp(
                     message.offset(lmsg as isize).offset(
-                        -((::core::mem::size_of::<[i8; 6]>() as u64)
-                            .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                            .wrapping_sub(1 as u64) as isize),
+                        -((::core::mem::size_of::<[i8; 6]>() as usize)
+                            .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                            .wrapping_sub(1 as usize) as isize),
                     ),
                     b"<eof>\0" as *const u8 as *const i8,
                 ) == 0
@@ -10221,8 +10221,8 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
         if !readstatus {
             return false;
         } else {
-            let mut l: u64 = strlen(b) as u64;
-            if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
+            let mut l: usize = strlen(b) as usize;
+            if l > 0 && *b.offset(l.wrapping_sub(1 as usize) as isize) as i32 == CHARACTER_LF as i32 {
                 l = l.wrapping_sub(1);
                 *b.offset(l as isize) = Character::Null as i8;
             }
@@ -10247,7 +10247,7 @@ pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
         let status: i32 = lual_loadbufferx(
             interpreter,
             retline,
-            strlen(retline) as u64,
+            strlen(retline) as usize,
             b"=stdin\0" as *const u8 as *const i8,
             null(),
         );
@@ -10263,7 +10263,7 @@ pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         loop {
-            let mut length: u64 = 0;
+            let mut length: usize = 0;
             let line: *const i8 = lua_tolstring(interpreter, 1, &mut length);
             let status: i32 = lual_loadbufferx(
                 interpreter,

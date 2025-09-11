@@ -141,7 +141,7 @@ pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> bool {
 }
 pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool{
     unsafe {
-        return is_k_int(e) && (*e).value.integer as u64 <= ((1 << 8) - 1) as u64;
+        return is_k_int(e) && (*e).value.integer as usize <= ((1 << 8) - 1) as usize;
     }
 }
 pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> bool {

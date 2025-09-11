@@ -66,17 +66,17 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
             if forlimit(interpreter, init, plimit, &mut limit, step) != 0 {
                 return 1;
             } else {
-                let mut count: u64;
+                let mut count: usize;
                 if step > 0 {
-                    count = (limit as u64).wrapping_sub(init as u64);
+                    count = (limit as usize).wrapping_sub(init as usize);
                     if step != 1 {
-                        count = (count as u64).wrapping_div(step as u64) as u64;
+                        count = (count as usize).wrapping_div(step as usize) as usize;
                     }
                 } else {
-                    count = (init as u64).wrapping_sub(limit as u64);
-                    count = (count as u64)
-                        .wrapping_div((-(step + 1) as u64).wrapping_add(1 as u64))
-                        as u64;
+                    count = (init as usize).wrapping_sub(limit as usize);
+                    count = (count as usize)
+                        .wrapping_div((-(step + 1) as usize).wrapping_add(1 as usize))
+                        as usize;
                 }
                 let io_0: *mut TValue = plimit;
                 (*io_0).value.integer = count as i64;

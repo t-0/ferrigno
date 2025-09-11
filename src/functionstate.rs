@@ -312,12 +312,12 @@ pub unsafe extern "C" fn allocate_upvalue_description(function_state: *mut Funct
             (*function_state).count_upvalues as usize,
             &mut (*prototype).prototype_upvalues.size,
             ::core::mem::size_of::<UpValueDescription>(),
-            (if 255 as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
+            (if 255 as usize
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as usize)
             {
                 255 as u32
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as usize) as u32
             }) as i32,
             b"upvalues\0" as *const u8 as *const i8,
         ) as *mut UpValueDescription;
@@ -676,12 +676,12 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
                 (*function_state).count_abslineinfo as usize,
                 &mut (*prototype).prototype_absolute_line_info.size,
                 ::core::mem::size_of::<AbsoluteLineInfo>(),
-                (if 0x7FFFFFFF as u64
-                    <= (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
+                (if 0x7FFFFFFF as usize
+                    <= (!(0usize)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as usize)
                 {
                     0x7FFFFFFF as u32
                 } else {
-                    (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64) as u32
+                    (!(0usize)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as usize) as u32
                 }) as i32,
                 b"lines\0" as *const u8 as *const i8,
             ) as *mut AbsoluteLineInfo;
@@ -699,12 +699,12 @@ pub unsafe extern "C" fn savelineinfo(function_state: *mut FunctionState, protot
             program_counter as usize,
             &mut (*prototype).prototype_line_info.size,
             ::core::mem::size_of::<i8>(),
-            (if 0x7FFFFFFF as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
+            (if 0x7FFFFFFF as usize
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize)
             {
                 0x7FFFFFFF as u32
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize) as u32
             }) as i32,
             b"opcodes\0" as *const u8 as *const i8,
         ) as *mut i8;
@@ -743,12 +743,12 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
             (*function_state).program_counter as usize,
             &mut (*prototype).prototype_code.size,
             ::core::mem::size_of::<u32>(),
-            (if 0x7FFFFFFF as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
+            (if 0x7FFFFFFF as usize
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<u32>() as usize)
             {
                 0x7FFFFFFF as u32
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<u32>() as usize) as u32
             }) as i32,
             b"opcodes\0" as *const u8 as *const i8,
         ) as *mut u32;
@@ -904,12 +904,12 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             count_constants as usize,
             &mut (*prototype).prototype_constants.size,
             ::core::mem::size_of::<TValue>(),
-            (if ((1 << 8 + 8 + 1 + 8) - 1) as u64
-                <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
+            (if ((1 << 8 + 8 + 1 + 8) - 1) as usize
+                <= (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize)
             {
                 ((1 << 8 + 8 + 1 + 8) - 1) as u32
             } else {
-                (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64) as u32
+                (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize) as u32
             }) as i32,
             b"constants\0" as *const u8 as *const i8,
         ) as *mut TValue;
@@ -1135,7 +1135,7 @@ pub unsafe extern "C" fn discharge2reg(
 ) {
     unsafe {
         luak_dischargevars(function_state, e);
-        let current_block_14: u64;
+        let current_block_14: usize;
         match (*e).expression_kind as u32 {
             1 => {
                 luak_nil(function_state, reg, 1);
@@ -1833,7 +1833,7 @@ pub unsafe extern "C" fn luak_prefix(
             init
         };
         luak_dischargevars(function_state, e);
-        let current_block_3: u64;
+        let current_block_3: usize;
         match unary {
             OperatorUnary::Minus | OperatorUnary::BitwiseNot => {
                 if constfolding(
@@ -1941,7 +1941,7 @@ pub unsafe extern "C" fn luak_posfix(
         {
             return;
         }
-        let current_block_30: u64;
+        let current_block_30: usize;
         match opr as u32 {
             OP_NEWTABLE => {
                 luak_concat(function_state, &mut (*e2).f, (*e1).f);
@@ -2083,7 +2083,7 @@ pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
         let p: *mut Prototype = (*function_state).prototype;
         for i in 0..(*function_state).program_counter {
             let program_counter: *mut u32 = &mut *((*p).prototype_code.pointer).offset(i as isize) as *mut u32;
-            let current_block_7: u64;
+            let current_block_7: usize;
             match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
                 OP_RETURN0 | OP_RETURN1 => {
                     if !((*function_state).needs_close || (*p).prototype_is_variable_arguments as i32 != 0) {

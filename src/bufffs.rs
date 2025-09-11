@@ -45,7 +45,7 @@ impl BuffFS {
             return self.block.as_mut_ptr().offset(self.size as isize);
         }
     }
-    pub unsafe extern "C" fn add_string(&mut self, pointer: *const i8, length: u64) {
+    pub unsafe extern "C" fn add_string(&mut self, pointer: *const i8, length: usize) {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);

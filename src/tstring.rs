@@ -88,7 +88,7 @@ impl TString {
         unsafe {
             let ret: *mut TString = createstrobj(
                 interpreter,
-                length as u64,
+                length as usize,
                 TAG_VARIANT_STRING_LONG,
                 (*(*interpreter).global).seed,
             );
@@ -101,13 +101,13 @@ impl TString {
         unsafe {
             let global: *mut Global = (*interpreter).global;
             let tb: *mut StringTable = &mut (*global).string_table;
-            let h: u32 = luas_hash(str, length as u64, (*global).seed);
+            let h: u32 = luas_hash(str, length as usize, (*global).seed);
             let mut list: *mut *mut TString = &mut *((*tb).hash)
                 .offset((h & ((*tb).size - 1) as u32) as isize)
                 as *mut *mut TString;
             let mut ts: *mut TString = *list;
             while !ts.is_null() {
-                if length as u64 == (*ts).get_length() as u64
+                if length as usize == (*ts).get_length() as usize
                     && memcmp(
                         str as *const libc::c_void,
                         (*ts).get_contents() as *const libc::c_void,
@@ -126,7 +126,7 @@ impl TString {
                 list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as isize)
                     as *mut *mut TString;
             }
-            ts = createstrobj(interpreter, length as u64, TAG_VARIANT_STRING_SHORT, h);
+            ts = createstrobj(interpreter, length as usize, TAG_VARIANT_STRING_SHORT, h);
             (*ts).short_length = length as u8;
             memcpy(
                 (*ts).get_contents() as *mut libc::c_void,
@@ -160,13 +160,13 @@ pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool
         }
     }
 }
-pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: u64, seed: u32) -> u32 {
+pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: usize, seed: u32) -> u32 {
     unsafe {
         let mut h: u32 = seed ^ l as u32;
         while l > 0 {
             h ^= (h << 5)
                 .wrapping_add(h >> 2)
-                .wrapping_add(*str.offset(l.wrapping_sub(1 as u64) as isize) as u8 as u32);
+                .wrapping_add(*str.offset(l.wrapping_sub(1 as usize) as isize) as u8 as u32);
             l = l.wrapping_sub(1);
         }
         return h;
@@ -176,13 +176,13 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra == 0 {
             let length = (*ts).get_length();
-            (*ts).hash = luas_hash((*ts).get_contents_mut(), length as u64, (*ts).hash);
+            (*ts).hash = luas_hash((*ts).get_contents_mut(), length as usize, (*ts).hash);
             (*ts).extra = 1;
         }
         return (*ts).hash;
     }
 }
-pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: u64, tag: u8, h: u32) -> *mut TString {
+pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: usize, tag: u8, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
         let o: *mut Object = luac_newobj(interpreter, tag, total_size);
@@ -199,7 +199,7 @@ pub unsafe extern "C" fn luas_newlstr(interpreter: *mut Interpreter, str: *const
             return TString::intern(interpreter, str, length);
         } else {
             if length.wrapping_mul(::core::mem::size_of::<i8>())
-        >= (if (::core::mem::size_of::<u64>()) < ::core::mem::size_of::<i64>() {
+        >= (if (::core::mem::size_of::<usize>()) < ::core::mem::size_of::<i64>() {
                 !(0usize)
             } else {
                 MAXIMUM_SIZE
@@ -220,10 +220,10 @@ pub unsafe extern "C" fn luas_newlstr(interpreter: *mut Interpreter, str: *const
 }
 pub unsafe extern "C" fn luas_new(interpreter: *mut Interpreter, str: *const i8) -> *mut TString {
     unsafe {
-        let i: u32 = ((str as u64
+        let i: u32 = ((str as usize
             & (0x7FFFFFFF as u32)
                 .wrapping_mul(2 as u32)
-                .wrapping_add(1 as u32) as u64) as u32)
+                .wrapping_add(1 as u32) as usize) as u32)
             .wrapping_rem(53 as u32);
         let p: *mut *mut TString = ((*(*interpreter).global).string_cache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
@@ -274,7 +274,7 @@ pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i
 }
 pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *mut i8) {
     unsafe {
-        let mut tl: u64 = 0;
+        let mut tl: usize = 0;
         loop {
             let st: *mut TString =
                 &mut (*((*top.offset(-(n as isize))).tvalue.value.object as *mut TString));
@@ -284,7 +284,7 @@ pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *
                 ((*st).get_contents_mut()) as *const libc::c_void,
                 length.wrapping_mul(::core::mem::size_of::<i8>()),
             );
-            tl = tl.wrapping_add(length as u64);
+            tl = tl.wrapping_add(length as usize);
             n -= 1;
             if !(n > 0) {
                 break;
@@ -360,7 +360,7 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                         .object as *mut TString))
                         .get_length();
                     if ((l
-                        >= (if (::core::mem::size_of::<u64>())
+                        >= (if (::core::mem::size_of::<usize>())
                             < ::core::mem::size_of::<i64>()
                         {
                             !(0usize)
@@ -400,33 +400,33 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
         }
     }
 }
-pub unsafe extern "C" fn get_position_relative(pos: i64, length: u64) -> u64 {
+pub unsafe extern "C" fn get_position_relative(pos: i64, length: usize) -> usize {
     if pos > 0 {
-        return pos as u64;
+        return pos as usize;
     } else if pos == 0 {
-        return 1 as u64;
+        return 1 as usize;
     } else if pos < -(length as i64) {
-        return 1 as u64;
+        return 1 as usize;
     } else {
-        return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
+        return length.wrapping_add(pos as usize).wrapping_add(1 as usize);
     };
 }
 pub unsafe extern "C" fn get_position_end(
     interpreter: *mut Interpreter,
     arg: i32,
     def: i64,
-    length: u64,
-) -> u64 {
+    length: usize,
+) -> usize {
     unsafe {
         let pos: i64 = lual_optinteger(interpreter, arg, def);
         if pos > length as i64 {
             return length;
         } else if pos >= 0 {
-            return pos as u64;
+            return pos as usize;
         } else if pos < -(length as i64) {
-            return 0u64;
+            return 0usize;
         } else {
-            return length.wrapping_add(pos as u64).wrapping_add(1 as u64);
+            return length.wrapping_add(pos as usize).wrapping_add(1 as usize);
         };
     }
 }

@@ -28,7 +28,7 @@ impl TValue {
         unsafe {
             match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return ::core::mem::transmute::<CFunction, u64>(self.value.function)
+                    return ::core::mem::transmute::<CFunction, usize>(self.value.function)
                         as *mut libc::c_void;
                 }
                 TAG_VARIANT_USER => (*(self.value.object as *mut User)).get_raw_memory_mut(),
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn aux_upvalue(
         };
     }
 }
-pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 {
+pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
     unsafe {
         let mut i: i64 = 0;
         let mut n: f64 = 0.0;
@@ -155,7 +155,7 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 {
         if e.is_null() {
             e = l_str2d(s, &mut n);
             if e.is_null() {
-                return 0u64;
+                return 0usize;
             } else {
                 (*o).value.number = n;
                 (*o).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
@@ -164,26 +164,26 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> u64 {
             (*o).value.integer = i;
             (*o).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         }
-        return (e.offset_from(s) as i64 + 1) as u64;
+        return (e.offset_from(s) as i64 + 1) as usize;
     }
 }
-pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> u64 {
+pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
-        let mut length: u64;
+        let mut length: usize;
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             length = snprintf(
                 buffer,
                 44,
                 b"%lld\0" as *const u8 as *const i8,
                 (*obj).value.integer,
-            ) as u64;
+            ) as usize;
         } else {
             length = snprintf(
                 buffer,
                 44,
                 b"%.14g\0" as *const u8 as *const i8,
                 (*obj).value.number,
-            ) as u64;
+            ) as usize;
             if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
                 as i32
                 == Character::Null as i32
@@ -214,20 +214,20 @@ pub const ABSENT_KEY: TValue = {
     TValue::new(TAG_VARIANT_NIL_ABSENTKEY)
 };
 pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
-    if (k as u64).wrapping_sub(1 as u64)
+    if (k as usize).wrapping_sub(1 as usize)
         < (if ((1 as u32)
-            << (::core::mem::size_of::<i32>() as u64)
-                .wrapping_mul(8 as u64)
-                .wrapping_sub(1 as u64) as i32) as u64
-            <= (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
+            << (::core::mem::size_of::<i32>() as usize)
+                .wrapping_mul(8 as usize)
+                .wrapping_sub(1 as usize) as i32) as usize
+            <= (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize)
         {
             (1 as u32)
-                << (::core::mem::size_of::<i32>() as u64)
-                    .wrapping_mul(8 as u64)
-                    .wrapping_sub(1 as u64) as i32
+                << (::core::mem::size_of::<i32>() as usize)
+                    .wrapping_mul(8 as usize)
+                    .wrapping_sub(1 as usize) as i32
         } else {
-            (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64) as u32
-        }) as u64
+            (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize) as u32
+        }) as usize
     {
         return k as u32;
     } else {
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
         if (*obj).is_tagtype_string() {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
             return (luao_str2num((*st).get_contents_mut(), result)
-                == (*st).get_length().wrapping_add(1) as u64) as i32;
+                == (*st).get_length().wrapping_add(1) as usize) as i32;
         } else {
             return 0;
         };

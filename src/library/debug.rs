@@ -416,7 +416,7 @@ pub unsafe extern "C" fn db_debug(interpreter: *mut Interpreter) -> i32 {
             if lual_loadbufferx(
                 interpreter,
                 buffer.as_mut_ptr(),
-                strlen(buffer.as_mut_ptr()) as u64,
+                strlen(buffer.as_mut_ptr()) as usize,
                 b"=(debug command)\0" as *const u8 as *const i8,
                 null(),
             ) != 0
@@ -562,9 +562,9 @@ pub unsafe extern "C" fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, DEBUG_FUNCTIONS.as_ptr(), 0);

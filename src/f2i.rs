@@ -54,8 +54,8 @@ pub unsafe extern "C" fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mod
 }
 pub unsafe extern "C" fn ltintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
-            <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
+            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
         {
             return (i as f64) < number;
         } else {
@@ -70,8 +70,8 @@ pub unsafe extern "C" fn ltintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe extern "C" fn leintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
-            <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
+            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
         {
             return i as f64 <= number;
         } else {
@@ -86,8 +86,8 @@ pub unsafe extern "C" fn leintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe extern "C" fn ltfloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
-            <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
+            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
         {
             return number < i as f64;
         } else {
@@ -102,8 +102,8 @@ pub unsafe extern "C" fn ltfloatint(number: f64, i: i64) -> bool {
 }
 pub unsafe extern "C" fn lefloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as u64) << 53 as i32).wrapping_add(i as u64)
-            <= (2 as u64).wrapping_mul((1 as u64) << 53 as i32)
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
+            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
         {
             return number <= i as f64;
         } else {
@@ -156,7 +156,7 @@ pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
 }
 pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
+        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64
             != 0
         {
             if n == 0 {
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64
                     b"attempt to divide by zero\0" as *const u8 as *const i8,
                 );
             }
-            return (0u64).wrapping_sub(m as u64) as i64;
+            return (0usize).wrapping_sub(m as usize) as i64;
         } else {
             let mut q: i64 = m / n;
             if m ^ n < 0 && m % n != 0 {
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64
 }
 pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as u64).wrapping_add(1 as u64) <= 1 as u64) as i32 != 0) as i64
+        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64
             != 0
         {
             if n == 0 {
@@ -212,20 +212,20 @@ pub unsafe extern "C" fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64)
 }
 pub unsafe extern "C" fn luav_shiftl(x: i64, y: i64) -> i64 {
     if y < 0 {
-        if y <= -((::core::mem::size_of::<i64>() as u64).wrapping_mul(8 as u64) as i32) as i64 {
+        if y <= -((::core::mem::size_of::<i64>() as usize).wrapping_mul(8 as usize) as i32) as i64 {
             return 0;
         } else {
-            return (x as u64 >> -y as u64) as i64;
+            return (x as usize >> -y as usize) as i64;
         }
-    } else if y >= (::core::mem::size_of::<i64>() as u64).wrapping_mul(8 as u64) as i64 {
+    } else if y >= (::core::mem::size_of::<i64>() as usize).wrapping_mul(8 as usize) as i64 {
         return 0;
     } else {
-        return ((x as u64) << y as u64) as i64;
+        return ((x as usize) << y as usize) as i64;
     };
 }
 pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 {
     unsafe {
-        let mut n: u64 = 0;
+        let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
         s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
         if *s as i32 == CHARACTER_HYPHEN as i32 {
@@ -252,7 +252,7 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
             if digit_0 >= base {
                 return null();
             }
-            n = n.wrapping_mul(base as u64).wrapping_add(digit_0 as u64);
+            n = n.wrapping_mul(base as usize).wrapping_add(digit_0 as usize);
             s = s.offset(1);
             if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
                 & _ISALPHANUMERIC as i32
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
         }
         s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
         *pn = (if is_negative_ != 0 {
-            (0u64).wrapping_sub(n)
+            (0usize).wrapping_sub(n)
         } else {
             n
         }) as i64;

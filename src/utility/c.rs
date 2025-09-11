@@ -78,7 +78,7 @@ pub type __JumpBuffer = [u32; 8];
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SIgnalSet {
-    pub __val: [u64; 16],
+    pub __val: [usize; 16],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -218,7 +218,7 @@ pub struct FILE {
     pub _wide_data: *mut _IOWideData,
     pub _freeres_list: *mut FILE,
     pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: u64,
+    pub __pad5: usize,
     pub _mode: i32,
     pub _unused2: [i8; 20],
 }

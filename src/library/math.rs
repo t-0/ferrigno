@@ -23,17 +23,17 @@ pub unsafe extern "C" fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
         };
     }
 }
-pub unsafe extern "C" fn rotate_left(x: u64, n: i32) -> u64 {
-    (x << n) | ((x & 0xffffffffffffffff as u64) >> (64 - n))
+pub unsafe extern "C" fn rotate_left(x: usize, n: i32) -> usize {
+    (x << n) | ((x & 0xffffffffffffffff as usize) >> (64 - n))
 }
-pub unsafe extern "C" fn next_random(randomstate: *mut u64) -> u64 {
+pub unsafe extern "C" fn next_random(randomstate: *mut usize) -> usize {
     unsafe {
-        let state0: u64 = *randomstate.offset(0 as isize);
-        let state1: u64 = *randomstate.offset(1 as isize);
-        let state2: u64 = *randomstate.offset(2 as isize) ^ state0;
-        let state3: u64 = *randomstate.offset(3 as isize) ^ state1;
-        let res: u64 =
-            (rotate_left(state1.wrapping_mul(5 as u64), 7)).wrapping_mul(9 as u64);
+        let state0: usize = *randomstate.offset(0 as isize);
+        let state1: usize = *randomstate.offset(1 as isize);
+        let state2: usize = *randomstate.offset(2 as isize) ^ state0;
+        let state3: usize = *randomstate.offset(3 as isize) ^ state1;
+        let res: usize =
+            (rotate_left(state1.wrapping_mul(5 as usize), 7)).wrapping_mul(9 as usize);
         *randomstate.offset(0 as isize) = state0 ^ state3;
         *randomstate.offset(1 as isize) = state1 ^ state2;
         *randomstate.offset(2 as isize) = state2 ^ state1 << 17 as i32;
@@ -41,20 +41,20 @@ pub unsafe extern "C" fn next_random(randomstate: *mut u64) -> u64 {
         res
     }
 }
-pub unsafe extern "C" fn i2d(x: u64) -> f64 {
-    let sx: i64 = ((x & 0xffffffffffffffff as u64) >> (64 - 53)) as i64;
-    let mut res: f64 = sx as f64 * (0.5f64 / ((1 as u64) << (53 - 1)) as f64);
+pub unsafe extern "C" fn i2d(x: usize) -> f64 {
+    let sx: i64 = ((x & 0xffffffffffffffff as usize) >> (64 - 53)) as i64;
+    let mut res: f64 = sx as f64 * (0.5f64 / ((1 as usize) << (53 - 1)) as f64);
     if sx < 0 {
         res += 1.0f64;
     }
     res
 }
-pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState) -> u64 {
+pub unsafe extern "C" fn project(mut ran: usize, n: usize, ransate: *mut RandomState) -> usize {
     unsafe {
-        if n & n.wrapping_add(1 as u64) == 0 {
+        if n & n.wrapping_add(1 as usize) == 0 {
             return ran & n;
         } else {
-            let mut lim: u64 = n;
+            let mut lim: usize = n;
             lim |= lim >> 1;
             lim |= lim >> 2;
             lim |= lim >> 4;
@@ -66,17 +66,17 @@ pub unsafe extern "C" fn project(mut ran: u64, n: u64, ransate: *mut RandomState
                 if !(ran > n) {
                     break;
                 }
-                ran = (next_random(((*ransate).data).as_mut_ptr()) & 0xffffffffffffffff as u64) as u64;
+                ran = (next_random(((*ransate).data).as_mut_ptr()) & 0xffffffffffffffff as usize) as usize;
             }
             return ran;
         };
     }
 }
-pub unsafe extern "C" fn set_seed(interpreter: *mut Interpreter, randomstate: *mut u64, n1: u64, n2: u64) {
+pub unsafe extern "C" fn set_seed(interpreter: *mut Interpreter, randomstate: *mut usize, n1: usize, n2: usize) {
     unsafe {
-        *randomstate.offset(0 as isize) = n1 as u64;
-        *randomstate.offset(1 as isize) = 0xFF as u64;
-        *randomstate.offset(2 as isize) = n2 as u64;
+        *randomstate.offset(0 as isize) = n1 as usize;
+        *randomstate.offset(1 as isize) = 0xFF as usize;
+        *randomstate.offset(2 as isize) = n2 as usize;
         *randomstate.offset(3 as isize) = 0;
         for _ in 0..16 {
             next_random(randomstate);
@@ -87,8 +87,8 @@ pub unsafe extern "C" fn set_seed(interpreter: *mut Interpreter, randomstate: *m
 }
 pub unsafe extern "C" fn random_seed(interpreter: *mut Interpreter, randomstate: *mut RandomState) {
     unsafe {
-        let seed1: u64 = time(null_mut()) as u64;
-        let seed2: u64 = interpreter as u64;
+        let seed1: usize = time(null_mut()) as usize;
+        let seed2: usize = interpreter as usize;
         set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
     }
 }
@@ -97,7 +97,7 @@ unsafe extern "C" fn math_abs(interpreter: *mut Interpreter) -> i32 {
         if lua_isinteger(interpreter, 1) {
             let mut n: i64 = lua_tointegerx(interpreter, 1, null_mut());
             if n < 0 {
-                n = (0u64).wrapping_sub(n as u64) as i64;
+                n = (0usize).wrapping_sub(n as usize) as i64;
             }
             (*interpreter).push_integer(n);
         } else {
@@ -183,7 +183,7 @@ unsafe extern "C" fn math_fmod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         if lua_isinteger(interpreter, 1) && lua_isinteger(interpreter, 2) {
             let d: i64 = lua_tointegerx(interpreter, 2, null_mut());
-            if (d as u64).wrapping_add(1 as u64) <= 1 as u64 {
+            if (d as usize).wrapping_add(1 as usize) <= 1 as usize {
                 (((d != 0) as i32 != 0) as i64 != 0
                     || lual_argerror(interpreter, 2, b"zero\0" as *const u8 as *const i8) != 0)
                     as i32;
@@ -221,7 +221,7 @@ unsafe extern "C" fn math_ult(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let a: i64 = lual_checkinteger(interpreter, 1);
         let b: i64 = lual_checkinteger(interpreter, 2);
-        (*interpreter).push_boolean((a as u64) < (b as u64));
+        (*interpreter).push_boolean((a as usize) < (b as usize));
         1
     }
 }
@@ -321,10 +321,10 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let low: i64;
         let up: i64;
-        let p: u64;
+        let p: usize;
         let ransate: *mut RandomState =
             lua_touserdata(interpreter, -(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
-        let rv: u64 = next_random(((*ransate).data).as_mut_ptr());
+        let rv: usize = next_random(((*ransate).data).as_mut_ptr());
         match (*interpreter).get_top() {
             0 => {
                 (*interpreter).push_number(i2d(rv));
@@ -334,7 +334,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
                 low = 1;
                 up = lual_checkinteger(interpreter, 1);
                 if up == 0 {
-                    (*interpreter).push_integer((rv & 0xffffffffffffffff as u64) as i64);
+                    (*interpreter).push_integer((rv & 0xffffffffffffffff as usize) as i64);
                     return 1;
                 }
             }
@@ -353,11 +353,11 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(interpreter, 1, b"interval is empty\0" as *const u8 as *const i8) != 0)
             as i32;
         p = project(
-            (rv & 0xffffffffffffffff as u64) as u64,
-            (up as u64).wrapping_sub(low as u64),
+            (rv & 0xffffffffffffffff as usize) as usize,
+            (up as usize).wrapping_sub(low as usize),
             ransate,
         );
-        (*interpreter).push_integer(p.wrapping_add(low as u64) as i64);
+        (*interpreter).push_integer(p.wrapping_add(low as usize) as i64);
         return 1;
     }
 }
@@ -370,7 +370,7 @@ unsafe extern "C" fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
         } else {
             let n1: i64 = lual_checkinteger(interpreter, 1);
             let n2: i64 = lual_optinteger(interpreter, 2, 0);
-            set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), n1 as u64, n2 as u64);
+            set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), n1 as usize, n2 as usize);
         }
         return 2;
     }

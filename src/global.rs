@@ -17,8 +17,8 @@ use crate::tvalue::*;
 pub struct Global {
     pub total_bytes: i64,
     pub gc_debt: i64,
-    pub gc_estimate: u64,
-    pub last_atomic: u64,
+    pub gc_estimate: usize,
+    pub last_atomic: usize,
     pub string_table: StringTable,
     pub l_registry: TValue,
     pub none_value: TValue,
@@ -27,8 +27,8 @@ pub struct Global {
     pub gc_state: u8,
     pub gc_kind: u8,
     pub gcstopem: u8,
-    pub generational_minor_multiplier: u64,
-    pub generational_major_multiplier: u64,
+    pub generational_minor_multiplier: usize,
+    pub generational_major_multiplier: usize,
     pub gc_step: u8,
     pub is_emergency: bool,
     pub gc_pause: u8,
@@ -111,13 +111,13 @@ impl Global {
             self.finobjrold = self.finobjold1;
             self.gc_state = 8i32 as u8;
             self.gc_kind = 0i32 as u8;
-            self.last_atomic = 0i32 as u64;
+            self.last_atomic = 0i32 as usize;
         }
     }
     pub unsafe extern "C" fn set_debt(&mut self, mut debt: i64) {
         let tb: i64 = (self.total_bytes + self.gc_debt) as i64;
-        if debt < tb - (!(0i32 as u64) >> 1i32) as i64 {
-            debt = tb - (!(0i32 as u64) >> 1i32) as i64;
+        if debt < tb - (!(0i32 as usize) >> 1i32) as i64 {
+            debt = tb - (!(0i32 as usize) >> 1i32) as i64;
         }
         self.total_bytes = tb - debt;
         self.gc_debt = debt;
@@ -129,18 +129,18 @@ impl Global {
             );
         }
     }
-    pub unsafe extern "C" fn propagatemark(&mut self) -> u64 {
+    pub unsafe extern "C" fn propagatemark(&mut self) -> usize {
         unsafe {
             let object: *mut Object = self.gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
             self.gray = *getgclist(object);
             match (*object).get_tag_variant() {
                 TAG_VARIANT_TABLE => return traversetable(self, &mut (*(object as *mut Table))),
-                TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as u64,
+                TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as usize,
                 TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
                 TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
                 TAG_VARIANT_PROTOTYPE => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
-                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as u64,
+                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
                 _ => return 0,
             };
         }
@@ -160,9 +160,9 @@ impl Global {
         }
     }
 }
-pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> u64 {
+pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> usize {
     unsafe {
-        let mut count: u64 = 0;
+        let mut count: usize = 0;
         let mut object: *mut Object = (*global).to_be_finalized;
         while !object.is_null() {
             count = count.wrapping_add(1);
@@ -232,11 +232,11 @@ pub unsafe extern "C" fn restartcollection(global: *mut Global) {
         markbeingfnz(global);
     }
 }
-pub unsafe extern "C" fn propagateall(global: *mut Global) -> u64 {
+pub unsafe extern "C" fn propagateall(global: *mut Global) -> usize {
     unsafe {
-        let mut tot: u64 = 0;
+        let mut tot: usize = 0;
         while !((*global).gray).is_null() {
-            tot = (tot as u64).wrapping_add((*global).propagatemark()) as u64;
+            tot = (tot as usize).wrapping_add((*global).propagatemark()) as usize;
         }
         return tot;
     }
@@ -394,14 +394,14 @@ pub unsafe extern "C" fn correctpointers(global: *mut Global, object: *mut Objec
 pub unsafe extern "C" fn setpause(global: *mut Global) {
     unsafe {
         let pause: i32 = (*global).gc_pause as i32 * 4;
-        let estimate: i64 = ((*global).gc_estimate).wrapping_div(100 as u64) as i64;
-        let threshold: i64 = if (pause as i64) < (!(0u64) >> 1) as i64 / estimate {
+        let estimate: i64 = ((*global).gc_estimate).wrapping_div(100 as usize) as i64;
+        let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate {
             estimate * pause as i64
         } else {
-            (!(0u64) >> 1) as i64
+            (!(0usize) >> 1) as i64
         };
         let mut debt: i64 =
-            (((*global).total_bytes + (*global).gc_debt) as u64).wrapping_sub(threshold as u64) as i64;
+            (((*global).total_bytes + (*global).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
         if debt > 0 {
             debt = 0;
         }

@@ -19,7 +19,7 @@ pub struct DebugInfo {
     pub namewhat: *const i8,
     pub what: *const i8,
     pub source: *const i8,
-    pub source_length: u64,
+    pub source_length: usize,
     pub currentline: i32,
     pub line_defined: i32,
     pub last_line_defined: i32,
@@ -80,9 +80,9 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = b"=[C]\0" as *const u8 as *const i8;
-            (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as u64)
-                .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                .wrapping_sub(1 as u64);
+            (*ar).source_length = (::core::mem::size_of::<[i8; 5]>() as usize)
+                .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                .wrapping_sub(1 as usize);
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
             (*ar).what = b"C\0" as *const u8 as *const i8;
@@ -90,12 +90,12 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
             let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).prototype_source).is_null() {
                 (*ar).source = (*(*p).prototype_source).get_contents_mut();
-                (*ar).source_length = (*(*p).prototype_source).get_length() as u64;
+                (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
                 (*ar).source = b"=?\0" as *const u8 as *const i8;
-                (*ar).source_length = (::core::mem::size_of::<[i8; 3]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64);
+                (*ar).source_length = (::core::mem::size_of::<[i8; 3]>() as usize)
+                    .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                    .wrapping_sub(1 as usize);
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;

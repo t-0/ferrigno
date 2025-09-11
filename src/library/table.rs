@@ -42,7 +42,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
         let pos: i64;
         checktab(interpreter, 1, 1 | 2 | 4);
         let mut e: i64 = lual_len(interpreter, 1);
-        e = (e as u64).wrapping_add(1 as u64) as i64;
+        e = (e as usize).wrapping_add(1 as usize) as i64;
         match (*interpreter).get_top() {
             2 => {
                 pos = e;
@@ -50,7 +50,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
             3 => {
                 let mut i: i64;
                 pos = lual_checkinteger(interpreter, 2);
-                ((((pos as u64).wrapping_sub(1 as u64) < e as u64) as i32 != 0) as i32 as i64 != 0
+                ((((pos as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64 != 0
                     || lual_argerror(
                         interpreter,
                         2,
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn table_remove(interpreter: *mut Interpreter) -> i32 {
         let size: i64 = lual_len(interpreter, 1);
         let mut pos: i64 = lual_optinteger(interpreter, 2, size);
         if pos != size {
-            ((((pos as u64).wrapping_sub(1 as u64) <= size as u64) as i32 != 0) as i32 as i64 != 0
+            ((((pos as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64 != 0
                 || lual_argerror(
                     interpreter,
                     2,
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn table_concat(interpreter: *mut Interpreter) -> i32 {
         let mut b = Buffer::new();
         checktab(interpreter, 1, 1 | 4);
         let mut last: i64 = lual_len(interpreter, 1);
-        let mut lsep: u64 = 0;
+        let mut lsep: usize = 0;
         let sep: *const i8 =
             lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const i8, &mut lsep);
         let mut i: i64 = lual_optinteger(interpreter, 3, 1);
@@ -198,7 +198,7 @@ pub unsafe extern "C" fn table_pack(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut n: u64;
+        let mut n: usize;
         let mut i: i64 = lual_optinteger(interpreter, 2, 1);
         let e = match lua_type(interpreter, 3) {
             None | Some(TagType::Nil) => lual_len(interpreter, 1),
@@ -207,8 +207,8 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
         if i > e {
             return 0;
         }
-        n = (e as u64).wrapping_sub(i as u64);
-        if ((n >= 0x7FFFFFFF as u64 || {
+        n = (e as usize).wrapping_sub(i as usize);
+        if ((n >= 0x7FFFFFFF as usize || {
             n = n.wrapping_add(1);
             lua_checkstack(interpreter, n as i32) == 0
         }) as i32
@@ -241,8 +241,8 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
         );
         memcpy(
             buffer.as_mut_ptr().offset(
-                (::core::mem::size_of::<i64>() as u64)
-                    .wrapping_div(::core::mem::size_of::<u32>() as u64) as isize,
+                (::core::mem::size_of::<i64>() as usize)
+                    .wrapping_div(::core::mem::size_of::<u32>() as usize) as isize,
             ) as *mut libc::c_void,
             &mut t as *mut i64 as *const libc::c_void,
             (::core::mem::size_of::<i64>())
@@ -250,9 +250,9 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
                 .wrapping_mul(::core::mem::size_of::<u32>()),
         );
         i = 0u32;
-        while (i as u64)
-            < (::core::mem::size_of::<[u32; 4]>() as u64)
-                .wrapping_div(::core::mem::size_of::<u32>() as u64)
+        while (i as usize)
+            < (::core::mem::size_of::<[u32; 4]>() as usize)
+                .wrapping_div(::core::mem::size_of::<u32>() as usize)
         {
             rnd = rnd.wrapping_add(buffer[i as usize]);
             i = i.wrapping_add(1);
@@ -469,9 +469,9 @@ pub unsafe extern "C" fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), 0);

@@ -107,7 +107,7 @@ impl Buffer {
     pub unsafe fn push_result(&mut self) {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
-            lua_pushlstring(interpreter, self.vector.pointer, self.vector.length as u64);
+            lua_pushlstring(interpreter, self.vector.pointer, self.vector.length as usize);
             if self.vector.pointer != (self.initial_data).as_mut_ptr() {
                 lua_closeslot(interpreter, -2);
             }
@@ -118,7 +118,7 @@ impl Buffer {
     pub unsafe fn add_value(&mut self) {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
-            let mut length: u64 = 0;
+            let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
             memcpy(

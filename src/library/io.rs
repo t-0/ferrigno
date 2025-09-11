@@ -225,9 +225,9 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
                 interpreter,
                 b"default %s file is closed\0".as_ptr(),
                 findex.offset(
-                    (::core::mem::size_of::<[i8; 5]>() as u64)
-                        .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                        .wrapping_sub(1 as u64) as isize,
+                    (::core::mem::size_of::<[i8; 5]>() as usize)
+                        .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                        .wrapping_sub(1 as usize) as isize,
                 ),
             );
         }
@@ -449,9 +449,9 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
             let mut i: i32 = 0;
             flockfile(file);
             while i
-                < (16 as u64)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
+                < (16 as usize)
+                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
+                    .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i32
                 && {
                     c = getc_unlocked(file);
                     c != -1
@@ -475,12 +475,12 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
             *(b.vector.pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
-        return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as u64 as u32 as i32;
+        return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as usize as u32 as i32;
     }
 }
 pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE) {
     unsafe {
-        let mut nr: u64;
+        let mut nr: usize;
         let mut b = Buffer::new();
         b.initialize(interpreter);
         loop {
@@ -496,13 +496,13 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
                     .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
                     .wrapping_mul(::core::mem::size_of::<f64>()),
                 file,
-            ) as u64;
+            ) as usize;
             b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
             if !(nr
-                == (16 as u64)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
-                    as u64)
+                == (16 as usize)
+                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
+                    .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i32
+                    as usize)
             {
                 break;
             }
@@ -510,9 +510,9 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
         b.push_result();
     }
 }
-pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FILE, n: u64) -> i32 {
+pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FILE, n: usize) -> i32 {
     unsafe {
-        let nr: u64;
+        let nr: usize;
         let p: *mut i8;
         let mut b = Buffer::new();
         b.initialize(interpreter);
@@ -522,7 +522,7 @@ pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FI
             ::core::mem::size_of::<i8>(),
             n as usize,
             file,
-        ) as u64;
+        ) as usize;
         b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
         b.push_result();
         return (nr > 0) as i32;
@@ -553,7 +553,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
                     break;
                 }
                 if lua_type(interpreter, n) == Some(TagType::Numeric) {
-                    let l: u64 = lual_checkinteger(interpreter, n) as u64;
+                    let l: usize = lual_checkinteger(interpreter, n) as usize;
                     success = if l == 0 {
                         test_eof(interpreter, file)
                     } else {
@@ -678,7 +678,7 @@ pub unsafe extern "C" fn g_write(interpreter: *mut Interpreter, file: *mut FILE,
                 };
                 status = (status != 0 && length > 0) as i32;
             } else {
-                let mut l: u64 = 0;
+                let mut l: usize = 0;
                 let s: *const i8 = lual_checklstring(interpreter, arg, &mut l);
                 status = (status != 0
                     && fwrite(
@@ -761,9 +761,9 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
         let size: i64 = lual_optinteger(
             interpreter,
             3,
-            (16 as u64)
-                .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i64,
+            (16 as usize)
+                .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
+                .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i64,
         );
         let res: i32;
         *__errno_location() = 0;
@@ -992,9 +992,9 @@ pub unsafe extern "C" fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), 0);

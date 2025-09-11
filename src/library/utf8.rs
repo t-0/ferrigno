@@ -3,10 +3,10 @@ use crate::buffer::*;
 use crate::interpreter::*;
 use crate::new::*;
 use crate::registeredfunction::*;
-pub unsafe extern "C" fn u_posrelat(pos: i64, length: u64) -> i64 {
+pub unsafe extern "C" fn u_posrelat(pos: i64, length: usize) -> i64 {
     if pos >= 0 {
         return pos;
-    } else if (0u64).wrapping_sub(pos as u64) > length {
+    } else if (0usize).wrapping_sub(pos as usize) > length {
         return 0;
     } else {
         return length as i64 + pos + 1;
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: 
 pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: i64 = 0;
-        let mut length: u64 = 0;
+        let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let mut posj: i64 = u_posrelat(lual_optinteger(interpreter, 3, -1 as i64), length);
@@ -100,7 +100,7 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut length: u64 = 0;
+        let mut length: usize = 0;
         let mut s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let pose: i64 = u_posrelat(lual_optinteger(interpreter, 3, posi), length);
@@ -142,8 +142,8 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
-        let code: u64 = lual_checkinteger(interpreter, arg) as u64;
-        (((code <= 0x7fffffff as u64) as i32 != 0) as i64 != 0
+        let code: usize = lual_checkinteger(interpreter, arg) as usize;
+        (((code <= 0x7fffffff as usize) as i32 != 0) as i64 != 0
             || lual_argerror(
                 interpreter,
                 arg,
@@ -171,13 +171,13 @@ pub unsafe extern "C" fn utfchar(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut length: u64 = 0;
+        let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut n: i64 = lual_checkinteger(interpreter, 2);
         let mut posi: i64 = (if n >= 0 {
-            1 as u64
+            1 as usize
         } else {
-            length.wrapping_add(1 as u64)
+            length.wrapping_add(1 as usize)
         }) as i64;
         posi = u_posrelat(lual_optinteger(interpreter, 3, posi), length);
         (((1 <= posi && {
@@ -237,15 +237,15 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
     unsafe {
-        let mut length: u64 = 0;
+        let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
-        let mut n: u64 = lua_tointegerx(interpreter, 2, null_mut()) as u64;
-        if n < length as u64 {
+        let mut n: usize = lua_tointegerx(interpreter, 2, null_mut()) as usize;
+        if n < length as usize {
             while *s.offset(n as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
                 n = n.wrapping_add(1);
             }
         }
-        if n >= length as u64 {
+        if n >= length as usize {
             return 0;
         } else {
             let mut code: u32 = 0;
@@ -253,7 +253,7 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
             if next.is_null() || *next as i32 & 0xc0 as i32 == 0x80 as i32 {
                 return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
             }
-            (*interpreter).push_integer(n.wrapping_add(1 as u64) as i64);
+            (*interpreter).push_integer(n.wrapping_add(1 as usize) as i64);
             (*interpreter).push_integer(code as i64);
             return 2;
         };
@@ -344,18 +344,18 @@ pub unsafe extern "C" fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), 0);
         lua_pushlstring(
             interpreter,
             b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*\0" as *const u8 as *const i8,
-            (::core::mem::size_of::<[i8; 15]>() as u64)
-                .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                .wrapping_sub(1 as u64),
+            (::core::mem::size_of::<[i8; 15]>() as usize)
+                .wrapping_div(::core::mem::size_of::<i8>() as usize)
+                .wrapping_sub(1 as usize),
         );
         lua_setfield(interpreter, -2, b"charpattern\0" as *const u8 as *const i8);
         return 1;

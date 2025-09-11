@@ -65,7 +65,7 @@ impl Table {
             freehash(interpreter, self);
             (*interpreter).free_memory(
                 self.array as *mut libc::c_void,
-                (luah_realasize(self) as u64).wrapping_mul(::core::mem::size_of::<TValue>() as u64)
+                (luah_realasize(self) as usize).wrapping_mul(::core::mem::size_of::<TValue>() as usize)
                     as usize,
             );
             (*interpreter).free_memory(
@@ -270,7 +270,7 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
         generate_link(global, &mut (*(h as *mut Object)));
     }
 }
-pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u64 {
+pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
         let mut weakkey: *const i8 = null();
         let mut weakvalue: *const i8 = null();
@@ -317,7 +317,7 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> u6
             } else {
                 1 << (*h).log_size_node as i32
             })) as u32,
-        ) as u64;
+        ) as usize;
     }
 }
 pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: usize) {
@@ -343,14 +343,14 @@ pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, n
 }
 pub unsafe extern "C" fn hashint(t: *const Table, i: i64) -> *mut Node {
     unsafe {
-        let ui: u64 = i as u64;
-        if ui <= 0x7FFFFFFF as u64 {
+        let ui: usize = i as usize;
+        if ui <= 0x7FFFFFFF as usize {
             return &mut *((*t).node)
                 .offset((ui as i32 % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize)
                 as *mut Node;
         } else {
             return &mut *((*t).node)
-                .offset(ui.wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u64) as isize)
+                .offset(ui.wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as usize) as isize)
                 as *mut Node;
         };
     }
@@ -394,10 +394,10 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             TAG_VARIANT_POINTER => {
                 let p: *mut libc::c_void = (*key).value.pointer;
                 return &mut *((*t).node).offset(
-                    ((p as u64
+                    ((p as usize
                         & (0x7FFFFFFF as u32)
                             .wrapping_mul(2 as u32)
-                            .wrapping_add(1 as u32) as u64) as u32)
+                            .wrapping_add(1 as u32) as usize) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                         as isize,
                 ) as *mut Node;
@@ -405,10 +405,10 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             TAG_VARIANT_CLOSURE_CFUNCTION => {
                 let cfunction: CFunction = (*key).value.function;
                 return &mut *((*t).node).offset(
-                    ((::core::mem::transmute::<CFunction, u64>(cfunction)
+                    ((::core::mem::transmute::<CFunction, usize>(cfunction)
                         & (0x7FFFFFFF as u32)
                             .wrapping_mul(2 as u32)
-                            .wrapping_add(1 as u32) as u64) as u32)
+                            .wrapping_add(1 as u32) as usize) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                         as isize,
                 ) as *mut Node;
@@ -416,10 +416,10 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             _ => {
                 let o: *mut Object = (*key).value.object;
                 return &mut *((*t).node).offset(
-                    ((o as u64
+                    ((o as usize
                         & (0x7FFFFFFF as u32)
                             .wrapping_mul(2 as u32)
-                            .wrapping_add(1 as u32) as u64) as u32)
+                            .wrapping_add(1 as u32) as usize) as u32)
                         .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32)
                         as isize,
                 ) as *mut Node;
@@ -562,8 +562,8 @@ pub unsafe extern "C" fn freehash(interpreter: *mut Interpreter, table: *mut Tab
         if !((*table).last_free).is_null() {
             (*interpreter).free_memory(
                 (*table).node as *mut libc::c_void,
-                ((1 << (*table).log_size_node as i32) as u64)
-                    .wrapping_mul(::core::mem::size_of::<Node>() as u64) as usize,
+                ((1 << (*table).log_size_node as i32) as usize)
+                    .wrapping_mul(::core::mem::size_of::<Node>() as usize) as usize,
             );
         }
     }
@@ -596,7 +596,7 @@ pub unsafe extern "C" fn countint(key: i64, nums: *mut u32) -> i32 {
         if k == 0 {
             return 0;
         } else {
-            let ref mut fresh = *nums.offset(ceiling_log2(k as u64) as isize);
+            let ref mut fresh = *nums.offset(ceiling_log2(k as usize) as isize);
             *fresh += 1;
             return 1;
         };
@@ -612,9 +612,9 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
         lg = 0;
         ttlg = 1 as u32;
         while lg
-            <= (::core::mem::size_of::<i32>() as u64)
-                .wrapping_mul(8 as u64)
-                .wrapping_sub(1 as u64) as i32
+            <= (::core::mem::size_of::<i32>() as usize)
+                .wrapping_mul(8 as usize)
+                .wrapping_sub(1 as usize) as i32
         {
             let mut lc: u32 = 0u32;
             let mut lim: u32 = ttlg;
@@ -677,27 +677,27 @@ pub unsafe extern "C" fn setnodevector(
             (*table).log_size_node = 0;
             (*table).last_free = null_mut();
         } else {
-            let lsize: i32 = ceiling_log2(size as u64) as i32;
+            let lsize: i32 = ceiling_log2(size as usize) as i32;
             if lsize
-                > (::core::mem::size_of::<i32>() as u64)
-                    .wrapping_mul(8 as u64)
-                    .wrapping_sub(1 as u64) as i32
+                > (::core::mem::size_of::<i32>() as usize)
+                    .wrapping_mul(8 as usize)
+                    .wrapping_sub(1 as usize) as i32
                     - 1
                 || (1 as u32) << lsize
                     > (if ((1 as u32)
-                        << (::core::mem::size_of::<i32>() as u64)
-                            .wrapping_mul(8 as u64)
-                            .wrapping_sub(1 as u64) as i32
-                            - 1) as u64
-                        <= (!(0u64)).wrapping_div(::core::mem::size_of::<Node>() as u64)
+                        << (::core::mem::size_of::<i32>() as usize)
+                            .wrapping_mul(8 as usize)
+                            .wrapping_sub(1 as usize) as i32
+                            - 1) as usize
+                        <= (!(0usize)).wrapping_div(::core::mem::size_of::<Node>() as usize)
                     {
                         (1 as u32)
-                            << (::core::mem::size_of::<i32>() as u64)
-                                .wrapping_mul(8 as u64)
-                                .wrapping_sub(1 as u64) as i32
+                            << (::core::mem::size_of::<i32>() as usize)
+                                .wrapping_mul(8 as usize)
+                                .wrapping_sub(1 as usize) as i32
                                 - 1
                     } else {
-                        (!(0u64)).wrapping_div(::core::mem::size_of::<Node>() as u64) as u32
+                        (!(0usize)).wrapping_div(::core::mem::size_of::<Node>() as usize) as u32
                     })
             {
                 luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const i8);
@@ -811,9 +811,9 @@ pub unsafe extern "C" fn rehash(
         let mut totaluse: i32;
         let mut i: i32 = 0;
         while i
-            <= (::core::mem::size_of::<i32>() as u64)
-                .wrapping_mul(8 as u64)
-                .wrapping_sub(1 as u64) as i32
+            <= (::core::mem::size_of::<i32>() as usize)
+                .wrapping_mul(8 as usize)
+                .wrapping_sub(1 as usize) as i32
         {
             nums[i as usize] = 0u32;
             i += 1;
@@ -930,11 +930,11 @@ pub unsafe extern "C" fn luah_newkey(
 }
 pub unsafe extern "C" fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
     unsafe {
-        let array_limit: u64 = (*table).array_limit as u64;
-        if (key as u64).wrapping_sub(1 as u64) < array_limit {
+        let array_limit: usize = (*table).array_limit as usize;
+        if (key as usize).wrapping_sub(1 as usize) < array_limit {
             return &mut *((*table).array).offset((key - 1) as isize) as *mut TValue;
         } else if (*table).flags as i32 & 1 << 7 != 0
-            && (key as u64).wrapping_sub(1 as u64) & !array_limit.wrapping_sub(1 as u64)
+            && (key as usize).wrapping_sub(1 as usize) & !array_limit.wrapping_sub(1 as usize)
                 < array_limit
         {
             (*table).array_limit = key as u32;
@@ -1061,29 +1061,29 @@ pub unsafe extern "C" fn luah_setint(
         };
     }
 }
-pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
+pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: usize) -> usize {
     unsafe {
-        let mut i: u64;
+        let mut i: usize;
         if j == 0 {
             j = j.wrapping_add(1);
         }
         loop {
             i = j;
-            if j <= (MAXIMUM_SIZE as u64).wrapping_div(2 as u64) {
-                j = (j as u64).wrapping_mul(2 as u64) as u64;
+            if j <= (MAXIMUM_SIZE as usize).wrapping_div(2 as usize) {
+                j = (j as usize).wrapping_mul(2 as usize) as usize;
                 if (*luah_getint(table, j as i64)).is_tagtype_nil() {
                     break;
                 }
             } else {
-                j = MAXIMUM_SIZE as u64;
+                j = MAXIMUM_SIZE as usize;
                 if (*luah_getint(table, j as i64)).is_tagtype_nil() {
                     break;
                 }
                 return j;
             }
         }
-        while j.wrapping_sub(i) > 1 as u64 {
-            let m: u64 = i.wrapping_add(j).wrapping_div(2 as u64);
+        while j.wrapping_sub(i) > 1 as usize {
+            let m: usize = i.wrapping_add(j).wrapping_div(2 as usize);
             if (*luah_getint(table, m as i64)).is_tagtype_nil() {
                 j = m;
             } else {
@@ -1093,7 +1093,7 @@ pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: u64) -> u64 {
         return i;
     }
 }
-pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
+pub unsafe extern "C" fn luah_getn(table: *mut Table) -> usize {
     unsafe {
         let mut limit: u32 = (*table).array_limit;
         if limit > 0u32
@@ -1112,7 +1112,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
                     (*table).array_limit = limit.wrapping_sub(1 as u32);
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
                 }
-                return limit.wrapping_sub(1 as u32) as u64;
+                return limit.wrapping_sub(1 as u32) as usize;
             } else {
                 let boundary: u32 = binsearch((*table).array, 0u32, limit);
                 if ispow2realasize(table) != 0
@@ -1121,29 +1121,29 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> u64 {
                     (*table).array_limit = boundary;
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
                 }
-                return boundary as u64;
+                return boundary as usize;
             }
         }
         if !((*table).flags as i32 & 1 << 7 == 0
             || (*table).array_limit & ((*table).array_limit).wrapping_sub(1 as u32) == 0)
         {
             if (*((*table).array).offset(limit as isize)).is_tagtype_nil() {
-                return limit as u64;
+                return limit as usize;
             }
             limit = luah_realasize(table);
             if (*((*table).array).offset(limit.wrapping_sub(1 as u32) as isize)).is_tagtype_nil() {
                 let boundary_0: u32 = binsearch((*table).array, (*table).array_limit, limit);
                 (*table).array_limit = boundary_0;
-                return boundary_0 as u64;
+                return boundary_0 as usize;
             }
         }
         if ((*table).last_free).is_null()
             || ((*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag_type())
                 == TagType::Nil
         {
-            return limit as u64;
+            return limit as usize;
         } else {
-            return hash_search(table, limit as u64);
+            return hash_search(table, limit as usize);
         };
     }
 }

@@ -241,7 +241,7 @@ pub unsafe extern "C" fn l_checktime(interpreter: *mut Interpreter, arg: i32) ->
 }
 pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut slen: u64 = 0;
+        let mut slen: usize = 0;
         let mut s: *const i8 =
             lual_optlstring(interpreter, 1, b"%c\0" as *const u8 as *const i8, &mut slen);
         let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) {
@@ -484,9 +484,9 @@ pub unsafe extern "C" fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_mul(16 as u64)
-                .wrapping_add(::core::mem::size_of::<f64>() as u64),
+            (::core::mem::size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(::core::mem::size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, SYSTEM_FUNCTIONS.as_ptr(), 0);

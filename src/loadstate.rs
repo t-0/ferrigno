@@ -32,7 +32,7 @@ impl LoadState {
             luad_throw(self.interpreter, 3);
         }
     }
-    pub unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: u64) {
+    pub unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
             if luaz_read(self.zio, b, size) != 0 {
                 self.error(b"truncated chunk\0" as *const u8 as *const i8);
@@ -56,16 +56,16 @@ impl LoadState {
             return ret as u8;
         }
     }
-    pub unsafe extern "C" fn load_unsigned(& mut self, mut limit: u64) -> u64 {
+    pub unsafe extern "C" fn load_unsigned(& mut self, mut limit: usize) -> usize {
         unsafe {
-            let mut ret: u64 = 0;
+            let mut ret: usize = 0;
             limit >>= 7;
             loop {
                 let b: i32 = self.load_byte() as i32;
                 if ret >= limit {
                     self.error(b"integer overflow\0" as *const u8 as *const i8);
                 }
-                ret = ret << 7 | (b & 0x7f as i32) as u64;
+                ret = ret << 7 | (b & 0x7f as i32) as usize;
                 if !(b & 0x80 as i32 == 0) {
                     break;
                 }
@@ -73,14 +73,14 @@ impl LoadState {
             return ret;
         }
     }
-    pub unsafe extern "C" fn load_size(& mut self) -> u64 {
+    pub unsafe extern "C" fn load_size(& mut self) -> usize {
         unsafe {
-            return self.load_unsigned(!(0u64));
+            return self.load_unsigned(!(0usize));
         }
     }
     pub unsafe extern "C" fn load_int(& mut self) -> i32 {
         unsafe {
-            return self.load_unsigned(0x7FFFFFFF as u64) as i32;
+            return self.load_unsigned(0x7FFFFFFF as usize) as i32;
         }
     }
     pub unsafe extern "C" fn load_number(& mut self) -> f64 {
@@ -88,7 +88,7 @@ impl LoadState {
             let mut x: f64 = 0.0;
             self.load_block(
                 &mut x as *mut f64 as *mut libc::c_void,
-                1u64.wrapping_mul(::core::mem::size_of::<f64>() as u64),
+                1usize.wrapping_mul(::core::mem::size_of::<f64>() as usize),
             );
             return x;
         }
@@ -98,7 +98,7 @@ impl LoadState {
             let mut x: i64 = 0;
             self.load_block(
                 &mut x as *mut i64 as *mut libc::c_void,
-                1u64.wrapping_mul(::core::mem::size_of::<i64>() as u64),
+                1usize.wrapping_mul(::core::mem::size_of::<i64>() as usize),
             );
             return x;
         }
@@ -110,16 +110,16 @@ impl LoadState {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
             let ts: *mut TString;
-            let mut size: u64 = self.load_size();
+            let mut size: usize = self.load_size();
             if size == 0 {
                 return null_mut();
             } else {
                 size = size.wrapping_sub(1);
-                if size <= 40 as u64 {
+                if size <= 40 as usize {
                     let mut buffer: [i8; 40] = [0; 40];
                     self.load_block(
                         buffer.as_mut_ptr() as *mut libc::c_void,
-                        size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                        size.wrapping_mul(::core::mem::size_of::<i8>() as usize),
                     );
                     ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
@@ -131,7 +131,7 @@ impl LoadState {
                     (*interpreter).luad_inctop();
                     self.load_block(
                         ((*ts).get_contents_mut()) as *mut libc::c_void,
-                        size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                        size.wrapping_mul(::core::mem::size_of::<i8>() as usize),
                     );
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
@@ -164,9 +164,9 @@ impl LoadState {
     pub unsafe extern "C" fn load_code(& mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<u32>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<u32>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -178,16 +178,16 @@ impl LoadState {
             (*prototype).prototype_code.size = n;
             self.load_block(
                 (*prototype).prototype_code.pointer as *mut libc::c_void,
-                (n as usize).wrapping_mul(::core::mem::size_of::<u32>()) as u64,
+                (n as usize).wrapping_mul(::core::mem::size_of::<u32>()) as usize,
             );
         }
     }
     pub unsafe extern "C" fn load_constants(& mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<TValue>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -238,9 +238,9 @@ impl LoadState {
     pub unsafe extern "C" fn load_prototypes(& mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<*mut Prototype>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -273,9 +273,9 @@ impl LoadState {
         unsafe {
             let n: i32;
             n = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<UpValueDescription>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -299,9 +299,9 @@ impl LoadState {
         unsafe {
             let mut n: i32;
             n = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<i8>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<i8>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -313,12 +313,12 @@ impl LoadState {
             (*prototype).prototype_line_info.size = n;
             self.load_block(
                 (*prototype).prototype_line_info.pointer as *mut libc::c_void,
-                (n as u64).wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                (n as usize).wrapping_mul(::core::mem::size_of::<i8>() as usize),
             );
             n = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<AbsoluteLineInfo>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -333,9 +333,9 @@ impl LoadState {
                 (*((*prototype).prototype_absolute_line_info.pointer).offset(i as isize)).line = self.load_int();
             }
             n = self.load_int();
-            if ::core::mem::size_of::<i32>() as u64 >= ::core::mem::size_of::<u64>() as u64
-                && (n as u64).wrapping_add(1u64)
-                    > (!(0u64)).wrapping_div(::core::mem::size_of::<LocalVariable>() as u64)
+            if ::core::mem::size_of::<i32>() as usize >= ::core::mem::size_of::<usize>() as usize
+                && (n as usize).wrapping_add(1usize)
+                    > (!(0usize)).wrapping_div(::core::mem::size_of::<LocalVariable>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
@@ -395,10 +395,10 @@ impl LoadState {
     ) {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
-            let length: u64 = strlen(s) as u64;
+            let length: usize = strlen(s) as usize;
             self.load_block(
                 buffer.as_mut_ptr() as *mut libc::c_void,
-                length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
+                length.wrapping_mul(::core::mem::size_of::<i8>() as usize),
             );
             if memcmp(
                 s as *const libc::c_void,
@@ -410,9 +410,9 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn f_check_size(& mut self, size: u64, tname: *const i8) {
+    pub unsafe extern "C" fn f_check_size(& mut self, size: usize, tname: *const i8) {
         unsafe {
-            if self.load_byte() as u64 != size {
+            if self.load_byte() as usize != size {
                 self.error(
                     luao_pushfstring(
                         self.interpreter,
@@ -442,15 +442,15 @@ impl LoadState {
                 b"corrupted chunk\0" as *const u8 as *const i8,
             );
             self.f_check_size(
-                ::core::mem::size_of::<u32>() as u64,
+                ::core::mem::size_of::<u32>() as usize,
                 b"u32\0" as *const u8 as *const i8,
             );
             self.f_check_size(
-                ::core::mem::size_of::<i64>() as u64,
+                ::core::mem::size_of::<i64>() as usize,
                 b"i64\0" as *const u8 as *const i8,
             );
             self.f_check_size(
-                ::core::mem::size_of::<f64>() as u64,
+                ::core::mem::size_of::<f64>() as usize,
                 b"f64\0" as *const u8 as *const i8,
             );
             if self.load_integer() != 0x5678 as i64 {

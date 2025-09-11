@@ -60,7 +60,7 @@ impl Closure {
             );
         }
     }
-    pub unsafe extern "C" fn traversecclosure(global: *mut Global, closure: *mut Closure) -> u64 {
+    pub unsafe extern "C" fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             for i in 0..(*closure).count_upvalues {
                 if ((*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
@@ -79,10 +79,10 @@ impl Closure {
                     );
                 }
             }
-            return 1 + (*closure).count_upvalues as u64;
+            return 1 + (*closure).count_upvalues as usize;
         }
     }
-    pub unsafe extern "C" fn traverselclosure(global: *mut Global, closure: *mut Closure) -> u64 {
+    pub unsafe extern "C" fn traverselclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             if !((*closure).payload.l_prototype).is_null() {
                 if (*(*closure).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -97,7 +97,7 @@ impl Closure {
                     }
                 }
             }
-            return 1 + (*closure).count_upvalues as u64;
+            return 1 + (*closure).count_upvalues as usize;
         }
     }
 }

@@ -13,16 +13,16 @@ pub unsafe extern "C" fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
                     lua_settop(interpreter, 1);
                     return 1;
                 } else {
-                    let mut l: u64 = 0;
+                    let mut l: usize = 0;
                     let s: *const i8 = lua_tolstring(interpreter, 1, &mut l);
-                    if !s.is_null() && lua_stringtonumber(interpreter, s) == l.wrapping_add(1 as u64) {
+                    if !s.is_null() && lua_stringtonumber(interpreter, s) == l.wrapping_add(1 as usize) {
                         return 1;
                     }
                     lual_checkany(interpreter, 1);
                 }
             },
             _ => {
-                let mut l_0: u64 = 0;
+                let mut l_0: usize = 0;
                 let s_0: *const i8;
                 let mut n: i64 = 0;
                 let base: i64 = lual_checkinteger(interpreter, 2);
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
                 lual_typeerror(interpreter, 1, b"table or string\0" as *const u8 as *const i8);
             },
         };
-        (*interpreter).push_integer(get_length_raw(interpreter, 1) as u64 as i64);
+        (*interpreter).push_integer(get_length_raw(interpreter, 1) as usize as i64);
         return 1;
     }
 }
@@ -276,7 +276,7 @@ pub unsafe extern "C" fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn ipairsaux(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut i: i64 = lual_checkinteger(interpreter, 2);
-        i = (i as u64).wrapping_add(1 as u64) as i64;
+        i = (i as usize).wrapping_add(1 as usize) as i64;
         (*interpreter).push_integer(i);
         return if lua_geti(interpreter, 1, i) == TagType::Nil { 1 } else { 2 };
     }
@@ -323,7 +323,7 @@ pub unsafe extern "C" fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn generic_reader(
     interpreter: *mut Interpreter,
     mut _ud: *mut libc::c_void,
-    size: *mut u64,
+    size: *mut usize,
 ) -> *const i8 {
     unsafe {
         lual_checkstack(
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn generic_reader(
 pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
-        let mut l: u64 = 0;
+        let mut l: usize = 0;
         let s: *const i8 = lua_tolstring(interpreter, 1, &mut l);
         let mode: *const i8 = lual_optlstring(
             interpreter,
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
                         as unsafe extern "C" fn(
                             *mut Interpreter,
                             *mut libc::c_void,
-                            *mut u64,
+                            *mut usize,
                         ) -> *const i8,
                 ),
                 null_mut(),
