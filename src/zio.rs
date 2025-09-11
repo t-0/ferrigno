@@ -6,7 +6,7 @@ use libc::*;
 #[repr(C)]
 pub struct ZIO {
     pub length: usize,
-    pub pointer: *const libc::c_char,
+    pub pointer: *const i8,
     pub reader: ReadFunction,
     pub data: *mut libc::c_void,
     pub interpreter: *mut Interpreter,
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: usize = 0;
         let interpreter: *mut Interpreter = (*zio).interpreter;
-        let buffer: *const libc::c_char =
+        let buffer: *const i8 =
             ((*zio).reader).expect("non-null function pointer")(interpreter, (*zio).data, &mut size);
         if buffer.is_null() || size == 0 {
             return -1;
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn luaz_read(zio: *mut ZIO, mut b: *mut libc::c_void, mut 
             memcpy(b, (*zio).pointer as *const libc::c_void, m as usize);
             (*zio).length = ((*zio).length as usize).wrapping_sub(m) as usize;
             (*zio).pointer = ((*zio).pointer).offset(m as isize);
-            b = (b as *mut libc::c_char).offset(m as isize) as *mut libc::c_void;
+            b = (b as *mut i8).offset(m as isize) as *mut libc::c_void;
             n = (n as usize).wrapping_sub(m) as usize;
         }
         return 0usize;

@@ -65,12 +65,12 @@ impl Table {
             freehash(interpreter, self);
             (*interpreter).free_memory(
                 self.array as *mut libc::c_void,
-                (luah_realasize(self) as usize).wrapping_mul(::core::mem::size_of::<TValue>() as usize)
+                (luah_realasize(self) as usize).wrapping_mul(size_of::<TValue>() as usize)
                     as usize,
             );
             (*interpreter).free_memory(
                 self as *mut Table as *mut libc::c_void,
-                ::core::mem::size_of::<Table>(),
+                size_of::<Table>(),
             );
         }
     }
@@ -272,8 +272,8 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
 }
 pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
-        let mut weakkey: *const libc::c_char = null();
-        let mut weakvalue: *const libc::c_char = null();
+        let mut weakkey: *const i8 = null();
+        let mut weakvalue: *const i8 = null();
         let mode: *const TValue = if ((*h).get_metatable()).is_null() {
             null()
         } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn findindex(
             if (*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
                 luag_runerror(
                     interpreter,
-                    b"invalid key to 'next'\0" as *const u8 as *const libc::c_char,
+                    b"invalid key to 'next'\0" as *const u8 as *const i8,
                 );
             }
             i = (n_value as *mut Node)
@@ -563,7 +563,7 @@ pub unsafe extern "C" fn freehash(interpreter: *mut Interpreter, table: *mut Tab
             (*interpreter).free_memory(
                 (*table).node as *mut libc::c_void,
                 ((1 << (*table).log_size_node as i32) as usize)
-                    .wrapping_mul(::core::mem::size_of::<Node>() as usize) as usize,
+                    .wrapping_mul(size_of::<Node>() as usize) as usize,
             );
         }
     }
@@ -612,7 +612,7 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
         lg = 0;
         ttlg = 1 as u32;
         while lg
-            <= (::core::mem::size_of::<i32>() as usize)
+            <= (size_of::<i32>() as usize)
                 .wrapping_mul(8 as usize)
                 .wrapping_sub(1 as usize) as i32
         {
@@ -679,33 +679,33 @@ pub unsafe extern "C" fn setnodevector(
         } else {
             let lsize: i32 = ceiling_log2(size as usize) as i32;
             if lsize
-                > (::core::mem::size_of::<i32>() as usize)
+                > (size_of::<i32>() as usize)
                     .wrapping_mul(8 as usize)
                     .wrapping_sub(1 as usize) as i32
                     - 1
                 || (1 as u32) << lsize
                     > (if ((1 as u32)
-                        << (::core::mem::size_of::<i32>() as usize)
+                        << (size_of::<i32>() as usize)
                             .wrapping_mul(8 as usize)
                             .wrapping_sub(1 as usize) as i32
                             - 1) as usize
-                        <= (!(0usize)).wrapping_div(::core::mem::size_of::<Node>() as usize)
+                        <= (!(0usize)).wrapping_div(size_of::<Node>() as usize)
                     {
                         (1 as u32)
-                            << (::core::mem::size_of::<i32>() as usize)
+                            << (size_of::<i32>() as usize)
                                 .wrapping_mul(8 as usize)
                                 .wrapping_sub(1 as usize) as i32
                                 - 1
                     } else {
-                        (!(0usize)).wrapping_div(::core::mem::size_of::<Node>() as usize) as u32
+                        (!(0usize)).wrapping_div(size_of::<Node>() as usize) as u32
                     })
             {
-                luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const libc::c_char);
+                luag_runerror(interpreter, b"table overflow\0" as *const u8 as *const i8);
             }
             size = (1 << lsize) as u32;
             (*table).node = luam_malloc_(
                 interpreter,
-                (size as usize).wrapping_mul(::core::mem::size_of::<Node>()),
+                (size as usize).wrapping_mul(size_of::<Node>()),
             ) as *mut Node;
             for i in 0..size {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
@@ -770,8 +770,8 @@ pub unsafe extern "C" fn luah_resize(
         new_array = luam_realloc_(
             interpreter,
             (*table).array as *mut libc::c_void,
-            (old_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
-            (new_array_size as usize).wrapping_mul(::core::mem::size_of::<TValue>()),
+            (old_array_size as usize).wrapping_mul(size_of::<TValue>()),
+            (new_array_size as usize).wrapping_mul(size_of::<TValue>()),
         ) as *mut TValue;
         if new_array.is_null() && new_array_size > 0 {
             freehash(interpreter, &mut new_table);
@@ -811,7 +811,7 @@ pub unsafe extern "C" fn rehash(
         let mut totaluse: i32;
         let mut i: i32 = 0;
         while i
-            <= (::core::mem::size_of::<i32>() as usize)
+            <= (size_of::<i32>() as usize)
                 .wrapping_mul(8 as usize)
                 .wrapping_sub(1 as usize) as i32
         {
@@ -840,7 +840,7 @@ pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
         let object: *mut Object = luac_newobj(
             interpreter,
             TAG_VARIANT_TABLE,
-            ::core::mem::size_of::<Table>(),
+            size_of::<Table>(),
         );
         let new_table: *mut Table = &mut (*(object as *mut Table));
         (*new_table).metatable = null_mut();
@@ -863,7 +863,7 @@ pub unsafe extern "C" fn luah_newkey(
         if (*key).is_tagtype_nil() {
             luag_runerror(
                 interpreter,
-                b"table index is nil\0" as *const u8 as *const libc::c_char,
+                b"table index is nil\0" as *const u8 as *const i8,
             );
         } else if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
@@ -875,7 +875,7 @@ pub unsafe extern "C" fn luah_newkey(
             } else if number != number {
                 luag_runerror(
                     interpreter,
-                    b"table index is NaN\0" as *const u8 as *const libc::c_char,
+                    b"table index is NaN\0" as *const u8 as *const i8,
                 );
             }
         }
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn luav_finishget(
             if slot.is_null() {
                 tm = luat_gettmbyobj(interpreter, t, TM_INDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const libc::c_char);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
@@ -1205,7 +1205,7 @@ pub unsafe extern "C" fn luav_finishget(
         }
         luag_runerror(
             interpreter,
-            b"'__index' chain too long; possible loop\0" as *const u8 as *const libc::c_char,
+            b"'__index' chain too long; possible loop\0" as *const u8 as *const i8,
         );
     }
 }
@@ -1261,7 +1261,7 @@ pub unsafe extern "C" fn luav_finishset(
             } else {
                 tm = luat_gettmbyobj(interpreter, t, TM_NEWINDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const libc::c_char);
+                    luag_typeerror(interpreter, t, b"index\0" as *const u8 as *const i8);
                 }
             }
             if (*tm).is_tagtype_closure() {
@@ -1295,7 +1295,7 @@ pub unsafe extern "C" fn luav_finishset(
         }
         luag_runerror(
             interpreter,
-            b"'__newindex' chain too long; possible loop\0" as *const u8 as *const libc::c_char,
+            b"'__newindex' chain too long; possible loop\0" as *const u8 as *const i8,
         );
     }
 }

@@ -34,11 +34,11 @@ impl TObject for User {
 impl User {
     pub fn user_get_size(count_bytes: usize, count_upvalues: usize) -> usize {
         core::mem::size_of::<User>()
-            + ::core::mem::size_of::<TValue>() * count_upvalues
+            + size_of::<TValue>() * count_upvalues
             + count_bytes
     }
     pub fn user_get_offset(count_upvalues: usize) -> isize {
-        (core::mem::offset_of!(User, upvalues) + ::core::mem::size_of::<TValue>() * count_upvalues)
+        (core::mem::offset_of!(User, upvalues) + size_of::<TValue>() * count_upvalues)
             as isize
     }
     pub fn get_size(&self) -> usize {
@@ -46,14 +46,14 @@ impl User {
     }
     pub unsafe fn get_raw_memory(&self) -> *const libc::c_void {
         unsafe {
-            return (self as *const User as *mut libc::c_char)
+            return (self as *const User as *mut i8)
                 .offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *const libc::c_void;
         }
     }
     pub unsafe fn get_raw_memory_mut(&mut self) -> *mut libc::c_void {
         unsafe {
-            return (self as *mut User as *mut libc::c_char)
+            return (self as *mut User as *mut i8)
                 .offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *mut libc::c_void;
         }

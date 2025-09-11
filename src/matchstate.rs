@@ -9,15 +9,15 @@ pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchStateCapture {
-    pub init: *const libc::c_char,
+    pub init: *const i8,
     pub length: i64,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchState {
-    pub src_init: *const libc::c_char,
-    pub src_end: *const libc::c_char,
-    pub p_end: *const libc::c_char,
+    pub src_init: *const i8,
+    pub src_end: *const i8,
+    pub p_end: *const i8,
     pub interpreter: *mut Interpreter,
     pub matchdepth: i32,
     pub level: usize,
@@ -27,8 +27,8 @@ impl MatchState {
     pub unsafe extern "C" fn add_value(
         & mut self,
         b: *mut Buffer,
-        s: *const libc::c_char,
-        e: *const libc::c_char,
+        s: *const i8,
+        e: *const i8,
         tr: TagType,
     ) -> i32 {
         unsafe {
@@ -60,7 +60,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn push_captures(& mut self, s: *const libc::c_char, e: *const libc::c_char) -> i32 {
+    pub unsafe extern "C" fn push_captures(& mut self, s: *const i8, e: *const i8) -> i32 {
         unsafe {
             let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() {
                 1
@@ -70,7 +70,7 @@ impl MatchState {
             lual_checkstack(
                 self.interpreter,
                 nlevels,
-                b"too many captures\0" as *const u8 as *const libc::c_char,
+                b"too many captures\0" as *const u8 as *const i8,
             );
             for i in 0..nlevels {
                 self.push_onecapture(i, s, e);
@@ -78,9 +78,9 @@ impl MatchState {
             return nlevels;
         }
     }
-    pub unsafe extern "C" fn push_onecapture(& mut self, i: i32, s: *const libc::c_char, e: *const libc::c_char) {
+    pub unsafe extern "C" fn push_onecapture(& mut self, i: i32, s: *const i8, e: *const i8) {
         unsafe {
-            let mut cap: *const libc::c_char = null();
+            let mut cap: *const i8 = null();
             let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
             if level != -2 as i64 {
                 lua_pushlstring(self.interpreter, cap, level as usize);
@@ -89,9 +89,9 @@ impl MatchState {
     }
     pub unsafe extern "C" fn get_onecapture(& mut self,
         i: i32,
-        s: *const libc::c_char,
-        e: *const libc::c_char,
-        cap: *mut *const libc::c_char,
+        s: *const i8,
+        e: *const i8,
+        cap: *mut *const i8,
     ) -> usize {
         unsafe {
             if i >= self.level as i32 {
@@ -155,7 +155,7 @@ impl MatchState {
             );
         }
     }
-    pub unsafe extern "C" fn classend(& mut self, mut p: *const libc::c_char) -> *const libc::c_char {
+    pub unsafe extern "C" fn classend(& mut self, mut p: *const i8) -> *const i8 {
         unsafe {
             let fresh160 = p;
             p = p.offset(1);
@@ -197,9 +197,9 @@ impl MatchState {
     }
     pub unsafe extern "C" fn singlematch(
         & mut self,
-        s: *const libc::c_char,
-        p: *const libc::c_char,
-        ep: *const libc::c_char,
+        s: *const i8,
+        p: *const i8,
+        ep: *const i8,
     ) -> i32 {
         unsafe {
             if s >= self.src_end {
@@ -219,9 +219,9 @@ impl MatchState {
     }
     pub unsafe extern "C" fn matchbalance(
         & mut self,
-        mut s: *const libc::c_char,
-        p: *const libc::c_char,
-    ) -> *const libc::c_char {
+        mut s: *const i8,
+        p: *const i8,
+    ) -> *const i8 {
         unsafe {
             if p >= self.p_end.offset(-1) {
                 lual_error(
@@ -255,17 +255,17 @@ impl MatchState {
     }
     pub unsafe extern "C" fn max_expand(
         & mut self,
-        s: *const libc::c_char,
-        p: *const libc::c_char,
-        ep: *const libc::c_char,
-    ) -> *const libc::c_char {
+        s: *const i8,
+        p: *const i8,
+        ep: *const i8,
+    ) -> *const i8 {
         unsafe {
             let mut i: i64 = 0;
             while self.singlematch(s.offset(i as isize), p, ep) != 0 {
                 i += 1;
             }
             while i >= 0 {
-                let res: *const libc::c_char = self.match_0(s.offset(i as isize), ep.offset(1 as isize));
+                let res: *const i8 = self.match_0(s.offset(i as isize), ep.offset(1 as isize));
                 if !res.is_null() {
                     return res;
                 }
@@ -276,13 +276,13 @@ impl MatchState {
     }
     pub unsafe extern "C" fn min_expand(
         & mut self,
-        mut s: *const libc::c_char,
-        p: *const libc::c_char,
-        ep: *const libc::c_char,
-    ) -> *const libc::c_char {
+        mut s: *const i8,
+        p: *const i8,
+        ep: *const i8,
+    ) -> *const i8 {
         unsafe {
             loop {
-                let res: *const libc::c_char = self.match_0(s, ep.offset(1 as isize));
+                let res: *const i8 = self.match_0(s, ep.offset(1 as isize));
                 if !res.is_null() {
                     return res;
                 } else if self.singlematch(s, p, ep) != 0 {
@@ -295,12 +295,12 @@ impl MatchState {
     }
     pub unsafe extern "C" fn start_capture(
         & mut self,
-        s: *const libc::c_char,
-        p: *const libc::c_char,
+        s: *const i8,
+        p: *const i8,
         what: i32,
-    ) -> *const libc::c_char {
+    ) -> *const i8 {
         unsafe {
-            let res: *const libc::c_char;
+            let res: *const i8;
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
                 lual_error(
@@ -319,10 +319,10 @@ impl MatchState {
             return res;
         }
     }
-    pub unsafe extern "C" fn end_capture(& mut self, s: *const libc::c_char, p: *const libc::c_char) -> *const libc::c_char {
+    pub unsafe extern "C" fn end_capture(& mut self, s: *const i8, p: *const i8) -> *const i8 {
         unsafe {
             let l: i32 = self.capture_to_close();
-            let res: *const libc::c_char;
+            let res: *const i8;
             self.capture[l as usize].length = s.offset_from(self.capture[l as usize].init) as i64;
             res = self.match_0(s, p);
             if res.is_null() {
@@ -331,7 +331,7 @@ impl MatchState {
             return res;
         }
     }
-    pub unsafe extern "C" fn match_capture(& mut self, s: *const libc::c_char, mut l: i32) -> *const libc::c_char {
+    pub unsafe extern "C" fn match_capture(& mut self, s: *const i8, mut l: i32) -> *const i8 {
         unsafe {
             let length: usize;
             l = self.check_capture(l);
@@ -351,11 +351,11 @@ impl MatchState {
     }
     pub unsafe extern "C" fn match_0(
         & mut self,
-        mut s: *const libc::c_char,
-        mut p: *const libc::c_char,
-    ) -> *const libc::c_char {
+        mut s: *const i8,
+        mut p: *const i8,
+    ) -> *const i8 {
         unsafe {
-            let mut ep_0: *const libc::c_char = null();
+            let mut ep_0: *const i8 = null();
             let mut current_block: usize;
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
@@ -410,8 +410,8 @@ impl MatchState {
                                     continue;
                                 }
                                 8236137900636309791 => {
-                                    let ep: *const libc::c_char;
-                                    let previous: libc::c_char;
+                                    let ep: *const i8;
+                                    let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
@@ -424,7 +424,7 @@ impl MatchState {
                                         Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
-                                    }) as libc::c_char;
+                                    }) as i8;
                                     if matchbracketclass(
                                         previous as u8 as i32,
                                         p,
@@ -468,8 +468,8 @@ impl MatchState {
                                     continue;
                                 }
                                 8236137900636309791 => {
-                                    let ep: *const libc::c_char;
-                                    let previous: libc::c_char;
+                                    let ep: *const i8;
+                                    let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
@@ -482,7 +482,7 @@ impl MatchState {
                                         Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
-                                    }) as libc::c_char;
+                                    }) as i8;
                                     if matchbracketclass(
                                         previous as u8 as i32,
                                         p,
@@ -526,8 +526,8 @@ impl MatchState {
                                     continue;
                                 }
                                 8236137900636309791 => {
-                                    let ep: *const libc::c_char;
-                                    let previous: libc::c_char;
+                                    let ep: *const i8;
+                                    let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
@@ -540,7 +540,7 @@ impl MatchState {
                                         Character::Null as i32
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
-                                    }) as libc::c_char;
+                                    }) as i8;
                                     if matchbracketclass(
                                         previous as u8 as i32,
                                         p,
@@ -590,7 +590,7 @@ impl MatchState {
                 } else {
                     match *ep_0 as i32 {
                         63 => {
-                            let res: *const libc::c_char;
+                            let res: *const i8;
                             res = self.match_0(s.offset(1 as isize), ep_0.offset(1 as isize));
                             if !res.is_null() {
                                 s = res;
@@ -635,9 +635,9 @@ impl MatchState {
     pub unsafe extern "C" fn prepstate(
         & mut self,
         interpreter: *mut Interpreter,
-        s: *const libc::c_char,
+        s: *const i8,
         lexical_state: usize,
-        p: *const libc::c_char,
+        p: *const i8,
         lp: usize,
     ) {
         self.interpreter = interpreter;
@@ -651,31 +651,31 @@ impl MatchState {
     pub fn reprepstate(& mut self) {
         self.level = 0;
     }
-    pub unsafe extern "C" fn add_s(& mut self, b: *mut Buffer, s: *const libc::c_char, e: *const libc::c_char) {
+    pub unsafe extern "C" fn add_s(& mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
         unsafe {
             let mut l: usize = 0;
             let interpreter: *mut Interpreter = self.interpreter;
-            let mut news: *const libc::c_char = lua_tolstring(interpreter, 3, &mut l);
-            let mut p: *const libc::c_char;
+            let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
+            let mut p: *const i8;
             loop {
-                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l as usize) as *mut libc::c_char;
+                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l as usize) as *mut i8;
                 if p.is_null() {
                     break;
                 }
                 (*b).add_string_with_length(news, p.offset_from(news) as usize);
                 p = p.offset(1);
                 if *p as i32 == CHARACTER_PERCENT as i32 {
-                    ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                    let fresh164 = (*b).vector.length;
-                    (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-                    *((*b).vector.pointer).offset(fresh164 as isize) = *p;
+                    ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                    let fresh164 = (*b).vector.get_length();
+                    (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+                    *((*b).vector.vectort_pointer).offset(fresh164 as isize) = *p;
                 } else if *p as i32 == CHARACTER_0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32
                     & _ISDIGIT as i32
                     != 0
                 {
-                    let mut cap: *const libc::c_char = null();
+                    let mut cap: *const i8 = null();
                     let resl: i64 = self.get_onecapture(*p as i32 - CHARACTER_1 as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
                         (*b).add_value();
@@ -749,7 +749,7 @@ pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const libc::c_char, ec: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
     unsafe {
         let mut sig: i32 = 1;
         if *p.offset(1 as isize) as i32 == CHARACTER_CARET as i32 {

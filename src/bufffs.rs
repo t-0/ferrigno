@@ -9,7 +9,7 @@ pub struct BuffFS {
     interpreter: *mut Interpreter,
     is_pushed: bool,
     size: usize,
-    block: [libc::c_char; BUFFFS_SIZE],
+    block: [i8; BUFFFS_SIZE],
 }
 impl BuffFS {
     pub fn new(interpreter: *mut Interpreter) -> Self {
@@ -37,7 +37,7 @@ impl BuffFS {
             self.size = 0;
         }
     }
-    pub unsafe extern "C" fn get_raw(&mut self, size: usize) -> *mut libc::c_char {
+    pub unsafe extern "C" fn get_raw(&mut self, size: usize) -> *mut i8 {
         unsafe {
             if size > ((60 + 44 + 95) - self.size) {
                 self.clear();
@@ -45,7 +45,7 @@ impl BuffFS {
             return self.block.as_mut_ptr().offset(self.size as isize);
         }
     }
-    pub unsafe extern "C" fn add_string(&mut self, pointer: *const libc::c_char, length: usize) {
+    pub unsafe extern "C" fn add_string(&mut self, pointer: *const i8, length: usize) {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);

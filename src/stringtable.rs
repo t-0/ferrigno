@@ -37,8 +37,8 @@ pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: us
         let newvect: *mut *mut TString = luam_realloc_(
             interpreter,
             (*tb).hash as *mut libc::c_void,
-            old_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
-            new_size.wrapping_mul(::core::mem::size_of::<*mut TString>()),
+            old_size.wrapping_mul(size_of::<*mut TString>()),
+            new_size.wrapping_mul(size_of::<*mut TString>()),
         ) as *mut *mut TString;
         if newvect.is_null() {
             if new_size < old_size {
@@ -64,15 +64,15 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut
         let tb: *mut StringTable = &mut (*global).string_table;
         (*tb).hash = luam_malloc_(
             interpreter,
-            STRINGTABLE_INITIAL_SIZE.wrapping_mul(::core::mem::size_of::<*mut TString>()),
+            STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>()),
         ) as *mut *mut TString;
         tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE);
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*global).memory_error_message = luas_newlstr(
             interpreter,
-            b"not enough memory\0" as *const u8 as *const libc::c_char,
-            (::core::mem::size_of::<[libc::c_char; 18]>())
-                .wrapping_div(::core::mem::size_of::<libc::c_char>())
+            b"not enough memory\0" as *const u8 as *const i8,
+            (size_of::<[i8; 18]>())
+                .wrapping_div(size_of::<i8>())
                 .wrapping_sub(1),
         );
         (*global).fix_memory_error_message_global();
@@ -89,11 +89,11 @@ pub unsafe extern "C" fn growstrtab(interpreter: *mut Interpreter, tb: *mut Stri
         }
         if (*tb).size
             <= (if STRINGTABLE_LENGTH_MAX
-                <= (!(0usize)).wrapping_div(::core::mem::size_of::<*mut TString>())
+                <= (!(0usize)).wrapping_div(size_of::<*mut TString>())
             {
                 STRINGTABLE_LENGTH_MAX
             } else {
-                (!(0usize)).wrapping_div(::core::mem::size_of::<*mut TString>())
+                (!(0usize)).wrapping_div(size_of::<*mut TString>())
             }) as i32
                 / 2
         {

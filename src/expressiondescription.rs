@@ -63,7 +63,7 @@ pub unsafe extern "C" fn const2val(
     unsafe {
         return &mut (*((*(*(*function_state).lexical_state).dynamic_data)
             .active_variable
-            .pointer)
+            .vectort_pointer)
             .offset((*e).value.info as isize))
         .k;
     }

@@ -162,7 +162,7 @@ pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64
             if n == 0 {
                 luag_runerror(
                     interpreter,
-                    b"attempt to divide by zero\0" as *const u8 as *const libc::c_char,
+                    b"attempt to divide by zero\0" as *const u8 as *const i8,
                 );
             }
             return (0usize).wrapping_sub(m as usize) as i64;
@@ -183,7 +183,7 @@ pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64)
             if n == 0 {
                 luag_runerror(
                     interpreter,
-                    b"attempt to perform 'n%%0'\0" as *const u8 as *const libc::c_char,
+                    b"attempt to perform 'n%%0'\0" as *const u8 as *const i8,
                 );
             }
             return 0;
@@ -212,22 +212,22 @@ pub unsafe extern "C" fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64)
 }
 pub unsafe extern "C" fn luav_shiftl(x: i64, y: i64) -> i64 {
     if y < 0 {
-        if y <= -((::core::mem::size_of::<i64>() as usize).wrapping_mul(8 as usize) as i32) as i64 {
+        if y <= -((size_of::<i64>() as usize).wrapping_mul(8 as usize) as i32) as i64 {
             return 0;
         } else {
             return (x as usize >> -y as usize) as i64;
         }
-    } else if y >= (::core::mem::size_of::<i64>() as usize).wrapping_mul(8 as usize) as i64 {
+    } else if y >= (size_of::<i64>() as usize).wrapping_mul(8 as usize) as i64 {
         return 0;
     } else {
         return ((x as usize) << y as usize) as i64;
     };
 }
-pub unsafe extern "C" fn b_str2int(mut s: *const libc::c_char, base: i32, pn: *mut i64) -> *const libc::c_char {
+pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 {
     unsafe {
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
-        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const libc::c_char) as isize);
+        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
         if *s as i32 == CHARACTER_HYPHEN as i32 {
             s = s.offset(1);
             is_negative_ = 1;
@@ -261,7 +261,7 @@ pub unsafe extern "C" fn b_str2int(mut s: *const libc::c_char, base: i32, pn: *m
                 break;
             }
         }
-        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const libc::c_char) as isize);
+        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
         *pn = (if is_negative_ != 0 {
             (0usize).wrapping_sub(n)
         } else {

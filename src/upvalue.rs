@@ -34,7 +34,7 @@ impl UpValue {
             }
             (*interpreter).free_memory(
                 self as *mut UpValue as *mut libc::c_void,
-                ::core::mem::size_of::<UpValue>(),
+                size_of::<UpValue>(),
             );
         }
     }
@@ -64,7 +64,7 @@ pub unsafe extern "C" fn newupval(
 ) -> *mut UpValue {
     unsafe {
         let o: *mut Object =
-            luac_newobj(interpreter, TAG_VARIANT_UPVALUE, ::core::mem::size_of::<UpValue>());
+            luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level).tvalue;

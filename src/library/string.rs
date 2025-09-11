@@ -26,7 +26,7 @@ pub unsafe extern "C" fn str_len(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn str_sub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
         let start: usize = get_position_relative(lual_checkinteger(interpreter, 2), l);
         let end: usize = get_position_end(interpreter, 3, -1 as i64, l);
         if start <= end {
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn str_sub(interpreter: *mut Interpreter) -> i32 {
                 end.wrapping_sub(start).wrapping_add(1 as usize),
             );
         } else {
-            lua_pushstring(interpreter, b"\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
         }
         return 1;
     }
@@ -45,8 +45,8 @@ pub unsafe extern "C" fn str_reverse(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
-        let p: *mut libc::c_char = b.initialize_with_size(interpreter, l as usize);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
+        let p: *mut i8 = b.initialize_with_size(interpreter, l as usize);
         for i in 0..l {
             *p.offset(i as isize) = *s.offset(l.wrapping_sub(i).wrapping_sub(1 as usize) as isize);
         }
@@ -58,10 +58,10 @@ pub unsafe extern "C" fn str_lower(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
-        let p: *mut libc::c_char = b.initialize_with_size(interpreter, l as usize);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
+        let p: *mut i8 = b.initialize_with_size(interpreter, l as usize);
         for i in 0..l {
-            *p.offset(i as isize) = tolower(*s.offset(i as isize) as u8 as i32) as libc::c_char;
+            *p.offset(i as isize) = tolower(*s.offset(i as isize) as u8 as i32) as i8;
         }
         b.push_result_with_size(l as usize);
         return 1;
@@ -71,10 +71,10 @@ pub unsafe extern "C" fn str_upper(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
-        let p: *mut libc::c_char = b.initialize_with_size(interpreter, l as usize);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
+        let p: *mut i8 = b.initialize_with_size(interpreter, l as usize);
         for i in 0..l {
-            *p.offset(i as isize) = toupper(*s.offset(i as isize) as u8 as i32) as libc::c_char;
+            *p.offset(i as isize) = toupper(*s.offset(i as isize) as u8 as i32) as i8;
         }
         b.push_result_with_size(l as usize);
         return 1;
@@ -84,15 +84,15 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut lsep: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
         let mut n: i64 = lual_checkinteger(interpreter, 2);
-        let sep: *const libc::c_char =
-            lual_optlstring(interpreter, 3, b"\0" as *const u8 as *const libc::c_char, &mut lsep);
+        let sep: *const i8 =
+            lual_optlstring(interpreter, 3, b"\0" as *const u8 as *const i8, &mut lsep);
         if n <= 0 {
-        lua_pushstring(interpreter, b"\0" as *const u8 as *const libc::c_char);
+        lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
     } else if ((l.wrapping_add(lsep) < l
         || l.wrapping_add(lsep) as usize
-            > ((if (::core::mem::size_of::<usize>() as usize) < ::core::mem::size_of::<i32>() as usize {
+            > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
                 !(0usize)
             } else {
                 0x7FFFFFFF as usize
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
             .wrapping_mul(l)
             .wrapping_add(((n - 1) as usize).wrapping_mul(lsep));
         let mut b = Buffer::new();
-        let mut p: *mut libc::c_char = b.initialize_with_size(interpreter, totallen as usize);
+        let mut p: *mut i8 = b.initialize_with_size(interpreter, totallen as usize);
         loop {
             let fresh159 = n;
             n = n - 1;
@@ -120,14 +120,14 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
             memcpy(
                 p as *mut libc::c_void,
                 s as *const libc::c_void,
-                (l as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+                (l as usize).wrapping_mul(size_of::<i8>()),
             );
             p = p.offset(l as isize);
             if lsep > 0 {
                 memcpy(
                     p as *mut libc::c_void,
                     sep as *const libc::c_void,
-                    (lsep as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+                    (lsep as usize).wrapping_mul(size_of::<i8>()),
                 );
                 p = p.offset(lsep as isize);
             }
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
         memcpy(
             p as *mut libc::c_void,
             s as *const libc::c_void,
-            (l as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+            (l as usize).wrapping_mul(size_of::<i8>()),
         );
         b.push_result_with_size(totallen as usize);
     }
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut l);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
         let pi: i64 = lual_optinteger(interpreter, 2, 1);
         let posi: usize = get_position_relative(pi, l);
         let pose: usize = get_position_end(interpreter, 3, pi, l);
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
         lual_checkstack(
             interpreter,
             n,
-            b"string slice too long\0" as *const u8 as *const libc::c_char,
+            b"string slice too long\0" as *const u8 as *const i8,
         );
         for i in 0..n {
             (*interpreter).push_integer(
@@ -174,16 +174,16 @@ pub unsafe extern "C" fn str_char(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         let mut buffer = Buffer::new();
-        let p: *mut libc::c_char = buffer.initialize_with_size(interpreter, n as usize);
+        let p: *mut i8 = buffer.initialize_with_size(interpreter, n as usize);
         for i in 1..(1 + n) {
             let c: usize = lual_checkinteger(interpreter, i) as usize;
             (((c <= (127 as i32 * 2 + 1) as usize) as i32 != 0) as i64 != 0
                 || lual_argerror(
                     interpreter,
                     i,
-                    b"value out of range\0" as *const u8 as *const libc::c_char,
+                    b"value out of range\0" as *const u8 as *const i8,
                 ) != 0) as i32;
-            *p.offset((i - 1) as isize) = c as u8 as libc::c_char;
+            *p.offset((i - 1) as isize) = c as u8 as i8;
         }
         buffer.push_result_with_size(n as usize);
         return 1;
@@ -203,7 +203,7 @@ pub unsafe extern "C" fn writer(
         }
         (*stream_writer)
             .buffer
-            .add_string_with_length(b as *const libc::c_char, size as usize);
+            .add_string_with_length(b as *const i8, size as usize);
         return 0;
     }
 }
@@ -247,14 +247,14 @@ pub unsafe extern "C" fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
             return 1;
         } else {
             let mut length: usize = 0;
-            let s: *const libc::c_char = lua_tolstring(interpreter, arg, &mut length);
+            let s: *const i8 = lua_tolstring(interpreter, arg, &mut length);
             return (!s.is_null()
                 && lua_stringtonumber(interpreter, s) == length.wrapping_add(1 as usize))
                 as i32;
         };
     }
 }
-pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const libc::c_char) {
+pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
     unsafe {
         lua_settop(interpreter, 2);
         if lua_type(interpreter, 2) == Some(TagType::String)
@@ -272,7 +272,7 @@ pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const lib
         lua_callk(interpreter, 2, 1, 0, None);
     }
 }
-pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -> i32 {
     unsafe {
         if tonum(interpreter, 1) != 0 && tonum(interpreter, 2) != 0 {
             lua_arith(interpreter, op);
@@ -284,97 +284,97 @@ pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *
 }
 pub unsafe extern "C" fn arith_add(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 0, b"__add\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 0, b"__add\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_sub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 1, b"__sub\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 1, b"__sub\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_mul(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 2, b"__mul\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 2, b"__mul\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_mod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 3, b"__mod\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 3, b"__mod\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_pow(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 4, b"__pow\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 4, b"__pow\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_div(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 5, b"__div\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 5, b"__div\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_idiv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 6, b"__idiv\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 6, b"__idiv\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn arith_unm(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 12 as i32, b"__unm\0" as *const u8 as *const libc::c_char);
+        return arith(interpreter, 12 as i32, b"__unm\0" as *const u8 as *const i8);
     }
 }
 pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
     [
         {
             RegisteredFunction {
-                name: b"__add\0" as *const u8 as *const libc::c_char,
+                name: b"__add\0" as *const u8 as *const i8,
                 function: Some(arith_add as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__sub\0" as *const u8 as *const libc::c_char,
+                name: b"__sub\0" as *const u8 as *const i8,
                 function: Some(arith_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__mul\0" as *const u8 as *const libc::c_char,
+                name: b"__mul\0" as *const u8 as *const i8,
                 function: Some(arith_mul as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__mod\0" as *const u8 as *const libc::c_char,
+                name: b"__mod\0" as *const u8 as *const i8,
                 function: Some(arith_mod as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__pow\0" as *const u8 as *const libc::c_char,
+                name: b"__pow\0" as *const u8 as *const i8,
                 function: Some(arith_pow as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__div\0" as *const u8 as *const libc::c_char,
+                name: b"__div\0" as *const u8 as *const i8,
                 function: Some(arith_div as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__idiv\0" as *const u8 as *const libc::c_char,
+                name: b"__idiv\0" as *const u8 as *const i8,
                 function: Some(arith_idiv as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__unm\0" as *const u8 as *const libc::c_char,
+                name: b"__unm\0" as *const u8 as *const i8,
                 function: Some(arith_unm as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__index\0" as *const u8 as *const libc::c_char,
+                name: b"__index\0" as *const u8 as *const i8,
                 function: None,
             }
         },
@@ -387,22 +387,22 @@ pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
     ]
 };
 pub unsafe extern "C" fn lmemfind(
-    mut s1: *const libc::c_char,
+    mut s1: *const i8,
     mut l1: usize,
-    s2: *const libc::c_char,
+    s2: *const i8,
     mut l2: usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         if l2 == 0 {
             return s1;
         } else if l2 > l1 {
             return null();
         } else {
-            let mut init: *const libc::c_char = null();
+            let mut init: *const i8 = null();
             l2 = l2.wrapping_sub(1);
             l1 = l1.wrapping_sub(l2);
             while l1 > 0 && {
-                init = memchr(s1 as *const libc::c_void, *s2 as i32, l1 as usize) as *const libc::c_char;
+                init = memchr(s1 as *const libc::c_void, *s2 as i32, l1 as usize) as *const i8;
                 !init.is_null()
             } {
                 init = init.offset(1);
@@ -422,13 +422,13 @@ pub unsafe extern "C" fn lmemfind(
         };
     }
 }
-pub unsafe extern "C" fn nospecials(p: *const libc::c_char, l: usize) -> i32 {
+pub unsafe extern "C" fn nospecials(p: *const i8, l: usize) -> i32 {
     unsafe {
         let mut upto: usize = 0;
         loop {
             if !(strpbrk(
                 p.offset(upto as isize),
-                b"^$*+?.([%-\0" as *const u8 as *const libc::c_char,
+                b"^$*+?.([%-\0" as *const u8 as *const i8,
             ))
             .is_null()
             {
@@ -446,8 +446,8 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
     unsafe {
         let mut lexical_state: usize = 0;
         let mut lp: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut lexical_state);
-        let mut p: *const libc::c_char = lual_checklstring(interpreter, 2, &mut lp);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
+        let mut p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
         let init: usize =
             (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state))
                 .wrapping_sub(1 as usize);
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
             return 1;
         }
         if find != 0 && (lua_toboolean(interpreter, 4) != 0 || nospecials(p, lp) != 0) {
-            let s2: *const libc::c_char = lmemfind(
+            let s2: *const i8 = lmemfind(
                 s.offset(init as isize),
                 lexical_state.wrapping_sub(init),
                 p,
@@ -480,7 +480,7 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
                     length: 0,
                 }; 32],
             };
-            let mut s1: *const libc::c_char = s.offset(init as isize);
+            let mut s1: *const i8 = s.offset(init as isize);
             let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
             if anchor != 0 {
                 p = p.offset(1);
@@ -488,7 +488,7 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
             }
             match_state.prepstate(interpreter, s, lexical_state, p, lp);
             loop {
-                let res: *const libc::c_char;
+                let res: *const i8;
                 match_state.reprepstate();
                 res = match_state.match_0(s1, p);
                 if !res.is_null() {
@@ -525,9 +525,9 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut srcl: usize = 0;
         let mut lp: usize = 0;
-        let mut src: *const libc::c_char = lual_checklstring(interpreter, 1, &mut srcl);
-        let mut p: *const libc::c_char = lual_checklstring(interpreter, 2, &mut lp);
-        let mut lastmatch: *const libc::c_char = null();
+        let mut src: *const i8 = lual_checklstring(interpreter, 1, &mut srcl);
+        let mut p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
+        let mut lastmatch: *const i8 = null();
         let tr = lua_type(interpreter, 3);
         let max_s: i64 = lual_optinteger(interpreter, 4, srcl.wrapping_add(1 as usize) as i64);
         let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
@@ -555,7 +555,7 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             || lual_typeerror(
                 interpreter,
                 3,
-                b"string/function/table\0" as *const u8 as *const libc::c_char,
+                b"string/function/table\0" as *const u8 as *const i8,
             ) != 0) as i32;
         b.initialize(interpreter);
         if anchor != 0 {
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
         }
         match_state.prepstate(interpreter, src, srcl, p, lp);
         while n < max_s {
-            let e: *const libc::c_char;
+            let e: *const i8;
             match_state.reprepstate();
             e = match_state.match_0(src, p);
             if !e.is_null() && e != lastmatch {
@@ -576,12 +576,12 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
                 if !(src < match_state.src_end) {
                     break;
                 }
-                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh165 = src;
                 src = src.offset(1);
-                let fresh166 = b.vector.length;
-                b.vector.length = (b.vector.length).wrapping_add(1);
-                *(b.vector.pointer).offset(fresh166 as isize) = *fresh165;
+                let fresh166 = b.vector.get_length();
+                b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                *(b.vector.vectort_pointer).offset(fresh166 as isize) = *fresh165;
             }
             if anchor != 0 {
                 break;
@@ -597,12 +597,12 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
-pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const libc::c_char, mut length: usize) {
+pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
     unsafe {
-        ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh167 = (*b).vector.length;
-        (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-        *((*b).vector.pointer).offset(fresh167 as isize) = '"' as libc::c_char;
+        ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh167 = (*b).vector.get_length();
+        (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+        *((*b).vector.vectort_pointer).offset(fresh167 as isize) = '"' as i8;
         loop {
             let fresh168 = length;
             length = length.wrapping_sub(1);
@@ -613,61 +613,61 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const libc::c_char, m
                 || *s as i32 == CHARACTER_BACKSLASH as i32
                 || *s as i32 == CHARACTER_LF as i32
             {
-                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh169 = (*b).vector.length;
-                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-                *((*b).vector.pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as libc::c_char;
-                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh170 = (*b).vector.length;
-                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-                *((*b).vector.pointer).offset(fresh170 as isize) = *s;
+                ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh169 = (*b).vector.get_length();
+                (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+                *((*b).vector.vectort_pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
+                ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh170 = (*b).vector.get_length();
+                (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+                *((*b).vector.vectort_pointer).offset(fresh170 as isize) = *s;
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0
             {
-                let mut buffer: [libc::c_char; 10] = [0; 10];
+                let mut buffer: [i8; 10] = [0; 10];
                 if *(*__ctype_b_loc()).offset(*s.offset(1 as isize) as u8 as isize) as i32
                     & _ISDIGIT as i32
                     == 0
                 {
                     snprintf(
                         buffer.as_mut_ptr(),
-                        ::core::mem::size_of::<[libc::c_char; 10]>(),
-                        b"\\%d\0" as *const u8 as *const libc::c_char,
+                        size_of::<[i8; 10]>(),
+                        b"\\%d\0" as *const u8 as *const i8,
                         *s as u8 as i32,
                     );
                 } else {
                     snprintf(
                         buffer.as_mut_ptr(),
-                        ::core::mem::size_of::<[libc::c_char; 10]>(),
-                        b"\\%03d\0" as *const u8 as *const libc::c_char,
+                        size_of::<[i8; 10]>(),
+                        b"\\%03d\0" as *const u8 as *const i8,
                         *s as u8 as i32,
                     );
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
-                ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh171 = (*b).vector.length;
-                (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-                *((*b).vector.pointer).offset(fresh171 as isize) = *s;
+                ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh171 = (*b).vector.get_length();
+                (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+                *((*b).vector.vectort_pointer).offset(fresh171 as isize) = *s;
             }
             s = s.offset(1);
         }
-        ((*b).vector.length < (*b).vector.size || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh172 = (*b).vector.length;
-        (*b).vector.length = ((*b).vector.length).wrapping_add(1);
-        *((*b).vector.pointer).offset(fresh172 as isize) = '"' as libc::c_char;
+        ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh172 = (*b).vector.get_length();
+        (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+        *((*b).vector.vectort_pointer).offset(fresh172 as isize) = '"' as i8;
     }
 }
-pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut libc::c_char, n: f64) -> i32 {
+pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) -> i32 {
     unsafe {
-        let s: *const libc::c_char;
+        let s: *const i8;
         if n == ::core::f64::INFINITY {
-            s = b"1e9999\0" as *const u8 as *const libc::c_char;
+            s = b"1e9999\0" as *const u8 as *const i8;
         } else if n == -::core::f64::INFINITY {
-            s = b"-1e9999\0" as *const u8 as *const libc::c_char;
+            s = b"-1e9999\0" as *const u8 as *const i8;
         } else if n != n {
-            s = b"(0/0)\0" as *const u8 as *const libc::c_char;
+            s = b"(0/0)\0" as *const u8 as *const i8;
         } else {
-            let nb: i32 = snprintf(buffer, 120, b"%a\0" as *const u8 as *const libc::c_char, n);
+            let nb: i32 = snprintf(buffer, 120, b"%a\0" as *const u8 as *const i8, n);
             if (memchr(
                 buffer as *const libc::c_void,
                 CHARACTER_PERIOD as i32,
@@ -675,16 +675,16 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut l
             ))
             .is_null()
             {
-                let point: libc::c_char = CHARACTER_PERIOD as libc::c_char;
-                let ppoint: *mut libc::c_char =
-                    memchr(buffer as *const libc::c_void, point as i32, nb as usize) as *mut libc::c_char;
+                let point: i8 = CHARACTER_PERIOD as i8;
+                let ppoint: *mut i8 =
+                    memchr(buffer as *const libc::c_void, point as i32, nb as usize) as *mut i8;
                 if !ppoint.is_null() {
-                    *ppoint = CHARACTER_PERIOD as libc::c_char;
+                    *ppoint = CHARACTER_PERIOD as i8;
                 }
             }
             return nb;
         }
-        return snprintf(buffer, 120, b"%s\0" as *const u8 as *const libc::c_char, s);
+        return snprintf(buffer, 120, b"%s\0" as *const u8 as *const i8, s);
     }
 }
 pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
@@ -692,18 +692,18 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
         match lua_type(interpreter, arg) {
             Some(TagType::String) => {
                 let mut length: usize = 0;
-                let s: *const libc::c_char = lua_tolstring(interpreter, arg, &mut length);
+                let s: *const i8 = lua_tolstring(interpreter, arg, &mut length);
                 addquoted(b, s, length);
             }
             Some(TagType::Numeric) => {
-                let buffer: *mut libc::c_char = (*b).prepare_with_size(120);
+                let buffer: *mut i8 = (*b).prepare_with_size(120);
                 let nb: i32;
                 if lua_isinteger(interpreter, arg) {
                     let n: i64 = lua_tointegerx(interpreter, arg, null_mut());
-                    let format: *const libc::c_char = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
-                        b"0x%llx\0" as *const u8 as *const libc::c_char
+                    let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
+                        b"0x%llx\0" as *const u8 as *const i8
                     } else {
-                        b"%lld\0" as *const u8 as *const libc::c_char
+                        b"%lld\0" as *const u8 as *const i8
                     };
                     nb = snprintf(buffer, 120, format, n);
                 } else {
@@ -713,7 +713,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                         lua_tonumberx(interpreter, arg, null_mut()),
                     );
                 }
-                (*b).vector.length = ((*b).vector.length as usize).wrapping_add(nb as usize) as i32;
+                (*b).vector.vectort_length = ((*b).vector.get_length() as usize).wrapping_add(nb as usize) as i32;
             }
             Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(interpreter, arg, null_mut());
@@ -723,13 +723,13 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                 lual_argerror(
                     interpreter,
                     arg,
-                    b"value has no literal form\0" as *const u8 as *const libc::c_char,
+                    b"value has no literal form\0" as *const u8 as *const i8,
                 );
             }
         };
     }
 }
-pub unsafe extern "C" fn get2digits(mut s: *const libc::c_char) -> *const libc::c_char {
+pub unsafe extern "C" fn get2digits(mut s: *const i8) -> *const i8 {
     unsafe {
         if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
             s = s.offset(1);
@@ -742,12 +742,12 @@ pub unsafe extern "C" fn get2digits(mut s: *const libc::c_char) -> *const libc::
 }
 pub unsafe extern "C" fn checkformat(
     interpreter: *mut Interpreter,
-    form: *const libc::c_char,
-    flags: *const libc::c_char,
+    form: *const i8,
+    flags: *const i8,
     precision: i32,
 ) {
     unsafe {
-        let mut spec: *const libc::c_char = form.offset(1 as isize);
+        let mut spec: *const i8 = form.offset(1 as isize);
         spec = spec.offset(strspn(spec, flags) as isize);
         if *spec as i32 != CHARACTER_0 as i32 {
             spec = get2digits(spec);
@@ -767,35 +767,35 @@ pub unsafe extern "C" fn checkformat(
 }
 pub unsafe extern "C" fn getformat(
     interpreter: *mut Interpreter,
-    strfrmt: *const libc::c_char,
-    mut form: *mut libc::c_char,
-) -> *const libc::c_char {
+    strfrmt: *const i8,
+    mut form: *mut i8,
+) -> *const i8 {
     unsafe {
-        let mut length = strspn(strfrmt, b"-+#0 123456789.\0" as *const u8 as *const libc::c_char);
+        let mut length = strspn(strfrmt, b"-+#0 123456789.\0" as *const u8 as *const i8);
         length = length.wrapping_add(1);
         if length >= 22 {
             lual_error(interpreter, b"invalid format (too long)\0".as_ptr());
         }
         let fresh173 = form;
         form = form.offset(1);
-        *fresh173 = CHARACTER_PERCENT as libc::c_char;
+        *fresh173 = CHARACTER_PERCENT as i8;
         memcpy(
             form as *mut libc::c_void,
             strfrmt as *const libc::c_void,
-            (length as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+            (length as usize).wrapping_mul(size_of::<i8>()),
         );
-        *form.offset(length as isize) = Character::Null as libc::c_char;
+        *form.offset(length as isize) = Character::Null as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }
 }
-pub unsafe extern "C" fn addlenmod(form: *mut libc::c_char, lenmod: *const libc::c_char) {
+pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) {
     unsafe {
         let length: usize = strlen(form) as usize;
         let mode_length: usize = strlen(lenmod) as usize;
-        let spec: libc::c_char = *form.offset(length.wrapping_sub(1 as usize) as isize);
+        let spec: i8 = *form.offset(length.wrapping_sub(1 as usize) as isize);
         strcpy(form.offset(length as isize).offset(-(1 as isize)), lenmod);
         *form.offset(length.wrapping_add(mode_length).wrapping_sub(1 as usize) as isize) = spec;
-        *form.offset(length.wrapping_add(mode_length) as isize) = Character::Null as libc::c_char;
+        *form.offset(length.wrapping_add(mode_length) as isize) = Character::Null as i8;
     }
 }
 pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
@@ -804,39 +804,39 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
         let top: i32 = (*interpreter).get_top();
         let mut arg: i32 = 1;
         let mut sfl: usize = 0;
-        let mut strfrmt: *const libc::c_char = lual_checklstring(interpreter, arg, &mut sfl);
-        let strfrmt_end: *const libc::c_char = strfrmt.offset(sfl as isize);
-        let mut flags: *const libc::c_char = null();
+        let mut strfrmt: *const i8 = lual_checklstring(interpreter, arg, &mut sfl);
+        let strfrmt_end: *const i8 = strfrmt.offset(sfl as isize);
+        let mut flags: *const i8 = null();
         let mut b = Buffer::new();
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
             if *strfrmt as i32 != CHARACTER_PERCENT as i32 {
-                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
-                let fresh175 = b.vector.length;
-                b.vector.length = (b.vector.length).wrapping_add(1);
-                *(b.vector.pointer).offset(fresh175 as isize) = *fresh174;
+                let fresh175 = b.vector.get_length();
+                b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                *(b.vector.vectort_pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
                 if *strfrmt as i32 == CHARACTER_PERCENT as i32 {
-                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
-                    let fresh177 = b.vector.length;
-                    b.vector.length = (b.vector.length).wrapping_add(1);
-                    *(b.vector.pointer).offset(fresh177 as isize) = *fresh176;
+                    let fresh177 = b.vector.get_length();
+                    b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                    *(b.vector.vectort_pointer).offset(fresh177 as isize) = *fresh176;
                 } else {
-                    let mut form: [libc::c_char; 32] = [0; 32];
+                    let mut form: [i8; 32] = [0; 32];
                     let mut maxitem: i32 = 120 as i32;
-                    let mut buffer: *mut libc::c_char = b.prepare_with_size(maxitem as usize);
+                    let mut buffer: *mut i8 = b.prepare_with_size(maxitem as usize);
                     let mut nb: i32 = 0;
                     arg += 1;
                     if arg > top {
                         return lual_argerror(
                             interpreter,
                             arg,
-                            b"no value\0" as *const u8 as *const libc::c_char,
+                            b"no value\0" as *const u8 as *const i8,
                         );
                     }
                     strfrmt = getformat(interpreter, strfrmt, form.as_mut_ptr());
@@ -847,7 +847,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-\0" as *const u8 as *const libc::c_char,
+                                b"-\0" as *const u8 as *const i8,
                                 0,
                             );
                             nb = snprintf(
@@ -859,25 +859,25 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             current_block = 11793792312832361944;
                         }
                         CHARACTER_LOWER_D | CHARACTER_LOWER_I => {
-                            flags = b"-+0 \0" as *const u8 as *const libc::c_char;
+                            flags = b"-+0 \0" as *const u8 as *const i8;
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_U => {
-                            flags = b"-0\0" as *const u8 as *const libc::c_char;
+                            flags = b"-0\0" as *const u8 as *const i8;
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_O | CHARACTER_LOWER_X | CHARACTER_UPPER_X => {
-                            flags = b"-#0\0" as *const u8 as *const libc::c_char;
+                            flags = b"-#0\0" as *const u8 as *const i8;
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_A | CHARACTER_UPPER_A => {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-+#0 \0" as *const u8 as *const libc::c_char,
+                                b"-+#0 \0" as *const u8 as *const i8,
                                 1,
                             );
-                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const libc::c_char);
+                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const i8);
                             nb = snprintf(
                                 buffer,
                                 maxitem as usize,
@@ -899,13 +899,13 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-\0" as *const u8 as *const libc::c_char,
+                                b"-\0" as *const u8 as *const i8,
                                 0,
                             );
                             if p.is_null() {
-                                p = b"(null)\0" as *const u8 as *const libc::c_char as *const libc::c_void;
+                                p = b"(null)\0" as *const u8 as *const i8 as *const libc::c_void;
                                 form[(strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] =
-                                    CHARACTER_LOWER_S as libc::c_char;
+                                    CHARACTER_LOWER_S as i8;
                             }
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
@@ -922,7 +922,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         }
                         CHARACTER_LOWER_S => {
                             let mut l: usize = 0;
-                            let s: *const libc::c_char = lual_tolstring(interpreter, arg, &mut l);
+                            let s: *const i8 = lual_tolstring(interpreter, arg, &mut l);
                             if form[2 as usize] as i32 == Character::Null as i32 {
                                 b.add_value();
                             } else {
@@ -930,12 +930,12 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                                     || lual_argerror(
                                         interpreter,
                                         arg,
-                                        b"string contains zeros\0" as *const u8 as *const libc::c_char,
+                                        b"string contains zeros\0" as *const u8 as *const i8,
                                     ) != 0) as i32;
                                 checkformat(
                                     interpreter,
                                     form.as_mut_ptr(),
-                                    b"-\0" as *const u8 as *const libc::c_char,
+                                    b"-\0" as *const u8 as *const i8,
                                     1,
                                 );
                                 if (strchr(form.as_mut_ptr(), CHARACTER_PERIOD as i32)).is_null()
@@ -961,7 +961,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         5689001924483802034 => {
                             let n: i64 = lual_checkinteger(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), flags, 1);
-                            addlenmod(form.as_mut_ptr(), b"ll\0" as *const u8 as *const libc::c_char);
+                            addlenmod(form.as_mut_ptr(), b"ll\0" as *const u8 as *const i8);
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n);
                         }
                         6669252993407410313 => {
@@ -969,15 +969,15 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-+#0 \0" as *const u8 as *const libc::c_char,
+                                b"-+#0 \0" as *const u8 as *const i8,
                                 1,
                             );
-                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const libc::c_char);
+                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const i8);
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n_0);
                         }
                         _ => {}
                     }
-                    b.vector.length = (b.vector.length as usize).wrapping_add(nb as usize) as i32;
+                    b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(nb as usize) as i32;
                 }
             }
         }
@@ -986,7 +986,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { dummy: 1 };
-pub unsafe extern "C" fn getnum(fmt: *mut *const libc::c_char, df: i32) -> i32 {
+pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         if is_digit(**fmt as i32) {
             let mut a: i32 = 0;
@@ -995,8 +995,8 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const libc::c_char, df: i32) -> i32 {
                 *fmt = (*fmt).offset(1);
                 a = a * 10 as i32 + (*fresh179 as i32 - CHARACTER_0);
                 if !(is_digit(**fmt as i32)
-                    && a <= ((if (::core::mem::size_of::<usize>() as usize)
-                        < ::core::mem::size_of::<i32>() as usize
+                    && a <= ((if (size_of::<usize>() as usize)
+                        < size_of::<i32>() as usize
                     {
                         !(0usize)
                     } else {
@@ -1014,7 +1014,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const libc::c_char, df: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const libc::c_char, df: i32) -> i32 {
+pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         let size: i32 = getnum(fmt, df);
         if size > 16 as i32 || size <= 0 {
@@ -1035,7 +1035,7 @@ pub unsafe extern "C" fn initheader(interpreter: *mut Interpreter, h: *mut Heade
         (*h).maxmimum_alignment = 1;
     }
 }
-pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const libc::c_char, size: *mut i32) -> K {
+pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
     unsafe {
         let fresh180 = *fmt;
         *fmt = (*fmt).offset(1);
@@ -1043,63 +1043,63 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const libc::c_char
         *size = 0;
         match opt {
             CHARACTER_LOWER_B => {
-                *size = ::core::mem::size_of::<libc::c_char>() as i32;
+                *size = size_of::<i8>() as i32;
                 return K::Integer;
             }
             CHARACTER_UPPER_B => {
-                *size = ::core::mem::size_of::<libc::c_char>() as i32;
+                *size = size_of::<i8>() as i32;
                 return K::Unsigned;
             }
             CHARACTER_LOWER_H => {
-                *size = ::core::mem::size_of::<i16>() as i32;
+                *size = size_of::<i16>() as i32;
                 return K::Integer;
             }
             CHARACTER_UPPER_H => {
-                *size = ::core::mem::size_of::<i16>() as i32;
+                *size = size_of::<i16>() as i32;
                 return K::Unsigned;
             }
             CHARACTER_LOWER_L => {
-                *size = ::core::mem::size_of::<i64>() as i32;
+                *size = size_of::<i64>() as i32;
                 return K::Integer;
             }
             CHARACTER_UPPER_L => {
-                *size = ::core::mem::size_of::<i64>() as i32;
+                *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             }
             CHARACTER_LOWER_J => {
-                *size = ::core::mem::size_of::<i64>() as i32;
+                *size = size_of::<i64>() as i32;
                 return K::Integer;
             }
             CHARACTER_UPPER_J => {
-                *size = ::core::mem::size_of::<i64>() as i32;
+                *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             }
             CHARACTER_UPPER_T => {
-                *size = ::core::mem::size_of::<usize>() as i32;
+                *size = size_of::<usize>() as i32;
                 return K::Unsigned;
             }
             CHARACTER_LOWER_F => {
-                *size = ::core::mem::size_of::<libc::c_float>() as i32;
+                *size = size_of::<libc::c_float>() as i32;
                 return K::Float;
             }
             CHARACTER_LOWER_N => {
-                *size = ::core::mem::size_of::<f64>() as i32;
+                *size = size_of::<f64>() as i32;
                 return K::Number;
             }
             CHARACTER_LOWER_D => {
-                *size = ::core::mem::size_of::<f64>() as i32;
+                *size = size_of::<f64>() as i32;
                 return K::Double;
             }
             CHARACTER_LOWER_I => {
-                *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as i32);
+                *size = getnumlimit(h, fmt, size_of::<i32>() as i32);
                 return K::Integer;
             }
             CHARACTER_UPPER_I => {
-                *size = getnumlimit(h, fmt, ::core::mem::size_of::<i32>() as i32);
+                *size = getnumlimit(h, fmt, size_of::<i32>() as i32);
                 return K::Unsigned;
             }
             CHARACTER_LOWER_S => {
-                *size = getnumlimit(h, fmt, ::core::mem::size_of::<usize>() as i32);
+                *size = getnumlimit(h, fmt, size_of::<usize>() as i32);
                 return K::String;
             }
             CHARACTER_LOWER_C => {
@@ -1146,7 +1146,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const libc::c_char
 pub unsafe extern "C" fn getdetails(
     h: *mut Header,
     totalsize: usize,
-    fmt: *mut *const libc::c_char,
+    fmt: *mut *const i8,
     total_size: *mut i32,
     ntoalign: *mut i32,
 ) -> K {
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn getdetails(
                 lual_argerror(
                     (*h).interpreter,
                     1,
-                    b"invalid next option for option CHARACTER_UPPER_X\0" as *const u8 as *const libc::c_char,
+                    b"invalid next option for option CHARACTER_UPPER_X\0" as *const u8 as *const i8,
                 );
             }
         }
@@ -1175,7 +1175,7 @@ pub unsafe extern "C" fn getdetails(
                 lual_argerror(
                     (*h).interpreter,
                     1,
-                    b"format asks for alignment not power of 2\0" as *const u8 as *const libc::c_char,
+                    b"format asks for alignment not power of 2\0" as *const u8 as *const i8,
                 );
             }
             *ntoalign = align - (totalsize & (align - 1) as usize) as i32 & align - 1;
@@ -1191,26 +1191,26 @@ pub unsafe extern "C" fn packint(
     is_negative_: i32,
 ) {
     unsafe {
-        let buffer: *mut libc::c_char = (*b).prepare_with_size(size as usize);
+        let buffer: *mut i8 = (*b).prepare_with_size(size as usize);
         *buffer.offset((if islittle != 0 { 0 } else { size - 1 }) as isize) =
-            (n & ((1 << 8) - 1) as usize) as libc::c_char;
+            (n & ((1 << 8) - 1) as usize) as i8;
         for i in 1..size {
             n >>= 8;
             *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
-                (n & ((1 << 8) - 1) as usize) as libc::c_char;
+                (n & ((1 << 8) - 1) as usize) as i8;
         }
-        if is_negative_ != 0 && size > ::core::mem::size_of::<i64>() as i32 {
-            for i in (::core::mem::size_of::<i64>() as i32)..size {
+        if is_negative_ != 0 && size > size_of::<i64>() as i32 {
+            for i in (size_of::<i64>() as i32)..size {
                 *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) =
-                    ((1 << 8) - 1) as libc::c_char;
+                    ((1 << 8) - 1) as i8;
             }
         }
-        (*b).vector.length = ((*b).vector.length as usize).wrapping_add(size as usize) as i32;
+        (*b).vector.vectort_length = ((*b).vector.get_length() as usize).wrapping_add(size as usize) as i32;
     }
 }
 pub unsafe extern "C" fn copywithendian(
-    mut dest: *mut libc::c_char,
-    mut src: *const libc::c_char,
+    mut dest: *mut i8,
+    mut src: *const i8,
     mut size: i32,
     islittle: i32,
 ) {
@@ -1246,7 +1246,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut arg: i32 = 1;
         let mut totalsize: usize = 0;
         initheader(interpreter, &mut h);
@@ -1263,23 +1263,23 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 if !(fresh184 > 0) {
                     break;
                 }
-                (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                let fresh185 = b.vector.length;
-                b.vector.length = (b.vector.length).wrapping_add(1);
-                *(b.vector.pointer).offset(fresh185 as isize) = 0 as libc::c_char;
+                (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                let fresh185 = b.vector.get_length();
+                b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                *(b.vector.vectort_pointer).offset(fresh185 as isize) = 0 as i8;
             }
             arg += 1;
             let current_block_33: usize;
             match opt as u32 {
                 0 => {
                     let n: i64 = lual_checkinteger(interpreter, arg);
-                    if size < ::core::mem::size_of::<i64>() as i32 {
+                    if size < size_of::<i64>() as i32 {
                         let lim: i64 = 1 << size * 8 - 1;
                         (((-lim <= n && n < lim) as i32 != 0) as i64 != 0
                             || lual_argerror(
                                 interpreter,
                                 arg,
-                                b"integer overflow\0" as *const u8 as *const libc::c_char,
+                                b"integer overflow\0" as *const u8 as *const i8,
                             ) != 0) as i32;
                     }
                     packint(&mut b, n as usize, h.is_little_endian, size, (n < 0) as i32);
@@ -1287,12 +1287,12 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 }
                 1 => {
                     let n_0: i64 = lual_checkinteger(interpreter, arg);
-                    if size < ::core::mem::size_of::<i64>() as i32 {
+                    if size < size_of::<i64>() as i32 {
                         ((((n_0 as usize) < (1 as usize) << size * 8) as i32 != 0) as i64 != 0
                             || lual_argerror(
                                 interpreter,
                                 arg,
-                                b"unsigned overflow\0" as *const u8 as *const libc::c_char,
+                                b"unsigned overflow\0" as *const u8 as *const i8,
                             ) != 0) as i32;
                     }
                     packint(&mut b, n_0 as usize, h.is_little_endian, size, 0);
@@ -1300,49 +1300,49 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 }
                 2 => {
                     let mut f: libc::c_float = lual_checknumber(interpreter, arg) as libc::c_float;
-                    let buffer: *mut libc::c_char =
-                        b.prepare_with_size(::core::mem::size_of::<libc::c_float>());
+                    let buffer: *mut i8 =
+                        b.prepare_with_size(size_of::<libc::c_float>());
                     copywithendian(
                         buffer,
-                        &mut f as *mut libc::c_float as *mut libc::c_char,
-                        ::core::mem::size_of::<libc::c_float>() as i32,
+                        &mut f as *mut libc::c_float as *mut i8,
+                        size_of::<libc::c_float>() as i32,
                         h.is_little_endian,
                     );
-                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
+                    b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 3 => {
                     let mut f_0: f64 = lual_checknumber(interpreter, arg);
-                    let buff_0: *mut libc::c_char = b.prepare_with_size(::core::mem::size_of::<f64>());
+                    let buff_0: *mut i8 = b.prepare_with_size(size_of::<f64>());
                     copywithendian(
                         buff_0,
-                        &mut f_0 as *mut f64 as *mut libc::c_char,
-                        ::core::mem::size_of::<f64>() as i32,
+                        &mut f_0 as *mut f64 as *mut i8,
+                        size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
+                    b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 4 => {
                     let mut f_1: f64 = lual_checknumber(interpreter, arg);
-                    let buff_1: *mut libc::c_char = b.prepare_with_size(::core::mem::size_of::<f64>());
+                    let buff_1: *mut i8 = b.prepare_with_size(size_of::<f64>());
                     copywithendian(
                         buff_1,
-                        &mut f_1 as *mut f64 as *mut libc::c_char,
-                        ::core::mem::size_of::<f64>() as i32,
+                        &mut f_1 as *mut f64 as *mut i8,
+                        size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.vector.length = (b.vector.length as usize).wrapping_add(size as usize) as i32;
+                    b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(size as usize) as i32;
                     current_block_33 = 3222590281903869779;
                 }
                 5 => {
                     let mut length: usize = 0;
-                    let s: *const libc::c_char = lual_checklstring(interpreter, arg, &mut length);
+                    let s: *const i8 = lual_checklstring(interpreter, arg, &mut length);
                     (((length <= size as usize) as i32 != 0) as i64 != 0
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string longer than given size\0" as *const u8 as *const libc::c_char,
+                            b"string longer than given size\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     b.add_string_with_length(s, length as usize);
                     loop {
@@ -1351,24 +1351,24 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         if !(fresh186 < size as usize) {
                             break;
                         }
-                        (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                        let fresh187 = b.vector.length;
-                        b.vector.length = (b.vector.length).wrapping_add(1);
-                        *(b.vector.pointer).offset(fresh187 as isize) = 0 as libc::c_char;
+                        (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                        let fresh187 = b.vector.get_length();
+                        b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                        *(b.vector.vectort_pointer).offset(fresh187 as isize) = 0 as i8;
                     }
                     current_block_33 = 3222590281903869779;
                 }
                 6 => {
                     let mut length: usize = 0;
-                    let s_0: *const libc::c_char = lual_checklstring(interpreter, arg, &mut length);
-                    (((size >= ::core::mem::size_of::<usize>() as i32
+                    let s_0: *const i8 = lual_checklstring(interpreter, arg, &mut length);
+                    (((size >= size_of::<usize>() as i32
                         || length < (1 as usize) << size * 8) as i32
                         != 0) as i64
                         != 0
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string length does not fit in given size\0" as *const u8 as *const libc::c_char,
+                            b"string length does not fit in given size\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     packint(&mut b, length as usize, h.is_little_endian, size, 0);
                     b.add_string_with_length(s_0, length as usize);
@@ -1377,27 +1377,27 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 }
                 7 => {
                     let mut length: usize = 0;
-                    let s_1: *const libc::c_char = lual_checklstring(interpreter, arg, &mut length);
+                    let s_1: *const i8 = lual_checklstring(interpreter, arg, &mut length);
                     (((strlen(s_1) as usize == length) as i32 != 0) as i64 != 0
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string contains zeros\0" as *const u8 as *const libc::c_char,
+                            b"string contains zeros\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     b.add_string_with_length(s_1, length as usize);
-                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh188 = b.vector.length;
-                    b.vector.length = (b.vector.length).wrapping_add(1);
-                    *(b.vector.pointer).offset(fresh188 as isize) = Character::Null as libc::c_char;
+                    (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh188 = b.vector.get_length();
+                    b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                    *(b.vector.vectort_pointer).offset(fresh188 as isize) = Character::Null as i8;
                     totalsize =
                         (totalsize as usize).wrapping_add(length.wrapping_add(1 as usize)) as usize;
                     current_block_33 = 3222590281903869779;
                 }
                 8 => {
-                    (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh189 = b.vector.length;
-                    b.vector.length = (b.vector.length).wrapping_add(1);
-                    *(b.vector.pointer).offset(fresh189 as isize) = 0 as libc::c_char;
+                    (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh189 = b.vector.get_length();
+                    b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                    *(b.vector.vectort_pointer).offset(fresh189 as isize) = 0 as i8;
                     current_block_33 = 7383952003695197780;
                 }
                 9 | 10 => {
@@ -1425,7 +1425,7 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut totalsize: usize = 0;
         initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
@@ -1438,11 +1438,11 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     1,
-                    b"variable-length format\0" as *const u8 as *const libc::c_char,
+                    b"variable-length format\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             size += ntoalign;
             (((totalsize
-            <= (if (::core::mem::size_of::<usize>() as usize) < ::core::mem::size_of::<i32>() as usize {
+            <= (if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
                 !(0usize)
             } else {
                 0x7FFFFFFF as usize
@@ -1453,7 +1453,7 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 1,
-                b"format result too large\0" as *const u8 as *const libc::c_char,
+                b"format result too large\0" as *const u8 as *const i8,
             ) != 0) as i32;
             totalsize = (totalsize as usize).wrapping_add(size as usize) as usize;
         }
@@ -1463,7 +1463,7 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn unpackint(
     interpreter: *mut Interpreter,
-    str: *const libc::c_char,
+    str: *const i8,
     islittle: i32,
     size: i32,
     issigned: i32,
@@ -1471,10 +1471,10 @@ pub unsafe extern "C" fn unpackint(
     unsafe {
         let mut res: u64 = 0;
         let mut i: i32;
-        let limit: i32 = if size <= ::core::mem::size_of::<i64>() as i32 {
+        let limit: i32 = if size <= size_of::<i64>() as i32 {
             size
         } else {
-            ::core::mem::size_of::<i64>() as i32
+            size_of::<i64>() as i32
         };
         i = limit - 1;
         while i >= 0 {
@@ -1483,12 +1483,12 @@ pub unsafe extern "C" fn unpackint(
                 *str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as u64;
             i -= 1;
         }
-        if size < ::core::mem::size_of::<i64>() as i32 {
+        if size < size_of::<i64>() as i32 {
             if issigned != 0 {
                 let mask: u64 = 1u64 << size * 8 - 1;
                 res = (res ^ mask).wrapping_sub(mask);
             }
-        } else if size > ::core::mem::size_of::<i64>() as i32 {
+        } else if size > size_of::<i64>() as i32 {
             let mask_0: i32 = if issigned == 0 || res as i64 >= 0 {
                 0
             } else {
@@ -1519,9 +1519,9 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
-        let mut fmt: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
+        let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut ld: usize = 0;
-        let data: *const libc::c_char = lual_checklstring(interpreter, 2, &mut ld);
+        let data: *const i8 = lual_checklstring(interpreter, 2, &mut ld);
         let mut pos: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), ld))
             .wrapping_sub(1 as usize);
         let mut n: i32 = 0;
@@ -1529,7 +1529,7 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 3,
-                b"initial position out of string\0" as *const u8 as *const libc::c_char,
+                b"initial position out of string\0" as *const u8 as *const i8,
             ) != 0) as i32;
         initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
@@ -1542,13 +1542,13 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     2,
-                    b"data string too short\0" as *const u8 as *const libc::c_char,
+                    b"data string too short\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             pos = (pos as usize).wrapping_add(ntoalign as usize) as usize;
             lual_checkstack(
                 interpreter,
                 2,
-                b"too many results\0" as *const u8 as *const libc::c_char,
+                b"too many results\0" as *const u8 as *const i8,
             );
             n += 1;
             match opt as u32 {
@@ -1565,9 +1565,9 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 2 => {
                     let mut f: libc::c_float = 0.0;
                     copywithendian(
-                        &mut f as *mut libc::c_float as *mut libc::c_char,
+                        &mut f as *mut libc::c_float as *mut i8,
                         data.offset(pos as isize),
-                        ::core::mem::size_of::<libc::c_float>() as i32,
+                        size_of::<libc::c_float>() as i32,
                         h.is_little_endian,
                     );
                     (*interpreter).push_number(f as f64);
@@ -1575,9 +1575,9 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 3 => {
                     let mut f_0: f64 = 0.0;
                     copywithendian(
-                        &mut f_0 as *mut f64 as *mut libc::c_char,
+                        &mut f_0 as *mut f64 as *mut i8,
                         data.offset(pos as isize),
-                        ::core::mem::size_of::<f64>() as i32,
+                        size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
                     (*interpreter).push_number(f_0);
@@ -1585,9 +1585,9 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 4 => {
                     let mut f_1: f64 = 0.0;
                     copywithendian(
-                        &mut f_1 as *mut f64 as *mut libc::c_char,
+                        &mut f_1 as *mut f64 as *mut i8,
                         data.offset(pos as isize),
-                        ::core::mem::size_of::<f64>() as i32,
+                        size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
                     (*interpreter).push_number(f_1);
@@ -1609,7 +1609,7 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         || lual_argerror(
                             interpreter,
                             2,
-                            b"data string too short\0" as *const u8 as *const libc::c_char,
+                            b"data string too short\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     lua_pushlstring(
                         interpreter,
@@ -1624,7 +1624,7 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         || lual_argerror(
                             interpreter,
                             2,
-                            b"unfinished string for format 'zio'\0" as *const u8 as *const libc::c_char,
+                            b"unfinished string for format 'zio'\0" as *const u8 as *const i8,
                         ) != 0) as i32;
                     lua_pushlstring(interpreter, data.offset(pos as isize), length_0);
                     pos = (pos as usize).wrapping_add(length_0.wrapping_add(1 as usize)) as usize;
@@ -1644,37 +1644,37 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
     [
         {
             RegisteredFunction {
-                name: b"byte\0" as *const u8 as *const libc::c_char,
+                name: b"byte\0" as *const u8 as *const i8,
                 function: Some(str_byte as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"char\0" as *const u8 as *const libc::c_char,
+                name: b"char\0" as *const u8 as *const i8,
                 function: Some(str_char as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"dump\0" as *const u8 as *const libc::c_char,
+                name: b"dump\0" as *const u8 as *const i8,
                 function: Some(str_dump as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"find\0" as *const u8 as *const libc::c_char,
+                name: b"find\0" as *const u8 as *const i8,
                 function: Some(str_find as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"format\0" as *const u8 as *const libc::c_char,
+                name: b"format\0" as *const u8 as *const i8,
                 function: Some(str_format as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"gmatch\0" as *const u8 as *const libc::c_char,
+                name: b"gmatch\0" as *const u8 as *const i8,
                 function: Some(
                     GMatchState::gmatch as unsafe extern "C" fn(*mut Interpreter) -> i32,
                 ),
@@ -1682,67 +1682,67 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         },
         {
             RegisteredFunction {
-                name: b"gsub\0" as *const u8 as *const libc::c_char,
+                name: b"gsub\0" as *const u8 as *const i8,
                 function: Some(str_gsub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"len\0" as *const u8 as *const libc::c_char,
+                name: b"len\0" as *const u8 as *const i8,
                 function: Some(str_len as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"lower\0" as *const u8 as *const libc::c_char,
+                name: b"lower\0" as *const u8 as *const i8,
                 function: Some(str_lower as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"match\0" as *const u8 as *const libc::c_char,
+                name: b"match\0" as *const u8 as *const i8,
                 function: Some(str_match as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"rep\0" as *const u8 as *const libc::c_char,
+                name: b"rep\0" as *const u8 as *const i8,
                 function: Some(str_rep as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"reverse\0" as *const u8 as *const libc::c_char,
+                name: b"reverse\0" as *const u8 as *const i8,
                 function: Some(str_reverse as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"sub\0" as *const u8 as *const libc::c_char,
+                name: b"sub\0" as *const u8 as *const i8,
                 function: Some(str_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"upper\0" as *const u8 as *const libc::c_char,
+                name: b"upper\0" as *const u8 as *const i8,
                 function: Some(str_upper as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"pack\0" as *const u8 as *const libc::c_char,
+                name: b"pack\0" as *const u8 as *const i8,
                 function: Some(str_pack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"packsize\0" as *const u8 as *const libc::c_char,
+                name: b"packsize\0" as *const u8 as *const i8,
                 function: Some(str_packsize as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"unpack\0" as *const u8 as *const libc::c_char,
+                name: b"unpack\0" as *const u8 as *const i8,
                 function: Some(str_unpack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -1758,12 +1758,12 @@ pub unsafe extern "C" fn createmetatable(interpreter: *mut Interpreter) {
     unsafe {
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_METAMETHODS.as_ptr(), 0);
-        lua_pushstring(interpreter, b"\0" as *const u8 as *const libc::c_char);
+        lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
         lua_pushvalue(interpreter, -2);
         lua_setmetatable(interpreter, -2);
         lua_settop(interpreter, -2);
         lua_pushvalue(interpreter, -2);
-        lua_setfield(interpreter, -2, b"__index\0" as *const u8 as *const libc::c_char);
+        lua_setfield(interpreter, -2, b"__index\0" as *const u8 as *const i8);
         lua_settop(interpreter, -2);
     }
 }
@@ -1772,9 +1772,9 @@ pub unsafe extern "C" fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as usize)
+            (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize),
+                .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_FUNCTIONS.as_ptr(), 0);

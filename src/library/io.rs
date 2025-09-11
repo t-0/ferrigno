@@ -10,19 +10,19 @@ use crate::user::*;
 use crate::registeredfunction::*;
 use crate::new::*;
 use crate::buffer::*;
-pub unsafe extern "C" fn l_checkmode(mut mode: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn l_checkmode(mut mode: *const i8) -> i32 {
     unsafe {
         return (*mode as i32 != Character::Null as i32
             && {
                 let fresh151 = mode;
                 mode = mode.offset(1);
-                !(strchr(b"rwa\0" as *const u8 as *const libc::c_char, *fresh151 as i32)).is_null()
+                !(strchr(b"rwa\0" as *const u8 as *const i8, *fresh151 as i32)).is_null()
             }
             && (*mode as i32 != CHARACTER_PLUS as i32 || {
                 mode = mode.offset(1);
                 1 != 0
             })
-            && strspn(mode, b"b\0" as *const u8 as *const libc::c_char) == strlen(mode))
+            && strspn(mode, b"b\0" as *const u8 as *const i8) == strlen(mode))
             as i32;
     }
 }
@@ -30,13 +30,13 @@ pub unsafe extern "C" fn io_type(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream;
         lual_checkany(interpreter, 1);
-        p = lual_testudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+        p = lual_testudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         if p.is_null() {
             (*interpreter).push_nil();
         } else if ((*p).close_function).is_none() {
-            lua_pushstring(interpreter, b"closed file\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"closed file\0" as *const u8 as *const i8);
         } else {
-            lua_pushstring(interpreter, b"file\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"file\0" as *const u8 as *const i8);
         }
         return 1;
     }
@@ -44,11 +44,11 @@ pub unsafe extern "C" fn io_type(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn f_tostring(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         if ((*p).close_function).is_none() {
-            lua_pushstring(interpreter, b"file (closed)\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"file (closed)\0" as *const u8 as *const i8);
         } else {
-            lua_pushfstring(interpreter, b"file (%p)\0" as *const u8 as *const libc::c_char, (*p).file);
+            lua_pushfstring(interpreter, b"file (%p)\0" as *const u8 as *const i8, (*p).file);
         }
         return 1;
     }
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn f_tostring(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         if (*p).close_function.is_none() {
             lual_error(
                 interpreter,
@@ -69,16 +69,16 @@ pub unsafe extern "C" fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
 pub unsafe extern "C" fn newprefile(interpreter: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream =
-            User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<Stream>(), 0) as *mut Stream;
+            User::lua_newuserdatauv(interpreter, size_of::<Stream>(), 0) as *mut Stream;
         (*p).close_function = None;
-        lual_setmetatable(interpreter, b"FILE*\0" as *const u8 as *const libc::c_char);
+        lual_setmetatable(interpreter, b"FILE*\0" as *const u8 as *const i8);
         return p;
     }
 }
 pub unsafe extern "C" fn aux_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         let cf: CFunction = (*p).close_function;
         (*p).close_function = None;
         return (Some(cf.expect("non-null function pointer"))).expect("non-null function pointer")(
@@ -98,7 +98,7 @@ pub unsafe extern "C" fn io_close(interpreter: *mut Interpreter) -> i32 {
             lua_getfield(
                 interpreter,
                 -(1000000 as i32) - 1000 as i32,
-                b"_IO_output\0" as *const u8 as *const libc::c_char,
+                b"_IO_output\0" as *const u8 as *const i8,
             );
         }
         return f_close(interpreter);
@@ -107,7 +107,7 @@ pub unsafe extern "C" fn io_close(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn f_gc(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         if ((*p).close_function).is_some() && !((*p).file).is_null() {
             aux_close(interpreter);
         }
@@ -117,7 +117,7 @@ pub unsafe extern "C" fn f_gc(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn io_fclose(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         *__errno_location() = 0;
         return lual_fileresult(interpreter, (fclose((*p).file) == 0) as i32, null());
     }
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn newfile(interpreter: *mut Interpreter) -> *mut Stream {
         return p;
     }
 }
-pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const libc::c_char, mode: *const libc::c_char) {
+pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const i8, mode: *const i8) {
     unsafe {
         let p: *mut Stream = newfile(interpreter);
         (*p).file = fopen(fname, mode);
@@ -146,17 +146,17 @@ pub unsafe extern "C" fn opencheck(interpreter: *mut Interpreter, fname: *const 
 }
 pub unsafe extern "C" fn io_open(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let filename: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
-        let mode: *const libc::c_char = lual_optlstring(
+        let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
+        let mode: *const i8 = lual_optlstring(
             interpreter,
             2,
-            b"r\0" as *const u8 as *const libc::c_char,
+            b"r\0" as *const u8 as *const i8,
             null_mut(),
         );
         let p: *mut Stream = newfile(interpreter);
-        let md: *const libc::c_char = mode;
+        let md: *const i8 = mode;
         ((l_checkmode(md) != 0) as i64 != 0
-            || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const libc::c_char) != 0)
+            || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
             as i32;
         *__errno_location() = 0;
         (*p).file = fopen(filename, mode);
@@ -170,18 +170,18 @@ pub unsafe extern "C" fn io_open(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn io_pclose(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         *__errno_location() = 0;
         return lual_execresult(interpreter, pclose((*p).file));
     }
 }
 pub unsafe extern "C" fn io_popen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let filename: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
-        let mode: *const libc::c_char = lual_optlstring(
+        let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
+        let mode: *const i8 = lual_optlstring(
             interpreter,
             2,
-            b"r\0" as *const u8 as *const libc::c_char,
+            b"r\0" as *const u8 as *const i8,
             null_mut(),
         );
         let p: *mut Stream = newprefile(interpreter);
@@ -190,7 +190,7 @@ pub unsafe extern "C" fn io_popen(interpreter: *mut Interpreter) -> i32 {
             && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32
             != 0) as i64
             != 0
-            || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const libc::c_char) != 0)
+            || lual_argerror(interpreter, 2, b"invalid mode\0" as *const u8 as *const i8) != 0)
             as i32;
         *__errno_location() = 0;
         fflush(null_mut());
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn io_tmpfile(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const libc::c_char) -> *mut FILE {
+pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const i8) -> *mut FILE {
     unsafe {
         let p: *mut Stream;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, findex);
@@ -225,8 +225,8 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
                 interpreter,
                 b"default %s file is closed\0".as_ptr(),
                 findex.offset(
-                    (::core::mem::size_of::<[libc::c_char; 5]>() as usize)
-                        .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+                    (size_of::<[i8; 5]>() as usize)
+                        .wrapping_div(size_of::<i8>() as usize)
                         .wrapping_sub(1 as usize) as isize,
                 ),
             );
@@ -234,10 +234,10 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
         return (*p).file;
     }
 }
-pub unsafe extern "C" fn g_iofile(interpreter: *mut Interpreter, f: *const libc::c_char, mode: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn g_iofile(interpreter: *mut Interpreter, f: *const i8, mode: *const i8) -> i32 {
     unsafe {
         if !(is_none_or_nil(lua_type(interpreter, 1))) {
-            let filename: *const libc::c_char = lua_tolstring(interpreter, 1, null_mut());
+            let filename: *const i8 = lua_tolstring(interpreter, 1, null_mut());
             if !filename.is_null() {
                 opencheck(interpreter, filename, mode);
             } else {
@@ -254,8 +254,8 @@ pub unsafe extern "C" fn io_input(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return g_iofile(
             interpreter,
-            b"_IO_input\0" as *const u8 as *const libc::c_char,
-            b"r\0" as *const u8 as *const libc::c_char,
+            b"_IO_input\0" as *const u8 as *const i8,
+            b"r\0" as *const u8 as *const i8,
         );
     }
 }
@@ -263,8 +263,8 @@ pub unsafe extern "C" fn io_output(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return g_iofile(
             interpreter,
-            b"_IO_output\0" as *const u8 as *const libc::c_char,
-            b"w\0" as *const u8 as *const libc::c_char,
+            b"_IO_output\0" as *const u8 as *const i8,
+            b"w\0" as *const u8 as *const i8,
         );
     }
 }
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn aux_lines(interpreter: *mut Interpreter, to_close: bool
             || lual_argerror(
                 interpreter,
                 250 as i32 + 2,
-                b"too many arguments\0" as *const u8 as *const libc::c_char,
+                b"too many arguments\0" as *const u8 as *const i8,
             ) != 0) as i32;
         lua_pushvalue(interpreter, 1);
         (*interpreter).push_integer(n as i64);
@@ -305,15 +305,15 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
             lua_getfield(
                 interpreter,
                 -(1000000 as i32) - 1000 as i32,
-                b"_IO_input\0" as *const u8 as *const libc::c_char,
+                b"_IO_input\0" as *const u8 as *const i8,
             );
             lua_copy(interpreter, -1, 1);
             lua_settop(interpreter, -2);
             tofile(interpreter);
             to_close = false;
         } else {
-            let filename: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
-            opencheck(interpreter, filename, b"r\0" as *const u8 as *const libc::c_char);
+            let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
+            opencheck(interpreter, filename, b"r\0" as *const u8 as *const i8);
             lua_copy(interpreter, -1, 1);
             lua_settop(interpreter, -2);
             to_close = true;
@@ -332,18 +332,18 @@ pub unsafe extern "C" fn io_lines(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn nextc(rn: *mut RN) -> i32 {
     unsafe {
         if (*rn).n >= 200 {
-            (*rn).buffer[0] = Character::Null as libc::c_char;
+            (*rn).buffer[0] = Character::Null as i8;
             return 0;
         } else {
             let fresh152 = (*rn).n;
             (*rn).n = (*rn).n + 1;
-            (*rn).buffer[fresh152 as usize] = (*rn).c as libc::c_char;
+            (*rn).buffer[fresh152 as usize] = (*rn).c as i8;
             (*rn).c = getc_unlocked((*rn).file);
             return 1;
         };
     }
 }
-pub unsafe extern "C" fn test2(rn: *mut RN, set: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn test2(rn: *mut RN, set: *const i8) -> i32 {
     unsafe {
         if (*rn).c == *set.offset(0 as isize) as i32 || (*rn).c == *set.offset(1 as isize) as i32 {
             return nextc(rn);
@@ -377,11 +377,11 @@ pub unsafe extern "C" fn read_number(interpreter: *mut Interpreter, file: *mut F
         };
         let mut count: i32 = 0;
         let mut hex: i32 = 0;
-        let mut decp: [libc::c_char; 2] = [0; 2];
+        let mut decp: [i8; 2] = [0; 2];
         rn.file = file;
         rn.n = 0;
-        decp[0] = CHARACTER_PERIOD as libc::c_char;
-        decp[1] = CHARACTER_PERIOD as libc::c_char;
+        decp[0] = CHARACTER_PERIOD as i8;
+        decp[1] = CHARACTER_PERIOD as i8;
         flockfile(rn.file);
         loop {
             rn.c = getc_unlocked(rn.file);
@@ -391,9 +391,9 @@ pub unsafe extern "C" fn read_number(interpreter: *mut Interpreter, file: *mut F
                 break;
             }
         }
-        test2(&mut rn, b"-+\0" as *const u8 as *const libc::c_char);
-        if test2(&mut rn, b"00\0" as *const u8 as *const libc::c_char) != 0 {
-            if test2(&mut rn, b"xX\0" as *const u8 as *const libc::c_char) != 0 {
+        test2(&mut rn, b"-+\0" as *const u8 as *const i8);
+        if test2(&mut rn, b"00\0" as *const u8 as *const i8) != 0 {
+            if test2(&mut rn, b"xX\0" as *const u8 as *const i8) != 0 {
                 hex = 1;
             } else {
                 count = 1;
@@ -407,18 +407,18 @@ pub unsafe extern "C" fn read_number(interpreter: *mut Interpreter, file: *mut F
             && test2(
                 &mut rn,
                 if hex != 0 {
-                    b"pP\0" as *const u8 as *const libc::c_char
+                    b"pP\0" as *const u8 as *const i8
                 } else {
-                    b"eE\0" as *const u8 as *const libc::c_char
+                    b"eE\0" as *const u8 as *const i8
                 },
             ) != 0
         {
-            test2(&mut rn, b"-+\0" as *const u8 as *const libc::c_char);
+            test2(&mut rn, b"-+\0" as *const u8 as *const i8);
             readdigits(&mut rn, 0);
         }
         ungetc(rn.c, rn.file);
         funlockfile(rn.file);
-        rn.buffer[rn.n as usize] = Character::Null as libc::c_char;
+        rn.buffer[rn.n as usize] = Character::Null as i8;
         if (lua_stringtonumber(interpreter, (rn.buffer).as_mut_ptr()) != 0) as i64 != 0 {
             return 1;
         } else {
@@ -431,7 +431,7 @@ pub unsafe extern "C" fn test_eof(interpreter: *mut Interpreter, file: *mut FILE
     unsafe {
         let c: i32 = getc(file);
         ungetc(c, file);
-        lua_pushstring(interpreter, b"\0" as *const u8 as *const libc::c_char);
+        lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
         return (c != -1) as i32;
     }
 }
@@ -441,17 +441,17 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
         let mut c: i32 = 0;
         b.initialize(interpreter);
         loop {
-            let buffer: *mut libc::c_char = b.prepare_with_size(
+            let buffer: *mut i8 = b.prepare_with_size(
                 (16 as usize)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
-                    .wrapping_mul(::core::mem::size_of::<f64>()),
+                    .wrapping_mul(size_of::<*mut libc::c_void>())
+                    .wrapping_mul(size_of::<f64>()),
             );
             let mut i: i32 = 0;
             flockfile(file);
             while i
                 < (16 as usize)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i32
+                    .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
+                    .wrapping_mul(size_of::<f64>() as usize) as i32
                 && {
                     c = getc_unlocked(file);
                     c != -1
@@ -460,19 +460,19 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
             {
                 let fresh153 = i;
                 i = i + 1;
-                *buffer.offset(fresh153 as isize) = c as libc::c_char;
+                *buffer.offset(fresh153 as isize) = c as i8;
             }
             funlockfile(file);
-            b.vector.length = (b.vector.length as usize).wrapping_add(i as usize) as i32;
+            b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(i as usize) as i32;
             if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
         if chop == 0 && c == CHARACTER_LF as i32 {
-            (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh154 = b.vector.length;
-            b.vector.length = (b.vector.length).wrapping_add(1);
-            *(b.vector.pointer).offset(fresh154 as isize) = c as libc::c_char;
+            (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh154 = b.vector.get_length();
+            b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+            *(b.vector.vectort_pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
         return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as usize as u32 as i32;
@@ -484,24 +484,24 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
         let mut b = Buffer::new();
         b.initialize(interpreter);
         loop {
-            let p: *mut libc::c_char = b.prepare_with_size(
+            let p: *mut i8 = b.prepare_with_size(
                 (16 as usize)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
-                    .wrapping_mul(::core::mem::size_of::<f64>()),
+                    .wrapping_mul(size_of::<*mut libc::c_void>())
+                    .wrapping_mul(size_of::<f64>()),
             );
             nr = fread(
                 p as *mut libc::c_void,
-                ::core::mem::size_of::<libc::c_char>(),
+                size_of::<i8>(),
                 (16 as usize)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
-                    .wrapping_mul(::core::mem::size_of::<f64>()),
+                    .wrapping_mul(size_of::<*mut libc::c_void>())
+                    .wrapping_mul(size_of::<f64>()),
                 file,
             ) as usize;
-            b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
+            b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(nr as usize) as i32;
             if !(nr
                 == (16 as usize)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i32
+                    .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
+                    .wrapping_mul(size_of::<f64>() as usize) as i32
                     as usize)
             {
                 break;
@@ -513,17 +513,17 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
 pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FILE, n: usize) -> i32 {
     unsafe {
         let nr: usize;
-        let p: *mut libc::c_char;
+        let p: *mut i8;
         let mut b = Buffer::new();
         b.initialize(interpreter);
         p = b.prepare_with_size(n as usize);
         nr = fread(
             p as *mut libc::c_void,
-            ::core::mem::size_of::<libc::c_char>(),
+            size_of::<i8>(),
             n as usize,
             file,
         ) as usize;
-        b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
+        b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(nr as usize) as i32;
         b.push_result();
         return (nr > 0) as i32;
     }
@@ -542,7 +542,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
             lual_checkstack(
                 interpreter,
                 nargs + 20 as i32,
-                b"too many arguments\0" as *const u8 as *const libc::c_char,
+                b"too many arguments\0" as *const u8 as *const i8,
             );
             success = 1;
             n = first;
@@ -560,7 +560,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
                         read_chars(interpreter, file, l)
                     };
                 } else {
-                    let mut p: *const libc::c_char = lual_checklstring(interpreter, n, null_mut());
+                    let mut p: *const i8 = lual_checklstring(interpreter, n, null_mut());
                     if *p as i32 == CHARACTER_ASTERISK as i32 {
                         p = p.offset(1);
                     }
@@ -582,7 +582,7 @@ pub unsafe extern "C" fn g_read(interpreter: *mut Interpreter, file: *mut FILE, 
                             return lual_argerror(
                                 interpreter,
                                 n,
-                                b"invalid format\0" as *const u8 as *const libc::c_char,
+                                b"invalid format\0" as *const u8 as *const i8,
                             );
                         }
                     }
@@ -604,7 +604,7 @@ pub unsafe extern "C" fn io_read(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return g_read(
             interpreter,
-            getiofile(interpreter, b"_IO_input\0" as *const u8 as *const libc::c_char),
+            getiofile(interpreter, b"_IO_input\0" as *const u8 as *const i8),
             1,
         );
     }
@@ -627,7 +627,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
             return lual_error(interpreter, b"file is already closed\0".as_ptr());
         }
         lua_settop(interpreter, 1);
-        lual_checkstack(interpreter, n, b"too many arguments\0" as *const u8 as *const libc::c_char);
+        lual_checkstack(interpreter, n, b"too many arguments\0" as *const u8 as *const i8);
         for i in 1..(1 + n) {
             lua_pushvalue(interpreter, -(1000000 as i32) - 1000 as i32 - (3 + i));
         }
@@ -666,24 +666,24 @@ pub unsafe extern "C" fn g_write(interpreter: *mut Interpreter, file: *mut FILE,
                 let length: i32 = if lua_isinteger(interpreter, arg) {
                     fprintf(
                         file,
-                        b"%lld\0" as *const u8 as *const libc::c_char,
+                        b"%lld\0" as *const u8 as *const i8,
                         lua_tointegerx(interpreter, arg, null_mut()),
                     )
                 } else {
                     fprintf(
                         file,
-                        b"%.14g\0" as *const u8 as *const libc::c_char,
+                        b"%.14g\0" as *const u8 as *const i8,
                         lua_tonumberx(interpreter, arg, null_mut()),
                     )
                 };
                 status = (status != 0 && length > 0) as i32;
             } else {
                 let mut l: usize = 0;
-                let s: *const libc::c_char = lual_checklstring(interpreter, arg, &mut l);
+                let s: *const i8 = lual_checklstring(interpreter, arg, &mut l);
                 status = (status != 0
                     && fwrite(
                         s as *const libc::c_void,
-                        ::core::mem::size_of::<libc::c_char>(),
+                        size_of::<i8>(),
                         l as usize,
                         file,
                     ) == l as usize) as i32;
@@ -701,7 +701,7 @@ pub unsafe extern "C" fn io_write(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return g_write(
             interpreter,
-            getiofile(interpreter, b"_IO_output\0" as *const u8 as *const libc::c_char),
+            getiofile(interpreter, b"_IO_output\0" as *const u8 as *const i8),
             1,
         );
     }
@@ -716,17 +716,17 @@ pub unsafe extern "C" fn f_write(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn f_seek(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         pub const MODE: [i32; 3] = [0, 1, 2];
-        pub const MODE_NAMES: [*const libc::c_char; 4] = [
-            b"set\0" as *const u8 as *const libc::c_char,
-            b"cur\0" as *const u8 as *const libc::c_char,
-            b"end\0" as *const u8 as *const libc::c_char,
+        pub const MODE_NAMES: [*const i8; 4] = [
+            b"set\0" as *const u8 as *const i8,
+            b"cur\0" as *const u8 as *const i8,
+            b"end\0" as *const u8 as *const i8,
             null(),
         ];
         let file: *mut FILE = tofile(interpreter);
         let mut op: i32 = lual_checkoption(
             interpreter,
             2,
-            b"cur\0" as *const u8 as *const libc::c_char,
+            b"cur\0" as *const u8 as *const i8,
             MODE_NAMES.as_ptr(),
         );
         let p3: i64 = lual_optinteger(interpreter, 3, 0);
@@ -735,7 +735,7 @@ pub unsafe extern "C" fn f_seek(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 3,
-                b"not an integer in proper range\0" as *const u8 as *const libc::c_char,
+                b"not an integer in proper range\0" as *const u8 as *const i8,
             ) != 0) as i32;
         *__errno_location() = 0;
         op = fseeko(file, offset, MODE[op as usize]);
@@ -750,10 +750,10 @@ pub unsafe extern "C" fn f_seek(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         pub const MODE: [i32; 3] = [2, 0, 1];
-        pub const MODE_NAMES: [*const libc::c_char; 4] = [
-            b"no\0" as *const u8 as *const libc::c_char,
-            b"full\0" as *const u8 as *const libc::c_char,
-            b"line\0" as *const u8 as *const libc::c_char,
+        pub const MODE_NAMES: [*const i8; 4] = [
+            b"no\0" as *const u8 as *const i8,
+            b"full\0" as *const u8 as *const i8,
+            b"line\0" as *const u8 as *const i8,
             null(),
         ];
         let file: *mut FILE = tofile(interpreter);
@@ -762,8 +762,8 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             3,
             (16 as usize)
-                .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as usize)
-                .wrapping_mul(::core::mem::size_of::<f64>() as usize) as i64,
+                .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
+                .wrapping_mul(size_of::<f64>() as usize) as i64,
         );
         let res: i32;
         *__errno_location() = 0;
@@ -773,7 +773,7 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn io_flush(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let file: *mut FILE = getiofile(interpreter, b"_IO_output\0" as *const u8 as *const libc::c_char);
+        let file: *mut FILE = getiofile(interpreter, b"_IO_output\0" as *const u8 as *const i8);
         *__errno_location() = 0;
         return lual_fileresult(interpreter, (fflush(file) == 0) as i32, null());
     }
@@ -789,67 +789,67 @@ pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
     [
         {
             RegisteredFunction {
-                name: b"close\0" as *const u8 as *const libc::c_char,
+                name: b"close\0" as *const u8 as *const i8,
                 function: Some(io_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"flush\0" as *const u8 as *const libc::c_char,
+                name: b"flush\0" as *const u8 as *const i8,
                 function: Some(io_flush as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"input\0" as *const u8 as *const libc::c_char,
+                name: b"input\0" as *const u8 as *const i8,
                 function: Some(io_input as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"lines\0" as *const u8 as *const libc::c_char,
+                name: b"lines\0" as *const u8 as *const i8,
                 function: Some(io_lines as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"open\0" as *const u8 as *const libc::c_char,
+                name: b"open\0" as *const u8 as *const i8,
                 function: Some(io_open as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"output\0" as *const u8 as *const libc::c_char,
+                name: b"output\0" as *const u8 as *const i8,
                 function: Some(io_output as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"popen\0" as *const u8 as *const libc::c_char,
+                name: b"popen\0" as *const u8 as *const i8,
                 function: Some(io_popen as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"read\0" as *const u8 as *const libc::c_char,
+                name: b"read\0" as *const u8 as *const i8,
                 function: Some(io_read as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"tmpfile\0" as *const u8 as *const libc::c_char,
+                name: b"tmpfile\0" as *const u8 as *const i8,
                 function: Some(io_tmpfile as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"type\0" as *const u8 as *const libc::c_char,
+                name: b"type\0" as *const u8 as *const i8,
                 function: Some(io_type as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"write\0" as *const u8 as *const libc::c_char,
+                name: b"write\0" as *const u8 as *const i8,
                 function: Some(io_write as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -865,43 +865,43 @@ pub const IO_METHODS: [RegisteredFunction; 8] = {
     [
         {
             RegisteredFunction {
-                name: b"read\0" as *const u8 as *const libc::c_char,
+                name: b"read\0" as *const u8 as *const i8,
                 function: Some(f_read as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"write\0" as *const u8 as *const libc::c_char,
+                name: b"write\0" as *const u8 as *const i8,
                 function: Some(f_write as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"lines\0" as *const u8 as *const libc::c_char,
+                name: b"lines\0" as *const u8 as *const i8,
                 function: Some(f_lines as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"flush\0" as *const u8 as *const libc::c_char,
+                name: b"flush\0" as *const u8 as *const i8,
                 function: Some(f_flush as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"seek\0" as *const u8 as *const libc::c_char,
+                name: b"seek\0" as *const u8 as *const i8,
                 function: Some(f_seek as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"close\0" as *const u8 as *const libc::c_char,
+                name: b"close\0" as *const u8 as *const i8,
                 function: Some(f_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"setvbuf\0" as *const u8 as *const libc::c_char,
+                name: b"setvbuf\0" as *const u8 as *const i8,
                 function: Some(f_setvbuf as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -917,25 +917,25 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
     [
         {
             RegisteredFunction {
-                name: b"__index\0" as *const u8 as *const libc::c_char,
+                name: b"__index\0" as *const u8 as *const i8,
                 function: None,
             }
         },
         {
             RegisteredFunction {
-                name: b"__gc\0" as *const u8 as *const libc::c_char,
+                name: b"__gc\0" as *const u8 as *const i8,
                 function: Some(f_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__close\0" as *const u8 as *const libc::c_char,
+                name: b"__close\0" as *const u8 as *const i8,
                 function: Some(f_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__tostring\0" as *const u8 as *const libc::c_char,
+                name: b"__tostring\0" as *const u8 as *const i8,
                 function: Some(f_tostring as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -949,23 +949,23 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
 };
 pub unsafe extern "C" fn createmeta(interpreter: *mut Interpreter) {
     unsafe {
-        lual_newmetatable(interpreter, b"FILE*\0" as *const u8 as *const libc::c_char);
+        lual_newmetatable(interpreter, b"FILE*\0" as *const u8 as *const i8);
         lual_setfuncs(interpreter, IO_METAMETHODS.as_ptr(), 0);
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, IO_METHODS.as_ptr(), 0);
-        lua_setfield(interpreter, -2, b"__index\0" as *const u8 as *const libc::c_char);
+        lua_setfield(interpreter, -2, b"__index\0" as *const u8 as *const i8);
         lua_settop(interpreter, -2);
     }
 }
 pub unsafe extern "C" fn io_noclose(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream =
-            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const libc::c_char) as *mut Stream;
+            lual_checkudata(interpreter, 1, b"FILE*\0" as *const u8 as *const i8) as *mut Stream;
         (*p).close_function = Some(io_noclose as unsafe extern "C" fn(*mut Interpreter) -> i32);
         (*interpreter).push_nil();
         lua_pushstring(
             interpreter,
-            b"cannot close standard file\0" as *const u8 as *const libc::c_char,
+            b"cannot close standard file\0" as *const u8 as *const i8,
         );
         return 2;
     }
@@ -973,8 +973,8 @@ pub unsafe extern "C" fn io_noclose(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn createstdfile(
     interpreter: *mut Interpreter,
     file: *mut FILE,
-    k: *const libc::c_char,
-    fname: *const libc::c_char,
+    k: *const i8,
+    fname: *const i8,
 ) {
     unsafe {
         let p: *mut Stream = newprefile(interpreter);
@@ -992,9 +992,9 @@ pub unsafe extern "C" fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as usize)
+            (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize),
+                .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), 0);
@@ -1002,20 +1002,20 @@ pub unsafe extern "C" fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
         createstdfile(
             interpreter,
             stdin,
-            b"_IO_input\0" as *const u8 as *const libc::c_char,
-            b"stdin\0" as *const u8 as *const libc::c_char,
+            b"_IO_input\0" as *const u8 as *const i8,
+            b"stdin\0" as *const u8 as *const i8,
         );
         createstdfile(
             interpreter,
             stdout,
-            b"_IO_output\0" as *const u8 as *const libc::c_char,
-            b"stdout\0" as *const u8 as *const libc::c_char,
+            b"_IO_output\0" as *const u8 as *const i8,
+            b"stdout\0" as *const u8 as *const i8,
         );
         createstdfile(
             interpreter,
             stderr,
             null(),
-            b"stderr\0" as *const u8 as *const libc::c_char,
+            b"stderr\0" as *const u8 as *const i8,
         );
         return 1;
     }

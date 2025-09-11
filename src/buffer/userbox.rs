@@ -18,7 +18,7 @@ impl UserBox {
             let user_box: *mut UserBox = lua_touserdata(interpreter, index) as *mut UserBox;
             let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
             if temp.is_null() && new_size > 0 {
-                lua_pushstring(interpreter, b"not enough memory\0" as *const u8 as *const libc::c_char);
+                lua_pushstring(interpreter, b"not enough memory\0" as *const u8 as *const i8);
                 lua_error(interpreter);
             }
             (*user_box).pointer = temp;
@@ -36,13 +36,13 @@ impl UserBox {
         [
             {
                 RegisteredFunction {
-                    name: b"__gc\0" as *const u8 as *const libc::c_char,
+                    name: b"__gc\0" as *const u8 as *const i8,
                     function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 }
             },
             {
                 RegisteredFunction {
-                    name: b"__close\0" as *const u8 as *const libc::c_char,
+                    name: b"__close\0" as *const u8 as *const i8,
                     function: Some(UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32),
                 }
             },
@@ -57,10 +57,10 @@ impl UserBox {
     pub unsafe extern "C" fn new_userbox(interpreter: *mut Interpreter) {
         unsafe {
             let box_0: *mut UserBox =
-                User::lua_newuserdatauv(interpreter, ::core::mem::size_of::<UserBox>(), 0) as *mut UserBox;
+                User::lua_newuserdatauv(interpreter, size_of::<UserBox>(), 0) as *mut UserBox;
             (*box_0).pointer = null_mut();
             (*box_0).size = 0;
-            if lual_newmetatable(interpreter, b"_UBOX*\0" as *const u8 as *const libc::c_char) != 0 {
+            if lual_newmetatable(interpreter, b"_UBOX*\0" as *const u8 as *const i8) != 0 {
                 lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), 0);
             }
             lua_setmetatable(interpreter, -2);

@@ -5,16 +5,16 @@ use libc::{isatty,};
 pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let argc: i32 = lua_tointegerx(interpreter, 1, null_mut()) as i32;
-        let argv: *mut *mut libc::c_char = lua_touserdata(interpreter, 2) as *mut *mut libc::c_char;
+        let argv: *mut *mut i8 = lua_touserdata(interpreter, 2) as *mut *mut i8;
         let mut script: i32 = 0;
         let args: i32 = collectargs(argv, &mut script);
         let optlim: i32 = if script > 0 { script } else { argc };
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as usize)
+            (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize),
+                .wrapping_add(size_of::<f64>() as usize),
         );
         if args == 1 {
             print_usage(*argv.offset(script as isize));
@@ -25,7 +25,7 @@ pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
             lua_setfield(
                 interpreter,
                 -(1000000 as i32) - 1000 as i32,
-                b"LUA_NOENV\0" as *const u8 as *const libc::c_char,
+                b"LUA_NOENV\0" as *const u8 as *const i8,
             );
         }
         lual_openlibs(interpreter);
@@ -58,13 +58,13 @@ pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe fn main_0(argc: i32, argv: *mut *mut libc::c_char) -> i32 {
+pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
         let interpreter: *mut Interpreter = lual_newstate();
         if interpreter.is_null() {
             l_message(
                 *argv.offset(0),
-                b"cannot create interpreter: not enough memory\0" as *const u8 as *const libc::c_char,
+                b"cannot create interpreter: not enough memory\0" as *const u8 as *const i8,
             );
             return 1;
         } else {

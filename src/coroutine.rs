@@ -1,11 +1,11 @@
 use std::ptr::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
-pub const COROUTINE_STATUS_NAMES: [*const libc::c_char; 4] = [
-    b"running\0" as *const u8 as *const libc::c_char,
-    b"dead\0" as *const u8 as *const libc::c_char,
-    b"suspended\0" as *const u8 as *const libc::c_char,
-    b"normal\0" as *const u8 as *const libc::c_char,
+pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
+    b"running\0" as *const u8 as *const i8,
+    b"dead\0" as *const u8 as *const i8,
+    b"suspended\0" as *const u8 as *const i8,
+    b"normal\0" as *const u8 as *const i8,
 ];
 pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {

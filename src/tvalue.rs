@@ -109,7 +109,7 @@ pub unsafe extern "C" fn aux_upvalue(
     n: i32,
     value: *mut *mut TValue,
     owner: *mut *mut Object,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_C => {
@@ -121,12 +121,12 @@ pub unsafe extern "C" fn aux_upvalue(
                 if !owner.is_null() {
                     *owner = &mut (*(closure as *mut Object));
                 }
-                return b"\0" as *const u8 as *const libc::c_char;
+                return b"\0" as *const u8 as *const i8;
             }
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
-                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.size as u32) {
+                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.vectort_size as u32) {
                     return null();
                 }
                 *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize))
@@ -136,22 +136,22 @@ pub unsafe extern "C" fn aux_upvalue(
                     *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)
                         as *mut Object));
                 }
-                let name: *mut TString = (*((*p).prototype_upvalues.pointer).offset((n - 1) as isize)).name;
+                let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).name;
                 return if name.is_null() {
-                    b"(no name)\0" as *const u8 as *const libc::c_char
+                    b"(no name)\0" as *const u8 as *const i8
                 } else {
-                    ((*name).get_contents_mut()) as *const libc::c_char
+                    ((*name).get_contents_mut()) as *const i8
                 };
             }
             _ => return null(),
         };
     }
 }
-pub unsafe extern "C" fn luao_str2num(s: *const libc::c_char, o: *mut TValue) -> usize {
+pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
     unsafe {
         let mut i: i64 = 0;
         let mut n: f64 = 0.0;
-        let mut e: *const libc::c_char = l_str2int(s, &mut i);
+        let mut e: *const i8 = l_str2int(s, &mut i);
         if e.is_null() {
             e = l_str2d(s, &mut n);
             if e.is_null() {
@@ -167,33 +167,33 @@ pub unsafe extern "C" fn luao_str2num(s: *const libc::c_char, o: *mut TValue) ->
         return (e.offset_from(s) as i64 + 1) as usize;
     }
 }
-pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut libc::c_char) -> usize {
+pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
         let mut length: usize;
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             length = snprintf(
                 buffer,
                 44,
-                b"%lld\0" as *const u8 as *const libc::c_char,
+                b"%lld\0" as *const u8 as *const i8,
                 (*obj).value.integer,
             ) as usize;
         } else {
             length = snprintf(
                 buffer,
                 44,
-                b"%.14g\0" as *const u8 as *const libc::c_char,
+                b"%.14g\0" as *const u8 as *const i8,
                 (*obj).value.number,
             ) as usize;
-            if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const libc::c_char) as isize)
+            if *buffer.offset(strspn(buffer, b"-0123456789\0" as *const u8 as *const i8) as isize)
                 as i32
                 == Character::Null as i32
             {
                 let fresh10 = length;
                 length = length + 1;
-                *buffer.offset(fresh10 as isize) = CHARACTER_PERIOD as libc::c_char;
+                *buffer.offset(fresh10 as isize) = CHARACTER_PERIOD as i8;
                 let fresh11 = length;
                 length = length + 1;
-                *buffer.offset(fresh11 as isize) = CHARACTER_0 as libc::c_char;
+                *buffer.offset(fresh11 as isize) = CHARACTER_0 as i8;
             }
         }
         return length;
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut libc::c_cha
 }
 pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
     unsafe {
-        let mut buffer: [libc::c_char; 44] = [0; 44];
+        let mut buffer: [i8; 44] = [0; 44];
         let length = tostringbuff(obj, buffer.as_mut_ptr());
         let io: *mut TValue = obj;
         let ts: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
@@ -216,17 +216,17 @@ pub const ABSENT_KEY: TValue = {
 pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
         < (if ((1 as u32)
-            << (::core::mem::size_of::<i32>() as usize)
+            << (size_of::<i32>() as usize)
                 .wrapping_mul(8 as usize)
                 .wrapping_sub(1 as usize) as i32) as usize
-            <= (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize)
+            <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
         {
             (1 as u32)
-                << (::core::mem::size_of::<i32>() as usize)
+                << (size_of::<i32>() as usize)
                     .wrapping_mul(8 as usize)
                     .wrapping_sub(1 as usize) as i32
         } else {
-            (!(0usize)).wrapping_div(::core::mem::size_of::<TValue>() as usize) as u32
+            (!(0usize)).wrapping_div(size_of::<TValue>() as usize) as u32
         }) as usize
     {
         return k as u32;
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn luav_objlen(interpreter: *mut Interpreter, ra: StackVal
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
                 if ((*tm).get_tag_type()) == TagType::Nil {
-                    luag_typeerror(interpreter, rb, b"get length of\0" as *const u8 as *const libc::c_char);
+                    luag_typeerror(interpreter, rb, b"get length of\0" as *const u8 as *const i8);
                 }
             }
         }

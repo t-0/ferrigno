@@ -6,7 +6,7 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use crate::utility::*;
-pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const libc::c_char, n: i32) -> bool {
+pub unsafe extern "C" fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> bool {
     unsafe {
         lua_pushstring(interpreter, key);
         return lua_rawget(interpreter, -n) != TagType::Nil;
@@ -19,15 +19,15 @@ pub unsafe extern "C" fn checktab(interpreter: *mut Interpreter, arg: i32, what:
             if (*interpreter).lua_getmetatable(arg)
                 && (what & 1 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__index\0" as *const u8 as *const libc::c_char, n)
+                    checkfield(interpreter, b"__index\0" as *const u8 as *const i8, n)
                 })
                 && (what & 2 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__newindex\0" as *const u8 as *const libc::c_char, n)
+                    checkfield(interpreter, b"__newindex\0" as *const u8 as *const i8, n)
                 })
                 && (what & 4 == 0 || {
                     n += 1;
-                    checkfield(interpreter, b"__len\0" as *const u8 as *const libc::c_char, n)
+                    checkfield(interpreter, b"__len\0" as *const u8 as *const i8, n)
                 })
             {
                 lua_settop(interpreter, -n - 1);
@@ -54,7 +54,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
                     || lual_argerror(
                         interpreter,
                         2,
-                        b"position out of bounds\0" as *const u8 as *const libc::c_char,
+                        b"position out of bounds\0" as *const u8 as *const i8,
                     ) != 0) as i32;
                 i = e;
                 while i > pos {
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn table_remove(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     2,
-                    b"position out of bounds\0" as *const u8 as *const libc::c_char,
+                    b"position out of bounds\0" as *const u8 as *const i8,
                 ) != 0) as i32;
         }
         lua_geti(interpreter, 1, pos);
@@ -116,14 +116,14 @@ pub unsafe extern "C" fn table_move(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     3,
-                    b"too many elements to move\0" as *const u8 as *const libc::c_char,
+                    b"too many elements to move\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             n = e - f + 1;
             (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
                 || lual_argerror(
                     interpreter,
                     4,
-                    b"destination wrap around\0" as *const u8 as *const libc::c_char,
+                    b"destination wrap around\0" as *const u8 as *const i8,
                 ) != 0) as i32;
             if t > e || t <= f || tag != 1 && lua_compare(interpreter, 1, tag, 0) == 0 {
                 for i in 0..n {
@@ -163,8 +163,8 @@ pub unsafe extern "C" fn table_concat(interpreter: *mut Interpreter) -> i32 {
         checktab(interpreter, 1, 1 | 4);
         let mut last: i64 = lual_len(interpreter, 1);
         let mut lsep: usize = 0;
-        let sep: *const libc::c_char =
-            lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const libc::c_char, &mut lsep);
+        let sep: *const i8 =
+            lual_optlstring(interpreter, 2, b"\0" as *const u8 as *const i8, &mut lsep);
         let mut i: i64 = lual_optinteger(interpreter, 3, 1);
         last = lual_optinteger(interpreter, 4, last);
         b.initialize(interpreter);
@@ -192,7 +192,7 @@ pub unsafe extern "C" fn table_pack(interpreter: *mut Interpreter) -> i32 {
             i -= 1;
         }
         (*interpreter).push_integer(n as i64);
-        lua_setfield(interpreter, 1, b"n\0" as *const u8 as *const libc::c_char);
+        lua_setfield(interpreter, 1, b"n\0" as *const u8 as *const i8);
         return 1;
     }
 }
@@ -235,24 +235,24 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
         memcpy(
             buffer.as_mut_ptr() as *mut libc::c_void,
             &mut c as *mut i64 as *const libc::c_void,
-            (::core::mem::size_of::<i64>())
-                .wrapping_div(::core::mem::size_of::<u32>())
-                .wrapping_mul(::core::mem::size_of::<u32>()),
+            (size_of::<i64>())
+                .wrapping_div(size_of::<u32>())
+                .wrapping_mul(size_of::<u32>()),
         );
         memcpy(
             buffer.as_mut_ptr().offset(
-                (::core::mem::size_of::<i64>() as usize)
-                    .wrapping_div(::core::mem::size_of::<u32>() as usize) as isize,
+                (size_of::<i64>() as usize)
+                    .wrapping_div(size_of::<u32>() as usize) as isize,
             ) as *mut libc::c_void,
             &mut t as *mut i64 as *const libc::c_void,
-            (::core::mem::size_of::<i64>())
-                .wrapping_div(::core::mem::size_of::<u32>())
-                .wrapping_mul(::core::mem::size_of::<u32>()),
+            (size_of::<i64>())
+                .wrapping_div(size_of::<u32>())
+                .wrapping_mul(size_of::<u32>()),
         );
         i = 0u32;
         while (i as usize)
-            < (::core::mem::size_of::<[u32; 4]>() as usize)
-                .wrapping_div(::core::mem::size_of::<u32>() as usize)
+            < (size_of::<[u32; 4]>() as usize)
+                .wrapping_div(size_of::<u32>() as usize)
         {
             rnd = rnd.wrapping_add(buffer[i as usize]);
             i = i.wrapping_add(1);
@@ -398,7 +398,7 @@ pub unsafe extern "C" fn table_sort(interpreter: *mut Interpreter) -> i32 {
         let n: i64 = lual_len(interpreter, 1);
         if n > 1 {
             if n >= 0x7FFFFFFF {
-                lual_argerror(interpreter, 1, b"array too big\0" as *const u8 as *const libc::c_char);
+                lual_argerror(interpreter, 1, b"array too big\0" as *const u8 as *const i8);
             }
             match lua_type(interpreter, 2) {
                 None | Some(TagType::Nil) => {}
@@ -416,43 +416,43 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
         {
             RegisteredFunction {
-                name: b"concat\0" as *const u8 as *const libc::c_char,
+                name: b"concat\0" as *const u8 as *const i8,
                 function: Some(table_concat as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"insert\0" as *const u8 as *const libc::c_char,
+                name: b"insert\0" as *const u8 as *const i8,
                 function: Some(table_insert as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"pack\0" as *const u8 as *const libc::c_char,
+                name: b"pack\0" as *const u8 as *const i8,
                 function: Some(table_pack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"unpack\0" as *const u8 as *const libc::c_char,
+                name: b"unpack\0" as *const u8 as *const i8,
                 function: Some(table_unpack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"remove\0" as *const u8 as *const libc::c_char,
+                name: b"remove\0" as *const u8 as *const i8,
                 function: Some(table_remove as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"move\0" as *const u8 as *const libc::c_char,
+                name: b"move\0" as *const u8 as *const i8,
                 function: Some(table_move as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"sort\0" as *const u8 as *const libc::c_char,
+                name: b"sort\0" as *const u8 as *const i8,
                 function: Some(table_sort as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -469,9 +469,9 @@ pub unsafe extern "C" fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as usize)
+            (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize),
+                .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), 0);

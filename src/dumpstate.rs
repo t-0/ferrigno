@@ -45,7 +45,7 @@ impl DumpState {
             let mut x: u8 = integer;
             self.dump_block(
                 &mut x as *mut u8 as *const libc::c_void,
-                ::core::mem::size_of::<u8>(),
+                size_of::<u8>(),
             );
         }
     }
@@ -55,7 +55,7 @@ impl DumpState {
             let mut n: usize = 0;
             loop {
                 n += 1;
-                buffer[::core::mem::size_of::<usize>()
+                buffer[size_of::<usize>()
                     .wrapping_mul(8)
                     .wrapping_add(6)
                     .wrapping_div(7)
@@ -65,11 +65,11 @@ impl DumpState {
                     break;
                 }
             }
-            buffer[::core::mem::size_of::<usize>()
+            buffer[size_of::<usize>()
                 .wrapping_mul(8)
                 .wrapping_add(6)
                 .wrapping_div(7)
-                .wrapping_sub(1)] = (buffer[::core::mem::size_of::<usize>()
+                .wrapping_sub(1)] = (buffer[size_of::<usize>()
                 .wrapping_mul(8)
                 .wrapping_add(6)
                 .wrapping_div(7)
@@ -80,13 +80,13 @@ impl DumpState {
                 buffer
                     .as_mut_ptr()
                     .offset(
-                        (::core::mem::size_of::<usize>() as usize)
+                        (size_of::<usize>() as usize)
                             .wrapping_mul(8 as usize)
                             .wrapping_add(6 as usize)
                             .wrapping_div(7 as usize) as isize,
                     )
                     .offset(-(n as isize)) as *const libc::c_void,
-                n.wrapping_mul(::core::mem::size_of::<u8>()),
+                n.wrapping_mul(size_of::<u8>()),
             );
         }
     }
@@ -99,7 +99,7 @@ impl DumpState {
         unsafe {
             self.dump_block(
                 &mut number as *mut f64 as *const libc::c_void,
-                ::core::mem::size_of::<f64>(),
+                size_of::<f64>(),
             );
         }
     }
@@ -107,7 +107,7 @@ impl DumpState {
         unsafe {
             self.dump_block(
                 &mut integer as *mut i64 as *const libc::c_void,
-                ::core::mem::size_of::<i64>(),
+                size_of::<i64>(),
             );
         }
     }
@@ -117,11 +117,11 @@ impl DumpState {
                 self.dump_size(0);
             } else {
                 let size: usize = (*tstring).get_length() as usize;
-                let str: *const libc::c_char = (*tstring).get_contents_mut();
+                let str: *const i8 = (*tstring).get_contents_mut();
                 self.dump_size(size.wrapping_add(1) as usize);
                 self.dump_block(
                     str as *const libc::c_void,
-                    size.wrapping_mul(::core::mem::size_of::<libc::c_char>()),
+                    size.wrapping_mul(size_of::<i8>()),
                 );
             };
         }
@@ -129,20 +129,20 @@ impl DumpState {
     pub unsafe extern "C" fn dump_header(& mut self) {
         unsafe {
             self.dump_block(
-                b"\x1BLua\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                (::core::mem::size_of::<[libc::c_char; 5]>())
-                    .wrapping_sub(::core::mem::size_of::<libc::c_char>()),
+                b"\x1BLua\0" as *const u8 as *const i8 as *const libc::c_void,
+                (size_of::<[i8; 5]>())
+                    .wrapping_sub(size_of::<i8>()),
             );
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
             self.dump_block(
-                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                (::core::mem::size_of::<[libc::c_char; 7]>())
-                    .wrapping_sub(::core::mem::size_of::<libc::c_char>()),
+                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const i8 as *const libc::c_void,
+                (size_of::<[i8; 7]>())
+                    .wrapping_sub(size_of::<i8>()),
             );
-            self.dump_byte(::core::mem::size_of::<u32>() as u8);
-            self.dump_byte(::core::mem::size_of::<i64>() as u8);
-            self.dump_byte(::core::mem::size_of::<f64>() as u8);
+            self.dump_byte(size_of::<u32>() as u8);
+            self.dump_byte(size_of::<i64>() as u8);
+            self.dump_byte(size_of::<f64>() as u8);
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn save_prototype(
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();
-        dump_state.dump_byte((*prototype).prototype_upvalues.size as u8);
+        dump_state.dump_byte((*prototype).prototype_upvalues.vectort_size as u8);
         (*prototype).dump_function(&mut dump_state, null_mut());
         return dump_state.status;
     }

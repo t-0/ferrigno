@@ -63,7 +63,7 @@ mod variabledescription;
 mod vm;
 mod zio;
 pub fn main() {
-    let mut args: Vec<*mut libc::c_char> = Vec::new();
+    let mut args: Vec<*mut i8> = Vec::new();
     for arg in ::std::env::args() {
         args.push(
             (::std::ffi::CString::new(arg))
@@ -75,7 +75,7 @@ pub fn main() {
     unsafe {
         ::std::process::exit(crate::repl::main_0(
             (args.len() - 1) as i32,
-            args.as_mut_ptr() as *mut *mut libc::c_char,
+            args.as_mut_ptr() as *mut *mut i8,
         ) as i32)
     }
 }

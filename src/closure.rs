@@ -115,7 +115,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
             (*io).set_tag_variant(TAG_VARIANT_TABLE);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-            if !((*prototype).prototype_line_info.pointer).is_null() {
+            if !((*prototype).prototype_line_info.vectort_pointer).is_null() {
                 let mut v: TValue = TValue::new(TAG_VARIANT_BOOLEAN_TRUE);
                 let start: i32 = if !(*prototype).prototype_is_variable_arguments {
                     0
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
                     current_line = nextline(prototype, current_line, 0);
                     1
                 };
-                for i in start..(*prototype).prototype_line_info.size {
+                for i in start..(*prototype).prototype_line_info.get_size() {
                     current_line = nextline(prototype, current_line, i);
                     luah_setint(interpreter, table, current_line as i64, &mut v);
                 }
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
 }
 pub unsafe extern "C" fn auxgetinfo(
     interpreter: *mut Interpreter,
-    mut what: *const libc::c_char,
+    mut what: *const i8,
     ar: *mut DebugInfo,
     closure: *mut Closure,
     call_info: *mut CallInfo,
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn auxgetinfo(
                 CHARACTER_LOWER_N => {
                     (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
-                        (*ar).namewhat = b"\0" as *const u8 as *const libc::c_char;
+                        (*ar).namewhat = b"\0" as *const u8 as *const i8;
                         (*ar).name = null();
                     }
                 },
@@ -201,10 +201,10 @@ pub unsafe extern "C" fn auxgetinfo(
     }
 }
 pub unsafe extern "C" fn size_cclosure(count_upvalues: usize) -> usize {
-    core::mem::size_of::<Closure>() + ::core::mem::size_of::<TValue>() * count_upvalues
+    core::mem::size_of::<Closure>() + size_of::<TValue>() * count_upvalues
 }
 pub unsafe extern "C" fn size_lclosure(count_upvalues: usize) -> usize {
-    core::mem::size_of::<Closure>() + ::core::mem::size_of::<*mut TValue>() * count_upvalues
+    core::mem::size_of::<Closure>() + size_of::<*mut TValue>() * count_upvalues
 }
 pub unsafe extern "C" fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut
             let object: *mut Object = luac_newobj(
                 interpreter,
                 TAG_VARIANT_UPVALUE,
-                ::core::mem::size_of::<UpValue>(),
+                size_of::<UpValue>(),
             );
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;

@@ -15,10 +15,10 @@ use crate::tvalue::*;
 #[repr(C)]
 pub struct DebugInfo {
     pub event: i32,
-    pub name: *const libc::c_char,
-    pub namewhat: *const libc::c_char,
-    pub what: *const libc::c_char,
-    pub source: *const libc::c_char,
+    pub name: *const i8,
+    pub namewhat: *const i8,
+    pub what: *const i8,
+    pub source: *const i8,
     pub source_length: usize,
     pub currentline: i32,
     pub line_defined: i32,
@@ -29,10 +29,10 @@ pub struct DebugInfo {
     pub is_tail_call: bool,
     pub ftransfer: u16,
     pub ntransfer: u16,
-    pub short_src: [libc::c_char; 60],
+    pub short_src: [i8; 60],
     pub i_ci: *mut CallInfo,
 }
-pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const libc::c_char {
+pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let name;
         if ar.is_null() {
@@ -63,10 +63,10 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const libc::c_char {
+pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut pos: StackValuePointer = null_mut();
-        let name: *const libc::c_char = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
+        let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
             let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
@@ -79,30 +79,30 @@ pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const 
 pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-            (*ar).source = b"=[C]\0" as *const u8 as *const libc::c_char;
-            (*ar).source_length = (::core::mem::size_of::<[libc::c_char; 5]>() as usize)
-                .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+            (*ar).source = b"=[C]\0" as *const u8 as *const i8;
+            (*ar).source_length = (size_of::<[i8; 5]>() as usize)
+                .wrapping_div(size_of::<i8>() as usize)
                 .wrapping_sub(1 as usize);
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
-            (*ar).what = b"C\0" as *const u8 as *const libc::c_char;
+            (*ar).what = b"C\0" as *const u8 as *const i8;
         } else {
             let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).prototype_source).is_null() {
                 (*ar).source = (*(*p).prototype_source).get_contents_mut();
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
-                (*ar).source = b"=?\0" as *const u8 as *const libc::c_char;
-                (*ar).source_length = (::core::mem::size_of::<[libc::c_char; 3]>() as usize)
-                    .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+                (*ar).source = b"=?\0" as *const u8 as *const i8;
+                (*ar).source_length = (size_of::<[i8; 3]>() as usize)
+                    .wrapping_div(size_of::<i8>() as usize)
                     .wrapping_sub(1 as usize);
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;
             (*ar).what = if (*ar).line_defined == 0 {
-                b"main\0" as *const u8 as *const libc::c_char
+                b"main\0" as *const u8 as *const i8
             } else {
-                b"Lua\0" as *const u8 as *const libc::c_char
+                b"Lua\0" as *const u8 as *const i8
             };
         }
         luao_chunkid(
@@ -114,7 +114,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
 }
 pub unsafe extern "C" fn lua_getinfo(
     interpreter: *mut Interpreter,
-    mut what: *const libc::c_char,
+    mut what: *const i8,
     ar: *mut DebugInfo,
 ) -> i32 {
     unsafe {

@@ -96,7 +96,7 @@ impl Interpreter {
             freestack(self);
             (*interpreter).free_memory(
                 self as *mut Interpreter as *mut libc::c_void,
-                ::core::mem::size_of::<Interpreter>(),
+                size_of::<Interpreter>(),
             );
         }
     }
@@ -128,15 +128,15 @@ impl Interpreter {
     }
     pub unsafe extern "C" fn correct_stack(&mut self) {
         unsafe {
-            (*self).top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut libc::c_char)
+            (*self).top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
                 .offset((*self).top.stkidrel_offset as isize)
                 as StackValuePointer;
-            (*self).tbc_list.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut libc::c_char)
+            (*self).tbc_list.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
                 .offset((*self).tbc_list.stkidrel_offset as isize)
                 as StackValuePointer;
             let mut up: *mut UpValue = (*self).open_upvalue;
             while !up.is_null() {
-                (*up).v.p = &mut (*(((*self).stack.stkidrel_pointer as *mut libc::c_char)
+                (*up).v.p = &mut (*(((*self).stack.stkidrel_pointer as *mut i8)
                     .offset((*up).v.offset as isize)
                     as StackValuePointer))
                     .tvalue;
@@ -144,10 +144,10 @@ impl Interpreter {
             }
             let mut call_info: *mut CallInfo = (*self).call_info;
             while !call_info.is_null() {
-                (*call_info).top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut libc::c_char)
+                (*call_info).top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
                     .offset((*call_info).top.stkidrel_offset as isize)
                     as StackValuePointer;
-                (*call_info).function.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut libc::c_char)
+                (*call_info).function.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
                     .offset((*call_info).function.stkidrel_offset as isize)
                     as StackValuePointer;
                 if (*call_info).call_status as i32 & (1i32) << 1i32 == 0 {
@@ -265,7 +265,7 @@ impl Interpreter {
         unsafe {
             luag_runerror(
                 self,
-                b"memory allocation error: block too big\0" as *const u8 as *const libc::c_char,
+                b"memory allocation error: block too big\0" as *const u8 as *const i8,
             );
         }
     }
@@ -281,27 +281,27 @@ impl Interpreter {
     }
     pub unsafe extern "C" fn relstack(&mut self) {
         unsafe {
-            self.top.stkidrel_offset = (self.top.stkidrel_pointer as *mut libc::c_char)
-                .offset_from(self.stack.stkidrel_pointer as *mut libc::c_char)
+            self.top.stkidrel_offset = (self.top.stkidrel_pointer as *mut i8)
+                .offset_from(self.stack.stkidrel_pointer as *mut i8)
                 as i64;
-            self.tbc_list.stkidrel_offset = (self.tbc_list.stkidrel_pointer as *mut libc::c_char)
-                .offset_from(self.stack.stkidrel_pointer as *mut libc::c_char)
+            self.tbc_list.stkidrel_offset = (self.tbc_list.stkidrel_pointer as *mut i8)
+                .offset_from(self.stack.stkidrel_pointer as *mut i8)
                 as i64;
             let mut up: *mut UpValue = self.open_upvalue;
             while !up.is_null() {
-                (*up).v.offset = ((*up).v.p as StackValuePointer as *mut libc::c_char)
-                    .offset_from(self.stack.stkidrel_pointer as *mut libc::c_char)
+                (*up).v.offset = ((*up).v.p as StackValuePointer as *mut i8)
+                    .offset_from(self.stack.stkidrel_pointer as *mut i8)
                     as i64;
                 up = (*up).u.open.next;
             }
             let mut call_info: *mut CallInfo = self.call_info;
             while !call_info.is_null() {
-                (*call_info).top.stkidrel_offset = ((*call_info).top.stkidrel_pointer as *mut libc::c_char)
-                    .offset_from(self.stack.stkidrel_pointer as *mut libc::c_char)
+                (*call_info).top.stkidrel_offset = ((*call_info).top.stkidrel_pointer as *mut i8)
+                    .offset_from(self.stack.stkidrel_pointer as *mut i8)
                     as i64;
                 (*call_info).function.stkidrel_offset = ((*call_info).function.stkidrel_pointer
-                    as *mut libc::c_char)
-                    .offset_from(self.stack.stkidrel_pointer as *mut libc::c_char)
+                    as *mut i8)
+                    .offset_from(self.stack.stkidrel_pointer as *mut i8)
                     as i64;
                 call_info = (*call_info).previous;
             }
@@ -311,7 +311,7 @@ impl Interpreter {
         unsafe {
             let message: *mut TString = luas_newlstr(
                 self,
-                b"error in error handling\0" as *const u8 as *const libc::c_char,
+                b"error in error handling\0" as *const u8 as *const i8,
                 23,
             );
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
@@ -325,7 +325,7 @@ impl Interpreter {
     pub unsafe extern "C" fn luae_checkcstack(&mut self) {
         unsafe {
             if self.count_c_calls & 0xffff as u32 == 200 as u32 {
-                luag_runerror(self, b"C stack overflow\0" as *const u8 as *const libc::c_char);
+                luag_runerror(self, b"C stack overflow\0" as *const u8 as *const i8);
             } else if self.count_c_calls & 0xffff as u32
                 >= (200 as i32 / 10 as i32 * 11 as i32) as u32
             {
@@ -487,7 +487,7 @@ impl Interpreter {
 pub unsafe extern "C" fn do_repl(interpreter: *mut Interpreter) {
     unsafe {
         let mut status: i32;
-        let oldprogname: *const libc::c_char = PROGRAM_NAME;
+        let oldprogname: *const i8 = PROGRAM_NAME;
         PROGRAM_NAME = null();
         loop {
             status = loadline(interpreter);
@@ -505,8 +505,8 @@ pub unsafe extern "C" fn do_repl(interpreter: *mut Interpreter) {
         }
         lua_settop(interpreter, 0);
         fwrite(
-            b"\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-            ::core::mem::size_of::<libc::c_char>(),
+            b"\n\0" as *const u8 as *const i8 as *const libc::c_void,
+            size_of::<i8>(),
             1,
             stdout,
         );
@@ -580,8 +580,8 @@ pub unsafe extern "C" fn luad_reallocstack(
         let newstack: StackValuePointer = luam_realloc_(
             interpreter,
             (*interpreter).stack.stkidrel_pointer as *mut libc::c_void,
-            ((old_size + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>() as usize),
-            ((new_size + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>() as usize),
+            ((old_size + 5) as usize).wrapping_mul(size_of::<StackValue>() as usize),
+            ((new_size + 5) as usize).wrapping_mul(size_of::<StackValue>() as usize),
         ) as *mut StackValue;
         (*(*interpreter).global).gcstopem = oldgcstop as u8;
         if newstack.is_null() {
@@ -635,7 +635,7 @@ pub unsafe extern "C" fn luad_growstack(
         }
         luad_reallocstack(interpreter, 1000000 + 200, should_raise_error);
         if should_raise_error {
-            luag_runerror(interpreter, b"stack overflow\0" as *const u8 as *const libc::c_char);
+            luag_runerror(interpreter, b"stack overflow\0" as *const u8 as *const i8);
         }
         return 0;
     }
@@ -652,11 +652,11 @@ pub unsafe extern "C" fn luad_hook(
         if hook.is_some() && (*interpreter).allow_hook as i32 != 0 {
             let mut mask: i32 = 1 << 3;
             let call_info: *mut CallInfo = (*interpreter).call_info;
-            let top: i64 = ((*interpreter).top.stkidrel_pointer as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            let top: i64 = ((*interpreter).top.stkidrel_pointer as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
-            let ci_top: i64 = ((*call_info).top.stkidrel_pointer as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            let ci_top: i64 = ((*call_info).top.stkidrel_pointer as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
             let mut ar: DebugInfo = DebugInfo {
                 event: 0,
@@ -711,10 +711,10 @@ pub unsafe extern "C" fn luad_hook(
                 &mut ar,
             );
             (*interpreter).allow_hook = 1;
-            (*call_info).top.stkidrel_pointer = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            (*call_info).top.stkidrel_pointer = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                 .offset(ci_top as isize)
                 as StackValuePointer;
-            (*interpreter).top.stkidrel_pointer = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            (*interpreter).top.stkidrel_pointer = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                 .offset(top as isize)
                 as StackValuePointer;
             (*call_info).call_status = ((*call_info).call_status as i32 & !mask) as u16;
@@ -794,7 +794,7 @@ pub unsafe extern "C" fn rethook(
                         .payload
                         .l_prototype)
                         .prototype_code
-                        .pointer,
+                        .vectort_pointer,
                 ) as i32
                 - 1;
         }
@@ -812,14 +812,14 @@ pub unsafe extern "C" fn tryfunctm(
             != 0) as i32 as i64
             != 0
         {
-            let t__: i64 = (function as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            let t__: i64 = (function as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
             if (*(*interpreter).global).gc_debt > 0 {
                 luac_step(interpreter);
             }
             luad_growstack(interpreter, 1, true);
-            function = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(t__ as isize)
+            function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
                 as StackValuePointer;
         }
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*function).tvalue, TM_CALL);
@@ -876,11 +876,11 @@ pub unsafe extern "C" fn moveresults(
                     (*(*interpreter).call_info).call_status =
                         ((*(*interpreter).call_info).call_status as i32 & !(1 << 9 as i32)) as u16;
                     if (*interpreter).hook_mask != 0 {
-                        let savedres: i64 = (res as *mut libc::c_char)
-                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        let savedres: i64 = (res as *mut i8)
+                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                             as i64;
                         rethook(interpreter, (*interpreter).call_info, nres);
-                        res = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        res = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                             .offset(savedres as isize)
                             as StackValuePointer;
                     }
@@ -961,14 +961,14 @@ pub unsafe extern "C" fn precallc(
             != 0) as i64
             != 0
         {
-            let t__: i64 = (function as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            let t__: i64 = (function as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
             if (*(*interpreter).global).gc_debt > 0 {
                 luac_step(interpreter);
             }
             luad_growstack(interpreter, 20 as i32, true);
-            function = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(t__ as isize)
+            function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
                 as StackValuePointer;
         }
         let call_info = prepcallinfo(
@@ -1025,14 +1025,14 @@ pub unsafe extern "C" fn luad_pretailcall(
                         != 0) as i64
                         != 0
                     {
-                        let t__: i64 = (function as *mut libc::c_char)
-                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        let t__: i64 = (function as *mut i8)
+                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                             as i64;
                         if (*(*interpreter).global).gc_debt > 0 {
                             luac_step(interpreter);
                         }
                         luad_growstack(interpreter, fsize - delta, true);
-                        function = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        function = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                             .offset(t__ as isize)
                             as StackValuePointer;
                     }
@@ -1054,7 +1054,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                     }
                     (*call_info).top.stkidrel_pointer =
                         function.offset(1 as isize).offset(fsize as isize);
-                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.pointer;
+                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.vectort_pointer;
                     (*call_info).call_status = ((*call_info).call_status as i32 | 1 << 5) as u16;
                     (*interpreter).top.stkidrel_pointer = function.offset(narg1 as isize);
                     return -1;
@@ -1111,14 +1111,14 @@ pub unsafe extern "C" fn luad_precall(
                         != 0) as i64
                         != 0
                     {
-                        let t__: i64 = (function as *mut libc::c_char)
-                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        let t__: i64 = (function as *mut i8)
+                            .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                             as i64;
                         if (*(*interpreter).global).gc_debt > 0 {
                             luac_step(interpreter);
                         }
                         luad_growstack(interpreter, fsize, true);
-                        function = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                        function = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                             .offset(t__ as isize)
                             as StackValuePointer;
                     }
@@ -1130,7 +1130,7 @@ pub unsafe extern "C" fn luad_precall(
                         function.offset(1 as isize).offset(fsize as isize),
                     );
                     (*interpreter).call_info = call_info;
-                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.pointer;
+                    (*call_info).u.l.saved_program_counter = (*p).prototype_code.vectort_pointer;
                     while narg < nfixparams {
                         let fresh1 = (*interpreter).top.stkidrel_pointer;
                         (*interpreter).top.stkidrel_pointer =
@@ -1166,11 +1166,11 @@ pub unsafe extern "C" fn ccall(
                 != 0) as i64
                 != 0
             {
-                let t__: i64 = (function as *mut libc::c_char)
-                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                let t__: i64 = (function as *mut i8)
+                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                     as i64;
                 luad_growstack(interpreter, 0, true);
-                function = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(t__ as isize)
+                function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
                     as StackValuePointer;
             }
             (*interpreter).luae_checkcstack();
@@ -1207,7 +1207,7 @@ pub unsafe extern "C" fn finishpcallk(
         if status == 0 {
             status = 1;
         } else {
-            let mut function: StackValuePointer = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            let mut function: StackValuePointer = ((*interpreter).stack.stkidrel_pointer as *mut i8)
                 .offset((*call_info).u2.funcidx as isize)
                 as StackValuePointer;
             (*interpreter).allow_hook = ((*call_info).call_status as i32 & 1 << 0) as u8;
@@ -1266,7 +1266,7 @@ pub unsafe extern "C" fn unroll(interpreter: *mut Interpreter, mut _ud: *mut lib
 }
 pub unsafe extern "C" fn resume_error(
     interpreter: *mut Interpreter,
-    message: *const libc::c_char,
+    message: *const i8,
     narg: i32,
 ) -> i32 {
     unsafe {
@@ -1343,7 +1343,7 @@ pub unsafe extern "C" fn lua_resume(
             if (*interpreter).call_info != &mut (*interpreter).base_callinfo as *mut CallInfo {
                 return resume_error(
                     interpreter,
-                    b"cannot resume non-suspended coroutine\0" as *const u8 as *const libc::c_char,
+                    b"cannot resume non-suspended coroutine\0" as *const u8 as *const i8,
                     nargs,
                 );
             } else if ((*interpreter).top.stkidrel_pointer).offset_from(
@@ -1353,14 +1353,14 @@ pub unsafe extern "C" fn lua_resume(
             {
                 return resume_error(
                     interpreter,
-                    b"cannot resume dead coroutine\0" as *const u8 as *const libc::c_char,
+                    b"cannot resume dead coroutine\0" as *const u8 as *const i8,
                     nargs,
                 );
             }
         } else if (*interpreter).status as i32 != 1 {
             return resume_error(
                 interpreter,
-                b"cannot resume dead coroutine\0" as *const u8 as *const libc::c_char,
+                b"cannot resume dead coroutine\0" as *const u8 as *const i8,
                 nargs,
             );
         }
@@ -1372,7 +1372,7 @@ pub unsafe extern "C" fn lua_resume(
         if (*interpreter).count_c_calls & 0xffff as u32 >= 200 as u32 {
             return resume_error(
                 interpreter,
-                b"C stack overflow\0" as *const u8 as *const libc::c_char,
+                b"C stack overflow\0" as *const u8 as *const i8,
                 nargs,
             );
         }
@@ -1412,12 +1412,12 @@ pub unsafe extern "C" fn lua_yieldk(
             if interpreter != (*(*interpreter).global).main_state {
                 luag_runerror(
                     interpreter,
-                    b"attempt to yield across a C-call boundary\0" as *const u8 as *const libc::c_char,
+                    b"attempt to yield across a C-call boundary\0" as *const u8 as *const i8,
                 );
             } else {
                 luag_runerror(
                     interpreter,
-                    b"attempt to yield from outside a coroutine\0" as *const u8 as *const libc::c_char,
+                    b"attempt to yield from outside a coroutine\0" as *const u8 as *const i8,
                 );
             }
         }
@@ -1453,7 +1453,7 @@ pub unsafe extern "C" fn luad_closeprotected(
         let old_allowhooks: u8 = (*interpreter).allow_hook;
         loop {
             let mut closep = CloseP::new();
-            closep.level = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(level as isize)
+            closep.level = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(level as isize)
                 as StackValuePointer;
             closep.status = status;
             status = luad_rawrunprotected(
@@ -1490,7 +1490,7 @@ pub unsafe extern "C" fn luad_pcall(
             status = luad_closeprotected(interpreter, old_top, status);
             (*interpreter).set_error_object(
                 status,
-                ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(old_top as isize)
+                ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(old_top as isize)
                     as StackValuePointer,
             );
             (*interpreter).luad_shrinkstack();
@@ -1499,12 +1499,12 @@ pub unsafe extern "C" fn luad_pcall(
         return status;
     }
 }
-pub unsafe extern "C" fn checkmode(interpreter: *mut Interpreter, mode: *const libc::c_char, x: *const libc::c_char) {
+pub unsafe extern "C" fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *const i8) {
     unsafe {
         if !mode.is_null() && (strchr(mode, *x.offset(0) as i32)).is_null() {
             luao_pushfstring(
                 interpreter,
-                b"attempt to load a %s chunk (mode is '%s')\0" as *const u8 as *const libc::c_char,
+                b"attempt to load a %s chunk (mode is '%s')\0" as *const u8 as *const i8,
                 x,
                 mode,
             );
@@ -1528,15 +1528,15 @@ pub unsafe extern "C" fn f_parser(
         } else {
             luaz_fill((*p).zio)
         };
-        if c == (*::core::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"\x1BLua\0"))[0] as i32 {
+        if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             checkmode(
                 interpreter,
                 (*p).mode,
-                b"binary\0" as *const u8 as *const libc::c_char,
+                b"binary\0" as *const u8 as *const i8,
             );
             cl = load_closure(interpreter, (*p).zio, (*p).name);
         } else {
-            checkmode(interpreter, (*p).mode, b"text\0" as *const u8 as *const libc::c_char);
+            checkmode(interpreter, (*p).mode, b"text\0" as *const u8 as *const i8);
             cl = luay_parser(
                 interpreter,
                 (*p).zio,
@@ -1552,29 +1552,17 @@ pub unsafe extern "C" fn f_parser(
 pub unsafe extern "C" fn luad_protectedparser(
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
-    name: *const libc::c_char,
-    mode: *const libc::c_char,
+    name: *const i8,
+    mode: *const i8,
 ) -> i32 {
     unsafe {
         let mut p: SParser = SParser {
             zio: null_mut(),
             buffer: Buffer::new(),
             dynamic_data: DynamicData {
-                active_variable: VectorT::<VariableDescription> {
-                    pointer: null_mut(),
-                    length: 0,
-                    size: 0,
-                },
-                gt: VectorT::<LabelDescription> {
-                    pointer: null_mut(),
-                    length: 0,
-                    size: 0,
-                },
-                label: VectorT::<LabelDescription> {
-                    pointer: null_mut(),
-                    length: 0,
-                    size: 0,
-                },
+                active_variable: VectorT::<VariableDescription>::new(),
+                gt: VectorT::<LabelDescription>::new (),
+                label: VectorT::<LabelDescription>::new (),
             },
             mode: null(),
             name: null(),
@@ -1584,45 +1572,35 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.zio = zio;
         p.name = name;
         p.mode = mode;
-        p.dynamic_data.active_variable.pointer = null_mut();
-        p.dynamic_data.active_variable.size = 0;
-        p.dynamic_data.gt.pointer = null_mut();
-        p.dynamic_data.gt.size = 0;
-        p.dynamic_data.label.pointer = null_mut();
-        p.dynamic_data.label.size = 0;
-        p.buffer.vector.pointer = null_mut();
-        p.buffer.vector.size = 0;
+        p.dynamic_data.active_variable.initialize();
+        p.dynamic_data.gt.initialize();
+        p.dynamic_data.label.initialize();
+        p.buffer.vector.initialize();
         let status = luad_pcall(
             interpreter,
             Some(f_parser as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
             &mut p as *mut SParser as *mut libc::c_void,
-            ((*interpreter).top.stkidrel_pointer as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char) as i64,
+            ((*interpreter).top.stkidrel_pointer as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
             (*interpreter).error_function,
         );
-        p.buffer.vector.pointer = luam_saferealloc_(
-            interpreter,
-            p.buffer.vector.pointer as *mut libc::c_void,
-            (p.buffer.vector.size as usize).wrapping_mul(::core::mem::size_of::<libc::c_char>()),
-            0,
-        ) as *mut libc::c_char;
-        p.buffer.vector.size = 0;
+        p.buffer.vector.destroy(interpreter);
         (*interpreter).free_memory(
-            p.dynamic_data.active_variable.pointer as *mut libc::c_void,
-            (p.dynamic_data.active_variable.size as usize)
-                .wrapping_mul(::core::mem::size_of::<VariableDescription>() as usize)
+            p.dynamic_data.active_variable.vectort_pointer as *mut libc::c_void,
+            (p.dynamic_data.active_variable.vectort_size as usize)
+                .wrapping_mul(size_of::<VariableDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
-            p.dynamic_data.gt.pointer as *mut libc::c_void,
-            (p.dynamic_data.gt.size as usize)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as usize)
+            p.dynamic_data.gt.vectort_pointer as *mut libc::c_void,
+            (p.dynamic_data.gt.vectort_size as usize)
+                .wrapping_mul(size_of::<LabelDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
-            p.dynamic_data.label.pointer as *mut libc::c_void,
-            (p.dynamic_data.label.size as usize)
-                .wrapping_mul(::core::mem::size_of::<LabelDescription>() as usize)
+            p.dynamic_data.label.vectort_pointer as *mut libc::c_void,
+            (p.dynamic_data.label.vectort_size as usize)
+                .wrapping_mul(size_of::<LabelDescription>() as usize)
                 as usize,
         );
         (*interpreter).count_c_calls =
@@ -1831,21 +1809,21 @@ pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagT
         };
     }
 }
-pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> *const libc::c_char {
+pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> *const i8 {
     match t {
-        None => b"no value\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Nil) => b"nil\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Boolean) => b"boolean\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Pointer) => b"userdata\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Numeric) => b"number\0" as *const u8 as *const libc::c_char,
-        Some(TagType::String) => b"string\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Table) => b"table\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Closure) => b"function\0" as *const u8 as *const libc::c_char,
-        Some(TagType::User) => b"userdata\0" as *const u8 as *const libc::c_char,
-        Some(TagType::State) => b"thread\0" as *const u8 as *const libc::c_char,
-        Some(TagType::UpValue) => b"upvalue\0" as *const u8 as *const libc::c_char,
-        Some(TagType::Prototype) => b"proto\0" as *const u8 as *const libc::c_char,
-        _ => b"unknown\0" as *const u8 as *const libc::c_char,
+        None => b"no value\0" as *const u8 as *const i8,
+        Some(TagType::Nil) => b"nil\0" as *const u8 as *const i8,
+        Some(TagType::Boolean) => b"boolean\0" as *const u8 as *const i8,
+        Some(TagType::Pointer) => b"userdata\0" as *const u8 as *const i8,
+        Some(TagType::Numeric) => b"number\0" as *const u8 as *const i8,
+        Some(TagType::String) => b"string\0" as *const u8 as *const i8,
+        Some(TagType::Table) => b"table\0" as *const u8 as *const i8,
+        Some(TagType::Closure) => b"function\0" as *const u8 as *const i8,
+        Some(TagType::User) => b"userdata\0" as *const u8 as *const i8,
+        Some(TagType::State) => b"thread\0" as *const u8 as *const i8,
+        Some(TagType::UpValue) => b"upvalue\0" as *const u8 as *const i8,
+        Some(TagType::Prototype) => b"proto\0" as *const u8 as *const i8,
+        _ => b"unknown\0" as *const u8 as *const i8,
     }
 }
 pub unsafe extern "C" fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
@@ -1966,7 +1944,7 @@ pub unsafe extern "C" fn lua_compare(
         return i;
     }
 }
-pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const libc::c_char) -> usize {
+pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) -> usize {
     unsafe {
         let size: usize = luao_str2num(s, &mut (*(*interpreter).top.stkidrel_pointer).tvalue);
         if size != 0 {
@@ -2027,7 +2005,7 @@ pub unsafe extern "C" fn lua_tolstring(
     interpreter: *mut Interpreter,
     index: i32,
     length: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut o: *mut TValue = (*interpreter).index2value(index);
         if !((*o).is_tagtype_string()) {
@@ -2088,12 +2066,12 @@ pub unsafe extern "C" fn lua_tothread(
 }
 pub unsafe extern "C" fn lua_pushlstring(
     interpreter: *mut Interpreter,
-    s: *const libc::c_char,
+    s: *const i8,
     length: usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let ts: *mut TString = if length == 0 {
-            luas_new(interpreter, b"\0" as *const u8 as *const libc::c_char)
+            luas_new(interpreter, b"\0" as *const u8 as *const i8)
         } else {
             luas_newlstr(interpreter, s, length as usize)
         };
@@ -2110,8 +2088,8 @@ pub unsafe extern "C" fn lua_pushlstring(
 }
 pub unsafe extern "C" fn lua_pushstring(
     interpreter: *mut Interpreter,
-    mut s: *const libc::c_char,
-) -> *const libc::c_char {
+    mut s: *const i8,
+) -> *const i8 {
     unsafe {
         if s.is_null() {
             (*(*interpreter).top.stkidrel_pointer)
@@ -2134,11 +2112,11 @@ pub unsafe extern "C" fn lua_pushstring(
 }
 pub unsafe extern "C" fn lua_pushvfstring(
     interpreter: *mut Interpreter,
-    fmt: *const libc::c_char,
+    fmt: *const i8,
     mut argp: ::core::ffi::VaList,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
-        let ret: *const libc::c_char = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
         }
@@ -2147,13 +2125,13 @@ pub unsafe extern "C" fn lua_pushvfstring(
 }
 pub unsafe extern "C" fn lua_pushfstring(
     interpreter: *mut Interpreter,
-    fmt: *const libc::c_char,
+    fmt: *const i8,
     args: ...
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut argp: ::core::ffi::VaListImpl;
         argp = args.clone();
-        let ret: *const libc::c_char = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
         }
@@ -2214,7 +2192,7 @@ pub unsafe extern "C" fn lua_pushlightuserdata(
 pub unsafe extern "C" fn auxgetstr(
     interpreter: *mut Interpreter,
     t: *const TValue,
-    k: *const libc::c_char,
+    k: *const i8,
 ) -> TagType {
     unsafe {
         let slot: *const TValue;
@@ -2250,7 +2228,7 @@ pub unsafe extern "C" fn auxgetstr(
             .get_tag_type();
     }
 }
-pub unsafe extern "C" fn lua_getglobal(interpreter: *mut Interpreter, name: *const libc::c_char) -> TagType {
+pub unsafe extern "C" fn lua_getglobal(interpreter: *mut Interpreter, name: *const i8) -> TagType {
     unsafe {
         let global_table: *const TValue =
             &mut *((*((*(*interpreter).global).l_registry.value.object as *mut Table)).array)
@@ -2293,10 +2271,10 @@ pub unsafe extern "C" fn lua_gettable(interpreter: *mut Interpreter, index: i32)
 }
 pub unsafe extern "C" fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut name: *const libc::c_char = b"=LUA_INIT_5_4\0" as *const u8 as *const libc::c_char;
-        let mut init: *const libc::c_char = getenv(name.offset(1 as isize));
+        let mut name: *const i8 = b"=LUA_INIT_5_4\0" as *const u8 as *const i8;
+        let mut init: *const i8 = getenv(name.offset(1 as isize));
         if init.is_null() {
-            name = b"=LUA_INIT\0" as *const u8 as *const libc::c_char;
+            name = b"=LUA_INIT\0" as *const u8 as *const i8;
             init = getenv(name.offset(1 as isize));
         }
         if init.is_null() {
@@ -2311,7 +2289,7 @@ pub unsafe extern "C" fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn lua_getfield(
     interpreter: *mut Interpreter,
     index: i32,
-    k: *const libc::c_char,
+    k: *const i8,
 ) -> TagType {
     unsafe {
         return auxgetstr(interpreter, (*interpreter).index2value(index), k);
@@ -2402,7 +2380,7 @@ pub unsafe extern "C" fn lua_rawgeti(interpreter: *mut Interpreter, index: i32, 
         return finishrawget(interpreter, luah_getint(table, n));
     }
 }
-pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *const libc::c_char) {
+pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *const i8) {
     unsafe {
         let slot: *const TValue;
         let str: *mut TString = luas_new(interpreter, k);
@@ -2455,7 +2433,7 @@ pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TVal
         };
     }
 }
-pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *const libc::c_char) {
+pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
         let global_table: *const TValue =
             &mut *((*((*(*interpreter).global).l_registry.value.object as *mut Table)).array)
@@ -2463,7 +2441,7 @@ pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *con
         auxsetstr(interpreter, global_table, name);
     }
 }
-pub unsafe extern "C" fn lua_setfield(interpreter: *mut Interpreter, index: i32, k: *const libc::c_char) {
+pub unsafe extern "C" fn lua_setfield(interpreter: *mut Interpreter, index: i32, k: *const i8) {
     unsafe {
         auxsetstr(interpreter, (*interpreter).index2value(index), k);
     }
@@ -2755,7 +2733,7 @@ pub unsafe extern "C" fn lua_pcallk(
         } else {
             let o: StackValuePointer = index2stack(interpreter, error_function);
             function =
-                (o as *mut libc::c_char).offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char) as i64;
+                (o as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
         }
         calls.function = (*interpreter)
             .top
@@ -2767,8 +2745,8 @@ pub unsafe extern "C" fn lua_pcallk(
                 interpreter,
                 Some(f_call as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 &mut calls as *mut CallS as *mut libc::c_void,
-                (calls.function as *mut libc::c_char)
-                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                (calls.function as *mut i8)
+                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                     as i64,
                 function,
             );
@@ -2776,8 +2754,8 @@ pub unsafe extern "C" fn lua_pcallk(
             let call_info: *mut CallInfo = (*interpreter).call_info;
             (*call_info).u.c.context_function = k;
             (*call_info).u.c.context = ctx;
-            (*call_info).u2.funcidx = (calls.function as *mut libc::c_char)
-                .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+            (*call_info).u2.funcidx = (calls.function as *mut i8)
+                .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i32;
             (*call_info).u.c.old_error_function = (*interpreter).error_function;
             (*interpreter).error_function = function;
@@ -2802,13 +2780,13 @@ pub unsafe extern "C" fn lua_load(
     interpreter: *mut Interpreter,
     reader: ReadFunction,
     data: *mut libc::c_void,
-    mut chunkname: *const libc::c_char,
-    mode: *const libc::c_char,
+    mut chunkname: *const i8,
+    mode: *const i8,
 ) -> i32 {
     unsafe {
         let mut zio: ZIO = ZIO::new(interpreter, reader, data);
         if chunkname.is_null() {
-            chunkname = b"?\0" as *const u8 as *const libc::c_char;
+            chunkname = b"?\0" as *const u8 as *const i8;
         }
         let status: i32 = luad_protectedparser(interpreter, &mut zio, chunkname, mode);
         if status == 0 {
@@ -3031,7 +3009,7 @@ pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
             concatenate(interpreter, n);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
-            let ts: *mut TString = luas_newlstr(interpreter, b"\0" as *const u8 as *const libc::c_char, 0);
+            let ts: *mut TString = luas_newlstr(interpreter, b"\0" as *const u8 as *const i8, 0);
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag_variant((*ts).get_tag_variant());
             (*io).set_collectable(true);
@@ -3061,7 +3039,7 @@ pub unsafe extern "C" fn lua_setwarnf(
 }
 pub unsafe extern "C" fn lua_warning(
     interpreter: *mut Interpreter,
-    message: *const libc::c_char,
+    message: *const i8,
     tocont: i32,
 ) {
     unsafe {
@@ -3072,10 +3050,10 @@ pub unsafe extern "C" fn lua_getupvalue(
     interpreter: *mut Interpreter,
     funcindex: i32,
     n: i32,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
-        let name: *const libc::c_char = aux_upvalue(
+        let name: *const i8 = aux_upvalue(
             (*interpreter).index2value(funcindex),
             n,
             &mut value,
@@ -3094,12 +3072,12 @@ pub unsafe extern "C" fn lua_setupvalue(
     interpreter: *mut Interpreter,
     funcindex: i32,
     n: i32,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
         let mut owner: *mut Object = null_mut();
         let fi: *mut TValue = (*interpreter).index2value(funcindex);
-        let name: *const libc::c_char = aux_upvalue(fi, n, &mut value, &mut owner);
+        let name: *const i8 = aux_upvalue(fi, n, &mut value, &mut owner);
         if !name.is_null() {
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
             let io1: *mut TValue = value;
@@ -3135,7 +3113,7 @@ pub unsafe extern "C" fn getupvalref(
         if !pf.is_null() {
             *pf = closure;
         }
-        if 1 <= n && n <= (*(*closure).payload.l_prototype).prototype_upvalues.size {
+        if 1 <= n && n <= (*(*closure).payload.l_prototype).prototype_upvalues.get_size() {
             return &mut *((*closure).upvalues)
                 .l_upvalues
                 .as_mut_ptr()
@@ -3197,23 +3175,23 @@ pub unsafe extern "C" fn lua_upvaluejoin(
 }
 pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
     unsafe {
-        let mut buffer: [libc::c_char; 24] = [0; 24];
+        let mut buffer: [i8; 24] = [0; 24];
         let mut h: u32 = time(null_mut()) as u32;
         let mut p: i32 = 0;
         let mut t: usize = interpreter as usize;
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t as *mut usize as *const libc::c_void,
-            ::core::mem::size_of::<usize>(),
+            size_of::<usize>(),
         );
-        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        p = (p as usize).wrapping_add(size_of::<usize>() as usize) as i32;
         let mut t_0: usize = &mut h as *mut u32 as usize;
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_0 as *mut usize as *const libc::c_void,
-            ::core::mem::size_of::<usize>(),
+            size_of::<usize>(),
         );
-        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        p = (p as usize).wrapping_add(size_of::<usize>() as usize) as i32;
         let mut t_1: usize =
             ::core::mem::transmute::<Option<unsafe fn(interpreter: *mut Interpreter) -> u32>, usize>(
                 Some(luai_makeseed as unsafe fn(interpreter: *mut Interpreter) -> u32),
@@ -3221,15 +3199,15 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_1 as *mut usize as *const libc::c_void,
-            ::core::mem::size_of::<usize>(),
+            size_of::<usize>(),
         );
-        p = (p as usize).wrapping_add(::core::mem::size_of::<usize>() as usize) as i32;
+        p = (p as usize).wrapping_add(size_of::<usize>() as usize) as i32;
         return luas_hash(buffer.as_mut_ptr(), p as usize, h);
     }
 }
 pub unsafe extern "C" fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
     unsafe {
-        let ret = luam_malloc_(interpreter, ::core::mem::size_of::<CallInfo>()) as *mut CallInfo;
+        let ret = luam_malloc_(interpreter, size_of::<CallInfo>()) as *mut CallInfo;
         (*(*interpreter).call_info).next = ret;
         (*ret).previous = (*interpreter).call_info;
         (*ret).next = null_mut();
@@ -3252,7 +3230,7 @@ pub unsafe extern "C" fn freeci(interpreter: *mut Interpreter) {
             next = (*call_info).next;
             (*interpreter).free_memory(
                 call_info as *mut libc::c_void,
-                ::core::mem::size_of::<CallInfo>(),
+                size_of::<CallInfo>(),
             );
             (*interpreter).count_call_info = ((*interpreter).count_call_info).wrapping_sub(1);
             (*interpreter).count_call_info;
@@ -3275,7 +3253,7 @@ pub unsafe extern "C" fn luae_shrinkci(interpreter: *mut Interpreter) {
                 (*interpreter).count_call_info;
                 (*interpreter).free_memory(
                     next as *mut libc::c_void,
-                    ::core::mem::size_of::<CallInfo>(),
+                    size_of::<CallInfo>(),
                 );
                 if next2.is_null() {
                     break;
@@ -3290,7 +3268,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut Interpreter, interpreter: 
     unsafe {
         (*other_state).stack.stkidrel_pointer = luam_malloc_(
             interpreter,
-            ((2 * 20 as i32 + 5) as usize).wrapping_mul(::core::mem::size_of::<StackValue>()),
+            ((2 * 20 as i32 + 5) as usize).wrapping_mul(size_of::<StackValue>()),
         ) as *mut StackValue;
         (*other_state).tbc_list.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         for i in 0..2 * 20 as i32 + 5 {
@@ -3330,7 +3308,7 @@ pub unsafe extern "C" fn freestack(interpreter: *mut Interpreter) {
             ((((*interpreter).stack_last.stkidrel_pointer)
                 .offset_from((*interpreter).stack.stkidrel_pointer) as i32
                 + 5) as usize)
-                .wrapping_mul(::core::mem::size_of::<StackValue>() as usize) as usize,
+                .wrapping_mul(size_of::<StackValue>() as usize) as usize,
         );
     }
 }
@@ -3405,17 +3383,17 @@ pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
         (*interpreter).free_memory(
             (*(*interpreter).global).string_table.hash as *mut libc::c_void,
             ((*(*interpreter).global).string_table.size as usize)
-                .wrapping_mul(::core::mem::size_of::<*mut TString>() as usize) as usize,
+                .wrapping_mul(size_of::<*mut TString>() as usize) as usize,
         );
         freestack(interpreter);
         raw_allocate(
             interpreter as *mut u8 as *mut libc::c_void,
-            ::core::mem::size_of::<Interpreter>(),
+            size_of::<Interpreter>(),
             0,
         );
         raw_allocate(
             global as *mut u8 as *mut libc::c_void,
-            ::core::mem::size_of::<Global>(),
+            size_of::<Global>(),
             0,
         );
     }
@@ -3429,7 +3407,7 @@ pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut In
         let ret = luac_newobj(
             interpreter,
             TAG_VARIANT_STATE,
-            ::core::mem::size_of::<Interpreter>(),
+            size_of::<Interpreter>(),
         ) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).set_tag_variant(TAG_VARIANT_STATE);
@@ -3502,7 +3480,7 @@ pub unsafe extern "C" fn lua_close(mut interpreter: *mut Interpreter) {
 }
 pub unsafe extern "C" fn luae_warning(
     interpreter: *mut Interpreter,
-    message: *const libc::c_char,
+    message: *const i8,
     tocont: i32,
 ) {
     unsafe {
@@ -3516,20 +3494,20 @@ pub unsafe extern "C" fn luae_warning(
         }
     }
 }
-pub unsafe extern "C" fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const libc::c_char) {
+pub unsafe extern "C" fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue =
             &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
-        let message: *const libc::c_char = if (*errobj).is_tagtype_string() {
-            ((*((*errobj).value.object as *mut TString)).get_contents_mut()) as *const libc::c_char
+        let message: *const i8 = if (*errobj).is_tagtype_string() {
+            ((*((*errobj).value.object as *mut TString)).get_contents_mut()) as *const i8
         } else {
-            b"error object is not a string\0" as *const u8 as *const libc::c_char
+            b"error object is not a string\0" as *const u8 as *const i8
         };
-        luae_warning(interpreter, b"error in \0" as *const u8 as *const libc::c_char, 1);
+        luae_warning(interpreter, b"error in \0" as *const u8 as *const i8, 1);
         luae_warning(interpreter, where_0, 1);
-        luae_warning(interpreter, b" (\0" as *const u8 as *const libc::c_char, 1);
+        luae_warning(interpreter, b" (\0" as *const u8 as *const i8, 1);
         luae_warning(interpreter, message, 1);
-        luae_warning(interpreter, b")\0" as *const u8 as *const libc::c_char, 0);
+        luae_warning(interpreter, b")\0" as *const u8 as *const i8, 0);
     }
 }
 pub unsafe extern "C" fn lua_sethook(
@@ -3594,27 +3572,27 @@ pub unsafe extern "C" fn lua_getstack(
 }
 pub unsafe extern "C" fn formatvarinfo(
     interpreter: *mut Interpreter,
-    kind: *const libc::c_char,
-    name: *const libc::c_char,
-) -> *const libc::c_char {
+    kind: *const i8,
+    name: *const i8,
+) -> *const i8 {
     unsafe {
         if kind.is_null() {
-            return b"\0" as *const u8 as *const libc::c_char;
+            return b"\0" as *const u8 as *const i8;
         } else {
             return luao_pushfstring(
                 interpreter,
-                b" (%s '%s')\0" as *const u8 as *const libc::c_char,
+                b" (%s '%s')\0" as *const u8 as *const i8,
                 kind,
                 name,
             );
         };
     }
 }
-pub unsafe extern "C" fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const libc::c_char {
+pub unsafe extern "C" fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
-        let mut name: *const libc::c_char = null();
-        let mut kind: *const libc::c_char = null();
+        let mut name: *const i8 = null();
+        let mut kind: *const i8 = null();
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             kind = getupvalname(call_info, o, &mut name);
             if kind.is_null() {
@@ -3640,14 +3618,14 @@ pub unsafe extern "C" fn varinfo(interpreter: *mut Interpreter, o: *const TValue
 pub unsafe extern "C" fn typeerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
-    op: *const libc::c_char,
-    extra: *const libc::c_char,
+    op: *const i8,
+    extra: *const i8,
 ) -> ! {
     unsafe {
-        let t: *const libc::c_char = luat_objtypename(interpreter, o);
+        let t: *const i8 = luat_objtypename(interpreter, o);
         luag_runerror(
             interpreter,
-            b"attempt to %s a %s value%s\0" as *const u8 as *const libc::c_char,
+            b"attempt to %s a %s value%s\0" as *const u8 as *const i8,
             op,
             t,
             extra,
@@ -3657,7 +3635,7 @@ pub unsafe extern "C" fn typeerror(
 pub unsafe extern "C" fn luag_typeerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
-    op: *const libc::c_char,
+    op: *const i8,
 ) -> ! {
     unsafe {
         typeerror(interpreter, o, op, varinfo(interpreter, o));
@@ -3666,25 +3644,25 @@ pub unsafe extern "C" fn luag_typeerror(
 pub unsafe extern "C" fn luag_callerror(interpreter: *mut Interpreter, o: *const TValue) -> ! {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
-        let mut name: *const libc::c_char = null();
-        let kind: *const libc::c_char = funcnamefromcall(interpreter, call_info, &mut name);
-        let extra: *const libc::c_char = if !kind.is_null() {
+        let mut name: *const i8 = null();
+        let kind: *const i8 = funcnamefromcall(interpreter, call_info, &mut name);
+        let extra: *const i8 = if !kind.is_null() {
             formatvarinfo(interpreter, kind, name)
         } else {
             varinfo(interpreter, o)
         };
-        typeerror(interpreter, o, b"call\0" as *const u8 as *const libc::c_char, extra);
+        typeerror(interpreter, o, b"call\0" as *const u8 as *const i8, extra);
     }
 }
 pub unsafe extern "C" fn luag_forerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
-    what: *const libc::c_char,
+    what: *const i8,
 ) -> ! {
     unsafe {
         luag_runerror(
             interpreter,
-            b"bad 'for' %s (number expected, got %s)\0" as *const u8 as *const libc::c_char,
+            b"bad 'for' %s (number expected, got %s)\0" as *const u8 as *const i8,
             what,
             luat_objtypename(interpreter, o),
         );
@@ -3702,14 +3680,14 @@ pub unsafe extern "C" fn luag_concaterror(
             }
             _ => {}
         }
-        luag_typeerror(interpreter, p1, b"concatenate\0" as *const u8 as *const libc::c_char);
+        luag_typeerror(interpreter, p1, b"concatenate\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn luag_opinterror(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     mut p2: *const TValue,
-    message: *const libc::c_char,
+    message: *const i8,
 ) -> ! {
     unsafe {
         if !(*p1).is_tagtype_numeric() {
@@ -3730,7 +3708,7 @@ pub unsafe extern "C" fn luag_tointerror(
         }
         luag_runerror(
             interpreter,
-            b"number%s has no integer representation\0" as *const u8 as *const libc::c_char,
+            b"number%s has no integer representation\0" as *const u8 as *const i8,
             varinfo(interpreter, p2),
         );
     }
@@ -3741,18 +3719,18 @@ pub unsafe extern "C" fn luag_ordererror(
     p2: *const TValue,
 ) -> ! {
     unsafe {
-        let t1: *const libc::c_char = luat_objtypename(interpreter, p1);
-        let t2: *const libc::c_char = luat_objtypename(interpreter, p2);
+        let t1: *const i8 = luat_objtypename(interpreter, p1);
+        let t2: *const i8 = luat_objtypename(interpreter, p2);
         if strcmp(t1, t2) == 0 {
             luag_runerror(
                 interpreter,
-                b"attempt to compare two %s values\0" as *const u8 as *const libc::c_char,
+                b"attempt to compare two %s values\0" as *const u8 as *const i8,
                 t1,
             );
         } else {
             luag_runerror(
                 interpreter,
-                b"attempt to compare %s with %s\0" as *const u8 as *const libc::c_char,
+                b"attempt to compare %s with %s\0" as *const u8 as *const i8,
                 t1,
                 t2,
             );
@@ -3761,12 +3739,12 @@ pub unsafe extern "C" fn luag_ordererror(
 }
 pub unsafe extern "C" fn luag_addinfo(
     interpreter: *mut Interpreter,
-    message: *const libc::c_char,
+    message: *const i8,
     src: *mut TString,
     line: i32,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
-        let mut buffer: [libc::c_char; 60] = [0; 60];
+        let mut buffer: [i8; 60] = [0; 60];
         if !src.is_null() {
             luao_chunkid(
                 buffer.as_mut_ptr(),
@@ -3774,12 +3752,12 @@ pub unsafe extern "C" fn luag_addinfo(
                 (*src).get_length() as usize,
             );
         } else {
-            buffer[0] = CHARACTER_QUESTION as libc::c_char;
-            buffer[1] = Character::Null as libc::c_char;
+            buffer[0] = CHARACTER_QUESTION as i8;
+            buffer[1] = Character::Null as i8;
         }
         return luao_pushfstring(
             interpreter,
-            b"%s:%d: %s\0" as *const u8 as *const libc::c_char,
+            b"%s:%d: %s\0" as *const u8 as *const i8,
             buffer.as_mut_ptr(),
             line,
             message,
@@ -3790,7 +3768,7 @@ pub unsafe extern "C" fn luag_errormsg(interpreter: *mut Interpreter) -> ! {
     unsafe {
         if (*interpreter).error_function != 0 {
             let error_function: StackValuePointer = ((*interpreter).stack.stkidrel_pointer
-                as *mut libc::c_char)
+                as *mut i8)
                 .offset((*interpreter).error_function as isize)
                 as StackValuePointer;
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -3813,12 +3791,12 @@ pub unsafe extern "C" fn luag_errormsg(interpreter: *mut Interpreter) -> ! {
 }
 pub unsafe extern "C" fn luag_runerror(
     interpreter: *mut Interpreter,
-    fmt: *const libc::c_char,
+    fmt: *const i8,
     args: ...
 ) -> ! {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
-        let message: *const libc::c_char;
+        let message: *const i8;
         let mut argp: ::core::ffi::VaListImpl;
         if (*(*interpreter).global).gc_debt > 0 {
             luac_step(interpreter);
@@ -3858,7 +3836,7 @@ pub unsafe extern "C" fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
             .payload
             .l_prototype;
         ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
-        if (*call_info).u.l.saved_program_counter == (*p).prototype_code.pointer as *const u32 {
+        if (*call_info).u.l.saved_program_counter == (*p).prototype_code.vectort_pointer as *const u32 {
             if (*p).prototype_is_variable_arguments {
                 return 0;
             } else if (*call_info).call_status as i32 & 1 << 6 == 0 {
@@ -3915,12 +3893,12 @@ pub unsafe extern "C" fn luag_traceexec(
         }
         if mask as i32 & 1 << 2 != 0 {
             let old_program_counter: i32 =
-                if (*interpreter).old_program_counter < (*p).prototype_code.size {
+                if (*interpreter).old_program_counter < (*p).prototype_code.get_size() {
                     (*interpreter).old_program_counter
                 } else {
                     0
                 };
-            let npci: i32 = program_counter.offset_from((*p).prototype_code.pointer) as i32 - 1;
+            let npci: i32 = program_counter.offset_from((*p).prototype_code.vectort_pointer) as i32 - 1;
             if npci <= old_program_counter || changedline(p, old_program_counter, npci) != 0 {
                 let newline: i32 = luag_getfuncline(p, npci);
                 luad_hook(interpreter, 2, newline, 0, 0);
@@ -3935,46 +3913,6 @@ pub unsafe extern "C" fn luag_traceexec(
             luad_throw(interpreter, 1);
         }
         return 1;
-    }
-}
-pub unsafe extern "C" fn luam_growaux_(
-    interpreter: *mut Interpreter,
-    block: *mut libc::c_void,
-    count_elements: usize,
-    total_size: *mut i32,
-    element_size: usize,
-    limit: i32,
-    what: *const libc::c_char,
-) -> *mut libc::c_void {
-    unsafe {
-        let mut size: i32 = *total_size;
-        if count_elements + 1 <= size as usize {
-            return block;
-        }
-        if size >= limit / 2 {
-            if size >= limit {
-                luag_runerror(
-                    interpreter,
-                    b"too many %s (limit is %d)\0" as *const u8 as *const libc::c_char,
-                    what,
-                    limit,
-                );
-            }
-            size = limit;
-        } else {
-            size *= 2;
-            if size < 4 {
-                size = 4;
-            }
-        }
-        let new_block: *mut libc::c_void = luam_saferealloc_(
-            interpreter,
-            block,
-            (*total_size as usize).wrapping_mul(element_size),
-            (size as usize).wrapping_mul(element_size),
-        );
-        *total_size = size;
-        return new_block;
     }
 }
 pub unsafe extern "C" fn tryagain(
@@ -4221,12 +4159,12 @@ pub unsafe extern "C" fn luao_arith(
 }
 pub unsafe extern "C" fn luao_pushvfstring(
     interpreter: *mut Interpreter,
-    mut fmt: *const libc::c_char,
+    mut fmt: *const i8,
     mut argp: ::core::ffi::VaList,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut buff_fs = BuffFS::new(interpreter);
-        let mut e: *const libc::c_char;
+        let mut e: *const i8;
         loop {
             e = strchr(fmt, CHARACTER_PERCENT as i32);
             if e.is_null() {
@@ -4235,15 +4173,15 @@ pub unsafe extern "C" fn luao_pushvfstring(
             buff_fs.add_string(fmt, e.offset_from(fmt) as usize);
             match *e.offset(1 as isize) as i32 {
                 CHARACTER_LOWER_S => {
-                    let mut s: *const libc::c_char = argp.arg::<*mut libc::c_char>();
+                    let mut s: *const i8 = argp.arg::<*mut i8>();
                     if s.is_null() {
-                        s = b"(null)\0" as *const u8 as *const libc::c_char;
+                        s = b"(null)\0" as *const u8 as *const i8;
                     }
                     buff_fs.add_string(s, strlen(s) as usize);
                 }
                 CHARACTER_LOWER_C => {
-                    let mut c: libc::c_char = argp.arg::<i32>() as u8 as libc::c_char;
-                    buff_fs.add_string(&mut c, ::core::mem::size_of::<libc::c_char>() as usize);
+                    let mut c: i8 = argp.arg::<i32>() as u8 as i8;
+                    buff_fs.add_string(&mut c, size_of::<i8>() as usize);
                 }
                 CHARACTER_LOWER_D => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
@@ -4265,16 +4203,16 @@ pub unsafe extern "C" fn luao_pushvfstring(
                 }
                 CHARACTER_LOWER_P => {
                     let size = (3 as usize)
-                        .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                        .wrapping_mul(size_of::<*mut libc::c_void>())
                         .wrapping_add(8);
-                    let bf: *mut libc::c_char = buff_fs.get_raw(size);
+                    let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                     let length =
-                        snprintf(bf, size, b"%p\0" as *const u8 as *const libc::c_char, p);
+                        snprintf(bf, size, b"%p\0" as *const u8 as *const i8, p);
                     buff_fs.add_length(length as usize);
                 }
                 CHARACTER_UPPER_U => {
-                    let mut bf_0: [libc::c_char; 8] = [0; 8];
+                    let mut bf_0: [i8; 8] = [0; 8];
                     let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as usize);
                     buff_fs.add_string(
                         bf_0.as_mut_ptr()
@@ -4284,12 +4222,12 @@ pub unsafe extern "C" fn luao_pushvfstring(
                     );
                 }
                 CHARACTER_PERCENT => {
-                    buff_fs.add_string(b"%\0" as *const u8 as *const libc::c_char, 1 as usize);
+                    buff_fs.add_string(b"%\0" as *const u8 as *const i8, 1 as usize);
                 }
                 _ => {
                     luag_runerror(
                         interpreter,
-                        b"invalid option '%%%c' to 'lua_pushfstring'\0" as *const u8 as *const libc::c_char,
+                        b"invalid option '%%%c' to 'lua_pushfstring'\0" as *const u8 as *const i8,
                         *e.offset(1 as isize) as i32,
                     );
                 }
@@ -4307,11 +4245,11 @@ pub unsafe extern "C" fn luao_pushvfstring(
 }
 pub unsafe extern "C" fn luao_pushfstring(
     interpreter: *mut Interpreter,
-    fmt: *const libc::c_char,
+    fmt: *const i8,
     args: ...
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
-        let message: *const libc::c_char;
+        let message: *const i8;
         let mut argp: ::core::ffi::VaListImpl;
         argp = args.clone();
         message = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
@@ -4320,32 +4258,32 @@ pub unsafe extern "C" fn luao_pushfstring(
 }
 pub unsafe extern "C" fn luat_init(interpreter: *mut Interpreter) {
     unsafe {
-        static mut EVENT_NAMES: [*const libc::c_char; 25] = [
-            b"__index\0" as *const u8 as *const libc::c_char,
-            b"__newindex\0" as *const u8 as *const libc::c_char,
-            b"__gc\0" as *const u8 as *const libc::c_char,
-            b"__mode\0" as *const u8 as *const libc::c_char,
-            b"__len\0" as *const u8 as *const libc::c_char,
-            b"__eq\0" as *const u8 as *const libc::c_char,
-            b"__add\0" as *const u8 as *const libc::c_char,
-            b"__sub\0" as *const u8 as *const libc::c_char,
-            b"__mul\0" as *const u8 as *const libc::c_char,
-            b"__mod\0" as *const u8 as *const libc::c_char,
-            b"__pow\0" as *const u8 as *const libc::c_char,
-            b"__div\0" as *const u8 as *const libc::c_char,
-            b"__idiv\0" as *const u8 as *const libc::c_char,
-            b"__band\0" as *const u8 as *const libc::c_char,
-            b"__bor\0" as *const u8 as *const libc::c_char,
-            b"__bxor\0" as *const u8 as *const libc::c_char,
-            b"__shl\0" as *const u8 as *const libc::c_char,
-            b"__shr\0" as *const u8 as *const libc::c_char,
-            b"__unm\0" as *const u8 as *const libc::c_char,
-            b"__bnot\0" as *const u8 as *const libc::c_char,
-            b"__lt\0" as *const u8 as *const libc::c_char,
-            b"__le\0" as *const u8 as *const libc::c_char,
-            b"__concat\0" as *const u8 as *const libc::c_char,
-            b"__call\0" as *const u8 as *const libc::c_char,
-            b"__close\0" as *const u8 as *const libc::c_char,
+        static mut EVENT_NAMES: [*const i8; 25] = [
+            b"__index\0" as *const u8 as *const i8,
+            b"__newindex\0" as *const u8 as *const i8,
+            b"__gc\0" as *const u8 as *const i8,
+            b"__mode\0" as *const u8 as *const i8,
+            b"__len\0" as *const u8 as *const i8,
+            b"__eq\0" as *const u8 as *const i8,
+            b"__add\0" as *const u8 as *const i8,
+            b"__sub\0" as *const u8 as *const i8,
+            b"__mul\0" as *const u8 as *const i8,
+            b"__mod\0" as *const u8 as *const i8,
+            b"__pow\0" as *const u8 as *const i8,
+            b"__div\0" as *const u8 as *const i8,
+            b"__idiv\0" as *const u8 as *const i8,
+            b"__band\0" as *const u8 as *const i8,
+            b"__bor\0" as *const u8 as *const i8,
+            b"__bxor\0" as *const u8 as *const i8,
+            b"__shl\0" as *const u8 as *const i8,
+            b"__shr\0" as *const u8 as *const i8,
+            b"__unm\0" as *const u8 as *const i8,
+            b"__bnot\0" as *const u8 as *const i8,
+            b"__lt\0" as *const u8 as *const i8,
+            b"__le\0" as *const u8 as *const i8,
+            b"__concat\0" as *const u8 as *const i8,
+            b"__call\0" as *const u8 as *const i8,
+            b"__close\0" as *const u8 as *const i8,
         ];
         for i in 0..TM_N {
             (*(*interpreter).global).tm_name[i as usize] =
@@ -4387,7 +4325,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
 pub unsafe extern "C" fn luat_objtypename(
     interpreter: *mut Interpreter,
     o: *const TValue,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let mut metatable: *mut Table;
         if (*o).get_tag_variant() == TAG_VARIANT_TABLE && {
@@ -4399,7 +4337,7 @@ pub unsafe extern "C" fn luat_objtypename(
         } {
             let name: *const TValue = luah_getshortstr(
                 metatable,
-                luas_new(interpreter, b"__name\0" as *const u8 as *const libc::c_char),
+                luas_new(interpreter, b"__name\0" as *const u8 as *const i8),
             );
             if (*name).is_tagtype_string() {
                 return (*((*name).value.object as *mut TString)).get_contents_mut();
@@ -4445,7 +4383,7 @@ pub unsafe extern "C" fn luat_calltmres(
 ) {
     unsafe {
         let result: i64 =
-            (res as *mut libc::c_char).offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char) as i64;
+            (res as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
         let function: StackValuePointer = (*interpreter).top.stkidrel_pointer;
         let io1: *mut TValue = &mut (*function).tvalue;
         let io2: *const TValue = f;
@@ -4463,7 +4401,7 @@ pub unsafe extern "C" fn luat_calltmres(
         } else {
             luad_callnoyield(interpreter, function, 1);
         }
-        res = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(result as isize)
+        res = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(result as isize)
             as StackValuePointer;
         let io1_2: *mut TValue = &mut (*res).tvalue;
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -4508,7 +4446,7 @@ pub unsafe extern "C" fn luat_trybintm(
                             interpreter,
                             p1,
                             p2,
-                            b"perform bitwise operation on\0" as *const u8 as *const libc::c_char,
+                            b"perform bitwise operation on\0" as *const u8 as *const i8,
                         );
                     }
                 }
@@ -4517,7 +4455,7 @@ pub unsafe extern "C" fn luat_trybintm(
                         interpreter,
                         p1,
                         p2,
-                        b"perform arithmetic on\0" as *const u8 as *const libc::c_char,
+                        b"perform arithmetic on\0" as *const u8 as *const i8,
                     );
                 }
             }
@@ -4694,14 +4632,14 @@ pub unsafe extern "C" fn luat_getvarargs(
                 != 0) as i64
                 != 0
             {
-                let t__: i64 = (where_0 as *mut libc::c_char)
-                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                let t__: i64 = (where_0 as *mut i8)
+                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                     as i64;
                 if (*(*interpreter).global).gc_debt > 0 {
                     luac_step(interpreter);
                 }
                 luad_growstack(interpreter, nextra, true);
-                where_0 = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(t__ as isize)
+                where_0 = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
                     as StackValuePointer;
             }
             (*interpreter).top.stkidrel_pointer = where_0.offset(nextra as isize);
@@ -4853,8 +4791,8 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
                 interpreter,
                 Some(dothecall as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 null_mut(),
-                ((*interpreter).top.stkidrel_pointer.offset(-(2 as isize)) as *mut libc::c_char)
-                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char)
+                ((*interpreter).top.stkidrel_pointer.offset(-(2 as isize)) as *mut i8)
+                    .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                     as i64,
                 0,
             );
@@ -4863,7 +4801,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
             (*interpreter).allow_hook = oldah;
             (*global).gc_step = oldgcstp as u8;
             if status != 0 {
-                luae_warnerror(interpreter, b"__gc\0" as *const u8 as *const libc::c_char);
+                luae_warnerror(interpreter, b"__gc\0" as *const u8 as *const i8);
                 (*interpreter).top.stkidrel_pointer =
                     (*interpreter).top.stkidrel_pointer.offset(-1);
             }
@@ -5314,15 +5252,15 @@ pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Glo
     unsafe {
         let stepmul: i32 = (*global).gc_step_multiplier as i32 * 4 | 1;
         let mut debt: i64 = ((*global).gc_debt as usize)
-            .wrapping_div(::core::mem::size_of::<TValue>() as usize)
+            .wrapping_div(size_of::<TValue>() as usize)
             .wrapping_mul(stepmul as usize) as i64;
         let stepsize: i64 = (if (*global).gc_step_size as usize
-            <= (::core::mem::size_of::<i64>() as usize)
+            <= (size_of::<i64>() as usize)
                 .wrapping_mul(8 as usize)
                 .wrapping_sub(2 as usize)
         {
             ((1 << (*global).gc_step_size as i32) as usize)
-                .wrapping_div(::core::mem::size_of::<TValue>() as usize)
+                .wrapping_div(size_of::<TValue>() as usize)
                 .wrapping_mul(stepmul as usize)
         } else {
             (!(0usize) >> 1) as usize
@@ -5338,7 +5276,7 @@ pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Glo
             setpause(global);
         } else {
             debt = ((debt / stepmul as i64) as usize)
-                .wrapping_mul(::core::mem::size_of::<TValue>() as usize) as i64;
+                .wrapping_mul(size_of::<TValue>() as usize) as i64;
             (*global).set_debt(debt);
         };
     }
@@ -5411,18 +5349,18 @@ pub unsafe extern "C" fn checkclosemth(interpreter: *mut Interpreter, level: Sta
         if (*tm).is_tagtype_nil() {
             let index: i32 =
                 level.offset_from((*(*interpreter).call_info).function.stkidrel_pointer) as i32;
-            let mut vname: *const libc::c_char = luag_findlocal(
+            let mut vname: *const i8 = luag_findlocal(
                 interpreter,
                 (*interpreter).call_info,
                 index,
                 null_mut(),
             );
             if vname.is_null() {
-                vname = b"?\0" as *const u8 as *const libc::c_char;
+                vname = b"?\0" as *const u8 as *const i8;
             }
             luag_runerror(
                 interpreter,
-                b"variable '%s' got a non-closable value\0" as *const u8 as *const libc::c_char,
+                b"variable '%s' got a non-closable value\0" as *const u8 as *const i8,
                 vname,
             );
         }
@@ -5456,7 +5394,7 @@ pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: 
         checkclosemth(interpreter, level);
         while level.offset_from((*interpreter).tbc_list.stkidrel_pointer) as usize
             > ((256 as usize)
-                << (::core::mem::size_of::<u16>() as usize)
+                << (size_of::<u16>() as usize)
                     .wrapping_sub(1 as usize)
                     .wrapping_mul(8 as usize))
             .wrapping_sub(1 as usize)
@@ -5464,7 +5402,7 @@ pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: 
             (*interpreter).tbc_list.stkidrel_pointer = ((*interpreter).tbc_list.stkidrel_pointer)
                 .offset(
                     ((256 as usize)
-                        << (::core::mem::size_of::<u16>() as usize)
+                        << (size_of::<u16>() as usize)
                             .wrapping_sub(1 as usize)
                             .wrapping_mul(8 as usize))
                     .wrapping_sub(1 as usize) as isize,
@@ -5518,7 +5456,7 @@ pub unsafe extern "C" fn poptbclist(interpreter: *mut Interpreter) {
         while tbc > (*interpreter).stack.stkidrel_pointer && (*tbc).delta == 0 {
             tbc = tbc.offset(
                 -(((256 as usize)
-                    << (::core::mem::size_of::<u16>() as usize)
+                    << (size_of::<u16>() as usize)
                         .wrapping_sub(1 as usize)
                         .wrapping_mul(8 as usize))
                 .wrapping_sub(1 as usize) as isize),
@@ -5535,13 +5473,13 @@ pub unsafe extern "C" fn luaf_close(
 ) -> StackValuePointer {
     unsafe {
         let levelrel: i64 =
-            (level as *mut libc::c_char).offset_from((*interpreter).stack.stkidrel_pointer as *mut libc::c_char) as i64;
+            (level as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
         luaf_closeupval(interpreter, level);
         while (*interpreter).tbc_list.stkidrel_pointer >= level {
             let tbc: StackValuePointer = (*interpreter).tbc_list.stkidrel_pointer;
             poptbclist(interpreter);
             prepcallclosemth(interpreter, tbc, status, yy);
-            level = ((*interpreter).stack.stkidrel_pointer as *mut libc::c_char).offset(levelrel as isize)
+            level = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(levelrel as isize)
                 as StackValuePointer;
         }
         return level;
@@ -5552,7 +5490,7 @@ pub unsafe extern "C" fn luay_parser(
     zio: *mut ZIO,
     buffer: *mut Buffer,
     dynamic_data: *mut DynamicData,
-    name: *const libc::c_char,
+    name: *const i8,
     firstchar: i32,
 ) -> *mut Closure {
     unsafe {
@@ -5597,9 +5535,9 @@ pub unsafe extern "C" fn luay_parser(
         };
         lexstate.buffer = buffer;
         lexstate.dynamic_data = dynamic_data;
-        (*dynamic_data).label.length = 0;
-        (*dynamic_data).gt.length = (*dynamic_data).label.length;
-        (*dynamic_data).active_variable.length = (*dynamic_data).gt.length;
+        (*dynamic_data).label.zero_length();
+        (*dynamic_data).gt.vectort_length = (*dynamic_data).label.get_length();
+        (*dynamic_data).active_variable.vectort_length = (*dynamic_data).gt.get_length();
         luax_setinput(
             interpreter,
             &mut lexstate,
@@ -5617,9 +5555,9 @@ pub unsafe extern "C" fn luax_init(interpreter: *mut Interpreter) {
         let mut i: i32;
         let e: *mut TString = luas_newlstr(
             interpreter,
-            b"_ENV\0" as *const u8 as *const libc::c_char,
-            (::core::mem::size_of::<[libc::c_char; 5]>())
-                .wrapping_div(::core::mem::size_of::<libc::c_char>())
+            b"_ENV\0" as *const u8 as *const i8,
+            (size_of::<[i8; 5]>())
+                .wrapping_div(size_of::<i8>())
                 .wrapping_sub(1),
         );
         fix_object_state(interpreter, &mut (*(e as *mut Object)));
@@ -5640,8 +5578,8 @@ pub unsafe extern "C" fn pushclosure(
     ra: StackValuePointer,
 ) {
     unsafe {
-        let nup: i32 = (*p).prototype_upvalues.size;
-        let uv: *mut UpValueDescription = (*p).prototype_upvalues.pointer;
+        let nup: i32 = (*p).prototype_upvalues.get_size();
+        let uv: *mut UpValueDescription = (*p).prototype_upvalues.vectort_pointer;
         let ncl: *mut Closure = luaf_newlclosure(interpreter, nup);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra).tvalue;
@@ -5772,7 +5710,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                     .tvalue
                     .value
                     .object as *mut Closure));
-                k = (*(*cl).payload.l_prototype).prototype_constants.pointer;
+                k = (*(*cl).payload.l_prototype).prototype_constants.vectort_pointer;
                 program_counter = (*call_info).u.l.saved_program_counter;
                 if (trap != 0) as i64 != 0 {
                     trap = luag_tracecall(interpreter);
@@ -8338,7 +8276,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let p: *mut Prototype = *((*(*cl).payload.l_prototype)
                                 .prototype_prototypes
-                                .pointer)
+                                .vectort_pointer)
                                 .offset((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize);
                             (*call_info).u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*call_info).top.stkidrel_pointer;
@@ -8395,7 +8333,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 ra_74.offset(4 as isize) as *mut libc::c_void,
                                 ra_74 as *const libc::c_void,
                                 (3 as usize)
-                                    .wrapping_mul(::core::mem::size_of::<StackValue>()),
+                                    .wrapping_mul(size_of::<StackValue>()),
                             );
                             (*interpreter).top.stkidrel_pointer =
                                 ra_74.offset(4 as isize).offset(3 as isize);
@@ -8447,7 +8385,7 @@ pub unsafe extern "C" fn findfield(interpreter: *mut Interpreter, objidx: i32, l
                     lua_settop(interpreter, -2);
                     return true;
                 } else if findfield(interpreter, objidx, level - 1) {
-                    lua_pushstring(interpreter, b".\0" as *const u8 as *const libc::c_char);
+                    lua_pushstring(interpreter, b".\0" as *const u8 as *const i8);
                     lua_copy(interpreter, -1, -3);
                     lua_settop(interpreter, -2);
                     lua_concat(interpreter, 3);
@@ -8465,20 +8403,20 @@ pub unsafe extern "C" fn pushglobalfuncname(
 ) -> bool {
     unsafe {
         let top: i32 = (*interpreter).get_top();
-        lua_getinfo(interpreter, b"f\0" as *const u8 as *const libc::c_char, ar);
+        lua_getinfo(interpreter, b"f\0" as *const u8 as *const i8, ar);
         lua_getfield(
             interpreter,
             -(1000000 as i32) - 1000 as i32,
-            b"_LOADED\0" as *const u8 as *const libc::c_char,
+            b"_LOADED\0" as *const u8 as *const i8,
         );
         lual_checkstack(
             interpreter,
             6,
-            b"not enough stack\0" as *const u8 as *const libc::c_char,
+            b"not enough stack\0" as *const u8 as *const i8,
         );
         if findfield(interpreter, top + 1, 2) {
-            let name: *const libc::c_char = lua_tolstring(interpreter, -1, null_mut());
-            if strncmp(name, b"_G.\0" as *const u8 as *const libc::c_char, 3) == 0 {
+            let name: *const i8 = lua_tolstring(interpreter, -1, null_mut());
+            if strncmp(name, b"_G.\0" as *const u8 as *const i8, 3) == 0 {
                 lua_pushstring(interpreter, name.offset(3 as isize));
                 lua_rotate(interpreter, -2, -1);
                 lua_settop(interpreter, -2);
@@ -8497,7 +8435,7 @@ pub unsafe extern "C" fn pushfuncname(interpreter: *mut Interpreter, ar: *mut De
         if pushglobalfuncname(interpreter, ar) {
             lua_pushfstring(
                 interpreter,
-                b"function '%s'\0" as *const u8 as *const libc::c_char,
+                b"function '%s'\0" as *const u8 as *const i8,
                 lua_tolstring(interpreter, -1, null_mut()),
             );
             lua_rotate(interpreter, -2, -1);
@@ -8505,21 +8443,21 @@ pub unsafe extern "C" fn pushfuncname(interpreter: *mut Interpreter, ar: *mut De
         } else if *(*ar).namewhat as i32 != Character::Null as i32 {
             lua_pushfstring(
                 interpreter,
-                b"%s '%s'\0" as *const u8 as *const libc::c_char,
+                b"%s '%s'\0" as *const u8 as *const i8,
                 (*ar).namewhat,
                 (*ar).name,
             );
         } else if *(*ar).what as i32 == CHARACTER_LOWER_M as i32 {
-            lua_pushstring(interpreter, b"main chunk\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"main chunk\0" as *const u8 as *const i8);
         } else if *(*ar).what as i32 != CHARACTER_UPPER_C as i32 {
             lua_pushfstring(
                 interpreter,
-                b"function <%s:%d>\0" as *const u8 as *const libc::c_char,
+                b"function <%s:%d>\0" as *const u8 as *const i8,
                 ((*ar).short_src).as_mut_ptr(),
                 (*ar).line_defined,
             );
         } else {
-            lua_pushstring(interpreter, b"?\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"?\0" as *const u8 as *const i8);
         };
     }
 }
@@ -8564,7 +8502,7 @@ pub unsafe extern "C" fn lastlevel(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn lual_traceback(
     interpreter: *mut Interpreter,
     other_state: *mut Interpreter,
-    message: *const libc::c_char,
+    message: *const i8,
     mut level: i32,
 ) {
     unsafe {
@@ -8597,12 +8535,12 @@ pub unsafe extern "C" fn lual_traceback(
         b.initialize(interpreter);
         if !message.is_null() {
             b.add_string(message);
-            (b.vector.length < b.vector.size || !(b.prepare_with_size(1)).is_null()) as i32;
-            let fresh145 = b.vector.length;
-            b.vector.length = (b.vector.length).wrapping_add(1);
-            *(b.vector.pointer).offset(fresh145 as isize) = CHARACTER_LF as libc::c_char;
+            (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+            let fresh145 = b.vector.get_length();
+            b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+            *(b.vector.vectort_pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
         }
-        b.add_string(b"stack traceback:\0" as *const u8 as *const libc::c_char);
+        b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
         loop {
             let fresh146 = level;
             level = level + 1;
@@ -8615,23 +8553,23 @@ pub unsafe extern "C" fn lual_traceback(
                 let n: i32 = last - level - 11 as i32 + 1;
                 lua_pushfstring(
                     interpreter,
-                    b"\n\t...\t(skipping %d levels)\0" as *const u8 as *const libc::c_char,
+                    b"\n\t...\t(skipping %d levels)\0" as *const u8 as *const i8,
                     n,
                 );
                 b.add_value();
                 level += n;
             } else {
-                lua_getinfo(other_state, b"Slnt\0" as *const u8 as *const libc::c_char, &mut ar);
+                lua_getinfo(other_state, b"Slnt\0" as *const u8 as *const i8, &mut ar);
                 if ar.currentline <= 0 {
                     lua_pushfstring(
                         interpreter,
-                        b"\n\t%s: in \0" as *const u8 as *const libc::c_char,
+                        b"\n\t%s: in \0" as *const u8 as *const i8,
                         (ar.short_src).as_mut_ptr(),
                     );
                 } else {
                     lua_pushfstring(
                         interpreter,
-                        b"\n\t%s:%d: in \0" as *const u8 as *const libc::c_char,
+                        b"\n\t%s:%d: in \0" as *const u8 as *const i8,
                         (ar.short_src).as_mut_ptr(),
                         ar.currentline,
                     );
@@ -8640,7 +8578,7 @@ pub unsafe extern "C" fn lual_traceback(
                 pushfuncname(interpreter, &mut ar);
                 b.add_value();
                 if ar.is_tail_call {
-                    b.add_string(b"\n\t(...tail calls...)\0" as *const u8 as *const libc::c_char);
+                    b.add_string(b"\n\t(...tail calls...)\0" as *const u8 as *const i8);
                 }
             }
         }
@@ -8650,7 +8588,7 @@ pub unsafe extern "C" fn lual_traceback(
 pub unsafe extern "C" fn lual_argerror(
     interpreter: *mut Interpreter,
     mut arg: i32,
-    extramsg: *const libc::c_char,
+    extramsg: *const i8,
 ) -> i32 {
     unsafe {
         let mut ar: DebugInfo = DebugInfo {
@@ -8680,8 +8618,8 @@ pub unsafe extern "C" fn lual_argerror(
                 extramsg,
             );
         }
-        lua_getinfo(interpreter, b"n\0" as *const u8 as *const libc::c_char, &mut ar);
-        if strcmp(ar.namewhat, b"method\0" as *const u8 as *const libc::c_char) == 0 {
+        lua_getinfo(interpreter, b"n\0" as *const u8 as *const i8, &mut ar);
+        if strcmp(ar.namewhat, b"method\0" as *const u8 as *const i8) == 0 {
             arg -= 1;
             if arg == 0 {
                 return lual_error(
@@ -8696,7 +8634,7 @@ pub unsafe extern "C" fn lual_argerror(
             ar.name = if pushglobalfuncname(interpreter, &mut ar) {
                 lua_tolstring(interpreter, -1, null_mut())
             } else {
-                b"?\0" as *const u8 as *const libc::c_char
+                b"?\0" as *const u8 as *const i8
             };
         }
         return lual_error(
@@ -8711,23 +8649,23 @@ pub unsafe extern "C" fn lual_argerror(
 pub unsafe extern "C" fn lual_typeerror(
     interpreter: *mut Interpreter,
     arg: i32,
-    tname: *const libc::c_char,
+    tname: *const i8,
 ) -> i32 {
     unsafe {
-        let message: *const libc::c_char;
-        let typearg: *const libc::c_char;
-        if lual_getmetafield(interpreter, arg, b"__name\0" as *const u8 as *const libc::c_char)
+        let message: *const i8;
+        let typearg: *const i8;
+        if lual_getmetafield(interpreter, arg, b"__name\0" as *const u8 as *const i8)
             == TagType::String
         {
             typearg = lua_tolstring(interpreter, -1, null_mut());
         } else if lua_type(interpreter, arg) == Some(TagType::Pointer) {
-            typearg = b"light userdata\0" as *const u8 as *const libc::c_char;
+            typearg = b"light userdata\0" as *const u8 as *const i8;
         } else {
             typearg = lua_typename(interpreter, lua_type(interpreter, arg));
         }
         message = lua_pushfstring(
             interpreter,
-            b"%s expected, got %s\0" as *const u8 as *const libc::c_char,
+            b"%s expected, got %s\0" as *const u8 as *const i8,
             tname,
             typearg,
         );
@@ -8761,18 +8699,18 @@ pub unsafe extern "C" fn lual_where(interpreter: *mut Interpreter, level: i32) {
             i_ci: null_mut(),
         };
         if lua_getstack(interpreter, level, &mut ar) != 0 {
-            lua_getinfo(interpreter, b"Sl\0" as *const u8 as *const libc::c_char, &mut ar);
+            lua_getinfo(interpreter, b"Sl\0" as *const u8 as *const i8, &mut ar);
             if ar.currentline > 0 {
                 lua_pushfstring(
                     interpreter,
-                    b"%s:%d: \0" as *const u8 as *const libc::c_char,
+                    b"%s:%d: \0" as *const u8 as *const i8,
                     (ar.short_src).as_mut_ptr(),
                     ar.currentline,
                 );
                 return;
             }
         }
-        lua_pushfstring(interpreter, b"\0" as *const u8 as *const libc::c_char);
+        lua_pushfstring(interpreter, b"\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn lual_error(
@@ -8784,7 +8722,7 @@ pub unsafe extern "C" fn lual_error(
         let mut argp: ::core::ffi::VaListImpl;
         argp = args.clone();
         lual_where(interpreter, 1);
-        lua_pushvfstring(interpreter, fmt as *const libc::c_char, argp.as_va_list());
+        lua_pushvfstring(interpreter, fmt as *const i8, argp.as_va_list());
         lua_concat(interpreter, 2);
         return lua_error(interpreter);
     }
@@ -8792,7 +8730,7 @@ pub unsafe extern "C" fn lual_error(
 pub unsafe extern "C" fn lual_fileresult(
     interpreter: *mut Interpreter,
     stat: i32,
-    fname: *const libc::c_char,
+    fname: *const i8,
 ) -> i32 {
     unsafe {
         let en: i32 = *__errno_location();
@@ -8800,17 +8738,17 @@ pub unsafe extern "C" fn lual_fileresult(
             (*interpreter).push_boolean(true);
             return 1;
         } else {
-            let message: *const libc::c_char;
+            let message: *const i8;
             (*interpreter).push_nil();
             message = if en != 0 {
-                strerror(en) as *const libc::c_char
+                strerror(en) as *const i8
             } else {
-                b"(no extra info)\0" as *const u8 as *const libc::c_char
+                b"(no extra info)\0" as *const u8 as *const i8
             };
             if !fname.is_null() {
                 lua_pushfstring(
                     interpreter,
-                    b"%s: %s\0" as *const u8 as *const libc::c_char,
+                    b"%s: %s\0" as *const u8 as *const i8,
                     fname,
                     message,
                 );
@@ -8827,12 +8765,12 @@ pub unsafe extern "C" fn lual_execresult(interpreter: *mut Interpreter, mut stat
         if stat != 0 && *__errno_location() != 0 {
             return lual_fileresult(interpreter, 0, null());
         } else {
-            let mut what: *const libc::c_char = b"exit\0" as *const u8 as *const libc::c_char;
+            let mut what: *const i8 = b"exit\0" as *const u8 as *const i8;
             if stat & 0x7f as i32 == 0 {
                 stat = (stat & 0xff00 as i32) >> 8;
             } else if ((stat & 0x7f as i32) + 1) as i32 >> 1 > 0 {
                 stat = stat & 0x7f as i32;
-                what = b"signal\0" as *const u8 as *const libc::c_char;
+                what = b"signal\0" as *const u8 as *const i8;
             }
             if *what as i32 == CHARACTER_LOWER_E as i32 && stat == 0 {
                 (*interpreter).push_boolean(true);
@@ -8845,7 +8783,7 @@ pub unsafe extern "C" fn lual_execresult(interpreter: *mut Interpreter, mut stat
         };
     }
 }
-pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname: *const i8) -> i32 {
     unsafe {
         if lua_getfield(interpreter, -1000000 - 1000, tname) != TagType::Nil {
             return 0;
@@ -8853,13 +8791,13 @@ pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname:
         lua_settop(interpreter, -2);
         (*interpreter).lua_createtable();
         lua_pushstring(interpreter, tname);
-        lua_setfield(interpreter, -2, b"__name\0" as *const u8 as *const libc::c_char);
+        lua_setfield(interpreter, -2, b"__name\0" as *const u8 as *const i8);
         lua_pushvalue(interpreter, -1);
         lua_setfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
         return 1;
     }
 }
-pub unsafe extern "C" fn lual_setmetatable(interpreter: *mut Interpreter, tname: *const libc::c_char) {
+pub unsafe extern "C" fn lual_setmetatable(interpreter: *mut Interpreter, tname: *const i8) {
     unsafe {
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
         lua_setmetatable(interpreter, -2);
@@ -8868,7 +8806,7 @@ pub unsafe extern "C" fn lual_setmetatable(interpreter: *mut Interpreter, tname:
 pub unsafe extern "C" fn lual_testudata(
     interpreter: *mut Interpreter,
     arbitrary_data: i32,
-    tname: *const libc::c_char,
+    tname: *const i8,
 ) -> *mut libc::c_void {
     unsafe {
         let mut p: *mut libc::c_void = lua_touserdata(interpreter, arbitrary_data);
@@ -8888,7 +8826,7 @@ pub unsafe extern "C" fn lual_testudata(
 pub unsafe extern "C" fn lual_checkudata(
     interpreter: *mut Interpreter,
     arbitrary_data: i32,
-    tname: *const libc::c_char,
+    tname: *const i8,
 ) -> *mut libc::c_void {
     unsafe {
         let p: *mut libc::c_void = lual_testudata(interpreter, arbitrary_data, tname);
@@ -8901,11 +8839,11 @@ pub unsafe extern "C" fn lual_checkudata(
 pub unsafe extern "C" fn lual_checkoption(
     interpreter: *mut Interpreter,
     arg: i32,
-    def: *const libc::c_char,
-    lst: *const *const libc::c_char,
+    def: *const i8,
+    lst: *const *const i8,
 ) -> i32 {
     unsafe {
-        let name: *const libc::c_char = if !def.is_null() {
+        let name: *const i8 = if !def.is_null() {
             lual_optlstring(interpreter, arg, def, null_mut())
         } else {
             lual_checklstring(interpreter, arg, null_mut())
@@ -8923,7 +8861,7 @@ pub unsafe extern "C" fn lual_checkoption(
             arg,
             lua_pushfstring(
                 interpreter,
-                b"invalid option '%s'\0" as *const u8 as *const libc::c_char,
+                b"invalid option '%s'\0" as *const u8 as *const i8,
                 name,
             ),
         );
@@ -8932,7 +8870,7 @@ pub unsafe extern "C" fn lual_checkoption(
 pub unsafe extern "C" fn lual_checkstack(
     interpreter: *mut Interpreter,
     space: i32,
-    message: *const libc::c_char,
+    message: *const i8,
 ) {
     unsafe {
         if lua_checkstack(interpreter, space) == 0 {
@@ -8957,7 +8895,7 @@ pub unsafe extern "C" fn lual_checkany(interpreter: *mut Interpreter, arg: i32) 
             lual_argerror(
                 interpreter,
                 arg,
-                b"value expected\0" as *const u8 as *const libc::c_char,
+                b"value expected\0" as *const u8 as *const i8,
             );
         }
     }
@@ -8966,9 +8904,9 @@ pub unsafe extern "C" fn lual_checklstring(
     interpreter: *mut Interpreter,
     arg: i32,
     length: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
-        let s: *const libc::c_char = lua_tolstring(interpreter, arg, length);
+        let s: *const i8 = lua_tolstring(interpreter, arg, length);
         if s.is_null() {
             tag_error2(interpreter, arg, Some(TagType::String));
         }
@@ -8978,9 +8916,9 @@ pub unsafe extern "C" fn lual_checklstring(
 pub unsafe extern "C" fn lual_optlstring(
     interpreter: *mut Interpreter,
     arg: i32,
-    def: *const libc::c_char,
+    def: *const i8,
     length: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         match lua_type(interpreter, arg) {
             None | Some(TagType::Nil) => {
@@ -9019,7 +8957,7 @@ pub unsafe extern "C" fn interror(interpreter: *mut Interpreter, arg: i32) {
             lual_argerror(
                 interpreter,
                 arg,
-                b"number has no integer representation\0" as *const u8 as *const libc::c_char,
+                b"number has no integer representation\0" as *const u8 as *const i8,
             );
         } else {
             tag_error2(interpreter, arg, Some(TagType::Numeric));
@@ -9048,7 +8986,7 @@ pub unsafe extern "C" fn get_f(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
     size: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         let lf: *mut LoadF = arbitrary_data as *mut LoadF;
         if (*lf).n > 0 {
@@ -9061,7 +8999,7 @@ pub unsafe extern "C" fn get_f(
             *size = fread(
                 ((*lf).buffer).as_mut_ptr() as *mut libc::c_void,
                 1,
-                ::core::mem::size_of::<[libc::c_char; 8192]>(),
+                size_of::<[i8; 8192]>(),
                 (*lf).file,
             ) as usize;
         }
@@ -9070,17 +9008,17 @@ pub unsafe extern "C" fn get_f(
 }
 pub unsafe extern "C" fn errfile(
     interpreter: *mut Interpreter,
-    what: *const libc::c_char,
+    what: *const i8,
     fnameindex: i32,
 ) -> i32 {
     unsafe {
         let err: i32 = *__errno_location();
-        let filename: *const libc::c_char =
+        let filename: *const i8 =
             (lua_tolstring(interpreter, fnameindex, null_mut())).offset(1 as isize);
         if err != 0 {
             lua_pushfstring(
                 interpreter,
-                b"cannot %s %s: %s\0" as *const u8 as *const libc::c_char,
+                b"cannot %s %s: %s\0" as *const u8 as *const i8,
                 what,
                 filename,
                 strerror(err),
@@ -9088,7 +9026,7 @@ pub unsafe extern "C" fn errfile(
         } else {
             lua_pushfstring(
                 interpreter,
-                b"cannot %s %s\0" as *const u8 as *const libc::c_char,
+                b"cannot %s %s\0" as *const u8 as *const i8,
                 what,
                 filename,
             );
@@ -9128,8 +9066,8 @@ pub unsafe extern "C" fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
 }
 pub unsafe extern "C" fn lual_loadfilex(
     interpreter: *mut Interpreter,
-    filename: *const libc::c_char,
-    mode: *const libc::c_char,
+    filename: *const i8,
+    mode: *const i8,
 ) -> i32 {
     unsafe {
         let mut lf: LoadF = LoadF {
@@ -9142,31 +9080,31 @@ pub unsafe extern "C" fn lual_loadfilex(
         let mut c: i32 = 0;
         let fnameindex: i32 = (*interpreter).get_top() + 1;
         if filename.is_null() {
-            lua_pushstring(interpreter, b"=stdin\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"=stdin\0" as *const u8 as *const i8);
             lf.file = stdin;
         } else {
-            lua_pushfstring(interpreter, b"@%s\0" as *const u8 as *const libc::c_char, filename);
+            lua_pushfstring(interpreter, b"@%s\0" as *const u8 as *const i8, filename);
             *__errno_location() = 0;
-            lf.file = fopen(filename, b"r\0" as *const u8 as *const libc::c_char);
+            lf.file = fopen(filename, b"r\0" as *const u8 as *const i8);
             if (lf.file).is_null() {
-                return errfile(interpreter, b"open\0" as *const u8 as *const libc::c_char, fnameindex);
+                return errfile(interpreter, b"open\0" as *const u8 as *const i8, fnameindex);
             }
         }
         lf.n = 0;
         if skipcomment(lf.file, &mut c) != 0 {
             let fresh148 = lf.n;
             lf.n = lf.n + 1;
-            lf.buffer[fresh148 as usize] = CHARACTER_LF as libc::c_char;
+            lf.buffer[fresh148 as usize] = CHARACTER_LF as i8;
         }
-        if c == (*::core::mem::transmute::<&[u8; 5], &[libc::c_char; 5]>(b"\x1BLua\0"))[0] as i32 {
+        if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             lf.n = 0;
             if !filename.is_null() {
                 *__errno_location() = 0;
-                lf.file = freopen(filename, b"rb\0" as *const u8 as *const libc::c_char, lf.file);
+                lf.file = freopen(filename, b"rb\0" as *const u8 as *const i8, lf.file);
                 if (lf.file).is_null() {
                     return errfile(
                         interpreter,
-                        b"reopen\0" as *const u8 as *const libc::c_char,
+                        b"reopen\0" as *const u8 as *const i8,
                         fnameindex,
                     );
                 }
@@ -9176,7 +9114,7 @@ pub unsafe extern "C" fn lual_loadfilex(
         if c != -1 {
             let fresh149 = lf.n;
             lf.n = lf.n + 1;
-            lf.buffer[fresh149 as usize] = c as libc::c_char;
+            lf.buffer[fresh149 as usize] = c as i8;
         }
         *__errno_location() = 0;
         status = lua_load(
@@ -9187,7 +9125,7 @@ pub unsafe extern "C" fn lual_loadfilex(
                         *mut Interpreter,
                         *mut libc::c_void,
                         *mut usize,
-                    ) -> *const libc::c_char,
+                    ) -> *const i8,
             ),
             &mut lf as *mut LoadF as *mut libc::c_void,
             lua_tolstring(interpreter, -1, null_mut()),
@@ -9199,7 +9137,7 @@ pub unsafe extern "C" fn lual_loadfilex(
         }
         if readstatus != 0 {
             lua_settop(interpreter, fnameindex);
-            return errfile(interpreter, b"read\0" as *const u8 as *const libc::c_char, fnameindex);
+            return errfile(interpreter, b"read\0" as *const u8 as *const i8, fnameindex);
         }
         lua_rotate(interpreter, fnameindex, -1);
         lua_settop(interpreter, -2);
@@ -9210,32 +9148,28 @@ pub unsafe extern "C" fn get_s(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
     size: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
-        let load_s: *mut VectorT<libc::c_char> = arbitrary_data as *mut VectorT<libc::c_char>;
-        if (*load_s).size == 0 {
+        let load_s: *mut VectorT<i8> = arbitrary_data as *mut VectorT<i8>;
+        if (*load_s).get_size() == 0 {
             return null();
         }
-        *size = (*load_s).size as usize;
-        (*load_s).size = 0;
-        return (*load_s).pointer;
+        *size = (*load_s).vectort_size as usize;
+        (*load_s).vectort_size = 0;
+        return (*load_s).vectort_pointer;
     }
 }
 pub unsafe extern "C" fn lual_loadbufferx(
     interpreter: *mut Interpreter,
-    buffer: *const libc::c_char,
+    buffer: *const i8,
     size: usize,
-    name: *const libc::c_char,
-    mode: *const libc::c_char,
+    name: *const i8,
+    mode: *const i8,
 ) -> i32 {
     unsafe {
-        let mut load_s: VectorT<libc::c_char> = VectorT::<libc::c_char> {
-            pointer: null_mut(),
-            size: 0,
-            length: 0,
-        };
-        load_s.pointer = buffer as *mut libc::c_char;
-        load_s.size = size as i32;
+        let mut load_s: VectorT<i8> = VectorT::<i8>::new ();
+        load_s.vectort_pointer = buffer as *mut i8;
+        load_s.vectort_size = size as i32;
         return lua_load(
             interpreter,
             Some(
@@ -9244,9 +9178,9 @@ pub unsafe extern "C" fn lual_loadbufferx(
                         *mut Interpreter,
                         *mut libc::c_void,
                         *mut usize,
-                    ) -> *const libc::c_char,
+                    ) -> *const i8,
             ),
-            &mut load_s as *mut VectorT<libc::c_char> as *mut libc::c_void,
+            &mut load_s as *mut VectorT<i8> as *mut libc::c_void,
             name,
             mode,
         );
@@ -9255,7 +9189,7 @@ pub unsafe extern "C" fn lual_loadbufferx(
 pub unsafe extern "C" fn lual_getmetafield(
     interpreter: *mut Interpreter,
     obj: i32,
-    event: *const libc::c_char,
+    event: *const i8,
 ) -> TagType {
     unsafe {
         if (*interpreter).lua_getmetatable(obj) {
@@ -9276,7 +9210,7 @@ pub unsafe extern "C" fn lual_getmetafield(
 pub unsafe extern "C" fn lual_callmeta(
     interpreter: *mut Interpreter,
     mut obj: i32,
-    event: *const libc::c_char,
+    event: *const i8,
 ) -> bool {
     unsafe {
         obj = lua_absindex(interpreter, obj);
@@ -9305,13 +9239,13 @@ pub unsafe extern "C" fn lual_tolstring(
     interpreter: *mut Interpreter,
     mut index: i32,
     length: *mut usize,
-) -> *const libc::c_char {
+) -> *const i8 {
     unsafe {
         index = lua_absindex(interpreter, index);
         if lual_callmeta(
             interpreter,
             index,
-            b"__tostring\0" as *const u8 as *const libc::c_char,
+            b"__tostring\0" as *const u8 as *const i8,
         ) {
             if !lua_isstring(interpreter, -1) {
                 lual_error(interpreter, b"'__tostring' must return a string\0".as_ptr());
@@ -9322,13 +9256,13 @@ pub unsafe extern "C" fn lual_tolstring(
                     if lua_isinteger(interpreter, index) {
                         lua_pushfstring(
                             interpreter,
-                            b"%I\0" as *const u8 as *const libc::c_char,
+                            b"%I\0" as *const u8 as *const i8,
                             lua_tointegerx(interpreter, index, null_mut()),
                         );
                     } else {
                         lua_pushfstring(
                             interpreter,
-                            b"%f\0" as *const u8 as *const libc::c_char,
+                            b"%f\0" as *const u8 as *const i8,
                             lua_tonumberx(interpreter, index, null_mut()),
                         );
                     }
@@ -9340,29 +9274,29 @@ pub unsafe extern "C" fn lual_tolstring(
                     lua_pushstring(
                         interpreter,
                         if lua_toboolean(interpreter, index) != 0 {
-                            b"true\0" as *const u8 as *const libc::c_char
+                            b"true\0" as *const u8 as *const i8
                         } else {
-                            b"false\0" as *const u8 as *const libc::c_char
+                            b"false\0" as *const u8 as *const i8
                         },
                     );
                 }
                 Some(TagType::Nil) => {
-                    lua_pushstring(interpreter, b"nil\0" as *const u8 as *const libc::c_char);
+                    lua_pushstring(interpreter, b"nil\0" as *const u8 as *const i8);
                 }
                 _ => {
                     let tag = lual_getmetafield(
                         interpreter,
                         index,
-                        b"__name\0" as *const u8 as *const libc::c_char,
+                        b"__name\0" as *const u8 as *const i8,
                     );
-                    let kind: *const libc::c_char = if tag == TagType::String {
+                    let kind: *const i8 = if tag == TagType::String {
                         lua_tolstring(interpreter, -1, null_mut())
                     } else {
                         lua_typename(interpreter, lua_type(interpreter, index))
                     };
                     lua_pushfstring(
                         interpreter,
-                        b"%s: %p\0" as *const u8 as *const libc::c_char,
+                        b"%s: %p\0" as *const u8 as *const i8,
                         kind,
                         (*interpreter).lua_topointer(index),
                     );
@@ -9385,7 +9319,7 @@ pub unsafe extern "C" fn lual_setfuncs(
         lual_checkstack(
             interpreter,
             nup,
-            b"too many upvalues\0" as *const u8 as *const libc::c_char,
+            b"too many upvalues\0" as *const u8 as *const i8,
         );
         while !((*l).name).is_null() {
             if ((*l).function).is_none() {
@@ -9405,7 +9339,7 @@ pub unsafe extern "C" fn lual_setfuncs(
 pub unsafe extern "C" fn lual_getsubtable(
     interpreter: *mut Interpreter,
     mut index: i32,
-    fname: *const libc::c_char,
+    fname: *const i8,
 ) -> i32 {
     unsafe {
         if lua_getfield(interpreter, index, fname) == TagType::Table {
@@ -9422,7 +9356,7 @@ pub unsafe extern "C" fn lual_getsubtable(
 }
 pub unsafe extern "C" fn lual_requiref(
     interpreter: *mut Interpreter,
-    modname: *const libc::c_char,
+    modname: *const i8,
     openf: CFunction,
     glb: i32,
 ) {
@@ -9430,7 +9364,7 @@ pub unsafe extern "C" fn lual_requiref(
         lual_getsubtable(
             interpreter,
             -(1000000 as i32) - 1000 as i32,
-            b"_LOADED\0" as *const u8 as *const libc::c_char,
+            b"_LOADED\0" as *const u8 as *const i8,
         );
         lua_getfield(interpreter, -1, modname);
         if lua_toboolean(interpreter, -1) == 0 {
@@ -9451,12 +9385,12 @@ pub unsafe extern "C" fn lual_requiref(
 }
 pub unsafe extern "C" fn lual_addgsub(
     b: *mut Buffer,
-    mut s: *const libc::c_char,
-    p: *const libc::c_char,
-    r: *const libc::c_char,
+    mut s: *const i8,
+    p: *const i8,
+    r: *const i8,
 ) {
     unsafe {
-        let mut wild: *const libc::c_char;
+        let mut wild: *const i8;
         let l = strlen(p);
         loop {
             wild = strstr(s, p);
@@ -9472,10 +9406,10 @@ pub unsafe extern "C" fn lual_addgsub(
 }
 pub unsafe extern "C" fn lual_gsub(
     interpreter: *mut Interpreter,
-    s: *const libc::c_char,
-    p: *const libc::c_char,
-    r: *const libc::c_char,
-) -> *const libc::c_char {
+    s: *const i8,
+    p: *const i8,
+    r: *const i8,
+) -> *const i8 {
     unsafe {
         let mut b = Buffer::new();
         b.initialize(interpreter);
@@ -9500,14 +9434,14 @@ pub unsafe extern "C" fn raw_allocate(
 }
 pub unsafe extern "C" fn panic(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let message: *const libc::c_char = if lua_type(interpreter, -1) == Some(TagType::String) {
+        let message: *const i8 = if lua_type(interpreter, -1) == Some(TagType::String) {
             lua_tolstring(interpreter, -1, null_mut())
         } else {
-            b"error object is not a string\0" as *const u8 as *const libc::c_char
+            b"error object is not a string\0" as *const u8 as *const i8
         };
         fprintf(
             stderr,
-            b"PANIC: unprotected error in call to Lua API (%s)\n\0" as *const u8 as *const libc::c_char,
+            b"PANIC: unprotected error in call to Lua API (%s)\n\0" as *const u8 as *const i8,
             message,
         );
         fflush(stderr);
@@ -9516,7 +9450,7 @@ pub unsafe extern "C" fn panic(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn checkcontrol(
     interpreter: *mut Interpreter,
-    mut message: *const libc::c_char,
+    mut message: *const i8,
     tocont: i32,
 ) -> i32 {
     unsafe {
@@ -9527,16 +9461,16 @@ pub unsafe extern "C" fn checkcontrol(
         } {
             return 0;
         } else {
-            if strcmp(message, b"off\0" as *const u8 as *const libc::c_char) == 0 {
+            if strcmp(message, b"off\0" as *const u8 as *const i8) == 0 {
                 lua_setwarnf(
                     interpreter,
-                    Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()),
+                    Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
                     interpreter as *mut libc::c_void,
                 );
-            } else if strcmp(message, b"on\0" as *const u8 as *const libc::c_char) == 0 {
+            } else if strcmp(message, b"on\0" as *const u8 as *const i8) == 0 {
                 lua_setwarnf(
                     interpreter,
-                    Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()),
+                    Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
                     interpreter as *mut libc::c_void,
                 );
             }
@@ -9546,7 +9480,7 @@ pub unsafe extern "C" fn checkcontrol(
 }
 pub unsafe extern "C" fn warnfoff(
     arbitrary_data: *mut libc::c_void,
-    message: *const libc::c_char,
+    message: *const i8,
     tocont: i32,
 ) {
     unsafe {
@@ -9555,29 +9489,29 @@ pub unsafe extern "C" fn warnfoff(
 }
 pub unsafe extern "C" fn warnfcont(
     arbitrary_data: *mut libc::c_void,
-    message: *const libc::c_char,
+    message: *const i8,
     tocont: i32,
 ) {
     unsafe {
         let interpreter: *mut Interpreter = arbitrary_data as *mut Interpreter;
-        fprintf(stderr, b"%s\0" as *const u8 as *const libc::c_char, message);
+        fprintf(stderr, b"%s\0" as *const u8 as *const i8, message);
         fflush(stderr);
         if tocont != 0 {
             lua_setwarnf(
                 interpreter,
-                Some(warnfcont as unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()),
+                Some(warnfcont as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         } else {
             fprintf(
                 stderr,
-                b"%s\0" as *const u8 as *const libc::c_char,
-                b"\n\0" as *const u8 as *const libc::c_char,
+                b"%s\0" as *const u8 as *const i8,
+                b"\n\0" as *const u8 as *const i8,
             );
             fflush(stderr);
             lua_setwarnf(
                 interpreter,
-                Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()),
+                Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         };
@@ -9585,7 +9519,7 @@ pub unsafe extern "C" fn warnfcont(
 }
 pub unsafe extern "C" fn warnfon(
     arbitrary_data: *mut libc::c_void,
-    message: *const libc::c_char,
+    message: *const i8,
     tocont: i32,
 ) {
     unsafe {
@@ -9594,8 +9528,8 @@ pub unsafe extern "C" fn warnfon(
         }
         fprintf(
             stderr,
-            b"%s\0" as *const u8 as *const libc::c_char,
-            b"Lua warning: \0" as *const u8 as *const libc::c_char,
+            b"%s\0" as *const u8 as *const i8,
+            b"Lua warning: \0" as *const u8 as *const i8,
         );
         fflush(stderr);
         warnfcont(arbitrary_data, message, tocont);
@@ -9606,17 +9540,17 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         let mut interpreter: *mut Interpreter = raw_allocate(
             null_mut(),
             0,
-            ::core::mem::size_of::<Interpreter>(),
+            size_of::<Interpreter>(),
         ) as *mut Interpreter;
         if interpreter.is_null() {
             return null_mut();
         }
         let global: *mut Global =
-            raw_allocate(null_mut(), 0, ::core::mem::size_of::<Global>()) as *mut Global;
+            raw_allocate(null_mut(), 0, size_of::<Global>()) as *mut Global;
         if global.is_null() {
             raw_allocate(
                 interpreter as *mut u8 as *mut libc::c_void,
-                ::core::mem::size_of::<Interpreter>(),
+                size_of::<Interpreter>(),
                 0,
             );
             return null_mut();
@@ -9663,8 +9597,8 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         (*global).weak = (*global).ephemeron;
         (*global).twups = null_mut();
         (*global).total_bytes = 0;
-        (*global).total_bytes += ::core::mem::size_of::<Interpreter>() as i64;
-        (*global).total_bytes += ::core::mem::size_of::<Global>() as i64;
+        (*global).total_bytes += size_of::<Interpreter>() as i64;
+        (*global).total_bytes += size_of::<Global>() as i64;
         (*global).gc_debt = 0;
         (*global).last_atomic = 0;
         let io: *mut TValue = &mut (*global).none_value;
@@ -9694,7 +9628,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
             );
             lua_setwarnf(
                 interpreter,
-                Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const libc::c_char, i32) -> ()),
+                Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         }
@@ -9709,9 +9643,9 @@ pub unsafe extern "C" fn lual_checkversion_(
     unsafe {
         let v: f64 = 504.0;
         if size
-            != (::core::mem::size_of::<i64>() as usize)
+            != (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize)
+                .wrapping_add(size_of::<f64>() as usize)
         {
             lual_error(
                 interpreter,
@@ -9732,26 +9666,26 @@ pub unsafe extern "C" fn luab_print(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = (*interpreter).get_top();
         for i in 1..(1 + n) {
             let mut l: usize = 0;
-            let s: *const libc::c_char = lual_tolstring(interpreter, i, &mut l);
+            let s: *const i8 = lual_tolstring(interpreter, i, &mut l);
             if i > 1 {
                 fwrite(
-                    b"\t\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-                    ::core::mem::size_of::<libc::c_char>(),
+                    b"\t\0" as *const u8 as *const i8 as *const libc::c_void,
+                    size_of::<i8>(),
                     1,
                     stdout,
                 );
             }
             fwrite(
                 s as *const libc::c_void,
-                ::core::mem::size_of::<libc::c_char>(),
+                size_of::<i8>(),
                 l as usize,
                 stdout,
             );
             lua_settop(interpreter, -2);
         }
         fwrite(
-            b"\n\0" as *const u8 as *const libc::c_char as *const libc::c_void,
-            ::core::mem::size_of::<libc::c_char>(),
+            b"\n\0" as *const u8 as *const i8 as *const libc::c_void,
+            size_of::<i8>(),
             1,
             stdout,
         );
@@ -9788,16 +9722,16 @@ pub unsafe extern "C" fn l_print(interpreter: *mut Interpreter) {
             lual_checkstack(
                 interpreter,
                 20 as i32,
-                b"too many results to print\0" as *const u8 as *const libc::c_char,
+                b"too many results to print\0" as *const u8 as *const i8,
             );
-            lua_getglobal(interpreter, b"print\0" as *const u8 as *const libc::c_char);
+            lua_getglobal(interpreter, b"print\0" as *const u8 as *const i8);
             lua_rotate(interpreter, 1, 1);
             if lua_pcallk(interpreter, n, 0, 0, 0, None) != 0 {
                 l_message(
                     PROGRAM_NAME,
                     lua_pushfstring(
                         interpreter,
-                        b"error calling 'print' (%s)\0" as *const u8 as *const libc::c_char,
+                        b"error calling 'print' (%s)\0" as *const u8 as *const i8,
                         lua_tolstring(interpreter, -1, null_mut()),
                     ),
                 );
@@ -9806,7 +9740,7 @@ pub unsafe extern "C" fn l_print(interpreter: *mut Interpreter) {
     }
 }
 pub static mut GLOBAL_STATE: *mut Interpreter = null_mut();
-pub static mut PROGRAM_NAME: *const libc::c_char = b"lua\0" as *const u8 as *const libc::c_char;
+pub static mut PROGRAM_NAME: *const i8 = b"lua\0" as *const u8 as *const i8;
 pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" fn(i32) -> ()>) {
     unsafe {
         let mut sa: SignalAction = SignalAction {
@@ -9839,23 +9773,23 @@ pub unsafe extern "C" fn laction(i: i32) {
         );
     }
 }
-pub unsafe extern "C" fn print_usage(badoption: *const libc::c_char) {
+pub unsafe extern "C" fn print_usage(badoption: *const i8) {
     unsafe {
-        fprintf(stderr, b"%s: \0" as *const u8 as *const libc::c_char, PROGRAM_NAME);
+        fprintf(stderr, b"%s: \0" as *const u8 as *const i8, PROGRAM_NAME);
         fflush(stderr);
         if *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_E as i32
             || *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_L as i32
         {
             fprintf(
                 stderr,
-                b"'%s' needs argument\n\0" as *const u8 as *const libc::c_char,
+                b"'%s' needs argument\n\0" as *const u8 as *const i8,
                 badoption,
             );
             fflush(stderr);
         } else {
             fprintf(
                 stderr,
-                b"unrecognized option '%s'\n\0" as *const u8 as *const libc::c_char,
+                b"unrecognized option '%s'\n\0" as *const u8 as *const i8,
                 badoption,
             );
             fflush(stderr);
@@ -9863,28 +9797,28 @@ pub unsafe extern "C" fn print_usage(badoption: *const libc::c_char) {
         fprintf(
         stderr,
         b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
-            as *const u8 as *const libc::c_char,
+            as *const u8 as *const i8,
         PROGRAM_NAME,
     );
         fflush(stderr);
     }
 }
-pub unsafe extern "C" fn l_message(pname: *const libc::c_char, message: *const libc::c_char) {
+pub unsafe extern "C" fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
-            fprintf(stderr, b"%s: \0" as *const u8 as *const libc::c_char, pname);
+            fprintf(stderr, b"%s: \0" as *const u8 as *const i8, pname);
             fflush(stderr);
         }
-        fprintf(stderr, b"%s\n\0" as *const u8 as *const libc::c_char, message);
+        fprintf(stderr, b"%s\n\0" as *const u8 as *const i8, message);
         fflush(stderr);
     }
 }
 pub unsafe extern "C" fn report(interpreter: *mut Interpreter, status: i32) -> i32 {
     unsafe {
         if status != 0 {
-            let mut message: *const libc::c_char = lua_tolstring(interpreter, -1, null_mut());
+            let mut message: *const i8 = lua_tolstring(interpreter, -1, null_mut());
             if message.is_null() {
-                message = b"(error message not a string)\0" as *const u8 as *const libc::c_char;
+                message = b"(error message not a string)\0" as *const u8 as *const i8;
             }
             l_message(PROGRAM_NAME, message);
             lua_settop(interpreter, -2);
@@ -9894,16 +9828,16 @@ pub unsafe extern "C" fn report(interpreter: *mut Interpreter, status: i32) -> i
 }
 pub unsafe extern "C" fn msghandler(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut message: *const libc::c_char = lua_tolstring(interpreter, 1, null_mut());
+        let mut message: *const i8 = lua_tolstring(interpreter, 1, null_mut());
         if message.is_null() {
-            if lual_callmeta(interpreter, 1, b"__tostring\0" as *const u8 as *const libc::c_char)
+            if lual_callmeta(interpreter, 1, b"__tostring\0" as *const u8 as *const i8)
                 && lua_type(interpreter, -1) == Some(TagType::String)
             {
                 return 1;
             } else {
                 message = lua_pushfstring(
                     interpreter,
-                    b"(error object is a %s value)\0" as *const u8 as *const libc::c_char,
+                    b"(error object is a %s value)\0" as *const u8 as *const i8,
                     lua_typename(interpreter, lua_type(interpreter, 1)),
                 );
             }
@@ -9933,7 +9867,7 @@ pub unsafe extern "C" fn docall(interpreter: *mut Interpreter, narg: i32, nres: 
 }
 pub unsafe extern "C" fn createargtable(
     interpreter: *mut Interpreter,
-    argv: *mut *mut libc::c_char,
+    argv: *mut *mut i8,
     argc: i32,
     script: i32,
 ) {
@@ -9943,7 +9877,7 @@ pub unsafe extern "C" fn createargtable(
             lua_pushstring(interpreter, *argv.offset(i as isize));
             lua_rawseti(interpreter, -2, (i - script) as i64);
         }
-        lua_setglobal(interpreter, b"arg\0" as *const u8 as *const libc::c_char);
+        lua_setglobal(interpreter, b"arg\0" as *const u8 as *const i8);
     }
 }
 pub unsafe extern "C" fn dochunk(interpreter: *mut Interpreter, mut status: i32) -> i32 {
@@ -9954,7 +9888,7 @@ pub unsafe extern "C" fn dochunk(interpreter: *mut Interpreter, mut status: i32)
         return report(interpreter, status);
     }
 }
-pub unsafe extern "C" fn dofile(interpreter: *mut Interpreter, name: *const libc::c_char) -> i32 {
+pub unsafe extern "C" fn dofile(interpreter: *mut Interpreter, name: *const i8) -> i32 {
     unsafe {
         return dochunk(
             interpreter,
@@ -9964,8 +9898,8 @@ pub unsafe extern "C" fn dofile(interpreter: *mut Interpreter, name: *const libc
 }
 pub unsafe extern "C" fn dostring(
     interpreter: *mut Interpreter,
-    s: *const libc::c_char,
-    name: *const libc::c_char,
+    s: *const i8,
+    name: *const i8,
 ) -> i32 {
     unsafe {
         return dochunk(
@@ -9974,24 +9908,24 @@ pub unsafe extern "C" fn dostring(
         );
     }
 }
-pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut libc::c_char) -> i32 {
+pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut i8) -> i32 {
     unsafe {
         let status: i32;
-        let mut suffix: *mut libc::c_char = null_mut();
-        let mut modname: *mut libc::c_char = strchr(globname, CHARACTER_EQUAL as i32);
+        let mut suffix: *mut i8 = null_mut();
+        let mut modname: *mut i8 = strchr(globname, CHARACTER_EQUAL as i32);
         if modname.is_null() {
             modname = globname;
-            suffix = strchr(modname, *(b"-\0" as *const u8 as *const libc::c_char) as i32);
+            suffix = strchr(modname, *(b"-\0" as *const u8 as *const i8) as i32);
         } else {
-            *modname = Character::Null as libc::c_char;
+            *modname = Character::Null as i8;
             modname = modname.offset(1);
         }
-        lua_getglobal(interpreter, b"require\0" as *const u8 as *const libc::c_char);
+        lua_getglobal(interpreter, b"require\0" as *const u8 as *const i8);
         lua_pushstring(interpreter, modname);
         status = docall(interpreter, 1, 1);
         if status == 0 {
             if !suffix.is_null() {
-                *suffix = Character::Null as libc::c_char;
+                *suffix = Character::Null as i8;
             }
             lua_setglobal(interpreter, globname);
         }
@@ -10001,14 +9935,14 @@ pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut
 pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32;
-        if lua_getglobal(interpreter, b"arg\0" as *const u8 as *const libc::c_char) != TagType::Table {
+        if lua_getglobal(interpreter, b"arg\0" as *const u8 as *const i8) != TagType::Table {
             lual_error(interpreter, b"'arg' is not a table\0".as_ptr());
         }
         n = lual_len(interpreter, -1) as i32;
         lual_checkstack(
             interpreter,
             n + 3,
-            b"too many arguments to script\0" as *const u8 as *const libc::c_char,
+            b"too many arguments to script\0" as *const u8 as *const i8,
         );
         for i in 1..(1 + n) {
             lua_rawgeti(interpreter, -i, i as i64);
@@ -10018,12 +9952,12 @@ pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn handle_script(interpreter: *mut Interpreter, argv: *mut *mut libc::c_char) -> i32 {
+pub unsafe extern "C" fn handle_script(interpreter: *mut Interpreter, argv: *mut *mut i8) -> i32 {
     unsafe {
         let mut status: i32;
-        let mut fname: *const libc::c_char = *argv.offset(0 as isize);
-        if strcmp(fname, b"-\0" as *const u8 as *const libc::c_char) == 0
-            && strcmp(*argv.offset(-1 as isize), b"--\0" as *const u8 as *const libc::c_char) != 0
+        let mut fname: *const i8 = *argv.offset(0 as isize);
+        if strcmp(fname, b"-\0" as *const u8 as *const i8) == 0
+            && strcmp(*argv.offset(-1 as isize), b"--\0" as *const u8 as *const i8) != 0
         {
             fname = null();
         }
@@ -10035,7 +9969,7 @@ pub unsafe extern "C" fn handle_script(interpreter: *mut Interpreter, argv: *mut
         return report(interpreter, status);
     }
 }
-pub unsafe extern "C" fn collectargs(argv: *mut *mut libc::c_char, first: *mut i32) -> i32 {
+pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
     unsafe {
         let mut args: i32 = 0;
         let mut i: i32;
@@ -10128,14 +10062,14 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut libc::c_char, first: *mut i
         return args;
     }
 }
-pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut libc::c_char, n: i32) -> i32 {
+pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32) -> i32 {
     unsafe {
         for i in 0..n {
             let option: i32 = *(*argv.offset(i as isize)).offset(1 as isize) as i32;
             match option {
                 CHARACTER_LOWER_E | CHARACTER_LOWER_L => {
                     let status: i32;
-                    let extra: *mut libc::c_char = (*argv.offset(i as isize)).offset(2 as isize);
+                    let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
                     if *extra as i32 == Character::Null as i32 {
                         continue;
                     }
@@ -10143,7 +10077,7 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
                         dostring(
                             interpreter,
                             extra,
-                            b"=(command line)\0" as *const u8 as *const libc::c_char,
+                            b"=(command line)\0" as *const u8 as *const i8,
                         )
                     } else {
                         dolibrary(interpreter, extra)
@@ -10153,7 +10087,7 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
                     }
                 }
                 CHARACTER_UPPER_W => {
-                    lua_warning(interpreter, b"@on\0" as *const u8 as *const libc::c_char, 0);
+                    lua_warning(interpreter, b"@on\0" as *const u8 as *const i8, 0);
                 }
                 _ => {}
             }
@@ -10161,24 +10095,24 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
         return 1;
     }
 }
-pub unsafe extern "C" fn get_prompt(interpreter: *mut Interpreter, firstline: i32) -> *const libc::c_char {
+pub unsafe extern "C" fn get_prompt(interpreter: *mut Interpreter, firstline: i32) -> *const i8 {
     unsafe {
         if lua_getglobal(
             interpreter,
             if firstline != 0 {
-                b"_PROMPT\0" as *const u8 as *const libc::c_char
+                b"_PROMPT\0" as *const u8 as *const i8
             } else {
-                b"_PROMPT2\0" as *const u8 as *const libc::c_char
+                b"_PROMPT2\0" as *const u8 as *const i8
             },
         ) == TagType::Nil
         {
             return if firstline != 0 {
-                b"> \0" as *const u8 as *const libc::c_char
+                b"> \0" as *const u8 as *const i8
             } else {
-                b">> \0" as *const u8 as *const libc::c_char
+                b">> \0" as *const u8 as *const i8
             };
         } else {
-            let p: *const libc::c_char = lual_tolstring(interpreter, -1, null_mut());
+            let p: *const i8 = lual_tolstring(interpreter, -1, null_mut());
             lua_rotate(interpreter, -2, -1);
             lua_settop(interpreter, -2);
             return p;
@@ -10189,18 +10123,18 @@ pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) 
     unsafe {
         if status == 3 {
             let mut lmsg: usize = 0;
-            let message: *const libc::c_char = lua_tolstring(interpreter, -1, &mut lmsg);
+            let message: *const i8 = lua_tolstring(interpreter, -1, &mut lmsg);
             if lmsg
-                >= (::core::mem::size_of::<[libc::c_char; 6]>() as usize)
-                    .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+                >= (size_of::<[i8; 6]>() as usize)
+                    .wrapping_div(size_of::<i8>() as usize)
                     .wrapping_sub(1 as usize)
                 && strcmp(
                     message.offset(lmsg as isize).offset(
-                        -((::core::mem::size_of::<[libc::c_char; 6]>() as usize)
-                            .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+                        -((size_of::<[i8; 6]>() as usize)
+                            .wrapping_div(size_of::<i8>() as usize)
                             .wrapping_sub(1 as usize) as isize),
                     ),
-                    b"<eof>\0" as *const u8 as *const libc::c_char,
+                    b"<eof>\0" as *const u8 as *const i8,
                 ) == 0
             {
                 return 1;
@@ -10211,9 +10145,9 @@ pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) 
 }
 pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
     unsafe {
-        let mut buffer: [libc::c_char; 512] = [0; 512];
-        let b: *mut libc::c_char = buffer.as_mut_ptr();
-        let prmt: *const libc::c_char = get_prompt(interpreter, firstline);
+        let mut buffer: [i8; 512] = [0; 512];
+        let b: *mut i8 = buffer.as_mut_ptr();
+        let prmt: *const i8 = get_prompt(interpreter, firstline);
         fputs(prmt, stdout);
         fflush(stdout);
         let readstatus = !fgets(b, 512 as i32, stdin).is_null();
@@ -10224,12 +10158,12 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
             let mut l: usize = strlen(b) as usize;
             if l > 0 && *b.offset(l.wrapping_sub(1 as usize) as isize) as i32 == CHARACTER_LF as i32 {
                 l = l.wrapping_sub(1);
-                *b.offset(l as isize) = Character::Null as libc::c_char;
+                *b.offset(l as isize) = Character::Null as i8;
             }
             if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
                 lua_pushfstring(
                     interpreter,
-                    b"return %s\0" as *const u8 as *const libc::c_char,
+                    b"return %s\0" as *const u8 as *const i8,
                     b.offset(1 as isize),
                 );
             } else {
@@ -10241,14 +10175,14 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
 }
 pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let line: *const libc::c_char = lua_tolstring(interpreter, -1, null_mut());
-        let retline: *const libc::c_char =
-            lua_pushfstring(interpreter, b"return %s;\0" as *const u8 as *const libc::c_char, line);
+        let line: *const i8 = lua_tolstring(interpreter, -1, null_mut());
+        let retline: *const i8 =
+            lua_pushfstring(interpreter, b"return %s;\0" as *const u8 as *const i8, line);
         let status: i32 = lual_loadbufferx(
             interpreter,
             retline,
             strlen(retline) as usize,
-            b"=stdin\0" as *const u8 as *const libc::c_char,
+            b"=stdin\0" as *const u8 as *const i8,
             null(),
         );
         if status == 0 {
@@ -10264,12 +10198,12 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         loop {
             let mut length: usize = 0;
-            let line: *const libc::c_char = lua_tolstring(interpreter, 1, &mut length);
+            let line: *const i8 = lua_tolstring(interpreter, 1, &mut length);
             let status: i32 = lual_loadbufferx(
                 interpreter,
                 line,
                 length,
-                b"=stdin\0" as *const u8 as *const libc::c_char,
+                b"=stdin\0" as *const u8 as *const i8,
                 null(),
             );
             if incomplete(interpreter, status) == 0 || !pushline(interpreter, 0) {
@@ -10277,7 +10211,7 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
             }
             lua_rotate(interpreter, -2, -1);
             lua_settop(interpreter, -2);
-            lua_pushstring(interpreter, b"\n\0" as *const u8 as *const libc::c_char);
+            lua_pushstring(interpreter, b"\n\0" as *const u8 as *const i8);
             lua_rotate(interpreter, -2, 1);
             lua_concat(interpreter, 3);
         }
@@ -10360,19 +10294,19 @@ pub unsafe extern "C" fn getthread(
         };
     }
 }
-pub unsafe extern "C" fn settabss(interpreter: *mut Interpreter, k: *const libc::c_char, v: *const libc::c_char) {
+pub unsafe extern "C" fn settabss(interpreter: *mut Interpreter, k: *const i8, v: *const i8) {
     unsafe {
         lua_pushstring(interpreter, v);
         lua_setfield(interpreter, -2, k);
     }
 }
-pub unsafe extern "C" fn settabsi(interpreter: *mut Interpreter, k: *const libc::c_char, v: i32) {
+pub unsafe extern "C" fn settabsi(interpreter: *mut Interpreter, k: *const i8, v: i32) {
     unsafe {
         (*interpreter).push_integer(v as i64);
         lua_setfield(interpreter, -2, k);
     }
 }
-pub unsafe extern "C" fn settabsb(interpreter: *mut Interpreter, k: *const libc::c_char, v: i32) {
+pub unsafe extern "C" fn settabsb(interpreter: *mut Interpreter, k: *const i8, v: i32) {
     unsafe {
         (*interpreter).push_boolean(v != 0);
         lua_setfield(interpreter, -2, k);
@@ -10381,7 +10315,7 @@ pub unsafe extern "C" fn settabsb(interpreter: *mut Interpreter, k: *const libc:
 pub unsafe extern "C" fn treatstackoption(
     interpreter: *mut Interpreter,
     other_state: *mut Interpreter,
-    fname: *const libc::c_char,
+    fname: *const i8,
 ) {
     unsafe {
         if interpreter == other_state {
@@ -10396,7 +10330,7 @@ pub unsafe extern "C" fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> 
     unsafe {
         let n: i32 = lual_checkinteger(interpreter, 2) as i32;
         lual_checktype(interpreter, 1, TagType::Closure);
-        let name: *const libc::c_char = if get != 0 {
+        let name: *const i8 = if get != 0 {
             lua_getupvalue(interpreter, 1, n)
         } else {
             lua_setupvalue(interpreter, 1, n)
@@ -10423,7 +10357,7 @@ pub unsafe extern "C" fn checkupval(
         id = lua_upvalueid(interpreter, argf, nup);
         if !pnup.is_null() {
             if id.is_null() {
-                lual_argerror(interpreter, argnup, b"invalid upvalue index\0" as *const u8 as *const libc::c_char);
+                lual_argerror(interpreter, argnup, b"invalid upvalue index\0" as *const u8 as *const i8);
             }
             *pnup = nup;
         }
@@ -10432,12 +10366,12 @@ pub unsafe extern "C" fn checkupval(
 }
 pub unsafe extern "C" fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
     unsafe {
-        pub const HOOK_NAMES: [*const libc::c_char; 5] = [
-            b"call\0" as *const u8 as *const libc::c_char,
-            b"return\0" as *const u8 as *const libc::c_char,
-            b"line\0" as *const u8 as *const libc::c_char,
-            b"count\0" as *const u8 as *const libc::c_char,
-            b"tail call\0" as *const u8 as *const libc::c_char,
+        pub const HOOK_NAMES: [*const i8; 5] = [
+            b"call\0" as *const u8 as *const i8,
+            b"return\0" as *const u8 as *const i8,
+            b"line\0" as *const u8 as *const i8,
+            b"count\0" as *const u8 as *const i8,
+            b"tail call\0" as *const u8 as *const i8,
         ];
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);
         (*interpreter).push_state();
@@ -10452,7 +10386,7 @@ pub unsafe extern "C" fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo
         }
     }
 }
-pub unsafe extern "C" fn makemask(smask: *const libc::c_char, count: i32) -> i32 {
+pub unsafe extern "C" fn makemask(smask: *const i8, count: i32) -> i32 {
     unsafe {
         let mut mask: i32 = 0;
         if !(strchr(smask, CHARACTER_LOWER_C as i32)).is_null() {
@@ -10470,26 +10404,26 @@ pub unsafe extern "C" fn makemask(smask: *const libc::c_char, count: i32) -> i32
         return mask;
     }
 }
-pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut libc::c_char) -> *mut libc::c_char {
+pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
     unsafe {
         let mut i: i32 = 0;
         if mask & 1 << 0 != 0 {
             let fresh190 = i;
             i = i + 1;
-            *smask.offset(fresh190 as isize) = CHARACTER_LOWER_C as libc::c_char;
+            *smask.offset(fresh190 as isize) = CHARACTER_LOWER_C as i8;
         }
         if mask & 1 << 1 != 0 {
             let fresh191 = i;
             i = i + 1;
-            *smask.offset(fresh191 as isize) = CHARACTER_LOWER_R as libc::c_char;
+            *smask.offset(fresh191 as isize) = CHARACTER_LOWER_R as i8;
         }
         if mask & 1 << 2 != 0 {
             let fresh192 = i;
             i = i + 1;
-            *smask.offset(fresh192 as isize) = CHARACTER_LOWER_L as libc::c_char;
+            *smask.offset(fresh192 as isize) = CHARACTER_LOWER_L as i8;
         }
-        *smask.offset(i as isize) = Character::Null as libc::c_char;
+        *smask.offset(i as isize) = Character::Null as i8;
         return smask;
     }
 }
-pub const HOOKKEY: *const libc::c_char = b"_HOOKKEY\0" as *const u8 as *const libc::c_char;
+pub const HOOKKEY: *const i8 = b"_HOOKKEY\0" as *const u8 as *const i8;

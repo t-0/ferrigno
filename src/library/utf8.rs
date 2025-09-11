@@ -12,7 +12,7 @@ pub unsafe extern "C" fn u_posrelat(pos: i64, length: usize) -> i64 {
         return length as i64 + pos + 1;
     };
 }
-pub unsafe extern "C" fn utf8_decode(mut s: *const libc::c_char, value: *mut u32, strict: i32) -> *const libc::c_char {
+pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: i32) -> *const i8 {
     unsafe {
         pub const LIMITS: [u32; 6] = [
             !(0u32),
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: i64 = 0;
         let mut length: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut length);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let mut posj: i64 = u_posrelat(lual_optinteger(interpreter, 3, -1 as i64), length);
         let lax: i32 = lua_toboolean(interpreter, 4);
@@ -71,17 +71,17 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 2,
-                b"initial position out of bounds\0" as *const u8 as *const libc::c_char,
+                b"initial position out of bounds\0" as *const u8 as *const i8,
             ) != 0) as i32;
         posj -= 1;
         (((posj < length as i64) as i32 != 0) as i64 != 0
             || lual_argerror(
                 interpreter,
                 3,
-                b"final position out of bounds\0" as *const u8 as *const libc::c_char,
+                b"final position out of bounds\0" as *const u8 as *const i8,
             ) != 0) as i32;
         while posi <= posj {
-            let s1: *const libc::c_char = utf8_decode(
+            let s1: *const i8 = utf8_decode(
                 s.offset(posi as isize),
                 null_mut(),
                 (lax == 0) as i32,
@@ -101,17 +101,17 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: usize = 0;
-        let mut s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut length);
+        let mut s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let pose: i64 = u_posrelat(lual_optinteger(interpreter, 3, posi), length);
         let lax: i32 = lua_toboolean(interpreter, 4);
         let mut n: i32;
-        let se: *const libc::c_char;
+        let se: *const i8;
         (((posi >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 2, b"out of bounds\0" as *const u8 as *const libc::c_char) != 0)
+            || lual_argerror(interpreter, 2, b"out of bounds\0" as *const u8 as *const i8) != 0)
             as i32;
         (((pose <= length as i64) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 3, b"out of bounds\0" as *const u8 as *const libc::c_char) != 0)
+            || lual_argerror(interpreter, 3, b"out of bounds\0" as *const u8 as *const i8) != 0)
             as i32;
         if posi > pose {
             return 0;
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
         lual_checkstack(
             interpreter,
             n,
-            b"string slice too long\0" as *const u8 as *const libc::c_char,
+            b"string slice too long\0" as *const u8 as *const i8,
         );
         n = 0;
         se = s.offset(pose as isize);
@@ -147,9 +147,9 @@ pub unsafe extern "C" fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
             || lual_argerror(
                 interpreter,
                 arg,
-                b"value out of range\0" as *const u8 as *const libc::c_char,
+                b"value out of range\0" as *const u8 as *const i8,
             ) != 0) as i32;
-        lua_pushfstring(interpreter, b"%U\0" as *const u8 as *const libc::c_char, code as i64);
+        lua_pushfstring(interpreter, b"%U\0" as *const u8 as *const i8, code as i64);
     }
 }
 pub unsafe extern "C" fn utfchar(interpreter: *mut Interpreter) -> i32 {
@@ -172,7 +172,7 @@ pub unsafe extern "C" fn utfchar(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut length);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut n: i64 = lual_checkinteger(interpreter, 2);
         let mut posi: i64 = (if n >= 0 {
             1 as usize
@@ -189,7 +189,7 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 3,
-                b"position out of bounds\0" as *const u8 as *const libc::c_char,
+                b"position out of bounds\0" as *const u8 as *const i8,
             ) != 0) as i32;
         if n == 0 {
             while posi > 0 && *s.offset(posi as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
     unsafe {
         let mut length: usize = 0;
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, &mut length);
+        let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut n: usize = lua_tointegerx(interpreter, 2, null_mut()) as usize;
         if n < length as usize {
             while *s.offset(n as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
             return 0;
         } else {
             let mut code: u32 = 0;
-            let next: *const libc::c_char = utf8_decode(s.offset(n as isize), &mut code, strict);
+            let next: *const i8 = utf8_decode(s.offset(n as isize), &mut code, strict);
             if next.is_null() || *next as i32 & 0xc0 as i32 == 0x80 as i32 {
                 return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
             }
@@ -272,12 +272,12 @@ pub unsafe extern "C" fn iter_auxlax(interpreter: *mut Interpreter) -> i32 {
 pub unsafe extern "C" fn iter_codes(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let lax: i32 = lua_toboolean(interpreter, 2);
-        let s: *const libc::c_char = lual_checklstring(interpreter, 1, null_mut());
+        let s: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0
             || lual_argerror(
                 interpreter,
                 1,
-                b"invalid UTF-8 code\0" as *const u8 as *const libc::c_char,
+                b"invalid UTF-8 code\0" as *const u8 as *const i8,
             ) != 0) as i32;
         lua_pushcclosure(
             interpreter,
@@ -297,37 +297,37 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
     [
         {
             RegisteredFunction {
-                name: b"offset\0" as *const u8 as *const libc::c_char,
+                name: b"offset\0" as *const u8 as *const i8,
                 function: Some(byteoffset as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"codepoint\0" as *const u8 as *const libc::c_char,
+                name: b"codepoint\0" as *const u8 as *const i8,
                 function: Some(codepoint as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"char\0" as *const u8 as *const libc::c_char,
+                name: b"char\0" as *const u8 as *const i8,
                 function: Some(utfchar as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"len\0" as *const u8 as *const libc::c_char,
+                name: b"len\0" as *const u8 as *const i8,
                 function: Some(utflen as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"codes\0" as *const u8 as *const libc::c_char,
+                name: b"codes\0" as *const u8 as *const i8,
                 function: Some(iter_codes as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"charpattern\0" as *const u8 as *const libc::c_char,
+                name: b"charpattern\0" as *const u8 as *const i8,
                 function: None,
             }
         },
@@ -344,20 +344,20 @@ pub unsafe extern "C" fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (::core::mem::size_of::<i64>() as usize)
+            (size_of::<i64>() as usize)
                 .wrapping_mul(16 as usize)
-                .wrapping_add(::core::mem::size_of::<f64>() as usize),
+                .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), 0);
         lua_pushlstring(
             interpreter,
-            b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*\0" as *const u8 as *const libc::c_char,
-            (::core::mem::size_of::<[libc::c_char; 15]>() as usize)
-                .wrapping_div(::core::mem::size_of::<libc::c_char>() as usize)
+            b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*\0" as *const u8 as *const i8,
+            (size_of::<[i8; 15]>() as usize)
+                .wrapping_div(size_of::<i8>() as usize)
                 .wrapping_sub(1 as usize),
         );
-        lua_setfield(interpreter, -2, b"charpattern\0" as *const u8 as *const libc::c_char);
+        lua_setfield(interpreter, -2, b"charpattern\0" as *const u8 as *const i8);
         return 1;
     }
 }
