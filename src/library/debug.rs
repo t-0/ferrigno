@@ -416,7 +416,7 @@ pub unsafe extern "C" fn db_debug(interpreter: *mut Interpreter) -> i32 {
             if lual_loadbufferx(
                 interpreter,
                 buffer.as_mut_ptr(),
-                strlen(buffer.as_mut_ptr()),
+                strlen(buffer.as_mut_ptr()) as u64,
                 b"=(debug command)\0" as *const u8 as *const i8,
                 null(),
             ) != 0

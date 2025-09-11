@@ -491,13 +491,12 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
             );
             nr = fread(
                 p as *mut libc::c_void,
-                ::core::mem::size_of::<i8>() as u64,
-                (16 as u64)
-                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>() as u64)
-                    .wrapping_mul(::core::mem::size_of::<f64>() as u64) as i32
-                    as u64,
+                ::core::mem::size_of::<i8>(),
+                (16 as usize)
+                    .wrapping_mul(::core::mem::size_of::<*mut libc::c_void>())
+                    .wrapping_mul(::core::mem::size_of::<f64>()),
                 file,
-            );
+            ) as u64;
             b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
             if !(nr
                 == (16 as u64)
@@ -520,10 +519,10 @@ pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FI
         p = b.prepare_with_size(n as usize);
         nr = fread(
             p as *mut libc::c_void,
-            ::core::mem::size_of::<i8>() as u64,
-            n,
+            ::core::mem::size_of::<i8>(),
+            n as usize,
             file,
-        );
+        ) as u64;
         b.vector.length = (b.vector.length as usize).wrapping_add(nr as usize) as i32;
         b.push_result();
         return (nr > 0) as i32;
@@ -768,7 +767,7 @@ pub unsafe extern "C" fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
         );
         let res: i32;
         *__errno_location() = 0;
-        res = setvbuf(file, null_mut(), MODE[op as usize], size as u64);
+        res = setvbuf(file, null_mut(), MODE[op as usize], size as usize);
         return lual_fileresult(interpreter, (res == 0) as i32, null());
     }
 }

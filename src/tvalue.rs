@@ -204,7 +204,7 @@ pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut 
         let mut buffer: [i8; 44] = [0; 44];
         let length = tostringbuff(obj, buffer.as_mut_ptr());
         let io: *mut TValue = obj;
-        let ts: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length);
+        let ts: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
         (*io).value.object = &mut (*(ts as *mut Object));
         (*io).set_tag_variant((*ts).get_tag_variant());
         (*io).set_collectable(true);
@@ -254,7 +254,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i3
         if (*obj).is_tagtype_string() {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
             return (luao_str2num((*st).get_contents_mut(), result)
-                == (*st).get_length().wrapping_add(1 as u64)) as i32;
+                == (*st).get_length().wrapping_add(1) as u64) as i32;
         } else {
             return 0;
         };

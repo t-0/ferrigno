@@ -38,8 +38,8 @@ pub struct FunctionState {
     pub program_counter: i32,
     pub last_target: i32,
     pub previous_line: i32,
-    pub count_k: i32,
-    pub count_p: i32,
+    pub count_constants: i32,
+    pub count_prototypes: i32,
     pub count_abslineinfo: i32,
     pub first_local: i32,
     pub first_label: i32,
@@ -60,8 +60,8 @@ impl New for FunctionState {
             program_counter: 0,
             last_target: 0,
             previous_line: 0,
-            count_k: 0,
-            count_p: 0,
+            count_constants: 0,
+            count_prototypes: 0,
             count_abslineinfo: 0,
             first_local: 0,
             first_label: 0,
@@ -118,9 +118,9 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
                 luas_newlstr(
                     (*lexical_state).interpreter,
                     b"break\0" as *const u8 as *const i8,
-                    (::core::mem::size_of::<[i8; 6]>() as u64)
-                        .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                        .wrapping_sub(1 as u64),
+                    (::core::mem::size_of::<[i8; 6]>())
+                        .wrapping_div(::core::mem::size_of::<i8>())
+                        .wrapping_sub(1),
                 ),
                 0,
                 false,
@@ -882,26 +882,26 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
         let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*(*function_state).lexical_state).table, key);
-        let mut count_k: i32;
+        let mut count_constants: i32;
         if (*index).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            count_k = (*index).value.integer as i32;
-            if count_k < (*function_state).count_k
-                && (*((*prototype).prototype_constants.pointer).offset(count_k as isize)).get_tag_variant() == (*v).get_tag_variant()
-                && luav_equalobj(null_mut(), &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize), v)
+            count_constants = (*index).value.integer as i32;
+            if count_constants < (*function_state).count_constants
+                && (*((*prototype).prototype_constants.pointer).offset(count_constants as isize)).get_tag_variant() == (*v).get_tag_variant()
+                && luav_equalobj(null_mut(), &mut *((*prototype).prototype_constants.pointer).offset(count_constants as isize), v)
             {
-                return count_k;
+                return count_constants;
             }
         }
         let mut old_size: i32 = (*prototype).prototype_constants.size;
-        count_k = (*function_state).count_k;
+        count_constants = (*function_state).count_constants;
         let io: *mut TValue = &mut value;
-        (*io).value.integer = count_k as i64;
+        (*io).value.integer = count_constants as i64;
         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(interpreter, (*(*function_state).lexical_state).table, key, index, &mut value);
         (*prototype).prototype_constants.pointer = luam_growaux_(
             interpreter,
             (*prototype).prototype_constants.pointer as *mut libc::c_void,
-            count_k as usize,
+            count_constants as usize,
             &mut (*prototype).prototype_constants.size,
             ::core::mem::size_of::<TValue>(),
             (if ((1 << 8 + 8 + 1 + 8) - 1) as u64
@@ -918,11 +918,11 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             old_size = old_size + 1;
             (*((*prototype).prototype_constants.pointer).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil as u8);
         }
-        let io1: *mut TValue = &mut *((*prototype).prototype_constants.pointer).offset(count_k as isize) as *mut TValue;
+        let io1: *mut TValue = &mut *((*prototype).prototype_constants.pointer).offset(count_constants as isize) as *mut TValue;
         let io2: *const TValue = v;
         (*io1).copy_from(&*io2);
-        (*function_state).count_k += 1;
-        (*function_state).count_k;
+        (*function_state).count_constants += 1;
+        (*function_state).count_constants;
         if (*v).is_collectable() {
             if (*prototype).get_marked() & 1 << 5 != 0
                 && (*(*v).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
@@ -936,7 +936,7 @@ pub unsafe extern "C" fn addk(function_state: *mut FunctionState, key: *mut TVal
             };
         } else {
         };
-        return count_k;
+        return count_constants;
     }
 }
 pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TString) -> i32 {

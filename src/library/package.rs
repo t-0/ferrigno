@@ -81,7 +81,7 @@ pub unsafe extern "C" fn setpath(
             if dftmark.is_null() {
                 lua_pushstring(interpreter, path);
             } else {
-                let length: u64 = strlen(path);
+                let length: u64 = strlen(path) as u64;
                 let mut b = Buffer::new();
                 b.initialize(interpreter);
                 if path < dftmark {

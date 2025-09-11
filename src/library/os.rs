@@ -201,13 +201,13 @@ pub unsafe extern "C" fn checkoption(
             } else if memcmp(
                 conv as *const libc::c_void,
                 option as *const libc::c_void,
-                oplen as u64,
+                oplen as usize,
             ) == 0
             {
                 memcpy(
                     buffer as *mut libc::c_void,
                     conv as *const libc::c_void,
-                    oplen as u64,
+                    oplen as usize,
                 );
                 *buffer.offset(oplen as isize) = Character::Null as i8;
                 return conv.offset(oplen as isize);
@@ -293,7 +293,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
                     b.vector.length = (b.vector.length).wrapping_add(1);
                     *(b.vector.pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
-                    let reslen: u64;
+                    let reslen:  usize;
                     let buffer: *mut i8 = b.prepare_with_size(250);
                     s = s.offset(1);
                     s = checkoption(
@@ -302,7 +302,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
                         se.offset_from(s) as i64,
                         cc.as_mut_ptr().offset(1 as isize),
                     );
-                    reslen = strftime(buffer, 250 as u64, cc.as_mut_ptr(), stm);
+                    reslen = strftime(buffer, 250, cc.as_mut_ptr(), stm);
                     b.vector.length = (b.vector.length as usize).wrapping_add(reslen as usize) as i32;
                 }
             }

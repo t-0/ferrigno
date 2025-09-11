@@ -72,7 +72,7 @@ impl Buffer {
                     memcpy(
                         new_pointer as *mut libc::c_void,
                         self.vector.pointer as *const libc::c_void,
-                        (self.vector.length as usize).wrapping_mul(::core::mem::size_of::<BufferElement>()) as u64,
+                        (self.vector.length as usize).wrapping_mul(::core::mem::size_of::<BufferElement>()),
                     );
                 }
                 self.vector.pointer = new_pointer;
@@ -93,7 +93,7 @@ impl Buffer {
                 memcpy(
                     raw as *mut libc::c_void,
                     s as *const libc::c_void,
-                    length.wrapping_mul(::core::mem::size_of::<BufferElement>()) as u64,
+                    length.wrapping_mul(::core::mem::size_of::<BufferElement>()),
                 );
                 self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
             }
@@ -124,7 +124,7 @@ impl Buffer {
             memcpy(
                 b as *mut libc::c_void,
                 s as *const libc::c_void,
-                length.wrapping_mul(::core::mem::size_of::<BufferElement>() as u64),
+                (length as usize).wrapping_mul(::core::mem::size_of::<BufferElement>()),
             );
             self.vector.length = (self.vector.length as usize).wrapping_add(length as usize) as i32;
             lua_settop(interpreter, -1 - 1);

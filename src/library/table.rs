@@ -235,9 +235,9 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
         memcpy(
             buffer.as_mut_ptr() as *mut libc::c_void,
             &mut c as *mut i64 as *const libc::c_void,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_div(::core::mem::size_of::<u32>() as u64)
-                .wrapping_mul(::core::mem::size_of::<u32>() as u64),
+            (::core::mem::size_of::<i64>())
+                .wrapping_div(::core::mem::size_of::<u32>())
+                .wrapping_mul(::core::mem::size_of::<u32>()),
         );
         memcpy(
             buffer.as_mut_ptr().offset(
@@ -245,9 +245,9 @@ pub unsafe extern "C" fn l_randomizepivot() -> u32 {
                     .wrapping_div(::core::mem::size_of::<u32>() as u64) as isize,
             ) as *mut libc::c_void,
             &mut t as *mut i64 as *const libc::c_void,
-            (::core::mem::size_of::<i64>() as u64)
-                .wrapping_div(::core::mem::size_of::<u32>() as u64)
-                .wrapping_mul(::core::mem::size_of::<u32>() as u64),
+            (::core::mem::size_of::<i64>())
+                .wrapping_div(::core::mem::size_of::<u32>())
+                .wrapping_mul(::core::mem::size_of::<u32>()),
         );
         i = 0u32;
         while (i as u64)

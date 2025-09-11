@@ -71,9 +71,9 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut
         (*global).memory_error_message = luas_newlstr(
             interpreter,
             b"not enough memory\0" as *const u8 as *const i8,
-            (::core::mem::size_of::<[i8; 18]>() as u64)
-                .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                .wrapping_sub(1 as u64),
+            (::core::mem::size_of::<[i8; 18]>())
+                .wrapping_div(::core::mem::size_of::<i8>())
+                .wrapping_sub(1),
         );
         (*global).fix_memory_error_message_global();
         (*global).stringcache_set_error();

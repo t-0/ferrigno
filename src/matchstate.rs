@@ -340,7 +340,7 @@ impl MatchState {
                 && memcmp(
                     self.capture[l as usize].init as *const libc::c_void,
                     s as *const libc::c_void,
-                    length,
+                    length as usize,
                 ) == 0
             {
                 return s.offset(length as isize);
@@ -658,7 +658,7 @@ impl MatchState {
             let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
             let mut p: *const i8;
             loop {
-                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l) as *mut i8;
+                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l as usize) as *mut i8;
                 if p.is_null() {
                     break;
                 }

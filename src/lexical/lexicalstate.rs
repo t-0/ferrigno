@@ -182,12 +182,12 @@ impl LexicalState {
         unsafe {
             let function_state: *mut FunctionState = self.function_state;
             let prototype: *mut Prototype = (*function_state).prototype;
-            if (*function_state).count_p >= (*prototype).prototype_prototypes.size {
+            if (*function_state).count_prototypes >= (*prototype).prototype_prototypes.size {
                 let mut old_size: i32 = (*prototype).prototype_prototypes.size;
                 (*prototype).prototype_prototypes.pointer = luam_growaux_(
                     self.interpreter,
                     (*prototype).prototype_prototypes.pointer as *mut libc::c_void,
-                    (*function_state).count_p as usize,
+                    (*function_state).count_prototypes as usize,
                     &mut (*prototype).prototype_prototypes.size,
                     ::core::mem::size_of::<*mut Prototype>(),
                     (if ((1 << 8 + 8 + 1) - 1) as u64
@@ -208,8 +208,8 @@ impl LexicalState {
                 }
             }
             let clp: *mut Prototype = luaf_newproto(self.interpreter);
-            let np = (*function_state).count_p;
-            (*function_state).count_p = (*function_state).count_p + 1;
+            let np = (*function_state).count_prototypes;
+            (*function_state).count_prototypes = (*function_state).count_prototypes + 1;
             let ref mut target = *((*prototype).prototype_prototypes.pointer).offset(np as isize);
             *target = clp;
             if (*prototype).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -320,9 +320,9 @@ pub unsafe extern "C" fn undefgoto(
             == luas_newlstr(
                 (*lexical_state).interpreter,
                 b"break\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 6]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
+                (::core::mem::size_of::<[i8; 6]>())
+                    .wrapping_div(::core::mem::size_of::<i8>())
+                    .wrapping_sub(1),
             )
         {
             message = b"break outside loop at line %d\0" as *const u8 as *const i8;
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn codeclosure(
         init_exp(
             v,
             ExpressionKind::VRELOC,
-            luak_codeabx(function_state, OP_CLOSURE, 0, ((*function_state).count_p - 1) as u32),
+            luak_codeabx(function_state, OP_CLOSURE, 0, ((*function_state).count_prototypes - 1) as u32),
         );
         luak_exp2nextreg(function_state, v);
     }
@@ -368,9 +368,9 @@ pub unsafe extern "C" fn open_func(
         (*function_state).iwthabs = 0;
         (*function_state).last_target = 0;
         (*function_state).freereg = 0;
-        (*function_state).count_k = 0;
+        (*function_state).count_constants = 0;
         (*function_state).count_abslineinfo = 0;
-        (*function_state).count_p = 0;
+        (*function_state).count_prototypes = 0;
         (*function_state).count_upvalues = 0;
         (*function_state).count_debug_variables = 0 as i16;
         (*function_state).count_active_variables = 0;
@@ -402,8 +402,8 @@ pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
         (*prototype).prototype_code.shrink(&mut *interpreter, (*function_state).program_counter as usize);
         (*prototype).prototype_line_info.shrink(&mut *interpreter, (*function_state).program_counter as usize);
         (*prototype).prototype_absolute_line_info.shrink(&mut *interpreter, (*function_state).count_abslineinfo as usize);
-        (*prototype).prototype_constants.shrink(&mut *interpreter, (*function_state).count_k as usize);
-        (*prototype).prototype_prototypes.shrink(&mut *interpreter, (*function_state).count_p as usize);
+        (*prototype).prototype_constants.shrink(&mut *interpreter, (*function_state).count_constants as usize);
+        (*prototype).prototype_prototypes.shrink(&mut *interpreter, (*function_state).count_prototypes as usize);
         (*prototype).prototype_local_variables.shrink(&mut *interpreter, (*function_state).count_debug_variables as usize);
         (*prototype).prototype_upvalues.shrink(&mut *interpreter, (*function_state).count_upvalues as usize);
         (*lexical_state).function_state = (*function_state).previous;
@@ -605,8 +605,8 @@ pub unsafe extern "C" fn body(
             program_counter: 0,
             last_target: 0,
             previous_line: 0,
-            count_k: 0,
-            count_p: 0,
+            count_constants: 0,
+            count_prototypes: 0,
             count_abslineinfo: 0,
             first_local: 0,
             first_label: 0,
@@ -1332,9 +1332,9 @@ pub unsafe extern "C" fn breakstat(lexical_state: *mut LexicalState) {
             luas_newlstr(
                 (*lexical_state).interpreter,
                 b"break\0" as *const u8 as *const i8,
-                (::core::mem::size_of::<[i8; 6]>() as u64)
-                    .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                    .wrapping_sub(1 as u64),
+                (::core::mem::size_of::<[i8; 6]>())
+                    .wrapping_div(::core::mem::size_of::<i8>())
+                    .wrapping_sub(1),
             ),
             line,
             luak_jump((*lexical_state).function_state),
@@ -1588,9 +1588,9 @@ pub unsafe extern "C" fn test_then_block(lexical_state: *mut LexicalState, escap
                 luas_newlstr(
                     (*lexical_state).interpreter,
                     b"break\0" as *const u8 as *const i8,
-                    (::core::mem::size_of::<[i8; 6]>() as u64)
-                        .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                        .wrapping_sub(1 as u64),
+                    (::core::mem::size_of::<[i8; 6]>())
+                        .wrapping_div(::core::mem::size_of::<i8>())
+                        .wrapping_sub(1),
                 ),
                 line,
                 v.t,
@@ -1971,7 +1971,7 @@ pub unsafe extern "C" fn luax_newstring(
 ) -> *mut TString {
     unsafe {
         let interpreter: *mut Interpreter = (*lexical_state).interpreter;
-        let mut ts: *mut TString = luas_newlstr(interpreter, str, length);
+        let mut ts: *mut TString = luas_newlstr(interpreter, str, length as usize);
         let o: *const TValue = luah_getstr((*lexical_state).table, ts);
         if (*o).is_tagtype_nil() {
             let fresh50 = (*interpreter).top.stkidrel_pointer;
@@ -2048,9 +2048,9 @@ pub unsafe extern "C" fn luax_setinput(
         (*lexical_state).environment = luas_newlstr(
             interpreter,
             b"_ENV\0" as *const u8 as *const i8,
-            (::core::mem::size_of::<[i8; 5]>() as u64)
-                .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                .wrapping_sub(1 as u64),
+            (::core::mem::size_of::<[i8; 5]>())
+                .wrapping_div(::core::mem::size_of::<i8>())
+                .wrapping_sub(1),
         );
         (*(*lexical_state).buffer).vector.pointer = luam_saferealloc_(
             (*lexical_state).interpreter,

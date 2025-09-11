@@ -121,9 +121,9 @@ impl LoadState {
                         buffer.as_mut_ptr() as *mut libc::c_void,
                         size.wrapping_mul(::core::mem::size_of::<i8>() as u64),
                     );
-                    ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size);
+                    ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
-                    ts = TString::create_long(interpreter, size);
+                    ts = TString::create_long(interpreter, size as usize);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     (*io).value.object = &mut (*(ts as *mut Object));
                     (*io).set_tag_variant((*ts).get_tag_variant());
@@ -395,7 +395,7 @@ impl LoadState {
     ) {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
-            let length: u64 = strlen(s);
+            let length: u64 = strlen(s) as u64;
             self.load_block(
                 buffer.as_mut_ptr() as *mut libc::c_void,
                 length.wrapping_mul(::core::mem::size_of::<i8>() as u64),
@@ -403,7 +403,7 @@ impl LoadState {
             if memcmp(
                 s as *const libc::c_void,
                 buffer.as_mut_ptr() as *const libc::c_void,
-                length,
+                length as usize,
             ) != 0
             {
                 self.error(message);

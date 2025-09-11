@@ -24,7 +24,7 @@ impl BuffFS {
         unsafe {
             let io: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer).tvalue;
             let ts: *mut TString =
-                luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size as u64);
+                luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size);
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag_variant((*ts).get_tag_variant());
             (*io).set_collectable(true);
@@ -52,13 +52,13 @@ impl BuffFS {
                 memcpy(
                     bf as *mut libc::c_void,
                     pointer as *const libc::c_void,
-                    length,
+                    length as usize,
                 );
                 self.size += length as usize;
             } else {
                 self.clear();
                 let io = &mut (*(*self.interpreter).top.stkidrel_pointer).tvalue;
-                let ts = luas_newlstr(self.interpreter, pointer, length);
+                let ts = luas_newlstr(self.interpreter, pointer, length as usize);
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag_variant((*ts).get_tag_variant());
                 (*io).set_collectable(true);

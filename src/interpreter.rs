@@ -2044,7 +2044,7 @@ pub unsafe extern "C" fn lua_tolstring(
             o = (*interpreter).index2value(index);
         }
         if !length.is_null() {
-            *length = (*((*o).value.object as *mut TString)).get_length();
+            *length = (*((*o).value.object as *mut TString)).get_length() as u64;
         }
         return (*((*o).value.object as *mut TString)).get_contents_mut();
     }
@@ -2095,7 +2095,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         let ts: *mut TString = if length == 0 {
             luas_new(interpreter, b"\0" as *const u8 as *const i8)
         } else {
-            luas_newlstr(interpreter, s, length)
+            luas_newlstr(interpreter, s, length as usize)
         };
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         (*io).value.object = &mut (*(ts as *mut Object));
@@ -3031,7 +3031,7 @@ pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
             concatenate(interpreter, n);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
-            let ts: *mut TString = luas_newlstr(interpreter, b"\0" as *const u8 as *const i8, 0u64);
+            let ts: *mut TString = luas_newlstr(interpreter, b"\0" as *const u8 as *const i8, 0);
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag_variant((*ts).get_tag_variant());
             (*io).set_collectable(true);
@@ -3204,14 +3204,14 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>() as u64,
+            ::core::mem::size_of::<u64>(),
         );
         p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
         let mut t_0: u64 = &mut h as *mut u32 as u64;
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_0 as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>() as u64,
+            ::core::mem::size_of::<u64>(),
         );
         p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
         let mut t_1: u64 =
@@ -3221,7 +3221,7 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_1 as *mut u64 as *const libc::c_void,
-            ::core::mem::size_of::<u64>() as u64,
+            ::core::mem::size_of::<u64>(),
         );
         p = (p as u64).wrapping_add(::core::mem::size_of::<u64>() as u64) as i32;
         return luas_hash(buffer.as_mut_ptr(), p as u64, h);
@@ -3771,7 +3771,7 @@ pub unsafe extern "C" fn luag_addinfo(
             luao_chunkid(
                 buffer.as_mut_ptr(),
                 (*src).get_contents_mut(),
-                (*src).get_length(),
+                (*src).get_length() as u64,
             );
         } else {
             buffer[0] = CHARACTER_QUESTION as i8;
@@ -4239,7 +4239,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                     if s.is_null() {
                         s = b"(null)\0" as *const u8 as *const i8;
                     }
-                    buff_fs.add_string(s, strlen(s));
+                    buff_fs.add_string(s, strlen(s) as u64);
                 }
                 CHARACTER_LOWER_C => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
@@ -4270,7 +4270,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
                     let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                     let length =
-                        snprintf(bf, size as u64, b"%p\0" as *const u8 as *const i8, p) as u64;
+                        snprintf(bf, size, b"%p\0" as *const u8 as *const i8, p);
                     buff_fs.add_length(length as usize);
                 }
                 CHARACTER_UPPER_U => {
@@ -4296,7 +4296,7 @@ pub unsafe extern "C" fn luao_pushvfstring(
             }
             fmt = e.offset(2 as isize);
         }
-        buff_fs.add_string(fmt, strlen(fmt));
+        buff_fs.add_string(fmt, strlen(fmt) as u64);
         buff_fs.clear();
         return (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue
@@ -5618,9 +5618,9 @@ pub unsafe extern "C" fn luax_init(interpreter: *mut Interpreter) {
         let e: *mut TString = luas_newlstr(
             interpreter,
             b"_ENV\0" as *const u8 as *const i8,
-            (::core::mem::size_of::<[i8; 5]>() as u64)
-                .wrapping_div(::core::mem::size_of::<i8>() as u64)
-                .wrapping_sub(1 as u64),
+            (::core::mem::size_of::<[i8; 5]>())
+                .wrapping_div(::core::mem::size_of::<i8>())
+                .wrapping_sub(1),
         );
         fix_object_state(interpreter, &mut (*(e as *mut Object)));
         i = 0;
@@ -8394,8 +8394,8 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             memcpy(
                                 ra_74.offset(4 as isize) as *mut libc::c_void,
                                 ra_74 as *const libc::c_void,
-                                (3 as u64)
-                                    .wrapping_mul(::core::mem::size_of::<StackValue>() as u64),
+                                (3 as usize)
+                                    .wrapping_mul(::core::mem::size_of::<StackValue>()),
                             );
                             (*interpreter).top.stkidrel_pointer =
                                 ra_74.offset(4 as isize).offset(3 as isize);
@@ -8478,7 +8478,7 @@ pub unsafe extern "C" fn pushglobalfuncname(
         );
         if findfield(interpreter, top + 1, 2) {
             let name: *const i8 = lua_tolstring(interpreter, -1, null_mut());
-            if strncmp(name, b"_G.\0" as *const u8 as *const i8, 3 as u64) == 0 {
+            if strncmp(name, b"_G.\0" as *const u8 as *const i8, 3) == 0 {
                 lua_pushstring(interpreter, name.offset(3 as isize));
                 lua_rotate(interpreter, -2, -1);
                 lua_settop(interpreter, -2);
@@ -8985,7 +8985,7 @@ pub unsafe extern "C" fn lual_optlstring(
         match lua_type(interpreter, arg) {
             None | Some(TagType::Nil) => {
                 if !length.is_null() {
-                    *length = if !def.is_null() { strlen(def) } else { 0u64 };
+                    *length = if !def.is_null() { strlen(def) as u64 } else { 0u64 };
                 }
                 return def;
             }
@@ -9060,10 +9060,10 @@ pub unsafe extern "C" fn get_f(
             }
             *size = fread(
                 ((*lf).buffer).as_mut_ptr() as *mut libc::c_void,
-                1 as u64,
-                ::core::mem::size_of::<[i8; 8192]>() as u64,
+                1,
+                ::core::mem::size_of::<[i8; 8192]>(),
                 (*lf).file,
-            );
+            ) as u64;
         }
         return ((*lf).buffer).as_mut_ptr();
     }
@@ -9457,7 +9457,7 @@ pub unsafe extern "C" fn lual_addgsub(
 ) {
     unsafe {
         let mut wild: *const i8;
-        let l: u64 = strlen(p);
+        let l = strlen(p);
         loop {
             wild = strstr(s, p);
             if wild.is_null() {
@@ -9494,7 +9494,7 @@ pub unsafe extern "C" fn raw_allocate(
             free(ptr);
             return null_mut();
         } else {
-            return realloc(ptr, new_size as u64);
+            return realloc(ptr, new_size);
         };
     }
 }
@@ -9970,7 +9970,7 @@ pub unsafe extern "C" fn dostring(
     unsafe {
         return dochunk(
             interpreter,
-            lual_loadbufferx(interpreter, s, strlen(s), name, null()),
+            lual_loadbufferx(interpreter, s, strlen(s) as u64, name, null()),
         );
     }
 }
@@ -10221,7 +10221,7 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
         if !readstatus {
             return false;
         } else {
-            let mut l: u64 = strlen(b);
+            let mut l: u64 = strlen(b) as u64;
             if l > 0 && *b.offset(l.wrapping_sub(1 as u64) as isize) as i32 == CHARACTER_LF as i32 {
                 l = l.wrapping_sub(1);
                 *b.offset(l as isize) = Character::Null as i8;
@@ -10247,7 +10247,7 @@ pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
         let status: i32 = lual_loadbufferx(
             interpreter,
             retline,
-            strlen(retline),
+            strlen(retline) as u64,
             b"=stdin\0" as *const u8 as *const i8,
             null(),
         );
