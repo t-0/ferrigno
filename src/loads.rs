@@ -1,76 +1,70 @@
-use std::{mem::*, ptr::*};
+#![allow(unused)]
+use std::ptr::*;
 use crate::interpreter::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
-pub struct VectorT<T> {
-    pub vectort_pointer: *mut T,
-    pub vectort_length: i32,
-    pub vectort_size: i32,
+pub struct LoadS<T> {
+    pub loads_pointer: *mut T,
+    pub loads_length: i32,
+    pub loads_size: i32,
 }
-impl <T> VectorT<T> {
-    pub fn capitulate(&mut self) -> (* mut T, usize) {
-        let ret = (self.vectort_pointer, self.vectort_size as usize);
-        self.vectort_pointer = null_mut();
-        self.vectort_size = 0;
-        self.vectort_length = 0;
-        ret
-    }
-    pub fn new() -> VectorT::<T> {
-        VectorT::<T> {
-            vectort_pointer: null_mut(),
-            vectort_length: 0,
-            vectort_size: 0,
+impl <T> LoadS<T> {
+    pub fn new() -> LoadS::<T> {
+        LoadS::<T> {
+            loads_pointer: null_mut(),
+            loads_length: 0,
+            loads_size: 0,
         }
     }
     pub fn add_length(& mut self, length: usize) {
-        self.vectort_length += length as i32;
+        self.loads_length += length as i32;
     }
     pub fn subtract_length(& mut self, length: usize) {
-        self.vectort_length -= length as i32;
+        self.loads_length -= length as i32;
     }
     pub fn set_length(& mut self, length: usize) {
-        self.vectort_length = length as i32;
+        self.loads_length = length as i32;
     }
     pub fn zero_length(& mut self) {
-        self.vectort_length  = 0;
+        self.loads_length  = 0;
     }
     pub fn initialize(&mut self) {
-        self.vectort_pointer = null_mut();
-        self.vectort_length = 0;
-        self.vectort_size = 0;
+        self.loads_pointer = null_mut();
+        self.loads_length = 0;
+        self.loads_size = 0;
     }
     pub unsafe fn shrink (&mut self, interpreter: &mut Interpreter, new_size: usize) { unsafe {
-        let old_total = self.vectort_size as usize * size_of::<T>();
+        let old_total = self.loads_size as usize * size_of::<T>();
         let new_total = new_size * size_of::<T>();
-        self.vectort_pointer = luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
-        self.vectort_length = 0;
-        self.vectort_size = new_size as i32;
+        self.loads_pointer = luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
+        self.loads_length = 0;
+        self.loads_size = new_size as i32;
     } }
     pub unsafe fn at (&self, index: isize) -> *const T { unsafe {
-        return self.vectort_pointer.offset(index);
+        return self.loads_pointer.offset(index);
     } }
     pub unsafe fn at_mut (&mut self, index: isize) -> * mut T { unsafe {
-        return self.vectort_pointer.offset(index);
+        return self.loads_pointer.offset(index);
     } }
     pub fn get_length(&self) -> i32 {
-        self.vectort_length
+        self.loads_length
     }
     pub fn get_size(&self) -> i32 {
-        self.vectort_size
+        self.loads_size
     }
     pub unsafe fn initialize_size (&mut self, interpreter: *mut Interpreter, size: usize) { unsafe {
-        self.vectort_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
-        self.vectort_size = size as i32;
+        self.loads_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
+        self.loads_size = size as i32;
     } }
     pub unsafe fn destroy (& mut self, interpreter: *mut Interpreter) { unsafe {
         luam_saferealloc_(
             interpreter,
-            self.vectort_pointer as *mut libc::c_void,
-            (self.vectort_size as usize).wrapping_mul(size_of::<i8>()),
+            self.loads_pointer as *mut libc::c_void,
+            (self.loads_size as usize).wrapping_mul(size_of::<i8>()),
             0,
         );
-        self.vectort_pointer = null_mut();
-        self.vectort_size = 0;
+        self.loads_pointer = null_mut();
+        self.loads_size = 0;
     } }
     pub unsafe extern "C" fn grow(&mut self,
         interpreter: *mut Interpreter,
@@ -79,7 +73,7 @@ impl <T> VectorT<T> {
         what: *const i8,
     ) {
         unsafe {
-            let mut new_size: i32 = self.vectort_size;
+            let mut new_size: i32 = self.loads_size;
             if new_length + 1 <= new_size as usize {
                 return;
             }
@@ -99,22 +93,22 @@ impl <T> VectorT<T> {
                     new_size = 4;
                 }
             }
-            self.vectort_pointer = luam_saferealloc_(
+            self.loads_pointer = luam_saferealloc_(
                 interpreter,
-                self.vectort_pointer as *mut libc::c_void,
-                (self.vectort_size as usize).wrapping_mul(size_of::<T> ()),
+                self.loads_pointer as *mut libc::c_void,
+                (self.loads_size as usize).wrapping_mul(size_of::<T> ()),
                 (new_size as usize).wrapping_mul(size_of::<T> ()),
             ) as *mut T;
-            self.vectort_size = new_size;
+            self.loads_size = new_size;
         }
     }
     pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) { unsafe {
-        self.vectort_pointer = luam_saferealloc_(
+        self.loads_pointer = luam_saferealloc_(
             interpreter,
-            self.vectort_pointer as *mut libc::c_void,
-            (self.vectort_size as usize).wrapping_mul(size_of::<T>()),
+            self.loads_pointer as *mut libc::c_void,
+            (self.loads_size as usize).wrapping_mul(size_of::<T>()),
             new_size.wrapping_mul(size_of::<T>()),
         ) as *mut T;
-        self.vectort_size = new_size as i32;
+        self.loads_size = new_size as i32;
     } }
 }

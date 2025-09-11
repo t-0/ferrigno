@@ -9154,9 +9154,9 @@ pub unsafe extern "C" fn get_s(
         if (*load_s).get_size() == 0 {
             return null();
         } else {
-            *size = (*load_s).get_size() as usize;
-            (*load_s).vectort_size = 0;
-            return (*load_s).vectort_pointer;
+            let (capitulated_pointer, capitulated_size) = (*load_s).capitulate();
+            *size = capitulated_size;
+            return capitulated_pointer;
         }
     }
 }

@@ -1,4 +1,4 @@
-#![allow(unpredictable_function_pointer_comparisons)]
+#![allow(unpredictable_function_pointer_comparisons,unused)]
 use std::ptr::*;
 use crate::character::*;
 use crate::tag::*;
