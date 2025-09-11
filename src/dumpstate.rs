@@ -158,7 +158,7 @@ pub unsafe extern "C" fn save_prototype(
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();
-        dump_state.dump_byte((*prototype).prototype_upvalues.vectort_size as u8);
+        dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
         (*prototype).dump_function(&mut dump_state, null_mut());
         return dump_state.status;
     }

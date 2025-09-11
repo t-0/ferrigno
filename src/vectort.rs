@@ -18,6 +18,12 @@ impl <T> VectorT<T> {
     pub fn add_length(& mut self, length: usize) {
         self.vectort_length += length as i32;
     }
+    pub fn subtract_length(& mut self, length: usize) {
+        self.vectort_length -= length as i32;
+    }
+    pub fn set_length(& mut self, length: usize) {
+        self.vectort_length = length as i32;
+    }
     pub fn zero_length(& mut self) {
         self.vectort_length  = 0;
     }

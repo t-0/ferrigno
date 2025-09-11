@@ -265,7 +265,7 @@ pub unsafe extern "C" fn newlabelentry(
             (*(*lexical_state).function_state).count_active_variables;
         (*((*l).vectort_pointer).offset(n as isize)).close = 0;
         (*((*l).vectort_pointer).offset(n as isize)).program_counter = program_counter;
-        (*l).vectort_length = n + 1;
+        (*l).set_length(n as usize + 1);
         return n;
     }
 }
@@ -963,7 +963,7 @@ pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *m
             b"local variables\0" as *const u8 as *const i8,
         );
         let fresh37 = (*dynamic_data).active_variable.get_length();
-        (*dynamic_data).active_variable.vectort_length = (*dynamic_data).active_variable.get_length() + 1;
+        (*dynamic_data).active_variable.set_length(((*dynamic_data).active_variable.get_length() + 1) as usize);
         var = &mut *((*dynamic_data).active_variable.vectort_pointer).offset(fresh37 as isize)
             as *mut VariableDescription;
         (*var).content.kind = 0;
@@ -1125,7 +1125,7 @@ pub unsafe extern "C" fn solvegoto(
             *((*goto_label_list).vectort_pointer).offset(i as isize) = *((*goto_label_list).vectort_pointer).offset((i + 1) as isize);
             i += 1;
         }
-        (*goto_label_list).vectort_length -= 1;
+        (*goto_label_list).subtract_length(1);
     }
 }
 pub unsafe extern "C" fn subexpr(
@@ -1846,8 +1846,8 @@ pub unsafe extern "C" fn mainfunc(lexical_state: *mut LexicalState, function_sta
 pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
     unsafe {
         let b: *mut Buffer = (*lexical_state).buffer;
-        if ((*b).vector.get_length() as usize).wrapping_add(1 as usize) > (*b).vector.vectort_size as usize{
-            if (*b).vector.vectort_size as usize
+        if ((*b).vector.get_length() as usize).wrapping_add(1 as usize) > (*b).vector.get_size() as usize{
+            if (*b).vector.get_size() as usize
                 >= (if (size_of::<usize>()) < size_of::<i64>()
                 {
                     !(0usize)
@@ -1862,11 +1862,11 @@ pub unsafe extern "C" fn save(lexical_state: *mut LexicalState, c: i32) {
                     0,
                 );
             }
-            let new_size = (*b).vector.vectort_size.wrapping_mul(2);
+            let new_size = (*b).vector.get_size().wrapping_mul(2);
             (*b).vector.resize((*lexical_state).interpreter, new_size as usize);
         }
         let fresh49 = (*b).vector.get_length();
-        (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+        (*b).vector.set_length((((*b).vector.get_length()).wrapping_add(1)) as usize);
         *((*b).vector.vectort_pointer).offset(fresh49 as isize) = c as i8;
     }
 }
@@ -2319,8 +2319,7 @@ pub unsafe extern "C" fn readhexaesc(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         let mut r: i32 = gethexa(lexical_state);
         r = (r << 4) + gethexa(lexical_state);
-        (*(*lexical_state).buffer).vector.vectort_length =
-            ((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(2);
+        (*(*lexical_state).buffer).vector.set_length(((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(2) as usize);
         return r;
     }
 }
@@ -2379,8 +2378,7 @@ pub unsafe extern "C" fn readutf8esc(lexical_state: *mut LexicalState) -> usize 
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        (*(*lexical_state).buffer).vector.vectort_length =
-            ((*(*lexical_state).buffer).vector.get_length() as usize).wrapping_sub(i as usize) as i32;
+        (*(*lexical_state).buffer).vector.set_length(((*(*lexical_state).buffer).vector.get_length() as usize).wrapping_sub(i as usize));
         return r;
     }
 }
@@ -2418,8 +2416,7 @@ pub unsafe extern "C" fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
             r <= 127 * 2 + 1,
             b"decimal escape too large\0" as *const u8 as *const i8,
         );
-        (*(*lexical_state).buffer).vector.vectort_length =
-            ((*(*lexical_state).buffer).vector.get_length() as usize).wrapping_sub(i as usize) as i32;
+        (*(*lexical_state).buffer).vector.set_length(((*(*lexical_state).buffer).vector.get_length() as usize).wrapping_sub(i as usize));
         return r;
     }
 }
@@ -2518,8 +2515,7 @@ pub unsafe extern "C" fn read_string(
                             continue;
                         }
                         CHARACTER_LOWER_Z => {
-                            (*(*lexical_state).buffer).vector.vectort_length =
-                                ((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(1);
+                            (*(*lexical_state).buffer).vector.set_length(((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(1) as usize);
                             let fresh93 = (*(*lexical_state).zio).length;
                             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                             (*lexical_state).current = if fresh93 > 0 {
@@ -2574,7 +2570,7 @@ pub unsafe extern "C" fn read_string(
                         }
                         _ => {}
                     }
-                    (*(*lexical_state).buffer).vector.vectort_length = ((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(1);
+                    (*(*lexical_state).buffer).vector.set_length(((*(*lexical_state).buffer).vector.get_length()).wrapping_sub(1) as usize);
                     save(lexical_state, c);
                 }
                 _ => {

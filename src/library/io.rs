@@ -463,15 +463,15 @@ pub unsafe extern "C" fn read_line(interpreter: *mut Interpreter, file: *mut FIL
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
             funlockfile(file);
-            b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(i as usize) as i32;
+            b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(i as usize) as i32) as usize);
             if !(c != -1 && c != CHARACTER_LF as i32) {
                 break;
             }
         }
         if chop == 0 && c == CHARACTER_LF as i32 {
-            (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+            (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh154 = b.vector.get_length();
-            b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+            b.vector.set_length(((b.vector.get_length()).wrapping_add(1)) as usize);
             *(b.vector.vectort_pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
@@ -497,7 +497,7 @@ pub unsafe extern "C" fn read_all(interpreter: *mut Interpreter, file: *mut FILE
                     .wrapping_mul(size_of::<f64>()),
                 file,
             ) as usize;
-            b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(nr as usize) as i32;
+            b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
             if !(nr
                 == (16 as usize)
                     .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
@@ -523,7 +523,7 @@ pub unsafe extern "C" fn read_chars(interpreter: *mut Interpreter, file: *mut FI
             n as usize,
             file,
         ) as usize;
-        b.vector.vectort_length = (b.vector.get_length() as usize).wrapping_add(nr as usize) as i32;
+        b.vector.set_length(((b.vector.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
         b.push_result();
         return (nr > 0) as i32;
     }

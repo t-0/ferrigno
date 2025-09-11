@@ -86,16 +86,16 @@ pub unsafe extern "C" fn setpath(
                 b.initialize(interpreter);
                 if path < dftmark {
                     b.add_string_with_length(path, dftmark.offset_from(path) as usize);
-                    (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh193 = b.vector.get_length();
-                    b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                    b.vector.set_length(((b.vector.get_length()).wrapping_add(1)) as usize);
                     *(b.vector.vectort_pointer).offset(fresh193 as isize) = *(b";\0" as *const u8 as *const i8);
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
-                    (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh194 = b.vector.get_length();
-                    b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+                    b.vector.set_length(((b.vector.get_length()).wrapping_add(1)) as usize);
                     *(b.vector.vectort_pointer).offset(fresh194 as isize) = *(b";\0" as *const u8 as *const i8);
                     b.add_string_with_length(
                         dftmark.offset(2 as isize),
@@ -248,9 +248,9 @@ pub unsafe extern "C" fn searchpath(
         let mut buffer = Buffer::new();
         buffer.initialize(interpreter);
         lual_addgsub(&mut buffer, path, b"?\0" as *const u8 as *const i8, name);
-        (buffer.vector.get_length() < buffer.vector.vectort_size || !(buffer.prepare_with_size(1)).is_null()) as i32;
+        (buffer.vector.get_length() < buffer.vector.get_size() || !(buffer.prepare_with_size(1)).is_null()) as i32;
         let fresh195 = buffer.vector.get_length();
-        buffer.vector.vectort_length = (buffer.vector.get_length()).wrapping_add(1);
+        buffer.vector.set_length(((buffer.vector.get_length()).wrapping_add(1)) as usize);
         *(buffer.vector.vectort_pointer).offset(fresh195 as isize) = Character::Null as i8;
         pathname = buffer.vector.vectort_pointer;
         endpathname = pathname
@@ -477,7 +477,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
             message.add_string(b"\n\t\0" as *const u8 as *const i8);
             if lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil {
                 lua_settop(interpreter, -2);
-                message.vector.vectort_length = message.vector.get_length().wrapping_sub(2);
+                message.vector.set_length((message.vector.get_length().wrapping_sub(2)) as usize);
                 message.push_result();
                 lual_error(
                     interpreter,
@@ -495,7 +495,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
                 message.add_value();
             } else {
                 lua_settop(interpreter, -2 - 1);
-                message.vector.vectort_length = message.vector.get_length().wrapping_sub(2);
+                message.vector.set_length((message.vector.get_length().wrapping_sub(2)) as usize);
             }
             i += 1;
         }

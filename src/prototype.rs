@@ -55,10 +55,10 @@ impl TObject for Prototype {
 impl Prototype {
     pub unsafe extern "C" fn dump_code(&self, dump_state: &mut DumpState) {
         unsafe {
-            dump_state.dump_int(self.prototype_code.vectort_size);
+            dump_state.dump_int(self.prototype_code.get_size());
             dump_state.dump_block(
                 self.prototype_code.vectort_pointer as *const libc::c_void,
-                (self.prototype_code.vectort_size as usize).wrapping_mul(size_of::<u32>()),
+                (self.prototype_code.get_size() as usize).wrapping_mul(size_of::<u32>()),
             );
         }
     }
@@ -90,7 +90,7 @@ impl Prototype {
             let n = if dump_state.is_strip {
                 0
             } else {
-                self.prototype_line_info.vectort_size as usize
+                self.prototype_line_info.get_size() as usize
             };
             dump_state.dump_int(n as i32);
             dump_state.dump_block(
@@ -102,7 +102,7 @@ impl Prototype {
             let n = if dump_state.is_strip {
                 0
             } else {
-                self.prototype_absolute_line_info.vectort_size as usize
+                self.prototype_absolute_line_info.get_size() as usize
             };
             dump_state.dump_int(n as i32);
             for i in 0..n {
@@ -118,7 +118,7 @@ impl Prototype {
             let n = if dump_state.is_strip {
                 0
             } else {
-                self.prototype_local_variables.vectort_size as usize
+                self.prototype_local_variables.get_size() as usize
             };
             dump_state.dump_int(n as i32);
             for i in 0..n {
@@ -137,7 +137,7 @@ impl Prototype {
             let n = if dump_state.is_strip {
                 0
             } else {
-                self.prototype_upvalues.vectort_size as usize
+                self.prototype_upvalues.get_size() as usize
             };
             dump_state.dump_int(n as i32);
             for i in 0..n {
@@ -238,40 +238,40 @@ impl Prototype {
                     }
                 }
             }
-            return (1 + self.prototype_constants.get_size() + self.prototype_upvalues.get_size() + self.prototype_prototypes.get_size() + self.prototype_local_variables.vectort_size) as usize
+            return (1 + self.prototype_constants.get_size() + self.prototype_upvalues.get_size() + self.prototype_prototypes.get_size() + self.prototype_local_variables.get_size()) as usize
         }
     }
     pub unsafe extern "C" fn prototype_free(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             (*interpreter).free_memory(
                 self.prototype_code.vectort_pointer as *mut libc::c_void,
-                (self.prototype_code.vectort_size as usize).wrapping_mul(size_of::<u32>() as usize) as usize,
+                (self.prototype_code.get_size() as usize).wrapping_mul(size_of::<u32>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_prototypes.vectort_pointer as *mut libc::c_void,
-                (self.prototype_prototypes.vectort_size as usize).wrapping_mul(size_of::<*mut Prototype>() as usize) as usize,
+                (self.prototype_prototypes.get_size() as usize).wrapping_mul(size_of::<*mut Prototype>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_constants.vectort_pointer as *mut libc::c_void,
-                (self.prototype_constants.vectort_size as usize).wrapping_mul(size_of::<TValue>() as usize) as usize,
+                (self.prototype_constants.get_size() as usize).wrapping_mul(size_of::<TValue>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_line_info.vectort_pointer as *mut libc::c_void,
-                (self.prototype_line_info.vectort_size as usize).wrapping_mul(size_of::<i8>() as usize) as usize,
+                (self.prototype_line_info.get_size() as usize).wrapping_mul(size_of::<i8>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_absolute_line_info.vectort_pointer as *mut libc::c_void,
-                (self.prototype_absolute_line_info.vectort_size as usize)
+                (self.prototype_absolute_line_info.get_size() as usize)
                     .wrapping_mul(size_of::<AbsoluteLineInfo>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_local_variables.vectort_pointer as *mut libc::c_void,
-                (self.prototype_local_variables.vectort_size as usize)
+                (self.prototype_local_variables.get_size() as usize)
                     .wrapping_mul(size_of::<LocalVariable>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_upvalues.vectort_pointer as *mut libc::c_void,
-                (self.prototype_upvalues.vectort_size as usize)
+                (self.prototype_upvalues.get_size() as usize)
                     .wrapping_mul(size_of::<UpValueDescription>() as usize) as usize,
             );
             (*interpreter).free_memory(
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn getbaseline(
             let mut i: i32 = (program_counter as u32)
                 .wrapping_div(128u32)
                 .wrapping_sub(1u32) as i32;
-            while (i + 1) < (*prototype).prototype_absolute_line_info.vectort_size
+            while (i + 1) < (*prototype).prototype_absolute_line_info.get_size()
                 && program_counter
                     >= (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset((i + 1) as isize)).program_counter
             {

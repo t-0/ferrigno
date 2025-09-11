@@ -665,9 +665,9 @@ impl MatchState {
                 (*b).add_string_with_length(news, p.offset_from(news) as usize);
                 p = p.offset(1);
                 if *p as i32 == CHARACTER_PERCENT as i32 {
-                    ((*b).vector.get_length() < (*b).vector.vectort_size || !((*b).prepare_with_size(1)).is_null()) as i32;
+                    ((*b).vector.get_length() < (*b).vector.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
                     let fresh164 = (*b).vector.get_length();
-                    (*b).vector.vectort_length = ((*b).vector.get_length()).wrapping_add(1);
+                    (*b).vector.set_length(((*b).vector.get_length()).wrapping_add(1) as usize);
                     *((*b).vector.vectort_pointer).offset(fresh164 as isize) = *p;
                 } else if *p as i32 == CHARACTER_0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);

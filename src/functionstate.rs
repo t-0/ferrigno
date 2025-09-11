@@ -133,7 +133,7 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
             luak_code_abck(function_state, OP_CLOSE, stklevel, 0, 0, 0);
         }
         (*function_state).freereg = stklevel as u8;
-        (*(*lexical_state).dynamic_data).label.vectort_length = (*block_control).first_label;
+        (*(*lexical_state).dynamic_data).label.set_length((*block_control).first_label as usize);
         (*function_state).block_control = (*block_control).previous;
         if !((*block_control).previous).is_null() {
             movegotosout(function_state, block_control);
@@ -274,8 +274,7 @@ pub unsafe extern "C" fn init_var(
 }
 pub unsafe extern "C" fn removevars(function_state: *mut FunctionState, tolevel: i32) {
     unsafe {
-        (*(*(*function_state).lexical_state).dynamic_data).active_variable.vectort_length -=
-            (*function_state).count_active_variables as i32 - tolevel;
+        (*(*(*function_state).lexical_state).dynamic_data).active_variable.subtract_length(((*function_state).count_active_variables as i32 - tolevel) as usize);
         while (*function_state).count_active_variables as i32 > tolevel {
             (*function_state).count_active_variables = ((*function_state).count_active_variables).wrapping_sub(1);
             let var: *mut LocalVariable = localdebuginfo(function_state, (*function_state).count_active_variables as i32);

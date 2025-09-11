@@ -126,7 +126,7 @@ pub unsafe extern "C" fn aux_upvalue(
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
-                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.vectort_size as u32) {
+                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.get_size() as u32) {
                     return null();
                 }
                 *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize))

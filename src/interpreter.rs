@@ -1587,19 +1587,19 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.buffer.vector.destroy(interpreter);
         (*interpreter).free_memory(
             p.dynamic_data.active_variable.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.active_variable.vectort_size as usize)
+            (p.dynamic_data.active_variable.get_size() as usize)
                 .wrapping_mul(size_of::<VariableDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
             p.dynamic_data.gt.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.gt.vectort_size as usize)
+            (p.dynamic_data.gt.get_size() as usize)
                 .wrapping_mul(size_of::<LabelDescription>() as usize)
                 as usize,
         );
         (*interpreter).free_memory(
             p.dynamic_data.label.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.label.vectort_size as usize)
+            (p.dynamic_data.label.get_size() as usize)
                 .wrapping_mul(size_of::<LabelDescription>() as usize)
                 as usize,
         );
@@ -5536,8 +5536,8 @@ pub unsafe extern "C" fn luay_parser(
         lexstate.buffer = buffer;
         lexstate.dynamic_data = dynamic_data;
         (*dynamic_data).label.zero_length();
-        (*dynamic_data).gt.vectort_length = (*dynamic_data).label.get_length();
-        (*dynamic_data).active_variable.vectort_length = (*dynamic_data).gt.get_length();
+        (*dynamic_data).gt.set_length((*dynamic_data).label.get_length() as usize);
+        (*dynamic_data).active_variable.set_length((*dynamic_data).gt.get_length() as usize);
         luax_setinput(
             interpreter,
             &mut lexstate,
@@ -8535,9 +8535,9 @@ pub unsafe extern "C" fn lual_traceback(
         b.initialize(interpreter);
         if !message.is_null() {
             b.add_string(message);
-            (b.vector.get_length() < b.vector.vectort_size || !(b.prepare_with_size(1)).is_null()) as i32;
+            (b.vector.get_length() < b.vector.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh145 = b.vector.get_length();
-            b.vector.vectort_length = (b.vector.get_length()).wrapping_add(1);
+            b.vector.set_length((b.vector.get_length()).wrapping_add(1) as usize);
             *(b.vector.vectort_pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
         }
         b.add_string(b"stack traceback:\0" as *const u8 as *const i8);
@@ -9153,10 +9153,11 @@ pub unsafe extern "C" fn get_s(
         let load_s: *mut VectorT<i8> = arbitrary_data as *mut VectorT<i8>;
         if (*load_s).get_size() == 0 {
             return null();
+        } else {
+            *size = (*load_s).get_size() as usize;
+            (*load_s).vectort_size = 0;
+            return (*load_s).vectort_pointer;
         }
-        *size = (*load_s).vectort_size as usize;
-        (*load_s).vectort_size = 0;
-        return (*load_s).vectort_pointer;
     }
 }
 pub unsafe extern "C" fn lual_loadbufferx(
