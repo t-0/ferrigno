@@ -78,8 +78,6 @@ pub struct Object {
     pub next: *mut Object = null_mut(),
     pub tag: u8 = TagVariant::NilNil as u8,
     pub marked: u8 = 0,
-    pub _dummy0: u16 = 0,
-    pub _dummy1: u32 = 0,
 }
 impl TObject for Object {
     fn as_object(&self) -> &Object {
@@ -119,8 +117,6 @@ impl Object {
             next: null_mut(),
             tag: tag,
             marked: 0,
-            _dummy0: 0,
-            _dummy1: 0,
             ..
         }
     }
