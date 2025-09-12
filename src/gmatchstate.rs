@@ -19,7 +19,6 @@ impl GMatchState {
             return (*gmatch_state).auxiliary(interpreter);
         }
     }
-
     pub unsafe fn auxiliary(& mut self, interpreter: *mut Interpreter) -> i32{
         unsafe {
             self.match_state.interpreter = interpreter;

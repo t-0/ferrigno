@@ -62,7 +62,61 @@ pub struct Global {
     pub warn_userdata: *mut libc::c_void,
 }
 impl Global {
-    pub unsafe extern "C" fn stringcache_clear(&mut self) {
+    pub unsafe fn separatetobefnz(& mut self, is_all: bool) {
+        unsafe {
+            let mut p: *mut *mut Object = &mut (*self).finalized_objects;
+            let mut last_next: *mut *mut Object = find_last(&mut (*self).to_be_finalized);
+            loop {
+                let current: *mut Object = *p;
+                if current == (*self).finobjold1 {
+                    break;
+                }
+                if !((*current).get_marked() & (1 << 3 | 1 << 4) != 0 || is_all) {
+                    p = &mut (*current).next;
+                } else {
+                    if current == (*self).finobjsur {
+                        (*self).finobjsur = (*current).next;
+                    }
+                    *p = (*current).next;
+                    (*current).next = *last_next;
+                    *last_next = current;
+                    last_next = &mut (*current).next;
+                }
+            }
+        }
+    }
+    pub unsafe fn setpause(& mut self) {
+        unsafe {
+            let pause: i32 = (*self).gc_pause as i32 * 4;
+            let estimate: i64 = ((*self).gc_estimate).wrapping_div(100 as usize) as i64;
+            let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate {
+                estimate * pause as i64
+            } else {
+                (!(0usize) >> 1) as i64
+            };
+            let mut debt: i64 =
+                (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
+            if debt > 0 {
+                debt = 0;
+            }
+            (*self).set_debt(debt);
+        }
+    }
+    pub unsafe fn correctgraylists(& mut self) {
+        unsafe {
+            let mut list: *mut *mut Object = correct_gray_list(&mut (*self).gray_again);
+            *list = (*self).weak;
+            (*self).weak = null_mut();
+            list = correct_gray_list(list);
+            *list = (*self).all_weak;
+            (*self).all_weak = null_mut();
+            list = correct_gray_list(list);
+            *list = (*self).ephemeron;
+            (*self).ephemeron = null_mut();
+            correct_gray_list(list);
+        }
+    }
+    pub unsafe fn stringcache_clear(&mut self) {
         unsafe {
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
@@ -75,7 +129,7 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn fix_memory_error_message_global(& mut self) {
+    pub unsafe fn fix_memory_error_message_global(& mut self) {
         unsafe {
             fix_object_global(self, self.memory_error_message as *mut Object);
         }
@@ -87,7 +141,7 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn white_list(&mut self, mut p: *mut Object) {
+    pub unsafe fn white_list(&mut self, mut p: *mut Object) {
         unsafe {
             let white = self.current_white & ((1 << 3) | (1 << 4));
             while !p.is_null() {
@@ -98,7 +152,7 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn enter_incremental(&mut self) {
+    pub unsafe fn enter_incremental(&mut self) {
         unsafe {
             self.white_list(self.all_gc);
             self.survival = null_mut();
@@ -114,7 +168,7 @@ impl Global {
             self.last_atomic = 0i32 as usize;
         }
     }
-    pub unsafe extern "C" fn set_debt(&mut self, mut debt: i64) {
+    pub unsafe fn set_debt(&mut self, mut debt: i64) {
         let tb: i64 = (self.total_bytes + self.gc_debt) as i64;
         if debt < tb - (!(0i32 as usize) >> 1i32) as i64 {
             debt = tb - (!(0i32 as usize) >> 1i32) as i64;
@@ -122,14 +176,14 @@ impl Global {
         self.total_bytes = tb - debt;
         self.gc_debt = debt;
     }
-    pub unsafe extern "C" fn set_minor_debt(&mut self) {
+    pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
             self.set_debt(
                 -((self.total_bytes + self.gc_debt).wrapping_div(100) * self.generational_minor_multiplier as i64),
             );
         }
     }
-    pub unsafe extern "C" fn propagatemark(&mut self) -> usize {
+    pub unsafe fn propagatemark(&mut self) -> usize {
         unsafe {
             let object: *mut Object = self.gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
@@ -145,7 +199,7 @@ impl Global {
             };
         }
     }
-    pub unsafe extern "C" fn markmt(& mut self) {
+    pub unsafe fn markmt(& mut self) {
         unsafe {
             for i in TAGTYPE_SIMPLE_ {
                 if !(self.metatables[i as usize]).is_null() {
@@ -159,117 +213,134 @@ impl Global {
             }
         }
     }
-}
-pub unsafe extern "C" fn markbeingfnz(global: *mut Global) -> usize {
-    unsafe {
-        let mut count: usize = 0;
-        let mut object: *mut Object = (*global).to_be_finalized;
-        while !object.is_null() {
-            count = count.wrapping_add(1);
-            if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(object as *mut Object)));
-            }
-            object = (*object).next;
-        }
-        return count;
-    }
-}
-pub unsafe extern "C" fn remarkupvals(global: *mut Global) -> i32 {
-    unsafe {
-        let mut p: *mut *mut Interpreter = &mut (*global).twups;
-        let mut work: i32 = 0;
-        loop {
-            let thread: *mut Interpreter = *p;
-            if thread.is_null() {
-                break;
-            }
-            work += 1;
-            if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0
-                && !((*thread).open_upvalue).is_null()
-            {
-                p = &mut (*thread).twups;
-            } else {
-                *p = (*thread).twups;
-                (*thread).twups = thread;
-                let mut uv: *mut UpValue = (*thread).open_upvalue;
-                while !uv.is_null() {
-                    work += 1;
-                    if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
-                        if ((*(*uv).v.p).is_collectable())
-                            && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                        {
-                            really_mark_object(global, (*(*uv).v.p).value.object);
-                        }
-                    }
-                    uv = (*uv).u.open.next;
+    pub unsafe fn markbeingfnz(&mut self) -> usize {
+        unsafe {
+            let mut count: usize = 0;
+            let mut object: *mut Object = self.to_be_finalized;
+            while !object.is_null() {
+                count = count.wrapping_add(1);
+                if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(self, &mut (*(object as *mut Object)));
                 }
+                object = (*object).next;
             }
+            return count;
         }
-        return work;
     }
-}
-pub unsafe extern "C" fn cleargraylists(global: *mut Global) {
-    unsafe {
-        (*global).gray_again = null_mut();
-        (*global).gray = (*global).gray_again;
-        (*global).ephemeron = null_mut();
-        (*global).all_weak = (*global).ephemeron;
-        (*global).weak = (*global).all_weak;
-    }
-}
-pub unsafe extern "C" fn restartcollection(global: *mut Global) {
-    unsafe {
-        cleargraylists(global);
-        if (*(*global).main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            really_mark_object(global, &mut (*((*global).main_state as *mut Object)));
+    pub unsafe fn restartcollection(& mut self) {
+        unsafe {
+            self.cleargraylists();
+            if (*self.main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(self, &mut (*(self.main_state as *mut Object)));
+            }
+            if (self.l_registry.is_collectable())
+                && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+            {
+                really_mark_object(self, self.l_registry.value.object);
+            }
+            self.markmt();
+            self.markbeingfnz();
         }
-        if ((*global).l_registry.is_collectable())
-            && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-        {
-            really_mark_object(global, (*global).l_registry.value.object);
-        }
-        (*global).markmt();
-        markbeingfnz(global);
     }
-}
-pub unsafe extern "C" fn propagateall(global: *mut Global) -> usize {
-    unsafe {
-        let mut tot: usize = 0;
-        while !((*global).gray).is_null() {
-            tot = (tot as usize).wrapping_add((*global).propagatemark()) as usize;
-        }
-        return tot;
-    }
-}
-pub unsafe extern "C" fn convergeephemerons(global: *mut Global) {
-    unsafe {
-        let mut changed;
-        let mut dir: i32 = 0;
-        loop {
-            let mut next: *mut Object = (*global).ephemeron;
-            (*global).ephemeron = null_mut();
-            changed = 0;
+    pub unsafe fn remarkupvals(&mut self) -> i32 {
+        unsafe {
+            let mut p: *mut *mut Interpreter = &mut self.twups;
+            let mut work: i32 = 0;
             loop {
-                let w: *mut Object = next;
-                if w.is_null() {
+                let thread: *mut Interpreter = *p;
+                if thread.is_null() {
                     break;
                 }
-                let h: *mut Table = &mut (*(w as *mut Table));
-                next = (*h).gc_list;
-                (*h).set_marked((*h).get_marked() | 1 << 5);
-                if traverseephemeron(global, h, dir) != 0 {
-                    propagateall(global);
-                    changed = 1;
+                work += 1;
+                if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0
+                    && !((*thread).open_upvalue).is_null()
+                {
+                    p = &mut (*thread).twups;
+                } else {
+                    *p = (*thread).twups;
+                    (*thread).twups = thread;
+                    let mut uv: *mut UpValue = (*thread).open_upvalue;
+                    while !uv.is_null() {
+                        work += 1;
+                        if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
+                            if ((*(*uv).v.p).is_collectable())
+                                && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+                            {
+                                really_mark_object(self, (*(*uv).v.p).value.object);
+                            }
+                        }
+                        uv = (*uv).u.open.next;
+                    }
                 }
             }
-            dir = (dir == 0) as i32;
-            if !(changed != 0) {
-                break;
+            return work;
+        }
+    }
+    pub fn cleargraylists(&mut self) {
+        self.gray_again = null_mut();
+        self.gray = null_mut();
+        self.ephemeron = null_mut();
+        self.all_weak = null_mut();
+        self.weak = null_mut();
+    }
+    pub unsafe fn propagateall(& mut self) -> usize {
+        unsafe {
+            let mut total: usize = 0;
+            while !self.gray.is_null() {
+                total += self.propagatemark();
+            }
+            return total;
+        }
+    }
+    pub unsafe fn convergeephemerons(& mut self) {
+        unsafe {
+            let mut is_reverse = false;
+            loop {
+                let mut next: *mut Object = (*self).ephemeron;
+                (*self).ephemeron = null_mut();
+                let mut changed = false;
+                loop {
+                    let w: *mut Object = next;
+                    if w.is_null() {
+                        break;
+                    } else {
+                        let h: *mut Table = &mut (*(w as *mut Table));
+                        next = (*h).gc_list;
+                        (*h).set_marked((*h).get_marked() | 1 << 5);
+                        if traverseephemeron(self, h, is_reverse) != 0 {
+                            (*self).propagateall();
+                            changed = true;
+                        }
+                    }
+                }
+                if !changed {
+                    break;
+                } else {
+                    is_reverse = !is_reverse;
+                }
             }
         }
     }
+    pub unsafe fn udata2finalize(& mut self) -> *mut Object {
+        unsafe {
+            let object: *mut Object = (*self).to_be_finalized;
+            (*self).to_be_finalized = (*object).next;
+            (*object).next = (*self).all_gc;
+            (*self).all_gc = object;
+            (*object).set_marked((*object).get_marked() & !(1 << 6));
+            if 3 <= (*self).gc_state as i32 && (*self).gc_state as i32 <= 6 {
+                (*object).set_marked(
+                    (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
+                        | ((*self).current_white & (1 << 3 | 1 << 4)),
+                );
+            } else if (*object).get_marked() & 7 == 3 {
+                (*self).first_old1 = object;
+            }
+            return object;
+        }
+    }
 }
-pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
+pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
             let h: *mut Table = &mut (*(l as *mut Table));
@@ -298,7 +369,7 @@ pub unsafe extern "C" fn clearbykeys(global: *mut Global, mut l: *mut Object) {
         }
     }
 }
-pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Object) {
+pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Object) {
     unsafe {
         while l != f {
             let h: *mut Table = &mut (*(l as *mut Table));
@@ -342,48 +413,7 @@ pub unsafe extern "C" fn clearbyvalues(global: *mut Global, mut l: *mut Object, 
         }
     }
 }
-pub unsafe extern "C" fn udata2finalize(global: *mut Global) -> *mut Object {
-    unsafe {
-        let object: *mut Object = (*global).to_be_finalized;
-        (*global).to_be_finalized = (*object).next;
-        (*object).next = (*global).all_gc;
-        (*global).all_gc = object;
-        (*object).set_marked((*object).get_marked() & !(1 << 6));
-        if 3 <= (*global).gc_state as i32 && (*global).gc_state as i32 <= 6 {
-            (*object).set_marked(
-                (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
-                    | ((*global).current_white & (1 << 3 | 1 << 4)),
-            );
-        } else if (*object).get_marked() & 7 == 3 {
-            (*global).first_old1 = object;
-        }
-        return object;
-    }
-}
-pub unsafe extern "C" fn separatetobefnz(global: *mut Global, all: i32) {
-    unsafe {
-        let mut p: *mut *mut Object = &mut (*global).finalized_objects;
-        let mut last_next: *mut *mut Object = find_last(&mut (*global).to_be_finalized);
-        loop {
-            let current: *mut Object = *p;
-            if current == (*global).finobjold1 {
-                break;
-            }
-            if !((*current).get_marked() & (1 << 3 | 1 << 4) != 0 || all != 0) {
-                p = &mut (*current).next;
-            } else {
-                if current == (*global).finobjsur {
-                    (*global).finobjsur = (*current).next;
-                }
-                *p = (*current).next;
-                (*current).next = *last_next;
-                *last_next = current;
-                last_next = &mut (*current).next;
-            }
-        }
-    }
-}
-pub unsafe extern "C" fn correctpointers(global: *mut Global, object: *mut Object) {
+pub unsafe fn correctpointers(global: *mut Global, object: *mut Object) {
     unsafe {
         check_pointer(&mut (*global).survival, object);
         check_pointer(&mut (*global).old1, object);
@@ -391,38 +421,7 @@ pub unsafe extern "C" fn correctpointers(global: *mut Global, object: *mut Objec
         check_pointer(&mut (*global).first_old1, object);
     }
 }
-pub unsafe extern "C" fn setpause(global: *mut Global) {
-    unsafe {
-        let pause: i32 = (*global).gc_pause as i32 * 4;
-        let estimate: i64 = ((*global).gc_estimate).wrapping_div(100 as usize) as i64;
-        let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate {
-            estimate * pause as i64
-        } else {
-            (!(0usize) >> 1) as i64
-        };
-        let mut debt: i64 =
-            (((*global).total_bytes + (*global).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
-        if debt > 0 {
-            debt = 0;
-        }
-        (*global).set_debt(debt);
-    }
-}
-pub unsafe extern "C" fn correctgraylists(global: *mut Global) {
-    unsafe {
-        let mut list: *mut *mut Object = correct_gray_list(&mut (*global).gray_again);
-        *list = (*global).weak;
-        (*global).weak = null_mut();
-        list = correct_gray_list(list);
-        *list = (*global).all_weak;
-        (*global).all_weak = null_mut();
-        list = correct_gray_list(list);
-        *list = (*global).ephemeron;
-        (*global).ephemeron = null_mut();
-        correct_gray_list(list);
-    }
-}
-pub unsafe extern "C" fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
+pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
     unsafe {
         let mut p: *mut Object = from;
         while p != to {

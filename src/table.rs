@@ -163,7 +163,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
         };
     }
 }
-pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, inv: i32) -> i32 {
+pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: bool) -> i32 {
     unsafe {
         let mut marked: i32 = 0;
         let mut hasclears: i32 = 0;
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn traverseephemeron(global: *mut Global, h: *mut Table, i
             }
         }
         for i in 0..new_size {
-            let node: *mut Node = if inv != 0 {
+            let node: *mut Node = if is_reverse {
                 &mut *((*h).node).offset(new_size.wrapping_sub(1 as u32).wrapping_sub(i) as isize)
                     as *mut Node
             } else {
@@ -300,7 +300,7 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> us
             if weakkey.is_null() {
                 traverseweakvalue(global, h);
             } else if weakvalue.is_null() {
-                traverseephemeron(global, h, 0);
+                traverseephemeron(global, h, false);
             } else {
                 linkgclist_(
                     &mut (*(h as *mut Object)),

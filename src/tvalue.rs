@@ -24,20 +24,42 @@ pub struct TValue {
     collectable: bool,
 }
 impl TValue {
+    pub unsafe fn to_number(& self, result: *mut f64) -> bool {
+        unsafe {
+            let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
+            if (*self).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
+                *result = (*self).value.integer as f64;
+                return true;
+            } else if l_strton(self, &mut tvalue) {
+                *result = if tvalue.get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
+                    tvalue.value.integer as f64
+                } else {
+                    tvalue.value.number
+                };
+                return true;
+            } else {
+                return false;
+            };
+        }
+    }
     pub unsafe extern "C" fn to_pointer(&self) -> *mut libc::c_void {
         unsafe {
             match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return ::core::mem::transmute::<CFunction, usize>(self.value.function)
-                        as *mut libc::c_void;
+                    ::core::mem::transmute::<CFunction, usize>(self.value.function)
+                        as *mut libc::c_void
                 }
-                TAG_VARIANT_USER => (*(self.value.object as *mut User)).get_raw_memory_mut(),
-                TAG_VARIANT_POINTER => self.value.pointer,
+                TAG_VARIANT_USER => {
+                    (*(self.value.object as *mut User)).get_raw_memory_mut()
+                },
+                TAG_VARIANT_POINTER => {
+                    self.value.pointer
+                },
                 _ => {
                     if self.is_collectable() {
-                        return self.value.object as *mut libc::c_void;
+                        self.value.object as *mut libc::c_void
                     } else {
-                        return null_mut();
+                        null_mut()
                     }
                 },
             }
@@ -81,11 +103,7 @@ impl TValue {
     }
     pub fn set_tag(&mut self, tag: u8) {
         self.tag = tag;
-        if 0 == TAG_COLLECTABLE & tag {
-            self.collectable = false;
-        } else {
-            self.collectable = true;
-        }
+        self.collectable = (0 == TAG_COLLECTABLE & tag);
     }
     pub fn set_tag_variant(&mut self, tag: u8) {
         self.set_tag((tag & !TAG_COLLECTABLE) | (self.tag & TAG_COLLECTABLE));
@@ -188,9 +206,9 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usiz
                 as i32
                 == Character::Null as i32
             {
-                let fresh10 = length;
+                let fresh = length;
                 length = length + 1;
-                *buffer.offset(fresh10 as isize) = CHARACTER_PERIOD as i8;
+                *buffer.offset(fresh as isize) = CHARACTER_PERIOD as i8;
                 let fresh11 = length;
                 length = length + 1;
                 *buffer.offset(fresh11 as isize) = CHARACTER_0 as i8;
@@ -249,30 +267,12 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
         return i;
     }
 }
-pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> i32 {
+pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> bool {
     unsafe {
         if (*obj).is_tagtype_string() {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
-            return (luao_str2num((*st).get_contents_mut(), result)
-                == (*st).get_length().wrapping_add(1) as usize) as i32;
-        } else {
-            return 0;
-        };
-    }
-}
-pub unsafe extern "C" fn luav_tonumber_(obj: *const TValue, n: *mut f64) -> bool {
-    unsafe {
-        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            *n = (*obj).value.integer as f64;
-            return true;
-        } else if l_strton(obj, &mut v) != 0 {
-            *n = if v.get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-                v.value.integer as f64
-            } else {
-                v.value.number
-            };
-            return true;
+            return luao_str2num((*st).get_contents_mut(), result)
+                == (*st).get_length().wrapping_add(1) as usize;
         } else {
             return false;
         };

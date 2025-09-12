@@ -18,7 +18,7 @@ pub unsafe extern "C" fn forlimit(
                 flim = (*lim).value.number;
                 1
             } else {
-                if luav_tonumber_(lim, &mut flim) {
+                if (*lim).to_number(&mut flim) {
                     1
                 } else {
                     0
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 limit_0 = (*plimit).value.number;
                 1
             } else {
-                if luav_tonumber_(plimit, &mut limit_0) {
+                if (*plimit).to_number(&mut limit_0) {
                     1
                 } else {
                     0
@@ -105,7 +105,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 step_0 = (*pstep).value.number;
                 1
             } else {
-                if luav_tonumber_(pstep, &mut step_0) {
+                if (*pstep).to_number(&mut step_0) {
                     1
                 } else {
                     0
@@ -120,7 +120,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
                 init_0 = (*pinit).value.number;
                 1
             } else {
-                if luav_tonumber_(pinit, &mut init_0) {
+                if (*pinit).to_number(&mut init_0) {
                     1
                 } else {
                     0

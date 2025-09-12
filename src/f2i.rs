@@ -45,9 +45,9 @@ pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode:
 }
 pub unsafe extern "C" fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
-        let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
-        if l_strton(obj, &mut v) != 0 {
-            obj = &mut v;
+        let mut tvalue = TValue::new(TAG_VARIANT_NIL_NIL);
+        if l_strton(obj, &mut tvalue) {
+            obj = &mut tvalue;
         }
         return luav_tointegerns(obj, p, mode);
     }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::{mem::*, ptr::*};
 use crate::interpreter::*;
 #[derive(Debug, Copy, Clone)]

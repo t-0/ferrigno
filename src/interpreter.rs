@@ -83,15 +83,6 @@ impl TObject for Interpreter {
         null_mut()
     }
 }
-pub unsafe extern "C" fn lua_touserdata(
-    interpreter: *mut Interpreter,
-    index: i32,
-) -> *mut libc::c_void {
-    unsafe {
-        let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        return (*tvalue).to_pointer();
-    }
-}
 impl Interpreter {
     pub unsafe fn to_pointer(& mut self, index: i32) -> *mut libc::c_void {
         unsafe {
@@ -1857,7 +1848,7 @@ pub unsafe extern "C" fn lua_isnumber(interpreter: *mut Interpreter, index: i32)
             true
         } else {
             let mut n: f64 = 0.0;
-            luav_tonumber_(o, &mut n)
+            (*o).to_number(&mut n)
         };
     }
 }
@@ -1973,7 +1964,7 @@ pub unsafe extern "C" fn lua_tonumberx(
             n = (*o).value.number;
             true
         } else {
-            luav_tonumber_(o, &mut n)
+            (*o).to_number(&mut n)
         };
         if !is_number.is_null() {
             *is_number = is_number_;
@@ -4763,7 +4754,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
         let tm: *const TValue;
         let mut v: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut v;
-        let i_g: *mut Object = udata2finalize(global);
+        let i_g: *mut Object = (*global).udata2finalize();
         (*io).value.object = i_g;
         (*io).set_tag_variant((*i_g).get_tag_variant());
         (*io).set_collectable(true);
@@ -4942,7 +4933,7 @@ pub unsafe extern "C" fn sweepgen(
 }
 pub unsafe extern "C" fn finishgencycle(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
-        correctgraylists(global);
+        (*global).correctgraylists();
         check_sizes(interpreter, global);
         (*global).gc_state = 0;
         if !(*global).is_emergency {
@@ -5007,7 +4998,7 @@ pub unsafe extern "C" fn youngcollection(interpreter: *mut Interpreter, global: 
 }
 pub unsafe extern "C" fn atomic2gen(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
-        cleargraylists(global);
+        (*global).cleargraylists();
         (*global).gc_state = 3 as u8;
         sweep2old(interpreter, &mut (*global).all_gc);
         (*global).survival = (*global).all_gc;
@@ -5069,7 +5060,7 @@ pub unsafe extern "C" fn stepgenfull(interpreter: *mut Interpreter, global: *mut
             (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
             entersweep(interpreter);
             luac_runtilstate(interpreter, 1 << 8);
-            setpause(global);
+            (*global).setpause();
             (*global).last_atomic = newatomic;
         };
     }
@@ -5092,7 +5083,7 @@ pub unsafe extern "C" fn genstep(interpreter: *mut Interpreter, global: *mut Glo
                     < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize)))
                 {
                     (*global).last_atomic = numobjs;
-                    setpause(global);
+                    (*global).setpause();
                 }
             } else {
                 youngcollection(interpreter, global);
@@ -5114,7 +5105,7 @@ pub unsafe extern "C" fn luac_freeallobjects(interpreter: *mut Interpreter) {
         let global: *mut Global = (*interpreter).global;
         (*global).gc_step = 4 as u8;
         luac_changemode(interpreter, 0);
-        separatetobefnz(global, 1);
+        (*global).separatetobefnz(true);
         callallpendingfinalizers(interpreter);
         delete_list(
             interpreter,
@@ -5140,20 +5131,20 @@ pub unsafe extern "C" fn atomic(interpreter: *mut Interpreter) -> usize {
             really_mark_object(global, (*global).l_registry.value.object);
         }
         (*global).markmt();
-        work = (work as usize).wrapping_add(propagateall(global)) as usize;
-        work = (work as usize).wrapping_add(remarkupvals(global) as usize) as usize;
-        work = (work as usize).wrapping_add(propagateall(global)) as usize;
+        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
+        work = (work as usize).wrapping_add((*global).remarkupvals() as usize) as usize;
+        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
         (*global).gray = grayagain;
-        work = (work as usize).wrapping_add(propagateall(global)) as usize;
-        convergeephemerons(global);
+        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
+        (*global).convergeephemerons();
         clearbyvalues(global, (*global).weak, null_mut());
         clearbyvalues(global, (*global).all_weak, null_mut());
         let origweak: *mut Object = (*global).weak;
         let origall: *mut Object = (*global).all_weak;
-        separatetobefnz(global, 0);
-        work = (work as usize).wrapping_add(markbeingfnz(global)) as usize;
-        work = (work as usize).wrapping_add(propagateall(global)) as usize;
-        convergeephemerons(global);
+        (*global).separatetobefnz(false);
+        work = (work as usize).wrapping_add((*global).markbeingfnz()) as usize;
+        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
+        (*global).convergeephemerons();
         clearbykeys(global, (*global).ephemeron);
         clearbykeys(global, (*global).all_weak);
         clearbyvalues(global, (*global).weak, origweak);
@@ -5193,7 +5184,7 @@ pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> usize {
         (*global).gcstopem = 1;
         match (*global).gc_state as i32 {
             8 => {
-                restartcollection(global);
+                (*global).restartcollection();
                 (*global).gc_state = 0;
                 work = 1 as usize;
             }
@@ -5272,7 +5263,7 @@ pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Glo
             }
         }
         if (*global).gc_state as i32 == 8 {
-            setpause(global);
+            (*global).setpause();
         } else {
             debt = ((debt / stepmul as i64) as usize)
                 .wrapping_mul(size_of::<TValue>() as usize) as i64;
@@ -5302,7 +5293,7 @@ pub unsafe extern "C" fn fullinc(interpreter: *mut Interpreter, global: *mut Glo
         (*global).gc_state = 1;
         luac_runtilstate(interpreter, 1 << 7);
         luac_runtilstate(interpreter, 1 << 8);
-        setpause(global);
+        (*global).setpause();
     }
 }
 pub unsafe extern "C" fn luac_fullgc(interpreter: *mut Interpreter, is_emergency: bool) {
