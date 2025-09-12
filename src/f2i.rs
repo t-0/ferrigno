@@ -1,11 +1,12 @@
-use std::ptr::*;
-use crate::tvalue::*;
-use crate::tag::*;
-use crate::utility::*;
+use rlua::*;
 use crate::character::*;
 use crate::interpreter::*;
+use crate::tag::*;
+use crate::tvalue::*;
 use crate::utility::c::*;
-use libc::{toupper};
+use crate::utility::*;
+use libc::toupper;
+use std::ptr::*;
 #[derive(PartialEq)]
 #[repr(C)]
 pub enum F2I {
@@ -34,7 +35,11 @@ pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bo
 pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
-            return if luav_flttointeger((*obj).value.number, p, mode) { 1 } else { 0 };
+            return if luav_flttointeger((*obj).value.number, p, mode) {
+                1
+            } else {
+                0
+            };
         } else if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             *p = (*obj).value.integer;
             return 1;
@@ -156,13 +161,11 @@ pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
 }
 pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64
-            != 0
-        {
+        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
                 luag_runerror(
                     interpreter,
-                    b"attempt to divide by zero\0" as *const u8 as *const i8,
+                    make_cstring!("attempt to divide by zero"),
                 );
             }
             return (0usize).wrapping_sub(m as usize) as i64;
@@ -177,13 +180,11 @@ pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64
 }
 pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64
-            != 0
-        {
+        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
                 luag_runerror(
                     interpreter,
-                    b"attempt to perform 'n%%0'\0" as *const u8 as *const i8,
+                    make_cstring!("attempt to perform 'n%%0'"),
                 );
             }
             return 0;
@@ -227,41 +228,34 @@ pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) ->
     unsafe {
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
-        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
+        s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
         if *s as i32 == CHARACTER_HYPHEN as i32 {
             s = s.offset(1);
             is_negative_ = 1;
         } else if *s as i32 == CHARACTER_PLUS as i32 {
             s = s.offset(1);
         }
-        if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
-            & _ISALPHANUMERIC as i32
-            == 0
-        {
+        if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 == 0 {
             return null();
         }
         loop {
-            let digit_0: i32 = if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
-                & _ISDIGIT as i32
-                != 0
-            {
-                *s as i32 - CHARACTER_0 as i32
-            } else {
-                toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
-            };
+            let digit_0: i32 =
+                if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+                    *s as i32 - CHARACTER_0 as i32
+                } else {
+                    toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
+                };
             if digit_0 >= base {
                 return null();
             }
             n = n.wrapping_mul(base as usize).wrapping_add(digit_0 as usize);
             s = s.offset(1);
-            if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32
-                & _ISALPHANUMERIC as i32
-                != 0)
+            if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 != 0)
             {
                 break;
             }
         }
-        s = s.offset(strspn(s, b" \x0C\n\r\t\x0B\0" as *const u8 as *const i8) as isize);
+        s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
         *pn = (if is_negative_ != 0 {
             (0usize).wrapping_sub(n)
         } else {

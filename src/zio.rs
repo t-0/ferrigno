@@ -1,7 +1,7 @@
-use std::ptr::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use libc::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ZIO {
@@ -23,15 +23,18 @@ impl ZIO {
             data: data,
             length: 0,
             pointer: null(),
-        }
+        };
     }
 }
 pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: usize = 0;
         let interpreter: *mut Interpreter = (*zio).interpreter;
-        let buffer: *const i8 =
-            ((*zio).reader).expect("non-null function pointer")(interpreter, (*zio).data, &mut size);
+        let buffer: *const i8 = ((*zio).reader).expect("non-null function pointer")(
+            interpreter,
+            (*zio).data,
+            &mut size,
+        );
         if buffer.is_null() || size == 0 {
             return -1;
         } else {

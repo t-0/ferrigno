@@ -1,7 +1,7 @@
-use std::ptr::*;
 use crate::functions::*;
 use crate::object::*;
 use crate::tstring::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -17,9 +17,7 @@ pub union Value {
 }
 impl Value {
     pub const fn new() -> Self {
-        Value {
-            object: null_mut(),
-        }
+        Value { object: null_mut() }
     }
 }
 #[derive(Copy, Clone)]

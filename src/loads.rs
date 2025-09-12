@@ -1,4 +1,5 @@
 #![allow(unused)]
+use rlua::*;
 use crate::interpreter::*;
 use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
@@ -110,7 +111,7 @@ impl<T> LoadS<T> {
                 if new_size >= limit {
                     luag_runerror(
                         interpreter,
-                        b"too many %s (limit is %d)\0" as *const u8 as *const i8,
+                        make_cstring!("too many %s (limit is %d)"),
                         what,
                         limit,
                     );

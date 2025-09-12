@@ -1,4 +1,4 @@
-use std::ptr::*;
+use rlua::*;
 use crate::buffer::*;
 use crate::character::*;
 use crate::gmatchstate::*;
@@ -15,6 +15,7 @@ use crate::tstring::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::{memcpy, tolower, toupper};
+use std::ptr::*;
 pub unsafe extern "C" fn str_len(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
@@ -36,7 +37,7 @@ pub unsafe extern "C" fn str_sub(interpreter: *mut Interpreter) -> i32 {
                 end.wrapping_sub(start).wrapping_add(1 as usize),
             );
         } else {
-            lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
+            lua_pushstring(interpreter, make_cstring!(""));
         }
         return 1;
     }
@@ -87,58 +88,55 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
         let mut n: i64 = lual_checkinteger(interpreter, 2);
         let sep: *const i8 =
-            lual_optlstring(interpreter, 3, b"\0" as *const u8 as *const i8, &mut lsep);
+            lual_optlstring(interpreter, 3, make_cstring!(""), &mut lsep);
         if n <= 0 {
-        lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
-    } else if ((l.wrapping_add(lsep) < l
-        || l.wrapping_add(lsep) as usize
-            > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
-                !(0usize)
-            } else {
-                0x7FFFFFFF as usize
-            }) as usize)
-                .wrapping_div(n as usize)) as i32
-        != 0) as i64
-        != 0
-    {
-        return lual_error(
-            interpreter,
-            b"resulting string too large\0".as_ptr(),
-        );
-    } else {
-        let totallen: usize = (n as usize)
-            .wrapping_mul(l)
-            .wrapping_add(((n - 1) as usize).wrapping_mul(lsep));
-        let mut b = Buffer::new();
-        let mut p: *mut i8 = b.initialize_with_size(interpreter, totallen as usize);
-        loop {
-            let fresh159 = n;
-            n = n - 1;
-            if !(fresh159 > 1) {
-                break;
+            lua_pushstring(interpreter, make_cstring!(""));
+        } else if ((l.wrapping_add(lsep) < l
+            || l.wrapping_add(lsep) as usize
+                > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                    !(0usize)
+                } else {
+                    0x7FFFFFFF as usize
+                }) as usize)
+                    .wrapping_div(n as usize)) as i32
+            != 0) as i64
+            != 0
+        {
+            return lual_error(interpreter, b"resulting string too large\0".as_ptr());
+        } else {
+            let totallen: usize = (n as usize)
+                .wrapping_mul(l)
+                .wrapping_add(((n - 1) as usize).wrapping_mul(lsep));
+            let mut b = Buffer::new();
+            let mut p: *mut i8 = b.initialize_with_size(interpreter, totallen as usize);
+            loop {
+                let fresh159 = n;
+                n = n - 1;
+                if !(fresh159 > 1) {
+                    break;
+                }
+                memcpy(
+                    p as *mut libc::c_void,
+                    s as *const libc::c_void,
+                    (l as usize).wrapping_mul(size_of::<i8>()),
+                );
+                p = p.offset(l as isize);
+                if lsep > 0 {
+                    memcpy(
+                        p as *mut libc::c_void,
+                        sep as *const libc::c_void,
+                        (lsep as usize).wrapping_mul(size_of::<i8>()),
+                    );
+                    p = p.offset(lsep as isize);
+                }
             }
             memcpy(
                 p as *mut libc::c_void,
                 s as *const libc::c_void,
                 (l as usize).wrapping_mul(size_of::<i8>()),
             );
-            p = p.offset(l as isize);
-            if lsep > 0 {
-                memcpy(
-                    p as *mut libc::c_void,
-                    sep as *const libc::c_void,
-                    (lsep as usize).wrapping_mul(size_of::<i8>()),
-                );
-                p = p.offset(lsep as isize);
-            }
+            b.push_result_with_size(totallen as usize);
         }
-        memcpy(
-            p as *mut libc::c_void,
-            s as *const libc::c_void,
-            (l as usize).wrapping_mul(size_of::<i8>()),
-        );
-        b.push_result_with_size(totallen as usize);
-    }
         return 1;
     }
 }
@@ -160,11 +158,12 @@ pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
         lual_checkstack(
             interpreter,
             n,
-            b"string slice too long\0" as *const u8 as *const i8,
+            make_cstring!("string slice too long"),
         );
         for i in 0..n {
             (*interpreter).push_integer(
-                *s.offset(posi.wrapping_add(i as usize).wrapping_sub(1 as usize) as isize) as u8 as i64,
+                *s.offset(posi.wrapping_add(i as usize).wrapping_sub(1 as usize) as isize) as u8
+                    as i64,
             );
         }
         return n;
@@ -181,7 +180,7 @@ pub unsafe extern "C" fn str_char(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     i,
-                    b"value out of range\0" as *const u8 as *const i8,
+                    make_cstring!("value out of range"),
                 ) != 0) as i32;
             *p.offset((i - 1) as isize) = c as u8 as i8;
         }
@@ -284,97 +283,97 @@ pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *
 }
 pub unsafe extern "C" fn arith_add(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 0, b"__add\0" as *const u8 as *const i8);
+        return arith(interpreter, 0, make_cstring!("__add"));
     }
 }
 pub unsafe extern "C" fn arith_sub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 1, b"__sub\0" as *const u8 as *const i8);
+        return arith(interpreter, 1, make_cstring!("__sub"));
     }
 }
 pub unsafe extern "C" fn arith_mul(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 2, b"__mul\0" as *const u8 as *const i8);
+        return arith(interpreter, 2, make_cstring!("__mul"));
     }
 }
 pub unsafe extern "C" fn arith_mod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 3, b"__mod\0" as *const u8 as *const i8);
+        return arith(interpreter, 3, make_cstring!("__mod"));
     }
 }
 pub unsafe extern "C" fn arith_pow(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 4, b"__pow\0" as *const u8 as *const i8);
+        return arith(interpreter, 4, make_cstring!("__pow"));
     }
 }
 pub unsafe extern "C" fn arith_div(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 5, b"__div\0" as *const u8 as *const i8);
+        return arith(interpreter, 5, make_cstring!("__div"));
     }
 }
 pub unsafe extern "C" fn arith_idiv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 6, b"__idiv\0" as *const u8 as *const i8);
+        return arith(interpreter, 6, make_cstring!("__idiv"));
     }
 }
 pub unsafe extern "C" fn arith_unm(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return arith(interpreter, 12 as i32, b"__unm\0" as *const u8 as *const i8);
+        return arith(interpreter, 12 as i32, make_cstring!("__unm"));
     }
 }
 pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
     [
         {
             RegisteredFunction {
-                name: b"__add\0" as *const u8 as *const i8,
+                name: make_cstring!("__add"),
                 function: Some(arith_add as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__sub\0" as *const u8 as *const i8,
+                name: make_cstring!("__sub"),
                 function: Some(arith_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__mul\0" as *const u8 as *const i8,
+                name: make_cstring!("__mul"),
                 function: Some(arith_mul as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__mod\0" as *const u8 as *const i8,
+                name: make_cstring!("__mod"),
                 function: Some(arith_mod as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__pow\0" as *const u8 as *const i8,
+                name: make_cstring!("__pow"),
                 function: Some(arith_pow as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__div\0" as *const u8 as *const i8,
+                name: make_cstring!("__div"),
                 function: Some(arith_div as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__idiv\0" as *const u8 as *const i8,
+                name: make_cstring!("__idiv"),
                 function: Some(arith_idiv as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__unm\0" as *const u8 as *const i8,
+                name: make_cstring!("__unm"),
                 function: Some(arith_unm as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"__index\0" as *const u8 as *const i8,
+                name: make_cstring!("__index"),
                 function: None,
             }
         },
@@ -428,7 +427,7 @@ pub unsafe extern "C" fn nospecials(p: *const i8, l: usize) -> i32 {
         loop {
             if !(strpbrk(
                 p.offset(upto as isize),
-                b"^$*+?.([%-\0" as *const u8 as *const i8,
+                make_cstring!("^$*+?.([%-"),
             ))
             .is_null()
             {
@@ -555,7 +554,7 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             || lual_typeerror(
                 interpreter,
                 3,
-                b"string/function/table\0" as *const u8 as *const i8,
+                make_cstring!("string/function/table"),
             ) != 0) as i32;
         b.initialize(interpreter);
         if anchor != 0 {
@@ -576,11 +575,13 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
                 if !(src < match_state.src_end) {
                     break;
                 }
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null())
+                    as i32;
                 let fresh165 = src;
                 src = src.offset(1);
                 let fresh166 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                b.loads
+                    .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                 *(b.loads.loads_pointer).offset(fresh166 as isize) = *fresh165;
             }
             if anchor != 0 {
@@ -599,9 +600,11 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
     unsafe {
-        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null())
+            as i32;
         let fresh167 = (*b).loads.get_length();
-        (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
+        (*b).loads
+            .set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
         *((*b).loads.loads_pointer).offset(fresh167 as isize) = '"' as i8;
         loop {
             let fresh168 = length;
@@ -613,13 +616,17 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                 || *s as i32 == CHARACTER_BACKSLASH as i32
                 || *s as i32 == CHARACTER_LF as i32
             {
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                ((*b).loads.get_length() < (*b).loads.get_size()
+                    || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh169 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
+                (*b).loads
+                    .set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
                 *((*b).loads.loads_pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                ((*b).loads.get_length() < (*b).loads.get_size()
+                    || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh170 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
+                (*b).loads
+                    .set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
                 *((*b).loads.loads_pointer).offset(fresh170 as isize) = *s;
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0
             {
@@ -631,29 +638,33 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
                     snprintf(
                         buffer.as_mut_ptr(),
                         size_of::<[i8; 10]>(),
-                        b"\\%d\0" as *const u8 as *const i8,
+                        make_cstring!("\\%d"),
                         *s as u8 as i32,
                     );
                 } else {
                     snprintf(
                         buffer.as_mut_ptr(),
                         size_of::<[i8; 10]>(),
-                        b"\\%03d\0" as *const u8 as *const i8,
+                        make_cstring!("\\%03d"),
                         *s as u8 as i32,
                     );
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                ((*b).loads.get_length() < (*b).loads.get_size()
+                    || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh171 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
+                (*b).loads
+                    .set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
                 *((*b).loads.loads_pointer).offset(fresh171 as isize) = *s;
             }
             s = s.offset(1);
         }
-        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null())
+            as i32;
         let fresh172 = (*b).loads.get_length();
-        (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
+        (*b).loads
+            .set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
         *((*b).loads.loads_pointer).offset(fresh172 as isize) = '"' as i8;
     }
 }
@@ -661,13 +672,13 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i
     unsafe {
         let s: *const i8;
         if n == ::core::f64::INFINITY {
-            s = b"1e9999\0" as *const u8 as *const i8;
+            s = make_cstring!("1e9999");
         } else if n == -::core::f64::INFINITY {
-            s = b"-1e9999\0" as *const u8 as *const i8;
+            s = make_cstring!("-1e9999");
         } else if n != n {
-            s = b"(0/0)\0" as *const u8 as *const i8;
+            s = make_cstring!("(0/0)");
         } else {
-            let nb: i32 = snprintf(buffer, 120, b"%a\0" as *const u8 as *const i8, n);
+            let nb: i32 = snprintf(buffer, 120, make_cstring!("%a"), n);
             if (memchr(
                 buffer as *const libc::c_void,
                 CHARACTER_PERIOD as i32,
@@ -684,7 +695,7 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i
             }
             return nb;
         }
-        return snprintf(buffer, 120, b"%s\0" as *const u8 as *const i8, s);
+        return snprintf(buffer, 120, make_cstring!("%s"), s);
     }
 }
 pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
@@ -701,9 +712,9 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                 if lua_isinteger(interpreter, arg) {
                     let n: i64 = lua_tointegerx(interpreter, arg, null_mut());
                     let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
-                        b"0x%llx\0" as *const u8 as *const i8
+                        make_cstring!("0x%llx")
                     } else {
-                        b"%lld\0" as *const u8 as *const i8
+                        make_cstring!("%lld")
                     };
                     nb = snprintf(buffer, 120, format, n);
                 } else {
@@ -713,7 +724,9 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                         lua_tonumberx(interpreter, arg, null_mut()),
                     );
                 }
-                (*b).loads.set_length((((*b).loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
+                (*b).loads.set_length(
+                    (((*b).loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize,
+                );
             }
             Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(interpreter, arg, null_mut());
@@ -723,7 +736,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
                 lual_argerror(
                     interpreter,
                     arg,
-                    b"value has no literal form\0" as *const u8 as *const i8,
+                    make_cstring!("value has no literal form"),
                 );
             }
         };
@@ -771,7 +784,7 @@ pub unsafe extern "C" fn getformat(
     mut form: *mut i8,
 ) -> *const i8 {
     unsafe {
-        let mut length = strspn(strfrmt, b"-+#0 123456789.\0" as *const u8 as *const i8);
+        let mut length = strspn(strfrmt, make_cstring!("-+#0 123456789."));
         length = length.wrapping_add(1);
         if length >= 22 {
             lual_error(interpreter, b"invalid format (too long)\0".as_ptr());
@@ -811,20 +824,24 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
             if *strfrmt as i32 != CHARACTER_PERCENT as i32 {
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null())
+                    as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
                 let fresh175 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                b.loads
+                    .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                 *(b.loads.loads_pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
                 if *strfrmt as i32 == CHARACTER_PERCENT as i32 {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.loads.get_length() < b.loads.get_size()
+                        || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
                     let fresh177 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                    b.loads
+                        .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                     *(b.loads.loads_pointer).offset(fresh177 as isize) = *fresh176;
                 } else {
                     let mut form: [i8; 32] = [0; 32];
@@ -836,7 +853,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         return lual_argerror(
                             interpreter,
                             arg,
-                            b"no value\0" as *const u8 as *const i8,
+                            make_cstring!("no value"),
                         );
                     }
                     strfrmt = getformat(interpreter, strfrmt, form.as_mut_ptr());
@@ -847,7 +864,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-\0" as *const u8 as *const i8,
+                                make_cstring!("-"),
                                 0,
                             );
                             nb = snprintf(
@@ -859,25 +876,25 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             current_block = 11793792312832361944;
                         }
                         CHARACTER_LOWER_D | CHARACTER_LOWER_I => {
-                            flags = b"-+0 \0" as *const u8 as *const i8;
+                            flags = make_cstring!("-+0 ");
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_U => {
-                            flags = b"-0\0" as *const u8 as *const i8;
+                            flags = make_cstring!("-0");
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_O | CHARACTER_LOWER_X | CHARACTER_UPPER_X => {
-                            flags = b"-#0\0" as *const u8 as *const i8;
+                            flags = make_cstring!("-#0");
                             current_block = 5689001924483802034;
                         }
                         CHARACTER_LOWER_A | CHARACTER_UPPER_A => {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-+#0 \0" as *const u8 as *const i8,
+                                make_cstring!("-+#0 "),
                                 1,
                             );
-                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const i8);
+                            addlenmod(form.as_mut_ptr(), make_cstring!(""));
                             nb = snprintf(
                                 buffer,
                                 maxitem as usize,
@@ -891,7 +908,8 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             buffer = b.prepare_with_size(maxitem as usize);
                             current_block = 6669252993407410313;
                         }
-                        CHARACTER_LOWER_E | CHARACTER_UPPER_E | CHARACTER_LOWER_G | CHARACTER_UPPER_G => {
+                        CHARACTER_LOWER_E | CHARACTER_UPPER_E | CHARACTER_LOWER_G
+                        | CHARACTER_UPPER_G => {
                             current_block = 6669252993407410313;
                         }
                         CHARACTER_LOWER_P => {
@@ -899,11 +917,11 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-\0" as *const u8 as *const i8,
+                                make_cstring!("-"),
                                 0,
                             );
                             if p.is_null() {
-                                p = b"(null)\0" as *const u8 as *const i8 as *const libc::c_void;
+                                p = make_cstring!("(null)") as *const libc::c_void;
                                 form[(strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] =
                                     CHARACTER_LOWER_S as i8;
                             }
@@ -930,12 +948,12 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                                     || lual_argerror(
                                         interpreter,
                                         arg,
-                                        b"string contains zeros\0" as *const u8 as *const i8,
+                                        make_cstring!("string contains zeros"),
                                     ) != 0) as i32;
                                 checkformat(
                                     interpreter,
                                     form.as_mut_ptr(),
-                                    b"-\0" as *const u8 as *const i8,
+                                    make_cstring!("-"),
                                     1,
                                 );
                                 if (strchr(form.as_mut_ptr(), CHARACTER_PERIOD as i32)).is_null()
@@ -961,7 +979,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         5689001924483802034 => {
                             let n: i64 = lual_checkinteger(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), flags, 1);
-                            addlenmod(form.as_mut_ptr(), b"ll\0" as *const u8 as *const i8);
+                            addlenmod(form.as_mut_ptr(), make_cstring!("ll"));
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n);
                         }
                         6669252993407410313 => {
@@ -969,15 +987,17 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(
                                 interpreter,
                                 form.as_mut_ptr(),
-                                b"-+#0 \0" as *const u8 as *const i8,
+                                make_cstring!("-+#0 "),
                                 1,
                             );
-                            addlenmod(form.as_mut_ptr(), b"\0" as *const u8 as *const i8);
+                            addlenmod(form.as_mut_ptr(), make_cstring!(""));
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n_0);
                         }
                         _ => {}
                     }
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
+                    b.loads.set_length(
+                        ((b.loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize,
+                    );
                 }
             }
         }
@@ -995,9 +1015,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
                 *fmt = (*fmt).offset(1);
                 a = a * 10 as i32 + (*fresh179 as i32 - CHARACTER_0);
                 if !(is_digit(**fmt as i32)
-                    && a <= ((if (size_of::<usize>() as usize)
-                        < size_of::<i32>() as usize
-                    {
+                    && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
                         !(0usize)
                     } else {
                         0x7FFFFFFF as usize
@@ -1161,7 +1179,7 @@ pub unsafe extern "C" fn getdetails(
                 lual_argerror(
                     (*h).interpreter,
                     1,
-                    b"invalid next option for option CHARACTER_UPPER_X\0" as *const u8 as *const i8,
+                    make_cstring!("invalid next option for option CHARACTER_UPPER_X"),
                 );
             }
         }
@@ -1175,7 +1193,7 @@ pub unsafe extern "C" fn getdetails(
                 lual_argerror(
                     (*h).interpreter,
                     1,
-                    b"format asks for alignment not power of 2\0" as *const u8 as *const i8,
+                    make_cstring!("format asks for alignment not power of 2"),
                 );
             }
             *ntoalign = align - (totalsize & (align - 1) as usize) as i32 & align - 1;
@@ -1205,7 +1223,9 @@ pub unsafe extern "C" fn packint(
                     ((1 << 8) - 1) as i8;
             }
         }
-        (*b).loads.set_length((((*b).loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+        (*b).loads.set_length(
+            (((*b).loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize,
+        );
     }
 }
 pub unsafe extern "C" fn copywithendian(
@@ -1263,9 +1283,11 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 if !(fresh184 > 0) {
                     break;
                 }
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null())
+                    as i32;
                 let fresh185 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                b.loads
+                    .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                 *(b.loads.loads_pointer).offset(fresh185 as isize) = 0 as i8;
             }
             arg += 1;
@@ -1279,7 +1301,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                             || lual_argerror(
                                 interpreter,
                                 arg,
-                                b"integer overflow\0" as *const u8 as *const i8,
+                                make_cstring!("integer overflow"),
                             ) != 0) as i32;
                     }
                     packint(&mut b, n as usize, h.is_little_endian, size, (n < 0) as i32);
@@ -1292,7 +1314,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                             || lual_argerror(
                                 interpreter,
                                 arg,
-                                b"unsigned overflow\0" as *const u8 as *const i8,
+                                make_cstring!("unsigned overflow"),
                             ) != 0) as i32;
                     }
                     packint(&mut b, n_0 as usize, h.is_little_endian, size, 0);
@@ -1300,15 +1322,17 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 }
                 2 => {
                     let mut f: libc::c_float = lual_checknumber(interpreter, arg) as libc::c_float;
-                    let buffer: *mut i8 =
-                        b.prepare_with_size(size_of::<libc::c_float>());
+                    let buffer: *mut i8 = b.prepare_with_size(size_of::<libc::c_float>());
                     copywithendian(
                         buffer,
                         &mut f as *mut libc::c_float as *mut i8,
                         size_of::<libc::c_float>() as i32,
                         h.is_little_endian,
                     );
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    b.loads.set_length(
+                        ((b.loads.get_length() as usize).wrapping_add(size as usize) as i32)
+                            as usize,
+                    );
                     current_block_33 = 3222590281903869779;
                 }
                 3 => {
@@ -1320,7 +1344,10 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    b.loads.set_length(
+                        ((b.loads.get_length() as usize).wrapping_add(size as usize) as i32)
+                            as usize,
+                    );
                     current_block_33 = 3222590281903869779;
                 }
                 4 => {
@@ -1332,7 +1359,10 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         size_of::<f64>() as i32,
                         h.is_little_endian,
                     );
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    b.loads.set_length(
+                        ((b.loads.get_length() as usize).wrapping_add(size as usize) as i32)
+                            as usize,
+                    );
                     current_block_33 = 3222590281903869779;
                 }
                 5 => {
@@ -1342,7 +1372,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string longer than given size\0" as *const u8 as *const i8,
+                            make_cstring!("string longer than given size"),
                         ) != 0) as i32;
                     b.add_string_with_length(s, length as usize);
                     loop {
@@ -1351,9 +1381,11 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         if !(fresh186 < size as usize) {
                             break;
                         }
-                        (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                        (b.loads.get_length() < b.loads.get_size()
+                            || !(b.prepare_with_size(1)).is_null()) as i32;
                         let fresh187 = b.loads.get_length();
-                        b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                        b.loads
+                            .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                         *(b.loads.loads_pointer).offset(fresh187 as isize) = 0 as i8;
                     }
                     current_block_33 = 3222590281903869779;
@@ -1361,14 +1393,14 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 6 => {
                     let mut length: usize = 0;
                     let s_0: *const i8 = lual_checklstring(interpreter, arg, &mut length);
-                    (((size >= size_of::<usize>() as i32
-                        || length < (1 as usize) << size * 8) as i32
+                    (((size >= size_of::<usize>() as i32 || length < (1 as usize) << size * 8)
+                        as i32
                         != 0) as i64
                         != 0
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string length does not fit in given size\0" as *const u8 as *const i8,
+                            make_cstring!("string length does not fit in given size"),
                         ) != 0) as i32;
                     packint(&mut b, length as usize, h.is_little_endian, size, 0);
                     b.add_string_with_length(s_0, length as usize);
@@ -1382,21 +1414,25 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         || lual_argerror(
                             interpreter,
                             arg,
-                            b"string contains zeros\0" as *const u8 as *const i8,
+                            make_cstring!("string contains zeros"),
                         ) != 0) as i32;
                     b.add_string_with_length(s_1, length as usize);
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.loads.get_length() < b.loads.get_size()
+                        || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh188 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                    b.loads
+                        .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                     *(b.loads.loads_pointer).offset(fresh188 as isize) = Character::Null as i8;
                     totalsize =
                         (totalsize as usize).wrapping_add(length.wrapping_add(1 as usize)) as usize;
                     current_block_33 = 3222590281903869779;
                 }
                 8 => {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.loads.get_length() < b.loads.get_size()
+                        || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh189 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
+                    b.loads
+                        .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                     *(b.loads.loads_pointer).offset(fresh189 as isize) = 0 as i8;
                     current_block_33 = 7383952003695197780;
                 }
@@ -1438,23 +1474,23 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     1,
-                    b"variable-length format\0" as *const u8 as *const i8,
+                    make_cstring!("variable-length format"),
                 ) != 0) as i32;
             size += ntoalign;
             (((totalsize
-            <= (if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
-                !(0usize)
-            } else {
-                0x7FFFFFFF as usize
-            })
-            .wrapping_sub(size as usize)) as i32
-            != 0) as i64
-            != 0
-            || lual_argerror(
-                interpreter,
-                1,
-                b"format result too large\0" as *const u8 as *const i8,
-            ) != 0) as i32;
+                <= (if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                    !(0usize)
+                } else {
+                    0x7FFFFFFF as usize
+                })
+                .wrapping_sub(size as usize)) as i32
+                != 0) as i64
+                != 0
+                || lual_argerror(
+                    interpreter,
+                    1,
+                    make_cstring!("format result too large"),
+                ) != 0) as i32;
             totalsize = (totalsize as usize).wrapping_add(size as usize) as usize;
         }
         (*interpreter).push_integer(totalsize as i64);
@@ -1529,7 +1565,7 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
             || lual_argerror(
                 interpreter,
                 3,
-                b"initial position out of string\0" as *const u8 as *const i8,
+                make_cstring!("initial position out of string"),
             ) != 0) as i32;
         initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
@@ -1542,13 +1578,13 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 || lual_argerror(
                     interpreter,
                     2,
-                    b"data string too short\0" as *const u8 as *const i8,
+                    make_cstring!("data string too short"),
                 ) != 0) as i32;
             pos = (pos as usize).wrapping_add(ntoalign as usize) as usize;
             lual_checkstack(
                 interpreter,
                 2,
-                b"too many results\0" as *const u8 as *const i8,
+                make_cstring!("too many results"),
             );
             n += 1;
             match opt as u32 {
@@ -1603,13 +1639,13 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         size,
                         0,
                     ) as usize;
-                    (((length <= ld.wrapping_sub(pos).wrapping_sub(size as usize)) as i32 != 0) as i32
-                        as i64
+                    (((length <= ld.wrapping_sub(pos).wrapping_sub(size as usize)) as i32 != 0)
+                        as i32 as i64
                         != 0
                         || lual_argerror(
                             interpreter,
                             2,
-                            b"data string too short\0" as *const u8 as *const i8,
+                            make_cstring!("data string too short"),
                         ) != 0) as i32;
                     lua_pushlstring(
                         interpreter,
@@ -1624,7 +1660,7 @@ pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         || lual_argerror(
                             interpreter,
                             2,
-                            b"unfinished string for format 'zio'\0" as *const u8 as *const i8,
+                            make_cstring!("unfinished string for format 'zio'"),
                         ) != 0) as i32;
                     lua_pushlstring(interpreter, data.offset(pos as isize), length_0);
                     pos = (pos as usize).wrapping_add(length_0.wrapping_add(1 as usize)) as usize;
@@ -1644,37 +1680,37 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
     [
         {
             RegisteredFunction {
-                name: b"byte\0" as *const u8 as *const i8,
+                name: make_cstring!("byte"),
                 function: Some(str_byte as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"char\0" as *const u8 as *const i8,
+                name: make_cstring!("char"),
                 function: Some(str_char as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"dump\0" as *const u8 as *const i8,
+                name: make_cstring!("dump"),
                 function: Some(str_dump as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"find\0" as *const u8 as *const i8,
+                name: make_cstring!("find"),
                 function: Some(str_find as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"format\0" as *const u8 as *const i8,
+                name: make_cstring!("format"),
                 function: Some(str_format as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"gmatch\0" as *const u8 as *const i8,
+                name: make_cstring!("gmatch"),
                 function: Some(
                     GMatchState::gmatch as unsafe extern "C" fn(*mut Interpreter) -> i32,
                 ),
@@ -1682,67 +1718,67 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         },
         {
             RegisteredFunction {
-                name: b"gsub\0" as *const u8 as *const i8,
+                name: make_cstring!("gsub"),
                 function: Some(str_gsub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"len\0" as *const u8 as *const i8,
+                name: make_cstring!("len"),
                 function: Some(str_len as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"lower\0" as *const u8 as *const i8,
+                name: make_cstring!("lower"),
                 function: Some(str_lower as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"match\0" as *const u8 as *const i8,
+                name: make_cstring!("match"),
                 function: Some(str_match as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"rep\0" as *const u8 as *const i8,
+                name: make_cstring!("rep"),
                 function: Some(str_rep as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"reverse\0" as *const u8 as *const i8,
+                name: make_cstring!("reverse"),
                 function: Some(str_reverse as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"sub\0" as *const u8 as *const i8,
+                name: make_cstring!("sub"),
                 function: Some(str_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"upper\0" as *const u8 as *const i8,
+                name: make_cstring!("upper"),
                 function: Some(str_upper as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"pack\0" as *const u8 as *const i8,
+                name: make_cstring!("pack"),
                 function: Some(str_pack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"packsize\0" as *const u8 as *const i8,
+                name: make_cstring!("packsize"),
                 function: Some(str_packsize as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"unpack\0" as *const u8 as *const i8,
+                name: make_cstring!("unpack"),
                 function: Some(str_unpack as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -1758,12 +1794,12 @@ pub unsafe extern "C" fn createmetatable(interpreter: *mut Interpreter) {
     unsafe {
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_METAMETHODS.as_ptr(), 0);
-        lua_pushstring(interpreter, b"\0" as *const u8 as *const i8);
+        lua_pushstring(interpreter, make_cstring!(""));
         lua_pushvalue(interpreter, -2);
         lua_setmetatable(interpreter, -2);
         lua_settop(interpreter, -2);
         lua_pushvalue(interpreter, -2);
-        lua_setfield(interpreter, -2, b"__index\0" as *const u8 as *const i8);
+        lua_setfield(interpreter, -2, make_cstring!("__index"));
         lua_settop(interpreter, -2);
     }
 }

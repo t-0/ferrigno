@@ -1,3 +1,4 @@
+use rlua::*;
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum TagType {
@@ -58,12 +59,12 @@ pub enum TagVariant {
 pub const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
 pub const TAG_VARIANT_NIL_EMPTY: u8 = TagVariant::NilEmpty as u8;
 pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagVariant::NilAbsentKey as u8;
-pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8 ;
+pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
 pub const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
 pub const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
-pub const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8 ;
+pub const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
 pub const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-pub const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8 ;
+pub const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
 pub const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
 pub const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
 pub const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
@@ -77,7 +78,7 @@ pub const TAG_VARIANT_DEADKEY: u8 = TagVariant::DeadKey as u8;
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
 pub const fn get_tag_type(tag: u8) -> TagType {
-    match TAG_TYPE_MASK_ & tag  {
+    match TAG_TYPE_MASK_ & tag {
         0 => TagType::Nil,
         1 => TagType::Boolean,
         2 => TagType::Pointer,
@@ -110,19 +111,17 @@ pub const STRING_LOCAL: [i8; 6] =
     unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
 pub const STRING_UPVALUE: [i8; 8] =
     unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
-pub const UDATA_TYPE_NAME: [i8; 9] =
-    unsafe { *::core::mem::transmute::<&[u8; 9], &[i8; 9]>(b"userdata\0") };
 pub const TYPE_NAMES: [*const i8; 12] = [
-    b"no value\0" as *const u8 as *const i8,
-    b"nil\0" as *const u8 as *const i8,
-    b"boolean\0" as *const u8 as *const i8,
-    UDATA_TYPE_NAME.as_ptr(),
-    b"number\0" as *const u8 as *const i8,
-    b"string\0" as *const u8 as *const i8,
-    b"table\0" as *const u8 as *const i8,
-    b"function\0" as *const u8 as *const i8,
-    UDATA_TYPE_NAME.as_ptr(),
-    b"thread\0" as *const u8 as *const i8,
-    b"upvalue\0" as *const u8 as *const i8,
-    b"proto\0" as *const u8 as *const i8,
+    make_cstring!(no value),
+    make_cstring!(nil),
+    make_cstring!(boolean),
+    make_cstring!(userdata),
+    make_cstring!(number),
+    make_cstring!(string),
+    make_cstring!(table),
+    make_cstring!(function),
+    make_cstring!(userdata),
+    make_cstring!(thread),
+    make_cstring!(upvalue),
+    make_cstring!(proto),
 ];

@@ -1,8 +1,8 @@
-use crate::utility::c::*;
-use crate::object::*;
 use crate::interpreter::*;
+use crate::object::*;
 use crate::tstring::*;
 use crate::tvalue::*;
+use crate::utility::c::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
 pub struct BuffFS {
@@ -28,7 +28,8 @@ impl BuffFS {
             (*io).value.object = &mut (*(ts as *mut Object));
             (*io).set_tag_variant((*ts).get_tag_variant());
             (*io).set_collectable(true);
-            (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
+            (*self.interpreter).top.stkidrel_pointer =
+                (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {
                 concatenate(self.interpreter, 2);
             } else {
@@ -62,7 +63,8 @@ impl BuffFS {
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag_variant((*ts).get_tag_variant());
                 (*io).set_collectable(true);
-                (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
+                (*self.interpreter).top.stkidrel_pointer =
+                    (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {
                     concatenate(self.interpreter, 2);
                 } else {

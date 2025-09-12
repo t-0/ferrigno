@@ -1,15 +1,16 @@
-use std::ptr::*;
+use rlua::*;
 use crate::character::*;
 use crate::global::*;
+use crate::interpreter::*;
 use crate::object::*;
 use crate::stackvalue::*;
-use crate::interpreter::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use std::ptr::*;
 pub const STRING_SHORT_MAX: usize = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -97,7 +98,11 @@ impl TString {
             return ret;
         }
     }
-    pub unsafe fn intern(interpreter: *mut Interpreter, str: *const i8, length: usize) -> *mut TString {
+    pub unsafe fn intern(
+        interpreter: *mut Interpreter,
+        str: *const i8,
+        length: usize,
+    ) -> *mut TString {
         unsafe {
             let global: *mut Global = (*interpreter).global;
             let tb: *mut StringTable = &mut (*global).string_table;
@@ -182,7 +187,12 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
         return (*ts).hash;
     }
 }
-pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: usize, tag: u8, h: u32) -> *mut TString {
+pub unsafe extern "C" fn createstrobj(
+    interpreter: *mut Interpreter,
+    l: usize,
+    tag: u8,
+    h: u32,
+) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
         let o: *mut Object = luac_newobj(interpreter, tag, total_size);
@@ -193,21 +203,25 @@ pub unsafe extern "C" fn createstrobj(interpreter: *mut Interpreter, l: usize, t
         return ts;
     }
 }
-pub unsafe extern "C" fn luas_newlstr(interpreter: *mut Interpreter, str: *const i8, length: usize) -> *mut TString {
+pub unsafe extern "C" fn luas_newlstr(
+    interpreter: *mut Interpreter,
+    str: *const i8,
+    length: usize,
+) -> *mut TString {
     unsafe {
         if length <= STRING_SHORT_MAX {
             return TString::intern(interpreter, str, length);
         } else {
             if length.wrapping_mul(size_of::<i8>())
-        >= (if (size_of::<usize>()) < size_of::<i64>() {
-                !(0usize)
-            } else {
-                MAXIMUM_SIZE
-            })
-            .wrapping_sub(size_of::<TString>())
-        {
-            (*interpreter).too_big();
-        }
+                >= (if (size_of::<usize>()) < size_of::<i64>() {
+                    !(0usize)
+                } else {
+                    MAXIMUM_SIZE
+                })
+                .wrapping_sub(size_of::<TString>())
+            {
+                (*interpreter).too_big();
+            }
             let ts: *mut TString = TString::create_long(interpreter, length);
             memcpy(
                 ((*ts).get_contents_mut()) as *mut libc::c_void,
@@ -303,11 +317,10 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
             if !((*top.offset(-(2 as isize))).tvalue.is_tagtype_string()
                 || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric())
                 || !((*top.offset(-(1 as isize))).tvalue.is_tagtype_string()
-                    || (*top.offset(-(1 as isize))).tvalue.is_tagtype_numeric()
-                    && {
-                            luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
-                            1 != 0
-                        })
+                    || (*top.offset(-(1 as isize))).tvalue.is_tagtype_numeric() && {
+                        luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
+                        1 != 0
+                    })
             {
                 luat_tryconcattm(interpreter);
             } else if (*top.offset(-(1 as isize))).tvalue.get_tag_variant()
@@ -317,11 +330,10 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                     == 0
             {
                 (((*top.offset(-(2 as isize))).tvalue.is_tagtype_string())
-                    || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric()
-                        && {
-                            luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
-                            1 != 0
-                        }) as i32;
+                    || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric() && {
+                        luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
+                        1 != 0
+                    }) as i32;
             } else if (*top.offset(-(2 as isize))).tvalue.get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
                 && (*((*top.offset(-(2 as isize))).tvalue.value.object as *mut TString))
@@ -332,20 +344,17 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize))).tvalue;
                 (*io1).copy_from(&*io2);
             } else {
-                let mut tl = (*((*top.offset(-(1 as isize))).tvalue.value.object
-                    as *mut TString))
+                let mut tl = (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString))
                     .get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
-                    && (
-                        (*top.offset(-(n as isize)).offset(-(1 as isize)))
+                    && ((*top.offset(-(n as isize)).offset(-(1 as isize)))
+                        .tvalue
+                        .is_tagtype_string()
+                        || (*top.offset(-(n as isize)).offset(-(1 as isize)))
                             .tvalue
-                            .is_tagtype_string()
-                        ||
-                            (*top.offset(-(n as isize)).offset(-(1 as isize)))
-                                .tvalue
-                                .is_tagtype_numeric()
+                            .is_tagtype_numeric()
                             && {
                                 luao_tostring(
                                     interpreter,
@@ -360,9 +369,7 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                         .object as *mut TString))
                         .get_length();
                     if ((l
-                        >= (if (size_of::<usize>())
-                            < size_of::<i64>()
-                        {
+                        >= (if (size_of::<usize>()) < size_of::<i64>() {
                             !(0usize)
                         } else {
                             MAXIMUM_SIZE
@@ -373,7 +380,10 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                         != 0
                     {
                         (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
-                        luag_runerror(interpreter, b"string length overflow\0" as *const u8 as *const i8);
+                        luag_runerror(
+                            interpreter,
+                            make_cstring!("string length overflow"),
+                        );
                     }
                     tl = tl.wrapping_add(l);
                     n += 1;
@@ -392,8 +402,10 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
                 (*io).set_collectable(true);
             }
             total -= n - 1;
-            (*interpreter).top.stkidrel_pointer =
-                (*interpreter).top.stkidrel_pointer.offset(-((n - 1) as isize));
+            (*interpreter).top.stkidrel_pointer = (*interpreter)
+                .top
+                .stkidrel_pointer
+                .offset(-((n - 1) as isize));
             if !(total > 1) {
                 break;
             }

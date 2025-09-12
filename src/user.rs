@@ -1,5 +1,4 @@
 #![allow(dead_code)]
-use std::ptr::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
@@ -7,6 +6,7 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
@@ -33,13 +33,10 @@ impl TObject for User {
 }
 impl User {
     pub fn user_get_size(count_bytes: usize, count_upvalues: usize) -> usize {
-        core::mem::size_of::<User>()
-            + size_of::<TValue>() * count_upvalues
-            + count_bytes
+        core::mem::size_of::<User>() + size_of::<TValue>() * count_upvalues + count_bytes
     }
     pub fn user_get_offset(count_upvalues: usize) -> isize {
-        (core::mem::offset_of!(User, upvalues) + size_of::<TValue>() * count_upvalues)
-            as isize
+        (core::mem::offset_of!(User, upvalues) + size_of::<TValue>() * count_upvalues) as isize
     }
     pub fn get_size(&self) -> usize {
         return User::user_get_size(self.count_bytes as usize, self.count_upvalues as usize);

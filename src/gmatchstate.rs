@@ -1,8 +1,8 @@
-use std::ptr::*;
-use crate::matchstate::*;
 use crate::interpreter::*;
+use crate::matchstate::*;
 use crate::tstring::*;
 use crate::user::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GMatchState {
@@ -19,7 +19,7 @@ impl GMatchState {
             return (*gmatch_state).auxiliary(interpreter);
         }
     }
-    pub unsafe fn auxiliary(& mut self, interpreter: *mut Interpreter) -> i32{
+    pub unsafe fn auxiliary(&mut self, interpreter: *mut Interpreter) -> i32 {
         unsafe {
             self.match_state.interpreter = interpreter;
             let mut src = self.source;
@@ -43,14 +43,18 @@ impl GMatchState {
             let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
             let p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
             let mut init: usize =
-                (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
+                (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state))
+                    .wrapping_sub(1 as usize);
             lua_settop(interpreter, 2);
             if init > lexical_state {
                 init = lexical_state.wrapping_add(1 as usize);
             }
-            let gm: *mut GMatchState = User::lua_newuserdatauv(interpreter, size_of::<GMatchState>(), 0)
-                as *mut GMatchState;
-            (*gm).match_state.prepstate(interpreter, s, lexical_state, p, lp);
+            let gm: *mut GMatchState =
+                User::lua_newuserdatauv(interpreter, size_of::<GMatchState>(), 0)
+                    as *mut GMatchState;
+            (*gm)
+                .match_state
+                .prepstate(interpreter, s, lexical_state, p, lp);
             (*gm).source = s.offset(init as isize);
             (*gm).pointer = p;
             (*gm).last_match = null();

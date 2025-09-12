@@ -1,5 +1,5 @@
-use crate::utility::c::*;
 use crate::functions::*;
+use crate::utility::c::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Stream {

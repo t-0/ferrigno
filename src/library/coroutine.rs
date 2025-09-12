@@ -1,8 +1,9 @@
-use std::ptr::*;
+use rlua::*;
 use crate::coroutine::*;
-use crate::tag::*;
-use crate::registeredfunction::*;
 use crate::interpreter::*;
+use crate::registeredfunction::*;
+use crate::tag::*;
+use std::ptr::*;
 unsafe extern "C" fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Closure);
@@ -73,7 +74,10 @@ unsafe extern "C" fn luab_close(interpreter: *mut Interpreter) -> i32 {
 unsafe extern "C" fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
-        lua_pushstring(interpreter, COROUTINE_STATUS_NAMES[auxstatus(interpreter, co) as usize]);
+        lua_pushstring(
+            interpreter,
+            COROUTINE_STATUS_NAMES[auxstatus(interpreter, co) as usize],
+        );
         return 1;
     }
 }
@@ -97,49 +101,49 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
     [
         {
             RegisteredFunction {
-                name: b"create\0" as *const u8 as *const i8,
+                name: make_cstring!("create"),
                 function: Some(luab_cocreate as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"resume\0" as *const u8 as *const i8,
+                name: make_cstring!("resume"),
                 function: Some(luab_coresume as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"running\0" as *const u8 as *const i8,
+                name: make_cstring!("running"),
                 function: Some(luab_corunning as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"status\0" as *const u8 as *const i8,
+                name: make_cstring!("status"),
                 function: Some(luab_costatus as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"wrap\0" as *const u8 as *const i8,
+                name: make_cstring!("wrap"),
                 function: Some(luab_cowrap as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"yield\0" as *const u8 as *const i8,
+                name: make_cstring!("yield"),
                 function: Some(luab_yield as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"isyieldable\0" as *const u8 as *const i8,
+                name: make_cstring!("isyieldable"),
                 function: Some(luab_yieldable as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"close\0" as *const u8 as *const i8,
+                name: make_cstring!("close"),
                 function: Some(luab_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
@@ -169,19 +173,23 @@ pub unsafe extern "C" fn getco(interpreter: *mut Interpreter) -> *mut Interprete
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, 1);
         if co.is_null() {
-            lual_typeerror(interpreter, 1, b"thread\0" as *const u8 as *const i8);
+            lual_typeerror(interpreter, 1, make_cstring!("thread"));
         }
         return co;
     }
 }
-pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, narg: i32) -> i32 {
+pub unsafe extern "C" fn auxresume(
+    interpreter: *mut Interpreter,
+    co: *mut Interpreter,
+    narg: i32,
+) -> i32 {
     unsafe {
         let status: i32;
         let mut nres: i32 = 0;
         if lua_checkstack(co, narg) == 0 {
             lua_pushstring(
                 interpreter,
-                b"too many arguments to resume\0" as *const u8 as *const i8,
+                make_cstring!("too many arguments to resume"),
             );
             return -1;
         }
@@ -192,7 +200,7 @@ pub unsafe extern "C" fn auxresume(interpreter: *mut Interpreter, co: *mut Inter
                 lua_settop(co, -nres - 1);
                 lua_pushstring(
                     interpreter,
-                    b"too many results to resume\0" as *const u8 as *const i8,
+                    make_cstring!("too many results to resume"),
                 );
                 return -1;
             }

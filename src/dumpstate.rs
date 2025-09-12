@@ -1,8 +1,10 @@
-use std::ptr::*;
+use rlua::*;
 use crate::functions::*;
 use crate::interpreter::*;
-use crate::tstring::*;
 use crate::prototype::*;
+use crate::tstring::*;
+use std::ptr::*;
+pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
 #[repr(C)]
 pub struct DumpState {
     pub interpreter: *mut Interpreter,
@@ -26,30 +28,26 @@ impl DumpState {
             status: 0,
         };
     }
-    pub unsafe extern "C" fn dump_block(& mut self, pointer: *const libc::c_void, size: usize) {
+    pub unsafe extern "C" fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
-                self.status =
-                    (Some((self.write_function).expect("non-null function pointer")))
-                        .expect("non-null function pointer")(
-                        self.interpreter,
-                        pointer,
-                        size as usize,
-                        self.pointer,
-                    );
+                self.status = (Some((self.write_function).expect("non-null function pointer")))
+                    .expect("non-null function pointer")(
+                    self.interpreter,
+                    pointer,
+                    size as usize,
+                    self.pointer,
+                );
             }
         }
     }
-    pub unsafe extern "C" fn dump_byte(& mut self, integer: u8) {
+    pub unsafe extern "C" fn dump_byte(&mut self, integer: u8) {
         unsafe {
             let mut x: u8 = integer;
-            self.dump_block(
-                &mut x as *mut u8 as *const libc::c_void,
-                size_of::<u8>(),
-            );
+            self.dump_block(&mut x as *mut u8 as *const libc::c_void, size_of::<u8>());
         }
     }
-    pub unsafe extern "C" fn dump_size(& mut self, mut integer: usize) {
+    pub unsafe extern "C" fn dump_size(&mut self, mut integer: usize) {
         unsafe {
             let mut buffer: [u8; 10] = [0; 10];
             let mut n: usize = 0;
@@ -73,8 +71,7 @@ impl DumpState {
                 .wrapping_mul(8)
                 .wrapping_add(6)
                 .wrapping_div(7)
-                .wrapping_sub(1)
-                ] as i32
+                .wrapping_sub(1)] as i32
                 | 0x80 as i32) as u8;
             self.dump_block(
                 buffer
@@ -90,12 +87,12 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_int(& mut self, integer: i32) {
+    pub unsafe extern "C" fn dump_int(&mut self, integer: i32) {
         unsafe {
             self.dump_size(integer as usize);
         }
     }
-    pub unsafe extern "C" fn dump_number(& mut self, mut number: f64) {
+    pub unsafe extern "C" fn dump_number(&mut self, mut number: f64) {
         unsafe {
             self.dump_block(
                 &mut number as *mut f64 as *const libc::c_void,
@@ -103,7 +100,7 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_integer(& mut self, mut integer: i64) {
+    pub unsafe extern "C" fn dump_integer(&mut self, mut integer: i64) {
         unsafe {
             self.dump_block(
                 &mut integer as *mut i64 as *const libc::c_void,
@@ -111,7 +108,7 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_string(& mut self, tstring: *const TString) {
+    pub unsafe extern "C" fn dump_string(&mut self, tstring: *const TString) {
         unsafe {
             if tstring.is_null() {
                 self.dump_size(0);
@@ -126,19 +123,17 @@ impl DumpState {
             };
         }
     }
-    pub unsafe extern "C" fn dump_header(& mut self) {
+    pub unsafe extern "C" fn dump_header(&mut self) {
         unsafe {
             self.dump_block(
-                b"\x1BLua\0" as *const u8 as *const i8 as *const libc::c_void,
-                (size_of::<[i8; 5]>())
-                    .wrapping_sub(size_of::<i8>()),
+                LUA_SIGNATURE as *const libc::c_void,
+                (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()),
             );
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
             self.dump_block(
-                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const i8 as *const libc::c_void,
-                (size_of::<[i8; 7]>())
-                    .wrapping_sub(size_of::<i8>()),
+                make_cstring!("\x19\x7F\r\n\x1A\n") as *const libc::c_void,
+                (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()),
             );
             self.dump_byte(size_of::<u32>() as u8);
             self.dump_byte(size_of::<i64>() as u8);

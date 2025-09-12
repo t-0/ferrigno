@@ -1,6 +1,7 @@
-use std::ptr::*;
+use rlua::*;
 use crate::character::*;
 use libc::*;
+use std::ptr::*;
 pub mod c;
 pub const MAXIMUM_SIZE: usize = 0x7FFFFFFFFFFFFFFF;
 pub fn ceiling_log2(input: usize) -> usize {
@@ -46,7 +47,7 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
 }
 pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
-        let pmode: *const i8 = strpbrk(s, b".xXnN\0" as *const u8 as *const i8);
+        let pmode: *const i8 = strpbrk(s, make_cstring!(".xXnN"));
         let mode: i32 = if !pmode.is_null() {
             *pmode as u8 as i32 | CHARACTER_UPPER_A as i32 ^ CHARACTER_LOWER_A as i32
         } else {
@@ -122,7 +123,11 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
         };
     }
 }
-pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_length: usize) {
+pub unsafe extern "C" fn luao_chunkid(
+    mut out: *mut i8,
+    source: *const i8,
+    mut source_length: usize,
+) {
     unsafe {
         let mut bufflen: usize = 60 as usize;
         if *source as i32 == CHARACTER_EQUAL as i32 {
@@ -153,7 +158,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
             } else {
                 memcpy(
                     out as *mut libc::c_void,
-                    b"...\0" as *const u8 as *const i8 as *const libc::c_void,
+                    make_cstring!("...") as *const libc::c_void,
                     (size_of::<[i8; 4]>())
                         .wrapping_div(size_of::<i8>())
                         .wrapping_sub(1)
@@ -182,7 +187,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
             let nl: *const i8 = strchr(source, CHARACTER_LF as i32);
             memcpy(
                 out as *mut libc::c_void,
-                b"[string \"\0" as *const u8 as *const i8 as *const libc::c_void,
+                b"[string \"".as_ptr() as *const libc::c_void,
                 (size_of::<[i8; 10]>())
                     .wrapping_div(size_of::<i8>())
                     .wrapping_sub(1)
@@ -216,12 +221,12 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
                 memcpy(
                     out as *mut libc::c_void,
                     source as *const libc::c_void,
-                    (source_length as usize).wrapping_mul(size_of::<i8>())
+                    (source_length as usize).wrapping_mul(size_of::<i8>()),
                 );
                 out = out.offset(source_length as isize);
                 memcpy(
                     out as *mut libc::c_void,
-                    b"...\0" as *const u8 as *const i8 as *const libc::c_void,
+                    make_cstring!("...") as *const libc::c_void,
                     (size_of::<[i8; 4]>())
                         .wrapping_div(size_of::<i8>())
                         .wrapping_sub(1)
@@ -235,7 +240,7 @@ pub unsafe extern "C" fn luao_chunkid(mut out: *mut i8, source: *const i8, mut s
             }
             memcpy(
                 out as *mut libc::c_void,
-                b"\"]\0" as *const u8 as *const i8 as *const libc::c_void,
+                make_cstring!("\"]") as *const libc::c_void,
                 (size_of::<[i8; 3]>())
                     .wrapping_div(size_of::<i8>())
                     .wrapping_sub(1)

@@ -1,13 +1,14 @@
-use std::ptr::*;
-use crate::character::CHARACTER_EXCLAMATION;
-use crate::interpreter::*;
-use crate::registeredfunction::*;
-use crate::utility::c::*;
-use crate::character::*;
-use crate::tag::*;
-use crate::new::*;
+use rlua::*;
 use crate::buffer::*;
-use libc::{system,remove,rename,setlocale};
+use crate::character::CHARACTER_EXCLAMATION;
+use crate::character::*;
+use crate::interpreter::*;
+use crate::new::*;
+use crate::registeredfunction::*;
+use crate::tag::*;
+use crate::utility::c::*;
+use libc::{remove, rename, setlocale, system};
+use std::ptr::*;
 pub unsafe extern "C" fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let cmd: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
@@ -34,11 +35,7 @@ pub unsafe extern "C" fn os_rename(interpreter: *mut Interpreter) -> i32 {
         let fromname: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let toname: *const i8 = lual_checklstring(interpreter, 2, null_mut());
         *__errno_location() = 0;
-        return lual_fileresult(
-            interpreter,
-            (rename(fromname, toname) == 0) as i32,
-            null(),
-        );
+        return lual_fileresult(interpreter, (rename(fromname, toname) == 0) as i32, null());
     }
 }
 pub unsafe extern "C" fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
@@ -47,7 +44,7 @@ pub unsafe extern "C" fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
         let mut err: i32;
         strcpy(
             buffer.as_mut_ptr(),
-            b"/tmp/lua_XXXXXX\0" as *const u8 as *const i8,
+            make_cstring!("/tmp/lua_XXXXXX"),
         );
         err = mkstemp(buffer.as_mut_ptr());
         if err != -1 {
@@ -79,7 +76,12 @@ pub unsafe extern "C" fn os_clock(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn setfield(interpreter: *mut Interpreter, key: *const i8, value: i32, delta: i32) {
+pub unsafe extern "C" fn setfield(
+    interpreter: *mut Interpreter,
+    key: *const i8,
+    value: i32,
+    delta: i32,
+) {
     unsafe {
         (*interpreter).push_integer(value as i64 + delta as i64);
         lua_setfield(interpreter, -2, key);
@@ -95,40 +97,55 @@ pub unsafe extern "C" fn setallfields(interpreter: *mut Interpreter, stm: *mut T
     unsafe {
         setfield(
             interpreter,
-            b"year\0" as *const u8 as *const i8,
+            make_cstring!("year"),
             (*stm).tm_year,
             1900 as i32,
         );
         setfield(
             interpreter,
-            b"month\0" as *const u8 as *const i8,
+            make_cstring!("month"),
             (*stm).tm_mon,
             1,
         );
-        setfield(interpreter, b"day\0" as *const u8 as *const i8, (*stm).tm_mday, 0);
         setfield(
             interpreter,
-            b"hour\0" as *const u8 as *const i8,
+            make_cstring!("day"),
+            (*stm).tm_mday,
+            0,
+        );
+        setfield(
+            interpreter,
+            make_cstring!("hour"),
             (*stm).tm_hour,
             0,
         );
-        setfield(interpreter, b"min\0" as *const u8 as *const i8, (*stm).tm_min, 0);
-        setfield(interpreter, b"sec\0" as *const u8 as *const i8, (*stm).tm_sec, 0);
         setfield(
             interpreter,
-            b"yday\0" as *const u8 as *const i8,
+            make_cstring!("min"),
+            (*stm).tm_min,
+            0,
+        );
+        setfield(
+            interpreter,
+            make_cstring!("sec"),
+            (*stm).tm_sec,
+            0,
+        );
+        setfield(
+            interpreter,
+            make_cstring!("yday"),
             (*stm).tm_yday,
             1,
         );
         setfield(
             interpreter,
-            b"wday\0" as *const u8 as *const i8,
+            make_cstring!("wday"),
             (*stm).tm_wday,
             1,
         );
         setboolfield(
             interpreter,
-            b"isdst\0" as *const u8 as *const i8,
+            make_cstring!("isdst"),
             0 != (*stm).tm_isdst,
         );
     }
@@ -145,18 +162,19 @@ pub unsafe extern "C" fn getboolfield(interpreter: *mut Interpreter, key: *const
         return res;
     }
 }
-pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, delta: i32) -> i32 {
+pub unsafe extern "C" fn getfield(
+    interpreter: *mut Interpreter,
+    key: *const i8,
+    d: i32,
+    delta: i32,
+) -> i32 {
     unsafe {
-        let mut is_number= false;
+        let mut is_number = false;
         let t = lua_getfield(interpreter, -1, key);
         let mut res: i64 = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
             if t != TagType::Nil {
-                return lual_error(
-                    interpreter,
-                    b"field '%s' is not an integer\0".as_ptr(),
-                    key,
-                );
+                return lual_error(interpreter, b"field '%s' is not an integer\0".as_ptr(), key);
             } else if d < 0 {
                 return lual_error(
                     interpreter,
@@ -172,11 +190,7 @@ pub unsafe extern "C" fn getfield(interpreter: *mut Interpreter, key: *const i8,
                 ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
             } == 0
             {
-                return lual_error(
-                    interpreter,
-                    b"field '%s' is out-of-bound\0".as_ptr(),
-                    key,
-                );
+                return lual_error(interpreter, b"field '%s' is out-of-bound\0".as_ptr(), key);
             }
             res -= delta as i64;
         }
@@ -219,7 +233,7 @@ pub unsafe extern "C" fn checkoption(
             1,
             lua_pushfstring(
                 interpreter,
-                b"invalid conversion specifier '%%%s'\0" as *const u8 as *const i8,
+                make_cstring!("invalid conversion specifier '%%%s'"),
                 conv,
             ),
         );
@@ -233,7 +247,7 @@ pub unsafe extern "C" fn l_checktime(interpreter: *mut Interpreter, arg: i32) ->
             lual_argerror(
                 interpreter,
                 arg,
-                b"time out-of-bounds\0" as *const u8 as *const i8,
+                make_cstring!("time out-of-bounds"),
             );
         }
         return t as i64;
@@ -243,7 +257,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
         let mut s: *const i8 =
-            lual_optlstring(interpreter, 1, b"%c\0" as *const u8 as *const i8, &mut slen);
+            lual_optlstring(interpreter, 1, make_cstring!("%c"), &mut slen);
         let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) {
             time(null_mut())
         } else {
@@ -276,7 +290,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
                 b"date result cannot be represented in this installation\0".as_ptr(),
             );
         }
-        if strcmp(s, b"*t\0" as *const u8 as *const i8) == 0 {
+        if strcmp(s, make_cstring!("*t")) == 0 {
             (*interpreter).lua_createtable();
             setallfields(interpreter, stm);
         } else {
@@ -286,14 +300,16 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
             b.initialize(interpreter);
             while s < se {
                 if *s as i32 != CHARACTER_PERCENT as i32 {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.loads.get_length() < b.loads.get_size()
+                        || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh157 = s;
                     s = s.offset(1);
                     let fresh158 = b.loads.get_length();
-                    b.loads.set_length((b.loads.get_length()).wrapping_add(1) as usize);
+                    b.loads
+                        .set_length((b.loads.get_length()).wrapping_add(1) as usize);
                     *(b.loads.loads_pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
-                    let reslen:  usize;
+                    let reslen: usize;
                     let buffer: *mut i8 = b.prepare_with_size(250);
                     s = s.offset(1);
                     s = checkoption(
@@ -303,7 +319,8 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
                         cc.as_mut_ptr().offset(1 as isize),
                     );
                     reslen = strftime(buffer, 250, cc.as_mut_ptr(), stm);
-                    b.loads.set_length((b.loads.get_length() as usize).wrapping_add(reslen as usize));
+                    b.loads
+                        .set_length((b.loads.get_length() as usize).wrapping_add(reslen as usize));
                 }
             }
             b.push_result();
@@ -317,7 +334,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
         match lua_type(interpreter, 1) {
             None | Some(TagType::Nil) => {
                 t = time(null_mut());
-            },
+            }
             _ => {
                 let mut ts: TM = TM {
                     tm_sec: 0,
@@ -334,13 +351,23 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
                 };
                 lual_checktype(interpreter, 1, TagType::Table);
                 lua_settop(interpreter, 1);
-                ts.tm_year = getfield(interpreter, b"year\0" as *const u8 as *const i8, -1, 1900 as i32);
-                ts.tm_mon = getfield(interpreter, b"month\0" as *const u8 as *const i8, -1, 1);
-                ts.tm_mday = getfield(interpreter, b"day\0" as *const u8 as *const i8, -1, 0);
-                ts.tm_hour = getfield(interpreter, b"hour\0" as *const u8 as *const i8, 12 as i32, 0);
-                ts.tm_min = getfield(interpreter, b"min\0" as *const u8 as *const i8, 0, 0);
-                ts.tm_sec = getfield(interpreter, b"sec\0" as *const u8 as *const i8, 0, 0);
-                ts.tm_isdst = getboolfield(interpreter, b"isdst\0" as *const u8 as *const i8);
+                ts.tm_year = getfield(
+                    interpreter,
+                    make_cstring!("year"),
+                    -1,
+                    1900 as i32,
+                );
+                ts.tm_mon = getfield(interpreter, make_cstring!("month"), -1, 1);
+                ts.tm_mday = getfield(interpreter, make_cstring!("day"), -1, 0);
+                ts.tm_hour = getfield(
+                    interpreter,
+                    make_cstring!("hour"),
+                    12 as i32,
+                    0,
+                );
+                ts.tm_min = getfield(interpreter, make_cstring!("min"), 0, 0);
+                ts.tm_sec = getfield(interpreter, make_cstring!("sec"), 0, 0);
+                ts.tm_isdst = getboolfield(interpreter, make_cstring!("isdst"));
                 t = mktime(&mut ts);
                 setallfields(interpreter, &mut ts);
             }
@@ -367,19 +394,19 @@ pub unsafe extern "C" fn os_setlocale(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         pub const CATEGORY: [i32; 6] = [6, 3, 0, 4, 1, 2];
         pub const CATEGORY_NAMES: [*const i8; 7] = [
-            b"all\0" as *const u8 as *const i8,
-            b"collate\0" as *const u8 as *const i8,
-            b"ctype\0" as *const u8 as *const i8,
-            b"monetary\0" as *const u8 as *const i8,
-            b"numeric\0" as *const u8 as *const i8,
-            b"time\0" as *const u8 as *const i8,
+            make_cstring!("all"),
+            make_cstring!("collate"),
+            make_cstring!("ctype"),
+            make_cstring!("monetary"),
+            make_cstring!("numeric"),
+            make_cstring!("time"),
             null(),
         ];
         let l: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let op: i32 = lual_checkoption(
             interpreter,
             2,
-            b"all\0" as *const u8 as *const i8,
+            make_cstring!("all"),
             CATEGORY_NAMES.as_ptr(),
         );
         lua_pushstring(interpreter, setlocale(CATEGORY[op as usize], l));
@@ -390,7 +417,11 @@ pub unsafe extern "C" fn os_exit(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         if lua_type(interpreter, 1) == Some(TagType::Boolean) {
-            status = if lua_toboolean(interpreter, 1) != 0 { 0 } else { 1 };
+            status = if lua_toboolean(interpreter, 1) != 0 {
+                0
+            } else {
+                1
+            };
         } else {
             status = lual_optinteger(interpreter, 1, 0) as i32;
         }
@@ -407,67 +438,67 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
     [
         {
             RegisteredFunction {
-                name: b"clock\0" as *const u8 as *const i8,
+                name: make_cstring!("clock"),
                 function: Some(os_clock as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"date\0" as *const u8 as *const i8,
+                name: make_cstring!("date"),
                 function: Some(os_date as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"difftime\0" as *const u8 as *const i8,
+                name: make_cstring!("difftime"),
                 function: Some(os_difftime as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"execute\0" as *const u8 as *const i8,
+                name: make_cstring!("execute"),
                 function: Some(os_execute as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"exit\0" as *const u8 as *const i8,
+                name: make_cstring!("exit"),
                 function: Some(os_exit as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"getenv\0" as *const u8 as *const i8,
+                name: make_cstring!("getenv"),
                 function: Some(os_getenv as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"remove\0" as *const u8 as *const i8,
+                name: make_cstring!("remove"),
                 function: Some(os_remove as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"rename\0" as *const u8 as *const i8,
+                name: make_cstring!("rename"),
                 function: Some(os_rename as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"setlocale\0" as *const u8 as *const i8,
+                name: make_cstring!("setlocale"),
                 function: Some(os_setlocale as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"time\0" as *const u8 as *const i8,
+                name: make_cstring!("time"),
                 function: Some(os_time as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"tmpname\0" as *const u8 as *const i8,
+                name: make_cstring!("tmpname"),
                 function: Some(os_tmpname as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },

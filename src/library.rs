@@ -1,85 +1,86 @@
 use std::ptr::*;
-mod debug;
-mod math;
 mod base;
 mod coroutine;
-mod table;
+mod debug;
 mod io;
+mod math;
 mod os;
-mod string;
-mod utf8;
 mod package;
-use crate::registeredfunction::*;
+mod string;
+mod table;
+mod utf8;
+use rlua::*;
 use crate::interpreter::*;
+use crate::library::base::*;
 use crate::library::coroutine::*;
 use crate::library::debug::*;
-use crate::library::package::*;
-use crate::library::math::*;
-use crate::library::base::*;
-use crate::library::table::*;
 use crate::library::io::*;
-use crate::library::utf8::*;
+use crate::library::math::*;
 use crate::library::os::*;
+use crate::library::package::*;
 use crate::library::string::*;
+use crate::library::table::*;
+use crate::library::utf8::*;
+use crate::registeredfunction::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {
             RegisteredFunction {
-                name: b"_G\0" as *const u8 as *const i8,
+                name: make_cstring!("_G"),
                 function: Some(luaopen_base as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"package\0" as *const u8 as *const i8,
+                name: make_cstring!("package"),
                 function: Some(luaopen_package as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"coroutine\0" as *const u8 as *const i8,
+                name: make_cstring!("coroutine"),
                 function: Some(luaopen_coroutine as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"table\0" as *const u8 as *const i8,
+                name: make_cstring!("table"),
                 function: Some(luaopen_table as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"io\0" as *const u8 as *const i8,
+                name: make_cstring!("io"),
                 function: Some(luaopen_io as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"os\0" as *const u8 as *const i8,
+                name: make_cstring!("os"),
                 function: Some(luaopen_os as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"string\0" as *const u8 as *const i8,
+                name: make_cstring!("string"),
                 function: Some(luaopen_string as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"math\0" as *const u8 as *const i8,
+                name: make_cstring!("math"),
                 function: Some(luaopen_math as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"utf8\0" as *const u8 as *const i8,
+                name: make_cstring!("utf8"),
                 function: Some(luaopen_utf8 as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
-                name: b"debug\0" as *const u8 as *const i8,
+                name: make_cstring!("debug"),
                 function: Some(luaopen_debug as unsafe extern "C" fn(*mut Interpreter) -> i32),
             }
         },

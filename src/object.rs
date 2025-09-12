@@ -12,18 +12,18 @@
 //         }
 //     }
 // }
-use std::ptr::*;
 use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
-use crate::prototype::*;
 use crate::interpreter::*;
+use crate::prototype::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
+use std::ptr::*;
 pub trait TObject {
     fn as_object(&self) -> &Object;
     fn as_object_mut(&mut self) -> &mut Object;
@@ -112,7 +112,7 @@ impl TObject for Object {
     }
 }
 impl Object {
-    pub fn new (tag: u8) -> Object {
+    pub fn new(tag: u8) -> Object {
         Object {
             next: null_mut(),
             tag: tag,
@@ -125,7 +125,9 @@ pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
     unsafe {
         match (*object).get_tag_variant() {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
-            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
+            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
+                return &mut (*(object as *mut Closure)).gc_list
+            }
             TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
             TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).prototype_gc_list,
             TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
@@ -158,7 +160,11 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
         };
     }
 }
-pub unsafe extern "C" fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, v: *mut Object) {
+pub unsafe extern "C" fn luac_barrier_(
+    interpreter: *mut Interpreter,
+    object: *mut Object,
+    v: *mut Object,
+) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*global).gc_state as i32 <= 2 {
@@ -240,7 +246,10 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Ob
                 if (*u).count_upvalues as i32 == 0 {
                     if !((*u).get_metatable()).is_null() {
                         if (*(*u).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            really_mark_object(global, &mut (*((*u).get_metatable() as *mut Object)));
+                            really_mark_object(
+                                global,
+                                &mut (*((*u).get_metatable() as *mut Object)),
+                            );
                         }
                     }
                     (*u).set_marked((*u).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -306,7 +315,7 @@ pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut
             }
             TAG_VARIANT_STATE => {
                 let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
-                (*other).free_interpreter (interpreter);
+                (*other).free_interpreter(interpreter);
             }
             TAG_VARIANT_USER => {
                 let user: *mut User = &mut (*(object as *mut User));
@@ -315,7 +324,7 @@ pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 let tstring: *mut TString = &mut (*(object as *mut TString));
                 (*tstring).free_tstring(interpreter);
-            },
+            }
             _ => {}
         };
     }
@@ -371,7 +380,11 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
         return objects;
     }
 }
-pub unsafe extern "C" fn delete_list(interpreter: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
+pub unsafe extern "C" fn delete_list(
+    interpreter: *mut Interpreter,
+    mut object: *mut Object,
+    limit: *mut Object,
+) {
     unsafe {
         while object != limit {
             let next: *mut Object = (*object).next;

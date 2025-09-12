@@ -1,6 +1,6 @@
-use std::ptr::*;
 use crate::new::*;
 use crate::stackvalue::*;
+use std::ptr::*;
 #[repr(C)]
 pub struct CloseP {
     pub level: StackValuePointer,

@@ -1,17 +1,17 @@
-use std::ptr::*;
+use crate::closure::*;
 use crate::functions::*;
-use crate::object::*;
 use crate::interpreter::*;
+use crate::node::*;
+use crate::object::*;
+use crate::prototype::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tstring::*;
-use crate::node::*;
+use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
-use crate::prototype::*;
-use crate::closure::*;
-use crate::tvalue::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Global {
@@ -62,7 +62,15 @@ pub struct Global {
     pub warn_userdata: *mut libc::c_void,
 }
 impl Global {
-    pub unsafe fn separatetobefnz(& mut self, is_all: bool) {
+    pub unsafe fn correctpointers(&mut self, object: *mut Object) {
+        unsafe {
+            check_pointer(&mut self.survival, object);
+            check_pointer(&mut self.old1, object);
+            check_pointer(&mut self.really_old, object);
+            check_pointer(&mut self.first_old1, object);
+        }
+    }
+    pub unsafe fn separatetobefnz(&mut self, is_all: bool) {
         unsafe {
             let mut p: *mut *mut Object = &mut (*self).finalized_objects;
             let mut last_next: *mut *mut Object = find_last(&mut (*self).to_be_finalized);
@@ -85,7 +93,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn setpause(& mut self) {
+    pub unsafe fn setpause(&mut self) {
         unsafe {
             let pause: i32 = (*self).gc_pause as i32 * 4;
             let estimate: i64 = ((*self).gc_estimate).wrapping_div(100 as usize) as i64;
@@ -94,15 +102,15 @@ impl Global {
             } else {
                 (!(0usize) >> 1) as i64
             };
-            let mut debt: i64 =
-                (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
+            let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize)
+                .wrapping_sub(threshold as usize) as i64;
             if debt > 0 {
                 debt = 0;
             }
             (*self).set_debt(debt);
         }
     }
-    pub unsafe fn correctgraylists(& mut self) {
+    pub unsafe fn correctgraylists(&mut self) {
         unsafe {
             let mut list: *mut *mut Object = correct_gray_list(&mut (*self).gray_again);
             *list = (*self).weak;
@@ -129,7 +137,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn fix_memory_error_message_global(& mut self) {
+    pub unsafe fn fix_memory_error_message_global(&mut self) {
         unsafe {
             fix_object_global(self, self.memory_error_message as *mut Object);
         }
@@ -179,7 +187,8 @@ impl Global {
     pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
             self.set_debt(
-                -((self.total_bytes + self.gc_debt).wrapping_div(100) * self.generational_minor_multiplier as i64),
+                -((self.total_bytes + self.gc_debt).wrapping_div(100)
+                    * self.generational_minor_multiplier as i64),
             );
         }
     }
@@ -191,22 +200,31 @@ impl Global {
             match (*object).get_tag_variant() {
                 TAG_VARIANT_TABLE => return traversetable(self, &mut (*(object as *mut Table))),
                 TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as usize,
-                TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
-                TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
-                TAG_VARIANT_PROTOTYPE => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
-                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
+                TAG_VARIANT_CLOSURE_L => {
+                    return Closure::traverselclosure(self, &mut (*(object as *mut Closure)))
+                }
+                TAG_VARIANT_CLOSURE_C => {
+                    return Closure::traversecclosure(self, &mut (*(object as *mut Closure)))
+                }
+                TAG_VARIANT_PROTOTYPE => {
+                    return (&mut (*(object as *mut Prototype))).prototype_traverse(self)
+                }
+                TAG_VARIANT_STATE => {
+                    return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize
+                }
                 _ => return 0,
             };
         }
     }
-    pub unsafe fn markmt(& mut self) {
+    pub unsafe fn markmt(&mut self) {
         unsafe {
             for i in TAGTYPE_SIMPLE_ {
                 if !(self.metatables[i as usize]).is_null() {
                     if (*self.metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         really_mark_object(
                             self,
-                            &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize) as *mut Object)),
+                            &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize)
+                                as *mut Object)),
                         );
                     }
                 }
@@ -227,7 +245,7 @@ impl Global {
             return count;
         }
     }
-    pub unsafe fn restartcollection(& mut self) {
+    pub unsafe fn restartcollection(&mut self) {
         unsafe {
             self.cleargraylists();
             if (*self.main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -264,7 +282,8 @@ impl Global {
                         work += 1;
                         if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
                             if ((*(*uv).v.p).is_collectable())
-                                && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
+                                && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4)
+                                    != 0
                             {
                                 really_mark_object(self, (*(*uv).v.p).value.object);
                             }
@@ -283,7 +302,7 @@ impl Global {
         self.all_weak = null_mut();
         self.weak = null_mut();
     }
-    pub unsafe fn propagateall(& mut self) -> usize {
+    pub unsafe fn propagateall(&mut self) -> usize {
         unsafe {
             let mut total: usize = 0;
             while !self.gray.is_null() {
@@ -292,7 +311,7 @@ impl Global {
             return total;
         }
     }
-    pub unsafe fn convergeephemerons(& mut self) {
+    pub unsafe fn convergeephemerons(&mut self) {
         unsafe {
             let mut is_reverse = false;
             loop {
@@ -321,7 +340,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn udata2finalize(& mut self) -> *mut Object {
+    pub unsafe fn udata2finalize(&mut self) -> *mut Object {
         unsafe {
             let object: *mut Object = (*self).to_be_finalized;
             (*self).to_be_finalized = (*object).next;
@@ -344,9 +363,8 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
             let h: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*h).node)
-                .offset((1 << (*h).log_size_node as i32) as isize)
-                as *mut Node;
+            let limit: *mut Node =
+                &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
             let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
@@ -373,9 +391,8 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
     unsafe {
         while l != f {
             let h: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*h).node)
-                .offset((1 << (*h).log_size_node as i32) as isize)
-                as *mut Node;
+            let limit: *mut Node =
+                &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
             let asize: u32 = luah_realasize(h);
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
@@ -411,14 +428,6 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
             }
             l = (*(l as *mut Table)).gc_list;
         }
-    }
-}
-pub unsafe fn correctpointers(global: *mut Global, object: *mut Object) {
-    unsafe {
-        check_pointer(&mut (*global).survival, object);
-        check_pointer(&mut (*global).old1, object);
-        check_pointer(&mut (*global).really_old, object);
-        check_pointer(&mut (*global).first_old1, object);
     }
 }
 pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {

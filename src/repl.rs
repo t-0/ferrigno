@@ -1,11 +1,12 @@
-use std::ptr::*;
+use rlua::*;
 use crate::interpreter::*;
 use crate::library::*;
-use libc::{isatty,};
+use libc::isatty;
+use std::ptr::*;
 pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let argc: i32 = lua_tointegerx(interpreter, 1, null_mut()) as i32;
-        let argv: *mut *mut i8 = (*interpreter).to_pointer (2) as *mut *mut i8;
+        let argv: *mut *mut i8 = (*interpreter).to_pointer(2) as *mut *mut i8;
         let mut script: i32 = 0;
         let args: i32 = collectargs(argv, &mut script);
         let optlim: i32 = if script > 0 { script } else { argc };
@@ -25,7 +26,7 @@ pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
             lua_setfield(
                 interpreter,
                 -(1000000 as i32) - 1000 as i32,
-                b"LUA_NOENV\0" as *const u8 as *const i8,
+                make_cstring!("LUA_NOENV"),
             );
         }
         lual_openlibs(interpreter);
@@ -64,7 +65,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
         if interpreter.is_null() {
             l_message(
                 *argv.offset(0),
-                b"cannot create interpreter: not enough memory\0" as *const u8 as *const i8,
+                make_cstring!("cannot create interpreter: not enough memory"),
             );
             return 1;
         } else {

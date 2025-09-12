@@ -1,7 +1,8 @@
-use crate::tstring::*;
-use crate::interpreter::*;
+use rlua::*;
 use crate::global::*;
+use crate::interpreter::*;
 use crate::table::*;
+use crate::tstring::*;
 pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
 pub const GLOBAL_STRINGCACHE_N: usize = 53;
 pub const GLOBAL_STRINGCACHE_M: usize = 2;
@@ -14,7 +15,7 @@ pub struct StringTable {
     pub size: i32,
 }
 impl StringTable {
-    pub unsafe fn remove(& mut self, tstring: *mut TString) {
+    pub unsafe fn remove(&mut self, tstring: *mut TString) {
         unsafe {
             let mut p: *mut *mut TString = &mut *(self.hash)
                 .offset(((*tstring).hash & (self.size - 1) as u32) as isize)
@@ -30,7 +31,7 @@ impl StringTable {
 pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*interpreter).global).string_table;
-        let old_size= (*tb).size as usize;
+        let old_size = (*tb).size as usize;
         if new_size < old_size {
             tablerehash((*tb).hash, old_size, new_size);
         }
@@ -70,7 +71,7 @@ pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut
         (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
         (*global).memory_error_message = luas_newlstr(
             interpreter,
-            b"not enough memory\0" as *const u8 as *const i8,
+            make_cstring!("not enough memory"),
             (size_of::<[i8; 18]>())
                 .wrapping_div(size_of::<i8>())
                 .wrapping_sub(1),
@@ -88,9 +89,7 @@ pub unsafe extern "C" fn growstrtab(interpreter: *mut Interpreter, tb: *mut Stri
             }
         }
         if (*tb).size
-            <= (if STRINGTABLE_LENGTH_MAX
-                <= (!(0usize)).wrapping_div(size_of::<*mut TString>())
-            {
+            <= (if STRINGTABLE_LENGTH_MAX <= (!(0usize)).wrapping_div(size_of::<*mut TString>()) {
                 STRINGTABLE_LENGTH_MAX
             } else {
                 (!(0usize)).wrapping_div(size_of::<*mut TString>())

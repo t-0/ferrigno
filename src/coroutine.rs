@@ -1,11 +1,12 @@
-use std::ptr::*;
+use rlua::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
+use std::ptr::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
-    b"running\0" as *const u8 as *const i8,
-    b"dead\0" as *const u8 as *const i8,
-    b"suspended\0" as *const u8 as *const i8,
-    b"normal\0" as *const u8 as *const i8,
+    make_cstring!("running"),
+    make_cstring!("dead"),
+    make_cstring!("suspended"),
+    make_cstring!("normal"),
 ];
 pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {

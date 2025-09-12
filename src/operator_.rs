@@ -1,9 +1,9 @@
-use crate::tvalue::*;
-use crate::tag::*;
 use crate::f2i::*;
-use crate::tm::*;
-use crate::vm::opcode::*;
 use crate::lexical::operatorunary::*;
+use crate::tag::*;
+use crate::tm::*;
+use crate::tvalue::*;
+use crate::vm::opcode::*;
 pub const OPR_NOBINOPR: u32 = 21;
 pub const OPR_OR: u32 = 20;
 pub const OPR_AND: u32 = 19;

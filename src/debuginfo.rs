@@ -1,16 +1,17 @@
 #![allow(unpredictable_function_pointer_comparisons)]
-use std::ptr::*;
+use rlua::*;
 use crate::callinfo::*;
-use crate::utility::c::*;
-use crate::interpreter::*;
 use crate::character::*;
-use crate::utility::*;
 use crate::closure::*;
-use crate::prototype::*;
-use crate::tag::*;
+use crate::interpreter::*;
 use crate::object::*;
+use crate::prototype::*;
 use crate::stackvalue::*;
+use crate::tag::*;
 use crate::tvalue::*;
+use crate::utility::c::*;
+use crate::utility::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DebugInfo {
@@ -32,7 +33,11 @@ pub struct DebugInfo {
     pub short_src: [i8; 60],
     pub i_ci: *mut CallInfo,
 }
-pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_getlocal(
+    interpreter: *mut Interpreter,
+    ar: *const DebugInfo,
+    n: i32,
+) -> *const i8 {
     unsafe {
         let name;
         if ar.is_null() {
@@ -44,8 +49,12 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
                 name = null();
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue.value.object as *mut Closure))
-                        .payload.l_prototype,
+                    (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
+                        .tvalue
+                        .value
+                        .object as *mut Closure))
+                        .payload
+                        .l_prototype,
                     n,
                     0,
                 );
@@ -63,13 +72,18 @@ pub unsafe extern "C" fn lua_getlocal(interpreter: *mut Interpreter, ar: *const 
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
+pub unsafe extern "C" fn lua_setlocal(
+    interpreter: *mut Interpreter,
+    ar: *const DebugInfo,
+    n: i32,
+) -> *const i8 {
     unsafe {
         let mut pos: StackValuePointer = null_mut();
         let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
         if !name.is_null() {
             let io1: *mut TValue = &mut (*pos).tvalue;
-            let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
+            let io2: *const TValue =
+                &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
             (*io1).copy_from(&*io2);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         }
@@ -79,20 +93,20 @@ pub unsafe extern "C" fn lua_setlocal(interpreter: *mut Interpreter, ar: *const 
 pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-            (*ar).source = b"=[C]\0" as *const u8 as *const i8;
+            (*ar).source = make_cstring!("=[C]");
             (*ar).source_length = (size_of::<[i8; 5]>() as usize)
                 .wrapping_div(size_of::<i8>() as usize)
                 .wrapping_sub(1 as usize);
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
-            (*ar).what = b"C\0" as *const u8 as *const i8;
+            (*ar).what = make_cstring!("C");
         } else {
             let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).prototype_source).is_null() {
                 (*ar).source = (*(*p).prototype_source).get_contents_mut();
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
-                (*ar).source = b"=?\0" as *const u8 as *const i8;
+                (*ar).source = make_cstring!("=?");
                 (*ar).source_length = (size_of::<[i8; 3]>() as usize)
                     .wrapping_div(size_of::<i8>() as usize)
                     .wrapping_sub(1 as usize);
@@ -100,9 +114,9 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;
             (*ar).what = if (*ar).line_defined == 0 {
-                b"main\0" as *const u8 as *const i8
+                make_cstring!("main")
             } else {
-                b"Lua\0" as *const u8 as *const i8
+                make_cstring!("Lua")
             };
         }
         luao_chunkid(
@@ -138,7 +152,8 @@ pub unsafe extern "C" fn lua_getinfo(
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer =
+                        (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(interpreter, cl);
@@ -152,7 +167,8 @@ pub unsafe extern "C" fn lua_getinfo(
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer =
+                        (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(interpreter, cl);
@@ -166,7 +182,8 @@ pub unsafe extern "C" fn lua_getinfo(
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).top.stkidrel_pointer =
+                        (*interpreter).top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
                     collectvalidlines(interpreter, cl);

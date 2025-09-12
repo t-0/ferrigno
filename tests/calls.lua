@@ -456,7 +456,7 @@ do
     "\27Lua",                                  -- signature
     0x54,                                      -- version 5.4 (0x54)
     0,                                         -- format
-    "\x19\x93\r\n\x1a\n",                      -- data
+    "\x19\x7F\r\n\x1a\n",                      -- data
     4,                                         -- size of instruction
     string.packsize("j"),                      -- sizeof(lua integer)
     string.packsize("n")                       -- sizeof(lua number)

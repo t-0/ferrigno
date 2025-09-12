@@ -1,19 +1,21 @@
-use core::mem::*;
-use std::ptr::*;
-use crate::interpreter::*;
-use crate::zio::*;
+use rlua::*;
 use crate::character::*;
 use crate::closure::*;
-use crate::prototype::*;
-use crate::tstring::*;
-use crate::loadable::*;
-use crate::object::*;
-use crate::tag::*;
-use crate::tvalue::*;
-use crate::localvariable::*;
-use crate::upvaluedescription::*;
 use crate::debugger::absolutelineinfo::*;
+use crate::interpreter::*;
+use crate::loadable::*;
+use crate::dumpstate::*;
+use crate::localvariable::*;
+use crate::object::*;
+use crate::prototype::*;
+use crate::tag::*;
+use crate::tstring::*;
+use crate::tvalue::*;
+use crate::upvaluedescription::*;
 use crate::utility::c::*;
+use crate::zio::*;
+use core::mem::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct LoadState {
@@ -22,25 +24,25 @@ pub struct LoadState {
     name: *const i8,
 }
 impl LoadState {
-    pub unsafe extern "C" fn error(& mut self, why: *const i8) -> ! {
+    pub unsafe extern "C" fn error(&mut self, why: *const i8) -> ! {
         unsafe {
             luao_pushfstring(
                 self.interpreter,
-                b"%s: bad binary format (%s)\0" as *const u8 as *const i8,
+                make_cstring!("%s: bad binary format (%s)"),
                 self.name,
                 why,
             );
             luad_throw(self.interpreter, 3);
         }
     }
-    pub unsafe extern "C" fn load_block(& mut self, b: *mut libc::c_void, size: usize) {
+    pub unsafe extern "C" fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
             if luaz_read(self.zio, b, size) != 0 {
-                self.error(b"truncated chunk\0" as *const u8 as *const i8);
+                self.error(make_cstring!("truncated chunk"));
             }
         }
     }
-    pub unsafe extern "C" fn load_byte(& mut self) -> u8 {
+    pub unsafe extern "C" fn load_byte(&mut self) -> u8 {
         unsafe {
             let aa = (*self.zio).length;
             (*self.zio).length = ((*self.zio).length).wrapping_sub(1);
@@ -52,19 +54,19 @@ impl LoadState {
                 luaz_fill(self.zio)
             };
             if ret == -1 {
-                self.error(b"truncated chunk\0" as *const u8 as *const i8);
+                self.error(make_cstring!("truncated chunk"));
             }
             return ret as u8;
         }
     }
-    pub unsafe extern "C" fn load_unsigned(& mut self, mut limit: usize) -> usize {
+    pub unsafe extern "C" fn load_unsigned(&mut self, mut limit: usize) -> usize {
         unsafe {
             let mut ret: usize = 0;
             limit >>= 7;
             loop {
                 let b: i32 = self.load_byte() as i32;
                 if ret >= limit {
-                    self.error(b"integer overflow\0" as *const u8 as *const i8);
+                    self.error(make_cstring!("integer overflow"));
                 }
                 ret = ret << 7 | (b & 0x7f as i32) as usize;
                 if !(b & 0x80 as i32 == 0) {
@@ -74,17 +76,17 @@ impl LoadState {
             return ret;
         }
     }
-    pub unsafe extern "C" fn load_size(& mut self) -> usize {
+    pub unsafe extern "C" fn load_size(&mut self) -> usize {
         unsafe {
             return self.load_unsigned(!(0usize));
         }
     }
-    pub unsafe extern "C" fn load_int(& mut self) -> i32 {
+    pub unsafe extern "C" fn load_int(&mut self) -> i32 {
         unsafe {
             return self.load_unsigned(0x7FFFFFFF as usize) as i32;
         }
     }
-    pub unsafe extern "C" fn load_number(& mut self) -> f64 {
+    pub unsafe extern "C" fn load_number(&mut self) -> f64 {
         unsafe {
             let mut x: f64 = 0.0;
             self.load_block(
@@ -94,7 +96,7 @@ impl LoadState {
             return x;
         }
     }
-    pub unsafe extern "C" fn load_integer(& mut self) -> i64 {
+    pub unsafe extern "C" fn load_integer(&mut self) -> i64 {
         unsafe {
             let mut x: i64 = 0;
             self.load_block(
@@ -104,10 +106,7 @@ impl LoadState {
             return x;
         }
     }
-    pub unsafe extern "C" fn load_string_n(
-        & mut self,
-        p: *mut Prototype,
-    ) -> *mut TString {
+    pub unsafe extern "C" fn load_string_n(&mut self, p: *mut Prototype) -> *mut TString {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
             let ts: *mut TString;
@@ -134,7 +133,8 @@ impl LoadState {
                         ((*ts).get_contents_mut()) as *mut libc::c_void,
                         size.wrapping_mul(size_of::<i8>() as usize),
                     );
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
+                    (*interpreter).top.stkidrel_pointer =
+                        (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
             }
             if (*p).get_marked() & 1 << 5 != 0 && (*ts).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -148,21 +148,16 @@ impl LoadState {
             return ts;
         }
     }
-    pub unsafe extern "C" fn load_string(
-        & mut self,
-        p: *mut Prototype,
-    ) -> *mut TString {
+    pub unsafe extern "C" fn load_string(&mut self, p: *mut Prototype) -> *mut TString {
         unsafe {
             let st: *mut TString = self.load_string_n(p);
             if st.is_null() {
-                self.error(
-                    b"bad format for constant string\0" as *const u8 as *const i8,
-                );
+                self.error(make_cstring!("bad format for constant string"));
             }
             return st;
         }
     }
-    pub unsafe extern "C" fn load_code(& mut self, prototype: *mut Prototype) {
+    pub unsafe extern "C" fn load_code(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -172,14 +167,17 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_code.initialize_size(self.interpreter, (n as usize).wrapping_mul(size_of::<u32>()));
+            (*prototype).prototype_code.initialize_size(
+                self.interpreter,
+                (n as usize).wrapping_mul(size_of::<u32>()),
+            );
             self.load_block(
                 (*prototype).prototype_code.vectort_pointer as *mut libc::c_void,
                 (n as usize).wrapping_mul(size_of::<u32>()) as usize,
             );
         }
     }
-    pub unsafe extern "C" fn load_constants(& mut self, prototype: *mut Prototype) {
+    pub unsafe extern "C" fn load_constants(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -189,12 +187,16 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_constants.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_constants
+                .initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
+                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize))
+                    .set_tag_variant(TagVariant::NilNil as u8);
             }
             for i in 0..n {
-                let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer)
+                    .offset(i as isize) as *mut TValue;
                 let t = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
@@ -228,7 +230,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn load_prototypes(& mut self, prototype: *mut Prototype) {
+    pub unsafe extern "C" fn load_prototypes(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -238,27 +240,38 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_prototypes.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_prototypes
+                .initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) = null_mut();
+                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) =
+                    null_mut();
             }
             for i in 0..n {
-                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) = luaf_newproto(self.interpreter);
+                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) =
+                    luaf_newproto(self.interpreter);
                 if (*prototype).get_marked() & 1 << 5 != 0
-                    && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0
+                    && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize))
+                        .get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
                 {
                     luac_barrier_(
                         self.interpreter,
                         &mut (*(prototype as *mut Object)),
-                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)),
+                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer)
+                            .offset(i as isize) as *mut Object)),
                     );
                 } else {
                 }
-                self.load_function(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize), (*prototype).prototype_source);
+                self.load_function(
+                    *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize),
+                    (*prototype).prototype_source,
+                );
             }
         }
     }
-    pub unsafe extern "C" fn load_upvalues(& mut self, prototype: *mut Prototype) {
+    pub unsafe extern "C" fn load_upvalues(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32;
             n = self.load_int();
@@ -269,18 +282,22 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_upvalues.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_upvalues
+                .initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                let ref mut fresh29 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
+                let ref mut fresh29 =
+                    (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
                 *fresh29 = null_mut();
             }
             for i in 0..n {
-                let upvalue_description = & mut *((*prototype).prototype_upvalues.at_mut(i as isize));
+                let upvalue_description =
+                    &mut *((*prototype).prototype_upvalues.at_mut(i as isize));
                 upvalue_description.load(self);
             }
         }
     }
-    pub unsafe extern "C" fn load_debug(& mut self, prototype: *mut Prototype) {
+    pub unsafe extern "C" fn load_debug(&mut self, prototype: *mut Prototype) {
         unsafe {
             let mut n: i32;
             n = self.load_int();
@@ -291,7 +308,9 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_line_info.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_line_info
+                .initialize_size(self.interpreter, n as usize);
             self.load_block(
                 (*prototype).prototype_line_info.vectort_pointer as *mut libc::c_void,
                 (n as usize).wrapping_mul(size_of::<i8>() as usize),
@@ -304,10 +323,14 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_absolute_line_info.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_absolute_line_info
+                .initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).program_counter = self.load_int();
-                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).line = self.load_int();
+                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize))
+                    .program_counter = self.load_int();
+                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize))
+                    .line = self.load_int();
             }
             n = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -317,30 +340,36 @@ impl LoadState {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_local_variables.initialize_size(self.interpreter, n as usize);
+            (*prototype)
+                .prototype_local_variables
+                .initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                let ref mut fresh30 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
+                let ref mut fresh30 =
+                    (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
                 *fresh30 = null_mut();
             }
             for i in 0..n {
-                let ref mut fresh31 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
+                let ref mut fresh31 =
+                    (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
                 *fresh31 = self.load_string_n(prototype);
-                (*((*prototype).prototype_local_variables.at_mut(i as isize))).start_program_counter =
-                    self.load_int();
-                (*((*prototype).prototype_local_variables.at_mut(i as isize))).end_program_counter = self.load_int();
+                (*((*prototype).prototype_local_variables.at_mut(i as isize)))
+                    .start_program_counter = self.load_int();
+                (*((*prototype).prototype_local_variables.at_mut(i as isize)))
+                    .end_program_counter = self.load_int();
             }
             n = self.load_int();
             if n != 0 {
                 n = (*prototype).prototype_upvalues.get_size();
             }
             for i in 0..n {
-                let ref mut fresh32 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
+                let ref mut fresh32 =
+                    (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
                 *fresh32 = self.load_string_n(prototype);
             }
         }
     }
     pub unsafe extern "C" fn load_function(
-        & mut self,
+        &mut self,
         prototype: *mut Prototype,
         psource: *mut TString,
     ) {
@@ -361,11 +390,7 @@ impl LoadState {
             self.load_debug(prototype);
         }
     }
-    pub unsafe extern "C" fn check_literal(
-        & mut self,
-        s: *const i8,
-        message: *const i8,
-    ) {
+    pub unsafe extern "C" fn check_literal(&mut self, s: *const i8, message: *const i8) {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
             let length: usize = strlen(s) as usize;
@@ -383,58 +408,52 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn f_check_size(& mut self, size: usize, tname: *const i8) {
+    pub unsafe extern "C" fn f_check_size(&mut self, size: usize, tname: *const i8) {
         unsafe {
             if self.load_byte() as usize != size {
-                self.error(
-                    luao_pushfstring(
-                        self.interpreter,
-                        b"%s size mismatch\0" as *const u8 as *const i8,
-                        tname,
-                    ),
-                );
+                self.error(luao_pushfstring(
+                    self.interpreter,
+                    make_cstring!("%s size mismatch"),
+                    tname,
+                ));
             }
         }
     }
-    pub unsafe extern "C" fn check_header(& mut self) {
+    pub unsafe extern "C" fn check_header(&mut self) {
         unsafe {
             self.check_literal(
-                &*(b"\x1BLua\0" as *const u8 as *const i8).offset(1 as isize),
-                b"not a binary chunk\0" as *const u8 as *const i8,
+                &*(LUA_SIGNATURE).offset(1 as isize),
+                make_cstring!("not a binary chunk"),
             );
             if self.load_byte() as i32
                 != 504 as i32 / 100 as i32 * 16 as i32 + 504 as i32 % 100 as i32
             {
-                self.error(b"version mismatch\0" as *const u8 as *const i8);
+                self.error(make_cstring!("version mismatch"));
             }
             if self.load_byte() as i32 != 0 {
-                self.error(b"format mismatch\0" as *const u8 as *const i8);
+                self.error(make_cstring!("format mismatch"));
             }
             self.check_literal(
-                b"\x19\x93\r\n\x1A\n\0" as *const u8 as *const i8,
-                b"corrupted chunk\0" as *const u8 as *const i8,
+                make_cstring!("\x19\x7F\r\n\x1A\n"),
+                make_cstring!("corrupted chunk"),
             );
             self.f_check_size(
                 size_of::<u32>() as usize,
-                b"u32\0" as *const u8 as *const i8,
+                make_cstring!("u32"),
             );
             self.f_check_size(
                 size_of::<i64>() as usize,
-                b"i64\0" as *const u8 as *const i8,
+                make_cstring!("i64"),
             );
             self.f_check_size(
                 size_of::<f64>() as usize,
-                b"f64\0" as *const u8 as *const i8,
+                make_cstring!("f64"),
             );
             if self.load_integer() != 0x5678 as i64 {
-                self.error(
-                    b"integer format mismatch\0" as *const u8 as *const i8,
-                );
+                self.error(make_cstring!("integer format mismatch"));
             }
             if self.load_number() != 370.5f64 {
-                self.error(
-                    b"float format mismatch\0" as *const u8 as *const i8,
-                );
+                self.error(make_cstring!("float format mismatch"));
             }
         }
     }
@@ -455,7 +474,7 @@ pub unsafe extern "C" fn load_closure(
         } else if *name as i32
             == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32
         {
-            load_state.name = b"binary string\0" as *const u8 as *const i8;
+            load_state.name = make_cstring!("binary string");
         } else {
             load_state.name = name;
         }
@@ -469,7 +488,9 @@ pub unsafe extern "C" fn load_closure(
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);
-        if (*ret).get_marked() & 1 << 5 != 0 && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
+        if (*ret).get_marked() & 1 << 5 != 0
+            && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0
+        {
             luac_barrier_(
                 interpreter,
                 &mut (*(ret as *mut Object)),

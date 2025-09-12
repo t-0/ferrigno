@@ -1,12 +1,12 @@
-use crate::tstring::*;
 use crate::expressionkind::*;
-use crate::tvalue::*;
-use crate::object::*;
+use crate::f2i::*;
 use crate::functionstate::*;
+use crate::object::*;
 use crate::tag::*;
+use crate::tstring::*;
+use crate::tvalue::*;
 use crate::utility::*;
 use crate::value::*;
-use crate::f2i::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ExpressionDescription {
@@ -15,7 +15,11 @@ pub struct ExpressionDescription {
     pub t: i32,
     pub f: i32,
 }
-pub unsafe extern "C" fn init_exp(e: *mut ExpressionDescription, expression_kind: ExpressionKind, i: i32) {
+pub unsafe extern "C" fn init_exp(
+    e: *mut ExpressionDescription,
+    expression_kind: ExpressionKind,
+    i: i32,
+) {
     unsafe {
         (*e).t = -1;
         (*e).f = (*e).t;
@@ -139,7 +143,7 @@ pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> bool {
         return (*e).expression_kind as u32 == ExpressionKind::VKINT as u32 && !((*e).t != (*e).f);
     }
 }
-pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool{
+pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
         return is_k_int(e) && (*e).value.integer as usize <= ((1 << 8) - 1) as usize;
     }
@@ -182,7 +186,9 @@ pub unsafe extern "C" fn luak_indexed(
         if (*k).expression_kind as u32 == ExpressionKind::VKSTR as u32 {
             str_to_k(function_state, k);
         }
-        if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32 && !is_k_string(function_state, k) {
+        if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32
+            && !is_k_string(function_state, k)
+        {
             luak_exp2anyreg(function_state, t);
         }
         if (*t).expression_kind as u32 == ExpressionKind::VUPVAL as u32 {

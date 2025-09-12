@@ -1,10 +1,10 @@
-use std::ptr::*;
+use crate::interpreter::*;
 use crate::object::*;
 use crate::stackvalue::*;
-use crate::interpreter::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
@@ -63,8 +63,7 @@ pub unsafe extern "C" fn newupval(
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
     unsafe {
-        let o: *mut Object =
-            luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
+        let o: *mut Object = luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level).tvalue;
