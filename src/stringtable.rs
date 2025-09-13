@@ -19,9 +19,9 @@ impl StringTable {
                 .offset(((*tstring).hash & (self.size - 1) as u32) as isize)
                 as *mut *mut TString;
             while *p != tstring {
-                p = &mut (**p).u.hash_next;
+                p = &mut (**p).hash_next;
             }
-            *p = (**p).u.hash_next;
+            *p = (**p).hash_next;
             self.length -= 1;
         }
     }

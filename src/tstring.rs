@@ -16,10 +16,10 @@ pub const STRING_SHORT_MAX: usize = 40;
 #[repr(C)]
 pub struct TString {
     pub object: Object,
+    pub long_length: usize,
+    pub hash_next: *mut TString,
     pub hash: u32,
     pub extra: u8,
-    pub short_length: u8,
-    pub u: TStringExtension,
     pub contents: [i8; 0],
 }
 impl TObject for TString {
@@ -35,11 +35,6 @@ impl TObject for TString {
     fn get_metatable(&mut self) -> *mut Table {
         null_mut()
     }
-}
-#[derive(Copy, Clone)]
-pub union TStringExtension {
-    pub long_length: usize,
-    pub hash_next: *mut TString,
 }
 impl TString {
     pub unsafe fn free_tstring(&mut self, interpreter: *mut Interpreter) {
@@ -77,13 +72,7 @@ impl TString {
         return &mut self.contents as *mut i8;
     }
     pub fn get_length(&self) -> usize {
-        if self.short_length < 0xFF {
-            return self.short_length as usize;
-        } else {
-            unsafe {
-                return self.u.long_length;
-            }
-        }
+        return self.long_length;
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
@@ -93,8 +82,7 @@ impl TString {
                 TAG_VARIANT_STRING_LONG,
                 (*(*interpreter).global).seed,
             );
-            (*ret).u.long_length = length;
-            (*ret).short_length = 0xFF;
+            (*ret).long_length = length;
             return ret;
         }
     }
@@ -124,7 +112,7 @@ impl TString {
                     }
                     return ts;
                 }
-                ts = (*ts).u.hash_next;
+                ts = (*ts).hash_next;
             }
             if (*tb).length >= (*tb).size {
                 growstrtab(interpreter, tb);
@@ -132,13 +120,13 @@ impl TString {
                     as *mut *mut TString;
             }
             ts = createstrobj(interpreter, length as usize, TAG_VARIANT_STRING_SHORT, h);
-            (*ts).short_length = length as u8;
+            (*ts).long_length = length;
             memcpy(
                 (*ts).get_contents() as *mut libc::c_void,
                 str as *const libc::c_void,
                 length.wrapping_mul(size_of::<i8>()),
             );
-            (*ts).u.hash_next = *list;
+            (*ts).hash_next = *list;
             *list = ts;
             (*tb).length += 1;
             (*tb).length;

@@ -332,9 +332,9 @@ pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, n
             let ref mut fresh21 = *vect.offset(i as isize);
             *fresh21 = null_mut();
             while !p.is_null() {
-                let hash_next: *mut TString = (*p).u.hash_next;
+                let hash_next: *mut TString = (*p).hash_next;
                 let h: u32 = ((*p).hash & (new_size - 1) as u32) as u32;
-                (*p).u.hash_next = *vect.offset(h as isize);
+                (*p).hash_next = *vect.offset(h as isize);
                 let ref mut fresh22 = *vect.offset(h as isize);
                 *fresh22 = p;
                 p = hash_next;
