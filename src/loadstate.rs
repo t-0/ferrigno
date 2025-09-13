@@ -359,7 +359,7 @@ impl LoadState {
             }
             n = self.load_int();
             if n != 0 {
-                n = (*prototype).prototype_upvalues.get_size();
+                n = (*prototype).prototype_upvalues.get_size() as i32;
             }
             for i in 0..n {
                 let ref mut fresh32 =

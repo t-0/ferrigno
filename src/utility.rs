@@ -184,7 +184,7 @@ pub unsafe extern "C" fn luao_chunkid(
                 );
             }
         } else {
-            let nl: *const i8 = strchr(source, CHARACTER_LF as i32);
+            let nl = strchr(source, CHARACTER_LF as i32);
             memcpy(
                 out as *mut libc::c_void,
                 b"[string \"".as_ptr() as *const libc::c_void,

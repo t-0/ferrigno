@@ -139,7 +139,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
                     current_line = nextline(prototype, current_line, 0);
                     1
                 };
-                for i in start..(*prototype).prototype_line_info.get_size() {
+                for i in start..(*prototype).prototype_line_info.get_size() as i32 {
                     current_line = nextline(prototype, current_line, i);
                     luah_setint(interpreter, table, current_line as i64, &mut v);
                 }

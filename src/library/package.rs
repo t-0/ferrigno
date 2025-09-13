@@ -326,7 +326,7 @@ pub unsafe extern "C" fn findfile(
         if path.is_null() {
             lual_error(
                 interpreter,
-                b"'package.%s' must be a string\0".as_ptr(),
+                make_cstring!("'package.%s' must be a string"),
                 pname,
             );
         }
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn checkload(
         } else {
             return lual_error(
                 interpreter,
-                b"error loading module '%s' from file '%s':\n\t%s\0".as_ptr(),
+                make_cstring!("error loading module '%s' from file '%s':\n\t%s"),
                 lua_tolstring(interpreter, 1, null_mut()),
                 filename,
                 lua_tolstring(interpreter, -1, null_mut()),
@@ -502,7 +502,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
         {
             lual_error(
                 interpreter,
-                b"'package.searchers' must be a table\0".as_ptr(),
+                make_cstring!("'package.searchers' must be a table"),
             );
         }
         message.initialize(interpreter);
@@ -517,7 +517,7 @@ pub unsafe extern "C" fn findloader(interpreter: *mut Interpreter, name: *const 
                 message.push_result();
                 lual_error(
                     interpreter,
-                    b"module '%s' not found:%s\0".as_ptr(),
+                    make_cstring!("module '%s' not found:%s"),
                     name,
                     lua_tolstring(interpreter, -1, null_mut()),
                 );
@@ -693,15 +693,14 @@ pub unsafe extern "C" fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         interpreter,
         make_cstring!("path"),
         make_cstring!("LUA_PATH"),
-        b"/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua\0"
+        make_cstring!("/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua")
             as *const u8 as *const i8,
     );
         setpath(
             interpreter,
             make_cstring!("cpath"),
             make_cstring!("LUA_CPATH"),
-            b"/usr/local/lib/lua/5.4/?.so;/usr/local/lib/lua/5.4/loadall.so;./?.so\0" as *const u8
-                as *const i8,
+            make_cstring!("/usr/local/lib/lua/5.4/?.so;/usr/local/lib/lua/5.4/loadall.so;./?.so\0"),
         );
         lua_pushstring(interpreter, make_cstring!("/\n;\n?\n!\n-\n"));
         lua_setfield(interpreter, -2, make_cstring!("config"));

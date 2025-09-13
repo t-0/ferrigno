@@ -114,7 +114,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         if pose - posi >= 0x7FFFFFFF as i64 {
-            return lual_error(interpreter, b"string slice too long\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("string slice too long"));
         }
         n = (pose - posi) as i32 + 1;
         lual_checkstack(
@@ -129,7 +129,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
             let mut code: u32 = 0;
             s = utf8_decode(s, &mut code, (lax == 0) as i32);
             if s.is_null() {
-                return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
+                return lual_error(interpreter, make_cstring!("invalid UTF-8 code"));
             }
             (*interpreter).push_integer(code as i64);
             n += 1;
@@ -196,7 +196,7 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
             if *s.offset(posi as isize) as i32 & 0xc0 as i32 == 0x80 as i32 {
                 return lual_error(
                     interpreter,
-                    b"initial position is a continuation byte\0".as_ptr(),
+                    make_cstring!("initial position is a continuation byte"),
                 );
             }
             if n < 0 {
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
             let mut code: u32 = 0;
             let next: *const i8 = utf8_decode(s.offset(n as isize), &mut code, strict);
             if next.is_null() || *next as i32 & 0xc0 as i32 == 0x80 as i32 {
-                return lual_error(interpreter, b"invalid UTF-8 code\0".as_ptr());
+                return lual_error(interpreter, make_cstring!("invalid UTF-8 code"));
             }
             (*interpreter).push_integer(n.wrapping_add(1 as usize) as i64);
             (*interpreter).push_integer(code as i64);

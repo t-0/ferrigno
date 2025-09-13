@@ -246,7 +246,7 @@ pub unsafe extern "C" fn getupvalname(
                 == tvalue as *mut TValue
             {
                 *name = upvalname((*c).payload.l_prototype, i as i32);
-                return STRING_UPVALUE.as_ptr();
+                return STRING_UPVALUE;
             }
         }
         return null();

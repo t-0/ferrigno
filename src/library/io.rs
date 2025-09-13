@@ -63,7 +63,7 @@ pub unsafe extern "C" fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
         let p: *mut Stream =
             lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
         if (*p).close_function.is_none() {
-            lual_error(interpreter, b"attempt to use a closed file\0".as_ptr());
+            lual_error(interpreter, make_cstring!("attempt to use a closed file"));
         }
         return (*p).file;
     }
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn opencheck(
         if (*p).file.is_null() {
             lual_error(
                 interpreter,
-                b"cannot open file '%s' (%s)\0".as_ptr(),
+                make_cstring!("cannot open file '%s' (%s)"),
                 fname,
                 strerror(*__errno_location()),
             );
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn getiofile(interpreter: *mut Interpreter, findex: *const
         if (*p).close_function.is_none() {
             lual_error(
                 interpreter,
-                b"default %s file is closed\0".as_ptr(),
+                make_cstring!("default %s file is closed"),
                 findex.offset(
                     (size_of::<[i8; 5]>() as usize)
                         .wrapping_div(size_of::<i8>() as usize)
@@ -632,7 +632,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
         let mut n: i32 =
             lua_tointegerx(interpreter, -(1000000 as i32) - 1000 as i32 - 2, null_mut()) as i32;
         if ((*p).close_function).is_none() {
-            return lual_error(interpreter, b"file is already closed\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("file is already closed"));
         }
         lua_settop(interpreter, 1);
         lual_checkstack(
@@ -650,7 +650,7 @@ pub unsafe extern "C" fn io_readline(interpreter: *mut Interpreter) -> i32 {
             if n > 1 {
                 return lual_error(
                     interpreter,
-                    b"%s\0".as_ptr(),
+                    make_cstring!("%s"),
                     lua_tolstring(interpreter, -n + 1, null_mut()),
                 );
             }

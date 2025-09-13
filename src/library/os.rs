@@ -54,7 +54,7 @@ pub unsafe extern "C" fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
         if (err != 0) as i64 != 0 {
             return lual_error(
                 interpreter,
-                b"unable to generate a unique filename\0".as_ptr(),
+                make_cstring!("unable to generate a unique filename"),
             );
         }
         lua_pushstring(interpreter, buffer.as_mut_ptr());
@@ -174,13 +174,9 @@ pub unsafe extern "C" fn getfield(
         let mut res: i64 = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
             if t != TagType::Nil {
-                return lual_error(interpreter, b"field '%s' is not an integer\0".as_ptr(), key);
+                return lual_error(interpreter, make_cstring!("field '%s' is not an integer"), key);
             } else if d < 0 {
-                return lual_error(
-                    interpreter,
-                    b"field '%s' missing in date table\0".as_ptr(),
-                    key,
-                );
+                return lual_error(interpreter, make_cstring!("field '%s' missing in date table"), key);
             }
             res = d as i64;
         } else {
@@ -190,7 +186,7 @@ pub unsafe extern "C" fn getfield(
                 ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
             } == 0
             {
-                return lual_error(interpreter, b"field '%s' is out-of-bound\0".as_ptr(), key);
+                return lual_error(interpreter, make_cstring!("field '%s' is out-of-bound"), key);
             }
             res -= delta as i64;
         }
@@ -205,9 +201,7 @@ pub unsafe extern "C" fn checkoption(
     buffer: *mut i8,
 ) -> *const i8 {
     unsafe {
-        let mut option: *const i8 =
-            b"aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy\0"
-                as *const u8 as *const i8;
+        let mut option: *const i8 = make_cstring!("aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy");
         let mut oplen: i32 = 1;
         while *option as i32 != Character::Null as i32 && oplen as i64 <= convlen {
             if *option as i32 == '|' as i32 {
@@ -287,7 +281,7 @@ pub unsafe extern "C" fn os_date(interpreter: *mut Interpreter) -> i32 {
         if stm.is_null() {
             return lual_error(
                 interpreter,
-                b"date result cannot be represented in this installation\0".as_ptr(),
+                make_cstring!("date result cannot be represented in this installation"),
             );
         }
         if strcmp(s, make_cstring!("*t")) == 0 {
@@ -375,7 +369,7 @@ pub unsafe extern "C" fn os_time(interpreter: *mut Interpreter) -> i32 {
         if t != t as i64 || t == -1 as i64 {
             return lual_error(
                 interpreter,
-                b"time result cannot be represented in this installation\0".as_ptr(),
+                make_cstring!("time result cannot be represented in this installation"),
             );
         }
         (*interpreter).push_integer(t as i64);

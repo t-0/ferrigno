@@ -68,7 +68,7 @@ pub unsafe extern "C" fn table_insert(interpreter: *mut Interpreter) -> i32 {
             _ => {
                 return lual_error(
                     interpreter,
-                    b"wrong number of arguments to 'insert'\0".as_ptr(),
+                    make_cstring!("wrong number of arguments to 'insert'"),
                 );
             }
         }
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn addfield(interpreter: *mut Interpreter, b: *mut Buffer,
         if !lua_isstring(interpreter, -1) {
             lual_error(
                 interpreter,
-                b"invalid value (%s) at index %I in table for 'concat'\0".as_ptr(),
+                make_cstring!("invalid value (%s) at index %I in table for 'concat'"),
                 lua_typename(interpreter, lua_type(interpreter, -1)),
                 i,
             );
@@ -218,7 +218,7 @@ pub unsafe extern "C" fn table_unpack(interpreter: *mut Interpreter) -> i32 {
             != 0) as i64
             != 0
         {
-            return lual_error(interpreter, b"too many results to unpack\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("too many results to unpack"));
         }
         while i < e {
             lua_geti(interpreter, 1, i);
@@ -297,7 +297,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if i == up.wrapping_sub(1) {
                     lual_error(
                         interpreter,
-                        b"invalid order function for sorting\0".as_ptr(),
+                        make_cstring!("invalid order function for sorting"),
                     );
                 }
                 lua_settop(interpreter, -2);
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn partition(interpreter: *mut Interpreter, lo: u32, up: u
                 if j < i {
                     lual_error(
                         interpreter,
-                        b"invalid order function for sorting\0".as_ptr(),
+                        make_cstring!("invalid order function for sorting"),
                     );
                 }
                 lua_settop(interpreter, -2);

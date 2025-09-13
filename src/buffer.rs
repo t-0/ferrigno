@@ -1,4 +1,5 @@
 pub mod userbox;
+use rlua::*;
 use crate::buffer::userbox::*;
 use crate::interpreter::*;
 use crate::loads::*;
@@ -46,7 +47,7 @@ impl Buffer {
         unsafe {
             let mut new_size = 2 * self.loads.get_size();
             if (!0usize).wrapping_sub(size) < self.loads.get_length() as usize {
-                return lual_error(self.interpreter, b"buffer too large\0".as_ptr()) as usize;
+                return lual_error(self.interpreter, make_cstring!("buffer too large")) as usize;
             }
             new_size = new_size.max(self.loads.get_length() + size as i32);
             return new_size as usize;

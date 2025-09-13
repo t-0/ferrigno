@@ -1,6 +1,7 @@
 use rlua::*;
 use crate::interpreter::*;
 use crate::library::*;
+use crate::global::*;
 use libc::isatty;
 use std::ptr::*;
 pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {

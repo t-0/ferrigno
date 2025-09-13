@@ -102,7 +102,7 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
             != 0) as i64
             != 0
         {
-            return lual_error(interpreter, b"resulting string too large\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("resulting string too large"));
         } else {
             let totallen: usize = (n as usize)
                 .wrapping_mul(l)
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         if pose.wrapping_sub(posi) >= 0x7FFFFFFF as usize {
-            return lual_error(interpreter, b"string slice too long\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("string slice too long"));
         }
         n = pose.wrapping_sub(posi) as i32 + 1;
         lual_checkstack(
@@ -233,7 +233,7 @@ pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
             != 0) as i64
             != 0
         {
-            return lual_error(interpreter, b"unable to dump given function\0".as_ptr());
+            return lual_error(interpreter, make_cstring!("unable to dump given function"));
         }
         stream_writer.buffer.push_result();
         return 1;
@@ -261,7 +261,7 @@ pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const i8)
         {
             lual_error(
                 interpreter,
-                b"attempt to %s a '%s' with a '%s'\0".as_ptr(),
+                make_cstring!("attempt to %s a '%s' with a '%s'"),
                 mtname.offset(2 as isize),
                 lua_typename(interpreter, lua_type(interpreter, -2)),
                 lua_typename(interpreter, lua_type(interpreter, -1)),
@@ -772,7 +772,7 @@ pub unsafe extern "C" fn checkformat(
         if *(*__ctype_b_loc()).offset(*spec as u8 as isize) as i32 & _ISALPHA as i32 == 0 {
             lual_error(
                 interpreter,
-                b"invalid conversion specification: '%s'\0".as_ptr(),
+                make_cstring!("invalid conversion specification: '%s'"),
                 form,
             );
         }
@@ -787,7 +787,7 @@ pub unsafe extern "C" fn getformat(
         let mut length = strspn(strfrmt, make_cstring!("-+#0 123456789."));
         length = length.wrapping_add(1);
         if length >= 22 {
-            lual_error(interpreter, b"invalid format (too long)\0".as_ptr());
+            lual_error(interpreter, make_cstring!("invalid format (too long)"));
         }
         let fresh173 = form;
         form = form.offset(1);
@@ -932,7 +932,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                             if form[2 as usize] as i32 != Character::Null as i32 {
                                 return lual_error(
                                     interpreter,
-                                    b"specifier '%%q' cannot have modifiers\0".as_ptr(),
+                                    make_cstring!("specifier '%%q' cannot have modifiers"),
                                 );
                             }
                             addliteral(interpreter, &mut b, arg);
@@ -970,7 +970,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
                         _ => {
                             return lual_error(
                                 interpreter,
-                                b"invalid conversion '%s' to 'format'\0".as_ptr(),
+                                make_cstring!("invalid conversion '%s' to 'format'"),
                                 form.as_mut_ptr(),
                             );
                         }
@@ -1038,7 +1038,7 @@ pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i3
         if size > 16 as i32 || size <= 0 {
             return lual_error(
                 (*h).interpreter,
-                b"integral size (%d) out of limits [1,%d]\0".as_ptr(),
+                make_cstring!("integral size (%d) out of limits [1,%d]"),
                 size,
                 16 as i32,
             );
@@ -1125,7 +1125,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
                 if *size == -1 {
                     lual_error(
                         (*h).interpreter,
-                        b"missing size for format option CHARACTER_LOWER_C\0".as_ptr(),
+                        make_cstring!("missing size for format option CHARACTER_LOWER_C"),
                     );
                 }
                 return K::Character;
@@ -1153,7 +1153,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
             _ => {
                 lual_error(
                     (*h).interpreter,
-                    b"invalid format option '%c'\0".as_ptr(),
+                    make_cstring!("invalid format option '%c'"),
                     opt,
                 );
             }
@@ -1539,7 +1539,7 @@ pub unsafe extern "C" fn unpackint(
                 {
                     lual_error(
                         interpreter,
-                        b"%d-byte integer does not fit into Lua Integer\0".as_ptr(),
+                        make_cstring!("%d-byte integer does not fit into Lua Integer"),
                         size,
                     );
                 }

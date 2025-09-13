@@ -184,18 +184,18 @@ impl LexicalState {
         unsafe {
             let function_state: *mut FunctionState = self.function_state;
             let prototype: *mut Prototype = (*function_state).prototype;
-            if (*function_state).count_prototypes >= (*prototype).prototype_prototypes.get_size() {
-                let mut old_size: i32 = (*prototype).prototype_prototypes.get_size();
+            if (*function_state).count_prototypes >= (*prototype).prototype_prototypes.get_size() as i32 {
+                let mut old_size = (*prototype).prototype_prototypes.get_size();
                 (*prototype).prototype_prototypes.grow(
                     self.interpreter,
                     (*function_state).count_prototypes as usize,
-                    (if ((1 << 8 + 8 + 1) - 1) as usize
+                    if ((1 << 8 + 8 + 1) - 1) as usize
                         <= (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
                     {
-                        ((1 << 8 + 8 + 1) - 1) as u32
+                        (1 << 8 + 8 + 1) - 1
                     } else {
-                        (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize) as u32
-                    }) as i32,
+                        (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
+                    },
                     make_cstring!("functions"),
                 );
                 while old_size < (*prototype).prototype_prototypes.get_size() {
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn findlabel(
 ) -> *mut LabelDescription {
     unsafe {
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
-        for i in (*(*lexical_state).function_state).first_label..(*dynamic_data).label.get_length()
+        for i in (*(*lexical_state).function_state).first_label..(*dynamic_data).label.get_length() as i32
         {
             let lb: *mut LabelDescription = &mut *((*dynamic_data).label.vectort_pointer)
                 .offset(i as isize)
@@ -252,15 +252,15 @@ pub unsafe extern "C" fn newlabelentry(
     program_counter: i32,
 ) -> i32 {
     unsafe {
-        let n: i32 = (*l).get_length();
+        let n = (*l).get_length();
         (*l).grow(
             (*lexical_state).interpreter,
             n as usize,
-            (if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize) {
-                32767 as u32
+            if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize) {
+                32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize)
+            },
             make_cstring!("labels/gotos"),
         );
         let ref mut fresh44 = (*((*l).vectort_pointer).offset(n as isize)).name;
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn newlabelentry(
         (*((*l).vectort_pointer).offset(n as isize)).close = 0;
         (*((*l).vectort_pointer).offset(n as isize)).program_counter = program_counter;
         (*l).set_length(n as usize + 1);
-        return n;
+        return n as i32;
     }
 }
 pub unsafe extern "C" fn newgotoentry(
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn solvegotos(
         let gl: *mut VectorT<LabelDescription> = &mut (*(*lexical_state).dynamic_data).gt;
         let mut i: i32 = (*(*(*lexical_state).function_state).block_control).first_goto;
         let mut needsclose = false;
-        while i < (*gl).get_length() {
+        while i < (*gl).get_length()  as i32{
             if (*((*gl).vectort_pointer).offset(i as isize)).name == (*lb).name {
                 needsclose =
                     needsclose || (0 != (*((*gl).vectort_pointer).offset(i as isize)).close);
@@ -382,8 +382,8 @@ pub unsafe extern "C" fn open_func(
         (*function_state).needs_close = false;
         (*function_state).first_local = (*(*lexical_state).dynamic_data)
             .active_variable
-            .get_length();
-        (*function_state).first_label = (*(*lexical_state).dynamic_data).label.get_length();
+            .get_length() as i32;
+        (*function_state).first_label = (*(*lexical_state).dynamic_data).label.get_length() as i32;
         (*function_state).block_control = null_mut();
         (*prototype).prototype_source = (*lexical_state).source;
         if (*prototype).get_marked() & 1 << 5 != 0
@@ -437,7 +437,7 @@ pub unsafe extern "C" fn close_func(lexical_state: *mut LexicalState) {
             .shrink(&mut *interpreter, (*function_state).count_upvalues as usize);
         (*lexical_state).function_state = (*function_state).previous;
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
     }
 }
@@ -976,15 +976,15 @@ pub unsafe extern "C" fn registerlocalvar(
 ) -> i32 {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
-        let mut old_size: i32 = (*prototype).prototype_local_variables.get_size();
+        let mut old_size = (*prototype).prototype_local_variables.get_size();
         (*prototype).prototype_local_variables.grow(
             (*lexical_state).interpreter,
             (*function_state).count_debug_variables as usize,
-            (if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) {
-                32767 as u32
+            if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) {
+                32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize)
+            },
             make_cstring!("local variables"),
         );
         while old_size < (*prototype).prototype_local_variables.get_size() {
@@ -1025,20 +1025,20 @@ pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *m
         let var: *mut VariableDescription;
         checklimit(
             function_state,
-            (*dynamic_data).active_variable.get_length() + 1 - (*function_state).first_local,
-            200 as i32,
+            (*dynamic_data).active_variable.get_length()  as i32 + 1 - (*function_state).first_local,
+            200,
             make_cstring!("local variables"),
         );
         (*dynamic_data).active_variable.grow(
             interpreter,
             ((*dynamic_data).active_variable.get_length() + 1) as usize,
-            (if 32767 as usize
-                <= (!(0usize)).wrapping_div(size_of::<VariableDescription>() as usize)
+            if 32767 as usize
+                <= (!(0usize)).wrapping_div(size_of::<VariableDescription>())
             {
-                32767 as u32
+                32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<VariableDescription>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<VariableDescription>() as usize)
+            },
             make_cstring!("local variables"),
         );
         let fresh37 = (*dynamic_data).active_variable.get_length();
@@ -1049,7 +1049,7 @@ pub unsafe extern "C" fn new_localvar(lexical_state: *mut LexicalState, name: *m
             as *mut VariableDescription;
         (*var).content.kind = 0;
         (*var).content.name = name;
-        return (*dynamic_data).active_variable.get_length() - 1 - (*function_state).first_local;
+        return (*dynamic_data).active_variable.get_length() as i32 - 1 - (*function_state).first_local;
     }
 }
 pub unsafe extern "C" fn check_readonly(
@@ -1217,7 +1217,7 @@ pub unsafe extern "C" fn solvegoto(
             (*label).program_counter,
         );
         let mut i: i32 = goto_offset;
-        while i < (*goto_label_list).get_length() - 1 {
+        while i < (*goto_label_list).get_length() as i32 - 1 {
             *((*goto_label_list).vectort_pointer).offset(i as isize) =
                 *((*goto_label_list).vectort_pointer).offset((i + 1) as isize);
             i += 1;
@@ -1819,8 +1819,7 @@ pub unsafe extern "C" fn localstat(lexical_state: *mut LexicalState) {
                 if toclose != -1 {
                     luak_semerror(
                         lexical_state,
-                        b"multiple to-be-closed variables in local list\0" as *const u8
-                            as *const i8,
+                        make_cstring!("multiple to-be-closed variables in local list"),
                     );
                 }
                 toclose = (*function_state).count_active_variables as i32 + nvars;
@@ -2127,7 +2126,7 @@ pub unsafe extern "C" fn luax_newstring(
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {

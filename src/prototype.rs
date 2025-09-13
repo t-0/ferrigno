@@ -56,7 +56,7 @@ impl TObject for Prototype {
 impl Prototype {
     pub unsafe extern "C" fn dump_code(&self, dump_state: &mut DumpState) {
         unsafe {
-            dump_state.dump_int(self.prototype_code.get_size());
+            dump_state.dump_int(self.prototype_code.get_size() as i32);
             dump_state.dump_block(
                 self.prototype_code.vectort_pointer as *const libc::c_void,
                 (self.prototype_code.get_size() as usize).wrapping_mul(size_of::<u32>()),
@@ -152,8 +152,8 @@ impl Prototype {
     }
     pub unsafe extern "C" fn dump_prototypes(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n: i32 = self.prototype_prototypes.get_size();
-            dump_state.dump_int(n);
+            let n = self.prototype_prototypes.get_size();
+            dump_state.dump_int(n as i32);
             for i in 0..n {
                 (*(*(self.prototype_prototypes.at(i as isize))))
                     .dump_function(dump_state, self.prototype_source);
@@ -162,8 +162,8 @@ impl Prototype {
     }
     pub unsafe extern "C" fn dump_upvalues(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n: i32 = self.prototype_upvalues.get_size();
-            dump_state.dump_int(n);
+            let n = self.prototype_upvalues.get_size();
+            dump_state.dump_int(n as i32);
             for i in 0..n {
                 let upvalue_description = *(self.prototype_upvalues.at(i as isize));
                 upvalue_description.dump(dump_state);
@@ -172,8 +172,8 @@ impl Prototype {
     }
     pub unsafe extern "C" fn dump_constants(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n: i32 = self.prototype_constants.get_size();
-            dump_state.dump_int(n);
+            let n = self.prototype_constants.get_size();
+            dump_state.dump_int(n as i32);
             for i in 0..n {
                 let tvalue: *const TValue = &mut *(self.prototype_constants.vectort_pointer)
                     .offset(i as isize) as *mut TValue;
@@ -345,7 +345,7 @@ pub unsafe extern "C" fn getbaseline(
             let mut i: i32 = (program_counter as u32)
                 .wrapping_div(128u32)
                 .wrapping_sub(1u32) as i32;
-            while (i + 1) < (*prototype).prototype_absolute_line_info.get_size()
+            while (i + 1) < (*prototype).prototype_absolute_line_info.get_size() as i32
                 && program_counter
                     >= (*((*prototype).prototype_absolute_line_info.vectort_pointer)
                         .offset((i + 1) as isize))
@@ -484,7 +484,7 @@ pub unsafe extern "C" fn basicgetobjname(
         let mut program_counter: i32 = *ppc;
         *name = luaf_getlocalname(p, reg + 1, program_counter);
         if !(*name).is_null() {
-            return STRING_LOCAL.as_ptr();
+            return STRING_LOCAL;
         }
         program_counter = findsetreg(p, program_counter, reg);
         *ppc = program_counter;
@@ -500,7 +500,7 @@ pub unsafe extern "C" fn basicgetobjname(
                 }
                 9 => {
                     *name = upvalname(p, (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32);
-                    return STRING_UPVALUE.as_ptr();
+                    return STRING_UPVALUE;
                 }
                 3 => {
                     return kname(
@@ -566,7 +566,7 @@ pub unsafe extern "C" fn is_environment(
             name = upvalname(p, t);
         } else {
             let what: *const i8 = basicgetobjname(p, &mut program_counter, t, &mut name);
-            if what != STRING_LOCAL.as_ptr() && what != STRING_UPVALUE.as_ptr() {
+            if what != STRING_LOCAL && what != STRING_UPVALUE {
                 name = null();
             }
         }

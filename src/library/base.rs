@@ -2,6 +2,7 @@
 use rlua::*;
 use crate::character::*;
 use crate::f2i::*;
+use crate::global::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
@@ -85,7 +86,7 @@ pub unsafe extern "C" fn luab_setmetatable(interpreter: *mut Interpreter) -> i32
         {
             return lual_error(
                 interpreter,
-                b"cannot change a protected metatable\0".as_ptr(),
+                make_cstring!("cannot change a protected metatable"),
             );
         }
         lua_settop(interpreter, 2);
@@ -370,7 +371,7 @@ pub unsafe extern "C" fn generic_reader(
         } else if !lua_isstring(interpreter, -1) {
             lual_error(
                 interpreter,
-                b"reader function must return a string\0".as_ptr(),
+                make_cstring!("reader function must return a string"),
             );
         }
         lua_copy(interpreter, -1, 5);

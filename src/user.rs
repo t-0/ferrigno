@@ -93,7 +93,7 @@ impl User {
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
             return (*new_user).get_raw_memory_mut();
         }

@@ -82,7 +82,7 @@ pub unsafe extern "C" fn movegotosout(
     unsafe {
         let gl: *mut VectorT<LabelDescription> =
             &mut (*(*(*function_state).lexical_state).dynamic_data).gt;
-        for i in (*block_control).first_goto..(*gl).get_length() {
+        for i in (*block_control).first_goto..(*gl).get_length() as i32 {
             let gt: *mut LabelDescription =
                 &mut *((*gl).vectort_pointer).offset(i as isize) as *mut LabelDescription;
             if reglevel(function_state, (*gt).count_active_variables as i32)
@@ -107,10 +107,10 @@ pub unsafe extern "C" fn enterblock(
         (*block_control).count_active_variables = (*function_state).count_active_variables;
         (*block_control).first_label = (*(*(*function_state).lexical_state).dynamic_data)
             .label
-            .get_length();
+            .get_length() as i32;
         (*block_control).first_goto = (*(*(*function_state).lexical_state).dynamic_data)
             .gt
-            .get_length();
+            .get_length() as i32;
         (*block_control).count_upvalues = 0;
         (*block_control).is_inside_tbc = !((*function_state).block_control).is_null()
             && (*(*function_state).block_control).is_inside_tbc as i32 != 0;
@@ -157,7 +157,7 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
         (*function_state).block_control = (*block_control).previous;
         if !((*block_control).previous).is_null() {
             movegotosout(function_state, block_control);
-        } else if (*block_control).first_goto < (*(*lexical_state).dynamic_data).gt.get_length() {
+        } else if (*block_control).first_goto < (*(*lexical_state).dynamic_data).gt.get_length()  as i32 {
             undefgoto(
                 lexical_state,
                 &mut *((*(*lexical_state).dynamic_data).gt.vectort_pointer)
@@ -370,7 +370,7 @@ pub unsafe extern "C" fn allocate_upvalue_description(
 ) -> *mut UpValueDescription {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
-        let mut old_size: i32 = (*prototype).prototype_upvalues.get_size();
+        let mut old_size = (*prototype).prototype_upvalues.get_size();
         checklimit(
             function_state,
             (*function_state).count_upvalues as i32 + 1,
@@ -380,11 +380,11 @@ pub unsafe extern "C" fn allocate_upvalue_description(
         (*prototype).prototype_upvalues.grow(
             (*(*function_state).lexical_state).interpreter,
             (*function_state).count_upvalues as usize,
-            (if 255 as usize <= (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize) {
-                255 as u32
+            if 255 as usize <= (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize) {
+                255
             } else {
-                (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
+            },
             make_cstring!("upvalues"),
         );
         while old_size < (*prototype).prototype_upvalues.get_size() {
@@ -792,13 +792,13 @@ pub unsafe extern "C" fn savelineinfo(
             (*prototype).prototype_absolute_line_info.grow(
                 (*(*function_state).lexical_state).interpreter,
                 (*function_state).count_abslineinfo as usize,
-                (if 0x7FFFFFFF as usize
+                if 0x7FFFFFFF as usize
                     <= (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
                 {
-                    0x7FFFFFFF as u32
+                    0x7FFFFFFF
                 } else {
-                    (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize) as u32
-                }) as i32,
+                    (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
+                },
                 make_cstring!("lines"),
             );
             (*((*prototype).prototype_absolute_line_info.vectort_pointer)
@@ -815,11 +815,11 @@ pub unsafe extern "C" fn savelineinfo(
         (*prototype).prototype_line_info.grow(
             (*(*function_state).lexical_state).interpreter,
             program_counter as usize,
-            (if 0x7FFFFFFF as usize <= (!(0usize)).wrapping_div(size_of::<i8>() as usize) {
-                0x7FFFFFFF as u32
+            if 0x7FFFFFFF <= (!(0usize)).wrapping_div(size_of::<i8>()) {
+                0x7FFFFFFF
             } else {
-                (!(0usize)).wrapping_div(size_of::<i8>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<i8>() as usize)
+            },
             make_cstring!("opcodes"),
         );
         *((*prototype).prototype_line_info.vectort_pointer).offset(program_counter as isize) =
@@ -860,11 +860,11 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
         (*prototype).prototype_code.grow(
             (*(*function_state).lexical_state).interpreter,
             (*function_state).program_counter as usize,
-            (if 0x7FFFFFFF as usize <= (!(0usize)).wrapping_div(size_of::<u32>() as usize) {
-                0x7FFFFFFF as u32
+            if 0x7FFFFFFF as usize <= (!(0usize)).wrapping_div(size_of::<u32>() as usize) {
+                0x7FFFFFFF
             } else {
-                (!(0usize)).wrapping_div(size_of::<u32>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<u32>() as usize)
+            },
             make_cstring!("opcodes"),
         );
         let fresh134 = (*function_state).program_counter;
@@ -1053,7 +1053,7 @@ pub unsafe extern "C" fn addk(
                 return count_constants;
             }
         }
-        let mut old_size: i32 = (*prototype).prototype_constants.get_size();
+        let mut old_size = (*prototype).prototype_constants.get_size();
         count_constants = (*function_state).count_constants;
         let io: *mut TValue = &mut value;
         (*io).value.integer = count_constants as i64;
@@ -1068,13 +1068,13 @@ pub unsafe extern "C" fn addk(
         (*prototype).prototype_constants.grow(
             interpreter,
             count_constants as usize,
-            (if ((1 << 8 + 8 + 1 + 8) - 1) as usize
+            if ((1 << 8 + 8 + 1 + 8) - 1) as usize
                 <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
             {
-                ((1 << 8 + 8 + 1 + 8) - 1) as u32
+                (1 << 8 + 8 + 1 + 8) - 1
             } else {
-                (!(0usize)).wrapping_div(size_of::<TValue>() as usize) as u32
-            }) as i32,
+                (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
+            },
             make_cstring!("constants"),
         );
         while old_size < (*prototype).prototype_constants.get_size() {

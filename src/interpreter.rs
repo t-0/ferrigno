@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::buffer::*;
 use crate::bufffs::*;
 use crate::callinfo::*;
@@ -26,7 +25,6 @@ use crate::registeredfunction::*;
 use crate::sparser::*;
 use crate::stackvalue::*;
 use crate::stkidrel::*;
-use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tm::*;
@@ -43,6 +41,7 @@ use crate::vectort::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::zio::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -85,6 +84,21 @@ impl TObject for Interpreter {
     }
 }
 impl Interpreter {
+    pub unsafe fn luac_step(&mut self) {
+        unsafe {
+            (*self.global).luac_step(self);
+        }
+    }
+    pub unsafe fn luac_fullgc(&mut self, is_emergency: bool) {
+        unsafe {
+            (*self.global).luac_fullgc(self, is_emergency);
+        }
+    }
+    pub unsafe extern "C" fn luas_init_state(&mut self) {
+        unsafe {
+            (*self.global).luas_init_global(self);
+        }
+    }
     pub unsafe fn to_pointer(&mut self, index: i32) -> *mut libc::c_void {
         unsafe { self.index_to_value(index).to_pointer() }
     }
@@ -303,11 +317,8 @@ impl Interpreter {
     }
     pub unsafe extern "C" fn luad_errerr(&mut self) -> ! {
         unsafe {
-            let message: *mut TString = luas_newlstr(
-                self,
-                make_cstring!("error in error handling"),
-                23,
-            );
+            let message: *mut TString =
+                luas_newlstr(self, make_cstring!("error in error handling"), 23);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(message as *mut Object));
             (*io).set_tag_variant((*message).get_tag_variant());
@@ -397,7 +408,7 @@ impl Interpreter {
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             if (*self.global).gc_debt > 0 {
-                luac_step(self);
+                (*self.global).luac_step(self);
             }
         }
     }
@@ -810,7 +821,7 @@ pub unsafe extern "C" fn tryfunctm(
                 .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
             luad_growstack(interpreter, 1, true);
             function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
@@ -959,7 +970,7 @@ pub unsafe extern "C" fn precallc(
                 .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                 as i64;
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
             luad_growstack(interpreter, 20 as i32, true);
             function = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
@@ -1023,7 +1034,7 @@ pub unsafe extern "C" fn luad_pretailcall(
                             .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                             as i64;
                         if (*(*interpreter).global).gc_debt > 0 {
-                            luac_step(interpreter);
+                            (*interpreter).luac_step();
                         }
                         luad_growstack(interpreter, fsize - delta, true);
                         function = ((*interpreter).stack.stkidrel_pointer as *mut i8)
@@ -1109,7 +1120,7 @@ pub unsafe extern "C" fn luad_precall(
                             .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                             as i64;
                         if (*(*interpreter).global).gc_debt > 0 {
-                            luac_step(interpreter);
+                            (*interpreter).luac_step();
                         }
                         luad_growstack(interpreter, fsize, true);
                         function = ((*interpreter).stack.stkidrel_pointer as *mut i8)
@@ -1364,11 +1375,7 @@ pub unsafe extern "C" fn lua_resume(
             0
         };
         if (*interpreter).count_c_calls & 0xffff as u32 >= 200 as u32 {
-            return resume_error(
-                interpreter,
-                make_cstring!("C stack overflow"),
-                nargs,
-            );
+            return resume_error(interpreter, make_cstring!("C stack overflow"), nargs);
         }
         (*interpreter).count_c_calls = ((*interpreter).count_c_calls).wrapping_add(1);
         (*interpreter).count_c_calls;
@@ -1523,11 +1530,7 @@ pub unsafe extern "C" fn f_parser(
             luaz_fill((*p).zio)
         };
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
-            checkmode(
-                interpreter,
-                (*p).mode,
-                make_cstring!("binary"),
-            );
+            checkmode(interpreter, (*p).mode, make_cstring!("binary"));
             cl = load_closure(interpreter, (*p).zio, (*p).name);
         } else {
             checkmode(interpreter, (*p).mode, make_cstring!("text"));
@@ -2007,7 +2010,7 @@ pub unsafe extern "C" fn lua_tolstring(
             }
             luao_tostring(interpreter, o);
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
             o = (*interpreter).index_to_value(index);
         }
@@ -2062,7 +2065,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         return (*ts).get_contents_mut();
     }
@@ -2086,7 +2089,7 @@ pub unsafe extern "C" fn lua_pushstring(
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         return s;
     }
@@ -2099,7 +2102,7 @@ pub unsafe extern "C" fn lua_pushvfstring(
     unsafe {
         let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         return ret;
     }
@@ -2114,7 +2117,7 @@ pub unsafe extern "C" fn lua_pushfstring(
         argp = args.clone();
         let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         return ret;
     }
@@ -2154,7 +2157,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
             (*io_0).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {
-                luac_step(interpreter);
+                (*interpreter).luac_step();
             }
         };
     }
@@ -2841,109 +2844,6 @@ pub unsafe extern "C" fn lua_dump(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: ...) -> i32 {
-    unsafe {
-        let mut argp: ::core::ffi::VaListImpl;
-        let mut res: i32 = 0;
-        let global: *mut Global = (*interpreter).global;
-        if (*global).gc_step as i32 & 2 != 0 {
-            return -1;
-        }
-        argp = args.clone();
-        match what {
-            0 => {
-                (*global).gc_step = 1;
-            }
-            1 => {
-                (*global).set_debt(0);
-                (*global).gc_step = 0;
-            }
-            2 => {
-                luac_fullgc(interpreter, false);
-            }
-            3 => {
-                res = (((*global).total_bytes + (*global).gc_debt) as usize >> 10 as i32) as i32;
-            }
-            4 => {
-                res =
-                    (((*global).total_bytes + (*global).gc_debt) as usize & 0x3ff as usize) as i32;
-            }
-            5 => {
-                let data: i32 = argp.arg::<i32>();
-                let mut debt: i64 = 1;
-                let oldstp: u8 = (*global).gc_step;
-                (*global).gc_step = 0;
-                if data == 0 {
-                    (*global).set_debt(0);
-                    luac_step(interpreter);
-                } else {
-                    debt = data as i64 * 1024 as i64 + (*global).gc_debt;
-                    (*global).set_debt(debt);
-                    if (*(*interpreter).global).gc_debt > 0 {
-                        luac_step(interpreter);
-                    }
-                }
-                (*global).gc_step = oldstp;
-                if debt > 0 && (*global).gc_state as i32 == 8 {
-                    res = 1;
-                }
-            }
-            6 => {
-                let data_0: i32 = argp.arg::<i32>();
-                res = (*global).gc_pause as i32 * 4;
-                (*global).gc_pause = (data_0 / 4) as u8;
-            }
-            7 => {
-                let data_1: i32 = argp.arg::<i32>();
-                res = (*global).gc_step_multiplier as i32 * 4;
-                (*global).gc_step_multiplier = (data_1 / 4) as u8;
-            }
-            9 => {
-                res = ((*global).gc_step as i32 == 0) as i32;
-            }
-            10 => {
-                let minormul: i32 = argp.arg::<i32>();
-                let majormul: i32 = argp.arg::<i32>();
-                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
-                    10 as i32
-                } else {
-                    11 as i32
-                };
-                if minormul != 0 {
-                    (*global).generational_minor_multiplier = minormul as usize;
-                }
-                if majormul != 0 {
-                    (*global).generational_major_multiplier = (majormul / 4) as usize;
-                }
-                luac_changemode(interpreter, 1);
-            }
-            11 => {
-                let pause: i32 = argp.arg::<i32>();
-                let stepmul: i32 = argp.arg::<i32>();
-                let stepsize: i32 = argp.arg::<i32>();
-                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
-                    10 as i32
-                } else {
-                    11 as i32
-                };
-                if pause != 0 {
-                    (*global).gc_pause = (pause / 4) as u8;
-                }
-                if stepmul != 0 {
-                    (*global).gc_step_multiplier = (stepmul / 4) as u8;
-                }
-                if stepsize != 0 {
-                    (*global).gc_step_size = stepsize as u8;
-                }
-                luac_changemode(interpreter, 0);
-            }
-            _ => {
-                res = -1;
-            }
-        }
-        return res;
-    }
-}
 pub unsafe extern "C" fn lua_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let errobj: *mut TValue =
@@ -2998,7 +2898,7 @@ pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         }
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
     }
 }
@@ -3098,7 +2998,7 @@ pub unsafe extern "C" fn getupvalref(
         if 1 <= n
             && n <= (*(*closure).payload.l_prototype)
                 .prototype_upvalues
-                .get_size()
+                .get_size() as i32
         {
             return &mut *((*closure).upvalues)
                 .l_upvalues
@@ -3319,7 +3219,7 @@ pub unsafe extern "C" fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut 
         let global: *mut Global = (*interpreter).global;
         stack_init(interpreter, interpreter);
         init_registry(interpreter, global);
-        luas_init_state(interpreter);
+        (*interpreter).luas_init_state();
         luat_init(interpreter);
         luax_init(interpreter);
         (*global).gc_step = 0;
@@ -3357,9 +3257,9 @@ pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
             luad_closeprotected(interpreter, 1 as i64, 0);
             (*interpreter).top.stkidrel_pointer =
                 ((*interpreter).stack.stkidrel_pointer).offset(1 as isize);
-            luac_freeallobjects(interpreter);
+            (*global).luac_freeallobjects(interpreter);
         } else {
-            luac_freeallobjects(interpreter);
+            (*global).luac_freeallobjects(interpreter);
         }
         (*interpreter).free_memory(
             (*(*interpreter).global).string_table.hash as *mut libc::c_void,
@@ -3383,7 +3283,7 @@ pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut In
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         let ret = luac_newobj(interpreter, TAG_VARIANT_STATE, size_of::<Interpreter>())
             as *mut Interpreter;
@@ -3557,12 +3457,7 @@ pub unsafe extern "C" fn formatvarinfo(
         if kind.is_null() {
             return make_cstring!("");
         } else {
-            return luao_pushfstring(
-                interpreter,
-                make_cstring!(" (%s '%s')"),
-                kind,
-                name,
-            );
+            return luao_pushfstring(interpreter, make_cstring!(" (%s '%s')"), kind, name);
         };
     }
 }
@@ -3777,7 +3672,7 @@ pub unsafe extern "C" fn luag_runerror(
         let message: *const i8;
         let mut argp: ::core::ffi::VaListImpl;
         if (*(*interpreter).global).gc_debt > 0 {
-            luac_step(interpreter);
+            (*interpreter).luac_step();
         }
         argp = args.clone();
         message = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
@@ -3873,7 +3768,7 @@ pub unsafe extern "C" fn luag_traceexec(
         }
         if mask as i32 & 1 << 2 != 0 {
             let old_program_counter: i32 =
-                if (*interpreter).old_program_counter < (*p).prototype_code.get_size() {
+                if (*interpreter).old_program_counter < (*p).prototype_code.get_size() as i32 {
                     (*interpreter).old_program_counter
                 } else {
                     0
@@ -3905,7 +3800,7 @@ pub unsafe extern "C" fn tryagain(
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*global).none_value.is_tagtype_nil() && (*global).gcstopem == 0 {
-            luac_fullgc(interpreter, true);
+            (*global).luac_fullgc(interpreter, true);
             return raw_allocate(block, old_size, new_size);
         } else {
             return null_mut();
@@ -4315,10 +4210,8 @@ pub unsafe extern "C" fn luat_objtypename(
             metatable = (*((*o).value.object as *mut User)).get_metatable();
             !metatable.is_null()
         } {
-            let name: *const TValue = luah_getshortstr(
-                metatable,
-                luas_new(interpreter, make_cstring!("__name")),
-            );
+            let name: *const TValue =
+                luah_getshortstr(metatable, luas_new(interpreter, make_cstring!("__name")));
             if (*name).is_tagtype_string() {
                 return (*((*name).value.object as *mut TString)).get_contents_mut();
             }
@@ -4431,12 +4324,7 @@ pub unsafe extern "C" fn luat_trybintm(
                     }
                 }
                 _ => {
-                    luag_opinterror(
-                        interpreter,
-                        p1,
-                        p2,
-                        make_cstring!("perform arithmetic on"),
-                    );
+                    luag_opinterror(interpreter, p1, p2, make_cstring!("perform arithmetic on"));
                 }
             }
         }
@@ -4616,7 +4504,7 @@ pub unsafe extern "C" fn luat_getvarargs(
                     .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
                     as i64;
                 if (*(*interpreter).global).gc_debt > 0 {
-                    luac_step(interpreter);
+                    (*interpreter).luac_step();
                 }
                 luad_growstack(interpreter, nextra, true);
                 where_0 = ((*interpreter).stack.stkidrel_pointer as *mut i8).offset(t__ as isize)
@@ -4716,19 +4604,6 @@ pub unsafe extern "C" fn sweeptolive(
         return p;
     }
 }
-pub unsafe extern "C" fn check_sizes(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        if !(*global).is_emergency {
-            if (*global).string_table.length < (*global).string_table.size / 4 {
-                let olddebt: i64 = (*global).gc_debt;
-                luas_resize(interpreter, ((*global).string_table.size / 2) as usize);
-                (*global).gc_estimate = ((*global).gc_estimate as usize)
-                    .wrapping_add(((*global).gc_debt - olddebt) as usize)
-                    as usize;
-            }
-        }
-    }
-}
 pub unsafe extern "C" fn dothecall(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
     unsafe {
         luad_callnoyield(
@@ -4800,14 +4675,6 @@ pub unsafe extern "C" fn runafewfinalizers(interpreter: *mut Interpreter, n: i32
         return i;
     }
 }
-pub unsafe extern "C" fn callallpendingfinalizers(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        while !((*global).to_be_finalized).is_null() {
-            gctm_function(interpreter);
-        }
-    }
-}
 pub unsafe extern "C" fn luac_checkfinalizer(
     interpreter: *mut Interpreter,
     o: *mut Object,
@@ -4839,7 +4706,7 @@ pub unsafe extern "C" fn luac_checkfinalizer(
                     (*global).sweep_gc = sweeptolive(interpreter, (*global).sweep_gc);
                 }
             } else {
-                (*global).correctpointers(o);
+                (*global).correct_pointers(o);
             }
             let mut p: *mut *mut Object = &mut (*global).all_gc;
             while *p != o {
@@ -4919,382 +4786,6 @@ pub unsafe extern "C" fn sweepgen(
             }
         }
         return p;
-    }
-}
-pub unsafe extern "C" fn finishgencycle(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        (*global).correctgraylists();
-        check_sizes(interpreter, global);
-        (*global).gc_state = 0;
-        if !(*global).is_emergency {
-            callallpendingfinalizers(interpreter);
-        }
-    }
-}
-pub unsafe extern "C" fn youngcollection(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        if !((*global).first_old1).is_null() {
-            markold(global, (*global).first_old1, (*global).really_old);
-            (*global).first_old1 = null_mut();
-        }
-        markold(global, (*global).finalized_objects, (*global).finobjrold);
-        markold(global, (*global).to_be_finalized, null_mut());
-        atomic(interpreter);
-        (*global).gc_state = 3 as u8;
-        let mut psurvival: *mut *mut Object = sweepgen(
-            interpreter,
-            global,
-            &mut (*global).all_gc,
-            (*global).survival,
-            &mut (*global).first_old1,
-        );
-        sweepgen(
-            interpreter,
-            global,
-            psurvival,
-            (*global).old1,
-            &mut (*global).first_old1,
-        );
-        (*global).really_old = (*global).old1;
-        (*global).old1 = *psurvival;
-        (*global).survival = (*global).all_gc;
-        let mut dummy: *mut Object = null_mut();
-        psurvival = sweepgen(
-            interpreter,
-            global,
-            &mut (*global).finalized_objects,
-            (*global).finobjsur,
-            &mut dummy,
-        );
-        sweepgen(
-            interpreter,
-            global,
-            psurvival,
-            (*global).finobjold1,
-            &mut dummy,
-        );
-        (*global).finobjrold = (*global).finobjold1;
-        (*global).finobjold1 = *psurvival;
-        (*global).finobjsur = (*global).finalized_objects;
-        sweepgen(
-            interpreter,
-            global,
-            &mut (*global).to_be_finalized,
-            null_mut(),
-            &mut dummy,
-        );
-        finishgencycle(interpreter, global);
-    }
-}
-pub unsafe extern "C" fn atomic2gen(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        (*global).cleargraylists();
-        (*global).gc_state = 3 as u8;
-        sweep2old(interpreter, &mut (*global).all_gc);
-        (*global).survival = (*global).all_gc;
-        (*global).old1 = (*global).survival;
-        (*global).really_old = (*global).old1;
-        (*global).first_old1 = null_mut();
-        sweep2old(interpreter, &mut (*global).finalized_objects);
-        (*global).finobjsur = (*global).finalized_objects;
-        (*global).finobjold1 = (*global).finobjsur;
-        (*global).finobjrold = (*global).finobjold1;
-        sweep2old(interpreter, &mut (*global).to_be_finalized);
-        (*global).gc_kind = 1;
-        (*global).last_atomic = 0;
-        (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
-        finishgencycle(interpreter, global);
-    }
-}
-pub unsafe extern "C" fn entergen(interpreter: *mut Interpreter, global: *mut Global) -> usize {
-    unsafe {
-        luac_runtilstate(interpreter, 1 << 8);
-        luac_runtilstate(interpreter, 1 << 0);
-        let numobjs: usize = atomic(interpreter);
-        atomic2gen(interpreter, global);
-        (*global).set_minor_debt();
-        return numobjs;
-    }
-}
-pub unsafe extern "C" fn luac_changemode(interpreter: *mut Interpreter, newmode: i32) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        if newmode != (*global).gc_kind as i32 {
-            if newmode == 1 {
-                entergen(interpreter, global);
-            } else {
-                (*global).enter_incremental();
-            }
-        }
-        (*global).last_atomic = 0;
-    }
-}
-pub unsafe extern "C" fn fullgen(interpreter: *mut Interpreter, global: *mut Global) -> usize {
-    unsafe {
-        (*global).enter_incremental();
-        return entergen(interpreter, global);
-    }
-}
-pub unsafe extern "C" fn stepgenfull(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        let lastatomic: usize = (*global).last_atomic;
-        if (*global).gc_kind as i32 == 1 {
-            (*global).enter_incremental();
-        }
-        luac_runtilstate(interpreter, 1 << 0);
-        let newatomic: usize = atomic(interpreter);
-        if newatomic < lastatomic.wrapping_add(lastatomic >> 3) {
-            atomic2gen(interpreter, global);
-            (*global).set_minor_debt();
-        } else {
-            (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
-            entersweep(interpreter);
-            luac_runtilstate(interpreter, 1 << 8);
-            (*global).setpause();
-            (*global).last_atomic = newatomic;
-        };
-    }
-}
-pub unsafe extern "C" fn genstep(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        if (*global).last_atomic != 0 {
-            stepgenfull(interpreter, global);
-        } else {
-            let majorbase: usize = (*global).gc_estimate;
-            let majorinc: usize = majorbase
-                .wrapping_div(100 as usize)
-                .wrapping_mul((*global).generational_major_multiplier * 4);
-            if (*global).gc_debt > 0
-                && ((*global).total_bytes + (*global).gc_debt) as usize
-                    > majorbase.wrapping_add(majorinc)
-            {
-                let numobjs: usize = fullgen(interpreter, global);
-                if !((((*global).total_bytes + (*global).gc_debt) as usize)
-                    < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize)))
-                {
-                    (*global).last_atomic = numobjs;
-                    (*global).setpause();
-                }
-            } else {
-                youngcollection(interpreter, global);
-                (*global).set_minor_debt();
-                (*global).gc_estimate = majorbase;
-            }
-        };
-    }
-}
-pub unsafe extern "C" fn entersweep(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        (*global).gc_state = 3 as u8;
-        (*global).sweep_gc = sweeptolive(interpreter, &mut (*global).all_gc);
-    }
-}
-pub unsafe extern "C" fn luac_freeallobjects(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        (*global).gc_step = 4 as u8;
-        luac_changemode(interpreter, 0);
-        (*global).separatetobefnz(true);
-        callallpendingfinalizers(interpreter);
-        delete_list(
-            interpreter,
-            (*global).all_gc,
-            &mut (*((*global).main_state as *mut Object)),
-        );
-        delete_list(interpreter, (*global).fixed_gc, null_mut());
-    }
-}
-pub unsafe extern "C" fn atomic(interpreter: *mut Interpreter) -> usize {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        let mut work: usize = 0;
-        let grayagain: *mut Object = (*global).gray_again;
-        (*global).gray_again = null_mut();
-        (*global).gc_state = 2 as u8;
-        if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            really_mark_object(global, &mut (*(interpreter as *mut Object)));
-        }
-        if ((*global).l_registry.is_collectable())
-            && (*(*global).l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-        {
-            really_mark_object(global, (*global).l_registry.value.object);
-        }
-        (*global).markmt();
-        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
-        work = (work as usize).wrapping_add((*global).remarkupvals() as usize) as usize;
-        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
-        (*global).gray = grayagain;
-        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
-        (*global).convergeephemerons();
-        clearbyvalues(global, (*global).weak, null_mut());
-        clearbyvalues(global, (*global).all_weak, null_mut());
-        let origweak: *mut Object = (*global).weak;
-        let origall: *mut Object = (*global).all_weak;
-        (*global).separatetobefnz(false);
-        work = (work as usize).wrapping_add((*global).markbeingfnz()) as usize;
-        work = (work as usize).wrapping_add((*global).propagateall()) as usize;
-        (*global).convergeephemerons();
-        clearbykeys(global, (*global).ephemeron);
-        clearbykeys(global, (*global).all_weak);
-        clearbyvalues(global, (*global).weak, origweak);
-        clearbyvalues(global, (*global).all_weak, origall);
-        (*global).stringcache_clear();
-        (*global).current_white = ((*global).current_white as i32 ^ (1 << 3 | 1 << 4)) as u8;
-        return work;
-    }
-}
-pub unsafe extern "C" fn sweepstep(
-    interpreter: *mut Interpreter,
-    global: *mut Global,
-    nextstate: i32,
-    nextlist: *mut *mut Object,
-) -> i32 {
-    unsafe {
-        if !((*global).sweep_gc).is_null() {
-            let olddebt: i64 = (*global).gc_debt;
-            let mut count: i32 = 0;
-            (*global).sweep_gc =
-                (*interpreter).sweep_list((*global).sweep_gc, 100 as i32, &mut count);
-            (*global).gc_estimate = ((*global).gc_estimate as usize)
-                .wrapping_add(((*global).gc_debt - olddebt) as usize)
-                as usize as usize;
-            return count;
-        } else {
-            (*global).gc_state = nextstate as u8;
-            (*global).sweep_gc = nextlist;
-            return 0;
-        };
-    }
-}
-pub unsafe extern "C" fn singlestep(interpreter: *mut Interpreter) -> usize {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        let work: usize;
-        (*global).gcstopem = 1;
-        match (*global).gc_state as i32 {
-            8 => {
-                (*global).restartcollection();
-                (*global).gc_state = 0;
-                work = 1 as usize;
-            }
-            0 => {
-                if ((*global).gray).is_null() {
-                    (*global).gc_state = 1;
-                    work = 0;
-                } else {
-                    work = (*global).propagatemark();
-                }
-            }
-            1 => {
-                work = atomic(interpreter);
-                entersweep(interpreter);
-                (*global).gc_estimate = ((*global).total_bytes + (*global).gc_debt) as usize;
-            }
-            3 => {
-                work = sweepstep(interpreter, global, 4, &mut (*global).finalized_objects) as usize;
-            }
-            4 => {
-                work = sweepstep(interpreter, global, 5, &mut (*global).to_be_finalized) as usize;
-            }
-            5 => {
-                work = sweepstep(interpreter, global, 6, null_mut()) as usize;
-            }
-            6 => {
-                check_sizes(interpreter, global);
-                (*global).gc_state = 7 as u8;
-                work = 0;
-            }
-            7 => {
-                if !((*global).to_be_finalized).is_null() && !(*global).is_emergency {
-                    (*global).gcstopem = 0;
-                    work = (runafewfinalizers(interpreter, 10 as i32) * 50 as i32) as usize;
-                } else {
-                    (*global).gc_state = 8 as u8;
-                    work = 0;
-                }
-            }
-            _ => return 0usize,
-        }
-        (*global).gcstopem = 0;
-        return work;
-    }
-}
-pub unsafe extern "C" fn luac_runtilstate(interpreter: *mut Interpreter, statesmask: i32) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        while statesmask & 1 << (*global).gc_state as i32 == 0 {
-            singlestep(interpreter);
-        }
-    }
-}
-pub unsafe extern "C" fn incstep(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        let stepmul: i32 = (*global).gc_step_multiplier as i32 * 4 | 1;
-        let mut debt: i64 = ((*global).gc_debt as usize)
-            .wrapping_div(size_of::<TValue>() as usize)
-            .wrapping_mul(stepmul as usize) as i64;
-        let stepsize: i64 = (if (*global).gc_step_size as usize
-            <= (size_of::<i64>() as usize)
-                .wrapping_mul(8 as usize)
-                .wrapping_sub(2 as usize)
-        {
-            ((1 << (*global).gc_step_size as i32) as usize)
-                .wrapping_div(size_of::<TValue>() as usize)
-                .wrapping_mul(stepmul as usize)
-        } else {
-            (!(0usize) >> 1) as usize
-        }) as i64;
-        loop {
-            let work: usize = singlestep(interpreter);
-            debt = (debt as usize).wrapping_sub(work) as i64;
-            if !(debt > -stepsize && (*global).gc_state as i32 != 8) {
-                break;
-            }
-        }
-        if (*global).gc_state as i32 == 8 {
-            (*global).setpause();
-        } else {
-            debt = ((debt / stepmul as i64) as usize).wrapping_mul(size_of::<TValue>() as usize)
-                as i64;
-            (*global).set_debt(debt);
-        };
-    }
-}
-pub unsafe extern "C" fn luac_step(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        if !((*global).gc_step as i32 == 0) {
-            (*global).set_debt(-(2000 as i32) as i64);
-        } else if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
-            genstep(interpreter, global);
-        } else {
-            incstep(interpreter, global);
-        };
-    }
-}
-pub unsafe extern "C" fn fullinc(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        if (*global).gc_state as i32 <= 2 {
-            entersweep(interpreter);
-        }
-        luac_runtilstate(interpreter, 1 << 8);
-        luac_runtilstate(interpreter, 1 << 0);
-        (*global).gc_state = 1;
-        luac_runtilstate(interpreter, 1 << 7);
-        luac_runtilstate(interpreter, 1 << 8);
-        (*global).setpause();
-    }
-}
-pub unsafe extern "C" fn luac_fullgc(interpreter: *mut Interpreter, is_emergency: bool) {
-    unsafe {
-        (*((*interpreter).global)).is_emergency = is_emergency;
-        if (*((*interpreter).global)).gc_kind as i32 == 0 {
-            fullinc(interpreter, (*interpreter).global);
-        } else {
-            fullgen(interpreter, (*interpreter).global);
-        }
-        (*((*interpreter).global)).is_emergency = false;
     }
 }
 pub unsafe extern "C" fn callclosemethod(
@@ -5558,9 +5049,9 @@ pub unsafe extern "C" fn pushclosure(
     ra: StackValuePointer,
 ) {
     unsafe {
-        let nup: i32 = (*p).prototype_upvalues.get_size();
+        let nup = (*p).prototype_upvalues.get_size();
         let uv: *mut UpValueDescription = (*p).prototype_upvalues.vectort_pointer;
-        let ncl: *mut Closure = luaf_newlclosure(interpreter, nup);
+        let ncl: *mut Closure = luaf_newlclosure(interpreter, nup as i32);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra).tvalue;
         let x_: *mut Closure = ncl;
@@ -6295,7 +5786,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             if (*(*interpreter).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = ra_17.offset(1 as isize);
-                                luac_step(interpreter);
+                                (*interpreter).luac_step();
                                 trap = (*call_info).u.l.trap;
                             }
                             continue;
@@ -7584,7 +7075,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer =
                                     (*interpreter).top.stkidrel_pointer;
-                                luac_step(interpreter);
+                                (*interpreter).luac_step();
                                 trap = (*call_info).u.l.trap;
                             }
                             continue;
@@ -8276,7 +7767,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
                             if (*(*interpreter).global).gc_debt > 0 {
                                 (*call_info).u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = ra_77.offset(1 as isize);
-                                luac_step(interpreter);
+                                (*interpreter).luac_step();
                                 trap = (*call_info).u.l.trap;
                             }
                             continue;
@@ -8394,11 +7885,7 @@ pub unsafe extern "C" fn pushglobalfuncname(
             -(1000000 as i32) - 1000 as i32,
             make_cstring!("_LOADED"),
         );
-        lual_checkstack(
-            interpreter,
-            6,
-            make_cstring!("not enough stack"),
-        );
+        lual_checkstack(interpreter, 6, make_cstring!("not enough stack"));
         if findfield(interpreter, top + 1, 2) {
             let name: *const i8 = lua_tolstring(interpreter, -1, null_mut());
             if strncmp(name, make_cstring!("_G."), 3) == 0 {
@@ -8600,7 +8087,7 @@ pub unsafe extern "C" fn lual_argerror(
         if lua_getstack(interpreter, 0, &mut ar) == 0 {
             return lual_error(
                 interpreter,
-                b"bad argument #%d (%s)\0".as_ptr(),
+                make_cstring!("bad argument #%d (%s)"),
                 arg,
                 extramsg,
             );
@@ -8611,7 +8098,7 @@ pub unsafe extern "C" fn lual_argerror(
             if arg == 0 {
                 return lual_error(
                     interpreter,
-                    b"calling '%s' on bad self (%s)\0".as_ptr(),
+                    make_cstring!("calling '%s' on bad self (%s)"),
                     ar.name,
                     extramsg,
                 );
@@ -8626,7 +8113,7 @@ pub unsafe extern "C" fn lual_argerror(
         }
         return lual_error(
             interpreter,
-            b"bad argument #%d to '%s' (%s)\0".as_ptr(),
+            make_cstring!("bad argument #%d to '%s' (%s)"),
             arg,
             ar.name,
             extramsg,
@@ -8641,9 +8128,7 @@ pub unsafe extern "C" fn lual_typeerror(
     unsafe {
         let message: *const i8;
         let typearg: *const i8;
-        if lual_getmetafield(interpreter, arg, make_cstring!("__name"))
-            == TagType::String
-        {
+        if lual_getmetafield(interpreter, arg, make_cstring!("__name")) == TagType::String {
             typearg = lua_tolstring(interpreter, -1, null_mut());
         } else if lua_type(interpreter, arg) == Some(TagType::Pointer) {
             typearg = make_cstring!("light userdata");
@@ -8702,14 +8187,13 @@ pub unsafe extern "C" fn lual_where(interpreter: *mut Interpreter, level: i32) {
 }
 pub unsafe extern "C" fn lual_error(
     interpreter: *mut Interpreter,
-    fmt: *const u8,
+    fmt: *const i8,
     args: ...
 ) -> i32 {
     unsafe {
-        let mut argp: ::core::ffi::VaListImpl;
-        argp = args.clone();
+        let mut argp: ::core::ffi::VaListImpl = args.clone();
         lual_where(interpreter, 1);
-        lua_pushvfstring(interpreter, fmt as *const i8, argp.as_va_list());
+        lua_pushvfstring(interpreter, fmt, argp.as_va_list());
         lua_concat(interpreter, 2);
         return lua_error(interpreter);
     }
@@ -8725,20 +8209,14 @@ pub unsafe extern "C" fn lual_fileresult(
             (*interpreter).push_boolean(true);
             return 1;
         } else {
-            let message: *const i8;
             (*interpreter).push_nil();
-            message = if en != 0 {
+            let message: *const i8 = if en != 0 {
                 strerror(en) as *const i8
             } else {
                 make_cstring!("(no extra info)")
             };
             if !fname.is_null() {
-                lua_pushfstring(
-                    interpreter,
-                    make_cstring!("%s: %s"),
-                    fname,
-                    message,
-                );
+                lua_pushfstring(interpreter, make_cstring!("%s: %s"), fname, message);
             } else {
                 lua_pushstring(interpreter, message);
             }
@@ -8774,14 +8252,15 @@ pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname:
     unsafe {
         if lua_getfield(interpreter, -1000000 - 1000, tname) != TagType::Nil {
             return 0;
+        } else {
+            lua_settop(interpreter, -2);
+            (*interpreter).lua_createtable();
+            lua_pushstring(interpreter, tname);
+            lua_setfield(interpreter, -2, make_cstring!("__name"));
+            lua_pushvalue(interpreter, -1);
+            lua_setfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
+            return 1;
         }
-        lua_settop(interpreter, -2);
-        (*interpreter).lua_createtable();
-        lua_pushstring(interpreter, tname);
-        lua_setfield(interpreter, -2, make_cstring!("__name"));
-        lua_pushvalue(interpreter, -1);
-        lua_setfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
-        return 1;
     }
 }
 pub unsafe extern "C" fn lual_setmetatable(interpreter: *mut Interpreter, tname: *const i8) {
@@ -8846,11 +8325,7 @@ pub unsafe extern "C" fn lual_checkoption(
         return lual_argerror(
             interpreter,
             arg,
-            lua_pushfstring(
-                interpreter,
-                make_cstring!("invalid option '%s'"),
-                name,
-            ),
+            lua_pushfstring(interpreter, make_cstring!("invalid option '%s'"), name),
         );
     }
 }
@@ -8862,9 +8337,9 @@ pub unsafe extern "C" fn lual_checkstack(
     unsafe {
         if lua_checkstack(interpreter, space) == 0 {
             if message.is_null() {
-                lual_error(interpreter, b"stack overflow\0".as_ptr());
+                lual_error(interpreter, make_cstring!("stack overflow"));
             } else {
-                lual_error(interpreter, b"stack overflow (%s)\0".as_ptr(), message);
+                lual_error(interpreter, make_cstring!("stack overflow (%s)"), message);
             }
         }
     }
@@ -8879,11 +8354,7 @@ pub unsafe extern "C" fn lual_checktype(interpreter: *mut Interpreter, arg: i32,
 pub unsafe extern "C" fn lual_checkany(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         if lua_type(interpreter, arg) == None {
-            lual_argerror(
-                interpreter,
-                arg,
-                make_cstring!("value expected"),
-            );
+            lual_argerror(interpreter, arg, make_cstring!("value expected"));
         }
     }
 }
@@ -9015,12 +8486,7 @@ pub unsafe extern "C" fn errfile(
                 strerror(err),
             );
         } else {
-            lua_pushfstring(
-                interpreter,
-                make_cstring!("cannot %s %s"),
-                what,
-                filename,
-            );
+            lua_pushfstring(interpreter, make_cstring!("cannot %s %s"), what, filename);
         }
         lua_rotate(interpreter, fnameindex, -1);
         lua_settop(interpreter, -2);
@@ -9093,11 +8559,7 @@ pub unsafe extern "C" fn lual_loadfilex(
                 *__errno_location() = 0;
                 lf.file = freopen(filename, make_cstring!("rb"), lf.file);
                 if (lf.file).is_null() {
-                    return errfile(
-                        interpreter,
-                        make_cstring!("reopen"),
-                        fnameindex,
-                    );
+                    return errfile(interpreter, make_cstring!("reopen"), fnameindex);
                 }
                 skipcomment(lf.file, &mut c);
             }
@@ -9220,7 +8682,10 @@ pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> 
         lua_len(interpreter, index);
         l = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
-            lual_error(interpreter, b"object length is not an integer\0".as_ptr());
+            lual_error(
+                interpreter,
+                make_cstring!("object length is not an integer"),
+            );
         }
         lua_settop(interpreter, -2);
         return l;
@@ -9233,13 +8698,12 @@ pub unsafe extern "C" fn lual_tolstring(
 ) -> *const i8 {
     unsafe {
         index = lua_absindex(interpreter, index);
-        if lual_callmeta(
-            interpreter,
-            index,
-            make_cstring!("__tostring"),
-        ) {
+        if lual_callmeta(interpreter, index, make_cstring!("__tostring")) {
             if !lua_isstring(interpreter, -1) {
-                lual_error(interpreter, b"'__tostring' must return a string\0".as_ptr());
+                lual_error(
+                    interpreter,
+                    make_cstring!("'__tostring' must return a string"),
+                );
             }
         } else {
             match lua_type(interpreter, index) {
@@ -9275,11 +8739,7 @@ pub unsafe extern "C" fn lual_tolstring(
                     lua_pushstring(interpreter, make_cstring!("nil"));
                 }
                 _ => {
-                    let tag = lual_getmetafield(
-                        interpreter,
-                        index,
-                        make_cstring!("__name"),
-                    );
+                    let tag = lual_getmetafield(interpreter, index, make_cstring!("__name"));
                     let kind: *const i8 = if tag == TagType::String {
                         lua_tolstring(interpreter, -1, null_mut())
                     } else {
@@ -9307,11 +8767,7 @@ pub unsafe extern "C" fn lual_setfuncs(
     nup: i32,
 ) {
     unsafe {
-        lual_checkstack(
-            interpreter,
-            nup,
-            make_cstring!("too many upvalues"),
-        );
+        lual_checkstack(interpreter, nup, make_cstring!("too many upvalues"));
         while !((*l).name).is_null() {
             if ((*l).function).is_none() {
                 (*interpreter).push_boolean(false);
@@ -9494,11 +8950,7 @@ pub unsafe extern "C" fn warnfcont(
                 interpreter as *mut libc::c_void,
             );
         } else {
-            fprintf(
-                stderr,
-                make_cstring!("%s"),
-                make_cstring!("\n"),
-            );
+            fprintf(stderr, make_cstring!("%s"), make_cstring!("\n"));
             fflush(stderr);
             lua_setwarnf(
                 interpreter,
@@ -9517,11 +8969,7 @@ pub unsafe extern "C" fn warnfon(
         if checkcontrol(arbitrary_data as *mut Interpreter, message, tocont) != 0 {
             return;
         }
-        fprintf(
-            stderr,
-            make_cstring!("%s"),
-            make_cstring!("Lua warning: "),
-        );
+        fprintf(stderr, make_cstring!("%s"), make_cstring!("Lua warning: "));
         fflush(stderr);
         warnfcont(arbitrary_data, message, tocont);
     }
@@ -9636,12 +9084,12 @@ pub unsafe extern "C" fn lual_checkversion_(
         {
             lual_error(
                 interpreter,
-                b"core and library have incompatible numeric types\0".as_ptr(),
+                make_cstring!("core and library have incompatible numeric types"),
             );
         } else if v != version {
             lual_error(
                 interpreter,
-                b"version mismatch: app. needs %f, Lua core provides %f\0".as_ptr(),
+                make_cstring!("version mismatch: app. needs %f, Lua core provides %f"),
                 version,
                 v,
             );
@@ -9737,7 +9185,7 @@ pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" f
 pub unsafe extern "C" fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(interpreter, None, 0, 0);
-        lual_error(interpreter, b"interrupted!\0".as_ptr());
+        lual_error(interpreter, make_cstring!("interrupted!"));
     }
 }
 pub unsafe extern "C" fn laction(i: i32) {
@@ -9759,11 +9207,7 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
         if *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_E as i32
             || *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_L as i32
         {
-            fprintf(
-                stderr,
-                make_cstring!("'%s' needs argument\n"),
-                badoption,
-            );
+            fprintf(stderr, make_cstring!("'%s' needs argument\n"), badoption);
             fflush(stderr);
         } else {
             fprintf(
@@ -9774,11 +9218,12 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
             fflush(stderr);
         }
         fprintf(
-        stderr,
-        b"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n\0"
-            as *const u8 as *const i8,
-        PROGRAM_NAME,
-    );
+            stderr,
+            make_cstring!(
+                "usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n"
+            ),
+            PROGRAM_NAME,
+        );
         fflush(stderr);
     }
 }
@@ -9912,7 +9357,7 @@ pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32;
         if lua_getglobal(interpreter, make_cstring!("arg")) != TagType::Table {
-            lual_error(interpreter, b"'arg' is not a table\0".as_ptr());
+            lual_error(interpreter, make_cstring!("'arg' is not a table"));
         }
         n = lual_len(interpreter, -1) as i32;
         lual_checkstack(
@@ -10050,11 +9495,7 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
                         continue;
                     }
                     status = if option == CHARACTER_LOWER_E as i32 {
-                        dostring(
-                            interpreter,
-                            extra,
-                            make_cstring!("=(command line)"),
-                        )
+                        dostring(interpreter, extra, make_cstring!("=(command line)"))
                     } else {
                         dolibrary(interpreter, extra)
                     };
@@ -10153,8 +9594,7 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
 pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let line: *const i8 = lua_tolstring(interpreter, -1, null_mut());
-        let retline: *const i8 =
-            lua_pushfstring(interpreter, make_cstring!("return %s;"), line);
+        let retline: *const i8 = lua_pushfstring(interpreter, make_cstring!("return %s;"), line);
         let status: i32 = lual_loadbufferx(
             interpreter,
             retline,
@@ -10176,13 +9616,8 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
         loop {
             let mut length: usize = 0;
             let line: *const i8 = lua_tolstring(interpreter, 1, &mut length);
-            let status: i32 = lual_loadbufferx(
-                interpreter,
-                line,
-                length,
-                make_cstring!("=stdin"),
-                null(),
-            );
+            let status: i32 =
+                lual_loadbufferx(interpreter, line, length, make_cstring!("=stdin"), null());
             if incomplete(interpreter, status) == 0 || !pushline(interpreter, 0) {
                 return status;
             }
@@ -10251,7 +9686,7 @@ pub unsafe extern "C" fn checkstack(
         if ((interpreter != other_state && lua_checkstack(other_state, n) == 0) as i32 != 0) as i64
             != 0
         {
-            lual_error(interpreter, b"stack overflow\0".as_ptr());
+            lual_error(interpreter, make_cstring!("stack overflow"));
         }
     }
 }
@@ -10332,11 +9767,7 @@ pub unsafe extern "C" fn checkupval(
         id = lua_upvalueid(interpreter, argf, nup);
         if !pnup.is_null() {
             if id.is_null() {
-                lual_argerror(
-                    interpreter,
-                    argnup,
-                    make_cstring!("invalid upvalue index"),
-                );
+                lual_argerror(interpreter, argnup, make_cstring!("invalid upvalue index"));
             }
             *pnup = nup;
         }
@@ -10405,4 +9836,4 @@ pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
         return smask;
     }
 }
-pub const HOOKKEY: *const i8 = make_cstring!(_HOOKKEY);
+pub const HOOKKEY: *const i8 = make_cstring!("_HOOKKEY");

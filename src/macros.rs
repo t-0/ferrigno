@@ -1,9 +1,9 @@
-#[macro_export]
-macro_rules! create_string_variable {
-    ($name:ident; $value:expr) => {
-        pub const $name: *const i8 = make_cstring!($value);
-    };
-}
+//#[macro_export]
+//macro_rules! create_string_variable {
+//    ($name:ident; $value:expr) => {
+//        pub const $name: *const i8 = make_cstring! ($value);
+//    };
+//}
 // macro_rules! c_string {
 //     ($value:tt) => {
 //          concat!("b\"", $value, "\"\0").as_bytes().as_ptr() as *const u8 as *const i8

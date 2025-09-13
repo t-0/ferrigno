@@ -107,21 +107,19 @@ pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
 pub const fn set_collectable(tag: u8) -> u8 {
     tag | TAG_COLLECTABLE
 }
-pub const STRING_LOCAL: [i8; 6] =
-    unsafe { *::core::mem::transmute::<&[u8; 6], &[i8; 6]>(b"local\0") };
-pub const STRING_UPVALUE: [i8; 8] =
-    unsafe { *::core::mem::transmute::<&[u8; 8], &[i8; 8]>(b"upvalue\0") };
+pub const STRING_LOCAL: *const i8 = make_cstring!("local");
+pub const STRING_UPVALUE: *const i8 = make_cstring!("upvalue");
 pub const TYPE_NAMES: [*const i8; 12] = [
-    make_cstring!(no value),
-    make_cstring!(nil),
-    make_cstring!(boolean),
-    make_cstring!(userdata),
-    make_cstring!(number),
-    make_cstring!(string),
-    make_cstring!(table),
-    make_cstring!(function),
-    make_cstring!(userdata),
-    make_cstring!(thread),
-    make_cstring!(upvalue),
-    make_cstring!(proto),
+    make_cstring!("no value"),
+    make_cstring!("nil"),
+    make_cstring!("boolean"),
+    make_cstring!("userdata"),
+    make_cstring!("number"),
+    make_cstring!("string"),
+    make_cstring!("table"),
+    make_cstring!("function"),
+    make_cstring!("userdata"),
+    make_cstring!("thread"),
+    make_cstring!("upvalue"),
+    make_cstring!("proto"),
 ];

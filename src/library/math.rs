@@ -363,7 +363,7 @@ unsafe extern "C" fn math_random(interpreter: *mut Interpreter) -> i32 {
                 up = lual_checkinteger(interpreter, 2);
             }
             _ => {
-                return lual_error(interpreter, b"wrong number of arguments\0".as_ptr());
+                return lual_error(interpreter, make_cstring!("wrong number of arguments"));
             }
         }
         (((low <= up) as i32 != 0) as i64 != 0

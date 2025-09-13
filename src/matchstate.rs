@@ -56,7 +56,7 @@ impl MatchState {
             } else if !lua_isstring(interpreter, -1) {
                 return lual_error(
                     interpreter,
-                    b"invalid replacement value (a %s)\0".as_ptr(),
+                    make_cstring!("invalid replacement value (a %s)"),
                     lua_typename(interpreter, lua_type(interpreter, -1)),
                 );
             } else {
@@ -104,7 +104,7 @@ impl MatchState {
                 if i != 0 {
                     lual_error(
                         self.interpreter,
-                        b"invalid capture index %%%d\0".as_ptr(),
+                        make_cstring!("invalid capture index %%%d"),
                         i + 1,
                     );
                 }
@@ -114,7 +114,7 @@ impl MatchState {
                 let capl: i64 = self.capture[i as usize].length;
                 *cap = self.capture[i as usize].init;
                 if capl == -1 {
-                    lual_error(self.interpreter, b"unfinished capture\0".as_ptr());
+                    lual_error(self.interpreter, make_cstring!("unfinished capture"));
                 } else if capl == -2 as i64 {
                     (*(self.interpreter)).push_integer(
                         ((self.capture[i as usize].init).offset_from(self.src_init) as i64 + 1)
@@ -135,7 +135,7 @@ impl MatchState {
             {
                 return lual_error(
                     self.interpreter,
-                    b"invalid capture index %%%d\0".as_ptr(),
+                    make_cstring!("invalid capture index %%%d"),
                     l + 1,
                 );
             }
@@ -152,7 +152,7 @@ impl MatchState {
                 }
                 level -= 1;
             }
-            return lual_error(self.interpreter, b"invalid pattern capture\0".as_ptr());
+            return lual_error(self.interpreter, make_cstring!("invalid pattern capture"));
         }
     }
     pub unsafe extern "C" fn classend(&mut self, mut p: *const i8) -> *const i8 {
@@ -164,7 +164,7 @@ impl MatchState {
                     if p == self.p_end {
                         lual_error(
                             self.interpreter,
-                            b"malformed pattern (ends with '%%')\0".as_ptr(),
+                            make_cstring!("malformed pattern (ends with '%%')"),
                         );
                     }
                     return p.offset(1 as isize);
@@ -177,7 +177,7 @@ impl MatchState {
                         if p == self.p_end {
                             lual_error(
                                 self.interpreter,
-                                b"malformed pattern (missing CHARACTER_BRACKET_RIGHT)\0".as_ptr(),
+                                make_cstring!("malformed pattern (missing CHARACTER_BRACKET_RIGHT)"),
                             );
                         }
                         let fresh161 = p;
@@ -222,7 +222,7 @@ impl MatchState {
             if p >= self.p_end.offset(-1) {
                 lual_error(
                     self.interpreter,
-                    b"malformed pattern (missing arguments to '%%b')\0".as_ptr(),
+                    make_cstring!("malformed pattern (missing arguments to '%%b')"),
                 );
             }
             if *s as i32 != *p as i32 {
@@ -299,7 +299,7 @@ impl MatchState {
             let res: *const i8;
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
-                lual_error(self.interpreter, b"too many captures\0".as_ptr());
+                lual_error(self.interpreter, make_cstring!("too many captures"));
             }
             self.capture[level].init = s;
             self.capture[level].length = what as i64;
@@ -349,7 +349,7 @@ impl MatchState {
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
             if fresh162 == 0 {
-                lual_error(self.interpreter, b"pattern too complex\0".as_ptr());
+                lual_error(self.interpreter, make_cstring!("pattern too complex"));
             }
             loop {
                 if !(p != self.p_end) {
@@ -398,7 +398,7 @@ impl MatchState {
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
-                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),
+                                            make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"),
                                         );
                                     }
                                     ep = self.classend(p);
@@ -456,7 +456,7 @@ impl MatchState {
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
-                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),
+                                            make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"),
                                         );
                                     }
                                     ep = self.classend(p);
@@ -515,7 +515,7 @@ impl MatchState {
                                     if *p as i32 != CHARACTER_BRACKET_LEFT {
                                         lual_error(
                                             self.interpreter,
-                                            b"missing CHARACTER_BRACKET_LEFT after '%%f' in pattern\0".as_ptr(),
+                                            make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"),
                                         );
                                     }
                                     ep = self.classend(p);
@@ -674,7 +674,7 @@ impl MatchState {
                 } else {
                     lual_error(
                         interpreter,
-                        b"invalid use of '%c' in replacement string\0".as_ptr(),
+                        make_cstring!("invalid use of '%c' in replacement string"),
                         CHARACTER_PERCENT as i32,
                     );
                 }

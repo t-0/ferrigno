@@ -6,8 +6,8 @@ use std::{mem::*, ptr::*};
 #[repr(C)]
 pub struct VectorT<T> {
     pub vectort_pointer: *mut T,
-    vectort_length: i32,
-    vectort_size: i32,
+    vectort_length: usize,
+    vectort_size: usize,
 }
 impl<T> VectorT<T> {
     pub fn capitulate(&mut self) -> (*mut T, usize) {
@@ -19,7 +19,7 @@ impl<T> VectorT<T> {
     }
     pub fn inject(&mut self, pointer: *mut T, size: usize) {
         self.vectort_pointer = pointer;
-        self.vectort_size = size as i32;
+        self.vectort_size = size;
         self.vectort_length = 0;
     }
     pub fn new() -> VectorT<T> {
@@ -30,13 +30,13 @@ impl<T> VectorT<T> {
         }
     }
     pub fn add_length(&mut self, length: usize) {
-        self.vectort_length += length as i32;
+        self.vectort_length += length;
     }
     pub fn subtract_length(&mut self, length: usize) {
-        self.vectort_length -= length as i32;
+        self.vectort_length -= length;
     }
     pub fn set_length(&mut self, length: usize) {
-        self.vectort_length = length as i32;
+        self.vectort_length = length;
     }
     pub fn zero_length(&mut self) {
         self.vectort_length = 0;
@@ -57,7 +57,7 @@ impl<T> VectorT<T> {
                 new_total,
             ) as *mut T;
             self.vectort_length = 0;
-            self.vectort_size = new_size as i32;
+            self.vectort_size = new_size;
         }
     }
     pub unsafe fn at(&self, index: isize) -> *const T {
@@ -70,17 +70,17 @@ impl<T> VectorT<T> {
             return self.vectort_pointer.offset(index);
         }
     }
-    pub fn get_length(&self) -> i32 {
+    pub fn get_length(&self) -> usize {
         self.vectort_length
     }
-    pub fn get_size(&self) -> i32 {
-        self.vectort_size
+    pub fn get_size(&self) -> usize {
+        self.vectort_size as usize
     }
     pub unsafe fn initialize_size(&mut self, interpreter: *mut Interpreter, size: usize) {
         unsafe {
             self.vectort_pointer =
                 luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
-            self.vectort_size = size as i32;
+            self.vectort_size = size;
         }
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
@@ -99,12 +99,12 @@ impl<T> VectorT<T> {
         &mut self,
         interpreter: *mut Interpreter,
         new_length: usize,
-        limit: i32,
+        limit: usize,
         what: *const i8,
     ) {
         unsafe {
-            let mut new_size: i32 = self.vectort_size;
-            if new_length + 1 <= new_size as usize {
+            let mut new_size = self.vectort_size;
+            if new_length + 1 <= new_size {
                 return;
             }
             if new_size >= limit / 2 {
@@ -140,7 +140,7 @@ impl<T> VectorT<T> {
                 (self.vectort_size as usize).wrapping_mul(size_of::<T>()),
                 new_size.wrapping_mul(size_of::<T>()),
             ) as *mut T;
-            self.vectort_size = new_size as i32;
+            self.vectort_size = new_size;
         }
     }
 }

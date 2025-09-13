@@ -64,7 +64,7 @@ unsafe extern "C" fn luab_close(interpreter: *mut Interpreter) -> i32 {
             _ => {
                 return lual_error(
                     interpreter,
-                    b"cannot close a %s coroutine\0".as_ptr(),
+                    make_cstring!("cannot close a %s coroutine"),
                     COROUTINE_STATUS_NAMES[status as usize],
                 );
             }

@@ -1,5 +1,3 @@
-use rlua::*;
-use crate::global::*;
 use crate::interpreter::*;
 use crate::table::*;
 use crate::tstring::*;
@@ -27,63 +25,52 @@ impl StringTable {
             self.length -= 1;
         }
     }
+    pub unsafe extern "C" fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
+        unsafe {
+            let old_size = self.size as usize;
+            if new_size < old_size {
+                tablerehash(self.hash, old_size, new_size);
+            }
+            let newvect: *mut *mut TString = luam_realloc_(
+                interpreter,
+                self.hash as *mut libc::c_void,
+                old_size.wrapping_mul(size_of::<*mut TString>()),
+                new_size.wrapping_mul(size_of::<*mut TString>()),
+            ) as *mut *mut TString;
+            if newvect.is_null() {
+                if new_size < old_size {
+                    tablerehash(self.hash, new_size, old_size);
+                }
+            } else {
+                self.hash = newvect;
+                self.size = new_size as i32;
+                if new_size > old_size {
+                    tablerehash(newvect, old_size, new_size);
+                }
+            };
+        }
+    }
+    pub unsafe extern "C" fn initialize(&mut self, interpreter: *mut Interpreter) {
+        unsafe {
+            self.hash = luam_malloc_(
+                interpreter,
+                STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>()),
+            ) as *mut *mut TString;
+            tablerehash(self.hash, 0, STRINGTABLE_INITIAL_SIZE);
+            self.size = STRINGTABLE_INITIAL_SIZE as i32;
+        }
+    }
 }
 pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*interpreter).global).string_table;
-        let old_size = (*tb).size as usize;
-        if new_size < old_size {
-            tablerehash((*tb).hash, old_size, new_size);
-        }
-        let newvect: *mut *mut TString = luam_realloc_(
-            interpreter,
-            (*tb).hash as *mut libc::c_void,
-            old_size.wrapping_mul(size_of::<*mut TString>()),
-            new_size.wrapping_mul(size_of::<*mut TString>()),
-        ) as *mut *mut TString;
-        if newvect.is_null() {
-            if new_size < old_size {
-                tablerehash((*tb).hash, new_size, old_size);
-            }
-        } else {
-            (*tb).hash = newvect;
-            (*tb).size = new_size as i32;
-            if new_size > old_size {
-                tablerehash(newvect, old_size, new_size);
-            }
-        };
-    }
-}
-pub unsafe extern "C" fn luas_init_state(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).global;
-        luas_init_global(global, interpreter);
-    }
-}
-pub unsafe extern "C" fn luas_init_global(global: *mut Global, interpreter: *mut Interpreter) {
-    unsafe {
-        let tb: *mut StringTable = &mut (*global).string_table;
-        (*tb).hash = luam_malloc_(
-            interpreter,
-            STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>()),
-        ) as *mut *mut TString;
-        tablerehash((*tb).hash, 0, STRINGTABLE_INITIAL_SIZE);
-        (*tb).size = STRINGTABLE_INITIAL_SIZE as i32;
-        (*global).memory_error_message = luas_newlstr(
-            interpreter,
-            make_cstring!("not enough memory"),
-            (size_of::<[i8; 18]>())
-                .wrapping_div(size_of::<i8>())
-                .wrapping_sub(1),
-        );
-        (*global).fix_memory_error_message_global();
-        (*global).stringcache_set_error();
+        (*tb).resize(interpreter, new_size);
     }
 }
 pub unsafe extern "C" fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {
     unsafe {
         if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
-            luac_fullgc(interpreter, true);
+            (*interpreter).luac_fullgc(true);
             if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
                 luad_throw(interpreter, 4);
             }
