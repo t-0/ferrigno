@@ -30,7 +30,6 @@ use crate::tag::*;
 use crate::tm::*;
 use crate::token::*;
 use crate::tstring::*;
-use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::upvaluedescription::*;
 use crate::user::*;
@@ -471,7 +470,7 @@ impl Interpreter {
                 return &mut (*self.global).l_registry;
             } else {
                 index = -(1000000 as i32) - 1000 as i32 - index;
-                let value = (*(*call_info).function.stkidrel_pointer);
+                let value = *(*call_info).function.stkidrel_pointer;
                 if value.is_collectable() && value.get_tag_variant() == TAG_VARIANT_CLOSURE_C {
                     let function: *mut Closure = &mut (*(value.value.object as *mut Closure));
                     return if index <= (*function).count_upvalues as i32 {

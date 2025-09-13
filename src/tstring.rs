@@ -7,7 +7,6 @@ use crate::tvalue::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use std::ptr::*;
