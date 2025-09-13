@@ -124,7 +124,7 @@ impl LoadState {
                     ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
                     ts = TString::create_long(interpreter, size as usize);
-                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
+                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     (*io).value.object = &mut (*(ts as *mut Object));
                     (*io).set_tag_variant((*ts).get_tag_variant());
                     (*io).set_collectable(true);
@@ -482,7 +482,7 @@ pub unsafe fn load_closure(
         load_state.zio = zio;
         load_state.check_header();
         let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
-        let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
+        let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         (*io).value.object = &mut (*(ret as *mut Object));
         (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable(true);

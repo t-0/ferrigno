@@ -2101,7 +2101,7 @@ pub unsafe fn luax_newstring(
         if (*o).is_tagtype_nil() {
             let fresh50 = (*interpreter).top.stkidrel_pointer;
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-            let stv: *mut TValue = &mut (*fresh50).tvalue;
+            let stv: *mut TValue = &mut (*fresh50);
             let io: *mut TValue = stv;
             let ts: *mut TString = ts;
             (*io).value.object = &mut (*(ts as *mut Object));

@@ -119,14 +119,14 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*(*interpreter).top.stkidrel_pointer)
-                .tvalue
+                
                 .set_tag_variant(TagVariant::NilNil as u8);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
             let mut current_line = (*prototype).prototype_line_defined;
             let table: *mut Table = luah_new(interpreter);
-            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
+            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.object = &mut (*(table as *mut Object));
             (*io).set_tag_variant(TAG_VARIANT_TABLE);
             (*io).set_collectable(true);

@@ -1,7 +1,7 @@
 use rlua::*;
 use crate::f2i::*;
 use crate::interpreter::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
@@ -47,11 +47,11 @@ pub unsafe fn forlimit(
         };
     }
 }
-pub unsafe fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i32 {
+pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
     unsafe {
-        let pinit: *mut TValue = &mut (*ra).tvalue;
-        let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
-        let pstep: *mut TValue = &mut (*ra.offset(2 as isize)).tvalue;
+        let pinit: *mut TValue = &mut (*ra);
+        let plimit: *mut TValue = &mut (*ra.offset(1 as isize));
+        let pstep: *mut TValue = &mut (*ra.offset(2 as isize));
         if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
             && (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
         {
@@ -64,7 +64,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i
                     make_cstring!("'for' step is zero"),
                 );
             }
-            let io: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
+            let io: *mut TValue = &mut (*ra.offset(3 as isize));
             (*io).value.integer = init;
             (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
             if forlimit(interpreter, init, plimit, &mut limit, step) != 0 {
@@ -159,10 +159,10 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i
                 let io_2: *mut TValue = pstep;
                 (*io_2).value.number = step_0;
                 (*io_2).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
-                let io_3: *mut TValue = &mut (*ra).tvalue;
+                let io_3: *mut TValue = &mut (*ra);
                 (*io_3).value.number = init_0;
                 (*io_3).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
-                let io_4: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
+                let io_4: *mut TValue = &mut (*ra.offset(3 as isize));
                 (*io_4).value.number = init_0;
                 (*io_4).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
             }
@@ -170,11 +170,11 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i
         return 0;
     }
 }
-pub unsafe fn floatforloop(ra: StackValuePointer) -> i32 {
+pub unsafe fn floatforloop(ra: *mut TValue) -> i32 {
     unsafe {
-        let step: f64 = (*ra.offset(2 as isize)).tvalue.value.number;
-        let limit: f64 = (*ra.offset(1 as isize)).tvalue.value.number;
-        let mut index: f64 = (*ra).tvalue.value.number;
+        let step: f64 = (*ra.offset(2 as isize)).value.number;
+        let limit: f64 = (*ra.offset(1 as isize)).value.number;
+        let mut index: f64 = (*ra).value.number;
         index = index + step;
         if if (0.0) < step {
             (index <= limit) as i32
@@ -182,9 +182,9 @@ pub unsafe fn floatforloop(ra: StackValuePointer) -> i32 {
             (limit <= index) as i32
         } != 0
         {
-            let io: *mut TValue = &mut (*ra).tvalue;
+            let io: *mut TValue = &mut (*ra);
             (*io).value.number = index;
-            let io_0: *mut TValue = &mut (*ra.offset(3 as isize)).tvalue;
+            let io_0: *mut TValue = &mut (*ra.offset(3 as isize));
             (*io_0).value.number = index;
             (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
             return 1;

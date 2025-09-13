@@ -1,6 +1,6 @@
 use crate::interpreter::*;
 use crate::object::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
@@ -59,14 +59,14 @@ pub struct UpValueBA {
 }
 pub unsafe fn newupval(
     interpreter: *mut Interpreter,
-    level: StackValuePointer,
+    level: *mut TValue,
     previous: *mut *mut UpValue,
 ) -> *mut UpValue {
     unsafe {
         let o: *mut Object = luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
-        (*uv).v.p = &mut (*level).tvalue;
+        (*uv).v.p = &mut (*level);
         (*uv).u.open.next = next;
         (*uv).u.open.previous = previous;
         if !next.is_null() {
@@ -82,16 +82,16 @@ pub unsafe fn newupval(
 }
 pub unsafe fn luaf_findupval(
     interpreter: *mut Interpreter,
-    level: StackValuePointer,
+    level: *mut TValue,
 ) -> *mut UpValue {
     unsafe {
         let mut pp: *mut *mut UpValue = &mut (*interpreter).open_upvalue;
         loop {
             let p: *mut UpValue = *pp;
-            if !(!p.is_null() && (*p).v.p as StackValuePointer >= level) {
+            if !(!p.is_null() && (*p).v.p as *mut TValue >= level) {
                 break;
             }
-            if (*p).v.p as StackValuePointer == level {
+            if (*p).v.p as *mut TValue == level {
                 return p;
             }
             pp = &mut (*p).u.open.next;

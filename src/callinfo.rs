@@ -3,7 +3,7 @@ use crate::closure::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use crate::stkidrel::*;
 use crate::tag::*;
 use crate::tvalue::*;
@@ -58,7 +58,7 @@ pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).u.l.saved_program_counter).offset_from(
             (*(*((*(*call_info).function.stkidrel_pointer)
-                .tvalue
+                
                 .value
                 .object as *mut Closure))
                 .payload
@@ -73,7 +73,7 @@ pub unsafe fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
             (*((*(*call_info).function.stkidrel_pointer)
-                .tvalue
+                
                 .value
                 .object as *mut Closure))
                 .payload
@@ -100,10 +100,10 @@ pub unsafe fn luag_findlocal(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     n: i32,
-    pos: *mut StackValuePointer,
+    pos: *mut *mut TValue,
 ) -> *const i8 {
     unsafe {
-        let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
         let mut name: *const i8 = null();
         if (*call_info).call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
@@ -111,7 +111,7 @@ pub unsafe fn luag_findlocal(
             } else {
                 name = luaf_getlocalname(
                     (*((*(*call_info).function.stkidrel_pointer)
-                        .tvalue
+                        
                         .value
                         .object as *mut Closure))
                         .payload
@@ -122,7 +122,7 @@ pub unsafe fn luag_findlocal(
             }
         }
         if name.is_null() {
-            let limit: StackValuePointer = if call_info == (*interpreter).call_info {
+            let limit: *mut TValue = if call_info == (*interpreter).call_info {
                 (*interpreter).top.stkidrel_pointer
             } else {
                 (*(*call_info).next).function.stkidrel_pointer
@@ -146,11 +146,11 @@ pub unsafe fn luag_findlocal(
 pub unsafe fn findvararg(
     call_info: *mut CallInfo,
     n: i32,
-    pos: *mut StackValuePointer,
+    pos: *mut *mut TValue,
 ) -> *const i8 {
     unsafe {
         if (*(*((*(*call_info).function.stkidrel_pointer)
-            .tvalue
+            
             .value
             .object as *mut Closure))
             .payload
@@ -197,7 +197,7 @@ pub unsafe fn funcnamefromcall(
             return funcnamefromcode(
                 interpreter,
                 (*((*(*call_info).function.stkidrel_pointer)
-                    .tvalue
+                    
                     .value
                     .object as *mut Closure))
                     .payload
@@ -212,12 +212,12 @@ pub unsafe fn funcnamefromcall(
 }
 pub unsafe fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
-        let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
         let mut pos: i32 = 0;
         loop {
             if base.offset(pos as isize) < (*call_info).top.stkidrel_pointer {
                 if tvalue
-                    == &mut (*base.offset(pos as isize)).tvalue as *mut TValue as *const TValue
+                    == &mut (*base.offset(pos as isize)) as *mut TValue as *const TValue
                 {
                     return pos;
                 } else {
@@ -236,7 +236,7 @@ pub unsafe fn getupvalname(
 ) -> *const i8 {
     unsafe {
         let c: *mut Closure = &mut (*((*(*call_info).function.stkidrel_pointer)
-            .tvalue
+            
             .value
             .object as *mut Closure));
         for i in 0..(*c).count_upvalues {

@@ -7,7 +7,7 @@ use crate::interpreter::*;
 use crate::new::*;
 use crate::node::*;
 use crate::object::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tstring::*;
@@ -525,17 +525,17 @@ pub unsafe fn findindex(
 pub unsafe fn luah_next(
     interpreter: *mut Interpreter,
     table: *mut Table,
-    key: StackValuePointer,
+    key: *mut TValue,
 ) -> i32 {
     unsafe {
         let asize: u32 = luah_realasize(table);
-        let mut i: u32 = findindex(interpreter, table, &mut (*key).tvalue, asize);
+        let mut i: u32 = findindex(interpreter, table, &mut (*key), asize);
         while i < asize {
             if !(*((*table).array).offset(i as isize)).is_tagtype_nil() {
-                let io: *mut TValue = &mut (*key).tvalue;
+                let io: *mut TValue = &mut (*key);
                 (*io).value.integer = i.wrapping_add(1 as u32) as i64;
                 (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
-                let io1: *mut TValue = &mut (*key.offset(1 as isize)).tvalue;
+                let io1: *mut TValue = &mut (*key.offset(1 as isize));
                 let io2: *const TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 (*io1).copy_from(&*io2);
                 return 1;
@@ -546,9 +546,9 @@ pub unsafe fn luah_next(
         while (i as i32) < 1 << (*table).log_size_node as i32 {
             if !(*((*table).node).offset(i as isize)).value.is_tagtype_nil() {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
-                let io_: *mut TValue = &mut (*key).tvalue;
+                let io_: *mut TValue = &mut (*key);
                 (*io_).copy_from(&((*node).key));
-                let io1_0: *mut TValue = &mut (*key.offset(1 as isize)).tvalue;
+                let io1_0: *mut TValue = &mut (*key.offset(1 as isize));
                 let io2_0: *const TValue = &mut (*node).value;
                 (*io1_0).copy_from(&*io2_0);
                 return 1;
@@ -1147,7 +1147,7 @@ pub unsafe fn luav_finishget(
     interpreter: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
-    value: StackValuePointer,
+    value: *mut TValue,
     mut slot: *const TValue,
 ) {
     unsafe {
@@ -1175,7 +1175,7 @@ pub unsafe fn luav_finishget(
                     )
                 };
                 if tm.is_null() {
-                    (*value).tvalue.set_tag_variant(TagVariant::NilNil as u8);
+                    (*value).set_tag_variant(TagVariant::NilNil as u8);
                     return;
                 }
             }
@@ -1192,7 +1192,7 @@ pub unsafe fn luav_finishget(
                 !(*slot).is_tagtype_nil() as i32
             } != 0
             {
-                let io1: *mut TValue = &mut (*value).tvalue;
+                let io1: *mut TValue = &mut (*value);
                 let io2: *const TValue = slot;
                 (*io1).copy_from(&*io2);
                 return;
@@ -1232,7 +1232,7 @@ pub unsafe fn luav_finishset(
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
+                    let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let x_: *mut Table = h;
                     (*io).value.object = &mut (*(x_ as *mut Object));
                     (*io).set_tag_variant(TAG_VARIANT_TABLE);

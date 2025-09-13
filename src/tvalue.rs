@@ -7,7 +7,6 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::prototype::*;
-use crate::stackvalue::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tm::*;
@@ -23,6 +22,7 @@ pub struct TValue {
     pub value: Value,
     tag: u8,
     collectable: bool,
+    pub delta: u16,
 }
 impl TValue {
     pub unsafe fn to_number(&self, result: *mut f64) -> bool {
@@ -67,6 +67,7 @@ impl TValue {
             value: Value::new_object(null_mut()),
             tag: tag,
             collectable: false,
+            delta: 0,
         }
     }
     pub fn is_tagtype_nil(&self) -> bool {
@@ -461,18 +462,18 @@ pub unsafe fn luav_equalobj(
         } else {
             luat_calltmres(interpreter, tm, t1, t2, (*interpreter).top.stkidrel_pointer);
             return !((*(*interpreter).top.stkidrel_pointer)
-                .tvalue
+                
                 .get_tag_variant()
                 == TAG_VARIANT_BOOLEAN_FALSE
                 || (*(*interpreter).top.stkidrel_pointer)
-                    .tvalue
+                    
                     .is_tagtype_nil());
         };
     }
 }
 pub unsafe fn luav_objlen(
     interpreter: *mut Interpreter,
-    ra: StackValuePointer,
+    ra: *mut TValue,
     rb: *const TValue,
 ) {
     unsafe {
@@ -492,20 +493,20 @@ pub unsafe fn luav_objlen(
                     )
                 };
                 if tm.is_null() {
-                    let io: *mut TValue = &mut (*ra).tvalue;
+                    let io: *mut TValue = &mut (*ra);
                     (*io).value.integer = luah_getn(h) as i64;
                     (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     return;
                 }
             }
             TAG_VARIANT_STRING_SHORT => {
-                let io_0: *mut TValue = &mut (*ra).tvalue;
+                let io_0: *mut TValue = &mut (*ra);
                 (*io_0).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
             }
             TAG_VARIANT_STRING_LONG => {
-                let io_1: *mut TValue = &mut (*ra).tvalue;
+                let io_1: *mut TValue = &mut (*ra);
                 (*io_1).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_1).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 return;

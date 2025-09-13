@@ -3,7 +3,7 @@ use crate::character::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
@@ -274,12 +274,12 @@ pub unsafe fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
         }
     }
 }
-pub unsafe fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *mut i8) {
+pub unsafe fn copy2buff(top: *mut TValue, mut n: i32, buffer: *mut i8) {
     unsafe {
         let mut tl: usize = 0;
         loop {
             let st: *mut TString =
-                &mut (*((*top.offset(-(n as isize))).tvalue.value.object as *mut TString));
+                &mut (*((*top.offset(-(n as isize))).value.object as *mut TString));
             let length = (*st).get_length();
             memcpy(
                 buffer.offset(tl as isize) as *mut libc::c_void,
@@ -300,59 +300,59 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
             return;
         }
         loop {
-            let top: StackValuePointer = (*interpreter).top.stkidrel_pointer;
+            let top: *mut TValue = (*interpreter).top.stkidrel_pointer;
             let mut n: i32 = 2;
-            if !((*top.offset(-(2 as isize))).tvalue.is_tagtype_string()
-                || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric())
-                || !((*top.offset(-(1 as isize))).tvalue.is_tagtype_string()
-                    || (*top.offset(-(1 as isize))).tvalue.is_tagtype_numeric() && {
-                        luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))).tvalue);
+            if !((*top.offset(-(2 as isize))).is_tagtype_string()
+                || (*top.offset(-(2 as isize))).is_tagtype_numeric())
+                || !((*top.offset(-(1 as isize))).is_tagtype_string()
+                    || (*top.offset(-(1 as isize))).is_tagtype_numeric() && {
+                        luao_tostring(interpreter, &mut (*top.offset(-(1 as isize))));
                         1 != 0
                     })
             {
                 luat_tryconcattm(interpreter);
-            } else if (*top.offset(-(1 as isize))).tvalue.get_tag_variant()
+            } else if (*top.offset(-(1 as isize))).get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString))
+                && (*((*top.offset(-(1 as isize))).value.object as *mut TString))
                     .get_length() as i32
                     == 0
             {
-                (((*top.offset(-(2 as isize))).tvalue.is_tagtype_string())
-                    || (*top.offset(-(2 as isize))).tvalue.is_tagtype_numeric() && {
-                        luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))).tvalue);
+                (((*top.offset(-(2 as isize))).is_tagtype_string())
+                    || (*top.offset(-(2 as isize))).is_tagtype_numeric() && {
+                        luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))));
                         1 != 0
                     }) as i32;
-            } else if (*top.offset(-(2 as isize))).tvalue.get_tag_variant()
+            } else if (*top.offset(-(2 as isize))).get_tag_variant()
                 == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(2 as isize))).tvalue.value.object as *mut TString))
+                && (*((*top.offset(-(2 as isize))).value.object as *mut TString))
                     .get_length() as i32
                     == 0
             {
-                let io1: *mut TValue = &mut (*top.offset(-(2 as isize))).tvalue;
-                let io2: *const TValue = &mut (*top.offset(-(1 as isize))).tvalue;
+                let io1: *mut TValue = &mut (*top.offset(-(2 as isize)));
+                let io2: *const TValue = &mut (*top.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
             } else {
-                let mut tl = (*((*top.offset(-(1 as isize))).tvalue.value.object as *mut TString))
+                let mut tl = (*((*top.offset(-(1 as isize))).value.object as *mut TString))
                     .get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
                     && ((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                        .tvalue
+                        
                         .is_tagtype_string()
                         || (*top.offset(-(n as isize)).offset(-(1 as isize)))
-                            .tvalue
+                            
                             .is_tagtype_numeric()
                             && {
                                 luao_tostring(
                                     interpreter,
-                                    &mut (*top.offset(-(n as isize)).offset(-(1 as isize))).tvalue,
+                                    &mut (*top.offset(-(n as isize)).offset(-(1 as isize))),
                                 );
                                 1 != 0
                             })
                 {
                     let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                        .tvalue
+                        
                         .value
                         .object as *mut TString))
                         .get_length();
@@ -384,7 +384,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     ts = TString::create_long(interpreter, tl);
                     copy2buff(top, n, (*ts).get_contents());
                 }
-                let io: *mut TValue = &mut (*top.offset(-(n as isize))).tvalue;
+                let io: *mut TValue = &mut (*top.offset(-(n as isize)));
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag_variant((*ts).get_tag_variant());
                 (*io).set_collectable(true);

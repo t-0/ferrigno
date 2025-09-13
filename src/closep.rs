@@ -1,9 +1,9 @@
 use crate::new::*;
-use crate::stackvalue::*;
+use crate::tvalue::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct CloseP {
-    pub level: StackValuePointer,
+    pub level: *mut TValue,
     pub status: i32,
 }
 impl New for CloseP {

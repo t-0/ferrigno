@@ -87,7 +87,7 @@ impl User {
     ) -> *mut libc::c_void {
         unsafe {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
-            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
+            let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.object = &mut (*(new_user as *mut Object));
             (*io).set_tag_variant(TAG_VARIANT_USER);
             (*io).set_collectable(true);
