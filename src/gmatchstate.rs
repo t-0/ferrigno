@@ -12,7 +12,7 @@ pub struct GMatchState {
     pub match_state: MatchState,
 }
 impl GMatchState {
-    pub unsafe extern "C" fn gmatch_aux(interpreter: *mut Interpreter) -> i32 {
+    pub unsafe fn gmatch_aux(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let gmatch_state: *mut GMatchState =
                 (*interpreter).to_pointer(-1000000 - 1000 - 3) as *mut GMatchState;
@@ -36,7 +36,7 @@ impl GMatchState {
         }
         return 0;
     }
-    pub unsafe extern "C" fn gmatch(interpreter: *mut Interpreter) -> i32 {
+    pub unsafe fn gmatch(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let mut lexical_state: usize = 0;
             let mut lp: usize = 0;
@@ -60,7 +60,7 @@ impl GMatchState {
             (*gm).last_match = null();
             lua_pushcclosure(
                 interpreter,
-                Some(GMatchState::gmatch_aux as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                Some(GMatchState::gmatch_aux as unsafe fn(*mut Interpreter) -> i32),
                 3,
             );
             return 1;

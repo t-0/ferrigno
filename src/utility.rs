@@ -11,7 +11,7 @@ pub fn ceiling_log2(input: usize) -> usize {
         return 1 + input.ilog2() as usize;
     }
 }
-pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
+pub unsafe fn is_negative(s: *mut *const i8) -> bool {
     unsafe {
         if **s as i32 == CHARACTER_HYPHEN {
             *s = (*s).offset(1);
@@ -24,7 +24,7 @@ pub unsafe extern "C" fn is_negative(s: *mut *const i8) -> bool {
         }
     }
 }
-pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
+pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
     unsafe {
         let mut endptr: *mut i8 = null_mut();
         *result = if mode == CHARACTER_LOWER_X as i32 {
@@ -45,7 +45,7 @@ pub unsafe extern "C" fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -
         };
     }
 }
-pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
+pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
         let pmode: *const i8 = strpbrk(s, make_cstring!(".xXnN"));
         let mode: i32 = if !pmode.is_null() {
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
         return endptr;
     }
 }
-pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
+pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
     unsafe {
         let mut a: usize = 0;
         let mut empty: i32 = 1;
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn l_str2int(mut s: *const i8, result: *mut i64) -> *const
         };
     }
 }
-pub unsafe extern "C" fn luao_chunkid(
+pub unsafe fn luao_chunkid(
     mut out: *mut i8,
     source: *const i8,
     mut source_length: usize,
@@ -280,7 +280,7 @@ pub fn ldexp_(x: f64, exp: i32) -> f64 {
         }
     }
 }
-pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
+pub unsafe fn l_hashfloat(mut n: f64) -> i32 {
     let i: i32;
     let mut ni: i64 = 0;
     (n, i) = frexp_(n);
@@ -298,10 +298,10 @@ pub unsafe extern "C" fn l_hashfloat(mut n: f64) -> i32 {
         return (if u <= 0x7FFFFFFF as u32 { u } else { !u }) as i32;
     };
 }
-pub unsafe extern "C" fn fits_c(i: i64) -> bool {
+pub unsafe fn fits_c(i: i64) -> bool {
     return (i as usize).wrapping_add(((1 << 8) - 1 >> 1) as usize) <= ((1 << 8) - 1) as usize;
 }
-pub unsafe extern "C" fn fits_bx(i: i64) -> bool {
+pub unsafe fn fits_bx(i: i64) -> bool {
     return -((1 << 8 + 8 + 1) - 1 >> 1) as i64 <= i
         && i <= ((1 << 8 + 8 + 1) - 1 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
 }

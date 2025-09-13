@@ -54,7 +54,7 @@ impl TObject for Prototype {
     }
 }
 impl Prototype {
-    pub unsafe extern "C" fn dump_code(&self, dump_state: &mut DumpState) {
+    pub unsafe fn dump_code(&self, dump_state: &mut DumpState) {
         unsafe {
             dump_state.dump_int(self.prototype_code.get_size() as i32);
             dump_state.dump_block(
@@ -63,7 +63,7 @@ impl Prototype {
             );
         }
     }
-    pub unsafe extern "C" fn dump_function(
+    pub unsafe fn dump_function(
         &self,
         dump_state: &mut DumpState,
         source: *mut TString,
@@ -90,7 +90,7 @@ impl Prototype {
             self.dump_debug(dump_state);
         }
     }
-    pub unsafe extern "C" fn dump_debug(&self, dump_state: &mut DumpState) {
+    pub unsafe fn dump_debug(&self, dump_state: &mut DumpState) {
         unsafe {
             let n = if dump_state.is_strip {
                 0
@@ -150,7 +150,7 @@ impl Prototype {
             }
         }
     }
-    pub unsafe extern "C" fn dump_prototypes(&self, dump_state: &mut DumpState) {
+    pub unsafe fn dump_prototypes(&self, dump_state: &mut DumpState) {
         unsafe {
             let n = self.prototype_prototypes.get_size();
             dump_state.dump_int(n as i32);
@@ -160,7 +160,7 @@ impl Prototype {
             }
         }
     }
-    pub unsafe extern "C" fn dump_upvalues(&self, dump_state: &mut DumpState) {
+    pub unsafe fn dump_upvalues(&self, dump_state: &mut DumpState) {
         unsafe {
             let n = self.prototype_upvalues.get_size();
             dump_state.dump_int(n as i32);
@@ -170,7 +170,7 @@ impl Prototype {
             }
         }
     }
-    pub unsafe extern "C" fn dump_constants(&self, dump_state: &mut DumpState) {
+    pub unsafe fn dump_constants(&self, dump_state: &mut DumpState) {
         unsafe {
             let n = self.prototype_constants.get_size();
             dump_state.dump_int(n as i32);
@@ -194,7 +194,7 @@ impl Prototype {
             }
         }
     }
-    pub unsafe extern "C" fn prototype_traverse(&mut self, global: &mut Global) -> usize {
+    pub unsafe fn prototype_traverse(&mut self, global: &mut Global) -> usize {
         unsafe {
             if !self.prototype_source.is_null() {
                 if (*self.prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -277,7 +277,7 @@ impl Prototype {
                 + self.prototype_local_variables.get_size()) as usize;
         }
     }
-    pub unsafe extern "C" fn prototype_free(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn prototype_free(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             (*interpreter).free_memory(
                 self.prototype_code.vectort_pointer as *mut libc::c_void,
@@ -328,7 +328,7 @@ impl Prototype {
         }
     }
 }
-pub unsafe extern "C" fn getbaseline(
+pub unsafe fn getbaseline(
     prototype: *const Prototype,
     program_counter: i32,
     basepc: *mut i32,
@@ -362,7 +362,7 @@ pub unsafe extern "C" fn getbaseline(
         };
     }
 }
-pub unsafe extern "C" fn luag_getfuncline(
+pub unsafe fn luag_getfuncline(
     prototype: *const Prototype,
     program_counter: i32,
 ) -> i32 {
@@ -385,7 +385,7 @@ pub unsafe extern "C" fn luag_getfuncline(
         };
     }
 }
-pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
+pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
     unsafe {
         let s: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset(uv as isize)).name;
         if s.is_null() {
@@ -395,7 +395,7 @@ pub unsafe extern "C" fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         };
     }
 }
-pub unsafe extern "C" fn nextline(
+pub unsafe fn nextline(
     p: *const Prototype,
     currentline: i32,
     program_counter: i32,
@@ -412,7 +412,7 @@ pub unsafe extern "C" fn nextline(
         };
     }
 }
-pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 {
+pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 {
     unsafe {
         let mut setreg: i32 = -1;
         let mut jmptarget: i32 = 0;
@@ -461,7 +461,7 @@ pub unsafe extern "C" fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i
         return setreg;
     }
 }
-pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
+pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
     unsafe {
         let kvalue: *mut TValue =
             &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
@@ -474,7 +474,7 @@ pub unsafe extern "C" fn kname(p: *const Prototype, index: i32, name: *mut *cons
         };
     }
 }
-pub unsafe extern "C" fn basicgetobjname(
+pub unsafe fn basicgetobjname(
     p: *const Prototype,
     ppc: *mut i32,
     reg: i32,
@@ -525,7 +525,7 @@ pub unsafe extern "C" fn basicgetobjname(
         return null();
     }
 }
-pub unsafe extern "C" fn rname(
+pub unsafe fn rname(
     p: *const Prototype,
     mut program_counter: i32,
     c: i32,
@@ -538,7 +538,7 @@ pub unsafe extern "C" fn rname(
         }
     }
 }
-pub unsafe extern "C" fn rkname(
+pub unsafe fn rkname(
     p: *const Prototype,
     program_counter: i32,
     i: u32,
@@ -553,7 +553,7 @@ pub unsafe extern "C" fn rkname(
         };
     }
 }
-pub unsafe extern "C" fn is_environment(
+pub unsafe fn is_environment(
     p: *const Prototype,
     mut program_counter: i32,
     i: u32,
@@ -577,7 +577,7 @@ pub unsafe extern "C" fn is_environment(
         };
     }
 }
-pub unsafe extern "C" fn getobjname(
+pub unsafe fn getobjname(
     p: *const Prototype,
     mut lastpc: i32,
     reg: i32,
@@ -620,7 +620,7 @@ pub unsafe extern "C" fn getobjname(
         return null();
     }
 }
-pub unsafe extern "C" fn funcnamefromcode(
+pub unsafe fn funcnamefromcode(
     interpreter: *mut Interpreter,
     p: *const Prototype,
     program_counter: i32,
@@ -682,7 +682,7 @@ pub unsafe extern "C" fn funcnamefromcode(
         return make_cstring!("metamethod");
     }
 }
-pub unsafe extern "C" fn changedline(
+pub unsafe fn changedline(
     p: *const Prototype,
     old_program_counter: i32,
     newpc: i32,
@@ -710,7 +710,7 @@ pub unsafe extern "C" fn changedline(
         return (luag_getfuncline(p, old_program_counter) != luag_getfuncline(p, newpc)) as i32;
     }
 }
-pub unsafe extern "C" fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
+pub unsafe fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
     unsafe {
         let object: *mut Object =
             luac_newobj(interpreter, TAG_VARIANT_PROTOTYPE, size_of::<Prototype>());
@@ -731,7 +731,7 @@ pub unsafe extern "C" fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Pr
         return prototype;
     }
 }
-pub unsafe extern "C" fn luaf_getlocalname(
+pub unsafe fn luaf_getlocalname(
     prototype: *const Prototype,
     mut local_number: i32,
     program_counter: i32,

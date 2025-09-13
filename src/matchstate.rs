@@ -25,7 +25,7 @@ pub struct MatchState {
     pub capture: [MatchStateCapture; MAX_CAPTURES],
 }
 impl MatchState {
-    pub unsafe extern "C" fn add_value(
+    pub unsafe fn add_value(
         &mut self,
         b: *mut Buffer,
         s: *const i8,
@@ -65,7 +65,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn push_captures(&mut self, s: *const i8, e: *const i8) -> i32 {
+    pub unsafe fn push_captures(&mut self, s: *const i8, e: *const i8) -> i32 {
         unsafe {
             let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() {
                 1
@@ -83,7 +83,7 @@ impl MatchState {
             return nlevels;
         }
     }
-    pub unsafe extern "C" fn push_onecapture(&mut self, i: i32, s: *const i8, e: *const i8) {
+    pub unsafe fn push_onecapture(&mut self, i: i32, s: *const i8, e: *const i8) {
         unsafe {
             let mut cap: *const i8 = null();
             let level: i64 = self.get_onecapture(i, s, e, &mut cap) as i64;
@@ -92,7 +92,7 @@ impl MatchState {
             }
         }
     }
-    pub unsafe extern "C" fn get_onecapture(
+    pub unsafe fn get_onecapture(
         &mut self,
         i: i32,
         s: *const i8,
@@ -125,7 +125,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn check_capture(&mut self, mut l: i32) -> i32 {
+    pub unsafe fn check_capture(&mut self, mut l: i32) -> i32 {
         unsafe {
             l -= CHARACTER_1 as i32;
             if ((l < 0 || l >= self.level as i32 || self.capture[l as usize].length == -1 as i64)
@@ -142,7 +142,7 @@ impl MatchState {
             return l;
         }
     }
-    pub unsafe extern "C" fn capture_to_close(&mut self) -> i32 {
+    pub unsafe fn capture_to_close(&mut self) -> i32 {
         unsafe {
             let mut level: i32 = self.level as i32;
             level -= 1;
@@ -155,7 +155,7 @@ impl MatchState {
             return lual_error(self.interpreter, make_cstring!("invalid pattern capture"));
         }
     }
-    pub unsafe extern "C" fn classend(&mut self, mut p: *const i8) -> *const i8 {
+    pub unsafe fn classend(&mut self, mut p: *const i8) -> *const i8 {
         unsafe {
             let fresh160 = p;
             p = p.offset(1);
@@ -195,7 +195,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn singlematch(
+    pub unsafe fn singlematch(
         &mut self,
         s: *const i8,
         p: *const i8,
@@ -217,7 +217,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn matchbalance(&mut self, mut s: *const i8, p: *const i8) -> *const i8 {
+    pub unsafe fn matchbalance(&mut self, mut s: *const i8, p: *const i8) -> *const i8 {
         unsafe {
             if p >= self.p_end.offset(-1) {
                 lual_error(
@@ -249,7 +249,7 @@ impl MatchState {
             return null();
         }
     }
-    pub unsafe extern "C" fn max_expand(
+    pub unsafe fn max_expand(
         &mut self,
         s: *const i8,
         p: *const i8,
@@ -270,7 +270,7 @@ impl MatchState {
             return null();
         }
     }
-    pub unsafe extern "C" fn min_expand(
+    pub unsafe fn min_expand(
         &mut self,
         mut s: *const i8,
         p: *const i8,
@@ -289,7 +289,7 @@ impl MatchState {
             }
         }
     }
-    pub unsafe extern "C" fn start_capture(
+    pub unsafe fn start_capture(
         &mut self,
         s: *const i8,
         p: *const i8,
@@ -312,7 +312,7 @@ impl MatchState {
             return res;
         }
     }
-    pub unsafe extern "C" fn end_capture(&mut self, s: *const i8, p: *const i8) -> *const i8 {
+    pub unsafe fn end_capture(&mut self, s: *const i8, p: *const i8) -> *const i8 {
         unsafe {
             let l: i32 = self.capture_to_close();
             let res: *const i8;
@@ -324,7 +324,7 @@ impl MatchState {
             return res;
         }
     }
-    pub unsafe extern "C" fn match_capture(&mut self, s: *const i8, mut l: i32) -> *const i8 {
+    pub unsafe fn match_capture(&mut self, s: *const i8, mut l: i32) -> *const i8 {
         unsafe {
             let length: usize;
             l = self.check_capture(l);
@@ -342,7 +342,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe extern "C" fn match_0(&mut self, mut s: *const i8, mut p: *const i8) -> *const i8 {
+    pub unsafe fn match_0(&mut self, mut s: *const i8, mut p: *const i8) -> *const i8 {
         unsafe {
             let mut ep_0: *const i8 = null();
             let mut current_block: usize;
@@ -615,7 +615,7 @@ impl MatchState {
             return s;
         }
     }
-    pub unsafe extern "C" fn prepstate(
+    pub unsafe fn prepstate(
         &mut self,
         interpreter: *mut Interpreter,
         s: *const i8,
@@ -634,7 +634,7 @@ impl MatchState {
     pub fn reprepstate(&mut self) {
         self.level = 0;
     }
-    pub unsafe extern "C" fn add_s(&mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
+    pub unsafe fn add_s(&mut self, b: *mut Buffer, s: *const i8, e: *const i8) {
         unsafe {
             let mut l: usize = 0;
             let interpreter: *mut Interpreter = self.interpreter;
@@ -686,7 +686,7 @@ impl MatchState {
         }
     }
 }
-pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
+pub unsafe fn match_class(c: i32, cl: i32) -> i32 {
     unsafe {
         let res: i32;
         match tolower(cl) {
@@ -732,7 +732,7 @@ pub unsafe extern "C" fn match_class(c: i32, cl: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
+pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
     unsafe {
         let mut sig: i32 = 1;
         if *p.offset(1 as isize) as i32 == CHARACTER_CARET as i32 {

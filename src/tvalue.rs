@@ -43,7 +43,7 @@ impl TValue {
             };
         }
     }
-    pub unsafe extern "C" fn to_pointer(&self) -> *mut libc::c_void {
+    pub unsafe fn to_pointer(&self) -> *mut libc::c_void {
         unsafe {
             match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
@@ -119,7 +119,7 @@ impl TValue {
         }
     }
 }
-pub unsafe extern "C" fn aux_upvalue(
+pub unsafe fn aux_upvalue(
     fi: *mut TValue,
     n: i32,
     value: *mut *mut TValue,
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn aux_upvalue(
         };
     }
 }
-pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
+pub unsafe fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
     unsafe {
         let mut i: i64 = 0;
         let mut n: f64 = 0.0;
@@ -193,7 +193,7 @@ pub unsafe extern "C" fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
         return (e.offset_from(s) as i64 + 1) as usize;
     }
 }
-pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
+pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
         let mut length: usize;
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
@@ -225,7 +225,7 @@ pub unsafe extern "C" fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usiz
         return length;
     }
 }
-pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
+pub unsafe fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
     unsafe {
         let mut buffer: [i8; 44] = [0; 44];
         let length = tostringbuff(obj, buffer.as_mut_ptr());
@@ -237,7 +237,7 @@ pub unsafe extern "C" fn luao_tostring(interpreter: *mut Interpreter, obj: *mut 
     }
 }
 pub const ABSENT_KEY: TValue = { TValue::new(TAG_VARIANT_NIL_ABSENTKEY) };
-pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
+pub unsafe fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
         < (if ((1 as u32)
             << (size_of::<i32>() as usize)
@@ -258,7 +258,7 @@ pub unsafe extern "C" fn arrayindex(k: i64) -> u32 {
         return 0u32;
     };
 }
-pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
+pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
     unsafe {
         while j.wrapping_sub(i) > 1 as u32 {
             let m: u32 = i.wrapping_add(j).wrapping_div(2 as u32);
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn binsearch(array: *const TValue, mut i: u32, mut j: u32)
         return i;
     }
 }
-pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> bool {
+pub unsafe fn l_strton(obj: *const TValue, result: *mut TValue) -> bool {
     unsafe {
         if (*obj).is_tagtype_string() {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
@@ -282,7 +282,7 @@ pub unsafe extern "C" fn l_strton(obj: *const TValue, result: *mut TValue) -> bo
         };
     }
 }
-pub unsafe extern "C" fn lessthanothers(
+pub unsafe fn lessthanothers(
     interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn lessthanothers(
         };
     }
 }
-pub unsafe extern "C" fn luav_lessthan(
+pub unsafe fn luav_lessthan(
     interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn luav_lessthan(
         };
     }
 }
-pub unsafe extern "C" fn lessequalothers(
+pub unsafe fn lessequalothers(
     interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
@@ -327,7 +327,7 @@ pub unsafe extern "C" fn lessequalothers(
         }
     }
 }
-pub unsafe extern "C" fn luav_lessequal(
+pub unsafe fn luav_lessequal(
     interpreter: *mut Interpreter,
     l: *const TValue,
     r: *const TValue,
@@ -340,7 +340,7 @@ pub unsafe extern "C" fn luav_lessequal(
         };
     }
 }
-pub unsafe extern "C" fn luav_equalobj(
+pub unsafe fn luav_equalobj(
     interpreter: *mut Interpreter,
     t1: *const TValue,
     t2: *const TValue,
@@ -470,7 +470,7 @@ pub unsafe extern "C" fn luav_equalobj(
         };
     }
 }
-pub unsafe extern "C" fn luav_objlen(
+pub unsafe fn luav_objlen(
     interpreter: *mut Interpreter,
     ra: StackValuePointer,
     rb: *const TValue,

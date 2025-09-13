@@ -1,6 +1,6 @@
 use crate::operator_::*;
 use crate::token::*;
-pub unsafe extern "C" fn getbinopr(op: i32) -> u32 {
+pub unsafe fn getbinopr(op: i32) -> u32 {
     match op {
         TK_CHARACTER_PLUS => return OPR_ADD,
         TK_CHARACTER_HYPHEN => return OPR_SUB,

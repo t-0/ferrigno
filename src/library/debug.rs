@@ -8,13 +8,13 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use std::ptr::*;
-pub unsafe extern "C" fn db_getregistry(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getregistry(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_pushvalue(interpreter, -(1000000 as i32) - 1000 as i32);
         return 1;
     }
 }
-pub unsafe extern "C" fn db_getmetatable(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         if !(*interpreter).lua_getmetatable(1) {
@@ -23,7 +23,7 @@ pub unsafe extern "C" fn db_getmetatable(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let t = lua_type(interpreter, 2);
         (((t == Some(TagType::Nil) || t == Some(TagType::Table)) as i32 != 0) as i64 != 0
@@ -34,7 +34,7 @@ pub unsafe extern "C" fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(interpreter, 2, 1) as i32;
         if lua_type(interpreter, 1) != Some(TagType::User) {
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_setuservalue(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_setuservalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(interpreter, 3, 1) as i32;
         lual_checktype(interpreter, 1, TagType::User);
@@ -58,18 +58,18 @@ pub unsafe extern "C" fn db_setuservalue(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_getupvalue(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getupvalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return auxupvalue(interpreter, 1);
     }
 }
-pub unsafe extern "C" fn db_setupvalue(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_setupvalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 3);
         return auxupvalue(interpreter, 0);
     }
 }
-pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut ar: DebugInfo = DebugInfo {
             event: 0,
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let name: *const i8;
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_upvalueid(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_upvalueid(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let id: *mut libc::c_void = checkupval(interpreter, 1, 2, null_mut());
         if !id.is_null() {
@@ -322,7 +322,7 @@ pub unsafe extern "C" fn db_upvalueid(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn db_upvaluejoin(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_upvaluejoin(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut n1: i32 = 0;
         let mut n2: i32 = 0;
@@ -344,7 +344,7 @@ pub unsafe extern "C" fn db_upvaluejoin(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_sethook(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let mask: i32;
@@ -363,7 +363,7 @@ pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
                 lual_checktype(interpreter, arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
                 function =
-                    Some(hookf as unsafe extern "C" fn(*mut Interpreter, *mut DebugInfo) -> ());
+                    Some(hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);
             }
         };
@@ -382,7 +382,7 @@ pub unsafe extern "C" fn db_sethook(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn db_gethook(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_gethook(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
@@ -393,7 +393,7 @@ pub unsafe extern "C" fn db_gethook(interpreter: *mut Interpreter) -> i32 {
             (*interpreter).push_nil();
             return 1;
         } else if hook
-            != Some(hookf as unsafe extern "C" fn(*mut Interpreter, *mut DebugInfo) -> ())
+            != Some(hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ())
         {
             lua_pushstring(interpreter, make_cstring!("external hook"));
         } else {
@@ -410,7 +410,7 @@ pub unsafe extern "C" fn db_gethook(interpreter: *mut Interpreter) -> i32 {
         return 3;
     }
 }
-pub unsafe extern "C" fn db_debug(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         loop {
             let mut buffer: [i8; 250] = [0; 250];
@@ -445,7 +445,7 @@ pub unsafe extern "C" fn db_debug(interpreter: *mut Interpreter) -> i32 {
         }
     }
 }
-pub unsafe extern "C" fn db_traceback(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn db_traceback(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
@@ -468,97 +468,97 @@ pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
         {
             RegisteredFunction {
                 name: make_cstring!("debug"),
-                function: Some(db_debug as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_debug as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getuservalue"),
-                function: Some(db_getuservalue as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getuservalue as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("gethook"),
-                function: Some(db_gethook as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_gethook as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getinfo"),
-                function: Some(db_getinfo as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getinfo as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getlocal"),
-                function: Some(db_getlocal as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getlocal as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getregistry"),
-                function: Some(db_getregistry as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getregistry as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getmetatable"),
-                function: Some(db_getmetatable as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getmetatable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getupvalue"),
-                function: Some(db_getupvalue as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_getupvalue as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("upvaluejoin"),
-                function: Some(db_upvaluejoin as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_upvaluejoin as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("upvalueid"),
-                function: Some(db_upvalueid as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_upvalueid as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("setuservalue"),
-                function: Some(db_setuservalue as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_setuservalue as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("sethook"),
-                function: Some(db_sethook as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_sethook as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("setlocal"),
-                function: Some(db_setlocal as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_setlocal as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("setmetatable"),
-                function: Some(db_setmetatable as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_setmetatable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("setupvalue"),
-                function: Some(db_setupvalue as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_setupvalue as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("traceback"),
-                function: Some(db_traceback as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(db_traceback as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -569,7 +569,7 @@ pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             interpreter,

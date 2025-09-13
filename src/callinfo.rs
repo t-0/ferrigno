@@ -54,7 +54,7 @@ pub struct CallInfoConsistuentBTransferInfo {
     pub ftransfer: u16,
     pub ntransfer: u16,
 }
-pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
+pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).u.l.saved_program_counter).offset_from(
             (*(*((*(*call_info).function.stkidrel_pointer)
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn currentpc(call_info: *mut CallInfo) -> i32 {
             - 1;
     }
 }
-pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
+pub unsafe fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
             (*((*(*call_info).function.stkidrel_pointer)
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn getcurrentline(call_info: *mut CallInfo) -> i32 {
         );
     }
 }
-pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
+pub unsafe fn settraps(mut call_info: *mut CallInfo) {
     unsafe {
         loop {
             if call_info.is_null() {
@@ -96,7 +96,7 @@ pub unsafe extern "C" fn settraps(mut call_info: *mut CallInfo) {
         }
     }
 }
-pub unsafe extern "C" fn luag_findlocal(
+pub unsafe fn luag_findlocal(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     n: i32,
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn luag_findlocal(
         return name;
     }
 }
-pub unsafe extern "C" fn findvararg(
+pub unsafe fn findvararg(
     call_info: *mut CallInfo,
     n: i32,
     pos: *mut StackValuePointer,
@@ -168,7 +168,7 @@ pub unsafe extern "C" fn findvararg(
         return null();
     }
 }
-pub unsafe extern "C" fn getfuncname(
+pub unsafe fn getfuncname(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn getfuncname(
         };
     }
 }
-pub unsafe extern "C" fn funcnamefromcall(
+pub unsafe fn funcnamefromcall(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     name: *mut *const i8,
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn funcnamefromcall(
         };
     }
 }
-pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
+pub unsafe fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
         let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
         let mut pos: i32 = 0;
@@ -229,7 +229,7 @@ pub unsafe extern "C" fn in_stack(call_info: *mut CallInfo, tvalue: *const TValu
         }
     }
 }
-pub unsafe extern "C" fn getupvalname(
+pub unsafe fn getupvalname(
     call_info: *mut CallInfo,
     tvalue: *const TValue,
     name: *mut *const i8,

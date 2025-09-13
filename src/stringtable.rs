@@ -25,7 +25,7 @@ impl StringTable {
             self.length -= 1;
         }
     }
-    pub unsafe extern "C" fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
+    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
         unsafe {
             let old_size = self.size as usize;
             if new_size < old_size {
@@ -50,7 +50,7 @@ impl StringTable {
             };
         }
     }
-    pub unsafe extern "C" fn initialize(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             self.hash = luam_malloc_(
                 interpreter,
@@ -61,13 +61,13 @@ impl StringTable {
         }
     }
 }
-pub unsafe extern "C" fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
+pub unsafe fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
         let tb: *mut StringTable = &mut (*(*interpreter).global).string_table;
         (*tb).resize(interpreter, new_size);
     }
 }
-pub unsafe extern "C" fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {
+pub unsafe fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {
     unsafe {
         if (*tb).length as usize == STRINGTABLE_LENGTH_MAX {
             (*interpreter).luac_fullgc(true);

@@ -10,7 +10,7 @@ pub struct UserBox {
     pub size: usize,
 }
 impl UserBox {
-    pub unsafe extern "C" fn resize_userbox(
+    pub unsafe fn resize_userbox(
         interpreter: *mut Interpreter,
         index: i32,
         new_size: usize,
@@ -31,7 +31,7 @@ impl UserBox {
             return temp;
         }
     }
-    pub unsafe extern "C" fn userbox_gc(interpreter: *mut Interpreter) -> i32 {
+    pub unsafe fn userbox_gc(interpreter: *mut Interpreter) -> i32 {
         unsafe {
             UserBox::resize_userbox(interpreter, 1, 0);
             return 0;
@@ -43,7 +43,7 @@ impl UserBox {
                 RegisteredFunction {
                     name: make_cstring!("__gc"),
                     function: Some(
-                        UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32,
+                        UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32,
                     ),
                 }
             },
@@ -51,7 +51,7 @@ impl UserBox {
                 RegisteredFunction {
                     name: make_cstring!("__close"),
                     function: Some(
-                        UserBox::userbox_gc as unsafe extern "C" fn(*mut Interpreter) -> i32,
+                        UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32,
                     ),
                 }
             },
@@ -63,7 +63,7 @@ impl UserBox {
             },
         ]
     };
-    pub unsafe extern "C" fn new_userbox(interpreter: *mut Interpreter) {
+    pub unsafe fn new_userbox(interpreter: *mut Interpreter) {
         unsafe {
             let box_0: *mut UserBox =
                 User::lua_newuserdatauv(interpreter, size_of::<UserBox>(), 0) as *mut UserBox;

@@ -121,7 +121,7 @@ impl Object {
         }
     }
 }
-pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
+pub unsafe fn getgclist(object: *mut Object) -> *mut *mut Object {
     unsafe {
         match (*object).get_tag_variant() {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn getgclist(object: *mut Object) -> *mut *mut Object {
         };
     }
 }
-pub unsafe extern "C" fn linkgclist_(
+pub unsafe fn linkgclist_(
     object: *mut Object,
     pnext: *mut *mut Object,
     list: *mut *mut Object,
@@ -146,7 +146,7 @@ pub unsafe extern "C" fn linkgclist_(
         (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
     }
 }
-pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -> i32 {
+pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
     unsafe {
         if object.is_null() {
             return 0;
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn iscleared(global: *mut Global, object: *const Object) -
         };
     }
 }
-pub unsafe extern "C" fn luac_barrier_(
+pub unsafe fn luac_barrier_(
     interpreter: *mut Interpreter,
     object: *mut Object,
     v: *mut Object,
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn luac_barrier_(
         }
     }
 }
-pub unsafe extern "C" fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Object) {
+pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*object).get_marked() & 7 == 6 {
@@ -198,19 +198,19 @@ pub unsafe extern "C" fn luac_barrierback_(interpreter: *mut Interpreter, object
     }
 }
 
-pub unsafe extern "C" fn fix_memory_error_message_state(interpreter: *mut Interpreter) {
+pub unsafe fn fix_memory_error_message_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         (*global).fix_memory_error_message_global();
     }
 }
-pub unsafe extern "C" fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
+pub unsafe fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         fix_object_global(global, object);
     }
 }
-pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Object) {
+pub unsafe fn fix_object_global(global: *mut Global, object: *mut Object) {
     unsafe {
         (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         (*object).set_marked((*object).get_marked() & !(7) | 4);
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn fix_object_global(global: *mut Global, object: *mut Obj
         (*global).fixed_gc = object;
     }
 }
-pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Object) {
+pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: usize;
         match (*object).get_tag_variant() {
@@ -281,7 +281,7 @@ pub unsafe extern "C" fn really_mark_object(global: *mut Global, object: *mut Ob
         };
     }
 }
-pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object) {
+pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
             linkgclist_(
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn generate_link(global: *mut Global, object: *mut Object)
         }
     }
 }
-pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
+pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         match (*object).get_tag_variant() {
             TAG_VARIANT_PROTOTYPE => {
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn free_object(interpreter: *mut Interpreter, object: *mut
         };
     }
 }
-pub unsafe extern "C" fn find_last(mut objects: *mut *mut Object) -> *mut *mut Object {
+pub unsafe fn find_last(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         while !(*objects).is_null() {
             objects = &mut (**objects).next;
@@ -337,14 +337,14 @@ pub unsafe extern "C" fn find_last(mut objects: *mut *mut Object) -> *mut *mut O
         return objects;
     }
 }
-pub unsafe extern "C" fn check_pointer(objects: *mut *mut Object, object: *mut Object) {
+pub unsafe fn check_pointer(objects: *mut *mut Object, object: *mut Object) {
     unsafe {
         if object == *objects {
             *objects = (*object).next;
         }
     }
 }
-pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Object {
+pub unsafe fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         let mut current_block: usize;
         loop {
@@ -380,7 +380,7 @@ pub unsafe extern "C" fn correct_gray_list(mut objects: *mut *mut Object) -> *mu
         return objects;
     }
 }
-pub unsafe extern "C" fn delete_list(
+pub unsafe fn delete_list(
     interpreter: *mut Interpreter,
     mut object: *mut Object,
     limit: *mut Object,

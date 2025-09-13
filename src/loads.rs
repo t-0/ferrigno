@@ -95,7 +95,7 @@ impl<T> LoadS<T> {
             self.loads_size = 0;
         }
     }
-    pub unsafe extern "C" fn grow(
+    pub unsafe fn grow(
         &mut self,
         interpreter: *mut Interpreter,
         new_length: usize,

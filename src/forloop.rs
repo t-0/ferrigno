@@ -5,7 +5,7 @@ use crate::stackvalue::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
-pub unsafe extern "C" fn forlimit(
+pub unsafe fn forlimit(
     interpreter: *mut Interpreter,
     init: i64,
     lim: *const TValue,
@@ -47,7 +47,7 @@ pub unsafe extern "C" fn forlimit(
         };
     }
 }
-pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i32 {
+pub unsafe fn forprep(interpreter: *mut Interpreter, ra: StackValuePointer) -> i32 {
     unsafe {
         let pinit: *mut TValue = &mut (*ra).tvalue;
         let plimit: *mut TValue = &mut (*ra.offset(1 as isize)).tvalue;
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn forprep(interpreter: *mut Interpreter, ra: StackValuePo
         return 0;
     }
 }
-pub unsafe extern "C" fn floatforloop(ra: StackValuePointer) -> i32 {
+pub unsafe fn floatforloop(ra: StackValuePointer) -> i32 {
     unsafe {
         let step: f64 = (*ra.offset(2 as isize)).tvalue.value.number;
         let limit: f64 = (*ra.offset(1 as isize)).tvalue.value.number;

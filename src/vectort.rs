@@ -95,7 +95,7 @@ impl<T> VectorT<T> {
             self.vectort_size = 0;
         }
     }
-    pub unsafe extern "C" fn grow(
+    pub unsafe fn grow(
         &mut self,
         interpreter: *mut Interpreter,
         new_length: usize,

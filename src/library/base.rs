@@ -7,7 +7,7 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use std::ptr::*;
-pub unsafe extern "C" fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         match lua_type(interpreter, 2) {
             None | Some(TagType::Nil) => {
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_error(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let level: i32 = lual_optinteger(interpreter, 2, 1) as i32;
         lua_settop(interpreter, 1);
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn luab_error(interpreter: *mut Interpreter) -> i32 {
         return lua_error(interpreter);
     }
 }
-pub unsafe extern "C" fn luab_getmetatable(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_getmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         if (*interpreter).lua_getmetatable(1) {
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn luab_getmetatable(interpreter: *mut Interpreter) -> i32
         }
     }
 }
-pub unsafe extern "C" fn luab_setmetatable(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Table);
         match lua_type(interpreter, 2) {
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn luab_setmetatable(interpreter: *mut Interpreter) -> i32
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_rawequal(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_rawequal(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         lual_checkany(interpreter, 2);
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn luab_rawequal(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         match lua_type(interpreter, 1) {
             Some(TagType::Table) | Some(TagType::String) => {}
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Table);
         lual_checkany(interpreter, 2);
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_rawset(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_rawset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Table);
         lual_checkany(interpreter, 2);
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn luab_rawset(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn pushmode(interpreter: *mut Interpreter, oldmode: i32) -> i32 {
+pub unsafe fn pushmode(interpreter: *mut Interpreter, oldmode: i32) -> i32 {
     unsafe {
         if oldmode == -1 {
             (*interpreter).push_nil();
@@ -154,7 +154,7 @@ pub unsafe extern "C" fn pushmode(interpreter: *mut Interpreter, oldmode: i32) -
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_collectgarbage(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_collectgarbage(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         pub const OPTS: [*const i8; 11] = [
             make_cstring!("stop"),
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn luab_collectgarbage(interpreter: *mut Interpreter) -> i
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_type(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_type(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let t = lua_type(interpreter, 1);
         match t {
@@ -252,7 +252,7 @@ pub unsafe extern "C" fn luab_type(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luab_next(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_next(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Table);
         lua_settop(interpreter, 2);
@@ -264,21 +264,21 @@ pub unsafe extern "C" fn luab_next(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn pairscont(
+pub unsafe fn pairscont(
     mut _state: *mut Interpreter,
     mut _status: i32,
     mut _k: i64,
 ) -> i32 {
     return 3;
 }
-pub unsafe extern "C" fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         if lual_getmetafield(interpreter, 1, make_cstring!("__pairs")) == TagType::Nil
         {
             lua_pushcclosure(
                 interpreter,
-                Some(luab_next as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                Some(luab_next as unsafe fn(*mut Interpreter) -> i32),
                 0,
             );
             lua_pushvalue(interpreter, 1);
@@ -290,13 +290,13 @@ pub unsafe extern "C" fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
                 1,
                 3,
                 0,
-                Some(pairscont as unsafe extern "C" fn(*mut Interpreter, i32, i64) -> i32),
+                Some(pairscont as unsafe fn(*mut Interpreter, i32, i64) -> i32),
             );
         }
         return 3;
     }
 }
-pub unsafe extern "C" fn ipairsaux(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn ipairsaux(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut i: i64 = lual_checkinteger(interpreter, 2);
         i = (i as usize).wrapping_add(1 as usize) as i64;
@@ -308,12 +308,12 @@ pub unsafe extern "C" fn ipairsaux(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         lua_pushcclosure(
             interpreter,
-            Some(ipairsaux as unsafe extern "C" fn(*mut Interpreter) -> i32),
+            Some(ipairsaux as unsafe fn(*mut Interpreter) -> i32),
             0,
         );
         lua_pushvalue(interpreter, 1);
@@ -321,7 +321,7 @@ pub unsafe extern "C" fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {
         return 3;
     }
 }
-pub unsafe extern "C" fn load_aux(interpreter: *mut Interpreter, status: i32, envidx: i32) -> i32 {
+pub unsafe fn load_aux(interpreter: *mut Interpreter, status: i32, envidx: i32) -> i32 {
     unsafe {
         if status == 0 {
             if envidx != 0 {
@@ -338,7 +338,7 @@ pub unsafe extern "C" fn load_aux(interpreter: *mut Interpreter, status: i32, en
         };
     }
 }
-pub unsafe extern "C" fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let mode: *const i8 = lual_optlstring(interpreter, 2, null(), null_mut());
@@ -351,7 +351,7 @@ pub unsafe extern "C" fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
         return load_aux(interpreter, status, env);
     }
 }
-pub unsafe extern "C" fn generic_reader(
+pub unsafe fn generic_reader(
     interpreter: *mut Interpreter,
     mut _ud: *mut libc::c_void,
     size: *mut usize,
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn generic_reader(
         return lua_tolstring(interpreter, 5, size);
     }
 }
-pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         let mut l: usize = 0;
@@ -411,7 +411,7 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
                 interpreter,
                 Some(
                     generic_reader
-                        as unsafe extern "C" fn(
+                        as unsafe fn(
                             *mut Interpreter,
                             *mut libc::c_void,
                             *mut usize,
@@ -425,7 +425,7 @@ pub unsafe extern "C" fn luab_load(interpreter: *mut Interpreter) -> i32 {
         return load_aux(interpreter, status, env);
     }
 }
-pub unsafe extern "C" fn dofilecont(
+pub unsafe fn dofilecont(
     interpreter: *mut Interpreter,
     mut _d1: i32,
     mut _d2: i64,
@@ -434,7 +434,7 @@ pub unsafe extern "C" fn dofilecont(
         return (*interpreter).get_top() - 1;
     }
 }
-pub unsafe extern "C" fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         lua_settop(interpreter, 1);
@@ -446,12 +446,12 @@ pub unsafe extern "C" fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
             0,
             -1,
             0,
-            Some(dofilecont as unsafe extern "C" fn(*mut Interpreter, i32, i64) -> i32),
+            Some(dofilecont as unsafe fn(*mut Interpreter, i32, i64) -> i32),
         );
         return dofilecont(interpreter, 0, 0);
     }
 }
-pub unsafe extern "C" fn luab_assert(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         if (lua_toboolean(interpreter, 1) != 0) as i64 != 0 {
             return (*interpreter).get_top();
@@ -468,7 +468,7 @@ pub unsafe extern "C" fn luab_assert(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn luab_select(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_select(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n = (*interpreter).get_top();
         if lua_type(interpreter, 1) == Some(TagType::String)
@@ -493,7 +493,7 @@ pub unsafe extern "C" fn luab_select(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         let n: i32 = (*interpreter).get_top();
@@ -507,12 +507,12 @@ pub unsafe extern "C" fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
             -1,
             2,
             2 as i64,
-            Some(finishpcall as unsafe extern "C" fn(*mut Interpreter, i32, i64) -> i32),
+            Some(finishpcall as unsafe fn(*mut Interpreter, i32, i64) -> i32),
         );
         return finishpcall(interpreter, status, 2 as i64);
     }
 }
-pub unsafe extern "C" fn luab_tostring(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_tostring(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
         lual_tolstring(interpreter, 1, null_mut());
@@ -524,141 +524,141 @@ pub const BASE_FUNCTIONS: [RegisteredFunction; 26] = {
         {
             RegisteredFunction {
                 name: make_cstring!("assert"),
-                function: Some(luab_assert as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_assert as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("collectgarbage"),
                 function: Some(
-                    luab_collectgarbage as unsafe extern "C" fn(*mut Interpreter) -> i32,
+                    luab_collectgarbage as unsafe fn(*mut Interpreter) -> i32,
                 ),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("dofile"),
-                function: Some(luab_dofile as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_dofile as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("error"),
-                function: Some(luab_error as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_error as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("getmetatable"),
-                function: Some(luab_getmetatable as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_getmetatable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("ipairs"),
-                function: Some(luab_ipairs as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_ipairs as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("loadfile"),
-                function: Some(luab_loadfile as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_loadfile as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("load"),
-                function: Some(luab_load as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_load as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("next"),
-                function: Some(luab_next as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_next as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("pairs"),
-                function: Some(luab_pairs as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_pairs as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("pcall"),
-                function: Some(luab_pcall as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_pcall as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("print"),
-                function: Some(luab_print as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_print as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("warn"),
-                function: Some(luab_warn as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_warn as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("rawequal"),
-                function: Some(luab_rawequal as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_rawequal as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("rawlen"),
-                function: Some(luab_rawlen as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_rawlen as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("rawget"),
-                function: Some(luab_rawget as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_rawget as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("rawset"),
-                function: Some(luab_rawset as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_rawset as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("select"),
-                function: Some(luab_select as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_select as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("setmetatable"),
-                function: Some(luab_setmetatable as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_setmetatable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("tonumber"),
-                function: Some(luab_tonumber as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_tonumber as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("tostring"),
-                function: Some(luab_tostring as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_tostring as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("type"),
-                function: Some(luab_type as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_type as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("xpcall"),
-                function: Some(luab_xpcall as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_xpcall as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -681,7 +681,7 @@ pub const BASE_FUNCTIONS: [RegisteredFunction; 26] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_base(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luaopen_base(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_rawgeti(interpreter, -(1000000 as i32) - 1000 as i32, 2 as i64);
         lual_setfuncs(interpreter, BASE_FUNCTIONS.as_ptr(), 0);

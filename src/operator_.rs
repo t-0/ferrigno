@@ -26,7 +26,7 @@ pub const OPR_MOD: u32 = 3;
 pub const OPR_MUL: u32 = 2;
 pub const OPR_SUB: u32 = 1;
 pub const OPR_ADD: u32 = 0;
-pub unsafe extern "C" fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
+pub unsafe fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
     unsafe {
         match op {
             7 | 8 | 9 | 10 | 11 | 13 => {
@@ -46,12 +46,12 @@ pub unsafe extern "C" fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i
         };
     }
 }
-pub unsafe extern "C" fn binopr2op(opr: u32, baser: u32, base: u32) -> u32 {
+pub unsafe fn binopr2op(opr: u32, baser: u32, base: u32) -> u32 {
     return (opr as i32 - baser as i32 + base as i32) as u32;
 }
-pub unsafe extern "C" fn unopr2op(unary: OperatorUnary) -> u32 {
+pub unsafe fn unopr2op(unary: OperatorUnary) -> u32 {
     return (unary as i32 - OperatorUnary::Minus as i32 + OP_UNM as i32) as u32;
 }
-pub unsafe extern "C" fn binopr2tm(opr: u32) -> u32 {
+pub unsafe fn binopr2tm(opr: u32) -> u32 {
     return (opr as i32 - OPR_ADD as i32 + TM_ADD as i32) as u32;
 }

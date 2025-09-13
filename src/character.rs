@@ -257,7 +257,7 @@ pub const CHARACTER_BAR: i32 = 124;
 pub const CHARACTER_BRACE_RIGHT: i32 = 125;
 pub const CHARACTER_TILDE: i32 = 126;
 pub const CHARACTER_DELETE: i32 = 127;
-pub unsafe extern "C" fn get_hexadecimal_digit_value(ch: i32) -> i32 {
+pub unsafe fn get_hexadecimal_digit_value(ch: i32) -> i32 {
     match ch {
         CHARACTER_0 => 0,
         CHARACTER_1 => 1,
@@ -565,7 +565,7 @@ const CHARACTER_TYPE: [u8; 257] = [
     CHARACTER_TYPE_NONE,
     CHARACTER_TYPE_NONE,
 ];
-pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
+pub unsafe fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
     unsafe {
         let mut n: i32 = 1;
         if x < 0x80 {
@@ -587,7 +587,7 @@ pub unsafe extern "C" fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn is_digit(ch: i32) -> bool {
+pub fn is_digit(ch: i32) -> bool {
     match ch {
         CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5
         | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => true,

@@ -28,7 +28,7 @@ impl DumpState {
             status: 0,
         };
     }
-    pub unsafe extern "C" fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
+    pub unsafe fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
                 self.status = (Some((self.write_function).expect("non-null function pointer")))
@@ -41,13 +41,13 @@ impl DumpState {
             }
         }
     }
-    pub unsafe extern "C" fn dump_byte(&mut self, integer: u8) {
+    pub unsafe fn dump_byte(&mut self, integer: u8) {
         unsafe {
             let mut x: u8 = integer;
             self.dump_block(&mut x as *mut u8 as *const libc::c_void, size_of::<u8>());
         }
     }
-    pub unsafe extern "C" fn dump_size(&mut self, mut integer: usize) {
+    pub unsafe fn dump_size(&mut self, mut integer: usize) {
         unsafe {
             let mut buffer: [u8; 10] = [0; 10];
             let mut n: usize = 0;
@@ -87,12 +87,12 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_int(&mut self, integer: i32) {
+    pub unsafe fn dump_int(&mut self, integer: i32) {
         unsafe {
             self.dump_size(integer as usize);
         }
     }
-    pub unsafe extern "C" fn dump_number(&mut self, mut number: f64) {
+    pub unsafe fn dump_number(&mut self, mut number: f64) {
         unsafe {
             self.dump_block(
                 &mut number as *mut f64 as *const libc::c_void,
@@ -100,7 +100,7 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_integer(&mut self, mut integer: i64) {
+    pub unsafe fn dump_integer(&mut self, mut integer: i64) {
         unsafe {
             self.dump_block(
                 &mut integer as *mut i64 as *const libc::c_void,
@@ -108,7 +108,7 @@ impl DumpState {
             );
         }
     }
-    pub unsafe extern "C" fn dump_string(&mut self, tstring: *const TString) {
+    pub unsafe fn dump_string(&mut self, tstring: *const TString) {
         unsafe {
             if tstring.is_null() {
                 self.dump_size(0);
@@ -123,7 +123,7 @@ impl DumpState {
             };
         }
     }
-    pub unsafe extern "C" fn dump_header(&mut self) {
+    pub unsafe fn dump_header(&mut self) {
         unsafe {
             self.dump_block(
                 LUA_SIGNATURE as *const libc::c_void,
@@ -143,7 +143,7 @@ impl DumpState {
         }
     }
 }
-pub unsafe extern "C" fn save_prototype(
+pub unsafe fn save_prototype(
     interpreter: *mut Interpreter,
     prototype: *const Prototype,
     write_function: WriteFunction,

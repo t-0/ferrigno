@@ -178,20 +178,20 @@ pub struct SigInfoAA {
     pub si_pid: i32,
     pub si_uid: u32,
 }
-pub type SignalHandler = Option<unsafe extern "C" fn(i32) -> ()>;
+pub type SignalHandler = Option<unsafe fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SignalAction {
     pub __sigaction_handler: SigActionA,
     pub sa_mask: SIgnalSet,
     pub sa_flags: i32,
-    pub sa_restorer: Option<unsafe extern "C" fn() -> ()>,
+    pub sa_restorer: Option<unsafe fn() -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union SigActionA {
     pub sa_handler: SignalHandler,
-    pub sa_sigaction: Option<unsafe extern "C" fn(i32, *mut SignalInfo, *mut libc::c_void) -> ()>,
+    pub sa_sigaction: Option<unsafe fn(i32, *mut SignalInfo, *mut libc::c_void) -> ()>,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

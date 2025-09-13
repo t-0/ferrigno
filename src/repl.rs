@@ -4,7 +4,7 @@ use crate::library::*;
 use crate::global::*;
 use libc::isatty;
 use std::ptr::*;
-pub unsafe extern "C" fn pmain(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let argc: i32 = lua_tointegerx(interpreter, 1, null_mut()) as i32;
         let argv: *mut *mut i8 = (*interpreter).to_pointer(2) as *mut *mut i8;
@@ -73,7 +73,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             lua_gc(interpreter, 0);
             lua_pushcclosure(
                 interpreter,
-                Some(pmain as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                Some(pmain as unsafe fn(*mut Interpreter) -> i32),
                 0,
             );
             (*interpreter).push_integer(argc as i64);

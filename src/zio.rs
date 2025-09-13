@@ -26,7 +26,7 @@ impl ZIO {
         };
     }
 }
-pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
+pub unsafe fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: usize = 0;
         let interpreter: *mut Interpreter = (*zio).interpreter;
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn luaz_fill(zio: *mut ZIO) -> i32 {
         }
     }
 }
-pub unsafe extern "C" fn luaz_read(zio: *mut ZIO, mut b: *mut libc::c_void, mut n: usize) -> usize {
+pub unsafe fn luaz_read(zio: *mut ZIO, mut b: *mut libc::c_void, mut n: usize) -> usize {
     unsafe {
         while n != 0 {
             if (*zio).length == 0 {

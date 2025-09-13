@@ -8,7 +8,7 @@ pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
     make_cstring!("suspended"),
     make_cstring!("normal"),
 ];
-pub unsafe extern "C" fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
+pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {
         if interpreter == co {
             return 0;

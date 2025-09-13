@@ -15,7 +15,7 @@ pub struct ExpressionDescription {
     pub t: i32,
     pub f: i32,
 }
-pub unsafe extern "C" fn init_exp(
+pub unsafe fn init_exp(
     e: *mut ExpressionDescription,
     expression_kind: ExpressionKind,
     i: i32,
@@ -27,7 +27,7 @@ pub unsafe extern "C" fn init_exp(
         (*e).value.info = i;
     }
 }
-pub unsafe extern "C" fn codestring(e: *mut ExpressionDescription, s: *mut TString) {
+pub unsafe fn codestring(e: *mut ExpressionDescription, s: *mut TString) {
     unsafe {
         (*e).t = -1;
         (*e).f = (*e).t;
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn codestring(e: *mut ExpressionDescription, s: *mut TStri
         (*e).value.tstring = s;
     }
 }
-pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> bool {
+pub unsafe fn tonumeral(e: *const ExpressionDescription, v: *mut TValue) -> bool {
     unsafe {
         if (*e).t == (*e).f {
             match (*e).expression_kind {
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn tonumeral(e: *const ExpressionDescription, v: *mut TVal
         }
     }
 }
-pub unsafe extern "C" fn const2val(
+pub unsafe fn const2val(
     function_state: *mut FunctionState,
     e: *const ExpressionDescription,
 ) -> *mut TValue {
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn const2val(
         .k;
     }
 }
-pub unsafe extern "C" fn luak_exp2const(
+pub unsafe fn luak_exp2const(
     function_state: *mut FunctionState,
     e: *const ExpressionDescription,
     v: *mut TValue,
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn luak_exp2const(
         };
     }
 }
-pub unsafe extern "C" fn const2exp(v: *mut TValue, e: *mut ExpressionDescription) {
+pub unsafe fn const2exp(v: *mut TValue, e: *mut ExpressionDescription) {
     unsafe {
         match (*v).get_tag_variant() {
             TAG_VARIANT_NUMERIC_INTEGER => {
@@ -138,22 +138,22 @@ pub unsafe extern "C" fn const2exp(v: *mut TValue, e: *mut ExpressionDescription
         };
     }
 }
-pub unsafe extern "C" fn is_k_int(e: *mut ExpressionDescription) -> bool {
+pub unsafe fn is_k_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
         return (*e).expression_kind as u32 == ExpressionKind::VKINT as u32 && !((*e).t != (*e).f);
     }
 }
-pub unsafe extern "C" fn is_c_int(e: *mut ExpressionDescription) -> bool {
+pub unsafe fn is_c_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
         return is_k_int(e) && (*e).value.integer as usize <= ((1 << 8) - 1) as usize;
     }
 }
-pub unsafe extern "C" fn is_sc_int(e: *mut ExpressionDescription) -> bool {
+pub unsafe fn is_sc_int(e: *mut ExpressionDescription) -> bool {
     unsafe {
         return is_k_int(e) && fits_c((*e).value.integer);
     }
 }
-pub unsafe extern "C" fn is_sc_number(
+pub unsafe fn is_sc_number(
     e: *mut ExpressionDescription,
     pi: *mut i32,
     is_float: *mut bool,
@@ -177,7 +177,7 @@ pub unsafe extern "C" fn is_sc_number(
         };
     }
 }
-pub unsafe extern "C" fn luak_indexed(
+pub unsafe fn luak_indexed(
     function_state: *mut FunctionState,
     t: *mut ExpressionDescription,
     k: *mut ExpressionDescription,
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn luak_indexed(
         };
     }
 }
-pub unsafe extern "C" fn swapexps(e1: *mut ExpressionDescription, e2: *mut ExpressionDescription) {
+pub unsafe fn swapexps(e1: *mut ExpressionDescription, e2: *mut ExpressionDescription) {
     unsafe {
         let temp: ExpressionDescription = *e1;
         *e1 = *e2;

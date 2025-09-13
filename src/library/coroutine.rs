@@ -4,7 +4,7 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use std::ptr::*;
-unsafe extern "C" fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Closure);
         let nl: *mut Interpreter = lua_newthread(interpreter);
@@ -13,18 +13,18 @@ unsafe extern "C" fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-unsafe extern "C" fn luab_cowrap(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_cowrap(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         luab_cocreate(interpreter);
         lua_pushcclosure(
             interpreter,
-            Some(luab_auxwrap as unsafe extern "C" fn(*mut Interpreter) -> i32),
+            Some(luab_auxwrap as unsafe fn(*mut Interpreter) -> i32),
             1,
         );
         return 1;
     }
 }
-unsafe extern "C" fn luab_coresume(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_coresume(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
         let r: i32 = auxresume(interpreter, co, (*interpreter).get_top() - 1);
@@ -39,13 +39,13 @@ unsafe extern "C" fn luab_coresume(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-unsafe extern "C" fn luab_corunning(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_corunning(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         (*interpreter).push_boolean((*interpreter).push_state());
         return 2;
     }
 }
-unsafe extern "C" fn luab_close(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
         let mut status: i32 = auxstatus(interpreter, co);
@@ -71,7 +71,7 @@ unsafe extern "C" fn luab_close(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-unsafe extern "C" fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
         lua_pushstring(
@@ -81,7 +81,7 @@ unsafe extern "C" fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-unsafe extern "C" fn luab_yieldable(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_yieldable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let coroutine: *mut Interpreter = if lua_type(interpreter, 1) == None {
             interpreter
@@ -92,7 +92,7 @@ unsafe extern "C" fn luab_yieldable(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-unsafe extern "C" fn luab_yield(interpreter: *mut Interpreter) -> i32 {
+unsafe fn luab_yield(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return lua_yieldk(interpreter, (*interpreter).get_top(), 0, None);
     }
@@ -102,49 +102,49 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
         {
             RegisteredFunction {
                 name: make_cstring!("create"),
-                function: Some(luab_cocreate as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("resume"),
-                function: Some(luab_coresume as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("running"),
-                function: Some(luab_corunning as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("status"),
-                function: Some(luab_costatus as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("wrap"),
-                function: Some(luab_cowrap as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("yield"),
-                function: Some(luab_yield as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("isyieldable"),
-                function: Some(luab_yieldable as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("close"),
-                function: Some(luab_close as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -155,7 +155,7 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             interpreter,
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32
         return 1;
     }
 }
-pub unsafe extern "C" fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
+pub unsafe fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, 1);
         if co.is_null() {
@@ -178,7 +178,7 @@ pub unsafe extern "C" fn getco(interpreter: *mut Interpreter) -> *mut Interprete
         return co;
     }
 }
-pub unsafe extern "C" fn auxresume(
+pub unsafe fn auxresume(
     interpreter: *mut Interpreter,
     co: *mut Interpreter,
     narg: i32,
@@ -212,7 +212,7 @@ pub unsafe extern "C" fn auxresume(
         };
     }
 }
-pub unsafe extern "C" fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, -(1000000 as i32) - 1000 as i32 - 1);
         let r: i32 = auxresume(interpreter, co, (*interpreter).get_top());

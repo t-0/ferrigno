@@ -55,7 +55,7 @@ impl User {
                 as *mut libc::c_void;
         }
     }
-    pub unsafe extern "C" fn luas_newudata(
+    pub unsafe fn luas_newudata(
         interpreter: *mut Interpreter,
         count_bytes: usize,
         count_upvalues: usize,
@@ -80,7 +80,7 @@ impl User {
             return ret;
         }
     }
-    pub unsafe extern "C" fn lua_newuserdatauv(
+    pub unsafe fn lua_newuserdatauv(
         interpreter: *mut Interpreter,
         size: usize,
         count_upvalues: usize,
@@ -98,12 +98,12 @@ impl User {
             return (*new_user).get_raw_memory_mut();
         }
     }
-    pub unsafe extern "C" fn free_user(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn free_user(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             (*interpreter).free_memory(self as *mut User as *mut libc::c_void, self.get_size());
         }
     }
-    pub unsafe extern "C" fn traverseudata(&mut self, global: *mut Global) -> i32 {
+    pub unsafe fn traverseudata(&mut self, global: *mut Global) -> i32 {
         unsafe {
             if !self.get_metatable().is_null() {
                 if (*self.get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {

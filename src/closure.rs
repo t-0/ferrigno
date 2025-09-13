@@ -58,7 +58,7 @@ impl Closure {
             (*interpreter).free_memory(self as *mut Closure as *mut libc::c_void, size);
         }
     }
-    pub unsafe extern "C" fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {
+    pub unsafe fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             for i in 0..(*closure).count_upvalues {
                 if ((*((*closure).upvalues)
@@ -90,7 +90,7 @@ impl Closure {
             return 1 + (*closure).count_upvalues as usize;
         }
     }
-    pub unsafe extern "C" fn traverselclosure(global: *mut Global, closure: *mut Closure) -> usize {
+    pub unsafe fn traverselclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             if !((*closure).payload.l_prototype).is_null() {
                 if (*(*closure).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -115,7 +115,7 @@ impl Closure {
         }
     }
 }
-pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
+pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*(*interpreter).top.stkidrel_pointer)
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn collectvalidlines(interpreter: *mut Interpreter, closur
         };
     }
 }
-pub unsafe extern "C" fn auxgetinfo(
+pub unsafe fn auxgetinfo(
     interpreter: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,
@@ -220,13 +220,13 @@ pub unsafe extern "C" fn auxgetinfo(
         return status;
     }
 }
-pub unsafe extern "C" fn size_cclosure(count_upvalues: usize) -> usize {
+pub unsafe fn size_cclosure(count_upvalues: usize) -> usize {
     core::mem::size_of::<Closure>() + size_of::<TValue>() * count_upvalues
 }
-pub unsafe extern "C" fn size_lclosure(count_upvalues: usize) -> usize {
+pub unsafe fn size_lclosure(count_upvalues: usize) -> usize {
     core::mem::size_of::<Closure>() + size_of::<*mut TValue>() * count_upvalues
 }
-pub unsafe extern "C" fn luaf_newcclosure(
+pub unsafe fn luaf_newcclosure(
     interpreter: *mut Interpreter,
     count_upvalues: i32,
 ) -> *mut Closure {
@@ -241,7 +241,7 @@ pub unsafe extern "C" fn luaf_newcclosure(
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_newlclosure(
+pub unsafe fn luaf_newlclosure(
     interpreter: *mut Interpreter,
     mut count_upvalues: i32,
 ) -> *mut Closure {
@@ -269,7 +269,7 @@ pub unsafe extern "C" fn luaf_newlclosure(
         return ret;
     }
 }
-pub unsafe extern "C" fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut Closure) {
+pub unsafe fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut Closure) {
     unsafe {
         for i in 0..(*cl).count_upvalues {
             let object: *mut Object =

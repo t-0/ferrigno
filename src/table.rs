@@ -71,7 +71,7 @@ impl Table {
             (*interpreter).free_memory(self as *mut Table as *mut libc::c_void, size_of::<Table>());
         }
     }
-    pub unsafe extern "C" fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
+    pub unsafe fn exchange_hash_part(t1: *mut Table, t2: *mut Table) {
         unsafe {
             let temporary_size_node: u8 = (*t1).log_size_node;
             (*t1).log_size_node = (*t2).log_size_node;
@@ -84,7 +84,7 @@ impl Table {
             (*t2).last_free = temporary_last_free;
         }
     }
-    pub unsafe extern "C" fn get_free_position(&mut self) -> *mut Node {
+    pub unsafe fn get_free_position(&mut self) -> *mut Node {
         unsafe {
             if !self.last_free.is_null() {
                 while self.last_free > self.node {
@@ -99,7 +99,7 @@ impl Table {
         }
     }
 }
-pub unsafe extern "C" fn luat_gettm(
+pub unsafe fn luat_gettm(
     events: *mut Table,
     event: u32,
     ename: *mut TString,
@@ -115,7 +115,7 @@ pub unsafe extern "C" fn luat_gettm(
         };
     }
 }
-pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
+pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
     unsafe {
         let limit: *mut Node =
             &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn traverseweakvalue(global: *mut Global, h: *mut Table) {
         };
     }
 }
-pub unsafe extern "C" fn traverseephemeron(
+pub unsafe fn traverseephemeron(
     global: *mut Global,
     h: *mut Table,
     is_reverse: bool,
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn traverseephemeron(
         return marked;
     }
 }
-pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table) {
+pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
     unsafe {
         let limit: *mut Node =
             &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn traversestrongtable(global: *mut Global, h: *mut Table)
         generate_link(global, &mut (*(h as *mut Object)));
     }
 }
-pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> usize {
+pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
         let mut weakkey: *const i8 = null();
         let mut weakvalue: *const i8 = null();
@@ -321,7 +321,7 @@ pub unsafe extern "C" fn traversetable(global: *mut Global, h: *mut Table) -> us
         ) as usize;
     }
 }
-pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: usize) {
+pub unsafe fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: usize) {
     unsafe {
         for i in old_size..new_size {
             let ref mut fresh = *vect.offset(i as isize);
@@ -342,7 +342,7 @@ pub unsafe extern "C" fn tablerehash(vect: *mut *mut TString, old_size: usize, n
         }
     }
 }
-pub unsafe extern "C" fn hashint(t: *const Table, i: i64) -> *mut Node {
+pub unsafe fn hashint(t: *const Table, i: i64) -> *mut Node {
     unsafe {
         let ui: usize = i as usize;
         if ui <= 0x7FFFFFFF as usize {
@@ -356,7 +356,7 @@ pub unsafe extern "C" fn hashint(t: *const Table, i: i64) -> *mut Node {
         };
     }
 }
-pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
+pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
     unsafe {
         match (*key).get_tag_variant() {
             TAG_VARIANT_NUMERIC_INTEGER => {
@@ -366,7 +366,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             TAG_VARIANT_NUMERIC_NUMBER => {
                 let n: f64 = (*key).value.number;
                 return &mut *((*t).node).offset(
-                    ((l_hashfloat as unsafe extern "C" fn(f64) -> i32)(n)
+                    ((l_hashfloat as unsafe fn(f64) -> i32)(n)
                         % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize,
                 ) as *mut Node;
             }
@@ -379,7 +379,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
             TAG_VARIANT_STRING_LONG => {
                 let ts_0: *mut TString = &mut (*((*key).value.object as *mut TString));
                 return &mut *((*t).node).offset(
-                    ((hash_string_long as unsafe extern "C" fn(*mut TString) -> u32)(ts_0)
+                    ((hash_string_long as unsafe fn(*mut TString) -> u32)(ts_0)
                         & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32
                         as isize,
                 ) as *mut Node;
@@ -428,7 +428,7 @@ pub unsafe extern "C" fn mainpositiontv(t: *const Table, key: *const TValue) -> 
         };
     }
 }
-pub unsafe extern "C" fn mainpositionfromnode(t: *const Table, nd: *mut Node) -> *mut Node {
+pub unsafe fn mainpositionfromnode(t: *const Table, nd: *mut Node) -> *mut Node {
     unsafe {
         let mut key: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io_: *mut TValue = &mut key;
@@ -437,7 +437,7 @@ pub unsafe extern "C" fn mainpositionfromnode(t: *const Table, nd: *mut Node) ->
         return mainpositiontv(t, &mut key);
     }
 }
-pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 {
+pub unsafe fn luah_realasize(t: *const Table) -> u32 {
     unsafe {
         if (*t).flags as i32 & 1 << 7 == 0
             || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0
@@ -455,21 +455,21 @@ pub unsafe extern "C" fn luah_realasize(t: *const Table) -> u32 {
         };
     }
 }
-pub unsafe extern "C" fn ispow2realasize(t: *const Table) -> i32 {
+pub unsafe fn ispow2realasize(t: *const Table) -> i32 {
     unsafe {
         return ((*t).flags as i32 & 1 << 7 != 0
             || (*t).array_limit & ((*t).array_limit).wrapping_sub(1 as u32) == 0)
             as i32;
     }
 }
-pub unsafe extern "C" fn setlimittosize(table: *mut Table) -> u32 {
+pub unsafe fn setlimittosize(table: *mut Table) -> u32 {
     unsafe {
         (*table).array_limit = luah_realasize(table);
         (*table).flags = ((*table).flags as i32 & !(1 << 7) as u8 as i32) as u8;
         return (*table).array_limit;
     }
 }
-pub unsafe extern "C" fn getgeneric(
+pub unsafe fn getgeneric(
     table: *mut Table,
     key: *const TValue,
     deadok: i32,
@@ -489,7 +489,7 @@ pub unsafe extern "C" fn getgeneric(
         }
     }
 }
-pub unsafe extern "C" fn findindex(
+pub unsafe fn findindex(
     interpreter: *mut Interpreter,
     table: *mut Table,
     key: *mut TValue,
@@ -522,7 +522,7 @@ pub unsafe extern "C" fn findindex(
         };
     }
 }
-pub unsafe extern "C" fn luah_next(
+pub unsafe fn luah_next(
     interpreter: *mut Interpreter,
     table: *mut Table,
     key: StackValuePointer,
@@ -558,7 +558,7 @@ pub unsafe extern "C" fn luah_next(
         return 0;
     }
 }
-pub unsafe extern "C" fn freehash(interpreter: *mut Interpreter, table: *mut Table) {
+pub unsafe fn freehash(interpreter: *mut Interpreter, table: *mut Table) {
     unsafe {
         if !((*table).last_free).is_null() {
             (*interpreter).free_memory(
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn freehash(interpreter: *mut Interpreter, table: *mut Tab
         }
     }
 }
-pub unsafe extern "C" fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
+pub unsafe fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
     unsafe {
         let mut i: i32;
         let mut twotoi: u32;
@@ -591,7 +591,7 @@ pub unsafe extern "C" fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
         return optimal;
     }
 }
-pub unsafe extern "C" fn countint(key: i64, nums: *mut u32) -> i32 {
+pub unsafe fn countint(key: i64, nums: *mut u32) -> i32 {
     unsafe {
         let k: u32 = arrayindex(key);
         if k == 0 {
@@ -603,7 +603,7 @@ pub unsafe extern "C" fn countint(key: i64, nums: *mut u32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
+pub unsafe fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
     unsafe {
         let mut lg: i32;
         let mut ttlg: u32;
@@ -642,7 +642,7 @@ pub unsafe extern "C" fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
         return ause;
     }
 }
-pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u32) -> i32 {
+pub unsafe fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u32) -> i32 {
     unsafe {
         let mut totaluse: i32 = 0;
         let mut ause: i32 = 0;
@@ -667,7 +667,7 @@ pub unsafe extern "C" fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u
         return totaluse;
     }
 }
-pub unsafe extern "C" fn setnodevector(
+pub unsafe fn setnodevector(
     interpreter: *mut Interpreter,
     table: *mut Table,
     mut size: u32,
@@ -718,7 +718,7 @@ pub unsafe extern "C" fn setnodevector(
         };
     }
 }
-pub unsafe extern "C" fn reinsert(
+pub unsafe fn reinsert(
     interpreter: *mut Interpreter,
     ot: *mut Table,
     table: *mut Table,
@@ -740,7 +740,7 @@ pub unsafe extern "C" fn reinsert(
         }
     }
 }
-pub unsafe extern "C" fn luah_resize(
+pub unsafe fn luah_resize(
     interpreter: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
@@ -787,7 +787,7 @@ pub unsafe extern "C" fn luah_resize(
         freehash(interpreter, &mut new_table);
     }
 }
-pub unsafe extern "C" fn luah_resizearray(
+pub unsafe fn luah_resizearray(
     interpreter: *mut Interpreter,
     table: *mut Table,
     new_array_size: usize,
@@ -801,7 +801,7 @@ pub unsafe extern "C" fn luah_resizearray(
         luah_resize(interpreter, table, new_array_size, new_table_size);
     }
 }
-pub unsafe extern "C" fn rehash(
+pub unsafe fn rehash(
     interpreter: *mut Interpreter,
     table: *mut Table,
     ek: *const TValue,
@@ -835,7 +835,7 @@ pub unsafe extern "C" fn rehash(
         );
     }
 }
-pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
+pub unsafe fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
         let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_TABLE, size_of::<Table>());
         let new_table: *mut Table = &mut (*(object as *mut Table));
@@ -847,7 +847,7 @@ pub unsafe extern "C" fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
         return new_table;
     }
 }
-pub unsafe extern "C" fn luah_newkey(
+pub unsafe fn luah_newkey(
     interpreter: *mut Interpreter,
     table: *mut Table,
     mut key: *const TValue,
@@ -924,7 +924,7 @@ pub unsafe extern "C" fn luah_newkey(
         (*io1).copy_from(&*io2);
     }
 }
-pub unsafe extern "C" fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
+pub unsafe fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
     unsafe {
         let array_limit: usize = (*table).array_limit as usize;
         if (key as usize).wrapping_sub(1 as usize) < array_limit {
@@ -954,7 +954,7 @@ pub unsafe extern "C" fn luah_getint(table: *mut Table, key: i64) -> *const TVal
         };
     }
 }
-pub unsafe extern "C" fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const TValue {
+pub unsafe fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const TValue {
     unsafe {
         let mut node: *mut Node = &mut *((*table).node)
             .offset(((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize)
@@ -974,7 +974,7 @@ pub unsafe extern "C" fn luah_getshortstr(table: *mut Table, key: *mut TString) 
         }
     }
 }
-pub unsafe extern "C" fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue {
+pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue {
     unsafe {
         if (*key).get_tag_variant() == TAG_VARIANT_STRING_SHORT {
             return luah_getshortstr(table, key);
@@ -989,7 +989,7 @@ pub unsafe extern "C" fn luah_getstr(table: *mut Table, key: *mut TString) -> *c
         };
     }
 }
-pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
+pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
     unsafe {
         match (*key).get_tag_variant() {
             TAG_VARIANT_STRING_SHORT => {
@@ -1008,7 +1008,7 @@ pub unsafe extern "C" fn luah_get(table: *mut Table, key: *const TValue) -> *con
         return getgeneric(table, key, 0);
     }
 }
-pub unsafe extern "C" fn luah_finishset(
+pub unsafe fn luah_finishset(
     interpreter: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
@@ -1025,7 +1025,7 @@ pub unsafe extern "C" fn luah_finishset(
         };
     }
 }
-pub unsafe extern "C" fn luah_set(
+pub unsafe fn luah_set(
     interpreter: *mut Interpreter,
     table: *mut Table,
     key: *const TValue,
@@ -1036,7 +1036,7 @@ pub unsafe extern "C" fn luah_set(
         luah_finishset(interpreter, table, key, slot, value);
     }
 }
-pub unsafe extern "C" fn luah_setint(
+pub unsafe fn luah_setint(
     interpreter: *mut Interpreter,
     table: *mut Table,
     key: i64,
@@ -1057,7 +1057,7 @@ pub unsafe extern "C" fn luah_setint(
         };
     }
 }
-pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: usize) -> usize {
+pub unsafe fn hash_search(table: *mut Table, mut j: usize) -> usize {
     unsafe {
         let mut i: usize;
         if j == 0 {
@@ -1089,7 +1089,7 @@ pub unsafe extern "C" fn hash_search(table: *mut Table, mut j: usize) -> usize {
         return i;
     }
 }
-pub unsafe extern "C" fn luah_getn(table: *mut Table) -> usize {
+pub unsafe fn luah_getn(table: *mut Table) -> usize {
     unsafe {
         let mut limit: u32 = (*table).array_limit;
         if limit > 0u32
@@ -1143,7 +1143,7 @@ pub unsafe extern "C" fn luah_getn(table: *mut Table) -> usize {
         };
     }
 }
-pub unsafe extern "C" fn luav_finishget(
+pub unsafe fn luav_finishget(
     interpreter: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,
@@ -1205,7 +1205,7 @@ pub unsafe extern "C" fn luav_finishget(
         );
     }
 }
-pub unsafe extern "C" fn luav_finishset(
+pub unsafe fn luav_finishset(
     interpreter: *mut Interpreter,
     mut t: *const TValue,
     key: *mut TValue,

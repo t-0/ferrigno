@@ -8,7 +8,7 @@ pub enum OperatorUnary {
     Length,
     None_,
 }
-pub unsafe extern "C" fn getunopr(token: i32) -> OperatorUnary {
+pub unsafe fn getunopr(token: i32) -> OperatorUnary {
     match token {
         TK_NOT => return OperatorUnary::Not,
         TK_CHARACTER_HYPHEN => return OperatorUnary::Minus,

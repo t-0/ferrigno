@@ -5,14 +5,14 @@ pub const IABC: u32 = 0;
 pub const IABX: u32 = 1;
 pub const ISJ: u32 = 4;
 pub const IASBX: u32 = 2;
-pub unsafe extern "C" fn filter_program_counter(program_counter: i32, jump_target: i32) -> i32 {
+pub unsafe fn filter_program_counter(program_counter: i32, jump_target: i32) -> i32 {
     if program_counter < jump_target {
         return -1;
     } else {
         return program_counter;
     };
 }
-pub unsafe extern "C" fn final_target(code: *mut u32, mut index: i32) -> i32 {
+pub unsafe fn final_target(code: *mut u32, mut index: i32) -> i32 {
     unsafe {
         for _ in 0..100 {
             let program_counter: u32 = *code.offset(index as isize);

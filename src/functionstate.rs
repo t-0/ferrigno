@@ -75,7 +75,7 @@ impl New for FunctionState {
         };
     }
 }
-pub unsafe extern "C" fn movegotosout(
+pub unsafe fn movegotosout(
     function_state: *mut FunctionState,
     block_control: *mut BlockControl,
 ) {
@@ -97,7 +97,7 @@ pub unsafe extern "C" fn movegotosout(
         }
     }
 }
-pub unsafe extern "C" fn enterblock(
+pub unsafe fn enterblock(
     function_state: *mut FunctionState,
     block_control: *mut BlockControl,
     is_loop: bool,
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn enterblock(
         (*function_state).block_control = block_control;
     }
 }
-pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
+pub unsafe fn leaveblock(function_state: *mut FunctionState) {
     unsafe {
         let block_control: *mut BlockControl = (*function_state).block_control;
         let lexical_state: *mut LexicalState = (*function_state).lexical_state;
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn leaveblock(function_state: *mut FunctionState) {
         }
     }
 }
-pub unsafe extern "C" fn closelistfield(
+pub unsafe fn closelistfield(
     function_state: *mut FunctionState,
     cc: *mut ConstructorControl,
 ) {
@@ -188,7 +188,7 @@ pub unsafe extern "C" fn closelistfield(
         }
     }
 }
-pub unsafe extern "C" fn lastlistfield(
+pub unsafe fn lastlistfield(
     function_state: *mut FunctionState,
     cc: *mut ConstructorControl,
 ) {
@@ -217,13 +217,13 @@ pub unsafe extern "C" fn lastlistfield(
         (*cc).na += (*cc).to_store;
     }
 }
-pub unsafe extern "C" fn setvararg(function_state: *mut FunctionState, nparams: i32) {
+pub unsafe fn setvararg(function_state: *mut FunctionState, nparams: i32) {
     unsafe {
         (*(*function_state).prototype).prototype_is_variable_arguments = true;
         luak_code_abck(function_state, OP_VARARGPREP, nparams, 0, 0, 0);
     }
 }
-pub unsafe extern "C" fn errorlimit(
+pub unsafe fn errorlimit(
     function_state: *mut FunctionState,
     limit: i32,
     what: *const i8,
@@ -251,7 +251,7 @@ pub unsafe extern "C" fn errorlimit(
         luax_syntaxerror((*function_state).lexical_state, message);
     }
 }
-pub unsafe extern "C" fn checklimit(
+pub unsafe fn checklimit(
     function_state: *mut FunctionState,
     v: i32,
     length: i32,
@@ -263,7 +263,7 @@ pub unsafe extern "C" fn checklimit(
         }
     }
 }
-pub unsafe extern "C" fn getlocalvardesc(
+pub unsafe fn getlocalvardesc(
     function_state: *mut FunctionState,
     vidx: i32,
 ) -> *mut VariableDescription {
@@ -275,7 +275,7 @@ pub unsafe extern "C" fn getlocalvardesc(
             as *mut VariableDescription;
     }
 }
-pub unsafe extern "C" fn reglevel(function_state: *mut FunctionState, mut nvar: i32) -> i32 {
+pub unsafe fn reglevel(function_state: *mut FunctionState, mut nvar: i32) -> i32 {
     unsafe {
         loop {
             let fresh38 = nvar;
@@ -292,7 +292,7 @@ pub unsafe extern "C" fn reglevel(function_state: *mut FunctionState, mut nvar: 
         return 0;
     }
 }
-pub unsafe extern "C" fn luay_nvarstack(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn luay_nvarstack(function_state: *mut FunctionState) -> i32 {
     unsafe {
         return reglevel(
             function_state,
@@ -300,7 +300,7 @@ pub unsafe extern "C" fn luay_nvarstack(function_state: *mut FunctionState) -> i
         );
     }
 }
-pub unsafe extern "C" fn localdebuginfo(
+pub unsafe fn localdebuginfo(
     function_state: *mut FunctionState,
     vidx: i32,
 ) -> *mut LocalVariable {
@@ -316,7 +316,7 @@ pub unsafe extern "C" fn localdebuginfo(
         };
     }
 }
-pub unsafe extern "C" fn init_var(
+pub unsafe fn init_var(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     vidx: i32,
@@ -331,7 +331,7 @@ pub unsafe extern "C" fn init_var(
             .register_index;
     }
 }
-pub unsafe extern "C" fn removevars(function_state: *mut FunctionState, tolevel: i32) {
+pub unsafe fn removevars(function_state: *mut FunctionState, tolevel: i32) {
     unsafe {
         (*(*(*function_state).lexical_state).dynamic_data)
             .active_variable
@@ -349,7 +349,7 @@ pub unsafe extern "C" fn removevars(function_state: *mut FunctionState, tolevel:
         }
     }
 }
-pub unsafe extern "C" fn searchupvalue(
+pub unsafe fn searchupvalue(
     function_state: *mut FunctionState,
     name: *mut TString,
 ) -> i32 {
@@ -365,7 +365,7 @@ pub unsafe extern "C" fn searchupvalue(
         return -1;
     }
 }
-pub unsafe extern "C" fn allocate_upvalue_description(
+pub unsafe fn allocate_upvalue_description(
     function_state: *mut FunctionState,
 ) -> *mut UpValueDescription {
     unsafe {
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn allocate_upvalue_description(
             as *mut UpValueDescription;
     }
 }
-pub unsafe extern "C" fn newupvalue(
+pub unsafe fn newupvalue(
     function_state: *mut FunctionState,
     name: *mut TString,
     v: *mut ExpressionDescription,
@@ -435,7 +435,7 @@ pub unsafe extern "C" fn newupvalue(
         return (*function_state).count_upvalues as i32 - 1;
     }
 }
-pub unsafe extern "C" fn searchvar(
+pub unsafe fn searchvar(
     function_state: *mut FunctionState,
     n: *mut TString,
     var: *mut ExpressionDescription,
@@ -462,7 +462,7 @@ pub unsafe extern "C" fn searchvar(
         return -1;
     }
 }
-pub unsafe extern "C" fn markupval(function_state: *mut FunctionState, level: i32) {
+pub unsafe fn markupval(function_state: *mut FunctionState, level: i32) {
     unsafe {
         let mut block_control: *mut BlockControl = (*function_state).block_control;
         while (*block_control).count_active_variables as i32 > level {
@@ -472,7 +472,7 @@ pub unsafe extern "C" fn markupval(function_state: *mut FunctionState, level: i3
         (*function_state).needs_close = true;
     }
 }
-pub unsafe extern "C" fn marktobeclosed(function_state: *mut FunctionState) {
+pub unsafe fn marktobeclosed(function_state: *mut FunctionState) {
     unsafe {
         let block_control: *mut BlockControl = (*function_state).block_control;
         (*block_control).count_upvalues = 1;
@@ -480,7 +480,7 @@ pub unsafe extern "C" fn marktobeclosed(function_state: *mut FunctionState) {
         (*function_state).needs_close = true;
     }
 }
-pub unsafe extern "C" fn singlevaraux(
+pub unsafe fn singlevaraux(
     function_state: *mut FunctionState,
     n: *mut TString,
     var: *mut ExpressionDescription,
@@ -512,7 +512,7 @@ pub unsafe extern "C" fn singlevaraux(
         };
     }
 }
-pub unsafe extern "C" fn fixforjump(
+pub unsafe fn fixforjump(
     function_state: *mut FunctionState,
     program_counter: i32,
     dest: i32,
@@ -537,7 +537,7 @@ pub unsafe extern "C" fn fixforjump(
             | (offset as u32) << POSITION_K & !(!(0u32) << 8 + 8 + 1) << POSITION_K;
     }
 }
-pub unsafe extern "C" fn checktoclose(function_state: *mut FunctionState, level: i32) {
+pub unsafe fn checktoclose(function_state: *mut FunctionState, level: i32) {
     unsafe {
         if level != -1 {
             marktobeclosed(function_state);
@@ -552,7 +552,7 @@ pub unsafe extern "C" fn checktoclose(function_state: *mut FunctionState, level:
         }
     }
 }
-pub unsafe extern "C" fn previousinstruction(function_state: *mut FunctionState) -> *mut u32 {
+pub unsafe fn previousinstruction(function_state: *mut FunctionState) -> *mut u32 {
     unsafe {
         pub const INVALID_INSTRUCTION: u32 = !(0u32);
         if (*function_state).program_counter > (*function_state).last_target {
@@ -566,7 +566,7 @@ pub unsafe extern "C" fn previousinstruction(function_state: *mut FunctionState)
         };
     }
 }
-pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: i32, n: i32) {
+pub unsafe fn luak_nil(function_state: *mut FunctionState, mut from: i32, n: i32) {
     unsafe {
         let mut length: i32 = from + n - 1;
         let previous: *mut u32 = previousinstruction(function_state);
@@ -590,7 +590,7 @@ pub unsafe extern "C" fn luak_nil(function_state: *mut FunctionState, mut from: 
         luak_code_abck(function_state, OP_LOADNIL, from, n - 1, 0, 0);
     }
 }
-pub unsafe extern "C" fn getjump(function_state: *mut FunctionState, program_counter: i32) -> i32 {
+pub unsafe fn getjump(function_state: *mut FunctionState, program_counter: i32) -> i32 {
     unsafe {
         let offset: i32 = (*((*(*function_state).prototype)
             .prototype_code
@@ -606,7 +606,7 @@ pub unsafe extern "C" fn getjump(function_state: *mut FunctionState, program_cou
         };
     }
 }
-pub unsafe extern "C" fn fixjump(
+pub unsafe fn fixjump(
     function_state: *mut FunctionState,
     program_counter: i32,
     dest: i32,
@@ -630,7 +630,7 @@ pub unsafe extern "C" fn fixjump(
                 & !(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A;
     }
 }
-pub unsafe extern "C" fn luak_concat(function_state: *mut FunctionState, l1: *mut i32, l2: i32) {
+pub unsafe fn luak_concat(function_state: *mut FunctionState, l1: *mut i32, l2: i32) {
     unsafe {
         if l2 == -1 {
             return;
@@ -650,12 +650,12 @@ pub unsafe extern "C" fn luak_concat(function_state: *mut FunctionState, l1: *mu
         };
     }
 }
-pub unsafe extern "C" fn luak_jump(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn luak_jump(function_state: *mut FunctionState) -> i32 {
     unsafe {
         return codesj(function_state, OP_JMP, -1, 0);
     }
 }
-pub unsafe extern "C" fn luak_ret(function_state: *mut FunctionState, first: i32, nret: i32) {
+pub unsafe fn luak_ret(function_state: *mut FunctionState, first: i32, nret: i32) {
     unsafe {
         let op: u32;
         match nret {
@@ -672,7 +672,7 @@ pub unsafe extern "C" fn luak_ret(function_state: *mut FunctionState, first: i32
         luak_code_abck(function_state, op, first, nret + 1, 0, 0);
     }
 }
-pub unsafe extern "C" fn condjump(
+pub unsafe fn condjump(
     function_state: *mut FunctionState,
     op: u32,
     a: i32,
@@ -685,13 +685,13 @@ pub unsafe extern "C" fn condjump(
         return luak_jump(function_state);
     }
 }
-pub unsafe extern "C" fn luak_getlabel(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn luak_getlabel(function_state: *mut FunctionState) -> i32 {
     unsafe {
         (*function_state).last_target = (*function_state).program_counter;
         return (*function_state).program_counter;
     }
 }
-pub unsafe extern "C" fn getjumpcontrol(
+pub unsafe fn getjumpcontrol(
     function_state: *mut FunctionState,
     program_counter: i32,
 ) -> *mut u32 {
@@ -711,7 +711,7 @@ pub unsafe extern "C" fn getjumpcontrol(
         };
     }
 }
-pub unsafe extern "C" fn patchtestreg(
+pub unsafe fn patchtestreg(
     function_state: *mut FunctionState,
     node: i32,
     reg: i32,
@@ -734,7 +734,7 @@ pub unsafe extern "C" fn patchtestreg(
         return 1;
     }
 }
-pub unsafe extern "C" fn removevalues(function_state: *mut FunctionState, mut list: i32) {
+pub unsafe fn removevalues(function_state: *mut FunctionState, mut list: i32) {
     unsafe {
         while list != -1 {
             patchtestreg(function_state, list, (1 << 8) - 1);
@@ -742,7 +742,7 @@ pub unsafe extern "C" fn removevalues(function_state: *mut FunctionState, mut li
         }
     }
 }
-pub unsafe extern "C" fn patchlistaux(
+pub unsafe fn patchlistaux(
     function_state: *mut FunctionState,
     mut list: i32,
     vtarget: i32,
@@ -761,7 +761,7 @@ pub unsafe extern "C" fn patchlistaux(
         }
     }
 }
-pub unsafe extern "C" fn luak_patchlist(
+pub unsafe fn luak_patchlist(
     function_state: *mut FunctionState,
     list: i32,
     target: i32,
@@ -770,13 +770,13 @@ pub unsafe extern "C" fn luak_patchlist(
         patchlistaux(function_state, list, target, (1 << 8) - 1, target);
     }
 }
-pub unsafe extern "C" fn luak_patchtohere(function_state: *mut FunctionState, list: i32) {
+pub unsafe fn luak_patchtohere(function_state: *mut FunctionState, list: i32) {
     unsafe {
         let hr: i32 = luak_getlabel(function_state);
         luak_patchlist(function_state, list, hr);
     }
 }
-pub unsafe extern "C" fn savelineinfo(
+pub unsafe fn savelineinfo(
     function_state: *mut FunctionState,
     prototype: *mut Prototype,
     line: i32,
@@ -827,7 +827,7 @@ pub unsafe extern "C" fn savelineinfo(
         (*function_state).previous_line = line;
     }
 }
-pub unsafe extern "C" fn removelastlineinfo(function_state: *mut FunctionState) {
+pub unsafe fn removelastlineinfo(function_state: *mut FunctionState) {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
         let program_counter: i32 = (*function_state).program_counter - 1;
@@ -847,14 +847,14 @@ pub unsafe extern "C" fn removelastlineinfo(function_state: *mut FunctionState) 
         };
     }
 }
-pub unsafe extern "C" fn removelastinstruction(function_state: *mut FunctionState) {
+pub unsafe fn removelastinstruction(function_state: *mut FunctionState) {
     unsafe {
         removelastlineinfo(function_state);
         (*function_state).program_counter -= 1;
         (*function_state).program_counter;
     }
 }
-pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -> i32 {
+pub unsafe fn luak_code(function_state: *mut FunctionState, i: u32) -> i32 {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
         (*prototype).prototype_code.grow(
@@ -878,7 +878,7 @@ pub unsafe extern "C" fn luak_code(function_state: *mut FunctionState, i: u32) -
         return (*function_state).program_counter - 1;
     }
 }
-pub unsafe extern "C" fn luak_code_abck(
+pub unsafe fn luak_code_abck(
     function_state: *mut FunctionState,
     o: u32,
     a: i32,
@@ -897,7 +897,7 @@ pub unsafe extern "C" fn luak_code_abck(
         );
     }
 }
-pub unsafe extern "C" fn luak_codeabx(
+pub unsafe fn luak_codeabx(
     function_state: *mut FunctionState,
     o: u32,
     a: i32,
@@ -910,7 +910,7 @@ pub unsafe extern "C" fn luak_codeabx(
         );
     }
 }
-pub unsafe extern "C" fn codeasbx(
+pub unsafe fn codeasbx(
     function_state: *mut FunctionState,
     o: u32,
     a: i32,
@@ -924,7 +924,7 @@ pub unsafe extern "C" fn codeasbx(
         );
     }
 }
-pub unsafe extern "C" fn codesj(
+pub unsafe fn codesj(
     function_state: *mut FunctionState,
     o: u32,
     sj: i32,
@@ -938,7 +938,7 @@ pub unsafe extern "C" fn codesj(
         );
     }
 }
-pub unsafe extern "C" fn codeextraarg(function_state: *mut FunctionState, a: i32) -> i32 {
+pub unsafe fn codeextraarg(function_state: *mut FunctionState, a: i32) -> i32 {
     unsafe {
         return luak_code(
             function_state,
@@ -946,7 +946,7 @@ pub unsafe extern "C" fn codeextraarg(function_state: *mut FunctionState, a: i32
         );
     }
 }
-pub unsafe extern "C" fn luak_codek(function_state: *mut FunctionState, reg: i32, k: i32) -> i32 {
+pub unsafe fn luak_codek(function_state: *mut FunctionState, reg: i32, k: i32) -> i32 {
     unsafe {
         if k <= (1 << 8 + 8 + 1) - 1 {
             return luak_codeabx(function_state, OP_LOADK, reg, k as u32);
@@ -957,7 +957,7 @@ pub unsafe extern "C" fn luak_codek(function_state: *mut FunctionState, reg: i32
         };
     }
 }
-pub unsafe extern "C" fn luak_checkstack(function_state: *mut FunctionState, n: i32) {
+pub unsafe fn luak_checkstack(function_state: *mut FunctionState, n: i32) {
     unsafe {
         let newstack: i32 = (*function_state).freereg as i32 + n;
         if newstack > (*(*function_state).prototype).prototype_maximum_stack_size as i32 {
@@ -971,13 +971,13 @@ pub unsafe extern "C" fn luak_checkstack(function_state: *mut FunctionState, n: 
         }
     }
 }
-pub unsafe extern "C" fn luak_reserveregs(function_state: *mut FunctionState, n: i32) {
+pub unsafe fn luak_reserveregs(function_state: *mut FunctionState, n: i32) {
     unsafe {
         luak_checkstack(function_state, n);
         (*function_state).freereg = ((*function_state).freereg as i32 + n) as u8;
     }
 }
-pub unsafe extern "C" fn freereg(function_state: *mut FunctionState, reg: i32) {
+pub unsafe fn freereg(function_state: *mut FunctionState, reg: i32) {
     unsafe {
         if reg >= luay_nvarstack(function_state) {
             (*function_state).freereg = ((*function_state).freereg).wrapping_sub(1);
@@ -985,7 +985,7 @@ pub unsafe extern "C" fn freereg(function_state: *mut FunctionState, reg: i32) {
         }
     }
 }
-pub unsafe extern "C" fn freeregs(function_state: *mut FunctionState, r1: i32, r2: i32) {
+pub unsafe fn freeregs(function_state: *mut FunctionState, r1: i32, r2: i32) {
     unsafe {
         if r1 > r2 {
             freereg(function_state, r1);
@@ -996,7 +996,7 @@ pub unsafe extern "C" fn freeregs(function_state: *mut FunctionState, r1: i32, r
         };
     }
 }
-pub unsafe extern "C" fn freeexp(
+pub unsafe fn freeexp(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1006,7 +1006,7 @@ pub unsafe extern "C" fn freeexp(
         }
     }
 }
-pub unsafe extern "C" fn freeexps(
+pub unsafe fn freeexps(
     function_state: *mut FunctionState,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
@@ -1025,7 +1025,7 @@ pub unsafe extern "C" fn freeexps(
         freeregs(function_state, r1, r2);
     }
 }
-pub unsafe extern "C" fn addk(
+pub unsafe fn addk(
     function_state: *mut FunctionState,
     key: *mut TValue,
     v: *mut TValue,
@@ -1105,7 +1105,7 @@ pub unsafe extern "C" fn addk(
         return count_constants;
     }
 }
-pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TString) -> i32 {
+pub unsafe fn string_k(function_state: *mut FunctionState, s: *mut TString) -> i32 {
     unsafe {
         let mut o: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let io: *mut TValue = &mut o;
@@ -1115,7 +1115,7 @@ pub unsafe extern "C" fn string_k(function_state: *mut FunctionState, s: *mut TS
         return addk(function_state, &mut o, &mut o);
     }
 }
-pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer: i64) -> i32 {
+pub unsafe fn luak_int_k(function_state: *mut FunctionState, integer: i64) -> i32 {
     unsafe {
         let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         tvalue.value.integer = integer;
@@ -1123,7 +1123,7 @@ pub unsafe extern "C" fn luak_int_k(function_state: *mut FunctionState, integer:
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
-pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, number: f64) -> i32 {
+pub unsafe fn luak_number_k(function_state: *mut FunctionState, number: f64) -> i32 {
     unsafe {
         let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let mut ik: i64 = 0;
@@ -1141,19 +1141,19 @@ pub unsafe extern "C" fn luak_number_k(function_state: *mut FunctionState, numbe
         };
     }
 }
-pub unsafe extern "C" fn bool_false(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn bool_false(function_state: *mut FunctionState) -> i32 {
     unsafe {
         let mut tvalue: TValue = TValue::new(TAG_VARIANT_BOOLEAN_FALSE);
         return addk(function_state, &mut tvalue, &mut tvalue);
     }
 }
-pub unsafe extern "C" fn bool_true(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn bool_true(function_state: *mut FunctionState) -> i32 {
     unsafe {
         let mut value: TValue = TValue::new(TAG_VARIANT_BOOLEAN_TRUE);
         return addk(function_state, &mut value, &mut value);
     }
 }
-pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {
+pub unsafe fn nil_k(function_state: *mut FunctionState) -> i32 {
     unsafe {
         let mut key: TValue = TValue::new(TAG_VARIANT_TABLE);
         let mut value: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
@@ -1163,7 +1163,7 @@ pub unsafe extern "C" fn nil_k(function_state: *mut FunctionState) -> i32 {
         return addk(function_state, &mut key, &mut value);
     }
 }
-pub unsafe extern "C" fn luak_int(function_state: *mut FunctionState, reg: i32, i: i64) {
+pub unsafe fn luak_int(function_state: *mut FunctionState, reg: i32, i: i64) {
     unsafe {
         if fits_bx(i) {
             codeasbx(function_state, OP_LOADI, reg, i as i32);
@@ -1172,7 +1172,7 @@ pub unsafe extern "C" fn luak_int(function_state: *mut FunctionState, reg: i32, 
         };
     }
 }
-pub unsafe extern "C" fn luak_float(function_state: *mut FunctionState, reg: i32, number: f64) {
+pub unsafe fn luak_float(function_state: *mut FunctionState, reg: i32, number: f64) {
     unsafe {
         let mut fi: i64 = 0;
         if luav_flttointeger(number, &mut fi, F2I::Equal) && fits_bx(fi) {
@@ -1182,7 +1182,7 @@ pub unsafe extern "C" fn luak_float(function_state: *mut FunctionState, reg: i32
         };
     }
 }
-pub unsafe extern "C" fn luak_setreturns(
+pub unsafe fn luak_setreturns(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     count_results: i32,
@@ -1204,7 +1204,7 @@ pub unsafe extern "C" fn luak_setreturns(
         };
     }
 }
-pub unsafe extern "C" fn str_to_k(
+pub unsafe fn str_to_k(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1213,7 +1213,7 @@ pub unsafe extern "C" fn str_to_k(
         (*e).expression_kind = ExpressionKind::VK;
     }
 }
-pub unsafe extern "C" fn luak_setoneret(
+pub unsafe fn luak_setoneret(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1240,7 +1240,7 @@ pub unsafe extern "C" fn luak_setoneret(
         }
     }
 }
-pub unsafe extern "C" fn luak_dischargevars(
+pub unsafe fn luak_dischargevars(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1317,7 +1317,7 @@ pub unsafe extern "C" fn luak_dischargevars(
         };
     }
 }
-pub unsafe extern "C" fn discharge2reg(
+pub unsafe fn discharge2reg(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     reg: i32,
@@ -1381,7 +1381,7 @@ pub unsafe extern "C" fn discharge2reg(
         (*e).expression_kind = ExpressionKind::VNONRELOC;
     }
 }
-pub unsafe extern "C" fn discharge2anyreg(
+pub unsafe fn discharge2anyreg(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1392,13 +1392,13 @@ pub unsafe extern "C" fn discharge2anyreg(
         }
     }
 }
-pub unsafe extern "C" fn code_loadbool(function_state: *mut FunctionState, a: i32, op: u32) -> i32 {
+pub unsafe fn code_loadbool(function_state: *mut FunctionState, a: i32, op: u32) -> i32 {
     unsafe {
         luak_getlabel(function_state);
         return luak_code_abck(function_state, op, a, 0, 0, 0);
     }
 }
-pub unsafe extern "C" fn need_value(function_state: *mut FunctionState, mut list: i32) -> i32 {
+pub unsafe fn need_value(function_state: *mut FunctionState, mut list: i32) -> i32 {
     unsafe {
         while list != -1 {
             let i: u32 = *getjumpcontrol(function_state, list);
@@ -1410,7 +1410,7 @@ pub unsafe extern "C" fn need_value(function_state: *mut FunctionState, mut list
         return 0;
     }
 }
-pub unsafe extern "C" fn exp2reg(
+pub unsafe fn exp2reg(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     reg: i32,
@@ -1443,7 +1443,7 @@ pub unsafe extern "C" fn exp2reg(
         (*e).expression_kind = ExpressionKind::VNONRELOC;
     }
 }
-pub unsafe extern "C" fn luak_exp2nextreg(
+pub unsafe fn luak_exp2nextreg(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1454,7 +1454,7 @@ pub unsafe extern "C" fn luak_exp2nextreg(
         exp2reg(function_state, e, (*function_state).freereg as i32 - 1);
     }
 }
-pub unsafe extern "C" fn luak_exp2anyreg(
+pub unsafe fn luak_exp2anyreg(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) -> i32 {
@@ -1473,7 +1473,7 @@ pub unsafe extern "C" fn luak_exp2anyreg(
         return (*e).value.info;
     }
 }
-pub unsafe extern "C" fn luak_exp2anyregup(
+pub unsafe fn luak_exp2anyregup(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1483,7 +1483,7 @@ pub unsafe extern "C" fn luak_exp2anyregup(
         }
     }
 }
-pub unsafe extern "C" fn luak_exp2val(
+pub unsafe fn luak_exp2val(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1495,7 +1495,7 @@ pub unsafe extern "C" fn luak_exp2val(
         };
     }
 }
-pub unsafe extern "C" fn luak_exp2k(
+pub unsafe fn luak_exp2k(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) -> i32 {
@@ -1535,7 +1535,7 @@ pub unsafe extern "C" fn luak_exp2k(
         return 0;
     }
 }
-pub unsafe extern "C" fn exp2rk(
+pub unsafe fn exp2rk(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) -> i32 {
@@ -1548,7 +1548,7 @@ pub unsafe extern "C" fn exp2rk(
         };
     }
 }
-pub unsafe extern "C" fn codeabrk(
+pub unsafe fn codeabrk(
     function_state: *mut FunctionState,
     o: u32,
     a: i32,
@@ -1560,7 +1560,7 @@ pub unsafe extern "C" fn codeabrk(
         luak_code_abck(function_state, o, a, b, (*ec).value.info, k);
     }
 }
-pub unsafe extern "C" fn luak_storevar(
+pub unsafe fn luak_storevar(
     function_state: *mut FunctionState,
     var: *mut ExpressionDescription,
     ex: *mut ExpressionDescription,
@@ -1621,7 +1621,7 @@ pub unsafe extern "C" fn luak_storevar(
         freeexp(function_state, ex);
     }
 }
-pub unsafe extern "C" fn luak_self(
+pub unsafe fn luak_self(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     key: *mut ExpressionDescription,
@@ -1637,7 +1637,7 @@ pub unsafe extern "C" fn luak_self(
         freeexp(function_state, key);
     }
 }
-pub unsafe extern "C" fn negatecondition(
+pub unsafe fn negatecondition(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1649,7 +1649,7 @@ pub unsafe extern "C" fn negatecondition(
                 & !(!(0u32) << 1) << POSITION_K;
     }
 }
-pub unsafe extern "C" fn jumponcond(
+pub unsafe fn jumponcond(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
     cond_0: i32,
@@ -1684,7 +1684,7 @@ pub unsafe extern "C" fn jumponcond(
         );
     }
 }
-pub unsafe extern "C" fn luak_goiftrue(
+pub unsafe fn luak_goiftrue(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1708,7 +1708,7 @@ pub unsafe extern "C" fn luak_goiftrue(
         (*e).t = -1;
     }
 }
-pub unsafe extern "C" fn luak_goiffalse(
+pub unsafe fn luak_goiffalse(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1731,7 +1731,7 @@ pub unsafe extern "C" fn luak_goiffalse(
         (*e).f = -1;
     }
 }
-pub unsafe extern "C" fn codenot(
+pub unsafe fn codenot(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) {
@@ -1761,7 +1761,7 @@ pub unsafe extern "C" fn codenot(
         removevalues(function_state, (*e).t);
     }
 }
-pub unsafe extern "C" fn is_k_string(
+pub unsafe fn is_k_string(
     function_state: *mut FunctionState,
     e: *mut ExpressionDescription,
 ) -> bool {
@@ -1777,7 +1777,7 @@ pub unsafe extern "C" fn is_k_string(
                 == TAG_VARIANT_STRING_SHORT;
     }
 }
-pub unsafe extern "C" fn constfolding(
+pub unsafe fn constfolding(
     function_state: *mut FunctionState,
     op: i32,
     e1: *mut ExpressionDescription,
@@ -1812,7 +1812,7 @@ pub unsafe extern "C" fn constfolding(
         return 1;
     }
 }
-pub unsafe extern "C" fn codeunexpval(
+pub unsafe fn codeunexpval(
     function_state: *mut FunctionState,
     op: u32,
     e: *mut ExpressionDescription,
@@ -1826,7 +1826,7 @@ pub unsafe extern "C" fn codeunexpval(
         luak_fixline(function_state, line);
     }
 }
-pub unsafe extern "C" fn finishbinexpval(
+pub unsafe fn finishbinexpval(
     function_state: *mut FunctionState,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
@@ -1848,7 +1848,7 @@ pub unsafe extern "C" fn finishbinexpval(
         luak_fixline(function_state, line);
     }
 }
-pub unsafe extern "C" fn codebinexpval(
+pub unsafe fn codebinexpval(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -1871,7 +1871,7 @@ pub unsafe extern "C" fn codebinexpval(
         );
     }
 }
-pub unsafe extern "C" fn codebini(
+pub unsafe fn codebini(
     function_state: *mut FunctionState,
     op: u32,
     e1: *mut ExpressionDescription,
@@ -1885,7 +1885,7 @@ pub unsafe extern "C" fn codebini(
         finishbinexpval(function_state, e1, e2, op, v2, flip, line, OP_MMBINI, event);
     }
 }
-pub unsafe extern "C" fn codebink(
+pub unsafe fn codebink(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -1900,7 +1900,7 @@ pub unsafe extern "C" fn codebink(
         finishbinexpval(function_state, e1, e2, op, v2, flip, line, OP_MMBINK, event);
     }
 }
-pub unsafe extern "C" fn finishbinexpneg(
+pub unsafe fn finishbinexpneg(
     function_state: *mut FunctionState,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
@@ -1944,7 +1944,7 @@ pub unsafe extern "C" fn finishbinexpneg(
         };
     }
 }
-pub unsafe extern "C" fn codebinnok(
+pub unsafe fn codebinnok(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -1959,7 +1959,7 @@ pub unsafe extern "C" fn codebinnok(
         codebinexpval(function_state, opr, e1, e2, line);
     }
 }
-pub unsafe extern "C" fn codearith(
+pub unsafe fn codearith(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -1975,7 +1975,7 @@ pub unsafe extern "C" fn codearith(
         };
     }
 }
-pub unsafe extern "C" fn codecommutative(
+pub unsafe fn codecommutative(
     function_state: *mut FunctionState,
     op: u32,
     e1: *mut ExpressionDescription,
@@ -1995,7 +1995,7 @@ pub unsafe extern "C" fn codecommutative(
         };
     }
 }
-pub unsafe extern "C" fn codebitwise(
+pub unsafe fn codebitwise(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -2015,7 +2015,7 @@ pub unsafe extern "C" fn codebitwise(
         };
     }
 }
-pub unsafe extern "C" fn codeorder(
+pub unsafe fn codeorder(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -2045,7 +2045,7 @@ pub unsafe extern "C" fn codeorder(
         (*e1).expression_kind = ExpressionKind::VJMP;
     }
 }
-pub unsafe extern "C" fn codeeq(
+pub unsafe fn codeeq(
     function_state: *mut FunctionState,
     opr: u32,
     e1: *mut ExpressionDescription,
@@ -2083,7 +2083,7 @@ pub unsafe extern "C" fn codeeq(
         (*e1).expression_kind = ExpressionKind::VJMP;
     }
 }
-pub unsafe extern "C" fn luak_prefix(
+pub unsafe fn luak_prefix(
     function_state: *mut FunctionState,
     unary: OperatorUnary,
     e: *mut ExpressionDescription,
@@ -2134,7 +2134,7 @@ pub unsafe extern "C" fn luak_prefix(
         };
     }
 }
-pub unsafe extern "C" fn luak_infix(
+pub unsafe fn luak_infix(
     function_state: *mut FunctionState,
     op: u32,
     v: *mut ExpressionDescription,
@@ -2173,7 +2173,7 @@ pub unsafe extern "C" fn luak_infix(
         };
     }
 }
-pub unsafe extern "C" fn codeconcat(
+pub unsafe fn codeconcat(
     function_state: *mut FunctionState,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
@@ -2195,7 +2195,7 @@ pub unsafe extern "C" fn codeconcat(
         };
     }
 }
-pub unsafe extern "C" fn luak_posfix(
+pub unsafe fn luak_posfix(
     function_state: *mut FunctionState,
     mut opr: u32,
     e1: *mut ExpressionDescription,
@@ -2295,7 +2295,7 @@ pub unsafe extern "C" fn luak_posfix(
         };
     }
 }
-pub unsafe extern "C" fn luak_fixline(function_state: *mut FunctionState, line: i32) {
+pub unsafe fn luak_fixline(function_state: *mut FunctionState, line: i32) {
     unsafe {
         removelastlineinfo(function_state);
         savelineinfo(function_state, (*function_state).prototype, line);
@@ -2305,7 +2305,7 @@ pub const POSITION_A: usize = 7;
 pub const POSITION_K: usize = POSITION_A + 8;
 pub const POSITION_B: usize = POSITION_K + 1;
 pub const POSITION_C: usize = POSITION_B + 8;
-pub unsafe extern "C" fn luak_settablesize(
+pub unsafe fn luak_settablesize(
     function_state: *mut FunctionState,
     program_counter: i32,
     ra: i32,
@@ -2333,7 +2333,7 @@ pub unsafe extern "C" fn luak_settablesize(
         *inst.offset(1 as isize) = (OP_EXTRAARG as u32) << 0 | (extra as u32) << POSITION_A;
     }
 }
-pub unsafe extern "C" fn luak_setlist(
+pub unsafe fn luak_setlist(
     function_state: *mut FunctionState,
     base: i32,
     mut count_elements: usize,
@@ -2368,7 +2368,7 @@ pub unsafe extern "C" fn luak_setlist(
         (*function_state).freereg = (base + 1) as u8;
     }
 }
-pub unsafe extern "C" fn luak_finish(function_state: *mut FunctionState) {
+pub unsafe fn luak_finish(function_state: *mut FunctionState) {
     unsafe {
         let p: *mut Prototype = (*function_state).prototype;
         for i in 0..(*function_state).program_counter {

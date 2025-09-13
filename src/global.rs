@@ -63,7 +63,7 @@ pub struct Global {
     pub warn_userdata: *mut libc::c_void,
 }
 impl Global {
-    pub unsafe extern "C" fn luac_runtilstate(&mut self, interpreter: *mut Interpreter, statesmask: i32) {
+    pub unsafe fn luac_runtilstate(&mut self, interpreter: *mut Interpreter, statesmask: i32) {
         unsafe {
             while statesmask & 1 << self.gc_state as i32 == 0 {
                 self.singlestep(interpreter);
@@ -135,7 +135,7 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn luac_step(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn luac_step(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.gc_step as i32 != 0 {
                 self.set_debt(-2000);
@@ -146,7 +146,7 @@ impl Global {
             }
         }
     }
-    pub unsafe extern "C" fn incstep(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn incstep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let stepmul: i32 = self.gc_step_multiplier as i32 * 4 | 1;
             let mut debt: i64 = (self.gc_debt as usize)
@@ -392,7 +392,7 @@ impl Global {
             self.finishgencycle(interpreter);
         }
     }
-    pub unsafe extern "C" fn callallpendingfinalizers(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn callallpendingfinalizers(& mut self, interpreter: *mut Interpreter) {
         unsafe {
             while !(self.to_be_finalized).is_null() {
                 gctm_function(interpreter);

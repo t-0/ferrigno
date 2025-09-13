@@ -4,7 +4,7 @@ use crate::interpreter::*;
 use crate::new::*;
 use crate::registeredfunction::*;
 use std::ptr::*;
-pub unsafe extern "C" fn u_posrelat(pos: i64, length: usize) -> i64 {
+pub unsafe fn u_posrelat(pos: i64, length: usize) -> i64 {
     if pos >= 0 {
         return pos;
     } else if (0usize).wrapping_sub(pos as usize) > length {
@@ -13,7 +13,7 @@ pub unsafe extern "C" fn u_posrelat(pos: i64, length: usize) -> i64 {
         return length as i64 + pos + 1;
     };
 }
-pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: i32) -> *const i8 {
+pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: i32) -> *const i8 {
     unsafe {
         pub const LIMITS: [u32; 6] = [
             !(0u32),
@@ -55,7 +55,7 @@ pub unsafe extern "C" fn utf8_decode(mut s: *const i8, value: *mut u32, strict: 
         return s.offset(1 as isize);
     }
 }
-pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn utflen(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut n: i64 = 0;
         let mut length: usize = 0;
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn utflen(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn codepoint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: usize = 0;
         let mut s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn codepoint(interpreter: *mut Interpreter) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
+pub unsafe fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         let code: usize = lual_checkinteger(interpreter, arg) as usize;
         (((code <= 0x7fffffff as usize) as i32 != 0) as i64 != 0
@@ -149,7 +149,7 @@ pub unsafe extern "C" fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
         lua_pushfstring(interpreter, make_cstring!("%U"), code as i64);
     }
 }
-pub unsafe extern "C" fn utfchar(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn utfchar(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         if n == 1 {
@@ -166,7 +166,7 @@ pub unsafe extern "C" fn utfchar(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn byteoffset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
@@ -232,7 +232,7 @@ pub unsafe extern "C" fn byteoffset(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
+pub unsafe fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
     unsafe {
         let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
@@ -256,17 +256,17 @@ pub unsafe extern "C" fn iter_aux(interpreter: *mut Interpreter, strict: i32) ->
         };
     }
 }
-pub unsafe extern "C" fn iter_auxstrict(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn iter_auxstrict(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return iter_aux(interpreter, 1);
     }
 }
-pub unsafe extern "C" fn iter_auxlax(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn iter_auxlax(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return iter_aux(interpreter, 0);
     }
 }
-pub unsafe extern "C" fn iter_codes(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn iter_codes(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let lax: i32 = lua_toboolean(interpreter, 2);
         let s: *const i8 = lual_checklstring(interpreter, 1, null_mut());
@@ -279,9 +279,9 @@ pub unsafe extern "C" fn iter_codes(interpreter: *mut Interpreter) -> i32 {
         lua_pushcclosure(
             interpreter,
             if lax != 0 {
-                Some(iter_auxlax as unsafe extern "C" fn(*mut Interpreter) -> i32)
+                Some(iter_auxlax as unsafe fn(*mut Interpreter) -> i32)
             } else {
-                Some(iter_auxstrict as unsafe extern "C" fn(*mut Interpreter) -> i32)
+                Some(iter_auxstrict as unsafe fn(*mut Interpreter) -> i32)
             },
             0,
         );
@@ -295,31 +295,31 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
         {
             RegisteredFunction {
                 name: make_cstring!("offset"),
-                function: Some(byteoffset as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(byteoffset as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("codepoint"),
-                function: Some(codepoint as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(codepoint as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("char"),
-                function: Some(utfchar as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(utfchar as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("len"),
-                function: Some(utflen as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(utflen as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("codes"),
-                function: Some(iter_codes as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(iter_codes as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -336,7 +336,7 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
         },
     ]
 };
-pub unsafe extern "C" fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             interpreter,

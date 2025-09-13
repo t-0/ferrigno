@@ -14,7 +14,7 @@ pub enum F2I {
     Floor,
     Ceiling,
 }
-pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
+pub unsafe fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
     unsafe {
         let mut number: f64 = n.floor();
         if n != number {
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bo
             };
     }
 }
-pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
+pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             return if luav_flttointeger((*obj).value.number, p, mode) {
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode:
         };
     }
 }
-pub unsafe extern "C" fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
+pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         let mut tvalue = TValue::new(TAG_VARIANT_NIL_NIL);
         if l_strton(obj, &mut tvalue) {
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mod
         return luav_tointegerns(obj, p, mode);
     }
 }
-pub unsafe extern "C" fn ltintfloat(i: i64, number: f64) -> bool {
+pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
     unsafe {
         if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
             <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn ltintfloat(i: i64, number: f64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn leintfloat(i: i64, number: f64) -> bool {
+pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
     unsafe {
         if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
             <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn leintfloat(i: i64, number: f64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn ltfloatint(number: f64, i: i64) -> bool {
+pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
     unsafe {
         if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
             <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
@@ -105,7 +105,7 @@ pub unsafe extern "C" fn ltfloatint(number: f64, i: i64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn lefloatint(number: f64, i: i64) -> bool {
+pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
     unsafe {
         if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
             <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn lefloatint(number: f64, i: i64) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> bool {
+pub unsafe fn ltnum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             let li: i64 = (*l).value.integer;
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn ltnum(l: *const TValue, r: *const TValue) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
+pub unsafe fn lenum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             let li: i64 = (*l).value.integer;
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn lenum(l: *const TValue, r: *const TValue) -> bool {
         };
     }
 }
-pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
+pub unsafe fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
@@ -178,7 +178,7 @@ pub unsafe extern "C" fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64
         };
     }
 }
-pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
+pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64)
         };
     }
 }
-pub unsafe extern "C" fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
+pub unsafe fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
     unsafe {
         let mut r: f64 = fmod(m, n);
         if if r > 0.0 {
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64)
         return r;
     }
 }
-pub unsafe extern "C" fn luav_shiftl(x: i64, y: i64) -> i64 {
+pub unsafe fn luav_shiftl(x: i64, y: i64) -> i64 {
     if y < 0 {
         if y <= -((size_of::<i64>() as usize).wrapping_mul(8 as usize) as i32) as i64 {
             return 0;
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn luav_shiftl(x: i64, y: i64) -> i64 {
         return ((x as usize) << y as usize) as i64;
     };
 }
-pub unsafe extern "C" fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 {
+pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 {
     unsafe {
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;

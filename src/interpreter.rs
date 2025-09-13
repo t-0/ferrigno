@@ -94,7 +94,7 @@ impl Interpreter {
             (*self.global).luac_fullgc(self, is_emergency);
         }
     }
-    pub unsafe extern "C" fn luas_init_state(&mut self) {
+    pub unsafe fn luas_init_state(&mut self) {
         unsafe {
             (*self.global).luas_init_global(self);
         }
@@ -102,7 +102,7 @@ impl Interpreter {
     pub unsafe fn to_pointer(&mut self, index: i32) -> *mut libc::c_void {
         unsafe { self.index_to_value(index).to_pointer() }
     }
-    pub unsafe extern "C" fn free_interpreter(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn free_interpreter(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             luaf_closeupval(self, self.stack.stkidrel_pointer);
             freestack(self);
@@ -138,7 +138,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = old_top.offset(1);
         }
     }
-    pub unsafe extern "C" fn correct_stack(&mut self) {
+    pub unsafe fn correct_stack(&mut self) {
         unsafe {
             (*self).top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8)
                 .offset((*self).top.stkidrel_offset as isize)
@@ -172,7 +172,7 @@ impl Interpreter {
     pub fn is_yieldable(&mut self) -> bool {
         return self.count_c_calls & 0xffff0000u32 == 0;
     }
-    pub unsafe extern "C" fn push_boolean(&mut self, x: bool) {
+    pub unsafe fn push_boolean(&mut self, x: bool) {
         unsafe {
             if x {
                 (*self.top.stkidrel_pointer)
@@ -186,7 +186,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
-    pub unsafe extern "C" fn push_integer(&mut self, x: i64) {
+    pub unsafe fn push_integer(&mut self, x: i64) {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*t_value).value.integer = x;
@@ -194,7 +194,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
-    pub unsafe extern "C" fn push_nil(&mut self) {
+    pub unsafe fn push_nil(&mut self) {
         unsafe {
             (*self.top.stkidrel_pointer)
                 .tvalue
@@ -202,7 +202,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
-    pub unsafe extern "C" fn push_number(&mut self, x: f64) {
+    pub unsafe fn push_number(&mut self, x: f64) {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*t_value).value.number = x;
@@ -210,7 +210,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
-    pub unsafe extern "C" fn get_top(&mut self) -> i32 {
+    pub unsafe fn get_top(&mut self) -> i32 {
         unsafe {
             return self
                 .top
@@ -219,7 +219,7 @@ impl Interpreter {
                 as i32;
         }
     }
-    pub unsafe extern "C" fn find_pcall(&mut self) -> *mut CallInfo {
+    pub unsafe fn find_pcall(&mut self) -> *mut CallInfo {
         unsafe {
             let mut it = self.call_info;
             return loop {
@@ -233,7 +233,7 @@ impl Interpreter {
             };
         }
     }
-    pub unsafe extern "C" fn sweep_list(
+    pub unsafe fn sweep_list(
         &mut self,
         mut p: *mut *mut Object,
         countin: i32,
@@ -262,14 +262,14 @@ impl Interpreter {
             return if (*p).is_null() { null_mut() } else { p };
         }
     }
-    pub unsafe extern "C" fn free_memory(&mut self, block: *mut libc::c_void, old_size: usize) {
+    pub unsafe fn free_memory(&mut self, block: *mut libc::c_void, old_size: usize) {
         unsafe {
             raw_allocate(block, old_size, 0);
             (*(self.global)).gc_debt =
                 ((*(self.global)).gc_debt as usize).wrapping_sub(old_size as usize) as i64;
         }
     }
-    pub unsafe extern "C" fn too_big(&mut self) -> ! {
+    pub unsafe fn too_big(&mut self) -> ! {
         unsafe {
             luag_runerror(
                 self,
@@ -277,7 +277,7 @@ impl Interpreter {
             );
         }
     }
-    pub unsafe extern "C" fn push_state(&mut self) -> bool {
+    pub unsafe fn push_state(&mut self) -> bool {
         unsafe {
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
             (*io).value.object = &mut (*(self as *mut Interpreter as *mut Object));
@@ -287,7 +287,7 @@ impl Interpreter {
             return (*self.global).main_state == self;
         }
     }
-    pub unsafe extern "C" fn relstack(&mut self) {
+    pub unsafe fn relstack(&mut self) {
         unsafe {
             self.top.stkidrel_offset = (self.top.stkidrel_pointer as *mut i8)
                 .offset_from(self.stack.stkidrel_pointer as *mut i8)
@@ -315,7 +315,7 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe extern "C" fn luad_errerr(&mut self) -> ! {
+    pub unsafe fn luad_errerr(&mut self) -> ! {
         unsafe {
             let message: *mut TString =
                 luas_newlstr(self, make_cstring!("error in error handling"), 23);
@@ -327,7 +327,7 @@ impl Interpreter {
             luad_throw(self, 5);
         }
     }
-    pub unsafe extern "C" fn luae_checkcstack(&mut self) {
+    pub unsafe fn luae_checkcstack(&mut self) {
         unsafe {
             if self.count_c_calls & 0xffff as u32 == 200 as u32 {
                 luag_runerror(self, make_cstring!("C stack overflow"));
@@ -338,7 +338,7 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe extern "C" fn luae_inccstack(&mut self) {
+    pub unsafe fn luae_inccstack(&mut self) {
         unsafe {
             self.count_c_calls = (self.count_c_calls).wrapping_add(1);
             self.count_c_calls;
@@ -347,7 +347,7 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe extern "C" fn stackinuse(&mut self) -> i32 {
+    pub unsafe fn stackinuse(&mut self) -> i32 {
         unsafe {
             let mut lim: StackValuePointer = self.top.stkidrel_pointer;
             let mut call_info: *mut CallInfo = self.call_info;
@@ -364,7 +364,7 @@ impl Interpreter {
             return res;
         }
     }
-    pub unsafe extern "C" fn luad_shrinkstack(&mut self) {
+    pub unsafe fn luad_shrinkstack(&mut self) {
         unsafe {
             let inuse: i32 = self.stackinuse();
             let max: i32 = if inuse > 1000000 / 3 {
@@ -387,7 +387,7 @@ impl Interpreter {
             luae_shrinkci(self);
         }
     }
-    pub unsafe extern "C" fn luad_inctop(&mut self) {
+    pub unsafe fn luad_inctop(&mut self) {
         unsafe {
             if (((self.stack_last.stkidrel_pointer).offset_from(self.top.stkidrel_pointer) as i64
                 <= 1) as i32
@@ -399,7 +399,7 @@ impl Interpreter {
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
-    pub unsafe extern "C" fn lua_createtable(&mut self) {
+    pub unsafe fn lua_createtable(&mut self) {
         unsafe {
             let table: *mut Table = luah_new(self);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer).tvalue;
@@ -412,7 +412,7 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe extern "C" fn lua_getmetatable(&mut self, object_index: i32) -> bool {
+    pub unsafe fn lua_getmetatable(&mut self, object_index: i32) -> bool {
         unsafe {
             let object: *const TValue = self.index_to_value(object_index);
             let metatable: *mut Table = match (*object).get_tag_type() {
@@ -489,7 +489,7 @@ impl Interpreter {
         }
     }
 }
-pub unsafe extern "C" fn do_repl(interpreter: *mut Interpreter) {
+pub unsafe fn do_repl(interpreter: *mut Interpreter) {
     unsafe {
         let mut status: i32;
         let oldprogname: *const i8 = PROGRAM_NAME;
@@ -519,7 +519,7 @@ pub unsafe extern "C" fn do_repl(interpreter: *mut Interpreter) {
         PROGRAM_NAME = oldprogname;
     }
 }
-pub unsafe extern "C" fn luad_throw(interpreter: *mut Interpreter, mut error_code: i32) -> ! {
+pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut error_code: i32) -> ! {
     unsafe {
         if !((*interpreter).long_jump).is_null() {
             ::core::ptr::write_volatile(
@@ -549,7 +549,7 @@ pub unsafe extern "C" fn luad_throw(interpreter: *mut Interpreter, mut error_cod
         };
     }
 }
-pub unsafe extern "C" fn luad_rawrunprotected(
+pub unsafe fn luad_rawrunprotected(
     interpreter: *mut Interpreter,
     f: ProtectedFunction,
     arbitrary_data: *mut libc::c_void,
@@ -571,7 +571,7 @@ pub unsafe extern "C" fn luad_rawrunprotected(
         return long_jump.status;
     }
 }
-pub unsafe extern "C" fn luad_reallocstack(
+pub unsafe fn luad_reallocstack(
     interpreter: *mut Interpreter,
     new_size: i32,
     should_raise_error: bool,
@@ -609,7 +609,7 @@ pub unsafe extern "C" fn luad_reallocstack(
         return 1;
     }
 }
-pub unsafe extern "C" fn luad_growstack(
+pub unsafe fn luad_growstack(
     interpreter: *mut Interpreter,
     n: i32,
     should_raise_error: bool,
@@ -645,7 +645,7 @@ pub unsafe extern "C" fn luad_growstack(
         return 0;
     }
 }
-pub unsafe extern "C" fn luad_hook(
+pub unsafe fn luad_hook(
     interpreter: *mut Interpreter,
     event: i32,
     line: i32,
@@ -726,7 +726,7 @@ pub unsafe extern "C" fn luad_hook(
         }
     }
 }
-pub unsafe extern "C" fn luad_hookcall(interpreter: *mut Interpreter, call_info: *mut CallInfo) {
+pub unsafe fn luad_hookcall(interpreter: *mut Interpreter, call_info: *mut CallInfo) {
     unsafe {
         (*interpreter).old_program_counter = 0;
         if (*interpreter).hook_mask & (1 << 0) != 0 {
@@ -757,7 +757,7 @@ pub unsafe extern "C" fn luad_hookcall(interpreter: *mut Interpreter, call_info:
         }
     }
 }
-pub unsafe extern "C" fn rethook(
+pub unsafe fn rethook(
     interpreter: *mut Interpreter,
     mut call_info: *mut CallInfo,
     nres: i32,
@@ -805,7 +805,7 @@ pub unsafe extern "C" fn rethook(
         }
     }
 }
-pub unsafe extern "C" fn tryfunctm(
+pub unsafe fn tryfunctm(
     interpreter: *mut Interpreter,
     mut function: StackValuePointer,
 ) -> StackValuePointer {
@@ -844,7 +844,7 @@ pub unsafe extern "C" fn tryfunctm(
         return function;
     }
 }
-pub unsafe extern "C" fn moveresults(
+pub unsafe fn moveresults(
     interpreter: *mut Interpreter,
     mut res: StackValuePointer,
     mut nres: i32,
@@ -913,7 +913,7 @@ pub unsafe extern "C" fn moveresults(
         (*interpreter).top.stkidrel_pointer = res.offset(wanted as isize);
     }
 }
-pub unsafe extern "C" fn luad_poscall(
+pub unsafe fn luad_poscall(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     nres: i32,
@@ -932,7 +932,7 @@ pub unsafe extern "C" fn luad_poscall(
         (*interpreter).call_info = (*call_info).previous;
     }
 }
-pub unsafe extern "C" fn prepcallinfo(
+pub unsafe fn prepcallinfo(
     interpreter: *mut Interpreter,
     function: StackValuePointer,
     nret: i32,
@@ -953,7 +953,7 @@ pub unsafe extern "C" fn prepcallinfo(
         return call_info;
     }
 }
-pub unsafe extern "C" fn precallc(
+pub unsafe fn precallc(
     interpreter: *mut Interpreter,
     mut function: StackValuePointer,
     count_results: i32,
@@ -994,7 +994,7 @@ pub unsafe extern "C" fn precallc(
         return n;
     }
 }
-pub unsafe extern "C" fn luad_pretailcall(
+pub unsafe fn luad_pretailcall(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     mut function: StackValuePointer,
@@ -1072,7 +1072,7 @@ pub unsafe extern "C" fn luad_pretailcall(
         }
     }
 }
-pub unsafe extern "C" fn luad_precall(
+pub unsafe fn luad_precall(
     interpreter: *mut Interpreter,
     mut function: StackValuePointer,
     count_results: i32,
@@ -1152,7 +1152,7 @@ pub unsafe extern "C" fn luad_precall(
         }
     }
 }
-pub unsafe extern "C" fn ccall(
+pub unsafe fn ccall(
     interpreter: *mut Interpreter,
     mut function: StackValuePointer,
     count_results: i32,
@@ -1189,7 +1189,7 @@ pub unsafe extern "C" fn ccall(
             ((*interpreter).count_c_calls as u32).wrapping_sub(inc) as u32;
     }
 }
-pub unsafe extern "C" fn luad_callnoyield(
+pub unsafe fn luad_callnoyield(
     interpreter: *mut Interpreter,
     function: StackValuePointer,
     count_results: i32,
@@ -1203,7 +1203,7 @@ pub unsafe extern "C" fn luad_callnoyield(
         );
     }
 }
-pub unsafe extern "C" fn finishpcallk(
+pub unsafe fn finishpcallk(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
 ) -> i32 {
@@ -1227,7 +1227,7 @@ pub unsafe extern "C" fn finishpcallk(
         return status;
     }
 }
-pub unsafe extern "C" fn finishccall(interpreter: *mut Interpreter, call_info: *mut CallInfo) {
+pub unsafe fn finishccall(interpreter: *mut Interpreter, call_info: *mut CallInfo) {
     unsafe {
         let n: i32;
         if (*call_info).call_status as i32 & 1 << 9 as i32 != 0 {
@@ -1252,7 +1252,7 @@ pub unsafe extern "C" fn finishccall(interpreter: *mut Interpreter, call_info: *
         luad_poscall(interpreter, call_info, n);
     }
 }
-pub unsafe extern "C" fn unroll(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
+pub unsafe fn unroll(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
     unsafe {
         let mut call_info;
         loop {
@@ -1269,7 +1269,7 @@ pub unsafe extern "C" fn unroll(interpreter: *mut Interpreter, mut _ud: *mut lib
         }
     }
 }
-pub unsafe extern "C" fn resume_error(
+pub unsafe fn resume_error(
     interpreter: *mut Interpreter,
     message: *const i8,
     narg: i32,
@@ -1286,7 +1286,7 @@ pub unsafe extern "C" fn resume_error(
         return 2;
     }
 }
-pub unsafe extern "C" fn resume(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
+pub unsafe fn resume(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
     unsafe {
         let mut n: i32 = *(arbitrary_data as *mut i32);
         let first_argument: StackValuePointer =
@@ -1317,7 +1317,7 @@ pub unsafe extern "C" fn resume(interpreter: *mut Interpreter, arbitrary_data: *
         };
     }
 }
-pub unsafe extern "C" fn precover(interpreter: *mut Interpreter, mut status: i32) -> i32 {
+pub unsafe fn precover(interpreter: *mut Interpreter, mut status: i32) -> i32 {
     unsafe {
         let mut call_info;
         while status > 1 && {
@@ -1329,14 +1329,14 @@ pub unsafe extern "C" fn precover(interpreter: *mut Interpreter, mut status: i32
                 | status << 10 as i32) as u16;
             status = luad_rawrunprotected(
                 interpreter,
-                Some(unroll as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+                Some(unroll as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 null_mut(),
             );
         }
         return status;
     }
 }
-pub unsafe extern "C" fn lua_resume(
+pub unsafe fn lua_resume(
     interpreter: *mut Interpreter,
     from: *mut Interpreter,
     mut nargs: i32,
@@ -1381,7 +1381,7 @@ pub unsafe extern "C" fn lua_resume(
         (*interpreter).count_c_calls;
         status = luad_rawrunprotected(
             interpreter,
-            Some(resume as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+            Some(resume as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
             &mut nargs as *mut i32 as *mut libc::c_void,
         );
         status = precover(interpreter, status);
@@ -1400,7 +1400,7 @@ pub unsafe extern "C" fn lua_resume(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_yieldk(
+pub unsafe fn lua_yieldk(
     interpreter: *mut Interpreter,
     count_results: i32,
     ctx: i64,
@@ -1435,7 +1435,7 @@ pub unsafe extern "C" fn lua_yieldk(
         return 0;
     }
 }
-pub unsafe extern "C" fn closepaux(
+pub unsafe fn closepaux(
     interpreter: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
 ) {
@@ -1444,7 +1444,7 @@ pub unsafe extern "C" fn closepaux(
         luaf_close(interpreter, (*closep).level, (*closep).status, 0);
     }
 }
-pub unsafe extern "C" fn luad_closeprotected(
+pub unsafe fn luad_closeprotected(
     interpreter: *mut Interpreter,
     level: i64,
     mut status: i32,
@@ -1459,7 +1459,7 @@ pub unsafe extern "C" fn luad_closeprotected(
             closep.status = status;
             status = luad_rawrunprotected(
                 interpreter,
-                Some(closepaux as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+                Some(closepaux as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 &mut closep as *mut CloseP as *mut libc::c_void,
             );
             if status == 0 {
@@ -1471,7 +1471,7 @@ pub unsafe extern "C" fn luad_closeprotected(
         }
     }
 }
-pub unsafe extern "C" fn luad_pcall(
+pub unsafe fn luad_pcall(
     interpreter: *mut Interpreter,
     function: ProtectedFunction,
     u: *mut libc::c_void,
@@ -1500,7 +1500,7 @@ pub unsafe extern "C" fn luad_pcall(
         return status;
     }
 }
-pub unsafe extern "C" fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *const i8) {
+pub unsafe fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *const i8) {
     unsafe {
         if !mode.is_null() && (strchr(mode, *x.offset(0) as i32)).is_null() {
             luao_pushfstring(
@@ -1513,7 +1513,7 @@ pub unsafe extern "C" fn checkmode(interpreter: *mut Interpreter, mode: *const i
         }
     }
 }
-pub unsafe extern "C" fn f_parser(
+pub unsafe fn f_parser(
     interpreter: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
 ) {
@@ -1546,7 +1546,7 @@ pub unsafe extern "C" fn f_parser(
         luaf_initupvals(interpreter, cl);
     }
 }
-pub unsafe extern "C" fn luad_protectedparser(
+pub unsafe fn luad_protectedparser(
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,
@@ -1575,7 +1575,7 @@ pub unsafe extern "C" fn luad_protectedparser(
         p.buffer.loads.initialize();
         let status = luad_pcall(
             interpreter,
-            Some(f_parser as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+            Some(f_parser as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
             &mut p as *mut SParser as *mut libc::c_void,
             ((*interpreter).top.stkidrel_pointer as *mut i8)
                 .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
@@ -1602,7 +1602,7 @@ pub unsafe extern "C" fn luad_protectedparser(
         return status;
     }
 }
-pub unsafe extern "C" fn index2stack(
+pub unsafe fn index2stack(
     interpreter: *mut Interpreter,
     index: i32,
 ) -> StackValuePointer {
@@ -1617,7 +1617,7 @@ pub unsafe extern "C" fn index2stack(
         };
     }
 }
-pub unsafe extern "C" fn lua_checkstack(interpreter: *mut Interpreter, n: i32) -> i32 {
+pub unsafe fn lua_checkstack(interpreter: *mut Interpreter, n: i32) -> i32 {
     unsafe {
         let res: i32;
         let call_info;
@@ -1640,7 +1640,7 @@ pub unsafe extern "C" fn lua_checkstack(interpreter: *mut Interpreter, n: i32) -
         return res;
     }
 }
-pub unsafe extern "C" fn lua_xmove(from: *mut Interpreter, to: *mut Interpreter, n: i32) {
+pub unsafe fn lua_xmove(from: *mut Interpreter, to: *mut Interpreter, n: i32) {
     unsafe {
         if from != to {
             (*from).top.stkidrel_pointer = ((*from).top.stkidrel_pointer).offset(-(n as isize));
@@ -1655,7 +1655,7 @@ pub unsafe extern "C" fn lua_xmove(from: *mut Interpreter, to: *mut Interpreter,
         }
     }
 }
-pub unsafe extern "C" fn lua_atpanic(
+pub unsafe fn lua_atpanic(
     interpreter: *mut Interpreter,
     panicf: CFunction,
 ) -> CFunction {
@@ -1665,7 +1665,7 @@ pub unsafe extern "C" fn lua_atpanic(
         return old;
     }
 }
-pub unsafe extern "C" fn lua_absindex(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe fn lua_absindex(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         return if index > 0 || index <= -(1000000 as i32) - 1000 as i32 {
             index
@@ -1677,7 +1677,7 @@ pub unsafe extern "C" fn lua_absindex(interpreter: *mut Interpreter, index: i32)
         };
     }
 }
-pub unsafe extern "C" fn lua_settop(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_settop(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let call_info;
         let mut newtop;
@@ -1705,14 +1705,14 @@ pub unsafe extern "C" fn lua_settop(interpreter: *mut Interpreter, index: i32) {
         (*interpreter).top.stkidrel_pointer = newtop;
     }
 }
-pub unsafe extern "C" fn lua_closeslot(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_closeslot(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let mut level = index2stack(interpreter, index);
         level = luaf_close(interpreter, level, -1, 0);
         (*level).tvalue.set_tag_variant(TagVariant::NilNil as u8);
     }
 }
-pub unsafe extern "C" fn reverse(
+pub unsafe fn reverse(
     mut _state: *mut Interpreter,
     mut from: StackValuePointer,
     mut to: StackValuePointer,
@@ -1734,7 +1734,7 @@ pub unsafe extern "C" fn reverse(
         }
     }
 }
-pub unsafe extern "C" fn lua_rotate(interpreter: *mut Interpreter, index: i32, n: i32) {
+pub unsafe fn lua_rotate(interpreter: *mut Interpreter, index: i32, n: i32) {
     unsafe {
         let high: StackValuePointer = (*interpreter).top.stkidrel_pointer.offset(-(1 as isize));
         let low: StackValuePointer = index2stack(interpreter, index);
@@ -1748,7 +1748,7 @@ pub unsafe extern "C" fn lua_rotate(interpreter: *mut Interpreter, index: i32, n
         reverse(interpreter, low, high);
     }
 }
-pub unsafe extern "C" fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, toidx: i32) {
+pub unsafe fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, toidx: i32) {
     unsafe {
         let fr: *mut TValue = (*interpreter).index_to_value(fromidx);
         let to: *mut TValue = (*interpreter).index_to_value(toidx);
@@ -1783,7 +1783,7 @@ pub unsafe extern "C" fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, t
         }
     }
 }
-pub unsafe extern "C" fn lua_pushvalue(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_pushvalue(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
         let io2: *const TValue = (*interpreter).index_to_value(index);
@@ -1820,7 +1820,7 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> 
         _ => make_cstring!("unknown"),
     }
 }
-pub unsafe extern "C" fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
+pub unsafe fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
         match (*o).get_tag_variant() {
@@ -1830,13 +1830,13 @@ pub unsafe extern "C" fn lua_iscfunction(interpreter: *mut Interpreter, index: i
         }
     }
 }
-pub unsafe extern "C" fn lua_isinteger(interpreter: *mut Interpreter, index: i32) -> bool {
+pub unsafe fn lua_isinteger(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         return (*(*interpreter).index_to_value(index)).get_tag_variant()
             == TAG_VARIANT_NUMERIC_INTEGER;
     }
 }
-pub unsafe extern "C" fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
+pub unsafe fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
         return if (*o).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
@@ -1847,7 +1847,7 @@ pub unsafe extern "C" fn lua_isnumber(interpreter: *mut Interpreter, index: i32)
         };
     }
 }
-pub unsafe extern "C" fn lua_isstring(interpreter: *mut Interpreter, index: i32) -> bool {
+pub unsafe fn lua_isstring(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
         return match (*o).get_tag_type() {
@@ -1857,7 +1857,7 @@ pub unsafe extern "C" fn lua_isstring(interpreter: *mut Interpreter, index: i32)
         };
     }
 }
-pub unsafe extern "C" fn lua_rawequal(
+pub unsafe fn lua_rawequal(
     interpreter: *mut Interpreter,
     index1: i32,
     index2: i32,
@@ -1876,7 +1876,7 @@ pub unsafe extern "C" fn lua_rawequal(
         };
     }
 }
-pub unsafe extern "C" fn lua_arith(interpreter: *mut Interpreter, op: i32) {
+pub unsafe fn lua_arith(interpreter: *mut Interpreter, op: i32) {
     unsafe {
         if !(op != 12 as i32 && op != 13 as i32) {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer).tvalue;
@@ -1895,7 +1895,7 @@ pub unsafe extern "C" fn lua_arith(interpreter: *mut Interpreter, op: i32) {
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
     }
 }
-pub unsafe extern "C" fn lua_compare(
+pub unsafe fn lua_compare(
     interpreter: *mut Interpreter,
     index1: i32,
     index2: i32,
@@ -1938,7 +1938,7 @@ pub unsafe extern "C" fn lua_compare(
         return i;
     }
 }
-pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) -> usize {
+pub unsafe fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) -> usize {
     unsafe {
         let size: usize = luao_str2num(s, &mut (*(*interpreter).top.stkidrel_pointer).tvalue);
         if size != 0 {
@@ -1947,7 +1947,7 @@ pub unsafe extern "C" fn lua_stringtonumber(interpreter: *mut Interpreter, s: *c
         return size;
     }
 }
-pub unsafe extern "C" fn lua_tonumberx(
+pub unsafe fn lua_tonumberx(
     interpreter: *mut Interpreter,
     index: i32,
     is_number: *mut bool,
@@ -1967,7 +1967,7 @@ pub unsafe extern "C" fn lua_tonumberx(
         return n;
     }
 }
-pub unsafe extern "C" fn lua_tointegerx(
+pub unsafe fn lua_tointegerx(
     interpreter: *mut Interpreter,
     index: i32,
     is_number: *mut bool,
@@ -1987,14 +1987,14 @@ pub unsafe extern "C" fn lua_tointegerx(
         return res;
     }
 }
-pub unsafe extern "C" fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
         return !((*o).get_tag_variant() == TAG_VARIANT_BOOLEAN_FALSE || (*o).is_tagtype_nil())
             as i32;
     }
 }
-pub unsafe extern "C" fn lua_tolstring(
+pub unsafe fn lua_tolstring(
     interpreter: *mut Interpreter,
     index: i32,
     length: *mut usize,
@@ -2020,7 +2020,7 @@ pub unsafe extern "C" fn lua_tolstring(
         return (*((*o).value.object as *mut TString)).get_contents_mut();
     }
 }
-pub unsafe extern "C" fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize {
+pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
         match (*tvalue).get_tag_variant() {
@@ -2035,7 +2035,7 @@ pub unsafe extern "C" fn get_length_raw(interpreter: *mut Interpreter, index: i3
         };
     }
 }
-pub unsafe extern "C" fn lua_tothread(
+pub unsafe fn lua_tothread(
     interpreter: *mut Interpreter,
     index: i32,
 ) -> *mut Interpreter {
@@ -2048,7 +2048,7 @@ pub unsafe extern "C" fn lua_tothread(
         };
     }
 }
-pub unsafe extern "C" fn lua_pushlstring(
+pub unsafe fn lua_pushlstring(
     interpreter: *mut Interpreter,
     s: *const i8,
     length: usize,
@@ -2070,7 +2070,7 @@ pub unsafe extern "C" fn lua_pushlstring(
         return (*ts).get_contents_mut();
     }
 }
-pub unsafe extern "C" fn lua_pushstring(
+pub unsafe fn lua_pushstring(
     interpreter: *mut Interpreter,
     mut s: *const i8,
 ) -> *const i8 {
@@ -2094,7 +2094,7 @@ pub unsafe extern "C" fn lua_pushstring(
         return s;
     }
 }
-pub unsafe extern "C" fn lua_pushvfstring(
+pub unsafe fn lua_pushvfstring(
     interpreter: *mut Interpreter,
     fmt: *const i8,
     mut argp: ::core::ffi::VaList,
@@ -2122,7 +2122,7 @@ pub unsafe extern "C" fn lua_pushfstring(
         return ret;
     }
 }
-pub unsafe extern "C" fn lua_pushcclosure(
+pub unsafe fn lua_pushcclosure(
     interpreter: *mut Interpreter,
     fn_0: CFunction,
     mut n: i32,
@@ -2162,7 +2162,7 @@ pub unsafe extern "C" fn lua_pushcclosure(
         };
     }
 }
-pub unsafe extern "C" fn lua_pushlightuserdata(
+pub unsafe fn lua_pushlightuserdata(
     interpreter: *mut Interpreter,
     p: *mut libc::c_void,
 ) {
@@ -2173,7 +2173,7 @@ pub unsafe extern "C" fn lua_pushlightuserdata(
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
-pub unsafe extern "C" fn auxgetstr(
+pub unsafe fn auxgetstr(
     interpreter: *mut Interpreter,
     t: *const TValue,
     k: *const i8,
@@ -2212,7 +2212,7 @@ pub unsafe extern "C" fn auxgetstr(
             .get_tag_type();
     }
 }
-pub unsafe extern "C" fn lua_getglobal(interpreter: *mut Interpreter, name: *const i8) -> TagType {
+pub unsafe fn lua_getglobal(interpreter: *mut Interpreter, name: *const i8) -> TagType {
     unsafe {
         let global_table: *const TValue =
             &mut *((*((*(*interpreter).global).l_registry.value.object as *mut Table)).array)
@@ -2220,7 +2220,7 @@ pub unsafe extern "C" fn lua_getglobal(interpreter: *mut Interpreter, name: *con
         return auxgetstr(interpreter, global_table, name);
     }
 }
-pub unsafe extern "C" fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let slot;
         let t: *mut TValue = (*interpreter).index_to_value(index);
@@ -2253,7 +2253,7 @@ pub unsafe extern "C" fn lua_gettable(interpreter: *mut Interpreter, index: i32)
             .get_tag_type()) as i32;
     }
 }
-pub unsafe extern "C" fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut name: *const i8 = make_cstring!("=LUA_INIT_5_4");
         let mut init: *const i8 = getenv(name.offset(1 as isize));
@@ -2270,7 +2270,7 @@ pub unsafe extern "C" fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn lua_getfield(
+pub unsafe fn lua_getfield(
     interpreter: *mut Interpreter,
     index: i32,
     k: *const i8,
@@ -2279,7 +2279,7 @@ pub unsafe extern "C" fn lua_getfield(
         return auxgetstr(interpreter, (*interpreter).index_to_value(index), k);
     }
 }
-pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
+pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
     unsafe {
         let t: *mut TValue;
         let slot: *const TValue;
@@ -2321,7 +2321,7 @@ pub unsafe extern "C" fn lua_geti(interpreter: *mut Interpreter, index: i32, n: 
             .get_tag_type();
     }
 }
-pub unsafe extern "C" fn finishrawget(
+pub unsafe fn finishrawget(
     interpreter: *mut Interpreter,
     value: *const TValue,
 ) -> TagType {
@@ -2341,13 +2341,13 @@ pub unsafe extern "C" fn finishrawget(
             .get_tag_type();
     }
 }
-pub unsafe extern "C" fn gettable(interpreter: *mut Interpreter, index: i32) -> *mut Table {
+pub unsafe fn gettable(interpreter: *mut Interpreter, index: i32) -> *mut Table {
     unsafe {
         let t: *mut TValue = (*interpreter).index_to_value(index);
         return &mut (*((*t).value.object as *mut Table));
     }
 }
-pub unsafe extern "C" fn lua_rawget(interpreter: *mut Interpreter, index: i32) -> TagType {
+pub unsafe fn lua_rawget(interpreter: *mut Interpreter, index: i32) -> TagType {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         let value: *const TValue = luah_get(
@@ -2358,13 +2358,13 @@ pub unsafe extern "C" fn lua_rawget(interpreter: *mut Interpreter, index: i32) -
         return finishrawget(interpreter, value);
     }
 }
-pub unsafe extern "C" fn lua_rawgeti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
+pub unsafe fn lua_rawgeti(interpreter: *mut Interpreter, index: i32, n: i64) -> TagType {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         return finishrawget(interpreter, luah_getint(table, n));
     }
 }
-pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *const i8) {
+pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *const i8) {
     unsafe {
         let slot: *const TValue;
         let str: *mut TString = luas_new(interpreter, k);
@@ -2417,7 +2417,7 @@ pub unsafe extern "C" fn auxsetstr(interpreter: *mut Interpreter, t: *const TVal
         };
     }
 }
-pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *const i8) {
+pub unsafe fn lua_setglobal(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
         let global_table: *const TValue =
             &mut *((*((*(*interpreter).global).l_registry.value.object as *mut Table)).array)
@@ -2425,12 +2425,12 @@ pub unsafe extern "C" fn lua_setglobal(interpreter: *mut Interpreter, name: *con
         auxsetstr(interpreter, global_table, name);
     }
 }
-pub unsafe extern "C" fn lua_setfield(interpreter: *mut Interpreter, index: i32, k: *const i8) {
+pub unsafe fn lua_setfield(interpreter: *mut Interpreter, index: i32, k: *const i8) {
     unsafe {
         auxsetstr(interpreter, (*interpreter).index_to_value(index), k);
     }
 }
-pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
+pub unsafe fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
     unsafe {
         let t: *mut TValue;
         let slot: *const TValue;
@@ -2486,7 +2486,7 @@ pub unsafe extern "C" fn lua_seti(interpreter: *mut Interpreter, index: i32, n: 
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
     }
 }
-pub unsafe extern "C" fn aux_rawset(
+pub unsafe fn aux_rawset(
     interpreter: *mut Interpreter,
     index: i32,
     key: *mut TValue,
@@ -2523,7 +2523,7 @@ pub unsafe extern "C" fn aux_rawset(
             (*interpreter).top.stkidrel_pointer.offset(-(n as isize));
     }
 }
-pub unsafe extern "C" fn lua_rawset(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_rawset(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         aux_rawset(
             interpreter,
@@ -2533,7 +2533,7 @@ pub unsafe extern "C" fn lua_rawset(interpreter: *mut Interpreter, index: i32) {
         );
     }
 }
-pub unsafe extern "C" fn lua_rawseti(interpreter: *mut Interpreter, index: i32, n: i64) {
+pub unsafe fn lua_rawseti(interpreter: *mut Interpreter, index: i32, n: i64) {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         luah_setint(
@@ -2563,7 +2563,7 @@ pub unsafe extern "C" fn lua_rawseti(interpreter: *mut Interpreter, index: i32, 
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
     }
 }
-pub unsafe extern "C" fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let metatable: *mut Table;
         let object: *mut TValue = (*interpreter).index_to_value(index);
@@ -2621,7 +2621,7 @@ pub unsafe extern "C" fn lua_setmetatable(interpreter: *mut Interpreter, index: 
         return 1;
     }
 }
-pub unsafe extern "C" fn lua_setiuservalue(
+pub unsafe fn lua_setiuservalue(
     interpreter: *mut Interpreter,
     index: i32,
     n: i32,
@@ -2664,7 +2664,7 @@ pub unsafe extern "C" fn lua_setiuservalue(
         return res;
     }
 }
-pub unsafe extern "C" fn lua_callk(
+pub unsafe fn lua_callk(
     interpreter: *mut Interpreter,
     nargs: i32,
     count_results: i32,
@@ -2691,13 +2691,13 @@ pub unsafe extern "C" fn lua_callk(
         }
     }
 }
-pub unsafe extern "C" fn f_call(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
+pub unsafe fn f_call(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
     unsafe {
         let calls: *mut CallS = arbitrary_data as *mut CallS;
         luad_callnoyield(interpreter, (*calls).function, (*calls).count_results);
     }
 }
-pub unsafe extern "C" fn lua_pcallk(
+pub unsafe fn lua_pcallk(
     interpreter: *mut Interpreter,
     nargs: i32,
     count_results: i32,
@@ -2727,7 +2727,7 @@ pub unsafe extern "C" fn lua_pcallk(
             calls.count_results = count_results;
             status = luad_pcall(
                 interpreter,
-                Some(f_call as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+                Some(f_call as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 &mut calls as *mut CallS as *mut libc::c_void,
                 (calls.function as *mut i8)
                     .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
@@ -2760,7 +2760,7 @@ pub unsafe extern "C" fn lua_pcallk(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_load(
+pub unsafe fn lua_load(
     interpreter: *mut Interpreter,
     reader: ReadFunction,
     data: *mut libc::c_void,
@@ -2820,7 +2820,7 @@ pub unsafe extern "C" fn lua_load(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_dump(
+pub unsafe fn lua_dump(
     interpreter: *mut Interpreter,
     writer_0: WriteFunction,
     data: *mut libc::c_void,
@@ -2844,7 +2844,7 @@ pub unsafe extern "C" fn lua_dump(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_error(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn lua_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let errobj: *mut TValue =
             &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
@@ -2858,7 +2858,7 @@ pub unsafe extern "C" fn lua_error(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn lua_next(interpreter: *mut Interpreter, index: i32) -> i32 {
+pub unsafe fn lua_next(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let table: *mut Table = gettable(interpreter, index);
         let more: i32 = luah_next(
@@ -2875,7 +2875,7 @@ pub unsafe extern "C" fn lua_next(interpreter: *mut Interpreter, index: i32) -> 
         return more;
     }
 }
-pub unsafe extern "C" fn lua_toclose(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_toclose(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let o: StackValuePointer = index2stack(interpreter, index);
         let count_results: i32 = (*(*interpreter).call_info).count_results as i32;
@@ -2885,7 +2885,7 @@ pub unsafe extern "C" fn lua_toclose(interpreter: *mut Interpreter, index: i32) 
         }
     }
 }
-pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
+pub unsafe fn lua_concat(interpreter: *mut Interpreter, n: i32) {
     unsafe {
         if n > 0 {
             concatenate(interpreter, n);
@@ -2902,14 +2902,14 @@ pub unsafe extern "C" fn lua_concat(interpreter: *mut Interpreter, n: i32) {
         }
     }
 }
-pub unsafe extern "C" fn lua_len(interpreter: *mut Interpreter, index: i32) {
+pub unsafe fn lua_len(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let t: *mut TValue = (*interpreter).index_to_value(index);
         luav_objlen(interpreter, (*interpreter).top.stkidrel_pointer, t);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
-pub unsafe extern "C" fn lua_setwarnf(
+pub unsafe fn lua_setwarnf(
     interpreter: *mut Interpreter,
     f: WarnFunction,
     arbitrary_data: *mut libc::c_void,
@@ -2919,7 +2919,7 @@ pub unsafe extern "C" fn lua_setwarnf(
         (*(*interpreter).global).warn_function = f;
     }
 }
-pub unsafe extern "C" fn lua_warning(
+pub unsafe fn lua_warning(
     interpreter: *mut Interpreter,
     message: *const i8,
     tocont: i32,
@@ -2928,7 +2928,7 @@ pub unsafe extern "C" fn lua_warning(
         luae_warning(interpreter, message, tocont);
     }
 }
-pub unsafe extern "C" fn lua_getupvalue(
+pub unsafe fn lua_getupvalue(
     interpreter: *mut Interpreter,
     funcindex: i32,
     n: i32,
@@ -2950,7 +2950,7 @@ pub unsafe extern "C" fn lua_getupvalue(
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setupvalue(
+pub unsafe fn lua_setupvalue(
     interpreter: *mut Interpreter,
     funcindex: i32,
     n: i32,
@@ -2983,7 +2983,7 @@ pub unsafe extern "C" fn lua_setupvalue(
     }
 }
 pub const NULLUP: *const UpValue = null();
-pub unsafe extern "C" fn getupvalref(
+pub unsafe fn getupvalref(
     interpreter: *mut Interpreter,
     fidx: i32,
     n: i32,
@@ -3009,7 +3009,7 @@ pub unsafe extern "C" fn getupvalref(
         };
     }
 }
-pub unsafe extern "C" fn lua_upvalueid(
+pub unsafe fn lua_upvalueid(
     interpreter: *mut Interpreter,
     fidx: i32,
     n: i32,
@@ -3036,7 +3036,7 @@ pub unsafe extern "C" fn lua_upvalueid(
         return null_mut();
     }
 }
-pub unsafe extern "C" fn lua_upvaluejoin(
+pub unsafe fn lua_upvaluejoin(
     interpreter: *mut Interpreter,
     fidx1: i32,
     n1: i32,
@@ -3092,7 +3092,7 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         return luas_hash(buffer.as_mut_ptr(), p as usize, h);
     }
 }
-pub unsafe extern "C" fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
+pub unsafe fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
     unsafe {
         let ret = luam_malloc_(interpreter, size_of::<CallInfo>()) as *mut CallInfo;
         (*(*interpreter).call_info).next = ret;
@@ -3104,7 +3104,7 @@ pub unsafe extern "C" fn luae_extendci(interpreter: *mut Interpreter) -> *mut Ca
         return ret;
     }
 }
-pub unsafe extern "C" fn freeci(interpreter: *mut Interpreter) {
+pub unsafe fn freeci(interpreter: *mut Interpreter) {
     unsafe {
         let mut call_info: *mut CallInfo = (*interpreter).call_info;
         let mut next: *mut CallInfo = (*call_info).next;
@@ -3121,7 +3121,7 @@ pub unsafe extern "C" fn freeci(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn luae_shrinkci(interpreter: *mut Interpreter) {
+pub unsafe fn luae_shrinkci(interpreter: *mut Interpreter) {
     unsafe {
         let mut call_info: *mut CallInfo = (*(*interpreter).call_info).next;
         if !call_info.is_null() {
@@ -3145,7 +3145,7 @@ pub unsafe extern "C" fn luae_shrinkci(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn stack_init(other_state: *mut Interpreter, interpreter: *mut Interpreter) {
+pub unsafe fn stack_init(other_state: *mut Interpreter, interpreter: *mut Interpreter) {
     unsafe {
         (*other_state).stack.stkidrel_pointer = luam_malloc_(
             interpreter,
@@ -3177,7 +3177,7 @@ pub unsafe extern "C" fn stack_init(other_state: *mut Interpreter, interpreter: 
         (*other_state).call_info = call_info;
     }
 }
-pub unsafe extern "C" fn freestack(interpreter: *mut Interpreter) {
+pub unsafe fn freestack(interpreter: *mut Interpreter) {
     unsafe {
         if ((*interpreter).stack.stkidrel_pointer).is_null() {
             return;
@@ -3193,7 +3193,7 @@ pub unsafe extern "C" fn freestack(interpreter: *mut Interpreter) {
         );
     }
 }
-pub unsafe extern "C" fn init_registry(interpreter: *mut Interpreter, global: *mut Global) {
+pub unsafe fn init_registry(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
         let registry: *mut Table = luah_new(interpreter);
         let io: *mut TValue = &mut (*global).l_registry;
@@ -3214,7 +3214,7 @@ pub unsafe extern "C" fn init_registry(interpreter: *mut Interpreter, global: *m
         (*io_1).set_collectable(true);
     }
 }
-pub unsafe extern "C" fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
+pub unsafe fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         stack_init(interpreter, interpreter);
@@ -3228,7 +3228,7 @@ pub unsafe extern "C" fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut 
             .set_tag_variant(TagVariant::NilNil as u8);
     }
 }
-pub unsafe extern "C" fn preinit_thread(interpreter: *mut Interpreter, global: *mut Global) {
+pub unsafe fn preinit_thread(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
         (*interpreter).global = global;
         (*interpreter).stack.stkidrel_pointer = null_mut();
@@ -3248,7 +3248,7 @@ pub unsafe extern "C" fn preinit_thread(interpreter: *mut Interpreter, global: *
         (*interpreter).old_program_counter = 0;
     }
 }
-pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
+pub unsafe fn close_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*global).none_value.is_tagtype_nil() {
@@ -3279,7 +3279,7 @@ pub unsafe extern "C" fn close_state(interpreter: *mut Interpreter) {
         );
     }
 }
-pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
+pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*(*interpreter).global).gc_debt > 0 {
@@ -3301,7 +3301,7 @@ pub unsafe extern "C" fn lua_newthread(interpreter: *mut Interpreter) -> *mut In
         return ret;
     }
 }
-pub unsafe extern "C" fn luae_resetthread(interpreter: *mut Interpreter, mut status: i32) -> i32 {
+pub unsafe fn luae_resetthread(interpreter: *mut Interpreter, mut status: i32) -> i32 {
     unsafe {
         (*interpreter).call_info = &mut (*interpreter).base_callinfo;
         let call_info: *mut CallInfo = (*interpreter).call_info;
@@ -3335,7 +3335,7 @@ pub unsafe extern "C" fn luae_resetthread(interpreter: *mut Interpreter, mut sta
         return status;
     }
 }
-pub unsafe extern "C" fn lua_closethread(
+pub unsafe fn lua_closethread(
     interpreter: *mut Interpreter,
     from: *mut Interpreter,
 ) -> i32 {
@@ -3350,13 +3350,13 @@ pub unsafe extern "C" fn lua_closethread(
         return status;
     }
 }
-pub unsafe extern "C" fn lua_close(mut interpreter: *mut Interpreter) {
+pub unsafe fn lua_close(mut interpreter: *mut Interpreter) {
     unsafe {
         interpreter = (*(*interpreter).global).main_state;
         close_state(interpreter);
     }
 }
-pub unsafe extern "C" fn luae_warning(
+pub unsafe fn luae_warning(
     interpreter: *mut Interpreter,
     message: *const i8,
     tocont: i32,
@@ -3372,7 +3372,7 @@ pub unsafe extern "C" fn luae_warning(
         }
     }
 }
-pub unsafe extern "C" fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const i8) {
+pub unsafe fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue =
             &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).tvalue;
@@ -3388,7 +3388,7 @@ pub unsafe extern "C" fn luae_warnerror(interpreter: *mut Interpreter, where_0: 
         luae_warning(interpreter, make_cstring!(")"), 0);
     }
 }
-pub unsafe extern "C" fn lua_sethook(
+pub unsafe fn lua_sethook(
     interpreter: *mut Interpreter,
     mut function: HookFunction,
     mut mask: i32,
@@ -3408,22 +3408,22 @@ pub unsafe extern "C" fn lua_sethook(
         }
     }
 }
-pub unsafe extern "C" fn lua_gethook(interpreter: *mut Interpreter) -> HookFunction {
+pub unsafe fn lua_gethook(interpreter: *mut Interpreter) -> HookFunction {
     unsafe {
         return (*interpreter).hook;
     }
 }
-pub unsafe extern "C" fn lua_gethookmask(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn lua_gethookmask(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return (*interpreter).hook_mask;
     }
 }
-pub unsafe extern "C" fn lua_gethookcount(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn lua_gethookcount(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return (*interpreter).base_hook_count;
     }
 }
-pub unsafe extern "C" fn lua_getstack(
+pub unsafe fn lua_getstack(
     interpreter: *mut Interpreter,
     mut level: i32,
     ar: *mut DebugInfo,
@@ -3448,7 +3448,7 @@ pub unsafe extern "C" fn lua_getstack(
         return status;
     }
 }
-pub unsafe extern "C" fn formatvarinfo(
+pub unsafe fn formatvarinfo(
     interpreter: *mut Interpreter,
     kind: *const i8,
     name: *const i8,
@@ -3461,7 +3461,7 @@ pub unsafe extern "C" fn formatvarinfo(
         };
     }
 }
-pub unsafe extern "C" fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
+pub unsafe fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
         let mut name: *const i8 = null();
@@ -3488,7 +3488,7 @@ pub unsafe extern "C" fn varinfo(interpreter: *mut Interpreter, o: *const TValue
         return formatvarinfo(interpreter, kind, name);
     }
 }
-pub unsafe extern "C" fn typeerror(
+pub unsafe fn typeerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
     op: *const i8,
@@ -3505,7 +3505,7 @@ pub unsafe extern "C" fn typeerror(
         );
     }
 }
-pub unsafe extern "C" fn luag_typeerror(
+pub unsafe fn luag_typeerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
     op: *const i8,
@@ -3514,7 +3514,7 @@ pub unsafe extern "C" fn luag_typeerror(
         typeerror(interpreter, o, op, varinfo(interpreter, o));
     }
 }
-pub unsafe extern "C" fn luag_callerror(interpreter: *mut Interpreter, o: *const TValue) -> ! {
+pub unsafe fn luag_callerror(interpreter: *mut Interpreter, o: *const TValue) -> ! {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
         let mut name: *const i8 = null();
@@ -3527,7 +3527,7 @@ pub unsafe extern "C" fn luag_callerror(interpreter: *mut Interpreter, o: *const
         typeerror(interpreter, o, make_cstring!("call"), extra);
     }
 }
-pub unsafe extern "C" fn luag_forerror(
+pub unsafe fn luag_forerror(
     interpreter: *mut Interpreter,
     o: *const TValue,
     what: *const i8,
@@ -3541,7 +3541,7 @@ pub unsafe extern "C" fn luag_forerror(
         );
     }
 }
-pub unsafe extern "C" fn luag_concaterror(
+pub unsafe fn luag_concaterror(
     interpreter: *mut Interpreter,
     mut p1: *const TValue,
     p2: *const TValue,
@@ -3556,7 +3556,7 @@ pub unsafe extern "C" fn luag_concaterror(
         luag_typeerror(interpreter, p1, make_cstring!("concatenate"));
     }
 }
-pub unsafe extern "C" fn luag_opinterror(
+pub unsafe fn luag_opinterror(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     mut p2: *const TValue,
@@ -3569,7 +3569,7 @@ pub unsafe extern "C" fn luag_opinterror(
         luag_typeerror(interpreter, p2, message);
     }
 }
-pub unsafe extern "C" fn luag_tointerror(
+pub unsafe fn luag_tointerror(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     mut p2: *const TValue,
@@ -3586,7 +3586,7 @@ pub unsafe extern "C" fn luag_tointerror(
         );
     }
 }
-pub unsafe extern "C" fn luag_ordererror(
+pub unsafe fn luag_ordererror(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     p2: *const TValue,
@@ -3610,7 +3610,7 @@ pub unsafe extern "C" fn luag_ordererror(
         };
     }
 }
-pub unsafe extern "C" fn luag_addinfo(
+pub unsafe fn luag_addinfo(
     interpreter: *mut Interpreter,
     message: *const i8,
     src: *mut TString,
@@ -3637,7 +3637,7 @@ pub unsafe extern "C" fn luag_addinfo(
         );
     }
 }
-pub unsafe extern "C" fn luag_errormsg(interpreter: *mut Interpreter) -> ! {
+pub unsafe fn luag_errormsg(interpreter: *mut Interpreter) -> ! {
     unsafe {
         if (*interpreter).error_function != 0 {
             let error_function: StackValuePointer = ((*interpreter).stack.stkidrel_pointer
@@ -3699,7 +3699,7 @@ pub unsafe extern "C" fn luag_runerror(
         luag_errormsg(interpreter);
     }
 }
-pub unsafe extern "C" fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
         let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer)
@@ -3721,7 +3721,7 @@ pub unsafe extern "C" fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn luag_traceexec(
+pub unsafe fn luag_traceexec(
     interpreter: *mut Interpreter,
     mut program_counter: *const u32,
 ) -> i32 {
@@ -3791,7 +3791,7 @@ pub unsafe extern "C" fn luag_traceexec(
         return 1;
     }
 }
-pub unsafe extern "C" fn tryagain(
+pub unsafe fn tryagain(
     interpreter: *mut Interpreter,
     block: *mut libc::c_void,
     old_size: usize,
@@ -3807,7 +3807,7 @@ pub unsafe extern "C" fn tryagain(
         };
     }
 }
-pub unsafe extern "C" fn luam_realloc_(
+pub unsafe fn luam_realloc_(
     interpreter: *mut Interpreter,
     block: *mut libc::c_void,
     old_size: usize,
@@ -3828,7 +3828,7 @@ pub unsafe extern "C" fn luam_realloc_(
         return new_block;
     }
 }
-pub unsafe extern "C" fn luam_saferealloc_(
+pub unsafe fn luam_saferealloc_(
     interpreter: *mut Interpreter,
     block: *mut libc::c_void,
     old_size: usize,
@@ -3842,7 +3842,7 @@ pub unsafe extern "C" fn luam_saferealloc_(
         return new_block;
     }
 }
-pub unsafe extern "C" fn luam_malloc_(
+pub unsafe fn luam_malloc_(
     interpreter: *mut Interpreter,
     new_size: usize,
 ) -> *mut libc::c_void {
@@ -3863,7 +3863,7 @@ pub unsafe extern "C" fn luam_malloc_(
         };
     }
 }
-pub unsafe extern "C" fn intarith(interpreter: *mut Interpreter, op: i32, v1: i64, v2: i64) -> i64 {
+pub unsafe fn intarith(interpreter: *mut Interpreter, op: i32, v1: i64, v2: i64) -> i64 {
     unsafe {
         match op {
             0 => return (v1 as usize).wrapping_add(v2 as usize) as i64,
@@ -3888,7 +3888,7 @@ pub unsafe extern "C" fn intarith(interpreter: *mut Interpreter, op: i32, v1: i6
         };
     }
 }
-pub unsafe extern "C" fn numarith(interpreter: *mut Interpreter, op: i32, v1: f64, v2: f64) -> f64 {
+pub unsafe fn numarith(interpreter: *mut Interpreter, op: i32, v1: f64, v2: f64) -> f64 {
     unsafe {
         match op {
             0 => return v1 + v2,
@@ -3905,7 +3905,7 @@ pub unsafe extern "C" fn numarith(interpreter: *mut Interpreter, op: i32, v1: f6
         };
     }
 }
-pub unsafe extern "C" fn luao_rawarith(
+pub unsafe fn luao_rawarith(
     interpreter: *mut Interpreter,
     op: i32,
     p1: *const TValue,
@@ -4020,7 +4020,7 @@ pub unsafe extern "C" fn luao_rawarith(
         };
     }
 }
-pub unsafe extern "C" fn luao_arith(
+pub unsafe fn luao_arith(
     interpreter: *mut Interpreter,
     op: i32,
     p1: *const TValue,
@@ -4033,7 +4033,7 @@ pub unsafe extern "C" fn luao_arith(
         }
     }
 }
-pub unsafe extern "C" fn luao_pushvfstring(
+pub unsafe fn luao_pushvfstring(
     interpreter: *mut Interpreter,
     mut fmt: *const i8,
     mut argp: ::core::ffi::VaList,
@@ -4131,7 +4131,7 @@ pub unsafe extern "C" fn luao_pushfstring(
         return message;
     }
 }
-pub unsafe extern "C" fn luat_init(interpreter: *mut Interpreter) {
+pub unsafe fn luat_init(interpreter: *mut Interpreter) {
     unsafe {
         static mut EVENT_NAMES: [*const i8; 25] = [
             make_cstring!("__index"),
@@ -4172,7 +4172,7 @@ pub unsafe extern "C" fn luat_init(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn luat_gettmbyobj(
+pub unsafe fn luat_gettmbyobj(
     interpreter: *mut Interpreter,
     o: *const TValue,
     event: u32,
@@ -4197,7 +4197,7 @@ pub unsafe extern "C" fn luat_gettmbyobj(
         };
     }
 }
-pub unsafe extern "C" fn luat_objtypename(
+pub unsafe fn luat_objtypename(
     interpreter: *mut Interpreter,
     o: *const TValue,
 ) -> *const i8 {
@@ -4219,7 +4219,7 @@ pub unsafe extern "C" fn luat_objtypename(
         return TYPE_NAMES[((*o).get_tag_type() as usize + 1) as usize];
     }
 }
-pub unsafe extern "C" fn luat_calltm(
+pub unsafe fn luat_calltm(
     interpreter: *mut Interpreter,
     f: *const TValue,
     p1: *const TValue,
@@ -4247,7 +4247,7 @@ pub unsafe extern "C" fn luat_calltm(
         };
     }
 }
-pub unsafe extern "C" fn luat_calltmres(
+pub unsafe fn luat_calltmres(
     interpreter: *mut Interpreter,
     f: *const TValue,
     p1: *const TValue,
@@ -4282,7 +4282,7 @@ pub unsafe extern "C" fn luat_calltmres(
         (*io1_2).copy_from(&(*io2_2));
     }
 }
-pub unsafe extern "C" fn callbintm(
+pub unsafe fn callbintm(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     p2: *const TValue,
@@ -4301,7 +4301,7 @@ pub unsafe extern "C" fn callbintm(
         return 1;
     }
 }
-pub unsafe extern "C" fn luat_trybintm(
+pub unsafe fn luat_trybintm(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     p2: *const TValue,
@@ -4330,7 +4330,7 @@ pub unsafe extern "C" fn luat_trybintm(
         }
     }
 }
-pub unsafe extern "C" fn luat_tryconcattm(interpreter: *mut Interpreter) {
+pub unsafe fn luat_tryconcattm(interpreter: *mut Interpreter) {
     unsafe {
         let top: StackValuePointer = (*interpreter).top.stkidrel_pointer;
         if ((callbintm(
@@ -4351,7 +4351,7 @@ pub unsafe extern "C" fn luat_tryconcattm(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn luat_trybinassoctm(
+pub unsafe fn luat_trybinassoctm(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     p2: *const TValue,
@@ -4367,7 +4367,7 @@ pub unsafe extern "C" fn luat_trybinassoctm(
         };
     }
 }
-pub unsafe extern "C" fn luat_trybinitm(
+pub unsafe fn luat_trybinitm(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     i2: i64,
@@ -4383,7 +4383,7 @@ pub unsafe extern "C" fn luat_trybinitm(
         luat_trybinassoctm(interpreter, p1, &mut aux, flip, res, event);
     }
 }
-pub unsafe extern "C" fn luat_callordertm(
+pub unsafe fn luat_callordertm(
     interpreter: *mut Interpreter,
     p1: *const TValue,
     p2: *const TValue,
@@ -4409,7 +4409,7 @@ pub unsafe extern "C" fn luat_callordertm(
         luag_ordererror(interpreter, p1, p2);
     }
 }
-pub unsafe extern "C" fn luat_callorderitm(
+pub unsafe fn luat_callorderitm(
     interpreter: *mut Interpreter,
     mut p1: *const TValue,
     v2: i32,
@@ -4438,7 +4438,7 @@ pub unsafe extern "C" fn luat_callorderitm(
         return luat_callordertm(interpreter, p1, p2, event);
     }
 }
-pub unsafe extern "C" fn luat_adjustvarargs(
+pub unsafe fn luat_adjustvarargs(
     interpreter: *mut Interpreter,
     nfixparams: i32,
     call_info: *mut CallInfo,
@@ -4484,7 +4484,7 @@ pub unsafe extern "C" fn luat_adjustvarargs(
             ((*call_info).top.stkidrel_pointer).offset((actual + 1) as isize);
     }
 }
-pub unsafe extern "C" fn luat_getvarargs(
+pub unsafe fn luat_getvarargs(
     interpreter: *mut Interpreter,
     call_info: *mut CallInfo,
     mut where_0: StackValuePointer,
@@ -4527,7 +4527,7 @@ pub unsafe extern "C" fn luat_getvarargs(
         }
     }
 }
-pub unsafe extern "C" fn luac_newobj(
+pub unsafe fn luac_newobj(
     interpreter: *mut Interpreter,
     tag_variant: u8,
     size: usize,
@@ -4542,7 +4542,7 @@ pub unsafe extern "C" fn luac_newobj(
         return ret;
     }
 }
-pub unsafe extern "C" fn traverse_state(global: *mut Global, interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut o: StackValuePointer = (*interpreter).stack.stkidrel_pointer;
         if (*interpreter).get_marked() & 7 > 1 || (*global).gc_state as i32 == 0 {
@@ -4589,7 +4589,7 @@ pub unsafe extern "C" fn traverse_state(global: *mut Global, interpreter: *mut I
                 .offset_from((*interpreter).stack.stkidrel_pointer) as i32;
     }
 }
-pub unsafe extern "C" fn sweeptolive(
+pub unsafe fn sweeptolive(
     interpreter: *mut Interpreter,
     mut p: *mut *mut Object,
 ) -> *mut *mut Object {
@@ -4604,7 +4604,7 @@ pub unsafe extern "C" fn sweeptolive(
         return p;
     }
 }
-pub unsafe extern "C" fn dothecall(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
+pub unsafe fn dothecall(interpreter: *mut Interpreter, mut _ud: *mut libc::c_void) {
     unsafe {
         luad_callnoyield(
             interpreter,
@@ -4613,7 +4613,7 @@ pub unsafe extern "C" fn dothecall(interpreter: *mut Interpreter, mut _ud: *mut 
         );
     }
 }
-pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
+pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         let tm: *const TValue;
@@ -4644,7 +4644,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
                 ((*(*interpreter).call_info).call_status as i32 | 1 << 7) as u16;
             status = luad_pcall(
                 interpreter,
-                Some(dothecall as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+                Some(dothecall as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
                 null_mut(),
                 ((*interpreter).top.stkidrel_pointer.offset(-(2 as isize)) as *mut i8)
                     .offset_from((*interpreter).stack.stkidrel_pointer as *mut i8)
@@ -4663,7 +4663,7 @@ pub unsafe extern "C" fn gctm_function(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn runafewfinalizers(interpreter: *mut Interpreter, n: i32) -> i32 {
+pub unsafe fn runafewfinalizers(interpreter: *mut Interpreter, n: i32) -> i32 {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         let mut i: i32;
@@ -4675,7 +4675,7 @@ pub unsafe extern "C" fn runafewfinalizers(interpreter: *mut Interpreter, n: i32
         return i;
     }
 }
-pub unsafe extern "C" fn luac_checkfinalizer(
+pub unsafe fn luac_checkfinalizer(
     interpreter: *mut Interpreter,
     o: *mut Object,
     metatable: *mut Table,
@@ -4719,7 +4719,7 @@ pub unsafe extern "C" fn luac_checkfinalizer(
         };
     }
 }
-pub unsafe extern "C" fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) {
+pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         loop {
@@ -4752,7 +4752,7 @@ pub unsafe extern "C" fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *m
         }
     }
 }
-pub unsafe extern "C" fn sweepgen(
+pub unsafe fn sweepgen(
     interpreter: *mut Interpreter,
     global: *mut Global,
     mut p: *mut *mut Object,
@@ -4788,7 +4788,7 @@ pub unsafe extern "C" fn sweepgen(
         return p;
     }
 }
-pub unsafe extern "C" fn callclosemethod(
+pub unsafe fn callclosemethod(
     interpreter: *mut Interpreter,
     obj: *mut TValue,
     err: *mut TValue,
@@ -4814,7 +4814,7 @@ pub unsafe extern "C" fn callclosemethod(
         };
     }
 }
-pub unsafe extern "C" fn checkclosemth(interpreter: *mut Interpreter, level: StackValuePointer) {
+pub unsafe fn checkclosemth(interpreter: *mut Interpreter, level: StackValuePointer) {
     unsafe {
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*level).tvalue, TM_CLOSE);
         if (*tm).is_tagtype_nil() {
@@ -4833,7 +4833,7 @@ pub unsafe extern "C" fn checkclosemth(interpreter: *mut Interpreter, level: Sta
         }
     }
 }
-pub unsafe extern "C" fn prepcallclosemth(
+pub unsafe fn prepcallclosemth(
     interpreter: *mut Interpreter,
     level: StackValuePointer,
     status: i32,
@@ -4851,7 +4851,7 @@ pub unsafe extern "C" fn prepcallclosemth(
         callclosemethod(interpreter, uv, errobj, yy);
     }
 }
-pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: StackValuePointer) {
+pub unsafe fn luaf_newtbcupval(interpreter: *mut Interpreter, level: StackValuePointer) {
     unsafe {
         if (*level).tvalue.get_tag_variant() == TAG_VARIANT_BOOLEAN_FALSE
             || (*level).tvalue.is_tagtype_nil()
@@ -4880,7 +4880,7 @@ pub unsafe extern "C" fn luaf_newtbcupval(interpreter: *mut Interpreter, level: 
         (*interpreter).tbc_list.stkidrel_pointer = level;
     }
 }
-pub unsafe extern "C" fn luaf_closeupval(interpreter: *mut Interpreter, level: StackValuePointer) {
+pub unsafe fn luaf_closeupval(interpreter: *mut Interpreter, level: StackValuePointer) {
     unsafe {
         loop {
             let uv: *mut UpValue = (*interpreter).open_upvalue;
@@ -4916,7 +4916,7 @@ pub unsafe extern "C" fn luaf_closeupval(interpreter: *mut Interpreter, level: S
         }
     }
 }
-pub unsafe extern "C" fn poptbclist(interpreter: *mut Interpreter) {
+pub unsafe fn poptbclist(interpreter: *mut Interpreter) {
     unsafe {
         let mut tbc: StackValuePointer = (*interpreter).tbc_list.stkidrel_pointer;
         tbc = tbc.offset(-((*tbc).delta as isize));
@@ -4932,7 +4932,7 @@ pub unsafe extern "C" fn poptbclist(interpreter: *mut Interpreter) {
         (*interpreter).tbc_list.stkidrel_pointer = tbc;
     }
 }
-pub unsafe extern "C" fn luaf_close(
+pub unsafe fn luaf_close(
     interpreter: *mut Interpreter,
     mut level: StackValuePointer,
     status: i32,
@@ -4952,7 +4952,7 @@ pub unsafe extern "C" fn luaf_close(
         return level;
     }
 }
-pub unsafe extern "C" fn luay_parser(
+pub unsafe fn luay_parser(
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
     buffer: *mut Buffer,
@@ -5021,7 +5021,7 @@ pub unsafe extern "C" fn luay_parser(
         return cl;
     }
 }
-pub unsafe extern "C" fn luax_init(interpreter: *mut Interpreter) {
+pub unsafe fn luax_init(interpreter: *mut Interpreter) {
     unsafe {
         let mut i: i32;
         let e: *mut TString = luas_newlstr(
@@ -5041,7 +5041,7 @@ pub unsafe extern "C" fn luax_init(interpreter: *mut Interpreter) {
         }
     }
 }
-pub unsafe extern "C" fn pushclosure(
+pub unsafe fn pushclosure(
     interpreter: *mut Interpreter,
     p: *mut Prototype,
     encup: *mut *mut UpValue,
@@ -5087,7 +5087,7 @@ pub unsafe extern "C" fn pushclosure(
         }
     }
 }
-pub unsafe extern "C" fn luav_finishop(interpreter: *mut Interpreter) {
+pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
     unsafe {
         let call_info: *mut CallInfo = (*interpreter).call_info;
         let base: StackValuePointer = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
@@ -5161,7 +5161,7 @@ pub unsafe extern "C" fn luav_finishop(interpreter: *mut Interpreter) {
         };
     }
 }
-pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_info: *mut CallInfo) {
+pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut call_info: *mut CallInfo) {
     unsafe {
         let mut i: u32;
         let mut ra_65: StackValuePointer;
@@ -7849,7 +7849,7 @@ pub unsafe extern "C" fn luav_execute(interpreter: *mut Interpreter, mut call_in
         }
     }
 }
-pub unsafe extern "C" fn findfield(interpreter: *mut Interpreter, objidx: i32, level: i32) -> bool {
+pub unsafe fn findfield(interpreter: *mut Interpreter, objidx: i32, level: i32) -> bool {
     unsafe {
         if level == 0 || (lua_type(interpreter, -1) != Some(TagType::Table)) {
             return false;
@@ -7873,7 +7873,7 @@ pub unsafe extern "C" fn findfield(interpreter: *mut Interpreter, objidx: i32, l
         return false;
     }
 }
-pub unsafe extern "C" fn pushglobalfuncname(
+pub unsafe fn pushglobalfuncname(
     interpreter: *mut Interpreter,
     ar: *mut DebugInfo,
 ) -> bool {
@@ -7902,7 +7902,7 @@ pub unsafe extern "C" fn pushglobalfuncname(
         };
     }
 }
-pub unsafe extern "C" fn pushfuncname(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
+pub unsafe fn pushfuncname(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
     unsafe {
         if pushglobalfuncname(interpreter, ar) {
             lua_pushfstring(
@@ -7933,7 +7933,7 @@ pub unsafe extern "C" fn pushfuncname(interpreter: *mut Interpreter, ar: *mut De
         };
     }
 }
-pub unsafe extern "C" fn lastlevel(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn lastlevel(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut ar: DebugInfo = DebugInfo {
             event: 0,
@@ -7971,7 +7971,7 @@ pub unsafe extern "C" fn lastlevel(interpreter: *mut Interpreter) -> i32 {
         return le - 1;
     }
 }
-pub unsafe extern "C" fn lual_traceback(
+pub unsafe fn lual_traceback(
     interpreter: *mut Interpreter,
     other_state: *mut Interpreter,
     message: *const i8,
@@ -8059,7 +8059,7 @@ pub unsafe extern "C" fn lual_traceback(
         b.push_result();
     }
 }
-pub unsafe extern "C" fn lual_argerror(
+pub unsafe fn lual_argerror(
     interpreter: *mut Interpreter,
     mut arg: i32,
     extramsg: *const i8,
@@ -8120,7 +8120,7 @@ pub unsafe extern "C" fn lual_argerror(
         );
     }
 }
-pub unsafe extern "C" fn lual_typeerror(
+pub unsafe fn lual_typeerror(
     interpreter: *mut Interpreter,
     arg: i32,
     tname: *const i8,
@@ -8149,7 +8149,7 @@ pub unsafe fn tag_error2(interpreter: *mut Interpreter, arg: i32, tag: Option<Ta
         lual_typeerror(interpreter, arg, lua_typename(interpreter, tag));
     }
 }
-pub unsafe extern "C" fn lual_where(interpreter: *mut Interpreter, level: i32) {
+pub unsafe fn lual_where(interpreter: *mut Interpreter, level: i32) {
     unsafe {
         let mut ar: DebugInfo = DebugInfo {
             event: 0,
@@ -8198,7 +8198,7 @@ pub unsafe extern "C" fn lual_error(
         return lua_error(interpreter);
     }
 }
-pub unsafe extern "C" fn lual_fileresult(
+pub unsafe fn lual_fileresult(
     interpreter: *mut Interpreter,
     stat: i32,
     fname: *const i8,
@@ -8225,7 +8225,7 @@ pub unsafe extern "C" fn lual_fileresult(
         };
     }
 }
-pub unsafe extern "C" fn lual_execresult(interpreter: *mut Interpreter, mut stat: i32) -> i32 {
+pub unsafe fn lual_execresult(interpreter: *mut Interpreter, mut stat: i32) -> i32 {
     unsafe {
         if stat != 0 && *__errno_location() != 0 {
             return lual_fileresult(interpreter, 0, null());
@@ -8248,7 +8248,7 @@ pub unsafe extern "C" fn lual_execresult(interpreter: *mut Interpreter, mut stat
         };
     }
 }
-pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname: *const i8) -> i32 {
+pub unsafe fn lual_newmetatable(interpreter: *mut Interpreter, tname: *const i8) -> i32 {
     unsafe {
         if lua_getfield(interpreter, -1000000 - 1000, tname) != TagType::Nil {
             return 0;
@@ -8263,13 +8263,13 @@ pub unsafe extern "C" fn lual_newmetatable(interpreter: *mut Interpreter, tname:
         }
     }
 }
-pub unsafe extern "C" fn lual_setmetatable(interpreter: *mut Interpreter, tname: *const i8) {
+pub unsafe fn lual_setmetatable(interpreter: *mut Interpreter, tname: *const i8) {
     unsafe {
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, tname);
         lua_setmetatable(interpreter, -2);
     }
 }
-pub unsafe extern "C" fn lual_testudata(
+pub unsafe fn lual_testudata(
     interpreter: *mut Interpreter,
     arbitrary_data: i32,
     tname: *const i8,
@@ -8289,7 +8289,7 @@ pub unsafe extern "C" fn lual_testudata(
         return null_mut();
     }
 }
-pub unsafe extern "C" fn lual_checkudata(
+pub unsafe fn lual_checkudata(
     interpreter: *mut Interpreter,
     arbitrary_data: i32,
     tname: *const i8,
@@ -8302,7 +8302,7 @@ pub unsafe extern "C" fn lual_checkudata(
         return p;
     }
 }
-pub unsafe extern "C" fn lual_checkoption(
+pub unsafe fn lual_checkoption(
     interpreter: *mut Interpreter,
     arg: i32,
     def: *const i8,
@@ -8329,7 +8329,7 @@ pub unsafe extern "C" fn lual_checkoption(
         );
     }
 }
-pub unsafe extern "C" fn lual_checkstack(
+pub unsafe fn lual_checkstack(
     interpreter: *mut Interpreter,
     space: i32,
     message: *const i8,
@@ -8344,21 +8344,21 @@ pub unsafe extern "C" fn lual_checkstack(
         }
     }
 }
-pub unsafe extern "C" fn lual_checktype(interpreter: *mut Interpreter, arg: i32, tag: TagType) {
+pub unsafe fn lual_checktype(interpreter: *mut Interpreter, arg: i32, tag: TagType) {
     unsafe {
         if lua_type(interpreter, arg) != Some(tag) {
             tag_error2(interpreter, arg, Some(tag));
         }
     }
 }
-pub unsafe extern "C" fn lual_checkany(interpreter: *mut Interpreter, arg: i32) {
+pub unsafe fn lual_checkany(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         if lua_type(interpreter, arg) == None {
             lual_argerror(interpreter, arg, make_cstring!("value expected"));
         }
     }
 }
-pub unsafe extern "C" fn lual_checklstring(
+pub unsafe fn lual_checklstring(
     interpreter: *mut Interpreter,
     arg: i32,
     length: *mut usize,
@@ -8371,7 +8371,7 @@ pub unsafe extern "C" fn lual_checklstring(
         return s;
     }
 }
-pub unsafe extern "C" fn lual_optlstring(
+pub unsafe fn lual_optlstring(
     interpreter: *mut Interpreter,
     arg: i32,
     def: *const i8,
@@ -8395,7 +8395,7 @@ pub unsafe extern "C" fn lual_optlstring(
         }
     }
 }
-pub unsafe extern "C" fn lual_checknumber(interpreter: *mut Interpreter, arg: i32) -> f64 {
+pub unsafe fn lual_checknumber(interpreter: *mut Interpreter, arg: i32) -> f64 {
     unsafe {
         let mut is_number = false;
         let d: f64 = lua_tonumberx(interpreter, arg, &mut is_number);
@@ -8405,7 +8405,7 @@ pub unsafe extern "C" fn lual_checknumber(interpreter: *mut Interpreter, arg: i3
         return d;
     }
 }
-pub unsafe extern "C" fn lual_optnumber(interpreter: *mut Interpreter, arg: i32, def: f64) -> f64 {
+pub unsafe fn lual_optnumber(interpreter: *mut Interpreter, arg: i32, def: f64) -> f64 {
     unsafe {
         match lua_type(interpreter, arg) {
             None | Some(TagType::Nil) => def,
@@ -8413,7 +8413,7 @@ pub unsafe extern "C" fn lual_optnumber(interpreter: *mut Interpreter, arg: i32,
         }
     }
 }
-pub unsafe extern "C" fn interror(interpreter: *mut Interpreter, arg: i32) {
+pub unsafe fn interror(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         if lua_isnumber(interpreter, arg) {
             lual_argerror(
@@ -8426,7 +8426,7 @@ pub unsafe extern "C" fn interror(interpreter: *mut Interpreter, arg: i32) {
         };
     }
 }
-pub unsafe extern "C" fn lual_checkinteger(interpreter: *mut Interpreter, arg: i32) -> i64 {
+pub unsafe fn lual_checkinteger(interpreter: *mut Interpreter, arg: i32) -> i64 {
     unsafe {
         let mut is_number = false;
         let ret: i64 = lua_tointegerx(interpreter, arg, &mut is_number);
@@ -8436,7 +8436,7 @@ pub unsafe extern "C" fn lual_checkinteger(interpreter: *mut Interpreter, arg: i
         return ret;
     }
 }
-pub unsafe extern "C" fn lual_optinteger(interpreter: *mut Interpreter, arg: i32, def: i64) -> i64 {
+pub unsafe fn lual_optinteger(interpreter: *mut Interpreter, arg: i32, def: i64) -> i64 {
     unsafe {
         return match lua_type(interpreter, arg) {
             None | Some(TagType::Nil) => def,
@@ -8444,7 +8444,7 @@ pub unsafe extern "C" fn lual_optinteger(interpreter: *mut Interpreter, arg: i32
         };
     }
 }
-pub unsafe extern "C" fn get_f(
+pub unsafe fn get_f(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
     size: *mut usize,
@@ -8468,7 +8468,7 @@ pub unsafe extern "C" fn get_f(
         return ((*lf).buffer).as_mut_ptr();
     }
 }
-pub unsafe extern "C" fn errfile(
+pub unsafe fn errfile(
     interpreter: *mut Interpreter,
     what: *const i8,
     fnameindex: i32,
@@ -8493,7 +8493,7 @@ pub unsafe extern "C" fn errfile(
         return 5 + 1;
     }
 }
-pub unsafe extern "C" fn skip_bom(file: *mut FILE) -> i32 {
+pub unsafe fn skip_bom(file: *mut FILE) -> i32 {
     unsafe {
         let c: i32 = getc(file);
         if c == 0xef as i32 && getc(file) == 0xbb as i32 && getc(file) == 0xbf as i32 {
@@ -8503,7 +8503,7 @@ pub unsafe extern "C" fn skip_bom(file: *mut FILE) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
+pub unsafe fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
     unsafe {
         *cp = skip_bom(file);
         let mut c: i32 = *cp;
@@ -8521,7 +8521,7 @@ pub unsafe extern "C" fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn lual_loadfilex(
+pub unsafe fn lual_loadfilex(
     interpreter: *mut Interpreter,
     filename: *const i8,
     mode: *const i8,
@@ -8574,7 +8574,7 @@ pub unsafe extern "C" fn lual_loadfilex(
             interpreter,
             Some(
                 get_f
-                    as unsafe extern "C" fn(
+                    as unsafe fn(
                         *mut Interpreter,
                         *mut libc::c_void,
                         *mut usize,
@@ -8597,7 +8597,7 @@ pub unsafe extern "C" fn lual_loadfilex(
         return status;
     }
 }
-pub unsafe extern "C" fn get_s(
+pub unsafe fn get_s(
     mut _state: *mut Interpreter,
     arbitrary_data: *mut libc::c_void,
     size: *mut usize,
@@ -8613,7 +8613,7 @@ pub unsafe extern "C" fn get_s(
         }
     }
 }
-pub unsafe extern "C" fn lual_loadbufferx(
+pub unsafe fn lual_loadbufferx(
     interpreter: *mut Interpreter,
     buffer: *const i8,
     size: usize,
@@ -8627,7 +8627,7 @@ pub unsafe extern "C" fn lual_loadbufferx(
             interpreter,
             Some(
                 get_s
-                    as unsafe extern "C" fn(
+                    as unsafe fn(
                         *mut Interpreter,
                         *mut libc::c_void,
                         *mut usize,
@@ -8639,7 +8639,7 @@ pub unsafe extern "C" fn lual_loadbufferx(
         );
     }
 }
-pub unsafe extern "C" fn lual_getmetafield(
+pub unsafe fn lual_getmetafield(
     interpreter: *mut Interpreter,
     obj: i32,
     event: *const i8,
@@ -8660,7 +8660,7 @@ pub unsafe extern "C" fn lual_getmetafield(
         };
     }
 }
-pub unsafe extern "C" fn lual_callmeta(
+pub unsafe fn lual_callmeta(
     interpreter: *mut Interpreter,
     mut obj: i32,
     event: *const i8,
@@ -8675,7 +8675,7 @@ pub unsafe extern "C" fn lual_callmeta(
         return true;
     }
 }
-pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> i64 {
+pub unsafe fn lual_len(interpreter: *mut Interpreter, index: i32) -> i64 {
     unsafe {
         let l: i64;
         let mut is_number = false;
@@ -8691,7 +8691,7 @@ pub unsafe extern "C" fn lual_len(interpreter: *mut Interpreter, index: i32) -> 
         return l;
     }
 }
-pub unsafe extern "C" fn lual_tolstring(
+pub unsafe fn lual_tolstring(
     interpreter: *mut Interpreter,
     mut index: i32,
     length: *mut usize,
@@ -8761,7 +8761,7 @@ pub unsafe extern "C" fn lual_tolstring(
         return lua_tolstring(interpreter, -1, length);
     }
 }
-pub unsafe extern "C" fn lual_setfuncs(
+pub unsafe fn lual_setfuncs(
     interpreter: *mut Interpreter,
     mut l: *const RegisteredFunction,
     nup: i32,
@@ -8783,7 +8783,7 @@ pub unsafe extern "C" fn lual_setfuncs(
         lua_settop(interpreter, -nup - 1);
     }
 }
-pub unsafe extern "C" fn lual_getsubtable(
+pub unsafe fn lual_getsubtable(
     interpreter: *mut Interpreter,
     mut index: i32,
     fname: *const i8,
@@ -8801,7 +8801,7 @@ pub unsafe extern "C" fn lual_getsubtable(
         };
     }
 }
-pub unsafe extern "C" fn lual_requiref(
+pub unsafe fn lual_requiref(
     interpreter: *mut Interpreter,
     modname: *const i8,
     openf: CFunction,
@@ -8830,7 +8830,7 @@ pub unsafe extern "C" fn lual_requiref(
         }
     }
 }
-pub unsafe extern "C" fn lual_addgsub(
+pub unsafe fn lual_addgsub(
     b: *mut Buffer,
     mut s: *const i8,
     p: *const i8,
@@ -8851,7 +8851,7 @@ pub unsafe extern "C" fn lual_addgsub(
         (*b).add_string(s);
     }
 }
-pub unsafe extern "C" fn lual_gsub(
+pub unsafe fn lual_gsub(
     interpreter: *mut Interpreter,
     s: *const i8,
     p: *const i8,
@@ -8865,7 +8865,7 @@ pub unsafe extern "C" fn lual_gsub(
         return lua_tolstring(interpreter, -1, null_mut());
     }
 }
-pub unsafe extern "C" fn raw_allocate(
+pub unsafe fn raw_allocate(
     ptr: *mut libc::c_void,
     mut _old_size: usize,
     new_size: usize,
@@ -8879,7 +8879,7 @@ pub unsafe extern "C" fn raw_allocate(
         };
     }
 }
-pub unsafe extern "C" fn panic(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn panic(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let message: *const i8 = if lua_type(interpreter, -1) == Some(TagType::String) {
             lua_tolstring(interpreter, -1, null_mut())
@@ -8895,7 +8895,7 @@ pub unsafe extern "C" fn panic(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn checkcontrol(
+pub unsafe fn checkcontrol(
     interpreter: *mut Interpreter,
     mut message: *const i8,
     tocont: i32,
@@ -8911,13 +8911,13 @@ pub unsafe extern "C" fn checkcontrol(
             if strcmp(message, make_cstring!("off")) == 0 {
                 lua_setwarnf(
                     interpreter,
-                    Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
+                    Some(warnfoff as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                     interpreter as *mut libc::c_void,
                 );
             } else if strcmp(message, make_cstring!("on")) == 0 {
                 lua_setwarnf(
                     interpreter,
-                    Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
+                    Some(warnfon as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                     interpreter as *mut libc::c_void,
                 );
             }
@@ -8925,7 +8925,7 @@ pub unsafe extern "C" fn checkcontrol(
         };
     }
 }
-pub unsafe extern "C" fn warnfoff(
+pub unsafe fn warnfoff(
     arbitrary_data: *mut libc::c_void,
     message: *const i8,
     tocont: i32,
@@ -8934,7 +8934,7 @@ pub unsafe extern "C" fn warnfoff(
         checkcontrol(arbitrary_data as *mut Interpreter, message, tocont);
     }
 }
-pub unsafe extern "C" fn warnfcont(
+pub unsafe fn warnfcont(
     arbitrary_data: *mut libc::c_void,
     message: *const i8,
     tocont: i32,
@@ -8946,7 +8946,7 @@ pub unsafe extern "C" fn warnfcont(
         if tocont != 0 {
             lua_setwarnf(
                 interpreter,
-                Some(warnfcont as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
+                Some(warnfcont as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         } else {
@@ -8954,13 +8954,13 @@ pub unsafe extern "C" fn warnfcont(
             fflush(stderr);
             lua_setwarnf(
                 interpreter,
-                Some(warnfon as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
+                Some(warnfon as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         };
     }
 }
-pub unsafe extern "C" fn warnfon(
+pub unsafe fn warnfon(
     arbitrary_data: *mut libc::c_void,
     message: *const i8,
     tocont: i32,
@@ -8974,7 +8974,7 @@ pub unsafe extern "C" fn warnfon(
         warnfcont(arbitrary_data, message, tocont);
     }
 }
-pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
+pub unsafe fn lual_newstate() -> *mut Interpreter {
     unsafe {
         let mut interpreter: *mut Interpreter =
             raw_allocate(null_mut(), 0, size_of::<Interpreter>()) as *mut Interpreter;
@@ -9049,7 +9049,7 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         }
         if luad_rawrunprotected(
             interpreter,
-            Some(f_luaopen as unsafe extern "C" fn(*mut Interpreter, *mut libc::c_void) -> ()),
+            Some(f_luaopen as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
             null_mut(),
         ) != 0
         {
@@ -9059,18 +9059,18 @@ pub unsafe extern "C" fn lual_newstate() -> *mut Interpreter {
         if !interpreter.is_null() {
             lua_atpanic(
                 interpreter,
-                Some(panic as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                Some(panic as unsafe fn(*mut Interpreter) -> i32),
             );
             lua_setwarnf(
                 interpreter,
-                Some(warnfoff as unsafe extern "C" fn(*mut libc::c_void, *const i8, i32) -> ()),
+                Some(warnfoff as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                 interpreter as *mut libc::c_void,
             );
         }
         return interpreter;
     }
 }
-pub unsafe extern "C" fn lual_checkversion_(
+pub unsafe fn lual_checkversion_(
     interpreter: *mut Interpreter,
     version: f64,
     size: usize,
@@ -9096,7 +9096,7 @@ pub unsafe extern "C" fn lual_checkversion_(
         }
     }
 }
-pub unsafe extern "C" fn luab_print(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_print(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         for i in 1..(1 + n) {
@@ -9128,7 +9128,7 @@ pub unsafe extern "C" fn luab_print(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn luab_warn(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_warn(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         lual_checklstring(interpreter, 1, null_mut());
@@ -9142,7 +9142,7 @@ pub unsafe extern "C" fn luab_warn(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe extern "C" fn l_print(interpreter: *mut Interpreter) {
+pub unsafe fn l_print(interpreter: *mut Interpreter) {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         if n > 0 {
@@ -9168,7 +9168,7 @@ pub unsafe extern "C" fn l_print(interpreter: *mut Interpreter) {
 }
 pub static mut GLOBAL_STATE: *mut Interpreter = null_mut();
 pub static mut PROGRAM_NAME: *const i8 = make_cstring!("lua");
-pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" fn(i32) -> ()>) {
+pub unsafe fn setsignal(sig: i32, handler: Option<unsafe fn(i32) -> ()>) {
     unsafe {
         let mut sa: SignalAction = SignalAction {
             __sigaction_handler: SigActionA { sa_handler: None },
@@ -9182,25 +9182,25 @@ pub unsafe extern "C" fn setsignal(sig: i32, handler: Option<unsafe extern "C" f
         sigaction(sig, &mut sa, null_mut());
     }
 }
-pub unsafe extern "C" fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
+pub unsafe fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(interpreter, None, 0, 0);
         lual_error(interpreter, make_cstring!("interrupted!"));
     }
 }
-pub unsafe extern "C" fn laction(i: i32) {
+pub unsafe fn laction(i: i32) {
     unsafe {
         let flag: i32 = 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3;
         setsignal(i, None);
         lua_sethook(
             GLOBAL_STATE,
-            Some(lstop as unsafe extern "C" fn(*mut Interpreter, *mut DebugInfo) -> ()),
+            Some(lstop as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()),
             flag,
             1,
         );
     }
 }
-pub unsafe extern "C" fn print_usage(badoption: *const i8) {
+pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
         fprintf(stderr, make_cstring!("%s: "), PROGRAM_NAME);
         fflush(stderr);
@@ -9227,7 +9227,7 @@ pub unsafe extern "C" fn print_usage(badoption: *const i8) {
         fflush(stderr);
     }
 }
-pub unsafe extern "C" fn l_message(pname: *const i8, message: *const i8) {
+pub unsafe fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
             fprintf(stderr, make_cstring!("%s: "), pname);
@@ -9237,7 +9237,7 @@ pub unsafe extern "C" fn l_message(pname: *const i8, message: *const i8) {
         fflush(stderr);
     }
 }
-pub unsafe extern "C" fn report(interpreter: *mut Interpreter, status: i32) -> i32 {
+pub unsafe fn report(interpreter: *mut Interpreter, status: i32) -> i32 {
     unsafe {
         if status != 0 {
             let mut message: *const i8 = lua_tolstring(interpreter, -1, null_mut());
@@ -9250,7 +9250,7 @@ pub unsafe extern "C" fn report(interpreter: *mut Interpreter, status: i32) -> i
         return status;
     }
 }
-pub unsafe extern "C" fn msghandler(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn msghandler(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut message: *const i8 = lua_tolstring(interpreter, 1, null_mut());
         if message.is_null() {
@@ -9270,18 +9270,18 @@ pub unsafe extern "C" fn msghandler(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn docall(interpreter: *mut Interpreter, narg: i32, nres: i32) -> i32 {
+pub unsafe fn docall(interpreter: *mut Interpreter, narg: i32, nres: i32) -> i32 {
     unsafe {
         let status: i32;
         let base: i32 = (*interpreter).get_top() - narg;
         lua_pushcclosure(
             interpreter,
-            Some(msghandler as unsafe extern "C" fn(*mut Interpreter) -> i32),
+            Some(msghandler as unsafe fn(*mut Interpreter) -> i32),
             0,
         );
         lua_rotate(interpreter, base, 1);
         GLOBAL_STATE = interpreter;
-        setsignal(2, Some(laction as unsafe extern "C" fn(i32) -> ()));
+        setsignal(2, Some(laction as unsafe fn(i32) -> ()));
         status = lua_pcallk(interpreter, narg, nres, base, 0, None);
         setsignal(2, None);
         lua_rotate(interpreter, base, -1);
@@ -9289,7 +9289,7 @@ pub unsafe extern "C" fn docall(interpreter: *mut Interpreter, narg: i32, nres: 
         return status;
     }
 }
-pub unsafe extern "C" fn createargtable(
+pub unsafe fn createargtable(
     interpreter: *mut Interpreter,
     argv: *mut *mut i8,
     argc: i32,
@@ -9304,7 +9304,7 @@ pub unsafe extern "C" fn createargtable(
         lua_setglobal(interpreter, make_cstring!("arg"));
     }
 }
-pub unsafe extern "C" fn dochunk(interpreter: *mut Interpreter, mut status: i32) -> i32 {
+pub unsafe fn dochunk(interpreter: *mut Interpreter, mut status: i32) -> i32 {
     unsafe {
         if status == 0 {
             status = docall(interpreter, 0, 0);
@@ -9312,12 +9312,12 @@ pub unsafe extern "C" fn dochunk(interpreter: *mut Interpreter, mut status: i32)
         return report(interpreter, status);
     }
 }
-pub unsafe extern "C" fn dofile(interpreter: *mut Interpreter, name: *const i8) -> i32 {
+pub unsafe fn dofile(interpreter: *mut Interpreter, name: *const i8) -> i32 {
     unsafe {
         return dochunk(interpreter, lual_loadfilex(interpreter, name, null()));
     }
 }
-pub unsafe extern "C" fn dostring(
+pub unsafe fn dostring(
     interpreter: *mut Interpreter,
     s: *const i8,
     name: *const i8,
@@ -9329,7 +9329,7 @@ pub unsafe extern "C" fn dostring(
         );
     }
 }
-pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut i8) -> i32 {
+pub unsafe fn dolibrary(interpreter: *mut Interpreter, globname: *mut i8) -> i32 {
     unsafe {
         let status: i32;
         let mut suffix: *mut i8 = null_mut();
@@ -9353,7 +9353,7 @@ pub unsafe extern "C" fn dolibrary(interpreter: *mut Interpreter, globname: *mut
         return report(interpreter, status);
     }
 }
-pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn pushargs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32;
         if lua_getglobal(interpreter, make_cstring!("arg")) != TagType::Table {
@@ -9373,7 +9373,7 @@ pub unsafe extern "C" fn pushargs(interpreter: *mut Interpreter) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn handle_script(interpreter: *mut Interpreter, argv: *mut *mut i8) -> i32 {
+pub unsafe fn handle_script(interpreter: *mut Interpreter, argv: *mut *mut i8) -> i32 {
     unsafe {
         let mut status: i32;
         let mut fname: *const i8 = *argv.offset(0 as isize);
@@ -9390,7 +9390,7 @@ pub unsafe extern "C" fn handle_script(interpreter: *mut Interpreter, argv: *mut
         return report(interpreter, status);
     }
 }
-pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
+pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
     unsafe {
         let mut args: i32 = 0;
         let mut i: i32;
@@ -9483,7 +9483,7 @@ pub unsafe extern "C" fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32
         return args;
     }
 }
-pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32) -> i32 {
+pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32) -> i32 {
     unsafe {
         for i in 0..n {
             let option: i32 = *(*argv.offset(i as isize)).offset(1 as isize) as i32;
@@ -9512,7 +9512,7 @@ pub unsafe extern "C" fn runargs(interpreter: *mut Interpreter, argv: *mut *mut 
         return 1;
     }
 }
-pub unsafe extern "C" fn get_prompt(interpreter: *mut Interpreter, firstline: i32) -> *const i8 {
+pub unsafe fn get_prompt(interpreter: *mut Interpreter, firstline: i32) -> *const i8 {
     unsafe {
         if lua_getglobal(
             interpreter,
@@ -9536,7 +9536,7 @@ pub unsafe extern "C" fn get_prompt(interpreter: *mut Interpreter, firstline: i3
         };
     }
 }
-pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) -> i32 {
+pub unsafe fn incomplete(interpreter: *mut Interpreter, status: i32) -> i32 {
     unsafe {
         if status == 3 {
             let mut lmsg: usize = 0;
@@ -9560,7 +9560,7 @@ pub unsafe extern "C" fn incomplete(interpreter: *mut Interpreter, status: i32) 
         return 0;
     }
 }
-pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
+pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
     unsafe {
         let mut buffer: [i8; 512] = [0; 512];
         let b: *mut i8 = buffer.as_mut_ptr();
@@ -9591,7 +9591,7 @@ pub unsafe extern "C" fn pushline(interpreter: *mut Interpreter, firstline: i32)
         }
     }
 }
-pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn addreturn(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let line: *const i8 = lua_tolstring(interpreter, -1, null_mut());
         let retline: *const i8 = lua_pushfstring(interpreter, make_cstring!("return %s;"), line);
@@ -9611,7 +9611,7 @@ pub unsafe extern "C" fn addreturn(interpreter: *mut Interpreter) -> i32 {
         return status;
     }
 }
-pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn multiline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         loop {
             let mut length: usize = 0;
@@ -9629,7 +9629,7 @@ pub unsafe extern "C" fn multiline(interpreter: *mut Interpreter) -> i32 {
         }
     }
 }
-pub unsafe extern "C" fn loadline(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn loadline(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_settop(interpreter, 0);
         if !pushline(interpreter, 1) {
@@ -9644,7 +9644,7 @@ pub unsafe extern "C" fn loadline(interpreter: *mut Interpreter) -> i32 {
         return status;
     }
 }
-pub unsafe extern "C" fn finishpcall(
+pub unsafe fn finishpcall(
     interpreter: *mut Interpreter,
     status: i32,
     extra: i64,
@@ -9660,7 +9660,7 @@ pub unsafe extern "C" fn finishpcall(
         }
     }
 }
-pub unsafe extern "C" fn luab_pcall(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luab_pcall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         lual_checkany(interpreter, 1);
@@ -9672,12 +9672,12 @@ pub unsafe extern "C" fn luab_pcall(interpreter: *mut Interpreter) -> i32 {
             -1,
             0,
             0,
-            Some(finishpcall as unsafe extern "C" fn(*mut Interpreter, i32, i64) -> i32),
+            Some(finishpcall as unsafe fn(*mut Interpreter, i32, i64) -> i32),
         );
         return finishpcall(interpreter, status, 0);
     }
 }
-pub unsafe extern "C" fn checkstack(
+pub unsafe fn checkstack(
     interpreter: *mut Interpreter,
     other_state: *mut Interpreter,
     n: i32,
@@ -9690,7 +9690,7 @@ pub unsafe extern "C" fn checkstack(
         }
     }
 }
-pub unsafe extern "C" fn getthread(
+pub unsafe fn getthread(
     interpreter: *mut Interpreter,
     arg: *mut i32,
 ) -> *mut Interpreter {
@@ -9704,25 +9704,25 @@ pub unsafe extern "C" fn getthread(
         };
     }
 }
-pub unsafe extern "C" fn settabss(interpreter: *mut Interpreter, k: *const i8, v: *const i8) {
+pub unsafe fn settabss(interpreter: *mut Interpreter, k: *const i8, v: *const i8) {
     unsafe {
         lua_pushstring(interpreter, v);
         lua_setfield(interpreter, -2, k);
     }
 }
-pub unsafe extern "C" fn settabsi(interpreter: *mut Interpreter, k: *const i8, v: i32) {
+pub unsafe fn settabsi(interpreter: *mut Interpreter, k: *const i8, v: i32) {
     unsafe {
         (*interpreter).push_integer(v as i64);
         lua_setfield(interpreter, -2, k);
     }
 }
-pub unsafe extern "C" fn settabsb(interpreter: *mut Interpreter, k: *const i8, v: i32) {
+pub unsafe fn settabsb(interpreter: *mut Interpreter, k: *const i8, v: i32) {
     unsafe {
         (*interpreter).push_boolean(v != 0);
         lua_setfield(interpreter, -2, k);
     }
 }
-pub unsafe extern "C" fn treatstackoption(
+pub unsafe fn treatstackoption(
     interpreter: *mut Interpreter,
     other_state: *mut Interpreter,
     fname: *const i8,
@@ -9736,7 +9736,7 @@ pub unsafe extern "C" fn treatstackoption(
         lua_setfield(interpreter, -2, fname);
     }
 }
-pub unsafe extern "C" fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> i32 {
+pub unsafe fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> i32 {
     unsafe {
         let n: i32 = lual_checkinteger(interpreter, 2) as i32;
         lual_checktype(interpreter, 1, TagType::Closure);
@@ -9754,7 +9754,7 @@ pub unsafe extern "C" fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> 
         }
     }
 }
-pub unsafe extern "C" fn checkupval(
+pub unsafe fn checkupval(
     interpreter: *mut Interpreter,
     argf: i32,
     argnup: i32,
@@ -9774,7 +9774,7 @@ pub unsafe extern "C" fn checkupval(
         return id;
     }
 }
-pub unsafe extern "C" fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
+pub unsafe fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
     unsafe {
         pub const HOOK_NAMES: [*const i8; 5] = [
             make_cstring!("call"),
@@ -9796,7 +9796,7 @@ pub unsafe extern "C" fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo
         }
     }
 }
-pub unsafe extern "C" fn makemask(smask: *const i8, count: i32) -> i32 {
+pub unsafe fn makemask(smask: *const i8, count: i32) -> i32 {
     unsafe {
         let mut mask: i32 = 0;
         if !(strchr(smask, CHARACTER_LOWER_C as i32)).is_null() {
@@ -9814,7 +9814,7 @@ pub unsafe extern "C" fn makemask(smask: *const i8, count: i32) -> i32 {
         return mask;
     }
 }
-pub unsafe extern "C" fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
+pub unsafe fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
     unsafe {
         let mut i: i32 = 0;
         if mask & 1 << 0 != 0 {

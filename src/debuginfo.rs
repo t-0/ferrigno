@@ -33,7 +33,7 @@ pub struct DebugInfo {
     pub short_src: [i8; 60],
     pub i_ci: *mut CallInfo,
 }
-pub unsafe extern "C" fn lua_getlocal(
+pub unsafe fn lua_getlocal(
     interpreter: *mut Interpreter,
     ar: *const DebugInfo,
     n: i32,
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn lua_getlocal(
         return name;
     }
 }
-pub unsafe extern "C" fn lua_setlocal(
+pub unsafe fn lua_setlocal(
     interpreter: *mut Interpreter,
     ar: *const DebugInfo,
     n: i32,
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn lua_setlocal(
         return name;
     }
 }
-pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
+pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = make_cstring!("=[C]");
@@ -126,7 +126,7 @@ pub unsafe extern "C" fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
         );
     }
 }
-pub unsafe extern "C" fn lua_getinfo(
+pub unsafe fn lua_getinfo(
     interpreter: *mut Interpreter,
     mut what: *const i8,
     ar: *mut DebugInfo,

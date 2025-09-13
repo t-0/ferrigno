@@ -27,7 +27,7 @@ impl TObject for UpValue {
     }
 }
 impl UpValue {
-    pub unsafe extern "C" fn free_upvalue(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn free_upvalue(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.v.p != &mut self.u.value as *mut TValue {
                 luaf_unlinkupval(self);
@@ -57,7 +57,7 @@ pub struct UpValueBA {
     pub next: *mut UpValue,
     pub previous: *mut *mut UpValue,
 }
-pub unsafe extern "C" fn newupval(
+pub unsafe fn newupval(
     interpreter: *mut Interpreter,
     level: StackValuePointer,
     previous: *mut *mut UpValue,
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn newupval(
         return uv;
     }
 }
-pub unsafe extern "C" fn luaf_findupval(
+pub unsafe fn luaf_findupval(
     interpreter: *mut Interpreter,
     level: StackValuePointer,
 ) -> *mut UpValue {
@@ -99,7 +99,7 @@ pub unsafe extern "C" fn luaf_findupval(
         return newupval(interpreter, level, pp);
     }
 }
-pub unsafe extern "C" fn luaf_unlinkupval(uv: *mut UpValue) {
+pub unsafe fn luaf_unlinkupval(uv: *mut UpValue) {
     unsafe {
         *(*uv).u.open.previous = (*uv).u.open.next;
         if !((*uv).u.open.next).is_null() {

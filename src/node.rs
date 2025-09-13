@@ -21,7 +21,7 @@ impl Node {
         }
     }
 }
-pub unsafe extern "C" fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
+pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
         return if (*k1).get_tag_variant() != (*node).key.get_tag_variant()
             && !(deadok != 0

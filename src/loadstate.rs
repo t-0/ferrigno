@@ -24,7 +24,7 @@ pub struct LoadState {
     name: *const i8,
 }
 impl LoadState {
-    pub unsafe extern "C" fn error(&mut self, why: *const i8) -> ! {
+    pub unsafe fn error(&mut self, why: *const i8) -> ! {
         unsafe {
             luao_pushfstring(
                 self.interpreter,
@@ -35,14 +35,14 @@ impl LoadState {
             luad_throw(self.interpreter, 3);
         }
     }
-    pub unsafe extern "C" fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
+    pub unsafe fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
             if luaz_read(self.zio, b, size) != 0 {
                 self.error(make_cstring!("truncated chunk"));
             }
         }
     }
-    pub unsafe extern "C" fn load_byte(&mut self) -> u8 {
+    pub unsafe fn load_byte(&mut self) -> u8 {
         unsafe {
             let aa = (*self.zio).length;
             (*self.zio).length = ((*self.zio).length).wrapping_sub(1);
@@ -59,7 +59,7 @@ impl LoadState {
             return ret as u8;
         }
     }
-    pub unsafe extern "C" fn load_unsigned(&mut self, mut limit: usize) -> usize {
+    pub unsafe fn load_unsigned(&mut self, mut limit: usize) -> usize {
         unsafe {
             let mut ret: usize = 0;
             limit >>= 7;
@@ -76,17 +76,17 @@ impl LoadState {
             return ret;
         }
     }
-    pub unsafe extern "C" fn load_size(&mut self) -> usize {
+    pub unsafe fn load_size(&mut self) -> usize {
         unsafe {
             return self.load_unsigned(!(0usize));
         }
     }
-    pub unsafe extern "C" fn load_int(&mut self) -> i32 {
+    pub unsafe fn load_int(&mut self) -> i32 {
         unsafe {
             return self.load_unsigned(0x7FFFFFFF as usize) as i32;
         }
     }
-    pub unsafe extern "C" fn load_number(&mut self) -> f64 {
+    pub unsafe fn load_number(&mut self) -> f64 {
         unsafe {
             let mut x: f64 = 0.0;
             self.load_block(
@@ -96,7 +96,7 @@ impl LoadState {
             return x;
         }
     }
-    pub unsafe extern "C" fn load_integer(&mut self) -> i64 {
+    pub unsafe fn load_integer(&mut self) -> i64 {
         unsafe {
             let mut x: i64 = 0;
             self.load_block(
@@ -106,7 +106,7 @@ impl LoadState {
             return x;
         }
     }
-    pub unsafe extern "C" fn load_string_n(&mut self, p: *mut Prototype) -> *mut TString {
+    pub unsafe fn load_string_n(&mut self, p: *mut Prototype) -> *mut TString {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
             let ts: *mut TString;
@@ -148,7 +148,7 @@ impl LoadState {
             return ts;
         }
     }
-    pub unsafe extern "C" fn load_string(&mut self, p: *mut Prototype) -> *mut TString {
+    pub unsafe fn load_string(&mut self, p: *mut Prototype) -> *mut TString {
         unsafe {
             let st: *mut TString = self.load_string_n(p);
             if st.is_null() {
@@ -157,7 +157,7 @@ impl LoadState {
             return st;
         }
     }
-    pub unsafe extern "C" fn load_code(&mut self, prototype: *mut Prototype) {
+    pub unsafe fn load_code(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -177,7 +177,7 @@ impl LoadState {
             );
         }
     }
-    pub unsafe extern "C" fn load_constants(&mut self, prototype: *mut Prototype) {
+    pub unsafe fn load_constants(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -230,7 +230,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn load_prototypes(&mut self, prototype: *mut Prototype) {
+    pub unsafe fn load_prototypes(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
@@ -271,7 +271,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn load_upvalues(&mut self, prototype: *mut Prototype) {
+    pub unsafe fn load_upvalues(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32;
             n = self.load_int();
@@ -297,7 +297,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn load_debug(&mut self, prototype: *mut Prototype) {
+    pub unsafe fn load_debug(&mut self, prototype: *mut Prototype) {
         unsafe {
             let mut n: i32;
             n = self.load_int();
@@ -368,7 +368,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn load_function(
+    pub unsafe fn load_function(
         &mut self,
         prototype: *mut Prototype,
         psource: *mut TString,
@@ -390,7 +390,7 @@ impl LoadState {
             self.load_debug(prototype);
         }
     }
-    pub unsafe extern "C" fn check_literal(&mut self, s: *const i8, message: *const i8) {
+    pub unsafe fn check_literal(&mut self, s: *const i8, message: *const i8) {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
             let length: usize = strlen(s) as usize;
@@ -408,7 +408,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn f_check_size(&mut self, size: usize, tname: *const i8) {
+    pub unsafe fn f_check_size(&mut self, size: usize, tname: *const i8) {
         unsafe {
             if self.load_byte() as usize != size {
                 self.error(luao_pushfstring(
@@ -419,7 +419,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe extern "C" fn check_header(&mut self) {
+    pub unsafe fn check_header(&mut self) {
         unsafe {
             self.check_literal(
                 &*(LUA_SIGNATURE).offset(1 as isize),
@@ -458,7 +458,7 @@ impl LoadState {
         }
     }
 }
-pub unsafe extern "C" fn load_closure(
+pub unsafe fn load_closure(
     interpreter: *mut Interpreter,
     zio: *mut ZIO,
     name: *const i8,

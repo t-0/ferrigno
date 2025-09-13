@@ -20,7 +20,7 @@ impl BuffFS {
             block: [0; BUFFFS_SIZE],
         };
     }
-    pub unsafe extern "C" fn clear(&mut self) {
+    pub unsafe fn clear(&mut self) {
         unsafe {
             let io: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer).tvalue;
             let ts: *mut TString =
@@ -38,7 +38,7 @@ impl BuffFS {
             self.size = 0;
         }
     }
-    pub unsafe extern "C" fn get_raw(&mut self, size: usize) -> *mut i8 {
+    pub unsafe fn get_raw(&mut self, size: usize) -> *mut i8 {
         unsafe {
             if size > ((60 + 44 + 95) - self.size) {
                 self.clear();
@@ -46,7 +46,7 @@ impl BuffFS {
             return self.block.as_mut_ptr().offset(self.size as isize);
         }
     }
-    pub unsafe extern "C" fn add_string(&mut self, pointer: *const i8, length: usize) {
+    pub unsafe fn add_string(&mut self, pointer: *const i8, length: usize) {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);
@@ -73,7 +73,7 @@ impl BuffFS {
             };
         }
     }
-    pub unsafe extern "C" fn add_number(&mut self, number: *mut TValue) {
+    pub unsafe fn add_number(&mut self, number: *mut TValue) {
         unsafe {
             let number_buffer = self.get_raw(44);
             self.size += tostringbuff(number, number_buffer) as usize;

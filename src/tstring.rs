@@ -134,7 +134,7 @@ impl TString {
         }
     }
 }
-pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool {
+pub unsafe fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool {
     unsafe {
         if a == b {
             return true;
@@ -153,7 +153,7 @@ pub unsafe extern "C" fn luas_eqlngstr(a: *mut TString, b: *mut TString) -> bool
         }
     }
 }
-pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: usize, seed: u32) -> u32 {
+pub unsafe fn luas_hash(str: *const i8, mut l: usize, seed: u32) -> u32 {
     unsafe {
         let mut h: u32 = seed ^ l as u32;
         while l > 0 {
@@ -165,7 +165,7 @@ pub unsafe extern "C" fn luas_hash(str: *const i8, mut l: usize, seed: u32) -> u
         return h;
     }
 }
-pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
+pub unsafe fn hash_string_long(ts: *mut TString) -> u32 {
     unsafe {
         if (*ts).extra == 0 {
             let length = (*ts).get_length();
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn hash_string_long(ts: *mut TString) -> u32 {
         return (*ts).hash;
     }
 }
-pub unsafe extern "C" fn createstrobj(
+pub unsafe fn createstrobj(
     interpreter: *mut Interpreter,
     l: usize,
     tag: u8,
@@ -191,7 +191,7 @@ pub unsafe extern "C" fn createstrobj(
         return ts;
     }
 }
-pub unsafe extern "C" fn luas_newlstr(
+pub unsafe fn luas_newlstr(
     interpreter: *mut Interpreter,
     str: *const i8,
     length: usize,
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn luas_newlstr(
         };
     }
 }
-pub unsafe extern "C" fn luas_new(interpreter: *mut Interpreter, str: *const i8) -> *mut TString {
+pub unsafe fn luas_new(interpreter: *mut Interpreter, str: *const i8) -> *mut TString {
     unsafe {
         let i: u32 = ((str as usize
             & (0x7FFFFFFF as u32)
@@ -246,7 +246,7 @@ pub unsafe extern "C" fn luas_new(interpreter: *mut Interpreter, str: *const i8)
         return *p.offset(0 as isize);
     }
 }
-pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
+pub unsafe fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
     unsafe {
         let mut s1: *const i8 = (*ts1).get_contents_mut();
         let mut rl1 = (*ts1).get_length();
@@ -274,7 +274,7 @@ pub unsafe extern "C" fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i
         }
     }
 }
-pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *mut i8) {
+pub unsafe fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *mut i8) {
     unsafe {
         let mut tl: usize = 0;
         loop {
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn copy2buff(top: StackValuePointer, mut n: i32, buffer: *
         }
     }
 }
-pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
+pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
     unsafe {
         if total == 1 {
             return;
@@ -400,7 +400,7 @@ pub unsafe extern "C" fn concatenate(interpreter: *mut Interpreter, mut total: i
         }
     }
 }
-pub unsafe extern "C" fn get_position_relative(pos: i64, length: usize) -> usize {
+pub unsafe fn get_position_relative(pos: i64, length: usize) -> usize {
     if pos > 0 {
         return pos as usize;
     } else if pos == 0 {
@@ -411,7 +411,7 @@ pub unsafe extern "C" fn get_position_relative(pos: i64, length: usize) -> usize
         return length.wrapping_add(pos as usize).wrapping_add(1 as usize);
     };
 }
-pub unsafe extern "C" fn get_position_end(
+pub unsafe fn get_position_end(
     interpreter: *mut Interpreter,
     arg: i32,
     def: i64,

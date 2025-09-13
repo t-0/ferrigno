@@ -16,7 +16,7 @@ use crate::utility::c::*;
 use crate::utility::*;
 use libc::{memcpy, tolower, toupper};
 use std::ptr::*;
-pub unsafe extern "C" fn str_len(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_len(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         lual_checklstring(interpreter, 1, &mut l);
@@ -24,7 +24,7 @@ pub unsafe extern "C" fn str_len(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_sub(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_sub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
@@ -42,7 +42,7 @@ pub unsafe extern "C" fn str_sub(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_reverse(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_reverse(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
@@ -55,7 +55,7 @@ pub unsafe extern "C" fn str_reverse(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_lower(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_lower(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn str_lower(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_upper(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_upper(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut b = Buffer::new();
@@ -81,7 +81,7 @@ pub unsafe extern "C" fn str_upper(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_rep(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let mut lsep: usize = 0;
@@ -140,7 +140,7 @@ pub unsafe extern "C" fn str_rep(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_byte(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut l: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut l);
@@ -169,7 +169,7 @@ pub unsafe extern "C" fn str_byte(interpreter: *mut Interpreter) -> i32 {
         return n;
     }
 }
-pub unsafe extern "C" fn str_char(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_char(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         let mut buffer = Buffer::new();
@@ -188,7 +188,7 @@ pub unsafe extern "C" fn str_char(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn writer(
+pub unsafe fn writer(
     interpreter: *mut Interpreter,
     b: *const libc::c_void,
     size: usize,
@@ -206,7 +206,7 @@ pub unsafe extern "C" fn writer(
         return 0;
     }
 }
-pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_dump(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut stream_writer: StreamWriter = StreamWriter {
             is_initialized: false,
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             Some(
                 writer
-                    as unsafe extern "C" fn(
+                    as unsafe fn(
                         *mut Interpreter,
                         *const libc::c_void,
                         usize,
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn str_dump(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
+pub unsafe fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
     unsafe {
         if lua_type(interpreter, arg) == Some(TagType::Numeric) {
             lua_pushvalue(interpreter, arg);
@@ -253,7 +253,7 @@ pub unsafe extern "C" fn tonum(interpreter: *mut Interpreter, arg: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
+pub unsafe fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
     unsafe {
         lua_settop(interpreter, 2);
         if lua_type(interpreter, 2) == Some(TagType::String)
@@ -271,7 +271,7 @@ pub unsafe extern "C" fn trymt(interpreter: *mut Interpreter, mtname: *const i8)
         lua_callk(interpreter, 2, 1, 0, None);
     }
 }
-pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -> i32 {
+pub unsafe fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -> i32 {
     unsafe {
         if tonum(interpreter, 1) != 0 && tonum(interpreter, 2) != 0 {
             lua_arith(interpreter, op);
@@ -281,42 +281,42 @@ pub unsafe extern "C" fn arith(interpreter: *mut Interpreter, op: i32, mtname: *
         return 1;
     }
 }
-pub unsafe extern "C" fn arith_add(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_add(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 0, make_cstring!("__add"));
     }
 }
-pub unsafe extern "C" fn arith_sub(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_sub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 1, make_cstring!("__sub"));
     }
 }
-pub unsafe extern "C" fn arith_mul(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_mul(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 2, make_cstring!("__mul"));
     }
 }
-pub unsafe extern "C" fn arith_mod(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_mod(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 3, make_cstring!("__mod"));
     }
 }
-pub unsafe extern "C" fn arith_pow(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_pow(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 4, make_cstring!("__pow"));
     }
 }
-pub unsafe extern "C" fn arith_div(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_div(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 5, make_cstring!("__div"));
     }
 }
-pub unsafe extern "C" fn arith_idiv(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_idiv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 6, make_cstring!("__idiv"));
     }
 }
-pub unsafe extern "C" fn arith_unm(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn arith_unm(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return arith(interpreter, 12 as i32, make_cstring!("__unm"));
     }
@@ -326,49 +326,49 @@ pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
         {
             RegisteredFunction {
                 name: make_cstring!("__add"),
-                function: Some(arith_add as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_add as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__sub"),
-                function: Some(arith_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_sub as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__mul"),
-                function: Some(arith_mul as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_mul as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__mod"),
-                function: Some(arith_mod as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_mod as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__pow"),
-                function: Some(arith_pow as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_pow as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__div"),
-                function: Some(arith_div as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_div as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__idiv"),
-                function: Some(arith_idiv as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_idiv as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("__unm"),
-                function: Some(arith_unm as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(arith_unm as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -385,7 +385,7 @@ pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
         },
     ]
 };
-pub unsafe extern "C" fn lmemfind(
+pub unsafe fn lmemfind(
     mut s1: *const i8,
     mut l1: usize,
     s2: *const i8,
@@ -421,7 +421,7 @@ pub unsafe extern "C" fn lmemfind(
         };
     }
 }
-pub unsafe extern "C" fn nospecials(p: *const i8, l: usize) -> i32 {
+pub unsafe fn nospecials(p: *const i8, l: usize) -> i32 {
     unsafe {
         let mut upto: usize = 0;
         loop {
@@ -441,7 +441,7 @@ pub unsafe extern "C" fn nospecials(p: *const i8, l: usize) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
+pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
     unsafe {
         let mut lexical_state: usize = 0;
         let mut lp: usize = 0;
@@ -510,17 +510,17 @@ pub unsafe extern "C" fn str_find_aux(interpreter: *mut Interpreter, find: i32) 
         return 1;
     }
 }
-pub unsafe extern "C" fn str_find(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_find(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return str_find_aux(interpreter, 1);
     }
 }
-pub unsafe extern "C" fn str_match(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_match(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         return str_find_aux(interpreter, 0);
     }
 }
-pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut srcl: usize = 0;
         let mut lp: usize = 0;
@@ -598,7 +598,7 @@ pub unsafe extern "C" fn str_gsub(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
-pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
+pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
     unsafe {
         ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null())
             as i32;
@@ -668,7 +668,7 @@ pub unsafe extern "C" fn addquoted(b: *mut Buffer, mut s: *const i8, mut length:
         *((*b).loads.loads_pointer).offset(fresh172 as isize) = '"' as i8;
     }
 }
-pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) -> i32 {
+pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) -> i32 {
     unsafe {
         let s: *const i8;
         if n == ::core::f64::INFINITY {
@@ -698,7 +698,7 @@ pub unsafe extern "C" fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i
         return snprintf(buffer, 120, make_cstring!("%s"), s);
     }
 }
-pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
+pub unsafe fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
     unsafe {
         match lua_type(interpreter, arg) {
             Some(TagType::String) => {
@@ -742,7 +742,7 @@ pub unsafe extern "C" fn addliteral(interpreter: *mut Interpreter, b: *mut Buffe
         };
     }
 }
-pub unsafe extern "C" fn get2digits(mut s: *const i8) -> *const i8 {
+pub unsafe fn get2digits(mut s: *const i8) -> *const i8 {
     unsafe {
         if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
             s = s.offset(1);
@@ -753,7 +753,7 @@ pub unsafe extern "C" fn get2digits(mut s: *const i8) -> *const i8 {
         return s;
     }
 }
-pub unsafe extern "C" fn checkformat(
+pub unsafe fn checkformat(
     interpreter: *mut Interpreter,
     form: *const i8,
     flags: *const i8,
@@ -778,7 +778,7 @@ pub unsafe extern "C" fn checkformat(
         }
     }
 }
-pub unsafe extern "C" fn getformat(
+pub unsafe fn getformat(
     interpreter: *mut Interpreter,
     strfrmt: *const i8,
     mut form: *mut i8,
@@ -801,7 +801,7 @@ pub unsafe extern "C" fn getformat(
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }
 }
-pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) {
+pub unsafe fn addlenmod(form: *mut i8, lenmod: *const i8) {
     unsafe {
         let length: usize = strlen(form) as usize;
         let mode_length: usize = strlen(lenmod) as usize;
@@ -811,7 +811,7 @@ pub unsafe extern "C" fn addlenmod(form: *mut i8, lenmod: *const i8) {
         *form.offset(length.wrapping_add(mode_length) as isize) = Character::Null as i8;
     }
 }
-pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut current_block: usize;
         let top: i32 = (*interpreter).get_top();
@@ -1006,7 +1006,7 @@ pub unsafe extern "C" fn str_format(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { dummy: 1 };
-pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
+pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         if is_digit(**fmt as i32) {
             let mut a: i32 = 0;
@@ -1032,7 +1032,7 @@ pub unsafe extern "C" fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
         };
     }
 }
-pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
+pub unsafe fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         let size: i32 = getnum(fmt, df);
         if size > 16 as i32 || size <= 0 {
@@ -1046,14 +1046,14 @@ pub unsafe extern "C" fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i3
         return size;
     }
 }
-pub unsafe extern "C" fn initheader(interpreter: *mut Interpreter, h: *mut Header) {
+pub unsafe fn initheader(interpreter: *mut Interpreter, h: *mut Header) {
     unsafe {
         (*h).interpreter = interpreter;
         (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
         (*h).maxmimum_alignment = 1;
     }
 }
-pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
+pub unsafe fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
     unsafe {
         let fresh180 = *fmt;
         *fmt = (*fmt).offset(1);
@@ -1161,7 +1161,7 @@ pub unsafe extern "C" fn getoption(h: *mut Header, fmt: *mut *const i8, size: *m
         return K::NoOperator;
     }
 }
-pub unsafe extern "C" fn getdetails(
+pub unsafe fn getdetails(
     h: *mut Header,
     totalsize: usize,
     fmt: *mut *const i8,
@@ -1201,7 +1201,7 @@ pub unsafe extern "C" fn getdetails(
         return opt;
     }
 }
-pub unsafe extern "C" fn packint(
+pub unsafe fn packint(
     b: *mut Buffer,
     mut n: usize,
     islittle: i32,
@@ -1228,7 +1228,7 @@ pub unsafe extern "C" fn packint(
         );
     }
 }
-pub unsafe extern "C" fn copywithendian(
+pub unsafe fn copywithendian(
     mut dest: *mut i8,
     mut src: *const i8,
     mut size: i32,
@@ -1258,7 +1258,7 @@ pub unsafe extern "C" fn copywithendian(
         };
     }
 }
-pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         let mut h: Header = Header {
@@ -1454,7 +1454,7 @@ pub unsafe extern "C" fn str_pack(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
             interpreter: null_mut(),
@@ -1497,7 +1497,7 @@ pub unsafe extern "C" fn str_packsize(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe extern "C" fn unpackint(
+pub unsafe fn unpackint(
     interpreter: *mut Interpreter,
     str: *const i8,
     islittle: i32,
@@ -1548,7 +1548,7 @@ pub unsafe extern "C" fn unpackint(
         return res as i64;
     }
 }
-pub unsafe extern "C" fn str_unpack(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
             interpreter: null_mut(),
@@ -1681,105 +1681,105 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         {
             RegisteredFunction {
                 name: make_cstring!("byte"),
-                function: Some(str_byte as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_byte as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("char"),
-                function: Some(str_char as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_char as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("dump"),
-                function: Some(str_dump as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_dump as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("find"),
-                function: Some(str_find as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_find as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("format"),
-                function: Some(str_format as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_format as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("gmatch"),
                 function: Some(
-                    GMatchState::gmatch as unsafe extern "C" fn(*mut Interpreter) -> i32,
+                    GMatchState::gmatch as unsafe fn(*mut Interpreter) -> i32,
                 ),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("gsub"),
-                function: Some(str_gsub as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_gsub as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("len"),
-                function: Some(str_len as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_len as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("lower"),
-                function: Some(str_lower as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_lower as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("match"),
-                function: Some(str_match as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_match as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("rep"),
-                function: Some(str_rep as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_rep as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("reverse"),
-                function: Some(str_reverse as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_reverse as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("sub"),
-                function: Some(str_sub as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_sub as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("upper"),
-                function: Some(str_upper as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_upper as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("pack"),
-                function: Some(str_pack as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_pack as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("packsize"),
-                function: Some(str_packsize as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_packsize as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
             RegisteredFunction {
                 name: make_cstring!("unpack"),
-                function: Some(str_unpack as unsafe extern "C" fn(*mut Interpreter) -> i32),
+                function: Some(str_unpack as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {
@@ -1790,7 +1790,7 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
         },
     ]
 };
-pub unsafe extern "C" fn createmetatable(interpreter: *mut Interpreter) {
+pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
     unsafe {
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_METAMETHODS.as_ptr(), 0);
@@ -1803,7 +1803,7 @@ pub unsafe extern "C" fn createmetatable(interpreter: *mut Interpreter) {
         lua_settop(interpreter, -2);
     }
 }
-pub unsafe extern "C" fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
             interpreter,
