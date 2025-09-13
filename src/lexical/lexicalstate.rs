@@ -17,7 +17,6 @@ use crate::localvariable::*;
 use crate::new::*;
 use crate::node::*;
 use crate::object::*;
-use crate::operator_::*;
 use crate::prototype::*;
 use crate::table::*;
 use crate::tag::*;
@@ -458,7 +457,7 @@ pub unsafe fn fieldsel(lexical_state: *mut LexicalState, v: *mut ExpressionDescr
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut key: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -482,13 +481,13 @@ pub unsafe fn recfield(lexical_state: *mut LexicalState, cc: *mut ConstructorCon
         let reg: i32 = (*(*lexical_state).function_state).freereg as i32;
         let mut key: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
         let mut value: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -550,7 +549,7 @@ pub unsafe fn constructor(
         let mut cc: ConstructorControl = ConstructorControl {
             expression_description: ExpressionDescription {
                 expression_kind: ExpressionKind::VVOID,
-                value: Value { integer: 0 },
+                value: Value::new_integer (0),
                 t: 0,
                 f: 0,
             },
@@ -703,7 +702,7 @@ pub unsafe fn funcargs(
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut args: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -810,7 +809,7 @@ pub unsafe fn suffixedexp(
                 91 => {
                     let mut key: ExpressionDescription = ExpressionDescription {
                         expression_kind: ExpressionKind::VVOID,
-                        value: Value { integer: 0 },
+                        value: Value::new_integer (0),
                         t: 0,
                         f: 0,
                     };
@@ -821,7 +820,7 @@ pub unsafe fn suffixedexp(
                 58 => {
                     let mut key_0: ExpressionDescription = ExpressionDescription {
                         expression_kind: ExpressionKind::VVOID,
-                        value: Value { integer: 0 },
+                        value: Value::new_integer (0),
                         t: 0,
                         f: 0,
                     };
@@ -1126,7 +1125,7 @@ pub unsafe fn singlevar(
         if (*var).expression_kind as u32 == ExpressionKind::VVOID as u32 {
             let mut key: ExpressionDescription = ExpressionDescription {
                 expression_kind: ExpressionKind::VVOID,
-                value: Value { integer: 0 },
+                value: Value::new_integer (0),
                 t: 0,
                 f: 0,
             };
@@ -1229,10 +1228,10 @@ pub unsafe fn subexpr(
     lexical_state: *mut LexicalState,
     v: *mut ExpressionDescription,
     limit: i32,
-) -> u32 {
+) -> OperatorBinary {
     unsafe {
         (*((*lexical_state).interpreter)).luae_inccstack();
-        let uop = getunopr((*lexical_state).token.token);
+        let uop = OperatorUnary::from_token((*lexical_state).token.token);
         if uop as u32 != OperatorUnary::None_ as u32 {
             let line: i32 = (*lexical_state).line_number;
             luax_next(lexical_state);
@@ -1241,18 +1240,18 @@ pub unsafe fn subexpr(
         } else {
             simpleexp(lexical_state, v);
         }
-        let mut op: u32 = getbinopr((*lexical_state).token.token);
-        while op as u32 != OPR_NOBINOPR as u32 && PRIORITY[op as usize].left as i32 > limit {
+        let mut op = OperatorBinary::from_token((*lexical_state).token.token);
+        while op as u32 != OperatorBinary::NoBinaryOperation as u32 && PRIORITY[op as usize].left as i32 > limit {
             let mut v2: ExpressionDescription = ExpressionDescription {
                 expression_kind: ExpressionKind::VVOID,
-                value: Value { integer: 0 },
+                value: Value::new_integer (0),
                 t: 0,
                 f: 0,
             };
             let line_0: i32 = (*lexical_state).line_number;
             luax_next(lexical_state);
             luak_infix((*lexical_state).function_state, op, v);
-            let nextop: u32 = subexpr(lexical_state, &mut v2, PRIORITY[op as usize].right as i32);
+            let nextop = subexpr(lexical_state, &mut v2, PRIORITY[op as usize].right as i32);
             luak_posfix((*lexical_state).function_state, op, v, &mut v2, line_0);
             op = nextop;
         }
@@ -1343,7 +1342,7 @@ pub unsafe fn restassign(
     unsafe {
         let mut expression_description: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1355,15 +1354,7 @@ pub unsafe fn restassign(
         }
         check_readonly(lexical_state, &mut (*lh).expression_description);
         if testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
-            let mut nv: LHSAssign = LHSAssign {
-                previous: null_mut(),
-                expression_description: ExpressionDescription {
-                    expression_kind: ExpressionKind::VVOID,
-                    value: Value { integer: 0 },
-                    t: 0,
-                    f: 0,
-                },
-            };
+            let mut nv: LHSAssign = LHSAssign::new();
             nv.previous = lh;
             suffixedexp(lexical_state, &mut nv.expression_description);
             if !(ExpressionKind::VINDEXED as u32
@@ -1409,7 +1400,7 @@ pub unsafe fn cond(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1543,7 +1534,7 @@ pub unsafe fn exp1(lexical_state: *mut LexicalState) {
     unsafe {
         let mut expression_description: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1621,7 +1612,7 @@ pub unsafe fn forlist(lexical_state: *mut LexicalState, indexname: *mut TString)
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut expression_description: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1694,7 +1685,7 @@ pub unsafe fn test_then_block(lexical_state: *mut LexicalState, escapelist: *mut
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut v: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1760,7 +1751,7 @@ pub unsafe fn localfunc(lexical_state: *mut LexicalState) {
     unsafe {
         let mut b: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1807,7 +1798,7 @@ pub unsafe fn localstat(lexical_state: *mut LexicalState) {
         let nexps: i32;
         let mut expression_description: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1873,13 +1864,13 @@ pub unsafe fn funcstat(lexical_state: *mut LexicalState, line: i32) {
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
         let mut b: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };
@@ -1894,15 +1885,7 @@ pub unsafe fn funcstat(lexical_state: *mut LexicalState, line: i32) {
 pub unsafe fn exprstat(lexical_state: *mut LexicalState) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let mut v: LHSAssign = LHSAssign {
-            previous: null_mut(),
-            expression_description: ExpressionDescription {
-                expression_kind: ExpressionKind::VVOID,
-                value: Value { integer: 0 },
-                t: 0,
-                f: 0,
-            },
-        };
+        let mut v: LHSAssign = LHSAssign::new();
         suffixedexp(lexical_state, &mut v.expression_description);
         if (*lexical_state).token.token == CHARACTER_EQUAL as i32
             || (*lexical_state).token.token == CHARACTER_COMMA as i32
@@ -1928,7 +1911,7 @@ pub unsafe fn retstat(lexical_state: *mut LexicalState) {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut expression_description: ExpressionDescription = ExpressionDescription {
             expression_kind: ExpressionKind::VVOID,
-            value: Value { integer: 0 },
+            value: Value::new_integer (0),
             t: 0,
             f: 0,
         };

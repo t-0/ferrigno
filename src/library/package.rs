@@ -706,17 +706,17 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         lua_setfield(interpreter, -2, make_cstring!("config"));
         lual_getsubtable(
             interpreter,
-            -(1000000 as i32) - 1000 as i32,
+            -1000000 - 1000,
             make_cstring!("_LOADED"),
         );
         lua_setfield(interpreter, -2, make_cstring!("loaded"));
         lual_getsubtable(
             interpreter,
-            -(1000000 as i32) - 1000 as i32,
+            -1000000 - 1000,
             make_cstring!("_PRELOAD"),
         );
         lua_setfield(interpreter, -2, make_cstring!("preload"));
-        lua_rawgeti(interpreter, -(1000000 as i32) - 1000 as i32, 2 as i64);
+        lua_rawgeti(interpreter, -1000000 - 1000, 2 as i64);
         lua_pushvalue(interpreter, -2);
         lual_setfuncs(interpreter, LL_FUNCTIONS.as_ptr(), 1);
         lua_settop(interpreter, -2);

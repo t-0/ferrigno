@@ -1,4 +1,5 @@
 use rlua::*;
+use crate::lexical::operatorbinary::*;
 use crate::debugger::absolutelineinfo::*;
 use crate::expressiondescription::*;
 use crate::expressionkind::*;
@@ -1850,13 +1851,13 @@ pub unsafe fn finishbinexpval(
 }
 pub unsafe fn codebinexpval(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
 ) {
     unsafe {
-        let op: u32 = binopr2op(opr, OPR_ADD, OP_ADD);
+        let op = binopr2op(opr, OperatorBinary::Add, OP_ADD);
         let v2: i32 = luak_exp2anyreg(function_state, e2);
         finishbinexpval(
             function_state,
@@ -1887,7 +1888,7 @@ pub unsafe fn codebini(
 }
 pub unsafe fn codebink(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     flip: i32,
@@ -1896,7 +1897,7 @@ pub unsafe fn codebink(
     unsafe {
         let event: u32 = binopr2tm(opr);
         let v2: i32 = (*e2).value.info;
-        let op: u32 = binopr2op(opr, OPR_ADD, OP_ADDK);
+        let op: u32 = binopr2op(opr, OperatorBinary::Add, OP_ADDK);
         finishbinexpval(function_state, e1, e2, op, v2, flip, line, OP_MMBINK, event);
     }
 }
@@ -1946,7 +1947,7 @@ pub unsafe fn finishbinexpneg(
 }
 pub unsafe fn codebinnok(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     flip: i32,
@@ -1961,7 +1962,7 @@ pub unsafe fn codebinnok(
 }
 pub unsafe fn codearith(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     flip: i32,
@@ -1977,7 +1978,7 @@ pub unsafe fn codearith(
 }
 pub unsafe fn codecommutative(
     function_state: *mut FunctionState,
-    op: u32,
+    op: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
@@ -1988,7 +1989,7 @@ pub unsafe fn codecommutative(
             swapexps(e1, e2);
             flip = 1;
         }
-        if op as u32 == OPR_ADD as u32 && is_sc_int(e2) {
+        if op as u32 == OperatorBinary::Add as u32 && is_sc_int(e2) {
             codebini(function_state, OP_ADDI, e1, e2, flip, line, TM_ADD);
         } else {
             codearith(function_state, op, e1, e2, flip, line);
@@ -1997,7 +1998,7 @@ pub unsafe fn codecommutative(
 }
 pub unsafe fn codebitwise(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
@@ -2017,7 +2018,7 @@ pub unsafe fn codebitwise(
 }
 pub unsafe fn codeorder(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
 ) {
@@ -2030,15 +2031,15 @@ pub unsafe fn codeorder(
         if is_sc_number(e2, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(function_state, e1);
             r2 = im;
-            op = binopr2op(opr, OPR_LT, OP_LTI);
+            op = binopr2op(opr, OperatorBinary::Less, OP_LTI);
         } else if is_sc_number(e1, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(function_state, e2);
             r2 = im;
-            op = binopr2op(opr, OPR_LT, OP_GTI);
+            op = binopr2op(opr, OperatorBinary::Less, OP_GTI);
         } else {
             r1 = luak_exp2anyreg(function_state, e1);
             r2 = luak_exp2anyreg(function_state, e2);
-            op = binopr2op(opr, OPR_LT, OP_LT);
+            op = binopr2op(opr, OperatorBinary::Less, OP_LT);
         }
         freeexps(function_state, e1, e2);
         (*e1).value.info = condjump(function_state, op, r1, r2, is_float as i32, 1);
@@ -2047,7 +2048,7 @@ pub unsafe fn codeorder(
 }
 pub unsafe fn codeeq(
     function_state: *mut FunctionState,
-    opr: u32,
+    opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
 ) {
@@ -2078,7 +2079,7 @@ pub unsafe fn codeeq(
             r1,
             r2,
             is_float as i32,
-            (opr as u32 == OPR_EQ as u32) as i32,
+            (opr as u32 == OperatorBinary::Equal as u32) as i32,
         );
         (*e1).expression_kind = ExpressionKind::VJMP;
     }
@@ -2093,7 +2094,7 @@ pub unsafe fn luak_prefix(
         pub const EF: ExpressionDescription = {
             let init = ExpressionDescription {
                 expression_kind: ExpressionKind::VKINT,
-                value: Value { integer: 0 },
+                value: Value::new_integer (0),
                 t: -1,
                 f: -1,
             };
@@ -2136,7 +2137,7 @@ pub unsafe fn luak_prefix(
 }
 pub unsafe fn luak_infix(
     function_state: *mut FunctionState,
-    op: u32,
+    op: OperatorBinary,
     v: *mut ExpressionDescription,
 ) {
     unsafe {
@@ -2197,14 +2198,14 @@ pub unsafe fn codeconcat(
 }
 pub unsafe fn luak_posfix(
     function_state: *mut FunctionState,
-    mut opr: u32,
+    mut opr: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
 ) {
     unsafe {
         luak_dischargevars(function_state, e2);
-        if opr as u32 <= OPR_SHR as u32
+        if opr as u32 <= OperatorBinary::ShiftRight as u32
             && constfolding(
                 function_state,
                 (opr as u32).wrapping_add(0u32) as i32,
@@ -2215,41 +2216,41 @@ pub unsafe fn luak_posfix(
             return;
         }
         let current_block_30: usize;
-        match opr as u32 {
-            OP_NEWTABLE => {
+        match opr {
+            OperatorBinary::And => {
                 luak_concat(function_state, &mut (*e2).f, (*e1).f);
                 *e1 = *e2;
                 current_block_30 = 8180496224585318153;
             }
-            OPR_OR => {
+            OperatorBinary::Or => {
                 luak_concat(function_state, &mut (*e2).t, (*e1).t);
                 *e1 = *e2;
                 current_block_30 = 8180496224585318153;
             }
-            OPR_CONCAT => {
+            OperatorBinary::Concatenate => {
                 luak_exp2nextreg(function_state, e2);
                 codeconcat(function_state, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            OPR_ADD | OPR_MUL => {
+            OperatorBinary::Add | OperatorBinary::Multiply => {
                 codecommutative(function_state, opr, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            OPR_SUB => {
+            OperatorBinary::Subtract => {
                 if finishbinexpneg(function_state, e1, e2, OP_ADDI, line, TM_SUB) != 0 {
                     current_block_30 = 8180496224585318153;
                 } else {
                     current_block_30 = 12599329904712511516;
                 }
             }
-            OPR_POW | OPR_MOD | OPR_DIV | OPR_IDIV => {
+            OperatorBinary::Power | OperatorBinary::Modulus | OperatorBinary::Divide | OperatorBinary::IntegralDivide => {
                 current_block_30 = 12599329904712511516;
             }
-            OPR_BAND | OPR_BOR | OPR_BXOR => {
+            OperatorBinary::BitwiseAnd | OperatorBinary::BitwiseOr | OperatorBinary::BitwiseExclusiveOr => {
                 codebitwise(function_state, opr, e1, e2, line);
                 current_block_30 = 8180496224585318153;
             }
-            OPR_SHL => {
+            OperatorBinary::ShiftLeft => {
                 if is_sc_int(e1) {
                     swapexps(e1, e2);
                     codebini(function_state, OP_SHLI, e1, e2, 1, line, TM_SHL);
@@ -2258,7 +2259,7 @@ pub unsafe fn luak_posfix(
                 }
                 current_block_30 = 8180496224585318153;
             }
-            OPR_SHR => {
+            OperatorBinary::ShiftRight => {
                 if is_sc_int(e2) {
                     codebini(function_state, OP_SHRI, e1, e2, 0, line, TM_SHR);
                 } else {
@@ -2266,18 +2267,21 @@ pub unsafe fn luak_posfix(
                 }
                 current_block_30 = 8180496224585318153;
             }
-            OPR_EQ | OPR_NE => {
+            OperatorBinary::Equal | OperatorBinary::Inequal => {
                 codeeq(function_state, opr, e1, e2);
                 current_block_30 = 8180496224585318153;
             }
-            OPR_GE | OPR_GT => {
+            OperatorBinary::GreaterEqual => {
                 swapexps(e1, e2);
-                opr = (opr as u32)
-                    .wrapping_sub(OPR_GT as u32)
-                    .wrapping_add(OPR_LT as u32) as u32;
+                opr = OperatorBinary::LessEqual;
                 current_block_30 = 1118134448028020070;
             }
-            OPR_LE | OPR_LT => {
+            OperatorBinary::Greater => {
+                swapexps(e1, e2);
+                opr = OperatorBinary::Less;
+                current_block_30 = 1118134448028020070;
+            }
+            OperatorBinary::LessEqual | OperatorBinary::Less => {
                 current_block_30 = 1118134448028020070;
             }
             _ => {

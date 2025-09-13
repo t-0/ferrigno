@@ -64,7 +64,7 @@ impl TValue {
     }
     pub const fn new(tag: u8) -> Self {
         TValue {
-            value: Value::new(),
+            value: Value::new_object(null_mut()),
             tag: tag,
             collectable: false,
         }

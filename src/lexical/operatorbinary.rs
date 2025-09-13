@@ -1,28 +1,55 @@
-use crate::operator_::*;
 use crate::token::*;
-pub unsafe fn getbinopr(op: i32) -> u32 {
-    match op {
-        TK_CHARACTER_PLUS => return OPR_ADD,
-        TK_CHARACTER_HYPHEN => return OPR_SUB,
-        TK_CHARACTER_ASTERISK => return OPR_MUL,
-        TK_CHARACTER_PERCENT => return OPR_MOD,
-        TK_CHARACTER_CARET => return OPR_POW,
-        TK_CHARACTER_SOLIDUS => return OPR_DIV,
-        TK_CHARACTER_ANGLE_LEFT => return OPR_LT,
-        TK_CHARACTER_ANGLE_RIGHT => return OPR_GT,
-        TK_CHARACTER_AMPERSAND => return OPR_BAND,
-        TK_CHARACTER_BAR => return OPR_BOR,
-        TK_CHARACTER_TILDE => return OPR_BXOR,
-        TK_IDIV => return OPR_IDIV,
-        TK_SHL => return OPR_SHL,
-        TK_SHR => return OPR_SHR,
-        TK_CONCAT => return OPR_CONCAT,
-        TK_NE => return OPR_NE,
-        TK_EQ => return OPR_EQ,
-        TK_LE => return OPR_LE,
-        TK_GE => return OPR_GE,
-        TK_AND => return OPR_AND,
-        TK_OR => return OPR_OR,
-        _ => return OPR_NOBINOPR,
-    };
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub enum OperatorBinary {
+    Add = 0,
+    Subtract = 1,
+    Multiply = 2,
+    Modulus = 3,
+    Power = 4,
+    Divide = 5,
+    IntegralDivide = 6,
+    BitwiseAnd = 7,
+    BitwiseOr = 8,
+    BitwiseExclusiveOr = 9,
+    ShiftLeft = 10,
+    ShiftRight = 11,
+    Concatenate = 12,
+    Equal = 13,
+    Less = 14,
+    LessEqual = 15,
+    Inequal = 16,
+    Greater = 17,
+    GreaterEqual = 18,
+    And = 19,
+    Or = 20,
+    NoBinaryOperation = 21,
+}
+impl OperatorBinary {
+    pub unsafe fn from_token(token: i32) -> OperatorBinary {
+        match token {
+            TK_CHARACTER_PLUS => return OperatorBinary::Add,
+            TK_CHARACTER_HYPHEN => return OperatorBinary::Subtract,
+            TK_CHARACTER_ASTERISK => return OperatorBinary::Multiply,
+            TK_CHARACTER_PERCENT => return OperatorBinary::Modulus,
+            TK_CHARACTER_CARET => return OperatorBinary::Power,
+            TK_CHARACTER_SOLIDUS => return OperatorBinary::Divide,
+            TK_CHARACTER_ANGLE_LEFT => return OperatorBinary::Less,
+            TK_CHARACTER_ANGLE_RIGHT => return OperatorBinary::Greater,
+            TK_CHARACTER_AMPERSAND => return OperatorBinary::BitwiseAnd,
+            TK_CHARACTER_BAR => return OperatorBinary::BitwiseOr,
+            TK_CHARACTER_TILDE => return OperatorBinary::BitwiseExclusiveOr,
+            TK_IDIV => return OperatorBinary::IntegralDivide,
+            TK_SHL => return OperatorBinary::ShiftLeft,
+            TK_SHR => return OperatorBinary::ShiftRight,
+            TK_CONCAT => return OperatorBinary::Concatenate,
+            TK_NE => return OperatorBinary::Inequal,
+            TK_EQ => return OperatorBinary::Equal,
+            TK_LE => return OperatorBinary::LessEqual,
+            TK_GE => return OperatorBinary::GreaterEqual,
+            TK_AND => return OperatorBinary::And,
+            TK_OR => return OperatorBinary::Or,
+            _ => return OperatorBinary::NoBinaryOperation,
+        };
+    }
 }

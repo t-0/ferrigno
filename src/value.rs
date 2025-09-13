@@ -1,7 +1,6 @@
 use crate::functions::*;
 use crate::object::*;
 use crate::tstring::*;
-use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
@@ -16,8 +15,11 @@ pub union Value {
     pub variable: ValueRegister,
 }
 impl Value {
-    pub const fn new() -> Self {
-        Value { object: null_mut() }
+    pub const fn new_object(object: *mut Object) -> Self {
+        Value { object: object }
+    }
+    pub const fn new_integer(integer: i64) -> Self {
+        Value { integer: integer }
     }
 }
 #[derive(Copy, Clone)]

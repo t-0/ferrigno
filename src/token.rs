@@ -1,4 +1,5 @@
 use rlua::*;
+use std::ptr::*;
 use crate::character::*;
 use crate::new::*;
 use crate::value::*;
@@ -12,7 +13,7 @@ impl New for Token {
     fn new() -> Self {
         return Token {
             token: 0,
-            semantic_info: Value::new(),
+            semantic_info: Value::new_object(null_mut()),
         };
     }
 }
