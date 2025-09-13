@@ -768,7 +768,6 @@ pub unsafe fn rethook(
             let mut delta: i32 = 0;
             if (*call_info).call_status as i32 & 1 << 1 == 0 {
                 let p: *mut Prototype = (*((*(*call_info).function.stkidrel_pointer)
-                    
                     .value
                     .object as *mut Closure))
                     .payload
@@ -792,7 +791,6 @@ pub unsafe fn rethook(
             (*interpreter).old_program_counter = ((*call_info).u.l.saved_program_counter)
                 .offset_from(
                     (*(*((*(*call_info).function.stkidrel_pointer)
-                        
                         .value
                         .object as *mut Closure))
                         .payload
@@ -1052,7 +1050,6 @@ pub unsafe fn luad_pretailcall(
                     function = (*call_info).function.stkidrel_pointer;
                     while narg1 <= nfixparams {
                         (*function.offset(narg1 as isize))
-                            
                             .set_tag_variant(TagVariant::NilNil as u8);
                         narg1 += 1;
                     }
