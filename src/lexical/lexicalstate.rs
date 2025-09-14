@@ -74,7 +74,7 @@ impl LexicalState {
             (*(self.interpreter)).luae_inccstack();
             match self.token.token {
                 CHARACTER_SEMICOLON => {
-                    luax_next(self);
+                    luax_next(interpreter, self);
                 }
                 TK_IF => {
                     handle_if_statement(interpreter, self, self.function_state, line);
@@ -83,7 +83,7 @@ impl LexicalState {
                     handle_while_statement(interpreter, self, self.function_state, line);
                 }
                 TK_DO => {
-                    luax_next(self);
+                    luax_next(interpreter, self);
                     handle_block(interpreter, self, self.function_state);
                     check_match(interpreter, self, TK_END as i32, TK_DO as i32, line);
                 }
@@ -97,26 +97,26 @@ impl LexicalState {
                     handle_function_statement(interpreter, self, self.function_state, line);
                 }
                 TK_LOCAL => {
-                    luax_next(self);
-                    if testnext(self, TK_FUNCTION as i32) != 0 {
+                    luax_next(interpreter, self);
+                    if testnext(interpreter, self, TK_FUNCTION as i32) != 0 {
                         handle_local_function(interpreter, self, self.function_state);
                     } else {
                         handle_local_statement(interpreter, self, self.function_state);
                     }
                 }
                 TK_DBCOLON => {
-                    luax_next(self);
+                    luax_next(interpreter, self);
                     handle_label_statement(interpreter, self, self.function_state, str_checkname(interpreter, self), line);
                 }
                 TK_RETURN => {
-                    luax_next(self);
+                    luax_next(interpreter, self);
                     handle_return_statement(interpreter, self, self.function_state);
                 }
                 TK_BREAK => {
                     breakstat(interpreter, self, self.function_state);
                 }
                 TK_GOTO => {
-                    luax_next(self);
+                    luax_next(interpreter, self);
                     gotostat(interpreter, self, self.function_state);
                 }
                 _ => {
@@ -137,7 +137,7 @@ impl LexicalState {
                 (*((*ll).vectort_pointer).offset(l as isize)).count_active_variables =
                     (*(*function_state).block_control).count_active_variables;
             }
-            if solvegotos(self, &mut *((*ll).vectort_pointer).offset(l as isize)) {
+            if solvegotos(interpreter, self, &mut *((*ll).vectort_pointer).offset(l as isize)) {
                 code_abck(
                     function_state,
                     OP_CLOSE,
@@ -164,7 +164,7 @@ impl LexicalState {
         unsafe {
             let mut count: i32 = 1;
             self.parse_expression(interpreter, expression_description);
-            while testnext(self, CHARACTER_COMMA as i32) != 0 {
+            while testnext(interpreter, self, CHARACTER_COMMA as i32) != 0 {
                 luak_exp2nextreg(self.function_state, expression_description);
                 self.parse_expression(interpreter, expression_description);
                 count += 1;
@@ -285,6 +285,7 @@ pub unsafe fn newgotoentry(
     }
 }
 pub unsafe fn solvegotos(
+    interpreter: * mut Interpreter,
     lexical_state: *mut LexicalState,
     label_description: *mut LabelDescription,
 ) -> bool {
@@ -296,7 +297,7 @@ pub unsafe fn solvegotos(
             if (*((*gl).vectort_pointer).offset(i as isize)).name == (*label_description).name {
                 needsclose =
                     needsclose || (0 != (*((*gl).vectort_pointer).offset(i as isize)).close);
-                solvegoto(lexical_state, i, label_description);
+                solvegoto(interpreter, lexical_state, i, label_description);
             } else {
                 i += 1;
             }
@@ -335,7 +336,7 @@ pub unsafe fn undefgoto(
                 (*goto_label_description).line,
             );
         }
-        luak_semerror(lexical_state, message);
+        luak_semerror(interpreter, lexical_state, message);
     }
 }
 pub unsafe fn codeclosure(lexical_state: *mut LexicalState, v: *mut ExpressionDescription) {
@@ -454,14 +455,14 @@ pub unsafe fn fieldsel(interpreter: * mut Interpreter, lexical_state: *mut Lexic
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut key: ExpressionDescription = ExpressionDescription::new();
         luak_exp2anyregup(function_state, v);
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         codename(interpreter, lexical_state, &mut key);
         luak_indexed(function_state, v, &mut key);
     }
 }
 pub unsafe fn yindex(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, v: *mut ExpressionDescription) {
     unsafe {
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         (*lexical_state).parse_expression(interpreter, v);
         code_expression_to_value((*lexical_state).function_state, v);
         checknext(interpreter, lexical_state, CHARACTER_BRACKET_RIGHT as i32);
@@ -517,7 +518,7 @@ pub unsafe fn field(
     unsafe {
         match (*lexical_state).token.token {
             291 => {
-                if luax_lookahead(lexical_state) != CHARACTER_EQUAL as i32 {
+                if luax_lookahead(interpreter, lexical_state) != CHARACTER_EQUAL as i32 {
                     listfield(interpreter, lexical_state, constructor_control);
                 } else {
                     recfield(interpreter, lexical_state, constructor_control);
@@ -558,8 +559,8 @@ pub unsafe fn constructor(interpreter: *mut Interpreter, lexical_state: *mut Lex
         while !((*lexical_state).token.token == CHARACTER_BRACE_RIGHT as i32) {
             closelistfield(function_state, &mut constructor_control);
             field(interpreter, lexical_state, &mut constructor_control);
-            if !(testnext(lexical_state, CHARACTER_COMMA as i32) != 0
-                || testnext(lexical_state, CHARACTER_SEMICOLON as i32) != 0)
+            if !(testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0
+                || testnext(interpreter, lexical_state, CHARACTER_SEMICOLON as i32) != 0)
             {
                 break;
             }
@@ -599,7 +600,7 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
                         nparams += 1;
                     }
                     280 => {
-                        luax_next(lexical_state);
+                        luax_next(interpreter, lexical_state);
                         is_variable_arguments = true;
                     }
                     _ => {
@@ -610,13 +611,13 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
                         );
                     }
                 }
-                if !(!is_variable_arguments && testnext(lexical_state, CHARACTER_COMMA as i32) != 0)
+                if !(!is_variable_arguments && testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0)
                 {
                     break;
                 }
             }
         }
-        adjustlocalvars(lexical_state, nparams);
+        adjustlocalvars(interpreter, lexical_state, nparams);
         (*prototype).prototype_count_parameters = (*function_state).count_active_variables;
         if is_variable_arguments {
             setvararg(
@@ -676,7 +677,7 @@ pub unsafe fn body(
                         .wrapping_sub(1 as usize),
                 ),
             );
-            adjustlocalvars(lexical_state, 1);
+            adjustlocalvars(interpreter, lexical_state, 1);
         }
         parlist(interpreter, lexical_state);
         checknext(interpreter, lexical_state, CHARACTER_PARENTHESIS_RIGHT as i32);
@@ -698,7 +699,7 @@ pub unsafe fn funcargs(
         let line: i32 = (*lexical_state).line_number;
         match (*lexical_state).token.token {
             CHARACTER_PARENTHESIS_LEFT => {
-                luax_next(lexical_state);
+                luax_next(interpreter, lexical_state);
                 if (*lexical_state).token.token == CHARACTER_PARENTHESIS_RIGHT as i32 {
                     args.expression_kind = ExpressionKind::Void;
                 } else {
@@ -722,7 +723,7 @@ pub unsafe fn funcargs(
             }
             292 => {
                 codestring(&mut args, (*lexical_state).token.semantic_info.tstring);
-                luax_next(lexical_state);
+                luax_next(interpreter, lexical_state);
             }
             _ => {
                 luax_syntaxerror(
@@ -758,7 +759,7 @@ pub unsafe fn primaryexp(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         match (*lexical_state).token.token {
             40 => {
                 let line: i32 = (*lexical_state).line_number;
-                luax_next(lexical_state);
+                luax_next(interpreter, lexical_state);
                 (*lexical_state).parse_expression(interpreter, v);
                 check_match(
                     interpreter,
@@ -801,7 +802,7 @@ pub unsafe fn suffixedexp(interpreter: *mut Interpreter, lexical_state: *mut Lex
                 }
                 58 => {
                     let mut key_0: ExpressionDescription = ExpressionDescription::new();
-                    luax_next(lexical_state);
+                    luax_next(interpreter, lexical_state);
                     codename(interpreter, lexical_state, &mut key_0);
                     luak_self(function_state, v, &mut key_0);
                     funcargs(interpreter, lexical_state, v);
@@ -858,7 +859,7 @@ pub unsafe fn simpleexp(interpreter: *mut Interpreter, lexical_state: *mut Lexic
                 return;
             }
             TK_FUNCTION => {
-                luax_next(lexical_state);
+                luax_next(interpreter, lexical_state);
                 body(interpreter, lexical_state, v, false, (*lexical_state).line_number);
                 return;
             }
@@ -867,7 +868,7 @@ pub unsafe fn simpleexp(interpreter: *mut Interpreter, lexical_state: *mut Lexic
                 return;
             }
         }
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
     }
 }
 pub unsafe fn error_expected(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, token: i32) -> ! {
@@ -878,15 +879,15 @@ pub unsafe fn error_expected(interpreter: *mut Interpreter, lexical_state: *mut 
             luao_pushfstring(
                 interpreter,
                 make_cstring!("%s expected"),
-                luax_token2str(lexical_state, token),
+                luax_token2str(interpreter, lexical_state, token),
             ),
         );
     }
 }
-pub unsafe fn testnext(lexical_state: *mut LexicalState, c: i32) -> i32 {
+pub unsafe fn testnext(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, c: i32) -> i32 {
     unsafe {
         if (*lexical_state).token.token == c {
-            luax_next(lexical_state);
+            luax_next(interpreter, lexical_state);
             return 1;
         } else {
             return 0;
@@ -903,12 +904,12 @@ pub unsafe fn check(interpreter: *mut Interpreter, lexical_state: *mut LexicalSt
 pub unsafe fn checknext(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, c: i32) {
     unsafe {
         check(interpreter, lexical_state, c);
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
     }
 }
 pub unsafe fn check_match(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, what: i32, who: i32, where_0: i32) {
     unsafe {
-        if testnext(lexical_state, what) == 0 {
+        if testnext(interpreter, lexical_state, what) == 0 {
             if where_0 == (*lexical_state).line_number {
                 error_expected(interpreter, lexical_state, what);
             } else {
@@ -918,8 +919,8 @@ pub unsafe fn check_match(interpreter: *mut Interpreter, lexical_state: *mut Lex
                     luao_pushfstring(
                         interpreter,
                         make_cstring!("%s expected (to close %s at line %d)"),
-                        luax_token2str(lexical_state, what),
-                        luax_token2str(lexical_state, who),
+                        luax_token2str(interpreter, lexical_state, what),
+                        luax_token2str(interpreter, lexical_state, who),
                         where_0,
                     ),
                 );
@@ -931,7 +932,7 @@ pub unsafe fn str_checkname(interpreter: * mut Interpreter, lexical_state: *mut 
     unsafe {
         check(interpreter, lexical_state, TK_NAME as i32);
         let ts: *mut TString = (*lexical_state).token.semantic_info.tstring;
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         return ts;
     }
 }
@@ -945,7 +946,8 @@ pub unsafe fn codename(
     }
 }
 pub unsafe fn registerlocalvar(
-    lexical_state: *mut LexicalState,
+    interpreter: * mut Interpreter,
+    _lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     variable_name: *mut TString,
 ) -> i32 {
@@ -953,7 +955,7 @@ pub unsafe fn registerlocalvar(
         let prototype: *mut Prototype = (*function_state).prototype;
         let mut old_size = (*prototype).prototype_local_variables.get_size();
         (*prototype).prototype_local_variables.grow(
-            (*lexical_state).interpreter,
+            interpreter,
             (*function_state).count_debug_variables as usize,
             if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) {
                 32767
@@ -981,7 +983,7 @@ pub unsafe fn registerlocalvar(
             && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
-                (*lexical_state).interpreter,
+                interpreter,
                 &mut (*(prototype as *mut Object)),
                 &mut (*(variable_name as *mut Object)),
             );
@@ -1032,6 +1034,7 @@ pub unsafe fn new_localvar(
     }
 }
 pub unsafe fn check_readonly(
+    interpreter: * mut Interpreter,
     lexical_state: *mut LexicalState,
     expression_description: *mut ExpressionDescription,
 ) {
@@ -1070,15 +1073,15 @@ pub unsafe fn check_readonly(
         }
         if !variable_name.is_null() {
             let message: *const i8 = luao_pushfstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 make_cstring!("attempt to assign to const variable '%s'"),
                 (*variable_name).get_contents_mut(),
             );
-            luak_semerror(lexical_state, message);
+            luak_semerror(interpreter, lexical_state, message);
         }
     }
 }
-pub unsafe fn adjustlocalvars(lexical_state: *mut LexicalState, count_variables: i32) {
+pub unsafe fn adjustlocalvars(interpreter: * mut Interpreter, lexical_state: *mut LexicalState, count_variables: i32) {
     unsafe {
         let function_state = (*lexical_state).function_state;
         let mut reglevel_0 = luay_nvarstack(function_state);
@@ -1092,7 +1095,7 @@ pub unsafe fn adjustlocalvars(lexical_state: *mut LexicalState, count_variables:
             reglevel_0 += 1;
             (*var).content.register_index = fresh40 as u8;
             (*var).content.pidx =
-                registerlocalvar(lexical_state, function_state, (*var).content.name) as i16;
+                registerlocalvar(interpreter, lexical_state, function_state, (*var).content.name) as i16;
         }
     }
 }
@@ -1143,6 +1146,7 @@ pub unsafe fn adjust_assign(
     }
 }
 pub unsafe fn jumpscopeerror(
+    interpreter: * mut Interpreter,
     lexical_state: *mut LexicalState,
     goto_label_description: *mut LabelDescription,
 ) -> ! {
@@ -1157,16 +1161,17 @@ pub unsafe fn jumpscopeerror(
         let mut message: *const i8 =
             make_cstring!("<goto %s> at line %d jumps into the scope of local '%s'");
         message = luao_pushfstring(
-            (*lexical_state).interpreter,
+            interpreter,
             message,
             (*(*goto_label_description).name).get_contents_mut(),
             (*goto_label_description).line,
             variable_name,
         );
-        luak_semerror(lexical_state, message);
+        luak_semerror(interpreter, lexical_state, message);
     }
 }
 pub unsafe fn solvegoto(
+    interpreter: * mut Interpreter,
     lexical_state: *mut LexicalState,
     goto_offset: i32,
     label_description: *mut LabelDescription,
@@ -1181,7 +1186,7 @@ pub unsafe fn solvegoto(
             != 0) as i64
             != 0
         {
-            jumpscopeerror(lexical_state, goto_label_description);
+            jumpscopeerror(interpreter, lexical_state, goto_label_description);
         }
         luak_patchlist(
             (*lexical_state).function_state,
@@ -1204,11 +1209,11 @@ pub unsafe fn subexpr(
     limit: i32,
 ) -> OperatorBinary {
     unsafe {
-        (*((*lexical_state).interpreter)).luae_inccstack();
+        (*(interpreter)).luae_inccstack();
         let uop = OperatorUnary::from_token((*lexical_state).token.token);
         if uop as u32 != OperatorUnary::None_ as u32 {
             let line: i32 = (*lexical_state).line_number;
-            luax_next(lexical_state);
+            luax_next(interpreter, lexical_state);
             subexpr(interpreter, lexical_state, v, 12 as i32);
             luak_prefix((*lexical_state).function_state, uop, v, line);
         } else {
@@ -1220,15 +1225,15 @@ pub unsafe fn subexpr(
         {
             let mut v2: ExpressionDescription = ExpressionDescription::new();
             let line_0: i32 = (*lexical_state).line_number;
-            luax_next(lexical_state);
+            luax_next(interpreter, lexical_state);
             luak_infix((*lexical_state).function_state, op, v);
             let nextop = subexpr(interpreter ,lexical_state, &mut v2, PRIORITY[op as usize].right as i32);
             luak_posfix((*lexical_state).function_state, op, v, &mut v2, line_0);
             op = nextop;
         }
-        (*(*lexical_state).interpreter).count_c_calls =
-            ((*(*lexical_state).interpreter).count_c_calls).wrapping_sub(1);
-        (*(*lexical_state).interpreter).count_c_calls;
+        (*interpreter).count_c_calls =
+            ((*interpreter).count_c_calls).wrapping_sub(1);
+        (*interpreter).count_c_calls;
         return op;
     }
 }
@@ -1313,24 +1318,24 @@ pub unsafe fn restassign(
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         if !((*lhs_assign).expression_kind.is_index_plus()) {
             luax_syntaxerror(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 make_cstring!("syntax error"),
             );
         }
-        check_readonly(lexical_state, &mut (*lhs_assign));
-        if testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
+        check_readonly(interpreter, lexical_state, &mut (*lhs_assign));
+        if testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0 {
             let mut new_lhs_assign: ExpressionDescription =
                 ExpressionDescription::new_with_previous(lhs_assign);
             suffixedexp(interpreter, lexical_state, &mut new_lhs_assign);
             if !(new_lhs_assign.expression_kind.is_index()) {
                 check_conflict(lexical_state, lhs_assign, &mut new_lhs_assign);
             }
-            (*((*lexical_state).interpreter)).luae_inccstack();
+            (*(interpreter)).luae_inccstack();
             restassign(interpreter, lexical_state, &mut new_lhs_assign, count_variables + 1);
-            (*(*lexical_state).interpreter).count_c_calls =
-                ((*(*lexical_state).interpreter).count_c_calls).wrapping_sub(1);
-            (*(*lexical_state).interpreter).count_c_calls;
+            (*interpreter).count_c_calls =
+                ((*interpreter).count_c_calls).wrapping_sub(1);
+            (*interpreter).count_c_calls;
         } else {
             checknext(interpreter, lexical_state, CHARACTER_EQUAL as i32);
             let count_expressions: i32 =
@@ -1405,12 +1410,12 @@ pub unsafe fn gotostat(interpreter: *mut Interpreter, lexical_state: *mut Lexica
 pub unsafe fn breakstat(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
         let line: i32 = (*lexical_state).line_number;
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         newgotoentry(
             interpreter,
             lexical_state,
             luas_newlstr(
-                (*lexical_state).interpreter,
+                interpreter,
                 make_cstring!("break"),
                 (size_of::<[i8; 6]>())
                     .wrapping_div(size_of::<i8>())
@@ -1421,7 +1426,7 @@ pub unsafe fn breakstat(interpreter: *mut Interpreter, lexical_state: *mut Lexic
         );
     }
 }
-pub unsafe fn checkrepeated(lexical_state: *mut LexicalState, name: *mut TString) {
+pub unsafe fn checkrepeated(interpreter: * mut Interpreter, lexical_state: *mut LexicalState, name: *mut TString) {
     unsafe {
         let lb = find_label(
             (*lexical_state).function_state,
@@ -1431,12 +1436,12 @@ pub unsafe fn checkrepeated(lexical_state: *mut LexicalState, name: *mut TString
         if !lb.is_null() {
             let mut message: *const i8 = make_cstring!("label '%s' already defined on line %d");
             message = luao_pushfstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 message,
                 (*name).get_contents_mut(),
                 (*lb).line,
             );
-            luak_semerror(lexical_state, message);
+            luak_semerror(interpreter, lexical_state, message);
         }
     }
 }
@@ -1454,7 +1459,7 @@ pub unsafe fn handle_label_statement(
         {
             (*lexical_state).parse_statement(interpreter);
         }
-        checkrepeated(lexical_state, name);
+        checkrepeated(interpreter, lexical_state, name);
         (*lexical_state).create_label(
             interpreter,
             name,
@@ -1471,15 +1476,15 @@ pub unsafe fn handle_while_statement(
 ) {
     unsafe {
         let mut block_control: BlockControl = BlockControl::new();
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         let whileinit: i32 = (*function_state).code_get_label();
         let condexit: i32 = cond(interpreter, lexical_state);
         enterblock(function_state, &mut block_control, true);
         checknext(interpreter, lexical_state, TK_DO as i32);
-        handle_block((*lexical_state).interpreter, lexical_state, (*lexical_state).function_state);
+        handle_block(interpreter, lexical_state, (*lexical_state).function_state);
         luak_patchlist(function_state, luak_jump(function_state), whileinit);
         check_match(interpreter, lexical_state, TK_END as i32, TK_WHILE as i32, line);
-        leaveblock((*lexical_state).interpreter, (*function_state).lexical_state, function_state);
+        leaveblock(interpreter, (*function_state).lexical_state, function_state);
         luak_patchtohere(function_state, condexit);
     }
 }
@@ -1495,11 +1500,11 @@ pub unsafe fn handle_repeat_statement(
         let mut bl2: BlockControl = BlockControl::new();
         enterblock(function_state, &mut bl1, true);
         enterblock(function_state, &mut bl2, false);
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         statlist(interpreter, lexical_state);
         check_match(interpreter, lexical_state, TK_UNTIL as i32, TK_REPEAT as i32, line);
         let mut condexit: i32 = cond(interpreter, lexical_state);
-        leaveblock((*lexical_state).interpreter, (*function_state).lexical_state, function_state);
+        leaveblock(interpreter, (*function_state).lexical_state, function_state);
         if bl2.count_upvalues != 0 {
             let exit_0: i32 = luak_jump(function_state);
             luak_patchtohere(function_state, condexit);
@@ -1515,7 +1520,7 @@ pub unsafe fn handle_repeat_statement(
             luak_patchtohere(function_state, exit_0);
         }
         luak_patchlist(function_state, condexit, repeat_init);
-        leaveblock((*lexical_state).interpreter, (*function_state).lexical_state, function_state);
+        leaveblock(interpreter, (*function_state).lexical_state, function_state);
     }
 }
 pub unsafe fn exp1(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) {
@@ -1541,7 +1546,7 @@ pub unsafe fn handle_forbody(
         checknext(interpreter, lexical_state, TK_DO as i32);
         let prep: i32 = luak_codeabx(function_state, FOR_PREP[isgen as usize], base, 0u32);
         enterblock(function_state, &mut block_control, false);
-        adjustlocalvars(lexical_state, count_variables);
+        adjustlocalvars(interpreter, lexical_state, count_variables);
         luak_reserveregs(function_state, count_variables);
         handle_block(interpreter, lexical_state, (*lexical_state).function_state);
         leaveblock(interpreter, (*function_state).lexical_state, function_state);
@@ -1566,47 +1571,47 @@ pub unsafe fn handle_for_numeric(
         let base: i32 = (*function_state).freereg as i32;
         let s = make_cstring!("(for interpreter)");
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
-        new_localvar((*lexical_state).interpreter, lexical_state, variable_name);
+        new_localvar(interpreter, lexical_state, variable_name);
         checknext(interpreter, lexical_state, CHARACTER_EQUAL as i32);
         exp1(interpreter, lexical_state);
         checknext(interpreter, lexical_state, CHARACTER_COMMA as i32);
         exp1(interpreter, lexical_state);
-        if testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
+        if testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0 {
             exp1(interpreter, lexical_state);
         } else {
             code_constant_integer(function_state, (*function_state).freereg as i32, 1 as i64);
             luak_reserveregs(function_state, 1);
         }
-        adjustlocalvars(lexical_state, 3);
+        adjustlocalvars(interpreter, lexical_state, 3);
         handle_forbody(
             interpreter,
             lexical_state,
@@ -1630,49 +1635,49 @@ pub unsafe fn handle_for_list(
         let base: i32 = (*function_state).freereg as i32;
         let s = make_cstring!("(for interpreter)");
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 s,
                 strlen(s) as usize,
             ),
         );
-        new_localvar((*lexical_state).interpreter, lexical_state, indexname);
-        while testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
+        new_localvar(interpreter, lexical_state, indexname);
+        while testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0 {
             new_localvar(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 str_checkname(interpreter, lexical_state),
             );
@@ -1686,7 +1691,7 @@ pub unsafe fn handle_for_list(
             (*lexical_state).parse_expression_list(interpreter, &mut expression_description),
             &mut expression_description,
         );
-        adjustlocalvars(lexical_state, 4);
+        adjustlocalvars(interpreter, lexical_state, 4);
         marktobeclosed(function_state);
         luak_checkstack(function_state, 3);
         handle_forbody(
@@ -1709,7 +1714,7 @@ pub unsafe fn handle_for_statement(
     unsafe {
         let mut block_control: BlockControl = BlockControl::new();
         enterblock(function_state, &mut block_control, true);
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state);
         match (*lexical_state).token.token {
             CHARACTER_EQUAL => {
@@ -1731,14 +1736,14 @@ pub unsafe fn handle_for_statement(
             }
             _ => {
                 luax_syntaxerror(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     lexical_state,
                     make_cstring!("CHARACTER_EQUAL or 'in' expected"),
                 );
             }
         }
         check_match(interpreter, lexical_state, TK_END as i32, TK_FOR as i32, line);
-        leaveblock((*lexical_state).interpreter, (*function_state).lexical_state, function_state);
+        leaveblock(interpreter, (*function_state).lexical_state, function_state);
     }
 }
 pub unsafe fn handle_test_then_block(
@@ -1751,19 +1756,19 @@ pub unsafe fn handle_test_then_block(
         let mut block_control: BlockControl = BlockControl::new();
         let mut v: ExpressionDescription = ExpressionDescription::new();
         let jf;
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         (*lexical_state).parse_expression(interpreter, &mut v);
         checknext(interpreter, lexical_state, TK_THEN as i32);
         if (*lexical_state).token.token == TK_BREAK as i32 {
             let line: i32 = (*lexical_state).line_number;
             luak_goiffalse((*lexical_state).function_state, &mut v);
-            luax_next(lexical_state);
+            luax_next(interpreter, lexical_state);
             enterblock(function_state, &mut block_control, false);
             newgotoentry(
                 interpreter,
                 lexical_state,
                 luas_newlstr(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     make_cstring!("break"),
                     (size_of::<[i8; 6]>())
                         .wrapping_div(size_of::<i8>())
@@ -1772,7 +1777,7 @@ pub unsafe fn handle_test_then_block(
                 line,
                 v.t,
             );
-            while testnext(lexical_state, CHARACTER_SEMICOLON as i32) != 0 {}
+            while testnext(interpreter, lexical_state, CHARACTER_SEMICOLON as i32) != 0 {}
             if block_follow_without_until((*lexical_state).token.token) {
                 leaveblock(interpreter, (*function_state).lexical_state, function_state);
                 return;
@@ -1816,7 +1821,7 @@ pub unsafe fn handle_if_statement(
                 &mut escape_list,
             );
         }
-        if testnext(lexical_state, TK_ELSE as i32) != 0 {
+        if testnext(interpreter, lexical_state, TK_ELSE as i32) != 0 {
             handle_block(interpreter, lexical_state, (*lexical_state).function_state);
         }
         check_match(interpreter, lexical_state, TK_END as i32, TK_IF as i32, line);
@@ -1832,11 +1837,11 @@ pub unsafe fn handle_local_function(
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         let fvar: i32 = (*function_state).count_active_variables as i32;
         new_localvar(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             str_checkname(interpreter, lexical_state),
         );
-        adjustlocalvars(lexical_state, 1);
+        adjustlocalvars(interpreter, lexical_state, 1);
         body(
             interpreter,
             lexical_state,
@@ -1850,7 +1855,7 @@ pub unsafe fn handle_local_function(
 }
 pub unsafe fn getlocalattribute(interpreter: * mut Interpreter, lexical_state: *mut LexicalState) -> i32 {
     unsafe {
-        if testnext(lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
+        if testnext(interpreter, lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
             let attr: *const i8 = (*str_checkname(interpreter, lexical_state)).get_contents_mut();
             checknext(interpreter, lexical_state, CHARACTER_ANGLE_RIGHT);
             if strcmp(attr, make_cstring!("const")) == 0 {
@@ -1859,6 +1864,7 @@ pub unsafe fn getlocalattribute(interpreter: * mut Interpreter, lexical_state: *
                 return 2;
             } else {
                 luak_semerror(
+                    interpreter,
                     lexical_state,
                     luao_pushfstring(
                         interpreter,
@@ -1886,7 +1892,7 @@ pub unsafe fn handle_local_statement(
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         loop {
             vidx = new_localvar(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 str_checkname(interpreter, lexical_state),
             );
@@ -1895,6 +1901,7 @@ pub unsafe fn handle_local_statement(
             if kind == 2 {
                 if toclose != -1 {
                     luak_semerror(
+                        interpreter,
                         lexical_state,
                         make_cstring!("multiple to-be-closed variables in local list"),
                     );
@@ -1902,11 +1909,11 @@ pub unsafe fn handle_local_statement(
                 toclose = (*function_state).count_active_variables as i32 + count_variables;
             }
             count_variables += 1;
-            if !(testnext(lexical_state, CHARACTER_COMMA as i32) != 0) {
+            if !(testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0) {
                 break;
             }
         }
-        if testnext(lexical_state, CHARACTER_EQUAL as i32) != 0 {
+        if testnext(interpreter, lexical_state, CHARACTER_EQUAL as i32) != 0 {
             count_expressions = (*lexical_state).parse_expression_list(interpreter, &mut expression_description);
         } else {
             expression_description.expression_kind = ExpressionKind::Void;
@@ -1918,7 +1925,7 @@ pub unsafe fn handle_local_statement(
             && luak_exp2const(function_state, &mut expression_description, &mut (*var).k)
         {
             (*var).content.kind = 3 as u8;
-            adjustlocalvars(lexical_state, count_variables - 1);
+            adjustlocalvars(interpreter, lexical_state, count_variables - 1);
             (*function_state).count_active_variables =
                 ((*function_state).count_active_variables).wrapping_add(1);
             (*function_state).count_active_variables;
@@ -1929,7 +1936,7 @@ pub unsafe fn handle_local_statement(
                 count_expressions,
                 &mut expression_description,
             );
-            adjustlocalvars(lexical_state, count_variables);
+            adjustlocalvars(interpreter, lexical_state, count_variables);
         }
         checktoclose(function_state, toclose);
     }
@@ -1961,10 +1968,10 @@ pub unsafe fn handle_function_statement(
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription::new();
         let mut b: ExpressionDescription = ExpressionDescription::new();
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         let is_method = handle_function_name(interpreter, lexical_state, &mut v);
         body(interpreter, lexical_state, &mut b, is_method, line);
-        check_readonly(lexical_state, &mut v);
+        check_readonly(interpreter, lexical_state, &mut v);
         luak_storevar(function_state, &mut v, &mut b);
         luak_fixline(function_state, line);
     }
@@ -1985,7 +1992,7 @@ pub unsafe fn handle_expression_statement(
         } else {
             if !(new_lhs_assign.expression_kind == ExpressionKind::Call) {
                 luax_syntaxerror(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     lexical_state,
                     make_cstring!("syntax error"),
                 );
@@ -2042,7 +2049,7 @@ pub unsafe fn handle_return_statement(
             }
         }
         luak_ret(function_state, first, nret);
-        testnext(lexical_state, CHARACTER_SEMICOLON as i32);
+        testnext(interpreter, lexical_state, CHARACTER_SEMICOLON as i32);
     }
 }
 pub unsafe fn handle_main_function(
@@ -2070,13 +2077,13 @@ pub unsafe fn handle_main_function(
             );
         } else {
         };
-        luax_next(lexical_state);
+        luax_next(interpreter, lexical_state);
         statlist(interpreter, lexical_state);
         check(interpreter, lexical_state, TK_EOS as i32);
         close_func(interpreter, lexical_state, (*lexical_state).function_state);
     }
 }
-pub unsafe fn save(lexical_state: *mut LexicalState, c: i32) {
+pub unsafe fn save(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, c: i32) {
     unsafe {
         let b: *mut Buffer = (*lexical_state).buffer;
         if ((*b).loads.get_length() as usize).wrapping_add(1 as usize)
@@ -2091,7 +2098,7 @@ pub unsafe fn save(lexical_state: *mut LexicalState, c: i32) {
                 .wrapping_div(2)
             {
                 lexerror(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     lexical_state,
                     make_cstring!("lexical element too long"),
                     0,
@@ -2099,7 +2106,7 @@ pub unsafe fn save(lexical_state: *mut LexicalState, c: i32) {
             }
             let new_size = (*b).loads.get_size().wrapping_mul(2);
             (*b).loads
-                .resize((*lexical_state).interpreter, new_size as usize);
+                .resize(interpreter, new_size as usize);
         }
         let fresh49 = (*b).loads.get_length();
         (*b).loads
@@ -2107,18 +2114,18 @@ pub unsafe fn save(lexical_state: *mut LexicalState, c: i32) {
         *((*b).loads.loads_pointer).offset(fresh49 as isize) = c as i8;
     }
 }
-pub unsafe fn luax_token2str(lexical_state: *mut LexicalState, token: i32) -> *const i8 {
+pub unsafe fn luax_token2str(interpreter: * mut Interpreter,_lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         if token < 127 as i32 * 2 + 1 + 1 {
             if is_printable(token + 1) {
                 return luao_pushfstring(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     make_cstring!("'%c'"),
                     token,
                 );
             } else {
                 return luao_pushfstring(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     make_cstring!("'<\\%d>'"),
                     token,
                 );
@@ -2126,25 +2133,25 @@ pub unsafe fn luax_token2str(lexical_state: *mut LexicalState, token: i32) -> *c
         } else {
             let s: *const i8 = TOKENS[(token - (127 as i32 * 2 + 1 + 1)) as usize];
             if token < TK_EOS as i32 {
-                return luao_pushfstring((*lexical_state).interpreter, make_cstring!("'%s'"), s);
+                return luao_pushfstring(interpreter, make_cstring!("'%s'"), s);
             } else {
                 return s;
             }
         };
     }
 }
-pub unsafe fn text_token(lexical_state: *mut LexicalState, token: i32) -> *const i8 {
+pub unsafe fn text_token(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         match token {
             TK_NAME | TK_STRING | TK_FLT | TK_INT => {
-                save(lexical_state, Character::Null as i32);
+                save(interpreter, lexical_state, Character::Null as i32);
                 return luao_pushfstring(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     make_cstring!("'%s'"),
                     (*(*lexical_state).buffer).loads.loads_pointer,
                 );
             }
-            _ => return luax_token2str(lexical_state, token),
+            _ => return luax_token2str(interpreter, lexical_state, token),
         };
     }
 }
@@ -2166,7 +2173,7 @@ pub unsafe fn lexerror(
                 interpreter,
                 make_cstring!("%s near %s"),
                 message,
-                text_token(lexical_state, token),
+                text_token(interpreter, lexical_state, token),
             );
         }
         luad_throw(interpreter, 3);
@@ -2215,7 +2222,7 @@ pub unsafe fn luax_newstring(
         return ts;
     }
 }
-pub unsafe fn inclinenumber(lexical_state: *mut LexicalState) {
+pub unsafe fn inclinenumber(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) {
     unsafe {
         let old: i32 = (*lexical_state).current;
         let fresh51 = (*(*lexical_state).zio).length;
@@ -2244,7 +2251,7 @@ pub unsafe fn inclinenumber(lexical_state: *mut LexicalState) {
         (*lexical_state).line_number += 1;
         if (*lexical_state).line_number >= 0x7FFFFFFF as i32 {
             lexerror(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 make_cstring!("chunk has too many lines"),
                 0,
@@ -2278,7 +2285,7 @@ pub unsafe fn luax_setinput(
         );
         (*(*lexical_state).buffer)
             .loads
-            .resize((*lexical_state).interpreter, 32 as usize);
+            .resize(interpreter, 32 as usize);
     }
 }
 pub unsafe fn check_next1(lexical_state: *mut LexicalState, c: i32) -> i32 {
@@ -2299,12 +2306,12 @@ pub unsafe fn check_next1(lexical_state: *mut LexicalState, c: i32) -> i32 {
         };
     }
 }
-pub unsafe fn check_next2(lexical_state: *mut LexicalState, set: *const i8) -> i32 {
+pub unsafe fn check_next2(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, set: *const i8) -> i32 {
     unsafe {
         if (*lexical_state).current == *set.offset(0 as isize) as i32
             || (*lexical_state).current == *set.offset(1 as isize) as i32
         {
-            save(lexical_state, (*lexical_state).current);
+            save(interpreter, lexical_state, (*lexical_state).current);
             let fresh57 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh57 > 0 {
@@ -2320,12 +2327,12 @@ pub unsafe fn check_next2(lexical_state: *mut LexicalState, set: *const i8) -> i
         };
     }
 }
-pub unsafe fn read_numeral(lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
+pub unsafe fn read_numeral(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
     unsafe {
         let mut obj: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         let mut expo: *const i8 = make_cstring!("Ee");
         let first: i32 = (*lexical_state).current;
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh59 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh59 > 0 {
@@ -2335,19 +2342,19 @@ pub unsafe fn read_numeral(lexical_state: *mut LexicalState, semantic_info: *mut
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        if first == CHARACTER_0 as i32 && check_next2(lexical_state, make_cstring!("xX")) != 0 {
+        if first == CHARACTER_0 as i32 && check_next2(interpreter, lexical_state, make_cstring!("xX")) != 0 {
             expo = make_cstring!("Pp");
         }
         loop {
-            if check_next2(lexical_state, expo) != 0 {
-                check_next2(lexical_state, make_cstring!("-+"));
+            if check_next2(interpreter, lexical_state, expo) != 0 {
+                check_next2(interpreter, lexical_state, make_cstring!("-+"));
             } else {
                 if !(is_digit_hexadecimal((*lexical_state).current + 1)
                     || (*lexical_state).current == CHARACTER_PERIOD as i32)
                 {
                     break;
                 }
-                save(lexical_state, (*lexical_state).current);
+                save(interpreter, lexical_state, (*lexical_state).current);
                 let fresh61 = (*(*lexical_state).zio).length;
                 (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                 (*lexical_state).current = if fresh61 > 0 {
@@ -2360,7 +2367,7 @@ pub unsafe fn read_numeral(lexical_state: *mut LexicalState, semantic_info: *mut
             }
         }
         if is_identifier((*lexical_state).current + 1) {
-            save(lexical_state, (*lexical_state).current);
+            save(interpreter, lexical_state, (*lexical_state).current);
             let fresh63 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh63 > 0 {
@@ -2371,10 +2378,10 @@ pub unsafe fn read_numeral(lexical_state: *mut LexicalState, semantic_info: *mut
                 luaz_fill((*lexical_state).zio)
             };
         }
-        save(lexical_state, Character::Null as i32);
+        save(interpreter, lexical_state, Character::Null as i32);
         if luao_str2num((*(*lexical_state).buffer).loads.loads_pointer, &mut obj) == 0 {
             lexerror(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 make_cstring!("malformed number"),
                 TK_FLT as i32,
@@ -2389,11 +2396,11 @@ pub unsafe fn read_numeral(lexical_state: *mut LexicalState, semantic_info: *mut
         };
     }
 }
-pub unsafe fn skip_sep(lexical_state: *mut LexicalState) -> usize {
+pub unsafe fn skip_sep(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) -> usize {
     unsafe {
         let mut count: usize = 0;
         let s: i32 = (*lexical_state).current;
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh65 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh65 > 0 {
@@ -2404,7 +2411,7 @@ pub unsafe fn skip_sep(lexical_state: *mut LexicalState) -> usize {
             luaz_fill((*lexical_state).zio)
         };
         while (*lexical_state).current == CHARACTER_EQUAL as i32 {
-            save(lexical_state, (*lexical_state).current);
+            save(interpreter, lexical_state, (*lexical_state).current);
             let fresh67 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh67 > 0 {
@@ -2424,13 +2431,14 @@ pub unsafe fn skip_sep(lexical_state: *mut LexicalState) -> usize {
     }
 }
 pub unsafe fn read_long_string(
+    interpreter: * mut Interpreter,
     lexical_state: *mut LexicalState,
     semantic_info: *mut Value,
     sep: usize,
 ) {
     unsafe {
         let line: i32 = (*lexical_state).line_number;
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh69 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh69 > 0 {
@@ -2443,7 +2451,7 @@ pub unsafe fn read_long_string(
         if (*lexical_state).current == CHARACTER_LF as i32
             || (*lexical_state).current == CHARACTER_CR as i32
         {
-            inclinenumber(lexical_state);
+            inclinenumber(interpreter, lexical_state);
         }
         loop {
             match (*lexical_state).current {
@@ -2454,23 +2462,23 @@ pub unsafe fn read_long_string(
                         make_cstring!("comment")
                     };
                     let message: *const i8 = luao_pushfstring(
-                        (*lexical_state).interpreter,
+                        interpreter,
                         make_cstring!("unfinished long %s (starting at line %d)"),
                         what,
                         line,
                     );
                     lexerror(
-                        (*lexical_state).interpreter,
+                        interpreter,
                         lexical_state,
                         message,
                         TK_EOS as i32,
                     );
                 }
                 CHARACTER_BRACKET_RIGHT => {
-                    if !(skip_sep(lexical_state) == sep) {
+                    if !(skip_sep(interpreter, lexical_state) == sep) {
                         continue;
                     }
-                    save(lexical_state, (*lexical_state).current);
+                    save(interpreter, lexical_state, (*lexical_state).current);
                     let fresh71 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length =
                         ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2485,15 +2493,15 @@ pub unsafe fn read_long_string(
                     break;
                 }
                 CHARACTER_LF | CHARACTER_CR => {
-                    save(lexical_state, CHARACTER_LF as i32);
-                    inclinenumber(lexical_state);
+                    save(interpreter, lexical_state, CHARACTER_LF as i32);
+                    inclinenumber(interpreter, lexical_state);
                     if semantic_info.is_null() {
                         (*(*lexical_state).buffer).loads.zero_length();
                     }
                 }
                 _ => {
                     if !semantic_info.is_null() {
-                        save(lexical_state, (*lexical_state).current);
+                        save(interpreter, lexical_state, (*lexical_state).current);
                         let fresh73 = (*(*lexical_state).zio).length;
                         (*(*lexical_state).zio).length =
                             ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2523,7 +2531,7 @@ pub unsafe fn read_long_string(
         }
         if !semantic_info.is_null() {
             (*semantic_info).tstring = luax_newstring(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 ((*(*lexical_state).buffer).loads.loads_pointer).offset(sep as isize),
                 ((*(*lexical_state).buffer).loads.get_length() as usize)
@@ -2532,11 +2540,11 @@ pub unsafe fn read_long_string(
         }
     }
 }
-pub unsafe fn esccheck(lexical_state: *mut LexicalState, condition: bool, message: *const i8) {
+pub unsafe fn esccheck(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, condition: bool, message: *const i8) {
     unsafe {
         if !condition {
             if (*lexical_state).current != -1 {
-                save(lexical_state, (*lexical_state).current);
+                save(interpreter, lexical_state, (*lexical_state).current);
                 let fresh77 = (*(*lexical_state).zio).length;
                 (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                 (*lexical_state).current = if fresh77 > 0 {
@@ -2548,7 +2556,7 @@ pub unsafe fn esccheck(lexical_state: *mut LexicalState, condition: bool, messag
                 };
             }
             lexerror(
-                (*lexical_state).interpreter,
+                interpreter,
                 lexical_state,
                 message,
                 TK_STRING as i32,
@@ -2556,9 +2564,9 @@ pub unsafe fn esccheck(lexical_state: *mut LexicalState, condition: bool, messag
         }
     }
 }
-pub unsafe fn gethexa(lexical_state: *mut LexicalState) -> i32 {
+pub unsafe fn gethexa(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) -> i32 {
     unsafe {
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh79 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh79 > 0 {
@@ -2569,6 +2577,7 @@ pub unsafe fn gethexa(lexical_state: *mut LexicalState) -> i32 {
             luaz_fill((*lexical_state).zio)
         };
         esccheck(
+            interpreter,
             lexical_state,
             is_digit_hexadecimal((*lexical_state).current + 1),
             make_cstring!("hexadecimal digit expected"),
@@ -2576,20 +2585,20 @@ pub unsafe fn gethexa(lexical_state: *mut LexicalState) -> i32 {
         return get_hexadecimal_digit_value((*lexical_state).current);
     }
 }
-pub unsafe fn readhexaesc(lexical_state: *mut LexicalState) -> i32 {
+pub unsafe fn readhexaesc(interpreter: * mut Interpreter, lexical_state: *mut LexicalState) -> i32 {
     unsafe {
-        let mut r: i32 = gethexa(lexical_state);
-        r = (r << 4) + gethexa(lexical_state);
+        let mut r: i32 = gethexa(interpreter, lexical_state);
+        r = (r << 4) + gethexa(interpreter, lexical_state);
         (*(*lexical_state).buffer)
             .loads
             .set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(2) as usize);
         return r;
     }
 }
-pub unsafe fn readutf8esc(lexical_state: *mut LexicalState) -> usize {
+pub unsafe fn readutf8esc(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) -> usize {
     unsafe {
         let mut i: i32 = 4;
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh81 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh81 > 0 {
@@ -2600,13 +2609,14 @@ pub unsafe fn readutf8esc(lexical_state: *mut LexicalState) -> usize {
             luaz_fill((*lexical_state).zio)
         };
         esccheck(
+            interpreter,
             lexical_state,
             (*lexical_state).current == CHARACTER_BRACE_LEFT,
             make_cstring!("missing CHARACTER_BRACE_LEFT"),
         );
-        let mut r: usize = gethexa(lexical_state) as usize;
+        let mut r: usize = gethexa(interpreter, lexical_state) as usize;
         loop {
-            save(lexical_state, (*lexical_state).current);
+            save(interpreter, lexical_state, (*lexical_state).current);
             let fresh83 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh83 > 0 {
@@ -2621,6 +2631,7 @@ pub unsafe fn readutf8esc(lexical_state: *mut LexicalState) -> usize {
             }
             i += 1;
             esccheck(
+                interpreter,
                 lexical_state,
                 r <= (0x7fffffff as usize >> 4),
                 make_cstring!("UTF-8 value too large"),
@@ -2629,6 +2640,7 @@ pub unsafe fn readutf8esc(lexical_state: *mut LexicalState) -> usize {
                 .wrapping_add(get_hexadecimal_digit_value((*lexical_state).current) as usize);
         }
         esccheck(
+            interpreter,
             lexical_state,
             (*lexical_state).current == CHARACTER_BRACE_RIGHT,
             make_cstring!("missing CHARACTER_BRACE_RIGHT"),
@@ -2648,24 +2660,24 @@ pub unsafe fn readutf8esc(lexical_state: *mut LexicalState) -> usize {
         return r;
     }
 }
-pub unsafe fn utf8esc(lexical_state: *mut LexicalState) {
+pub unsafe fn utf8esc(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) {
     unsafe {
         let mut buffer: [i8; 8] = [0; 8];
-        let mut n: i32 = luao_utf8esc(buffer.as_mut_ptr(), readutf8esc(lexical_state));
+        let mut n: i32 = luao_utf8esc(buffer.as_mut_ptr(), readutf8esc(interpreter, lexical_state));
         while n > 0 {
-            save(lexical_state, buffer[(8 - n) as usize] as i32);
+            save(interpreter, lexical_state, buffer[(8 - n) as usize] as i32);
             n -= 1;
         }
     }
 }
-pub unsafe fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
+pub unsafe fn readdecesc(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         let mut i: i32;
         let mut r: i32 = 0;
         i = 0;
         while i < 3 && is_digit_decimal((*lexical_state).current + 1) {
             r = 10 as i32 * r + (*lexical_state).current - CHARACTER_0 as i32;
-            save(lexical_state, (*lexical_state).current);
+            save(interpreter, lexical_state, (*lexical_state).current);
             let fresh87 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh87 > 0 {
@@ -2678,6 +2690,7 @@ pub unsafe fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
             i += 1;
         }
         esccheck(
+            interpreter,
             lexical_state,
             r <= 127 * 2 + 1,
             make_cstring!("decimal escape too large"),
@@ -2688,10 +2701,10 @@ pub unsafe fn readdecesc(lexical_state: *mut LexicalState) -> i32 {
         return r;
     }
 }
-pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_info: *mut Value) {
+pub unsafe fn read_string(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, del: i32, semantic_info: *mut Value) {
     unsafe {
         let mut current_block: usize;
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh89 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh89 > 0 {
@@ -2705,7 +2718,7 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
             match (*lexical_state).current {
                 -1 => {
                     lexerror(
-                        (*lexical_state).interpreter,
+                        interpreter,
                         lexical_state,
                         make_cstring!("unfinished string"),
                         TK_EOS as i32,
@@ -2713,7 +2726,7 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                 }
                 CHARACTER_LF | CHARACTER_CR => {
                     lexerror(
-                        (*lexical_state).interpreter,
+                        interpreter,
                         lexical_state,
                         make_cstring!("unfinished string"),
                         TK_STRING as i32,
@@ -2721,7 +2734,7 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                 }
                 CHARACTER_BACKSLASH => {
                     let c: i32;
-                    save(lexical_state, (*lexical_state).current);
+                    save(interpreter, lexical_state, (*lexical_state).current);
                     let fresh91 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length =
                         ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2763,15 +2776,15 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_X => {
-                            c = readhexaesc(lexical_state);
+                            c = readhexaesc(interpreter, lexical_state);
                             current_block = 15029063370732930705;
                         }
                         CHARACTER_LOWER_U => {
-                            utf8esc(lexical_state);
+                            utf8esc(interpreter, lexical_state);
                             continue;
                         }
                         CHARACTER_CR | CHARACTER_LF => {
-                            inclinenumber(lexical_state);
+                            inclinenumber(interpreter, lexical_state);
                             c = CHARACTER_LF as i32;
                             current_block = 7010296663004816197;
                         }
@@ -2802,7 +2815,7 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                                 if (*lexical_state).current == CHARACTER_LF as i32
                                     || (*lexical_state).current == CHARACTER_CR as i32
                                 {
-                                    inclinenumber(lexical_state);
+                                    inclinenumber(interpreter, lexical_state);
                                 } else {
                                     let fresh95 = (*(*lexical_state).zio).length;
                                     (*(*lexical_state).zio).length =
@@ -2821,11 +2834,12 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                         }
                         _ => {
                             esccheck(
+                                interpreter,
                                 lexical_state,
                                 is_digit_decimal((*lexical_state).current + 1),
                                 make_cstring!("invalid escape sequence"),
                             );
-                            c = readdecesc(lexical_state);
+                            c = readdecesc(interpreter, lexical_state);
                             current_block = 7010296663004816197;
                         }
                     }
@@ -2848,10 +2862,10 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                     (*(*lexical_state).buffer).loads.set_length(
                         ((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize,
                     );
-                    save(lexical_state, c);
+                    save(interpreter, lexical_state, c);
                 }
                 _ => {
-                    save(lexical_state, (*lexical_state).current);
+                    save(interpreter, lexical_state, (*lexical_state).current);
                     let fresh99 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length =
                         ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2866,7 +2880,7 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
                 }
             }
         }
-        save(lexical_state, (*lexical_state).current);
+        save(interpreter, lexical_state, (*lexical_state).current);
         let fresh101 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh101 > 0 {
@@ -2877,21 +2891,21 @@ pub unsafe fn read_string(lexical_state: *mut LexicalState, del: i32, semantic_i
             luaz_fill((*lexical_state).zio)
         };
         (*semantic_info).tstring = luax_newstring(
-            (*lexical_state).interpreter,
+            interpreter,
             lexical_state,
             ((*(*lexical_state).buffer).loads.loads_pointer).offset(1 as isize),
             ((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(2) as usize,
         );
     }
 }
-pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
+pub unsafe fn llex(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
     unsafe {
         (*(*lexical_state).buffer).loads.zero_length();
         loop {
             let current_block_85: usize;
             match (*lexical_state).current {
                 CHARACTER_LF | CHARACTER_CR => {
-                    inclinenumber(lexical_state);
+                    inclinenumber(interpreter, lexical_state);
                 }
                 CHARACTER_SPACE | CHARACTER_FF | CHARACTER_HT | CHARACTER_VT => {
                     let fresh103 = (*(*lexical_state).zio).length;
@@ -2933,10 +2947,10 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
                         luaz_fill((*lexical_state).zio)
                     };
                     if (*lexical_state).current == CHARACTER_BRACKET_LEFT as i32 {
-                        let sep: usize = skip_sep(lexical_state);
+                        let sep: usize = skip_sep(interpreter, lexical_state);
                         (*(*lexical_state).buffer).loads.zero_length();
                         if sep >= 2 as usize {
-                            read_long_string(lexical_state, null_mut(), sep);
+                            read_long_string(interpreter, lexical_state, null_mut(), sep);
                             (*(*lexical_state).buffer).loads.zero_length();
                             current_block_85 = 10512632378975961025;
                         } else {
@@ -2968,13 +2982,13 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
                     }
                 }
                 CHARACTER_BRACKET_LEFT => {
-                    let sep_0: usize = skip_sep(lexical_state);
+                    let sep_0: usize = skip_sep(interpreter, lexical_state);
                     if sep_0 >= 2 as usize {
-                        read_long_string(lexical_state, semantic_info, sep_0);
+                        read_long_string(interpreter, lexical_state, semantic_info, sep_0);
                         return TK_STRING as i32;
                     } else if sep_0 == 0 {
                         lexerror(
-                            (*lexical_state).interpreter,
+                            interpreter,
                             lexical_state,
                             make_cstring!("invalid long string delimiter"),
                             TK_STRING as i32,
@@ -3095,11 +3109,11 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
                     }
                 }
                 CHARACTER_QUOTE | CHARACTER_DOUBLEQUOTE => {
-                    read_string(lexical_state, (*lexical_state).current, semantic_info);
+                    read_string(interpreter, lexical_state, (*lexical_state).current, semantic_info);
                     return TK_STRING as i32;
                 }
                 CHARACTER_PERIOD => {
-                    save(lexical_state, (*lexical_state).current);
+                    save(interpreter, lexical_state, (*lexical_state).current);
                     let fresh123 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length =
                         ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -3120,18 +3134,18 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
                     } else if !is_digit_decimal((*lexical_state).current + 1) {
                         return CHARACTER_PERIOD as i32;
                     } else {
-                        return read_numeral(lexical_state, semantic_info);
+                        return read_numeral(interpreter, lexical_state, semantic_info);
                     }
                 }
                 CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4
                 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => {
-                    return read_numeral(lexical_state, semantic_info);
+                    return read_numeral(interpreter, lexical_state, semantic_info);
                 }
                 -1 => return TK_EOS as i32,
                 _ => {
                     if is_identifier((*lexical_state).current + 1) {
                         loop {
-                            save(lexical_state, (*lexical_state).current);
+                            save(interpreter, lexical_state, (*lexical_state).current);
                             let fresh125 = (*(*lexical_state).zio).length;
                             (*(*lexical_state).zio).length =
                                 ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -3148,7 +3162,7 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
                             }
                         }
                         let ts: *mut TString = luax_newstring(
-                            (*lexical_state).interpreter,
+                            interpreter,
                             lexical_state,
                             (*(*lexical_state).buffer).loads.loads_pointer,
                             (*(*lexical_state).buffer).loads.get_length() as usize,
@@ -3181,7 +3195,7 @@ pub unsafe fn llex(lexical_state: *mut LexicalState, semantic_info: *mut Value) 
         }
     }
 }
-pub unsafe fn luax_next(lexical_state: *mut LexicalState) {
+pub unsafe fn luax_next(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) {
     unsafe {
         (*lexical_state).last_line = (*lexical_state).line_number;
         if (*lexical_state).look_ahead.token != TK_EOS as i32 {
@@ -3189,23 +3203,24 @@ pub unsafe fn luax_next(lexical_state: *mut LexicalState) {
             (*lexical_state).look_ahead.token = TK_EOS as i32;
         } else {
             (*lexical_state).token.token =
-                llex(lexical_state, &mut (*lexical_state).token.semantic_info);
+                llex(interpreter, lexical_state, &mut (*lexical_state).token.semantic_info);
         };
     }
 }
-pub unsafe fn luax_lookahead(lexical_state: *mut LexicalState) -> i32 {
+pub unsafe fn luax_lookahead(interpreter: * mut Interpreter,lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         (*lexical_state).look_ahead.token = llex(
+            interpreter,
             lexical_state,
             &mut (*lexical_state).look_ahead.semantic_info,
         );
         return (*lexical_state).look_ahead.token;
     }
 }
-pub unsafe fn luak_semerror(lexical_state: *mut LexicalState, message: *const i8) -> ! {
+pub unsafe fn luak_semerror(interpreter: * mut Interpreter,lexical_state: *mut LexicalState, message: *const i8) -> ! {
     unsafe {
         (*lexical_state).token.token = 0;
-        luax_syntaxerror((*lexical_state).interpreter, lexical_state, message);
+        luax_syntaxerror(interpreter, lexical_state, message);
     }
 }
 pub fn block_follow_without_until(token: i32) -> bool {
