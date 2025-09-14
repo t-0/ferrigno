@@ -142,6 +142,7 @@ pub unsafe fn leaveblock(
         if (*block_control).is_loop {
             has_close = (*lexical_state).create_label(
                 interpreter,
+                function_state,
                 luas_newlstr(
                     interpreter,
                     make_cstring!("break"),
@@ -181,6 +182,7 @@ pub unsafe fn leaveblock(
             undefgoto(
                 interpreter,
                 lexical_state,
+                function_state,
                 &mut *((*(*lexical_state).dynamic_data).goto_.vectort_pointer)
                     .offset((*block_control).first_goto as isize),
             );

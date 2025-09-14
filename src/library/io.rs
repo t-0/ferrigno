@@ -33,7 +33,7 @@ pub unsafe fn io_type(interpreter: *mut Interpreter) -> i32 {
         p = lual_testudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
         if p.is_null() {
             (*interpreter).push_nil();
-        } else if ((*p).close_function).is_none() {
+        } else if ((*p).stream_cfunction_close).is_none() {
             lua_pushstring(interpreter, make_cstring!("closed file"));
         } else {
             lua_pushstring(interpreter, make_cstring!("file"));
@@ -44,7 +44,7 @@ pub unsafe fn io_type(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn f_tostring(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream = lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
-        if ((*p).close_function).is_none() {
+        if ((*p).stream_cfunction_close).is_none() {
             lua_pushstring(interpreter, make_cstring!("file (closed)"));
         } else {
             lua_pushfstring(interpreter, make_cstring!("file (%p)"), (*p).file);
@@ -55,7 +55,7 @@ pub unsafe fn f_tostring(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn tofile(interpreter: *mut Interpreter) -> *mut FILE {
     unsafe {
         let p: *mut Stream = lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
-        if (*p).close_function.is_none() {
+        if (*p).stream_cfunction_close.is_none() {
             lual_error(interpreter, make_cstring!("attempt to use a closed file"));
         }
         return (*p).file;
@@ -65,7 +65,7 @@ pub unsafe fn newprefile(interpreter: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream =
             User::lua_newuserdatauv(interpreter, size_of::<Stream>(), 0) as *mut Stream;
-        (*p).close_function = None;
+        (*p).stream_cfunction_close = None;
         lual_setmetatable(interpreter, make_cstring!("FILE*"));
         return p;
     }
@@ -73,9 +73,9 @@ pub unsafe fn newprefile(interpreter: *mut Interpreter) -> *mut Stream {
 pub unsafe fn aux_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream = lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
-        let cf: CFunction = (*p).close_function;
-        (*p).close_function = None;
-        return (Some(cf.expect("non-null function pointer"))).expect("non-null function pointer")(
+        let cfunction_close: CFunction = (*p).stream_cfunction_close;
+        (*p).stream_cfunction_close = None;
+        return (Some(cfunction_close.expect("non-null function pointer"))).expect("non-null function pointer")(
             interpreter,
         );
     }
@@ -101,7 +101,7 @@ pub unsafe fn io_close(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn f_gc(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream = lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
-        if ((*p).close_function).is_some() && !((*p).file).is_null() {
+        if ((*p).stream_cfunction_close).is_some() && !((*p).file).is_null() {
             aux_close(interpreter);
         }
         return 0;
@@ -118,7 +118,7 @@ pub unsafe fn newfile(interpreter: *mut Interpreter) -> *mut Stream {
     unsafe {
         let p: *mut Stream = newprefile(interpreter);
         (*p).file = null_mut();
-        (*p).close_function = Some(io_fclose as unsafe fn(*mut Interpreter) -> i32);
+        (*p).stream_cfunction_close = Some(io_fclose as unsafe fn(*mut Interpreter) -> i32);
         return p;
     }
 }
@@ -174,7 +174,7 @@ pub unsafe fn io_popen(interpreter: *mut Interpreter) -> i32 {
         *__errno_location() = 0;
         fflush(null_mut());
         (*p).file = popen(filename, mode);
-        (*p).close_function = Some(io_pclose as unsafe fn(*mut Interpreter) -> i32);
+        (*p).stream_cfunction_close = Some(io_pclose as unsafe fn(*mut Interpreter) -> i32);
         return if ((*p).file).is_null() {
             lual_fileresult(interpreter, 0, filename)
         } else {
@@ -199,7 +199,7 @@ pub unsafe fn getiofile(interpreter: *mut Interpreter, findex: *const i8) -> *mu
         let p: *mut Stream;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, findex);
         p = (*interpreter).to_pointer(-1) as *mut Stream;
-        if (*p).close_function.is_none() {
+        if (*p).stream_cfunction_close.is_none() {
             lual_error(
                 interpreter,
                 make_cstring!("default %s file is closed"),
@@ -588,7 +588,7 @@ pub unsafe fn io_readline(interpreter: *mut Interpreter) -> i32 {
             (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut Stream;
         let mut n: i32 =
             lua_tointegerx(interpreter, -(1000000 as i32) - 1000 as i32 - 2, null_mut()) as i32;
-        if ((*p).close_function).is_none() {
+        if ((*p).stream_cfunction_close).is_none() {
             return lual_error(interpreter, make_cstring!("file is already closed"));
         }
         lua_settop(interpreter, 1);
@@ -917,7 +917,7 @@ pub unsafe fn createmeta(interpreter: *mut Interpreter) {
 pub unsafe fn io_noclose(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let p: *mut Stream = lual_checkudata(interpreter, 1, make_cstring!("FILE*")) as *mut Stream;
-        (*p).close_function = Some(io_noclose as unsafe fn(*mut Interpreter) -> i32);
+        (*p).stream_cfunction_close = Some(io_noclose as unsafe fn(*mut Interpreter) -> i32);
         (*interpreter).push_nil();
         lua_pushstring(interpreter, make_cstring!("cannot close standard file"));
         return 2;
@@ -932,7 +932,7 @@ pub unsafe fn createstdfile(
     unsafe {
         let p: *mut Stream = newprefile(interpreter);
         (*p).file = file;
-        (*p).close_function = Some(io_noclose as unsafe fn(*mut Interpreter) -> i32);
+        (*p).stream_cfunction_close = Some(io_noclose as unsafe fn(*mut Interpreter) -> i32);
         if !k.is_null() {
             lua_pushvalue(interpreter, -1);
             lua_setfield(interpreter, -(1000000 as i32) - 1000 as i32, k);
