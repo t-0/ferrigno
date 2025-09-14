@@ -2,6 +2,7 @@ use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::functionstate::*;
 use crate::interpreter::*;
+use crate::lexical::lexicalstate::LexicalState;
 use crate::object::*;
 use crate::tag::*;
 use crate::tstring::*;
@@ -93,11 +94,12 @@ pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v:
     }
 }
 pub unsafe fn const2val(
-    function_state: *mut FunctionState,
+    lexical_state: *mut LexicalState,
+    _function_state: *mut FunctionState,
     expression_description: *const ExpressionDescription,
 ) -> *mut TValue {
     unsafe {
-        return &mut (*((*(*(*function_state).lexical_state).dynamic_data)
+        return &mut (*((*(*lexical_state).dynamic_data)
             .active_variables
             .vectort_pointer)
             .offset((*expression_description).value.info as isize))
@@ -105,6 +107,7 @@ pub unsafe fn const2val(
     }
 }
 pub unsafe fn luak_exp2const(
+    lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     expression_description: *const ExpressionDescription,
     v: *mut TValue,
@@ -134,7 +137,7 @@ pub unsafe fn luak_exp2const(
                 return true;
             }
             ExpressionKind::Constant2 => {
-                let io2: *const TValue = const2val(function_state, expression_description);
+                let io2: *const TValue = const2val(lexical_state, function_state, expression_description);
                 (*v).copy_from(&*io2);
                 return true;
             }
@@ -210,6 +213,7 @@ pub unsafe fn is_sc_number(
     }
 }
 pub unsafe fn luak_indexed(interpreter: * mut Interpreter,
+    lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     t: *mut ExpressionDescription,
     k: *mut ExpressionDescription,
@@ -221,7 +225,7 @@ pub unsafe fn luak_indexed(interpreter: * mut Interpreter,
         if (*t).expression_kind == ExpressionKind::UpValue
             && !is_k_string(function_state, k)
         {
-            luak_exp2anyreg(interpreter, function_state, t);
+            luak_exp2anyreg(interpreter, lexical_state, function_state, t);
         }
         if (*t).expression_kind == ExpressionKind::UpValue {
             let temp: i32 = (*t).value.info;
@@ -241,7 +245,7 @@ pub unsafe fn luak_indexed(interpreter: * mut Interpreter,
                 (*t).value.index.reference_index = (*k).value.integer as i16;
                 (*t).expression_kind = ExpressionKind::IndexInteger;
             } else {
-                (*t).value.index.reference_index = luak_exp2anyreg(interpreter, function_state, k) as i16;
+                (*t).value.index.reference_index = luak_exp2anyreg(interpreter, lexical_state, function_state, k) as i16;
                 (*t).expression_kind = ExpressionKind::Indexed;
             }
         };
