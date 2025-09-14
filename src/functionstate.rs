@@ -75,6 +75,12 @@ impl New for FunctionState {
         };
     }
 }
+impl FunctionState {
+    pub fn code_get_label(&mut self) -> i32 {
+        self.last_target = self.program_counter;
+        return self.program_counter;
+    }
+}
 pub unsafe fn movegotosout(
     function_state: *mut FunctionState,
     block_control: *mut BlockControl,
@@ -83,8 +89,7 @@ pub unsafe fn movegotosout(
         let gl: *mut VectorT<LabelDescription> =
             &mut (*(*(*function_state).lexical_state).dynamic_data).goto_;
         for i in (*block_control).first_goto..(*gl).get_length() as i32 {
-            let gt: *mut LabelDescription =
-                &mut *((*gl).vectort_pointer).offset(i as isize) as *mut LabelDescription;
+            let gt = &mut *((*gl).vectort_pointer).offset(i as isize) as *mut LabelDescription;
             if reglevel(function_state, (*gt).count_active_variables as i32)
                 > reglevel(
                     function_state,
@@ -118,10 +123,9 @@ pub unsafe fn enterblock(
         (*function_state).block_control = block_control;
     }
 }
-pub unsafe fn leaveblock(function_state: *mut FunctionState) {
+pub unsafe fn leaveblock(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
         let block_control: *mut BlockControl = (*function_state).block_control;
-        let lexical_state: *mut LexicalState = (*function_state).lexical_state;
         let mut has_close = false;
         let stklevel: i32 = reglevel(
             function_state,
@@ -134,7 +138,7 @@ pub unsafe fn leaveblock(function_state: *mut FunctionState) {
         if (*block_control).is_loop {
             has_close = (*lexical_state).create_label(
                 luas_newlstr(
-                    (*lexical_state).interpreter,
+                    interpreter,
                     make_cstring!("break"),
                     (size_of::<[i8; 6]>())
                         .wrapping_div(size_of::<i8>())
@@ -224,12 +228,12 @@ pub unsafe fn setvararg(function_state: *mut FunctionState, nparams: i32) {
     }
 }
 pub unsafe fn errorlimit(
+    interpreter: *mut Interpreter,
     function_state: *mut FunctionState,
     limit: i32,
     what: *const i8,
 ) -> ! {
     unsafe {
-        let interpreter: *mut Interpreter = (*(*function_state).lexical_state).interpreter;
         let message: *const i8;
         let line: i32 = (*(*function_state).prototype).prototype_line_defined;
         let where_0: *const i8 = if line == 0 {
@@ -248,10 +252,11 @@ pub unsafe fn errorlimit(
             limit,
             where_0,
         );
-        luax_syntaxerror((*function_state).lexical_state, message);
+        luax_syntaxerror(interpreter, (*function_state).lexical_state, message);
     }
 }
 pub unsafe fn checklimit(
+    interpreter: *mut Interpreter,
     function_state: *mut FunctionState,
     v: i32,
     length: i32,
@@ -259,7 +264,7 @@ pub unsafe fn checklimit(
 ) {
     unsafe {
         if v > length {
-            errorlimit(function_state, length, what);
+            errorlimit(interpreter, function_state, length, what);
         }
     }
 }
@@ -365,13 +370,10 @@ pub unsafe fn searchupvalue(
         return -1;
     }
 }
-pub unsafe fn allocate_upvalue_description(
-    function_state: *mut FunctionState,
-) -> *mut UpValueDescription {
+pub unsafe fn allocate_upvalue_description(function_state: *mut FunctionState, prototype: *mut Prototype) -> *mut UpValueDescription {
     unsafe {
-        let prototype: *mut Prototype = (*function_state).prototype;
         let mut old_size = (*prototype).prototype_upvalues.get_size();
-        checklimit(
+        checklimit((*(*function_state).lexical_state).interpreter,
             function_state,
             (*function_state).count_upvalues as i32 + 1,
             255 as i32,
@@ -401,32 +403,33 @@ pub unsafe fn allocate_upvalue_description(
     }
 }
 pub unsafe fn newupvalue(
+    interpreter: *mut Interpreter,
     function_state: *mut FunctionState,
     name: *mut TString,
     v: *mut ExpressionDescription,
 ) -> i32 {
     unsafe {
-        let up: *mut UpValueDescription = allocate_upvalue_description(function_state);
+        let upvalue_description: *mut UpValueDescription = allocate_upvalue_description(function_state, (*function_state).prototype);
         let previous: *mut FunctionState = (*function_state).previous;
         if (*v).expression_kind == ExpressionKind::Local {
-            (*up).is_in_stack = true;
-            (*up).index = (*v).value.variable.register_index;
-            (*up).kind = (*getlocalvardesc(previous, (*v).value.variable.value_index as i32))
+            (*upvalue_description).is_in_stack = true;
+            (*upvalue_description).index = (*v).value.variable.register_index;
+            (*upvalue_description).kind = (*getlocalvardesc(previous, (*v).value.variable.value_index as i32))
                 .content
                 .kind;
         } else {
-            (*up).is_in_stack = false;
-            (*up).index = (*v).value.info as u8;
-            (*up).kind = (*((*(*previous).prototype).prototype_upvalues.vectort_pointer)
+            (*upvalue_description).is_in_stack = false;
+            (*upvalue_description).index = (*v).value.info as u8;
+            (*upvalue_description).kind = (*((*(*previous).prototype).prototype_upvalues.vectort_pointer)
                 .offset((*v).value.info as isize))
             .kind;
         }
-        (*up).name = name;
+        (*upvalue_description).name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0
             && (*name).get_marked() & (1 << 3 | 1 << 4) != 0
         {
             luac_barrier_(
-                (*(*function_state).lexical_state).interpreter,
+                interpreter,
                 &mut (*((*function_state).prototype as *mut Object)),
                 &mut (*(name as *mut Object)),
             );
@@ -481,6 +484,7 @@ pub unsafe fn marktobeclosed(function_state: *mut FunctionState) {
     }
 }
 pub unsafe fn singlevaraux(
+    interpreter: *mut Interpreter,
     function_state: *mut FunctionState,
     n: *mut TString,
     var: *mut ExpressionDescription,
@@ -498,11 +502,11 @@ pub unsafe fn singlevaraux(
             } else {
                 let mut index: i32 = searchupvalue(function_state, n);
                 if index < 0 {
-                    singlevaraux((*function_state).previous, n, var, 0);
+                    singlevaraux(interpreter, (*function_state).previous, n, var, 0);
                     if (*var).expression_kind == ExpressionKind::Local
                         || (*var).expression_kind == ExpressionKind::UpValue
                     {
-                        index = newupvalue(function_state, n, var);
+                        index = newupvalue(interpreter, function_state, n, var);
                     } else {
                         return;
                     }
@@ -528,7 +532,7 @@ pub unsafe fn fixforjump(
             offset = -offset;
         }
         if offset > (1 << 8 + 8 + 1) - 1 {
-            luax_syntaxerror(
+            luax_syntaxerror((*(*function_state).lexical_state).interpreter,
                 (*function_state).lexical_state,
                 make_cstring!("control structure too long"),
             );
@@ -620,7 +624,7 @@ pub unsafe fn fixjump(
         if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset
             && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1))
         {
-            luax_syntaxerror(
+            luax_syntaxerror((*(*function_state).lexical_state).interpreter,
                 (*function_state).lexical_state,
                 make_cstring!("control structure too long"),
             );
@@ -683,12 +687,6 @@ pub unsafe fn condjump(
     unsafe {
         code_abck(function_state, op, a, b, c, k);
         return luak_jump(function_state);
-    }
-}
-pub unsafe fn code_get_label(function_state: *mut FunctionState) -> i32 {
-    unsafe {
-        (*function_state).last_target = (*function_state).program_counter;
-        return (*function_state).program_counter;
     }
 }
 pub unsafe fn code_get_jump_control(
@@ -772,7 +770,7 @@ pub unsafe fn luak_patchlist(
 }
 pub unsafe fn luak_patchtohere(function_state: *mut FunctionState, list: i32) {
     unsafe {
-        let hr: i32 = code_get_label(function_state);
+        let hr: i32 = (*function_state).code_get_label();
         luak_patchlist(function_state, list, hr);
     }
 }
@@ -959,15 +957,15 @@ pub unsafe fn code_constant(function_state: *mut FunctionState, reg: i32, k: i32
 }
 pub unsafe fn luak_checkstack(function_state: *mut FunctionState, n: i32) {
     unsafe {
-        let newstack: i32 = (*function_state).freereg as i32 + n;
-        if newstack > (*(*function_state).prototype).prototype_maximum_stack_size as i32 {
-            if newstack >= 255 as i32 {
-                luax_syntaxerror(
+        let new_stack: i32 = (*function_state).freereg as i32 + n;
+        if new_stack > (*(*function_state).prototype).prototype_maximum_stack_size as i32 {
+            if new_stack >= 255 as i32 {
+                luax_syntaxerror((*(*function_state).lexical_state).interpreter,
                     (*function_state).lexical_state,
                     make_cstring!("function or expression needs too many registers"),
                 );
             }
-            (*(*function_state).prototype).prototype_maximum_stack_size = newstack as u8;
+            (*(*function_state).prototype).prototype_maximum_stack_size = new_stack as u8;
         }
     }
 }
@@ -1256,13 +1254,13 @@ pub unsafe fn luak_dischargevars(
             }
             ExpressionKind::UpValue => {
                 (*expression_description).value.info =
-                    code_abck(function_state, OP_GETUPVAL, 0, (*expression_description).value.info, 0, 0);
+                    code_abck(function_state, OPCODE_GET_UPVALUE, 0, (*expression_description).value.info, 0, 0);
                 (*expression_description).expression_kind = ExpressionKind::Relocatable;
             }
             ExpressionKind::IndexUpValue => {
                 (*expression_description).value.info = code_abck(
                     function_state,
-                    OP_GETTABUP,
+                    OPCODE_GET_TABLE_UPVALUE,
                     0,
                     (*expression_description).value.index.reference_tag as i32,
                     (*expression_description).value.index.reference_index as i32,
@@ -1274,7 +1272,7 @@ pub unsafe fn luak_dischargevars(
                 freereg(function_state, (*expression_description).value.index.reference_tag as i32);
                 (*expression_description).value.info = code_abck(
                     function_state,
-                    OP_GETI,
+                    OPCODE_INDEX_INTEGER,
                     0,
                     (*expression_description).value.index.reference_tag as i32,
                     (*expression_description).value.index.reference_index as i32,
@@ -1286,7 +1284,7 @@ pub unsafe fn luak_dischargevars(
                 freereg(function_state, (*expression_description).value.index.reference_tag as i32);
                 (*expression_description).value.info = code_abck(
                     function_state,
-                    OP_GETFIELD,
+                    OPCODE_GET_FIELD,
                     0,
                     (*expression_description).value.index.reference_tag as i32,
                     (*expression_description).value.index.reference_index as i32,
@@ -1302,7 +1300,7 @@ pub unsafe fn luak_dischargevars(
                 );
                 (*expression_description).value.info = code_abck(
                     function_state,
-                    OP_GETTABLE,
+                    OPCODE_GET_TABLE,
                     0,
                     (*expression_description).value.index.reference_tag as i32,
                     (*expression_description).value.index.reference_index as i32,
@@ -1332,10 +1330,10 @@ pub unsafe fn discharge2reg(
                 code_constant_nil(function_state, register, 1);
             }
             ExpressionKind::False => {
-                code_abck(function_state, OP_LOADFALSE, register, 0, 0, 0);
+                code_abck(function_state, OPCODE_LOAD_FALSE, register, 0, 0, 0);
             }
             ExpressionKind::True => {
-                code_abck(function_state, OP_LOADTRUE, register, 0, 0, 0);
+                code_abck(function_state, OPCODE_LOAD_TRUE, register, 0, 0, 0);
             }
             ExpressionKind::ConstantString => {
                 string_to_constant(function_state, expression_description);
@@ -1382,7 +1380,7 @@ pub unsafe fn discharge2anyreg(
 }
 pub unsafe fn code_loadbool(function_state: *mut FunctionState, a: i32, op: u32) -> i32 {
     unsafe {
-        code_get_label(function_state);
+        (*function_state).code_get_label();
         return code_abck(function_state, op, a, 0, 0, 0);
     }
 }
@@ -1418,10 +1416,10 @@ pub unsafe fn exp2reg(
                     luak_jump(function_state)
                 };
                 p_f = code_loadbool(function_state, reg, OP_LFALSESKIP);
-                p_t = code_loadbool(function_state, reg, OP_LOADTRUE);
+                p_t = code_loadbool(function_state, reg, OPCODE_LOAD_TRUE);
                 luak_patchtohere(function_state, fj);
             }
-            let final_0: i32 = code_get_label(function_state);
+            let final_0: i32 = (*function_state).code_get_label();
             patchlistaux(function_state, (*expression_description).f, final_0, reg, p_f);
             patchlistaux(function_state, (*expression_description).t, final_0, reg, p_t);
         }
@@ -2152,21 +2150,21 @@ pub unsafe fn luak_infix(
             OP_SELF => {
                 luak_goiffalse(function_state, v);
             }
-            OP_GETTABLE => {
+            OPCODE_GET_TABLE => {
                 luak_exp2nextreg(function_state, v);
             }
-            OP_MOVE | OP_LOADI | OP_LOADF | OP_LOADFALSE | OP_LFALSESKIP | OP_LOADK | OP_LOADKX
-            | OP_LOADTRUE | OP_LOADNIL | OP_GETUPVAL | OP_SETUPVAL | OP_GETTABUP => {
+            OP_MOVE | OP_LOADI | OP_LOADF | OPCODE_LOAD_FALSE | OP_LFALSESKIP | OP_LOADK | OP_LOADKX
+            | OPCODE_LOAD_TRUE | OP_LOADNIL | OPCODE_GET_UPVALUE | OP_SETUPVAL | OPCODE_GET_TABLE_UPVALUE => {
                 if !tonumeral(v, null_mut()) {
                     luak_exp2anyreg(function_state, v);
                 }
             }
-            OP_GETI | OP_SETTABLE => {
+            OPCODE_INDEX_INTEGER | OP_SETTABLE => {
                 if !tonumeral(v, null_mut()) {
                     exp2rk(function_state, v);
                 }
             }
-            OP_GETFIELD | OP_SETTABUP | OP_SETI | OP_SETFIELD => {
+            OPCODE_GET_FIELD | OP_SETTABUP | OP_SETI | OP_SETFIELD => {
                 let mut dummy: i32 = 0;
                 let mut dummy2 = false;
                 if is_sc_number(v, &mut dummy, &mut dummy2) == 0 {
@@ -2391,48 +2389,42 @@ pub unsafe fn luak_setlist(
         (*function_state).freereg = (base + 1) as u8;
     }
 }
-pub unsafe fn luak_finish(function_state: *mut FunctionState) {
+pub unsafe fn luak_finish(function_state: *mut FunctionState, prototype: *mut Prototype) {
     unsafe {
-        let p: *mut Prototype = (*function_state).prototype;
         for i in 0..(*function_state).program_counter {
             let program_counter: *mut u32 =
-                &mut *((*p).prototype_code.vectort_pointer).offset(i as isize) as *mut u32;
-            let current_block_7: usize;
+                &mut *((*prototype).prototype_code.vectort_pointer).offset(i as isize) as *mut u32;
             match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
                 OP_RETURN0 | OP_RETURN1 => {
-                    if !((*function_state).needs_close
-                        || (*p).prototype_is_variable_arguments as i32 != 0)
+                    if (*function_state).needs_close || (*prototype).prototype_is_variable_arguments
                     {
-                        current_block_7 = 12599329904712511516;
-                    } else {
                         *program_counter = *program_counter & !(!(!(0u32) << 7) << 0)
                             | (OP_RETURN as u32) << 0 & !(!(0u32) << 7) << 0;
-                        current_block_7 = 11006700562992250127;
+                        if (*function_state).needs_close {
+                            *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
+                                | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
+                        }
+                        if (*prototype).prototype_is_variable_arguments {
+                            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
+                                | (((*prototype).prototype_count_parameters as i32 + 1) as u32) << POSITION_C
+                                    & !(!(0u32) << 8) << POSITION_C;
+                        }
                     }
                 }
                 OP_RETURN | OP_TAILCALL => {
-                    current_block_7 = 11006700562992250127;
-                }
-                OP_JMP => {
-                    let target: i32 = final_target((*p).prototype_code.vectort_pointer, i);
-                    fixjump(function_state, i, target);
-                    current_block_7 = 12599329904712511516;
-                }
-                _ => {
-                    current_block_7 = 12599329904712511516;
-                }
-            }
-            match current_block_7 {
-                11006700562992250127 => {
                     if (*function_state).needs_close {
                         *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
                             | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
                     }
-                    if (*p).prototype_is_variable_arguments {
+                    if (*prototype).prototype_is_variable_arguments {
                         *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
-                            | (((*p).prototype_count_parameters as i32 + 1) as u32) << POSITION_C
+                            | (((*prototype).prototype_count_parameters as i32 + 1) as u32) << POSITION_C
                                 & !(!(0u32) << 8) << POSITION_C;
                     }
+                }
+                OP_JMP => {
+                    let target: i32 = final_target((*prototype).prototype_code.vectort_pointer, i);
+                    fixjump(function_state, i, target);
                 }
                 _ => {}
             }

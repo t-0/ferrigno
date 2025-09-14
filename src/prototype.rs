@@ -642,7 +642,7 @@ pub unsafe fn funcnamefromcode(
                 *name = make_cstring!("for iterator");
                 return make_cstring!("for iterator");
             }
-            OP_SELF | OP_GETTABUP | OP_GETTABLE | OP_GETI | OP_GETFIELD => {
+            OP_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
             }
             OP_SETTABUP | OP_SETTABLE | OP_SETI | OP_SETFIELD => {
