@@ -471,7 +471,7 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
                 src_init: null(),
                 src_end: null(),
                 p_end: null(),
-                interpreter: null_mut(),
+                matchstate_interpreter: null_mut(),
                 matchdepth: 0,
                 level: 0,
                 capture: [MatchStateCapture {
@@ -536,7 +536,7 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             src_init: null(),
             src_end: null(),
             p_end: null(),
-            interpreter: null_mut(),
+            matchstate_interpreter: null_mut(),
             matchdepth: 0,
             level: 0,
             capture: [MatchStateCapture {
@@ -1032,12 +1032,12 @@ pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
         };
     }
 }
-pub unsafe fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
+pub unsafe fn getnumlimit(header: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         let size: i32 = getnum(fmt, df);
         if size > 16 as i32 || size <= 0 {
             return lual_error(
-                (*h).interpreter,
+                (*header).header_interpreter,
                 make_cstring!("integral size (%d) out of limits [1,%d]"),
                 size,
                 16 as i32,
@@ -1046,14 +1046,14 @@ pub unsafe fn getnumlimit(h: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
         return size;
     }
 }
-pub unsafe fn initheader(interpreter: *mut Interpreter, h: *mut Header) {
+pub unsafe fn initheader(interpreter: *mut Interpreter, header: *mut Header) {
     unsafe {
-        (*h).interpreter = interpreter;
-        (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
-        (*h).maxmimum_alignment = 1;
+        (*header).header_interpreter = interpreter;
+        (*header).is_little_endian = NATIVE_ENDIAN.little as i32;
+        (*header).maxmimum_alignment = 1;
     }
 }
-pub unsafe fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
+pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
     unsafe {
         let fresh180 = *fmt;
         *fmt = (*fmt).offset(1);
@@ -1109,22 +1109,22 @@ pub unsafe fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> 
                 return K::Double;
             }
             CHARACTER_LOWER_I => {
-                *size = getnumlimit(h, fmt, size_of::<i32>() as i32);
+                *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Integer;
             }
             CHARACTER_UPPER_I => {
-                *size = getnumlimit(h, fmt, size_of::<i32>() as i32);
+                *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Unsigned;
             }
             CHARACTER_LOWER_S => {
-                *size = getnumlimit(h, fmt, size_of::<usize>() as i32);
+                *size = getnumlimit(header, fmt, size_of::<usize>() as i32);
                 return K::String;
             }
             CHARACTER_LOWER_C => {
                 *size = getnum(fmt, -1);
                 if *size == -1 {
                     lual_error(
-                        (*h).interpreter,
+                        (*header).header_interpreter,
                         make_cstring!("missing size for format option CHARACTER_LOWER_C"),
                     );
                 }
@@ -1138,21 +1138,21 @@ pub unsafe fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> 
             CHARACTER_UPPER_X => return K::PaddingAlignment,
             CHARACTER_SPACE => {}
             CHARACTER_ANGLE_LEFT => {
-                (*h).is_little_endian = 1;
+                (*header).is_little_endian = 1;
             }
             CHARACTER_ANGLE_RIGHT => {
-                (*h).is_little_endian = 0;
+                (*header).is_little_endian = 0;
             }
             CHARACTER_EQUAL => {
-                (*h).is_little_endian = NATIVE_ENDIAN.little as i32;
+                (*header).is_little_endian = NATIVE_ENDIAN.little as i32;
             }
             CHARACTER_EXCLAMATION => {
                 let maxalign: i32 = 8;
-                (*h).maxmimum_alignment = getnumlimit(h, fmt, maxalign);
+                (*header).maxmimum_alignment = getnumlimit(header, fmt, maxalign);
             }
             _ => {
                 lual_error(
-                    (*h).interpreter,
+                    (*header).header_interpreter,
                     make_cstring!("invalid format option '%c'"),
                     opt,
                 );
@@ -1162,22 +1162,22 @@ pub unsafe fn getoption(h: *mut Header, fmt: *mut *const i8, size: *mut i32) -> 
     }
 }
 pub unsafe fn getdetails(
-    h: *mut Header,
+    header: *mut Header,
     totalsize: usize,
     fmt: *mut *const i8,
     total_size: *mut i32,
     ntoalign: *mut i32,
 ) -> K {
     unsafe {
-        let opt: K = getoption(h, fmt, total_size);
+        let opt: K = getoption(header, fmt, total_size);
         let mut align: i32 = *total_size;
         if opt as u32 == K::PaddingAlignment as u32 {
             if **fmt as i32 == Character::Null as i32
-                || getoption(h, fmt, &mut align) as u32 == K::Character as u32
+                || getoption(header, fmt, &mut align) as u32 == K::Character as u32
                 || align == 0
             {
                 lual_argerror(
-                    (*h).interpreter,
+                    (*header).header_interpreter,
                     1,
                     make_cstring!("invalid next option for option CHARACTER_UPPER_X"),
                 );
@@ -1186,12 +1186,12 @@ pub unsafe fn getdetails(
         if align <= 1 || opt as u32 == K::Character as u32 {
             *ntoalign = 0;
         } else {
-            if align > (*h).maxmimum_alignment {
-                align = (*h).maxmimum_alignment;
+            if align > (*header).maxmimum_alignment {
+                align = (*header).maxmimum_alignment;
             }
             if align & align - 1 != 0 {
                 lual_argerror(
-                    (*h).interpreter,
+                    (*header).header_interpreter,
                     1,
                     make_cstring!("format asks for alignment not power of 2"),
                 );
@@ -1262,7 +1262,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
         let mut h: Header = Header {
-            interpreter: null_mut(),
+            header_interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
@@ -1457,7 +1457,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
-            interpreter: null_mut(),
+            header_interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };
@@ -1551,7 +1551,7 @@ pub unsafe fn unpackint(
 pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut h: Header = Header {
-            interpreter: null_mut(),
+            header_interpreter: null_mut(),
             is_little_endian: 0,
             maxmimum_alignment: 0,
         };

@@ -14,14 +14,14 @@ impl Buffer {
 #[repr(C)]
 pub struct Buffer {
     pub loads: LoadS<BufferElement>,
-    pub interpreter: *mut Interpreter,
+    pub buffer_interpreter: *mut Interpreter,
     pub initial_data: [BufferElement; Buffer::INITIAL_SIZE],
 }
 impl New for Buffer {
     fn new() -> Self {
         return Buffer {
             loads: LoadS::<BufferElement>::new(),
-            interpreter: null_mut(),
+            buffer_interpreter: null_mut(),
             initial_data: [0; Buffer::INITIAL_SIZE],
         };
     }
@@ -47,7 +47,7 @@ impl Buffer {
         unsafe {
             let mut new_size = 2 * self.loads.get_size();
             if (!0usize).wrapping_sub(size) < self.loads.get_length() as usize {
-                return lual_error(self.interpreter, make_cstring!("buffer too large")) as usize;
+                return lual_error(self.buffer_interpreter, make_cstring!("buffer too large")) as usize;
             }
             new_size = new_size.max(self.loads.get_length() + size as i32);
             return new_size as usize;
@@ -65,7 +65,7 @@ impl Buffer {
                     .loads_pointer
                     .offset(self.loads.get_length() as isize);
             } else {
-                let interpreter: *mut Interpreter = self.interpreter;
+                let interpreter: *mut Interpreter = self.buffer_interpreter;
                 let new_pointer: *mut BufferElement;
                 let new_size = self.new_with_size(size);
                 if self.loads.loads_pointer != (self.initial_data).as_mut_ptr() {
@@ -116,7 +116,7 @@ impl Buffer {
     }
     pub unsafe fn push_result(&mut self) {
         unsafe {
-            let interpreter: *mut Interpreter = self.interpreter;
+            let interpreter: *mut Interpreter = self.buffer_interpreter;
             lua_pushlstring(
                 interpreter,
                 self.loads.loads_pointer,
@@ -131,7 +131,7 @@ impl Buffer {
     }
     pub unsafe fn add_value(&mut self) {
         unsafe {
-            let interpreter: *mut Interpreter = self.interpreter;
+            let interpreter: *mut Interpreter = self.buffer_interpreter;
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
@@ -146,7 +146,7 @@ impl Buffer {
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            self.interpreter = interpreter;
+            self.buffer_interpreter = interpreter;
             self.loads
                 .inject(self.initial_data.as_mut_ptr(), Buffer::INITIAL_SIZE);
             lua_pushlightuserdata(interpreter, self as *mut Buffer as *mut libc::c_void);

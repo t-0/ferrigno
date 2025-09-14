@@ -33,8 +33,7 @@ use std::ptr::*;
 #[repr(C)]
 pub struct FunctionState {
     pub prototype: *mut Prototype,
-    pub previous: *mut FunctionState,
-    pub lexical_state: *mut LexicalState,
+    pub function_state_previous: *mut FunctionState,
     pub block_control: *mut BlockControl,
     pub program_counter: i32,
     pub last_target: i32,
@@ -55,8 +54,7 @@ impl New for FunctionState {
     fn new() -> Self {
         return FunctionState {
             prototype: null_mut(),
-            previous: null_mut(),
-            lexical_state: null_mut(),
+            function_state_previous: null_mut(),
             block_control: null_mut(),
             program_counter: 0,
             last_target: 0,
@@ -522,7 +520,7 @@ pub unsafe fn newupvalue(
             function_state,
             (*function_state).prototype,
         );
-        let previous: *mut FunctionState = (*function_state).previous;
+        let previous: *mut FunctionState = (*function_state).function_state_previous;
         if (*v).expression_kind == ExpressionKind::Local {
             (*upvalue_description).is_in_stack = true;
             (*upvalue_description).index = (*v).value.variable.register_index;
@@ -625,7 +623,7 @@ pub unsafe fn singlevaraux(
                     singlevaraux(
                         interpreter,
                         lexical_state,
-                        (*function_state).previous,
+                        (*function_state).function_state_previous,
                         n,
                         var,
                         0,
@@ -645,7 +643,7 @@ pub unsafe fn singlevaraux(
 }
 pub unsafe fn fixforjump(
     interpreter: *mut Interpreter,
-    _lexical_state: *mut LexicalState,
+    lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     program_counter: i32,
     dest: i32,
@@ -663,7 +661,7 @@ pub unsafe fn fixforjump(
         if offset > (1 << 8 + 8 + 1) - 1 {
             luax_syntaxerror(
                 interpreter,
-                (*function_state).lexical_state,
+                lexical_state,
                 make_cstring!("control structure too long"),
             );
         }
@@ -764,7 +762,7 @@ pub unsafe fn code_get_jump(function_state: *mut FunctionState, program_counter:
 }
 pub unsafe fn fixjump(
     interpreter: *mut Interpreter,
-    _lexical_state: *mut LexicalState,
+    lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     program_counter: i32,
     dest: i32,
@@ -780,7 +778,7 @@ pub unsafe fn fixjump(
         {
             luax_syntaxerror(
                 interpreter,
-                (*function_state).lexical_state,
+                lexical_state,
                 make_cstring!("control structure too long"),
             );
         }
@@ -1071,7 +1069,7 @@ pub unsafe fn luak_code(
             lexical_state,
             function_state,
             prototype,
-            (*(*function_state).lexical_state).last_line,
+            (*lexical_state).last_line,
         );
         return (*function_state).program_counter - 1;
     }
@@ -1200,7 +1198,7 @@ pub unsafe fn code_constant(
 }
 pub unsafe fn luak_checkstack(
     interpreter: *mut Interpreter,
-    _lexical_state: *mut LexicalState,
+    lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
     n: i32,
 ) {
@@ -1210,7 +1208,7 @@ pub unsafe fn luak_checkstack(
             if new_stack >= 255 as i32 {
                 luax_syntaxerror(
                     interpreter,
-                    (*function_state).lexical_state,
+                    lexical_state,
                     make_cstring!("function or expression needs too many registers"),
                 );
             }
@@ -1328,7 +1326,7 @@ pub unsafe fn addk(
         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
         luah_finishset(
             interpreter,
-            (*(*function_state).lexical_state).table,
+            (*lexical_state).table,
             key,
             index,
             &mut value,

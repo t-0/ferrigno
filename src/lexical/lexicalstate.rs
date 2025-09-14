@@ -39,8 +39,7 @@ pub struct LexicalState {
     pub last_line: i32,
     pub token: Token,
     pub look_ahead: Token,
-    pub function_state: *mut FunctionState,
-    pub interpreter: *mut Interpreter,
+    pub lexical_state_function_state: *mut FunctionState,
     pub zio: *mut ZIO,
     pub buffer: *mut Buffer,
     pub table: *mut Table,
@@ -56,8 +55,7 @@ impl New for LexicalState {
             last_line: 0,
             token: Token::new(),
             look_ahead: Token::new(),
-            function_state: null_mut(),
-            interpreter: null_mut(),
+            lexical_state_function_state: null_mut(),
             zio: null_mut(),
             buffer: null_mut(),
             table: null_mut(),
@@ -71,37 +69,52 @@ impl LexicalState {
     pub unsafe fn parse_statement(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let line: i32 = self.line_number;
-            (*(self.interpreter)).luae_inccstack();
+            (*interpreter).luae_inccstack();
             match self.token.token {
                 CHARACTER_SEMICOLON => {
                     luax_next(interpreter, self);
                 }
                 TK_IF => {
-                    handle_if_statement(interpreter, self, self.function_state, line);
+                    handle_if_statement(interpreter, self, self.lexical_state_function_state, line);
                 }
                 TK_WHILE => {
-                    handle_while_statement(interpreter, self, self.function_state, line);
+                    handle_while_statement(
+                        interpreter,
+                        self,
+                        self.lexical_state_function_state,
+                        line,
+                    );
                 }
                 TK_DO => {
                     luax_next(interpreter, self);
-                    handle_block(interpreter, self, self.function_state);
+                    handle_block(interpreter, self, self.lexical_state_function_state);
                     check_match(interpreter, self, TK_END as i32, TK_DO as i32, line);
                 }
                 TK_FOR => {
-                    handle_for_statement(interpreter, self, self.function_state, line);
+                    handle_for_statement(interpreter, self, self.lexical_state_function_state, line);
                 }
                 TK_REPEAT => {
-                    handle_repeat_statement(interpreter, self, self.function_state, line);
+                    handle_repeat_statement(
+                        interpreter,
+                        self,
+                        self.lexical_state_function_state,
+                        line,
+                    );
                 }
                 TK_FUNCTION => {
-                    handle_function_statement(interpreter, self, self.function_state, line);
+                    handle_function_statement(
+                        interpreter,
+                        self,
+                        self.lexical_state_function_state,
+                        line,
+                    );
                 }
                 TK_LOCAL => {
                     luax_next(interpreter, self);
                     if testnext(interpreter, self, TK_FUNCTION as i32) != 0 {
-                        handle_local_function(interpreter, self, self.function_state);
+                        handle_local_function(interpreter, self, self.lexical_state_function_state);
                     } else {
-                        handle_local_statement(interpreter, self, self.function_state);
+                        handle_local_statement(interpreter, self, self.lexical_state_function_state);
                     }
                 }
                 TK_DBCOLON => {
@@ -109,29 +122,30 @@ impl LexicalState {
                     handle_label_statement(
                         interpreter,
                         self,
-                        self.function_state,
+                        self.lexical_state_function_state,
                         str_checkname(interpreter, self),
                         line,
                     );
                 }
                 TK_RETURN => {
                     luax_next(interpreter, self);
-                    handle_return_statement(interpreter, self, self.function_state);
+                    handle_return_statement(interpreter, self, self.lexical_state_function_state);
                 }
                 TK_BREAK => {
-                    breakstat(interpreter, self, self.function_state);
+                    breakstat(interpreter, self, self.lexical_state_function_state);
                 }
                 TK_GOTO => {
                     luax_next(interpreter, self);
-                    gotostat(interpreter, self, self.function_state);
+                    gotostat(interpreter, self, self.lexical_state_function_state);
                 }
                 _ => {
-                    handle_expression_statement(interpreter, self, self.function_state);
+                    handle_expression_statement(interpreter, self, self.lexical_state_function_state);
                 }
             }
-            (*self.function_state).freereg = luay_nvarstack(self, self.function_state) as u8;
-            (*self.interpreter).count_c_calls = (*self.interpreter).count_c_calls.wrapping_sub(1);
-            (*self.interpreter).count_c_calls;
+            (*self.lexical_state_function_state).freereg =
+                luay_nvarstack(self, self.lexical_state_function_state) as u8;
+            (*interpreter).count_c_calls = (*interpreter).count_c_calls.wrapping_sub(1);
+            (*interpreter).count_c_calls;
         }
     }
     pub unsafe fn create_label(
@@ -142,7 +156,7 @@ impl LexicalState {
         is_last: bool,
     ) -> bool {
         unsafe {
-            let function_state: *mut FunctionState = self.function_state;
+            let function_state: *mut FunctionState = self.lexical_state_function_state;
             let ll: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;
             let l: i32 = newlabelentry(
                 interpreter,
@@ -194,23 +208,28 @@ impl LexicalState {
             let mut count: i32 = 1;
             self.parse_expression(interpreter, expression_description);
             while testnext(interpreter, self, CHARACTER_COMMA as i32) != 0 {
-                luak_exp2nextreg(interpreter, self, self.function_state, expression_description);
+                luak_exp2nextreg(
+                    interpreter,
+                    self,
+                    self.lexical_state_function_state,
+                    expression_description,
+                );
                 self.parse_expression(interpreter, expression_description);
                 count += 1;
             }
             return count;
         }
     }
-    pub unsafe fn add_prototype(&mut self) -> *mut Prototype {
+    pub unsafe fn add_prototype(&mut self, interpreter: *mut Interpreter) -> *mut Prototype {
         unsafe {
-            let function_state: *mut FunctionState = self.function_state;
+            let function_state: *mut FunctionState = self.lexical_state_function_state;
             let prototype: *mut Prototype = (*function_state).prototype;
             if (*function_state).count_prototypes
                 >= (*prototype).prototype_prototypes.get_size() as i32
             {
                 let mut old_size = (*prototype).prototype_prototypes.get_size();
                 (*prototype).prototype_prototypes.grow(
-                    self.interpreter,
+                    interpreter,
                     (*function_state).count_prototypes as usize,
                     if ((1 << 8 + 8 + 1) - 1) as usize
                         <= (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
@@ -229,7 +248,7 @@ impl LexicalState {
                     *fresh46 = null_mut();
                 }
             }
-            let clp: *mut Prototype = luaf_newproto(self.interpreter);
+            let clp: *mut Prototype = luaf_newproto(interpreter);
             let np = (*function_state).count_prototypes;
             (*function_state).count_prototypes = (*function_state).count_prototypes + 1;
             let ref mut target =
@@ -239,7 +258,7 @@ impl LexicalState {
                 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0
             {
                 luac_barrier_(
-                    self.interpreter,
+                    interpreter,
                     &mut (*(prototype as *mut Object)),
                     &mut (*(clp as *mut Object)),
                 );
@@ -288,7 +307,7 @@ pub unsafe fn newlabelentry(
         *fresh44 = name;
         (*((*l).vectort_pointer).offset(n as isize)).line = line;
         (*((*l).vectort_pointer).offset(n as isize)).count_active_variables =
-            (*(*lexical_state).function_state).count_active_variables;
+            (*(*lexical_state).lexical_state_function_state).count_active_variables;
         (*((*l).vectort_pointer).offset(n as isize)).close = 0;
         (*((*l).vectort_pointer).offset(n as isize)).program_counter = program_counter;
         (*l).set_length(n as usize + 1);
@@ -320,7 +339,7 @@ pub unsafe fn solvegotos(
 ) -> bool {
     unsafe {
         let gl: *mut VectorT<LabelDescription> = &mut (*(*lexical_state).dynamic_data).goto_;
-        let mut i: i32 = (*(*(*lexical_state).function_state).block_control).first_goto;
+        let mut i: i32 = (*(*(*lexical_state).lexical_state_function_state).block_control).first_goto;
         let mut needsclose = false;
         while i < (*gl).get_length() as i32 {
             if (*((*gl).vectort_pointer).offset(i as isize)).name == (*label_description).name {
@@ -370,7 +389,8 @@ pub unsafe fn codeclosure(
     v: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*(*lexical_state).function_state).previous;
+        let function_state: *mut FunctionState =
+            (*(*lexical_state).lexical_state_function_state).function_state_previous;
         init_exp(
             v,
             ExpressionKind::Relocatable,
@@ -386,17 +406,17 @@ pub unsafe fn codeclosure(
         luak_exp2nextreg(interpreter, lexical_state, function_state, v);
     }
 }
-pub unsafe fn open_func(
+pub unsafe fn open_function(
     interpreter: *mut Interpreter,
     lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
+    previous: * mut FunctionState,
     block_control: *mut BlockControl,
 ) {
     unsafe {
         let prototype: *mut Prototype = (*function_state).prototype;
-        (*function_state).previous = (*lexical_state).function_state;
-        (*function_state).lexical_state = lexical_state;
-        (*lexical_state).function_state = function_state;
+        (*function_state).function_state_previous = previous;
+        (*lexical_state).lexical_state_function_state = function_state;
         (*function_state).program_counter = 0;
         (*function_state).previous_line = (*prototype).prototype_line_defined;
         (*function_state).iwthabs = 0;
@@ -445,7 +465,12 @@ pub unsafe fn close_func(
             0,
         );
         leaveblock(interpreter, lexical_state, function_state);
-        luak_finish(interpreter, lexical_state, function_state, (*function_state).prototype);
+        luak_finish(
+            interpreter,
+            lexical_state,
+            function_state,
+            (*function_state).prototype,
+        );
         (*prototype).prototype_code.shrink(
             &mut *interpreter,
             (*function_state).program_counter as usize,
@@ -473,7 +498,7 @@ pub unsafe fn close_func(
         (*prototype)
             .prototype_upvalues
             .shrink(&mut *interpreter, (*function_state).count_upvalues as usize);
-        (*lexical_state).function_state = (*function_state).previous;
+        (*lexical_state).lexical_state_function_state = (*function_state).function_state_previous;
         if (*(*interpreter).global).gc_debt > 0 {
             (*interpreter).luac_step();
         }
@@ -497,7 +522,7 @@ pub unsafe fn fieldsel(
     v: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let mut key: ExpressionDescription = ExpressionDescription::new();
         luak_exp2anyregup(interpreter, lexical_state, function_state, v);
         luax_next(interpreter, lexical_state);
@@ -513,7 +538,12 @@ pub unsafe fn yindex(
     unsafe {
         luax_next(interpreter, lexical_state);
         (*lexical_state).parse_expression(interpreter, v);
-        code_expression_to_value(interpreter, lexical_state, (*lexical_state).function_state, v);
+        code_expression_to_value(
+            interpreter,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
+            v,
+        );
         checknext(interpreter, lexical_state, CHARACTER_BRACKET_RIGHT as i32);
     }
 }
@@ -523,8 +553,8 @@ pub unsafe fn recfield(
     constructor_control: *mut ConstructorControl,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let reg: i32 = (*(*lexical_state).function_state).freereg as i32;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
+        let reg: i32 = (*(*lexical_state).lexical_state_function_state).freereg as i32;
         let mut key: ExpressionDescription = ExpressionDescription::new();
         let mut value: ExpressionDescription = ExpressionDescription::new();
         if (*lexical_state).token.token == TK_NAME as i32 {
@@ -543,9 +573,21 @@ pub unsafe fn recfield(
         (*constructor_control).count_table += 1;
         checknext(interpreter, lexical_state, CHARACTER_EQUAL as i32);
         let mut table: ExpressionDescription = *(*constructor_control).constructor_control_table;
-        luak_indexed(interpreter, lexical_state, function_state, &mut table, &mut key);
+        luak_indexed(
+            interpreter,
+            lexical_state,
+            function_state,
+            &mut table,
+            &mut key,
+        );
         (*lexical_state).parse_expression(interpreter, &mut value);
-        luak_storevar(interpreter, lexical_state, function_state, &mut table, &mut value);
+        luak_storevar(
+            interpreter,
+            lexical_state,
+            function_state,
+            &mut table,
+            &mut value,
+        );
         (*function_state).freereg = reg as u8;
     }
 }
@@ -592,9 +634,18 @@ pub unsafe fn constructor(
     t: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let line: i32 = (*lexical_state).line_number;
-        let program_counter: i32 = code_abck(interpreter, lexical_state, function_state, OP_NEWTABLE, 0, 0, 0, 0);
+        let program_counter: i32 = code_abck(
+            interpreter,
+            lexical_state,
+            function_state,
+            OP_NEWTABLE,
+            0,
+            0,
+            0,
+            0,
+        );
         let mut constructor_control: ConstructorControl = ConstructorControl::new();
         luak_code(interpreter, lexical_state, function_state, 0u32);
         constructor_control.count_to_store = 0;
@@ -614,7 +665,12 @@ pub unsafe fn constructor(
         );
         checknext(interpreter, lexical_state, CHARACTER_BRACE_LEFT as i32);
         while !((*lexical_state).token.token == CHARACTER_BRACE_RIGHT as i32) {
-            closelistfield(interpreter, lexical_state, function_state, &mut constructor_control);
+            closelistfield(
+                interpreter,
+                lexical_state,
+                function_state,
+                &mut constructor_control,
+            );
             field(interpreter, lexical_state, &mut constructor_control);
             if !(testnext(interpreter, lexical_state, CHARACTER_COMMA as i32) != 0
                 || testnext(interpreter, lexical_state, CHARACTER_SEMICOLON as i32) != 0)
@@ -629,7 +685,12 @@ pub unsafe fn constructor(
             CHARACTER_BRACE_LEFT as i32,
             line,
         );
-        lastlistfield(interpreter, lexical_state, function_state, &mut constructor_control);
+        lastlistfield(
+            interpreter,
+            lexical_state,
+            function_state,
+            &mut constructor_control,
+        );
         luak_settablesize(
             interpreter,
             function_state,
@@ -642,7 +703,7 @@ pub unsafe fn constructor(
 }
 pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let prototype: *mut Prototype = (*function_state).prototype;
         let mut nparams: i32 = 0;
         let mut is_variable_arguments = false;
@@ -682,14 +743,14 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
             setvararg(
                 interpreter,
                 lexical_state,
-                 function_state,
+                function_state,
                 (*prototype).prototype_count_parameters as i32,
             );
         }
         luak_reserveregs(
             interpreter,
             lexical_state,
-             function_state,
+            function_state,
             (*function_state).count_active_variables as i32,
         );
     }
@@ -704,8 +765,7 @@ pub unsafe fn body(
     unsafe {
         let mut new_fs: FunctionState = FunctionState {
             prototype: null_mut(),
-            previous: null_mut(),
-            lexical_state: null_mut(),
+            function_state_previous: null_mut(),
             block_control: null_mut(),
             program_counter: 0,
             last_target: 0,
@@ -723,9 +783,9 @@ pub unsafe fn body(
             needs_close: false,
         };
         let mut block_control = BlockControl::new();
-        new_fs.prototype = (*lexical_state).add_prototype();
+        new_fs.prototype = (*lexical_state).add_prototype(interpreter);
         (*new_fs.prototype).prototype_line_defined = line;
-        open_func(interpreter, lexical_state, &mut new_fs, &mut block_control);
+        open_function(interpreter, lexical_state, &mut new_fs, (*lexical_state).lexical_state_function_state, &mut block_control);
         checknext(
             interpreter,
             lexical_state,
@@ -762,7 +822,11 @@ pub unsafe fn body(
             line,
         );
         codeclosure(interpreter, lexical_state, expression_description);
-        close_func(interpreter, lexical_state, (*lexical_state).function_state);
+        close_func(
+            interpreter,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
+        );
     }
 }
 pub unsafe fn funcargs(
@@ -771,7 +835,7 @@ pub unsafe fn funcargs(
     expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let mut args: ExpressionDescription = ExpressionDescription::new();
         let line: i32 = (*lexical_state).line_number;
         match (*lexical_state).token.token {
@@ -858,7 +922,12 @@ pub unsafe fn primaryexp(
                     CHARACTER_PARENTHESIS_LEFT as i32,
                     line,
                 );
-                luak_dischargevars(interpreter, lexical_state, (*lexical_state).function_state, v);
+                luak_dischargevars(
+                    interpreter,
+                    lexical_state,
+                    (*lexical_state).lexical_state_function_state,
+                    v,
+                );
                 return;
             }
             291 => {
@@ -881,7 +950,7 @@ pub unsafe fn suffixedexp(
     v: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         primaryexp(interpreter, lexical_state, v);
         loop {
             match (*lexical_state).token.token {
@@ -938,7 +1007,8 @@ pub unsafe fn simpleexp(
                 init_exp(v, ExpressionKind::False, 0);
             }
             TK_DOTS => {
-                let function_state: *mut FunctionState = (*lexical_state).function_state;
+                let function_state: *mut FunctionState =
+                    (*lexical_state).lexical_state_function_state;
                 if !(*(*function_state).prototype).prototype_is_variable_arguments {
                     luax_syntaxerror(
                         interpreter,
@@ -949,7 +1019,16 @@ pub unsafe fn simpleexp(
                 init_exp(
                     v,
                     ExpressionKind::VariableArguments,
-                    code_abck(interpreter, lexical_state, function_state, OP_VARARG, 0, 0, 1, 0),
+                    code_abck(
+                        interpreter,
+                        lexical_state,
+                        function_state,
+                        OP_VARARG,
+                        0,
+                        0,
+                        1,
+                        0,
+                    ),
                 );
             }
             123 => {
@@ -1124,7 +1203,7 @@ pub unsafe fn new_localvar(
     name: *mut TString,
 ) -> i32 {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let dynamic_data: *mut DynamicData = (*lexical_state).dynamic_data;
         let var: *mut VariableDescription;
         checklimit(
@@ -1165,7 +1244,7 @@ pub unsafe fn check_readonly(
     expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let mut variable_name: *mut TString = null_mut();
         match (*expression_description).expression_kind {
             ExpressionKind::Constant2 => {
@@ -1214,7 +1293,7 @@ pub unsafe fn adjustlocalvars(
     count_variables: i32,
 ) {
     unsafe {
-        let function_state = (*lexical_state).function_state;
+        let function_state = (*lexical_state).lexical_state_function_state;
         let mut reglevel_0 = luay_nvarstack(lexical_state, function_state);
         for _ in 0..count_variables {
             let fresh39 = (*function_state).count_active_variables;
@@ -1241,8 +1320,15 @@ pub unsafe fn singlevar(
 ) {
     unsafe {
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state);
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
-        singlevaraux(interpreter, lexical_state, function_state, variable_name, var, 1);
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
+        singlevaraux(
+            interpreter,
+            lexical_state,
+            function_state,
+            variable_name,
+            var,
+            1,
+        );
         if (*var).expression_kind == ExpressionKind::Void {
             let mut key: ExpressionDescription = ExpressionDescription::new();
             singlevaraux(
@@ -1267,7 +1353,7 @@ pub unsafe fn adjust_assign(
     expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let needed: i32 = count_variables - count_expressions;
         if (*expression_description).expression_kind == ExpressionKind::Call
             || (*expression_description).expression_kind == ExpressionKind::VariableArguments
@@ -1276,10 +1362,21 @@ pub unsafe fn adjust_assign(
             if extra < 0 {
                 extra = 0;
             }
-            luak_setreturns(interpreter, lexical_state, function_state, expression_description, extra);
+            luak_setreturns(
+                interpreter,
+                lexical_state,
+                function_state,
+                expression_description,
+                extra,
+            );
         } else {
             if (*expression_description).expression_kind != ExpressionKind::Void {
-                luak_exp2nextreg(interpreter, lexical_state, function_state, expression_description);
+                luak_exp2nextreg(
+                    interpreter,
+                    lexical_state,
+                    function_state,
+                    expression_description,
+                );
             }
             if needed > 0 {
                 code_constant_nil(
@@ -1305,8 +1402,8 @@ pub unsafe fn jumpscopeerror(
 ) -> ! {
     unsafe {
         let variable_name: *const i8 = (*(*getlocalvardesc(
-            lexical_state, 
-            (*lexical_state).function_state,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
             (*goto_label_description).count_active_variables as i32,
         ))
         .content
@@ -1344,8 +1441,8 @@ pub unsafe fn solvegoto(
         }
         luak_patchlist(
             interpreter,
-            lexical_state, 
-            (*lexical_state).function_state,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
             (*goto_label_description).program_counter,
             (*label_description).program_counter,
         );
@@ -1371,7 +1468,14 @@ pub unsafe fn subexpr(
             let line: i32 = (*lexical_state).line_number;
             luax_next(interpreter, lexical_state);
             subexpr(interpreter, lexical_state, v, 12 as i32);
-            luak_prefix(interpreter, lexical_state, (*lexical_state).function_state, uop, v, line);
+            luak_prefix(
+                interpreter,
+                lexical_state,
+                (*lexical_state).lexical_state_function_state,
+                uop,
+                v,
+                line,
+            );
         } else {
             simpleexp(interpreter, lexical_state, v);
         }
@@ -1382,7 +1486,13 @@ pub unsafe fn subexpr(
             let mut v2: ExpressionDescription = ExpressionDescription::new();
             let line_0: i32 = (*lexical_state).line_number;
             luax_next(interpreter, lexical_state);
-            luak_infix(interpreter, lexical_state, (*lexical_state).function_state, op, v);
+            luak_infix(
+                interpreter,
+                lexical_state,
+                (*lexical_state).lexical_state_function_state,
+                op,
+                v,
+            );
             let nextop = subexpr(
                 interpreter,
                 lexical_state,
@@ -1392,7 +1502,7 @@ pub unsafe fn subexpr(
             luak_posfix(
                 interpreter,
                 lexical_state,
-                (*lexical_state).function_state,
+                (*lexical_state).lexical_state_function_state,
                 op,
                 v,
                 &mut v2,
@@ -1424,7 +1534,7 @@ pub unsafe fn check_conflict(
     v: *mut ExpressionDescription,
 ) {
     unsafe {
-        let function_state: *mut FunctionState = (*lexical_state).function_state;
+        let function_state: *mut FunctionState = (*lexical_state).lexical_state_function_state;
         let extra: i32 = (*function_state).freereg as i32;
         let mut conflict: i32 = 0;
         while !lhs_assign.is_null() {
@@ -1461,7 +1571,7 @@ pub unsafe fn check_conflict(
             if (*v).expression_kind == ExpressionKind::Local {
                 code_abck(
                     interpreter,
-                    lexical_state, 
+                    lexical_state,
                     function_state,
                     OP_MOVE,
                     extra,
@@ -1472,7 +1582,7 @@ pub unsafe fn check_conflict(
             } else {
                 code_abck(
                     interpreter,
-                    lexical_state, 
+                    lexical_state,
                     function_state,
                     OPCODE_GET_UPVALUE,
                     extra,
@@ -1526,11 +1636,14 @@ pub unsafe fn restassign(
                     &mut expression_description,
                 );
             } else {
-                luak_setoneret((*lexical_state).function_state, &mut expression_description);
+                luak_setoneret(
+                    (*lexical_state).lexical_state_function_state,
+                    &mut expression_description,
+                );
                 luak_storevar(
                     interpreter,
                     lexical_state,
-                    (*lexical_state).function_state,
+                    (*lexical_state).lexical_state_function_state,
                     &mut (*lhs_assign),
                     &mut expression_description,
                 );
@@ -1540,12 +1653,12 @@ pub unsafe fn restassign(
         init_exp(
             &mut expression_description,
             ExpressionKind::Nonrelocatable,
-            (*(*lexical_state).function_state).freereg as i32 - 1,
+            (*(*lexical_state).lexical_state_function_state).freereg as i32 - 1,
         );
         luak_storevar(
             interpreter,
             lexical_state,
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             &mut (*lhs_assign),
             &mut expression_description,
         );
@@ -1558,7 +1671,12 @@ pub unsafe fn cond(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         if v.expression_kind == ExpressionKind::Nil {
             v.expression_kind = ExpressionKind::False;
         }
-        luak_goiftrue(interpreter, lexical_state, (*lexical_state).function_state, &mut v);
+        luak_goiftrue(
+            interpreter,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
+            &mut v,
+        );
         return v.f;
     }
 }
@@ -1571,7 +1689,7 @@ pub unsafe fn gotostat(
         let line: i32 = (*lexical_state).line_number;
         let name: *mut TString = str_checkname(interpreter, lexical_state);
         let label_description = find_label(
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             (*lexical_state).dynamic_data,
             name,
         );
@@ -1585,16 +1703,25 @@ pub unsafe fn gotostat(
             );
         } else {
             let level: i32 = reglevel(
-                lexical_state, 
+                lexical_state,
                 function_state,
                 (*label_description).count_active_variables as i32,
             );
             if luay_nvarstack(lexical_state, function_state) > level {
-                code_abck(interpreter, lexical_state, function_state, OP_CLOSE, level, 0, 0, 0);
+                code_abck(
+                    interpreter,
+                    lexical_state,
+                    function_state,
+                    OP_CLOSE,
+                    level,
+                    0,
+                    0,
+                    0,
+                );
             }
             luak_patchlist(
                 interpreter,
-                lexical_state, 
+                lexical_state,
                 function_state,
                 luak_jump(interpreter, lexical_state, function_state),
                 (*label_description).program_counter,
@@ -1632,7 +1759,7 @@ pub unsafe fn checkrepeated(
 ) {
     unsafe {
         let lb = find_label(
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             (*lexical_state).dynamic_data,
             name,
         );
@@ -1680,10 +1807,10 @@ pub unsafe fn handle_while_statement(
         let condexit: i32 = cond(interpreter, lexical_state);
         enterblock(lexical_state, function_state, &mut block_control, true);
         checknext(interpreter, lexical_state, TK_DO as i32);
-        handle_block(interpreter, lexical_state, (*lexical_state).function_state);
+        handle_block(interpreter, lexical_state, function_state);
         luak_patchlist(
             interpreter,
-            lexical_state, 
+            lexical_state,
             function_state,
             luak_jump(interpreter, lexical_state, function_state),
             whileinit,
@@ -1727,10 +1854,14 @@ pub unsafe fn handle_repeat_statement(
             luak_patchtohere(interpreter, lexical_state, function_state, condexit);
             code_abck(
                 interpreter,
-                lexical_state, 
+                lexical_state,
                 function_state,
                 OP_CLOSE,
-                reglevel(lexical_state, function_state, bl2.count_active_variables as i32),
+                reglevel(
+                    lexical_state,
+                    function_state,
+                    bl2.count_active_variables as i32,
+                ),
                 0,
                 0,
                 0,
@@ -1738,7 +1869,13 @@ pub unsafe fn handle_repeat_statement(
             condexit = luak_jump(interpreter, lexical_state, function_state);
             luak_patchtohere(interpreter, lexical_state, function_state, exit_0);
         }
-        luak_patchlist(interpreter, lexical_state, function_state, condexit, repeat_init);
+        luak_patchlist(
+            interpreter,
+            lexical_state,
+            function_state,
+            condexit,
+            repeat_init,
+        );
         leaveblock(interpreter, lexical_state, function_state);
     }
 }
@@ -1749,7 +1886,7 @@ pub unsafe fn exp1(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         luak_exp2nextreg(
             interpreter,
             lexical_state,
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             &mut expression_description,
         );
     }
@@ -1770,7 +1907,7 @@ pub unsafe fn handle_forbody(
         checknext(interpreter, lexical_state, TK_DO as i32);
         let prep: i32 = luak_codeabx(
             interpreter,
-            lexical_state, 
+            lexical_state,
             function_state,
             FOR_PREP[isgen as usize],
             base,
@@ -1779,11 +1916,15 @@ pub unsafe fn handle_forbody(
         enterblock(lexical_state, function_state, &mut block_control, false);
         adjustlocalvars(interpreter, lexical_state, count_variables);
         luak_reserveregs(interpreter, lexical_state, function_state, count_variables);
-        handle_block(interpreter, lexical_state, (*lexical_state).function_state);
+        handle_block(
+            interpreter,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
+        );
         leaveblock(interpreter, lexical_state, function_state);
         fixforjump(
             interpreter,
-            lexical_state, 
+            lexical_state,
             function_state,
             prep,
             (*function_state).code_get_label(),
@@ -1792,7 +1933,7 @@ pub unsafe fn handle_forbody(
         if isgen != 0 {
             code_abck(
                 interpreter,
-                lexical_state, 
+                lexical_state,
                 function_state,
                 OP_TFORCALL,
                 base,
@@ -1804,13 +1945,20 @@ pub unsafe fn handle_forbody(
         }
         let endfor: i32 = luak_codeabx(
             interpreter,
-            lexical_state, 
+            lexical_state,
             function_state,
             FOR_LOOP[isgen as usize],
             base,
             0,
         );
-        fixforjump(interpreter, lexical_state, function_state, endfor, prep + 1, 1);
+        fixforjump(
+            interpreter,
+            lexical_state,
+            function_state,
+            endfor,
+            prep + 1,
+            1,
+        );
         luak_fixline(interpreter, lexical_state, function_state, line);
     }
 }
@@ -1849,7 +1997,7 @@ pub unsafe fn handle_for_numeric(
         } else {
             code_constant_integer(
                 interpreter,
-                lexical_state, 
+                lexical_state,
                 function_state,
                 (*function_state).freereg as i32,
                 1 as i64,
@@ -1860,7 +2008,7 @@ pub unsafe fn handle_for_numeric(
         handle_forbody(
             interpreter,
             lexical_state,
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             base,
             line,
             1,
@@ -1923,7 +2071,7 @@ pub unsafe fn handle_for_list(
         handle_forbody(
             interpreter,
             lexical_state,
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             base,
             line,
             count_variables - 4,
@@ -1947,7 +2095,7 @@ pub unsafe fn handle_for_statement(
                 handle_for_numeric(
                     interpreter,
                     lexical_state,
-                    (*lexical_state).function_state,
+                    (*lexical_state).lexical_state_function_state,
                     variable_name,
                     line,
                 );
@@ -1956,7 +2104,7 @@ pub unsafe fn handle_for_statement(
                 handle_for_list(
                     interpreter,
                     lexical_state,
-                    (*lexical_state).function_state,
+                    (*lexical_state).lexical_state_function_state,
                     variable_name,
                 );
             }
@@ -1993,7 +2141,12 @@ pub unsafe fn handle_test_then_block(
         checknext(interpreter, lexical_state, TK_THEN as i32);
         if (*lexical_state).token.token == TK_BREAK as i32 {
             let line: i32 = (*lexical_state).line_number;
-            luak_goiffalse(interpreter, lexical_state, (*lexical_state).function_state, &mut v);
+            luak_goiffalse(
+                interpreter,
+                lexical_state,
+                (*lexical_state).lexical_state_function_state,
+                &mut v,
+            );
             luax_next(interpreter, lexical_state);
             enterblock(lexical_state, function_state, &mut block_control, false);
             newgotoentry(
@@ -2017,7 +2170,12 @@ pub unsafe fn handle_test_then_block(
                 jf = luak_jump(interpreter, lexical_state, function_state);
             }
         } else {
-            luak_goiftrue(interpreter, lexical_state, (*lexical_state).function_state, &mut v);
+            luak_goiftrue(
+                interpreter,
+                lexical_state,
+                (*lexical_state).lexical_state_function_state,
+                &mut v,
+            );
             enterblock(lexical_state, function_state, &mut block_control, false);
             jf = v.f;
         }
@@ -2028,7 +2186,7 @@ pub unsafe fn handle_test_then_block(
         {
             luak_concat(
                 interpreter,
-                lexical_state, 
+                lexical_state,
                 function_state,
                 escapelist,
                 luak_jump(interpreter, lexical_state, function_state),
@@ -2048,19 +2206,23 @@ pub unsafe fn handle_if_statement(
         handle_test_then_block(
             interpreter,
             lexical_state,
-            (*lexical_state).function_state,
+            (*lexical_state).lexical_state_function_state,
             &mut escape_list,
         );
         while (*lexical_state).token.token == TK_ELSEIF as i32 {
             handle_test_then_block(
                 interpreter,
                 lexical_state,
-                (*lexical_state).function_state,
+                (*lexical_state).lexical_state_function_state,
                 &mut escape_list,
             );
         }
         if testnext(interpreter, lexical_state, TK_ELSE as i32) != 0 {
-            handle_block(interpreter, lexical_state, (*lexical_state).function_state);
+            handle_block(
+                interpreter,
+                lexical_state,
+                (*lexical_state).lexical_state_function_state,
+            );
         }
         check_match(
             interpreter,
@@ -2140,7 +2302,9 @@ pub unsafe fn handle_local_statement(
                 str_checkname(interpreter, lexical_state),
             );
             kind = getlocalattribute(interpreter, lexical_state);
-            (*getlocalvardesc(lexical_state, function_state, vidx)).content.kind = kind as u8;
+            (*getlocalvardesc(lexical_state, function_state, vidx))
+                .content
+                .kind = kind as u8;
             if kind == 2 {
                 if toclose != -1 {
                     luak_semerror(
@@ -2166,7 +2330,12 @@ pub unsafe fn handle_local_statement(
         var = getlocalvardesc(lexical_state, function_state, vidx);
         if count_variables == count_expressions
             && (*var).content.kind as i32 == 1
-            && luak_exp2const(lexical_state, function_state, &mut expression_description, &mut (*var).k)
+            && luak_exp2const(
+                lexical_state,
+                function_state,
+                &mut expression_description,
+                &mut (*var).k,
+            )
         {
             (*var).content.kind = 3 as u8;
             adjustlocalvars(interpreter, lexical_state, count_variables - 1);
@@ -2266,7 +2435,13 @@ pub unsafe fn handle_return_statement(
             if expression_description.expression_kind == ExpressionKind::Call
                 || expression_description.expression_kind == ExpressionKind::VariableArguments
             {
-                luak_setreturns(interpreter, lexical_state, function_state, &mut expression_description, -1);
+                luak_setreturns(
+                    interpreter,
+                    lexical_state,
+                    function_state,
+                    &mut expression_description,
+                    -1,
+                );
                 if expression_description.expression_kind == ExpressionKind::Call
                     && nret == 1
                     && !(*(*function_state).block_control).is_inside_tbc
@@ -2284,9 +2459,19 @@ pub unsafe fn handle_return_statement(
                 }
                 nret = -1;
             } else if nret == 1 {
-                first = luak_exp2anyreg(interpreter, lexical_state, function_state, &mut expression_description);
+                first = luak_exp2anyreg(
+                    interpreter,
+                    lexical_state,
+                    function_state,
+                    &mut expression_description,
+                );
             } else {
-                luak_exp2nextreg(interpreter, lexical_state, function_state, &mut expression_description);
+                luak_exp2nextreg(
+                    interpreter,
+                    lexical_state,
+                    function_state,
+                    &mut expression_description,
+                );
             }
         }
         luak_ret(interpreter, lexical_state, function_state, first, nret);
@@ -2301,14 +2486,20 @@ pub unsafe fn handle_main_function(
     unsafe {
         let mut block_control: BlockControl = BlockControl::new();
         let env: *mut UpValueDescription;
-        open_func(
+        open_function(
             interpreter,
             lexical_state,
             function_state,
+            (*lexical_state).lexical_state_function_state,
             &mut block_control,
         );
         setvararg(interpreter, lexical_state, function_state, 0);
-        env = allocate_upvalue_description(interpreter, lexical_state, function_state, (*function_state).prototype);
+        env = allocate_upvalue_description(
+            interpreter,
+            lexical_state,
+            function_state,
+            (*function_state).prototype,
+        );
         (*env).is_in_stack = true;
         (*env).index = 0;
         (*env).kind = 0;
@@ -2326,7 +2517,11 @@ pub unsafe fn handle_main_function(
         luax_next(interpreter, lexical_state);
         statlist(interpreter, lexical_state);
         check(interpreter, lexical_state, TK_EOS as i32);
-        close_func(interpreter, lexical_state, (*lexical_state).function_state);
+        close_func(
+            interpreter,
+            lexical_state,
+            (*lexical_state).lexical_state_function_state,
+        );
     }
 }
 pub unsafe fn save(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, c: i32) {
@@ -2513,11 +2708,10 @@ pub unsafe fn luax_setinput(
 ) {
     unsafe {
         (*lexical_state).token.token = 0;
-        (*lexical_state).interpreter = interpreter;
         (*lexical_state).current = firstchar;
         (*lexical_state).look_ahead.token = TK_EOS as i32;
         (*lexical_state).zio = zio;
-        (*lexical_state).function_state = null_mut();
+        (*lexical_state).lexical_state_function_state = null_mut();
         (*lexical_state).line_number = 1;
         (*lexical_state).last_line = 1;
         (*lexical_state).source = source;

@@ -9,7 +9,7 @@ pub struct ZIO {
     pub pointer: *const i8,
     pub reader: ReadFunction,
     pub data: *mut libc::c_void,
-    pub interpreter: *mut Interpreter,
+    pub zio_interpreter: *mut Interpreter,
 }
 impl ZIO {
     pub fn new(
@@ -18,7 +18,7 @@ impl ZIO {
         data: *mut libc::c_void,
     ) -> ZIO {
         return ZIO {
-            interpreter: interpreter,
+            zio_interpreter: interpreter,
             reader: reader,
             data: data,
             length: 0,
@@ -29,7 +29,7 @@ impl ZIO {
 pub unsafe fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: usize = 0;
-        let interpreter: *mut Interpreter = (*zio).interpreter;
+        let interpreter: *mut Interpreter = (*zio).zio_interpreter;
         let buffer: *const i8 = ((*zio).reader).expect("non-null function pointer")(
             interpreter,
             (*zio).data,

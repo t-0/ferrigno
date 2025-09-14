@@ -7,7 +7,7 @@ use std::ptr::*;
 pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
 #[repr(C)]
 pub struct DumpState {
-    pub interpreter: *mut Interpreter,
+    pub dumpstate_interpreter: *mut Interpreter,
     pub write_function: WriteFunction,
     pub pointer: *mut libc::c_void,
     pub is_strip: bool,
@@ -21,7 +21,7 @@ impl DumpState {
         is_strip: bool,
     ) -> Self {
         return DumpState {
-            interpreter: interpreter,
+            dumpstate_interpreter: interpreter,
             write_function,
             pointer,
             is_strip: is_strip,
@@ -33,7 +33,7 @@ impl DumpState {
             if self.status == 0 && size > 0 {
                 self.status = (Some((self.write_function).expect("non-null function pointer")))
                     .expect("non-null function pointer")(
-                    self.interpreter,
+                    self.dumpstate_interpreter,
                     pointer,
                     size as usize,
                     self.pointer,

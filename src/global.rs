@@ -751,10 +751,10 @@ impl Global {
                     if w.is_null() {
                         break;
                     } else {
-                        let h: *mut Table = &mut (*(w as *mut Table));
-                        next = (*h).gc_list;
-                        (*h).set_marked((*h).get_marked() | 1 << 5);
-                        if traverseephemeron(self, h, is_reverse) != 0 {
+                        let table: *mut Table = &mut (*(w as *mut Table));
+                        next = (*table).gc_list;
+                        (*table).set_marked((*table).get_marked() | 1 << 5);
+                        if traverseephemeron(self, table, is_reverse) != 0 {
                             (*self).propagateall();
                             changed = true;
                         }
@@ -790,10 +790,10 @@ impl Global {
 pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
-            let h: *mut Table = &mut (*(l as *mut Table));
+            let table: *mut Table = &mut (*(l as *mut Table));
             let limit: *mut Node =
-                &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
-            let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
+                &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
+            let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
                     global,
@@ -818,12 +818,12 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
 pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Object) {
     unsafe {
         while l != f {
-            let h: *mut Table = &mut (*(l as *mut Table));
+            let table: *mut Table = &mut (*(l as *mut Table));
             let limit: *mut Node =
-                &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
-            let asize: u32 = luah_realasize(h);
+                &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
+            let asize: u32 = luah_realasize(table);
             for i in 0..asize {
-                let tvalue: *mut TValue = &mut *((*h).array).offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 if iscleared(
                     global,
                     if (*tvalue).is_collectable() {
@@ -836,7 +836,7 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
                     (*tvalue).set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
             }
-            let mut node: *mut Node = &mut *((*h).node).offset(0 as isize) as *mut Node;
+            let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
                     global,

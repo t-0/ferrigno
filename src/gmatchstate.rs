@@ -21,7 +21,7 @@ impl GMatchState {
     }
     pub unsafe fn auxiliary(&mut self, interpreter: *mut Interpreter) -> i32 {
         unsafe {
-            self.match_state.interpreter = interpreter;
+            self.match_state.matchstate_interpreter = interpreter;
             let mut src = self.source;
             while src <= self.match_state.src_end {
                 self.match_state.reprepstate();
