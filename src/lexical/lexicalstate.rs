@@ -129,7 +129,7 @@ impl LexicalState {
                     handle_expression_statement(interpreter, self, self.function_state);
                 }
             }
-            (*self.function_state).freereg = luay_nvarstack(self.function_state) as u8;
+            (*self.function_state).freereg = luay_nvarstack(self, self.function_state) as u8;
             (*self.interpreter).count_c_calls = (*self.interpreter).count_c_calls.wrapping_sub(1);
             (*self.interpreter).count_c_calls;
         }
@@ -163,9 +163,10 @@ impl LexicalState {
             ) {
                 code_abck(
                     interpreter,
+                    self,
                     function_state,
                     OP_CLOSE,
-                    luay_nvarstack(function_state),
+                    luay_nvarstack(self, function_state),
                     0,
                     0,
                     0,
@@ -375,6 +376,7 @@ pub unsafe fn codeclosure(
             ExpressionKind::Relocatable,
             luak_codeabx(
                 interpreter,
+                lexical_state,
                 function_state,
                 OP_CLOSURE,
                 0,
@@ -437,12 +439,13 @@ pub unsafe fn close_func(
         let prototype: *mut Prototype = (*function_state).prototype;
         luak_ret(
             interpreter,
+            lexical_state,
             function_state,
-            luay_nvarstack(function_state),
+            luay_nvarstack(lexical_state, function_state),
             0,
         );
         leaveblock(interpreter, lexical_state, function_state);
-        luak_finish(interpreter, function_state, (*function_state).prototype);
+        luak_finish(interpreter, lexical_state, function_state, (*function_state).prototype);
         (*prototype).prototype_code.shrink(
             &mut *interpreter,
             (*function_state).program_counter as usize,
@@ -591,9 +594,9 @@ pub unsafe fn constructor(
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let line: i32 = (*lexical_state).line_number;
-        let program_counter: i32 = code_abck(interpreter, function_state, OP_NEWTABLE, 0, 0, 0, 0);
+        let program_counter: i32 = code_abck(interpreter, lexical_state, function_state, OP_NEWTABLE, 0, 0, 0, 0);
         let mut constructor_control: ConstructorControl = ConstructorControl::new();
-        luak_code(interpreter, function_state, 0u32);
+        luak_code(interpreter, lexical_state, function_state, 0u32);
         constructor_control.count_to_store = 0;
         constructor_control.count_table = 0;
         constructor_control.count_array = 0;
@@ -603,7 +606,7 @@ pub unsafe fn constructor(
             ExpressionKind::Nonrelocatable,
             (*function_state).freereg as i32,
         );
-        luak_reserveregs(interpreter, function_state, 1);
+        luak_reserveregs(interpreter, lexical_state, function_state, 1);
         init_exp(
             &mut constructor_control.expression_description,
             ExpressionKind::Void,
@@ -678,13 +681,15 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
         if is_variable_arguments {
             setvararg(
                 interpreter,
-                function_state,
+                lexical_state,
+                 function_state,
                 (*prototype).prototype_count_parameters as i32,
             );
         }
         luak_reserveregs(
             interpreter,
-            function_state,
+            lexical_state,
+             function_state,
             (*function_state).count_active_variables as i32,
         );
     }
@@ -779,7 +784,7 @@ pub unsafe fn funcargs(
                     if args.expression_kind == ExpressionKind::Call
                         || args.expression_kind == ExpressionKind::VariableArguments
                     {
-                        luak_setreturns(interpreter, function_state, &mut args, -1);
+                        luak_setreturns(interpreter, lexical_state, function_state, &mut args, -1);
                     }
                 }
                 check_match(
@@ -822,6 +827,7 @@ pub unsafe fn funcargs(
             ExpressionKind::Call,
             code_abck(
                 interpreter,
+                lexical_state,
                 function_state,
                 OP_CALL,
                 base,
@@ -830,7 +836,7 @@ pub unsafe fn funcargs(
                 0,
             ),
         );
-        luak_fixline(interpreter, function_state, line);
+        luak_fixline(interpreter, lexical_state, function_state, line);
         (*function_state).freereg = (base + 1) as u8;
     }
 }
@@ -943,7 +949,7 @@ pub unsafe fn simpleexp(
                 init_exp(
                     v,
                     ExpressionKind::VariableArguments,
-                    code_abck(interpreter, function_state, OP_VARARG, 0, 0, 1, 0),
+                    code_abck(interpreter, lexical_state, function_state, OP_VARARG, 0, 0, 1, 0),
                 );
             }
             123 => {
@@ -1172,6 +1178,7 @@ pub unsafe fn check_readonly(
             }
             ExpressionKind::Local => {
                 let vardesc: *mut VariableDescription = getlocalvardesc(
+                    lexical_state,
                     function_state,
                     (*expression_description).value.variable.value_index as i32,
                 );
@@ -1208,13 +1215,13 @@ pub unsafe fn adjustlocalvars(
 ) {
     unsafe {
         let function_state = (*lexical_state).function_state;
-        let mut reglevel_0 = luay_nvarstack(function_state);
+        let mut reglevel_0 = luay_nvarstack(lexical_state, function_state);
         for _ in 0..count_variables {
             let fresh39 = (*function_state).count_active_variables;
             (*function_state).count_active_variables =
                 ((*function_state).count_active_variables).wrapping_add(1);
             let vidx = fresh39 as i32;
-            let var = getlocalvardesc(function_state, vidx);
+            let var = getlocalvardesc(lexical_state, function_state, vidx);
             let fresh40 = reglevel_0;
             reglevel_0 += 1;
             (*var).content.register_index = fresh40 as u8;
@@ -1269,7 +1276,7 @@ pub unsafe fn adjust_assign(
             if extra < 0 {
                 extra = 0;
             }
-            luak_setreturns(interpreter, function_state, expression_description, extra);
+            luak_setreturns(interpreter, lexical_state, function_state, expression_description, extra);
         } else {
             if (*expression_description).expression_kind != ExpressionKind::Void {
                 luak_exp2nextreg(interpreter, lexical_state, function_state, expression_description);
@@ -1277,6 +1284,7 @@ pub unsafe fn adjust_assign(
             if needed > 0 {
                 code_constant_nil(
                     interpreter,
+                    lexical_state,
                     function_state,
                     (*function_state).freereg as i32,
                     needed,
@@ -1284,7 +1292,7 @@ pub unsafe fn adjust_assign(
             }
         }
         if needed > 0 {
-            luak_reserveregs(interpreter, function_state, needed);
+            luak_reserveregs(interpreter, lexical_state, function_state, needed);
         } else {
             (*function_state).freereg = ((*function_state).freereg as i32 + needed) as u8;
         };
@@ -1297,6 +1305,7 @@ pub unsafe fn jumpscopeerror(
 ) -> ! {
     unsafe {
         let variable_name: *const i8 = (*(*getlocalvardesc(
+            lexical_state, 
             (*lexical_state).function_state,
             (*goto_label_description).count_active_variables as i32,
         ))
@@ -1335,6 +1344,7 @@ pub unsafe fn solvegoto(
         }
         luak_patchlist(
             interpreter,
+            lexical_state, 
             (*lexical_state).function_state,
             (*goto_label_description).program_counter,
             (*label_description).program_counter,
@@ -1451,6 +1461,7 @@ pub unsafe fn check_conflict(
             if (*v).expression_kind == ExpressionKind::Local {
                 code_abck(
                     interpreter,
+                    lexical_state, 
                     function_state,
                     OP_MOVE,
                     extra,
@@ -1461,6 +1472,7 @@ pub unsafe fn check_conflict(
             } else {
                 code_abck(
                     interpreter,
+                    lexical_state, 
                     function_state,
                     OPCODE_GET_UPVALUE,
                     extra,
@@ -1469,7 +1481,7 @@ pub unsafe fn check_conflict(
                     0,
                 );
             }
-            luak_reserveregs(interpreter, function_state, 1);
+            luak_reserveregs(interpreter, lexical_state, function_state, 1);
         }
     }
 }
@@ -1569,20 +1581,22 @@ pub unsafe fn gotostat(
                 lexical_state,
                 name,
                 line,
-                luak_jump(interpreter, function_state),
+                luak_jump(interpreter, lexical_state, function_state),
             );
         } else {
             let level: i32 = reglevel(
+                lexical_state, 
                 function_state,
                 (*label_description).count_active_variables as i32,
             );
-            if luay_nvarstack(function_state) > level {
-                code_abck(interpreter, function_state, OP_CLOSE, level, 0, 0, 0);
+            if luay_nvarstack(lexical_state, function_state) > level {
+                code_abck(interpreter, lexical_state, function_state, OP_CLOSE, level, 0, 0, 0);
             }
             luak_patchlist(
                 interpreter,
+                lexical_state, 
                 function_state,
-                luak_jump(interpreter, function_state),
+                luak_jump(interpreter, lexical_state, function_state),
                 (*label_description).program_counter,
             );
         };
@@ -1607,7 +1621,7 @@ pub unsafe fn breakstat(
                     .wrapping_sub(1),
             ),
             line,
-            luak_jump(interpreter, function_state),
+            luak_jump(interpreter, lexical_state, function_state),
         );
     }
 }
@@ -1669,8 +1683,9 @@ pub unsafe fn handle_while_statement(
         handle_block(interpreter, lexical_state, (*lexical_state).function_state);
         luak_patchlist(
             interpreter,
+            lexical_state, 
             function_state,
-            luak_jump(interpreter, function_state),
+            luak_jump(interpreter, lexical_state, function_state),
             whileinit,
         );
         check_match(
@@ -1681,7 +1696,7 @@ pub unsafe fn handle_while_statement(
             line,
         );
         leaveblock(interpreter, lexical_state, function_state);
-        luak_patchtohere(interpreter, function_state, condexit);
+        luak_patchtohere(interpreter, lexical_state, function_state, condexit);
     }
 }
 pub unsafe fn handle_repeat_statement(
@@ -1708,21 +1723,22 @@ pub unsafe fn handle_repeat_statement(
         let mut condexit: i32 = cond(interpreter, lexical_state);
         leaveblock(interpreter, lexical_state, function_state);
         if bl2.count_upvalues != 0 {
-            let exit_0: i32 = luak_jump(interpreter, function_state);
-            luak_patchtohere(interpreter, function_state, condexit);
+            let exit_0: i32 = luak_jump(interpreter, lexical_state, function_state);
+            luak_patchtohere(interpreter, lexical_state, function_state, condexit);
             code_abck(
                 interpreter,
+                lexical_state, 
                 function_state,
                 OP_CLOSE,
-                reglevel(function_state, bl2.count_active_variables as i32),
+                reglevel(lexical_state, function_state, bl2.count_active_variables as i32),
                 0,
                 0,
                 0,
             );
-            condexit = luak_jump(interpreter, function_state);
-            luak_patchtohere(interpreter, function_state, exit_0);
+            condexit = luak_jump(interpreter, lexical_state, function_state);
+            luak_patchtohere(interpreter, lexical_state, function_state, exit_0);
         }
-        luak_patchlist(interpreter, function_state, condexit, repeat_init);
+        luak_patchlist(interpreter, lexical_state, function_state, condexit, repeat_init);
         leaveblock(interpreter, lexical_state, function_state);
     }
 }
@@ -1754,6 +1770,7 @@ pub unsafe fn handle_forbody(
         checknext(interpreter, lexical_state, TK_DO as i32);
         let prep: i32 = luak_codeabx(
             interpreter,
+            lexical_state, 
             function_state,
             FOR_PREP[isgen as usize],
             base,
@@ -1761,11 +1778,12 @@ pub unsafe fn handle_forbody(
         );
         enterblock(lexical_state, function_state, &mut block_control, false);
         adjustlocalvars(interpreter, lexical_state, count_variables);
-        luak_reserveregs(interpreter, function_state, count_variables);
+        luak_reserveregs(interpreter, lexical_state, function_state, count_variables);
         handle_block(interpreter, lexical_state, (*lexical_state).function_state);
         leaveblock(interpreter, lexical_state, function_state);
         fixforjump(
             interpreter,
+            lexical_state, 
             function_state,
             prep,
             (*function_state).code_get_label(),
@@ -1774,6 +1792,7 @@ pub unsafe fn handle_forbody(
         if isgen != 0 {
             code_abck(
                 interpreter,
+                lexical_state, 
                 function_state,
                 OP_TFORCALL,
                 base,
@@ -1781,17 +1800,18 @@ pub unsafe fn handle_forbody(
                 count_variables,
                 0,
             );
-            luak_fixline(interpreter, function_state, line);
+            luak_fixline(interpreter, lexical_state, function_state, line);
         }
         let endfor: i32 = luak_codeabx(
             interpreter,
+            lexical_state, 
             function_state,
             FOR_LOOP[isgen as usize],
             base,
             0,
         );
-        fixforjump(interpreter, function_state, endfor, prep + 1, 1);
-        luak_fixline(interpreter, function_state, line);
+        fixforjump(interpreter, lexical_state, function_state, endfor, prep + 1, 1);
+        luak_fixline(interpreter, lexical_state, function_state, line);
     }
 }
 pub unsafe fn handle_for_numeric(
@@ -1829,11 +1849,12 @@ pub unsafe fn handle_for_numeric(
         } else {
             code_constant_integer(
                 interpreter,
+                lexical_state, 
                 function_state,
                 (*function_state).freereg as i32,
                 1 as i64,
             );
-            luak_reserveregs(interpreter, function_state, 1);
+            luak_reserveregs(interpreter, lexical_state, function_state, 1);
         }
         adjustlocalvars(interpreter, lexical_state, 3);
         handle_forbody(
@@ -1898,7 +1919,7 @@ pub unsafe fn handle_for_list(
         );
         adjustlocalvars(interpreter, lexical_state, 4);
         marktobeclosed(function_state);
-        luak_checkstack(interpreter, function_state, 3);
+        luak_checkstack(interpreter, lexical_state, function_state, 3);
         handle_forbody(
             interpreter,
             lexical_state,
@@ -1993,7 +2014,7 @@ pub unsafe fn handle_test_then_block(
                 leaveblock(interpreter, lexical_state, function_state);
                 return;
             } else {
-                jf = luak_jump(interpreter, function_state);
+                jf = luak_jump(interpreter, lexical_state, function_state);
             }
         } else {
             luak_goiftrue(interpreter, lexical_state, (*lexical_state).function_state, &mut v);
@@ -2007,12 +2028,13 @@ pub unsafe fn handle_test_then_block(
         {
             luak_concat(
                 interpreter,
+                lexical_state, 
                 function_state,
                 escapelist,
-                luak_jump(interpreter, function_state),
+                luak_jump(interpreter, lexical_state, function_state),
             );
         }
-        luak_patchtohere(interpreter, function_state, jf);
+        luak_patchtohere(interpreter, lexical_state, function_state, jf);
     }
 }
 pub unsafe fn handle_if_statement(
@@ -2047,7 +2069,7 @@ pub unsafe fn handle_if_statement(
             TK_IF as i32,
             line,
         );
-        luak_patchtohere(interpreter, function_state, escape_list);
+        luak_patchtohere(interpreter, lexical_state, function_state, escape_list);
     }
 }
 pub unsafe fn handle_local_function(
@@ -2071,7 +2093,7 @@ pub unsafe fn handle_local_function(
             false,
             (*lexical_state).line_number,
         );
-        (*localdebuginfo(function_state, fvar)).start_program_counter =
+        (*localdebuginfo(lexical_state, function_state, fvar)).start_program_counter =
             (*function_state).program_counter;
     }
 }
@@ -2118,7 +2140,7 @@ pub unsafe fn handle_local_statement(
                 str_checkname(interpreter, lexical_state),
             );
             kind = getlocalattribute(interpreter, lexical_state);
-            (*getlocalvardesc(function_state, vidx)).content.kind = kind as u8;
+            (*getlocalvardesc(lexical_state, function_state, vidx)).content.kind = kind as u8;
             if kind == 2 {
                 if toclose != -1 {
                     luak_semerror(
@@ -2141,7 +2163,7 @@ pub unsafe fn handle_local_statement(
             expression_description.expression_kind = ExpressionKind::Void;
             count_expressions = 0;
         }
-        var = getlocalvardesc(function_state, vidx);
+        var = getlocalvardesc(lexical_state, function_state, vidx);
         if count_variables == count_expressions
             && (*var).content.kind as i32 == 1
             && luak_exp2const(lexical_state, function_state, &mut expression_description, &mut (*var).k)
@@ -2161,7 +2183,7 @@ pub unsafe fn handle_local_statement(
             );
             adjustlocalvars(interpreter, lexical_state, count_variables);
         }
-        checktoclose(interpreter, function_state, toclose);
+        checktoclose(interpreter, lexical_state, function_state, toclose);
     }
 }
 pub unsafe fn handle_function_name(
@@ -2196,7 +2218,7 @@ pub unsafe fn handle_function_statement(
         body(interpreter, lexical_state, &mut b, is_method, line);
         check_readonly(interpreter, lexical_state, &mut v);
         luak_storevar(interpreter, lexical_state, function_state, &mut v, &mut b);
-        luak_fixline(interpreter, function_state, line);
+        luak_fixline(interpreter, lexical_state, function_state, line);
     }
 }
 pub unsafe fn handle_expression_statement(
@@ -2234,7 +2256,7 @@ pub unsafe fn handle_return_statement(
     unsafe {
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         let mut nret: i32;
-        let mut first: i32 = luay_nvarstack(function_state);
+        let mut first: i32 = luay_nvarstack(lexical_state, function_state);
         if block_follow_with_until((*lexical_state).token.token)
             || (*lexical_state).token.token == CHARACTER_SEMICOLON as i32
         {
@@ -2244,7 +2266,7 @@ pub unsafe fn handle_return_statement(
             if expression_description.expression_kind == ExpressionKind::Call
                 || expression_description.expression_kind == ExpressionKind::VariableArguments
             {
-                luak_setreturns(interpreter, function_state, &mut expression_description, -1);
+                luak_setreturns(interpreter, lexical_state, function_state, &mut expression_description, -1);
                 if expression_description.expression_kind == ExpressionKind::Call
                     && nret == 1
                     && !(*(*function_state).block_control).is_inside_tbc
@@ -2267,7 +2289,7 @@ pub unsafe fn handle_return_statement(
                 luak_exp2nextreg(interpreter, lexical_state, function_state, &mut expression_description);
             }
         }
-        luak_ret(interpreter, function_state, first, nret);
+        luak_ret(interpreter, lexical_state, function_state, first, nret);
         testnext(interpreter, lexical_state, CHARACTER_SEMICOLON as i32);
     }
 }
@@ -2285,7 +2307,7 @@ pub unsafe fn handle_main_function(
             function_state,
             &mut block_control,
         );
-        setvararg(interpreter, function_state, 0);
+        setvararg(interpreter, lexical_state, function_state, 0);
         env = allocate_upvalue_description(interpreter, lexical_state, function_state, (*function_state).prototype);
         (*env).is_in_stack = true;
         (*env).index = 0;

@@ -220,7 +220,7 @@ pub unsafe fn luak_indexed(interpreter: * mut Interpreter,
 ) {
     unsafe {
         if (*k).expression_kind == ExpressionKind::ConstantString {
-            string_to_constant(interpreter, function_state, k);
+            string_to_constant(interpreter, lexical_state, function_state, k);
         }
         if (*t).expression_kind == ExpressionKind::UpValue
             && !is_k_string(function_state, k)
