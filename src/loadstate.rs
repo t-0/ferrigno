@@ -152,7 +152,7 @@ impl LoadState {
         unsafe {
             let st: *mut TString = self.load_string_n(p);
             if st.is_null() {
-                self.error(make_cstring!("bad format for constant string"));
+                self.error(make_cstring!("bad format for code_constant string"));
             }
             return st;
         }

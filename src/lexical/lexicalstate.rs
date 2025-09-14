@@ -132,13 +132,13 @@ impl LexicalState {
         unsafe {
             let function_state: *mut FunctionState = self.function_state;
             let ll: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;
-            let l: i32 = newlabelentry(self, ll, name, line, luak_getlabel(function_state));
+            let l: i32 = newlabelentry(self, ll, name, line, code_get_label(function_state));
             if is_last {
                 (*((*ll).vectort_pointer).offset(l as isize)).count_active_variables =
                     (*(*function_state).block_control).count_active_variables;
             }
             if solvegotos(self, &mut *((*ll).vectort_pointer).offset(l as isize)) {
-                luak_code_abck(
+                code_abck(
                     function_state,
                     OP_CLOSE,
                     luay_nvarstack(function_state),
@@ -465,7 +465,7 @@ pub unsafe fn yindex(lexical_state: *mut LexicalState, v: *mut ExpressionDescrip
     unsafe {
         luax_next(lexical_state);
         (*lexical_state).parse_expression(v);
-        luak_exp2val((*lexical_state).function_state, v);
+        code_expression_to_value((*lexical_state).function_state, v);
         checknext(lexical_state, CHARACTER_BRACKET_RIGHT as i32);
     }
 }
@@ -528,7 +528,7 @@ pub unsafe fn constructor(
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let line: i32 = (*lexical_state).line_number;
-        let program_counter: i32 = luak_code_abck(function_state, OP_NEWTABLE, 0, 0, 0, 0);
+        let program_counter: i32 = code_abck(function_state, OP_NEWTABLE, 0, 0, 0, 0);
         let mut constructor_control: ConstructorControl = ConstructorControl::new();
         luak_code(function_state, 0u32);
         constructor_control.count_to_store = 0;
@@ -614,7 +614,7 @@ pub unsafe fn parlist(lexical_state: *mut LexicalState) {
 }
 pub unsafe fn body(
     lexical_state: *mut LexicalState,
-    e: *mut ExpressionDescription,
+    expression_description: *mut ExpressionDescription,
     is_method: bool,
     line: i32,
 ) {
@@ -662,7 +662,7 @@ pub unsafe fn body(
         statlist(lexical_state);
         (*new_fs.prototype).prototype_last_line_defined = (*lexical_state).line_number;
         check_match(lexical_state, TK_END as i32, TK_FUNCTION as i32, line);
-        codeclosure(lexical_state, e);
+        codeclosure(lexical_state, expression_description);
         close_func(lexical_state);
     }
 }
@@ -681,8 +681,8 @@ pub unsafe fn funcargs(
                     args.expression_kind = ExpressionKind::Void;
                 } else {
                     (*lexical_state).parse_expression_list(&mut args);
-                    if args.expression_kind as u32 == ExpressionKind::Call as u32
-                        || args.expression_kind as u32 == ExpressionKind::VariableArguments as u32
+                    if args.expression_kind == ExpressionKind::Call
+                        || args.expression_kind == ExpressionKind::VariableArguments
                     {
                         luak_setreturns(function_state, &mut args, -1);
                     }
@@ -710,12 +710,12 @@ pub unsafe fn funcargs(
         }
         let base: i32 = (*expression_description).value.info;
         let nparams: i32;
-        if args.expression_kind as u32 == ExpressionKind::Call as u32
-            || args.expression_kind as u32 == ExpressionKind::VariableArguments as u32
+        if args.expression_kind == ExpressionKind::Call
+            || args.expression_kind == ExpressionKind::VariableArguments
         {
             nparams = -1;
         } else {
-            if args.expression_kind as u32 != ExpressionKind::Void as u32 {
+            if args.expression_kind != ExpressionKind::Void {
                 luak_exp2nextreg(function_state, &mut args);
             }
             nparams = (*function_state).freereg as i32 - (base + 1);
@@ -723,7 +723,7 @@ pub unsafe fn funcargs(
         init_exp(
             expression_description,
             ExpressionKind::Call,
-            luak_code_abck(function_state, OP_CALL, base, nparams + 1, 2, 0),
+            code_abck(function_state, OP_CALL, base, nparams + 1, 2, 0),
         );
         luak_fixline(function_state, line);
         (*function_state).freereg = (base + 1) as u8;
@@ -832,7 +832,7 @@ pub unsafe fn simpleexp(
                 init_exp(
                     v,
                     ExpressionKind::VariableArguments,
-                    luak_code_abck(function_state, OP_VARARG, 0, 0, 1, 0),
+                    code_abck(function_state, OP_VARARG, 0, 0, 1, 0),
                 );
             }
             123 => {
@@ -920,9 +920,9 @@ pub unsafe fn str_checkname(lexical_state: *mut LexicalState) -> *mut TString {
         return ts;
     }
 }
-pub unsafe fn codename(lexical_state: *mut LexicalState, e: *mut ExpressionDescription) {
+pub unsafe fn codename(lexical_state: *mut LexicalState, expression_description: *mut ExpressionDescription) {
     unsafe {
-        codestring(e, str_checkname(lexical_state));
+        codestring(expression_description, str_checkname(lexical_state));
     }
 }
 pub unsafe fn registerlocalvar(
@@ -1010,23 +1010,23 @@ pub unsafe fn new_localvar(lexical_state: *mut LexicalState, name: *mut TString)
 }
 pub unsafe fn check_readonly(
     lexical_state: *mut LexicalState,
-    e: *mut ExpressionDescription,
+    expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut variable_name: *mut TString = null_mut();
-        match (*e).expression_kind {
+        match (*expression_description).expression_kind {
             ExpressionKind::Constant2 => {
                 variable_name = (*((*(*lexical_state).dynamic_data)
                     .active_variables
                     .vectort_pointer)
-                    .offset((*e).value.info as isize))
+                    .offset((*expression_description).value.info as isize))
                 .content
                 .name;
             }
             ExpressionKind::Local => {
                 let vardesc: *mut VariableDescription =
-                    getlocalvardesc(function_state, (*e).value.variable.value_index as i32);
+                    getlocalvardesc(function_state, (*expression_description).value.variable.value_index as i32);
                 if (*vardesc).content.kind as i32 != 0 {
                     variable_name = (*vardesc).content.name;
                 }
@@ -1035,7 +1035,7 @@ pub unsafe fn check_readonly(
                 let up: *mut UpValueDescription = &mut *((*(*function_state).prototype)
                     .prototype_upvalues
                     .vectort_pointer)
-                    .offset((*e).value.info as isize)
+                    .offset((*expression_description).value.info as isize)
                     as *mut UpValueDescription;
                 if (*up).kind as i32 != 0 {
                     variable_name = (*up).name;
@@ -1079,7 +1079,7 @@ pub unsafe fn singlevar(
         let variable_name: *mut TString = str_checkname(lexical_state);
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         singlevaraux(function_state, variable_name, var, 1);
-        if (*var).expression_kind as u32 == ExpressionKind::Void as u32 {
+        if (*var).expression_kind == ExpressionKind::Void {
             let mut key: ExpressionDescription = ExpressionDescription::new();
             singlevaraux(function_state, (*lexical_state).environment, var, 1);
             luak_exp2anyregup(function_state, var);
@@ -1092,25 +1092,25 @@ pub unsafe fn adjust_assign(
     lexical_state: *mut LexicalState,
     nvars: i32,
     nexps: i32,
-    e: *mut ExpressionDescription,
+    expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let needed: i32 = nvars - nexps;
-        if (*e).expression_kind as u32 == ExpressionKind::Call as u32
-            || (*e).expression_kind as u32 == ExpressionKind::VariableArguments as u32
+        if (*expression_description).expression_kind == ExpressionKind::Call
+            || (*expression_description).expression_kind == ExpressionKind::VariableArguments
         {
             let mut extra: i32 = needed + 1;
             if extra < 0 {
                 extra = 0;
             }
-            luak_setreturns(function_state, e, extra);
+            luak_setreturns(function_state, expression_description, extra);
         } else {
-            if (*e).expression_kind as u32 != ExpressionKind::Void as u32 {
-                luak_exp2nextreg(function_state, e);
+            if (*expression_description).expression_kind != ExpressionKind::Void {
+                luak_exp2nextreg(function_state, expression_description);
             }
             if needed > 0 {
-                luak_nil(function_state, (*function_state).freereg as i32, needed);
+                code_constant_nil(function_state, (*function_state).freereg as i32, needed);
             }
         }
         if needed > 0 {
@@ -1230,30 +1230,30 @@ pub unsafe fn check_conflict(
             if ExpressionKind::Indexed as u32
                 <= (*lhs_assign).expression_kind as u32
                 && (*lhs_assign).expression_kind as u32
-                    <= ExpressionKind::IndexString as u32
+                    <= ExpressionKind::Field as u32
             {
-                if (*lhs_assign).expression_kind as u32
-                    == ExpressionKind::IndexUpValue as u32
+                if (*lhs_assign).expression_kind
+                    == ExpressionKind::IndexUpValue
                 {
-                    if (*v).expression_kind as u32 == ExpressionKind::UpValue as u32
+                    if (*v).expression_kind == ExpressionKind::UpValue
                         && (*lhs_assign).value.index.reference_tag as i32
                             == (*v).value.info
                     {
                         conflict = 1;
-                        (*lhs_assign).expression_kind = ExpressionKind::IndexString;
+                        (*lhs_assign).expression_kind = ExpressionKind::Field;
                         (*lhs_assign).value.index.reference_tag = extra as u8;
                     }
                 } else {
-                    if (*v).expression_kind as u32 == ExpressionKind::Local as u32
+                    if (*v).expression_kind == ExpressionKind::Local
                         && (*lhs_assign).value.index.reference_tag as i32
                             == (*v).value.variable.register_index as i32
                     {
                         conflict = 1;
                         (*lhs_assign).value.index.reference_tag = extra as u8;
                     }
-                    if (*lhs_assign).expression_kind as u32
-                        == ExpressionKind::Indexed as u32
-                        && (*v).expression_kind as u32 == ExpressionKind::Local as u32
+                    if (*lhs_assign).expression_kind
+                        == ExpressionKind::Indexed
+                        && (*v).expression_kind == ExpressionKind::Local
                         && (*lhs_assign).value.index.reference_index as i32
                             == (*v).value.variable.register_index as i32
                     {
@@ -1266,7 +1266,7 @@ pub unsafe fn check_conflict(
         }
         if conflict != 0 {
             if (*v).expression_kind == ExpressionKind::Local {
-                luak_code_abck(
+                code_abck(
                     function_state,
                     OP_MOVE,
                     extra,
@@ -1275,7 +1275,7 @@ pub unsafe fn check_conflict(
                     0,
                 );
             } else {
-                luak_code_abck(function_state, OP_GETUPVAL, extra, (*v).value.info, 0, 0);
+                code_abck(function_state, OP_GETUPVAL, extra, (*v).value.info, 0, 0);
             }
             luak_reserveregs(function_state, 1);
         }
@@ -1290,7 +1290,7 @@ pub unsafe fn restassign(
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         if !(ExpressionKind::Local as u32 <= (*lhs_assign).expression_kind as u32
             && (*lhs_assign).expression_kind as u32
-                <= ExpressionKind::IndexString as u32)
+                <= ExpressionKind::Field as u32)
         {
             luax_syntaxerror(lexical_state, make_cstring!("syntax error"));
         }
@@ -1301,7 +1301,7 @@ pub unsafe fn restassign(
             if !(ExpressionKind::Indexed as u32
                 <= new_lhs_assign.expression_kind as u32
                 && new_lhs_assign.expression_kind as u32
-                    <= ExpressionKind::IndexString as u32)
+                    <= ExpressionKind::Field as u32)
             {
                 check_conflict(lexical_state, lhs_assign, &mut new_lhs_assign);
             }
@@ -1341,7 +1341,7 @@ pub unsafe fn cond(lexical_state: *mut LexicalState) -> i32 {
     unsafe {
         let mut v: ExpressionDescription = ExpressionDescription::new();
         (*lexical_state).parse_expression(&mut v);
-        if v.expression_kind as u32 == ExpressionKind::Nil as u32 {
+        if v.expression_kind == ExpressionKind::Nil {
             v.expression_kind = ExpressionKind::False;
         }
         luak_goiftrue((*lexical_state).function_state, &mut v);
@@ -1359,7 +1359,7 @@ pub unsafe fn gotostat(lexical_state: *mut LexicalState) {
         } else {
             let lblevel: i32 = reglevel(function_state, (*lb).count_active_variables as i32);
             if luay_nvarstack(function_state) > lblevel {
-                luak_code_abck(function_state, OP_CLOSE, lblevel, 0, 0, 0);
+                code_abck(function_state, OP_CLOSE, lblevel, 0, 0, 0);
             }
             luak_patchlist(
                 function_state,
@@ -1424,7 +1424,7 @@ pub unsafe fn whilestat(lexical_state: *mut LexicalState, line: i32) {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
         let mut block_control: BlockControl = BlockControl::new();
         luax_next(lexical_state);
-        let whileinit: i32 = luak_getlabel(function_state);
+        let whileinit: i32 = code_get_label(function_state);
         let condexit: i32 = cond(lexical_state);
         enterblock(function_state, &mut block_control, true);
         checknext(lexical_state, TK_DO as i32);
@@ -1438,7 +1438,7 @@ pub unsafe fn whilestat(lexical_state: *mut LexicalState, line: i32) {
 pub unsafe fn repeatstat(lexical_state: *mut LexicalState, line: i32) {
     unsafe {
         let function_state: *mut FunctionState = (*lexical_state).function_state;
-        let repeat_init: i32 = luak_getlabel(function_state);
+        let repeat_init: i32 = code_get_label(function_state);
         let mut bl1: BlockControl = BlockControl::new();
         let mut bl2: BlockControl = BlockControl::new();
         enterblock(function_state, &mut bl1, true);
@@ -1451,7 +1451,7 @@ pub unsafe fn repeatstat(lexical_state: *mut LexicalState, line: i32) {
         if bl2.count_upvalues != 0 {
             let exit_0: i32 = luak_jump(function_state);
             luak_patchtohere(function_state, condexit);
-            luak_code_abck(
+            code_abck(
                 function_state,
                 OP_CLOSE,
                 reglevel(function_state, bl2.count_active_variables as i32),
@@ -1492,9 +1492,9 @@ pub unsafe fn forbody(
         luak_reserveregs(function_state, nvars);
         block(lexical_state);
         leaveblock(function_state);
-        fixforjump(function_state, prep, luak_getlabel(function_state), 0);
+        fixforjump(function_state, prep, code_get_label(function_state), 0);
         if isgen != 0 {
-            luak_code_abck(function_state, OP_TFORCALL, base, 0, nvars, 0);
+            code_abck(function_state, OP_TFORCALL, base, 0, nvars, 0);
             luak_fixline(function_state, line);
         }
         let endfor: i32 = luak_codeabx(function_state, FOR_LOOP[isgen as usize], base, 0u32);
@@ -1531,7 +1531,7 @@ pub unsafe fn fornum(
         if testnext(lexical_state, CHARACTER_COMMA as i32) != 0 {
             exp1(lexical_state);
         } else {
-            luak_int(function_state, (*function_state).freereg as i32, 1 as i64);
+            code_constant_integer(function_state, (*function_state).freereg as i32, 1 as i64);
             luak_reserveregs(function_state, 1);
         }
         adjustlocalvars(lexical_state, 3);
@@ -1794,7 +1794,7 @@ pub unsafe fn exprstat(lexical_state: *mut LexicalState) {
             new_lhs_assign.previous = null_mut();
             restassign(lexical_state, &mut new_lhs_assign, 1);
         } else {
-            if !(new_lhs_assign.expression_kind as u32 == ExpressionKind::Call as u32) {
+            if !(new_lhs_assign.expression_kind == ExpressionKind::Call) {
                 luax_syntaxerror(lexical_state, make_cstring!("syntax error"));
             }
             let inst: *mut u32 = &mut *((*(*function_state).prototype)
@@ -1819,11 +1819,11 @@ pub unsafe fn retstat(lexical_state: *mut LexicalState) {
             nret = 0;
         } else {
             nret = (*lexical_state).parse_expression_list(&mut expression_description);
-            if expression_description.expression_kind as u32 == ExpressionKind::Call as u32
-                || expression_description.expression_kind as u32 == ExpressionKind::VariableArguments as u32
+            if expression_description.expression_kind == ExpressionKind::Call
+                || expression_description.expression_kind == ExpressionKind::VariableArguments
             {
                 luak_setreturns(function_state, &mut expression_description, -1);
-                if expression_description.expression_kind as u32 == ExpressionKind::Call as u32
+                if expression_description.expression_kind == ExpressionKind::Call
                     && nret == 1
                     && !(*(*function_state).block_control).is_inside_tbc
                 {

@@ -57,7 +57,6 @@ pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).call_info_u.l.saved_program_counter).offset_from(
             (*(*((*(*call_info).call_info_function.stkidrel_pointer)
-                
                 .value
                 .object as *mut Closure))
                 .payload
@@ -72,7 +71,6 @@ pub unsafe fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
             (*((*(*call_info).call_info_function.stkidrel_pointer)
-                
                 .value
                 .object as *mut Closure))
                 .payload
@@ -110,7 +108,6 @@ pub unsafe fn luag_findlocal(
             } else {
                 name = luaf_getlocalname(
                     (*((*(*call_info).call_info_function.stkidrel_pointer)
-                        
                         .value
                         .object as *mut Closure))
                         .payload
@@ -149,7 +146,6 @@ pub unsafe fn findvararg(
 ) -> *const i8 {
     unsafe {
         if (*(*((*(*call_info).call_info_function.stkidrel_pointer)
-            
             .value
             .object as *mut Closure))
             .payload
@@ -196,7 +192,6 @@ pub unsafe fn funcnamefromcall(
             return funcnamefromcode(
                 interpreter,
                 (*((*(*call_info).call_info_function.stkidrel_pointer)
-                    
                     .value
                     .object as *mut Closure))
                     .payload
@@ -235,7 +230,6 @@ pub unsafe fn getupvalname(
 ) -> *const i8 {
     unsafe {
         let c: *mut Closure = &mut (*((*(*call_info).call_info_function.stkidrel_pointer)
-            
             .value
             .object as *mut Closure));
         for i in 0..(*c).count_upvalues {

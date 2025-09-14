@@ -16,7 +16,7 @@ pub enum ExpressionKind {
     Indexed = 12,
     IndexUpValue = 13,
     IndexInteger = 14,
-    IndexString = 15,
+    Field = 15,
     Jump = 16,
     Relocatable = 17,
     Call = 18,

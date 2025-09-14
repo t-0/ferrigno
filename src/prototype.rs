@@ -467,7 +467,7 @@ pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *c
             &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
         if (*kvalue).is_tagtype_string() {
             *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
-            return make_cstring!("constant");
+            return make_cstring!("code_constant");
         } else {
             *name = make_cstring!("?");
             return null();
