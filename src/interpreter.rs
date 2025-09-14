@@ -5041,16 +5041,16 @@ pub unsafe fn pushclosure(
     ra: *mut TValue,
 ) {
     unsafe {
-        let nup = (*p).prototype_upvalues.get_size();
+        let count_upvalues = (*p).prototype_upvalues.get_size();
         let uv: *mut UpValueDescription = (*p).prototype_upvalues.vectort_pointer;
-        let ncl: *mut Closure = luaf_newlclosure(interpreter, nup as i32);
+        let ncl: *mut Closure = luaf_newlclosure(interpreter, count_upvalues as i32);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra);
         let x_: *mut Closure = ncl;
         (*io).value.object = &mut (*(x_ as *mut Object));
         (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable(true);
-        for i in 0..nup {
+        for i in 0..count_upvalues {
             if (*uv.offset(i as isize)).is_in_stack {
                 let ref mut fresh136 =
                     *((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
@@ -8756,23 +8756,23 @@ pub unsafe fn lual_tolstring(
 pub unsafe fn lual_setfuncs(
     interpreter: *mut Interpreter,
     mut l: *const RegisteredFunction,
-    nup: i32,
+    count_upvalues: i32,
 ) {
     unsafe {
-        lual_checkstack(interpreter, nup, make_cstring!("too many upvalues"));
+        lual_checkstack(interpreter, count_upvalues, make_cstring!("too many upvalues"));
         while !((*l).name).is_null() {
             if ((*l).function).is_none() {
                 (*interpreter).push_boolean(false);
             } else {
-                for _ in 0..nup {
-                    lua_pushvalue(interpreter, -nup);
+                for _ in 0..count_upvalues {
+                    lua_pushvalue(interpreter, -count_upvalues);
                 }
-                lua_pushcclosure(interpreter, (*l).function, nup);
+                lua_pushcclosure(interpreter, (*l).function, count_upvalues);
             }
-            lua_setfield(interpreter, -(nup + 2), (*l).name);
+            lua_setfield(interpreter, -(count_upvalues + 2), (*l).name);
             l = l.offset(1);
         }
-        lua_settop(interpreter, -nup - 1);
+        lua_settop(interpreter, -count_upvalues - 1);
     }
 }
 pub unsafe fn lual_getsubtable(
@@ -9754,14 +9754,14 @@ pub unsafe fn checkupval(
 ) -> *mut libc::c_void {
     unsafe {
         let id: *mut libc::c_void;
-        let nup: i32 = lual_checkinteger(interpreter, argnup) as i32;
+        let count_upvalues: i32 = lual_checkinteger(interpreter, argnup) as i32;
         lual_checktype(interpreter, argf, TagType::Closure);
-        id = lua_upvalueid(interpreter, argf, nup);
+        id = lua_upvalueid(interpreter, argf, count_upvalues);
         if !pnup.is_null() {
             if id.is_null() {
                 lual_argerror(interpreter, argnup, make_cstring!("invalid upvalue index"));
             }
-            *pnup = nup;
+            *pnup = count_upvalues;
         }
         return id;
     }

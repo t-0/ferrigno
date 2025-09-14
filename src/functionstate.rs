@@ -1726,12 +1726,12 @@ pub unsafe fn luak_goiftrue(
     unsafe {
         let program_counter: i32;
         luak_dischargevars(function_state, expression_description);
-        match (*expression_description).expression_kind as u32 {
-            16 => {
+        match (*expression_description).expression_kind {
+            ExpressionKind::Jump => {
                 negatecondition(function_state, expression_description);
                 program_counter = (*expression_description).value.info;
             }
-            4 | 5 | 6 | 7 | 2 => {
+            ExpressionKind::True | ExpressionKind::Constant | ExpressionKind::ConstantNumber | ExpressionKind::ConstantInteger | ExpressionKind::ConstantString => {
                 program_counter = -1;
             }
             _ => {
@@ -1750,11 +1750,11 @@ pub unsafe fn luak_goiffalse(
     unsafe {
         let program_counter: i32;
         luak_dischargevars(function_state, expression_description);
-        match (*expression_description).expression_kind as u32 {
-            16 => {
+        match (*expression_description).expression_kind {
+            ExpressionKind::Jump => {
                 program_counter = (*expression_description).value.info;
             }
-            1 | 3 => {
+            ExpressionKind::Nil | ExpressionKind::False => {
                 program_counter = -1;
             }
             _ => {
@@ -1771,17 +1771,17 @@ pub unsafe fn codenot(
     expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
-        match (*expression_description).expression_kind as u32 {
-            1 | 3 => {
+        match (*expression_description).expression_kind {
+            ExpressionKind::Nil | ExpressionKind::False => {
                 (*expression_description).expression_kind = ExpressionKind::True;
             }
-            4 | 5 | 6 | 7 | 2 => {
+            ExpressionKind::Constant | ExpressionKind::ConstantNumber | ExpressionKind::ConstantInteger | ExpressionKind::ConstantString | ExpressionKind::True => {
                 (*expression_description).expression_kind = ExpressionKind::False;
             }
-            16 => {
+            ExpressionKind::Jump => {
                 negatecondition(function_state, expression_description);
             }
-            17 | 8 => {
+            ExpressionKind::Relocatable | ExpressionKind::Nonrelocatable => {
                 discharge2anyreg(function_state, expression_description);
                 freeexp(function_state, expression_description);
                 (*expression_description).value.info = code_abck(function_state, OP_NOT, 0, (*expression_description).value.info, 0, 0);
