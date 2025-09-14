@@ -1850,13 +1850,13 @@ pub unsafe fn finishbinexpval(
 }
 pub unsafe fn codebinexpval(
     function_state: *mut FunctionState,
-    opr: OperatorBinary,
+    binary: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
 ) {
     unsafe {
-        let op = binopr2op(opr, OperatorBinary::Add, OP_ADD);
+        let op = binopr2op(binary, OperatorBinary::Add, OP_ADD);
         let v2: i32 = luak_exp2anyreg(function_state, e2);
         finishbinexpval(
             function_state,
@@ -1867,7 +1867,7 @@ pub unsafe fn codebinexpval(
             0,
             line,
             OP_MMBIN,
-            binopr2tm(opr),
+            binopr2tm(binary),
         );
     }
 }
@@ -1972,26 +1972,6 @@ pub unsafe fn codearith(
             codebink(function_state, opr, e1, e2, flip, line);
         } else {
             codebinnok(function_state, opr, e1, e2, flip, line);
-        };
-    }
-}
-pub unsafe fn codecommutative(
-    function_state: *mut FunctionState,
-    op: OperatorBinary,
-    e1: *mut ExpressionDescription,
-    e2: *mut ExpressionDescription,
-    line: i32,
-) {
-    unsafe {
-        let mut flip: i32 = 0;
-        if tonumeral(e1, null_mut()) {
-            swapexps(e1, e2);
-            flip = 1;
-        }
-        if op as u32 == OperatorBinary::Add as u32 && is_sc_int(e2) {
-            codebini(function_state, OP_ADDI, e1, e2, flip, line, TM_ADD);
-        } else {
-            codearith(function_state, op, e1, e2, flip, line);
         };
     }
 }
@@ -2189,105 +2169,121 @@ pub unsafe fn codeconcat(
 }
 pub unsafe fn luak_posfix(
     function_state: *mut FunctionState,
-    mut opr: OperatorBinary,
+    mut binary: OperatorBinary,
     e1: *mut ExpressionDescription,
     e2: *mut ExpressionDescription,
     line: i32,
 ) {
     unsafe {
         luak_dischargevars(function_state, e2);
-        if opr as u32 <= OperatorBinary::ShiftRight as u32
+        if binary as u32 <= OperatorBinary::ShiftRight as u32
             && constfolding(
                 function_state,
-                (opr as u32).wrapping_add(0u32) as i32,
+                (binary as u32).wrapping_add(0u32) as i32,
                 e1,
                 e2,
             ) != 0
         {
             return;
         }
-        let current_block_30: usize;
-        match opr {
+        match binary {
             OperatorBinary::And => {
                 luak_concat(function_state, &mut (*e2).f, (*e1).f);
                 *e1 = *e2;
-                current_block_30 = 8180496224585318153;
             }
             OperatorBinary::Or => {
                 luak_concat(function_state, &mut (*e2).t, (*e1).t);
                 *e1 = *e2;
-                current_block_30 = 8180496224585318153;
             }
             OperatorBinary::Concatenate => {
                 luak_exp2nextreg(function_state, e2);
                 codeconcat(function_state, e1, e2, line);
-                current_block_30 = 8180496224585318153;
             }
-            OperatorBinary::Add | OperatorBinary::Multiply => {
-                codecommutative(function_state, opr, e1, e2, line);
-                current_block_30 = 8180496224585318153;
+            OperatorBinary::Add => {
+                let mut flip: i32 = 0;
+                if tonumeral(e1, null_mut()) {
+                    swapexps(e1, e2);
+                    flip = 1;
+                }
+                if is_sc_int(e2) {
+                    codebini(function_state, OP_ADDI, e1, e2, flip, line, TM_ADD);
+                } else {
+                    codearith(function_state, binary, e1, e2, flip, line);
+                };
+            }
+            OperatorBinary::Multiply => {
+                let mut flip: i32 = 0;
+                if tonumeral(e1, null_mut()) {
+                    swapexps(e1, e2);
+                    flip = 1;
+                }
+                codearith(function_state, binary, e1, e2, flip, line);
             }
             OperatorBinary::Subtract => {
-                if finishbinexpneg(function_state, e1, e2, OP_ADDI, line, TM_SUB) != 0 {
-                    current_block_30 = 8180496224585318153;
-                } else {
-                    current_block_30 = 12599329904712511516;
+                if finishbinexpneg(function_state, e1, e2, OP_ADDI, line, TM_SUB) == 0 {
+                    codearith(function_state, binary, e1, e2, 0, line);
                 }
             }
-            OperatorBinary::Power | OperatorBinary::Modulus | OperatorBinary::Divide | OperatorBinary::IntegralDivide => {
-                current_block_30 = 12599329904712511516;
+            OperatorBinary::Power  => {
+                codearith(function_state, binary, e1, e2, 0, line);
             }
-            OperatorBinary::BitwiseAnd | OperatorBinary::BitwiseOr | OperatorBinary::BitwiseExclusiveOr => {
-                codebitwise(function_state, opr, e1, e2, line);
-                current_block_30 = 8180496224585318153;
+            OperatorBinary::Modulus => {
+                codearith(function_state, binary, e1, e2, 0, line);
+            }
+            OperatorBinary::Divide => {
+                codearith(function_state, binary, e1, e2, 0, line);
+            }
+            OperatorBinary::IntegralDivide => {
+                codearith(function_state, binary, e1, e2, 0, line);
+            }
+            OperatorBinary::BitwiseAnd => {
+                codebitwise(function_state, binary, e1, e2, line);
+            }
+            OperatorBinary::BitwiseOr => {
+                codebitwise(function_state, binary, e1, e2, line);
+            }
+            OperatorBinary::BitwiseExclusiveOr => {
+                codebitwise(function_state, binary, e1, e2, line);
             }
             OperatorBinary::ShiftLeft => {
                 if is_sc_int(e1) {
                     swapexps(e1, e2);
                     codebini(function_state, OP_SHLI, e1, e2, 1, line, TM_SHL);
                 } else if !(finishbinexpneg(function_state, e1, e2, OP_SHRI, line, TM_SHL) != 0) {
-                    codebinexpval(function_state, opr, e1, e2, line);
+                    codebinexpval(function_state, binary, e1, e2, line);
                 }
-                current_block_30 = 8180496224585318153;
             }
             OperatorBinary::ShiftRight => {
                 if is_sc_int(e2) {
                     codebini(function_state, OP_SHRI, e1, e2, 0, line, TM_SHR);
                 } else {
-                    codebinexpval(function_state, opr, e1, e2, line);
+                    codebinexpval(function_state, binary, e1, e2, line);
                 }
-                current_block_30 = 8180496224585318153;
             }
-            OperatorBinary::Equal | OperatorBinary::Inequal => {
-                codeeq(function_state, opr, e1, e2);
-                current_block_30 = 8180496224585318153;
+            OperatorBinary::Inequal => {
+                codeeq(function_state, binary, e1, e2);
+            }
+            OperatorBinary::Equal => {
+                codeeq(function_state, binary, e1, e2);
             }
             OperatorBinary::GreaterEqual => {
                 swapexps(e1, e2);
-                opr = OperatorBinary::LessEqual;
-                current_block_30 = 1118134448028020070;
+                binary = OperatorBinary::LessEqual;
+                codeorder(function_state, binary, e1, e2);
             }
             OperatorBinary::Greater => {
                 swapexps(e1, e2);
-                opr = OperatorBinary::Less;
-                current_block_30 = 1118134448028020070;
+                binary = OperatorBinary::Less;
+                codeorder(function_state, binary, e1, e2);
             }
-            OperatorBinary::LessEqual | OperatorBinary::Less => {
-                current_block_30 = 1118134448028020070;
-            }
-            _ => {
-                current_block_30 = 8180496224585318153;
-            }
+            OperatorBinary::Less => {
+                codeorder(function_state, binary, e1, e2);
+            },
+            OperatorBinary::LessEqual => {
+                codeorder(function_state, binary, e1, e2);
+            },
+            _ => {},
         }
-        match current_block_30 {
-            12599329904712511516 => {
-                codearith(function_state, opr, e1, e2, 0, line);
-            }
-            1118134448028020070 => {
-                codeorder(function_state, opr, e1, e2);
-            }
-            _ => {}
-        };
     }
 }
 pub unsafe fn luak_fixline(function_state: *mut FunctionState, line: i32) {
