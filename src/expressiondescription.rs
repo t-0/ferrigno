@@ -1,6 +1,7 @@
 use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::functionstate::*;
+use crate::interpreter::*;
 use crate::object::*;
 use crate::tag::*;
 use crate::tstring::*;
@@ -208,19 +209,19 @@ pub unsafe fn is_sc_number(
         };
     }
 }
-pub unsafe fn luak_indexed(
+pub unsafe fn luak_indexed(interpreter: * mut Interpreter,
     function_state: *mut FunctionState,
     t: *mut ExpressionDescription,
     k: *mut ExpressionDescription,
 ) {
     unsafe {
         if (*k).expression_kind == ExpressionKind::ConstantString {
-            string_to_constant(function_state, k);
+            string_to_constant(interpreter, function_state, k);
         }
         if (*t).expression_kind == ExpressionKind::UpValue
             && !is_k_string(function_state, k)
         {
-            luak_exp2anyreg(function_state, t);
+            luak_exp2anyreg(interpreter, function_state, t);
         }
         if (*t).expression_kind == ExpressionKind::UpValue {
             let temp: i32 = (*t).value.info;
@@ -240,7 +241,7 @@ pub unsafe fn luak_indexed(
                 (*t).value.index.reference_index = (*k).value.integer as i16;
                 (*t).expression_kind = ExpressionKind::IndexInteger;
             } else {
-                (*t).value.index.reference_index = luak_exp2anyreg(function_state, k) as i16;
+                (*t).value.index.reference_index = luak_exp2anyreg(interpreter, function_state, k) as i16;
                 (*t).expression_kind = ExpressionKind::Indexed;
             }
         };
