@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::character::*;
 use crate::f2i::*;
 use crate::functions::*;
@@ -7,12 +6,13 @@ use crate::interpreter::*;
 use crate::new::*;
 use crate::node::*;
 use crate::object::*;
-use crate::tvalue::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tstring::*;
+use crate::tvalue::*;
 use crate::utility::*;
 use libc::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -98,11 +98,7 @@ impl Table {
         }
     }
 }
-pub unsafe fn luat_gettm(
-    events: *mut Table,
-    event: u32,
-    ename: *mut TString,
-) -> *const TValue {
+pub unsafe fn luat_gettm(events: *mut Table, event: u32, ename: *mut TString) -> *const TValue {
     unsafe {
         let tm: *const TValue = luah_getshortstr(events, ename);
         if (*tm).is_tagtype_nil() {
@@ -159,11 +155,7 @@ pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
         };
     }
 }
-pub unsafe fn traverseephemeron(
-    global: *mut Global,
-    h: *mut Table,
-    is_reverse: bool,
-) -> i32 {
+pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: bool) -> i32 {
     unsafe {
         let mut marked: i32 = 0;
         let mut hasclears: i32 = 0;
@@ -468,11 +460,7 @@ pub unsafe fn setlimittosize(table: *mut Table) -> u32 {
         return (*table).array_limit;
     }
 }
-pub unsafe fn getgeneric(
-    table: *mut Table,
-    key: *const TValue,
-    deadok: i32,
-) -> *const TValue {
+pub unsafe fn getgeneric(table: *mut Table, key: *const TValue, deadok: i32) -> *const TValue {
     unsafe {
         let mut node: *mut Node = mainpositiontv(table, key);
         loop {
@@ -509,10 +497,7 @@ pub unsafe fn findindex(
         } else {
             let n_value: *const TValue = getgeneric(table, key, 1);
             if (*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("invalid key to 'next'"),
-                );
+                luag_runerror(interpreter, make_cstring!("invalid key to 'next'"));
             }
             i = (n_value as *mut Node)
                 .offset_from(&mut *((*table).node).offset(0 as isize) as *mut Node)
@@ -521,11 +506,7 @@ pub unsafe fn findindex(
         };
     }
 }
-pub unsafe fn luah_next(
-    interpreter: *mut Interpreter,
-    table: *mut Table,
-    key: *mut TValue,
-) -> i32 {
+pub unsafe fn luah_next(interpreter: *mut Interpreter, table: *mut Table, key: *mut TValue) -> i32 {
     unsafe {
         let asize: u32 = luah_realasize(table);
         let mut i: u32 = findindex(interpreter, table, &mut (*key), asize);
@@ -666,11 +647,7 @@ pub unsafe fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u32) -> i32 
         return totaluse;
     }
 }
-pub unsafe fn setnodevector(
-    interpreter: *mut Interpreter,
-    table: *mut Table,
-    mut size: u32,
-) {
+pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mut size: u32) {
     unsafe {
         if size == 0 {
             (*table).node = &DUMMY_NODE as *const Node as *mut Node;
@@ -717,11 +694,7 @@ pub unsafe fn setnodevector(
         };
     }
 }
-pub unsafe fn reinsert(
-    interpreter: *mut Interpreter,
-    ot: *mut Table,
-    table: *mut Table,
-) {
+pub unsafe fn reinsert(interpreter: *mut Interpreter, ot: *mut Table, table: *mut Table) {
     unsafe {
         let mut j: i32;
         let size: i32 = 1 << (*ot).log_size_node as i32;
@@ -800,11 +773,7 @@ pub unsafe fn luah_resizearray(
         luah_resize(interpreter, table, new_array_size, new_table_size);
     }
 }
-pub unsafe fn rehash(
-    interpreter: *mut Interpreter,
-    table: *mut Table,
-    ek: *const TValue,
-) {
+pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *const TValue) {
     unsafe {
         let mut nums: [u32; 32] = [0; 32];
         let mut totaluse: i32;
@@ -822,7 +791,8 @@ pub unsafe fn rehash(
         totaluse = count_array as i32;
         totaluse += numusehash(table, nums.as_mut_ptr(), &mut count_array);
         if (*ek).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            count_array = count_array.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
+            count_array =
+                count_array.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
         }
         totaluse += 1;
         let asize: u32 = computesizes(nums.as_mut_ptr(), &mut count_array);
@@ -856,10 +826,7 @@ pub unsafe fn luah_newkey(
         let mut mp;
         let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         if (*key).is_tagtype_nil() {
-            luag_runerror(
-                interpreter,
-                make_cstring!("table index is nil"),
-            );
+            luag_runerror(interpreter, make_cstring!("table index is nil"));
         } else if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
             let mut k: i64 = 0;
@@ -868,10 +835,7 @@ pub unsafe fn luah_newkey(
                 aux.set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 key = &mut aux;
             } else if number != number {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("table index is NaN"),
-                );
+                luag_runerror(interpreter, make_cstring!("table index is NaN"));
             }
         }
         if (*value).is_tagtype_nil() {

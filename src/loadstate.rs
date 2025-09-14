@@ -1,10 +1,9 @@
-use rlua::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::debugger::absolutelineinfo::*;
+use crate::dumpstate::*;
 use crate::interpreter::*;
 use crate::loadable::*;
-use crate::dumpstate::*;
 use crate::localvariable::*;
 use crate::object::*;
 use crate::prototype::*;
@@ -15,6 +14,7 @@ use crate::upvaluedescription::*;
 use crate::utility::c::*;
 use crate::zio::*;
 use core::mem::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -368,11 +368,7 @@ impl LoadState {
             }
         }
     }
-    pub unsafe fn load_function(
-        &mut self,
-        prototype: *mut Prototype,
-        psource: *mut TString,
-    ) {
+    pub unsafe fn load_function(&mut self, prototype: *mut Prototype, psource: *mut TString) {
         unsafe {
             (*prototype).prototype_source = self.load_string_n(prototype);
             if ((*prototype).prototype_source).is_null() {
@@ -437,18 +433,9 @@ impl LoadState {
                 make_cstring!("\x19\x7F\r\n\x1A\n"),
                 make_cstring!("corrupted chunk"),
             );
-            self.f_check_size(
-                size_of::<u32>() as usize,
-                make_cstring!("u32"),
-            );
-            self.f_check_size(
-                size_of::<i64>() as usize,
-                make_cstring!("i64"),
-            );
-            self.f_check_size(
-                size_of::<f64>() as usize,
-                make_cstring!("f64"),
-            );
+            self.f_check_size(size_of::<u32>() as usize, make_cstring!("u32"));
+            self.f_check_size(size_of::<i64>() as usize, make_cstring!("i64"));
+            self.f_check_size(size_of::<f64>() as usize, make_cstring!("f64"));
             if self.load_integer() != 0x5678 as i64 {
                 self.error(make_cstring!("integer format mismatch"));
             }

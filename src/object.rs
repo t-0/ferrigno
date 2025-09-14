@@ -135,11 +135,7 @@ pub unsafe fn getgclist(object: *mut Object) -> *mut *mut Object {
         };
     }
 }
-pub unsafe fn linkgclist_(
-    object: *mut Object,
-    pnext: *mut *mut Object,
-    list: *mut *mut Object,
-) {
+pub unsafe fn linkgclist_(object: *mut Object, pnext: *mut *mut Object, list: *mut *mut Object) {
     unsafe {
         *pnext = *list;
         *list = object;
@@ -160,11 +156,7 @@ pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
         };
     }
 }
-pub unsafe fn luac_barrier_(
-    interpreter: *mut Interpreter,
-    object: *mut Object,
-    v: *mut Object,
-) {
+pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, v: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*global).gc_state as i32 <= 2 {

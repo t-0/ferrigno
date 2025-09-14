@@ -1,10 +1,10 @@
-use rlua::*;
 use crate::buffer::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use libc::tolower;
+use rlua::*;
 use std::ptr::*;
 pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]
@@ -114,7 +114,10 @@ impl MatchState {
                 let capl: i64 = self.capture[i as usize].length;
                 *cap = self.capture[i as usize].init;
                 if capl == -1 {
-                    lual_error(self.matchstate_interpreter, make_cstring!("unfinished capture"));
+                    lual_error(
+                        self.matchstate_interpreter,
+                        make_cstring!("unfinished capture"),
+                    );
                 } else if capl == -2 as i64 {
                     (*(self.matchstate_interpreter)).push_integer(
                         ((self.capture[i as usize].init).offset_from(self.src_init) as i64 + 1)
@@ -152,7 +155,10 @@ impl MatchState {
                 }
                 level -= 1;
             }
-            return lual_error(self.matchstate_interpreter, make_cstring!("invalid pattern capture"));
+            return lual_error(
+                self.matchstate_interpreter,
+                make_cstring!("invalid pattern capture"),
+            );
         }
     }
     pub unsafe fn classend(&mut self, mut p: *const i8) -> *const i8 {
@@ -177,7 +183,9 @@ impl MatchState {
                         if p == self.p_end {
                             lual_error(
                                 self.matchstate_interpreter,
-                                make_cstring!("malformed pattern (missing CHARACTER_BRACKET_RIGHT)"),
+                                make_cstring!(
+                                    "malformed pattern (missing CHARACTER_BRACKET_RIGHT)"
+                                ),
                             );
                         }
                         let fresh161 = p;
@@ -195,12 +203,7 @@ impl MatchState {
             };
         }
     }
-    pub unsafe fn singlematch(
-        &mut self,
-        s: *const i8,
-        p: *const i8,
-        ep: *const i8,
-    ) -> i32 {
+    pub unsafe fn singlematch(&mut self, s: *const i8, p: *const i8, ep: *const i8) -> i32 {
         unsafe {
             if s >= self.src_end {
                 return 0;
@@ -249,12 +252,7 @@ impl MatchState {
             return null();
         }
     }
-    pub unsafe fn max_expand(
-        &mut self,
-        s: *const i8,
-        p: *const i8,
-        ep: *const i8,
-    ) -> *const i8 {
+    pub unsafe fn max_expand(&mut self, s: *const i8, p: *const i8, ep: *const i8) -> *const i8 {
         unsafe {
             let mut i: i64 = 0;
             while self.singlematch(s.offset(i as isize), p, ep) != 0 {
@@ -289,17 +287,15 @@ impl MatchState {
             }
         }
     }
-    pub unsafe fn start_capture(
-        &mut self,
-        s: *const i8,
-        p: *const i8,
-        what: i32,
-    ) -> *const i8 {
+    pub unsafe fn start_capture(&mut self, s: *const i8, p: *const i8, what: i32) -> *const i8 {
         unsafe {
             let res: *const i8;
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
-                lual_error(self.matchstate_interpreter, make_cstring!("too many captures"));
+                lual_error(
+                    self.matchstate_interpreter,
+                    make_cstring!("too many captures"),
+                );
             }
             self.capture[level].init = s;
             self.capture[level].length = what as i64;
@@ -349,7 +345,10 @@ impl MatchState {
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
             if fresh162 == 0 {
-                lual_error(self.matchstate_interpreter, make_cstring!("pattern too complex"));
+                lual_error(
+                    self.matchstate_interpreter,
+                    make_cstring!("pattern too complex"),
+                );
             }
             loop {
                 if !(p != self.p_end) {

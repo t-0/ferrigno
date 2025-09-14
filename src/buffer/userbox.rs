@@ -1,8 +1,8 @@
 #![allow(unpredictable_function_pointer_comparisons, unsafe_code)]
-use rlua::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::user::*;
+use rlua::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct UserBox {
@@ -20,10 +20,7 @@ impl UserBox {
             let temp: *mut libc::c_void =
                 raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
             if temp.is_null() && new_size > 0 {
-                lua_pushstring(
-                    interpreter,
-                    make_cstring!("not enough memory"),
-                );
+                lua_pushstring(interpreter, make_cstring!("not enough memory"));
                 lua_error(interpreter);
             }
             (*user_box).pointer = temp;
@@ -42,17 +39,13 @@ impl UserBox {
             {
                 RegisteredFunction {
                     name: make_cstring!("__gc"),
-                    function: Some(
-                        UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32,
-                    ),
+                    function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
                 }
             },
             {
                 RegisteredFunction {
                     name: make_cstring!("__close"),
-                    function: Some(
-                        UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32,
-                    ),
+                    function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
                 }
             },
             {

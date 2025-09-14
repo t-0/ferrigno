@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::buffer::*;
 use crate::character::CHARACTER_EXCLAMATION;
 use crate::character::*;
@@ -8,6 +7,7 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use libc::{remove, rename, setlocale, system};
+use rlua::*;
 use std::ptr::*;
 pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -42,10 +42,7 @@ pub unsafe fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut buffer: [i8; 32] = [0; 32];
         let mut err: i32;
-        strcpy(
-            buffer.as_mut_ptr(),
-            make_cstring!("/tmp/lua_XXXXXX"),
-        );
+        strcpy(buffer.as_mut_ptr(), make_cstring!("/tmp/lua_XXXXXX"));
         err = mkstemp(buffer.as_mut_ptr());
         if err != -1 {
             close(err);
@@ -76,12 +73,7 @@ pub unsafe fn os_clock(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe fn setfield(
-    interpreter: *mut Interpreter,
-    key: *const i8,
-    value: i32,
-    delta: i32,
-) {
+pub unsafe fn setfield(interpreter: *mut Interpreter, key: *const i8, value: i32, delta: i32) {
     unsafe {
         (*interpreter).push_integer(value as i64 + delta as i64);
         lua_setfield(interpreter, -2, key);
@@ -101,53 +93,14 @@ pub unsafe fn setallfields(interpreter: *mut Interpreter, stm: *mut TM) {
             (*stm).tm_year,
             1900 as i32,
         );
-        setfield(
-            interpreter,
-            make_cstring!("month"),
-            (*stm).tm_mon,
-            1,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("day"),
-            (*stm).tm_mday,
-            0,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("hour"),
-            (*stm).tm_hour,
-            0,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("min"),
-            (*stm).tm_min,
-            0,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("sec"),
-            (*stm).tm_sec,
-            0,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("yday"),
-            (*stm).tm_yday,
-            1,
-        );
-        setfield(
-            interpreter,
-            make_cstring!("wday"),
-            (*stm).tm_wday,
-            1,
-        );
-        setboolfield(
-            interpreter,
-            make_cstring!("isdst"),
-            0 != (*stm).tm_isdst,
-        );
+        setfield(interpreter, make_cstring!("month"), (*stm).tm_mon, 1);
+        setfield(interpreter, make_cstring!("day"), (*stm).tm_mday, 0);
+        setfield(interpreter, make_cstring!("hour"), (*stm).tm_hour, 0);
+        setfield(interpreter, make_cstring!("min"), (*stm).tm_min, 0);
+        setfield(interpreter, make_cstring!("sec"), (*stm).tm_sec, 0);
+        setfield(interpreter, make_cstring!("yday"), (*stm).tm_yday, 1);
+        setfield(interpreter, make_cstring!("wday"), (*stm).tm_wday, 1);
+        setboolfield(interpreter, make_cstring!("isdst"), 0 != (*stm).tm_isdst);
     }
 }
 pub unsafe fn getboolfield(interpreter: *mut Interpreter, key: *const i8) -> i32 {
@@ -162,21 +115,24 @@ pub unsafe fn getboolfield(interpreter: *mut Interpreter, key: *const i8) -> i32
         return res;
     }
 }
-pub unsafe fn getfield(
-    interpreter: *mut Interpreter,
-    key: *const i8,
-    d: i32,
-    delta: i32,
-) -> i32 {
+pub unsafe fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, delta: i32) -> i32 {
     unsafe {
         let mut is_number = false;
         let t = lua_getfield(interpreter, -1, key);
         let mut res: i64 = lua_tointegerx(interpreter, -1, &mut is_number);
         if !is_number {
             if t != TagType::Nil {
-                return lual_error(interpreter, make_cstring!("field '%s' is not an integer"), key);
+                return lual_error(
+                    interpreter,
+                    make_cstring!("field '%s' is not an integer"),
+                    key,
+                );
             } else if d < 0 {
-                return lual_error(interpreter, make_cstring!("field '%s' missing in date table"), key);
+                return lual_error(
+                    interpreter,
+                    make_cstring!("field '%s' missing in date table"),
+                    key,
+                );
             }
             res = d as i64;
         } else {
@@ -186,7 +142,11 @@ pub unsafe fn getfield(
                 ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
             } == 0
             {
-                return lual_error(interpreter, make_cstring!("field '%s' is out-of-bound"), key);
+                return lual_error(
+                    interpreter,
+                    make_cstring!("field '%s' is out-of-bound"),
+                    key,
+                );
             }
             res -= delta as i64;
         }
@@ -201,7 +161,9 @@ pub unsafe fn checkoption(
     buffer: *mut i8,
 ) -> *const i8 {
     unsafe {
-        let mut option: *const i8 = make_cstring!("aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy");
+        let mut option: *const i8 = make_cstring!(
+            "aAbBcCdDeFgGhHIjmMnprRStTuUVwWxXyYzZ%||EcECExEXEyEYOdOeOHOIOmOMOSOuOUOVOwOWOy"
+        );
         let mut oplen: i32 = 1;
         while *option as i32 != Character::Null as i32 && oplen as i64 <= convlen {
             if *option as i32 == '|' as i32 {
@@ -238,11 +200,7 @@ pub unsafe fn l_checktime(interpreter: *mut Interpreter, arg: i32) -> i64 {
     unsafe {
         let t: i64 = lual_checkinteger(interpreter, arg);
         if t as i64 != t {
-            lual_argerror(
-                interpreter,
-                arg,
-                make_cstring!("time out-of-bounds"),
-            );
+            lual_argerror(interpreter, arg, make_cstring!("time out-of-bounds"));
         }
         return t as i64;
     }
@@ -250,8 +208,7 @@ pub unsafe fn l_checktime(interpreter: *mut Interpreter, arg: i32) -> i64 {
 pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
-        let mut s: *const i8 =
-            lual_optlstring(interpreter, 1, make_cstring!("%c"), &mut slen);
+        let mut s: *const i8 = lual_optlstring(interpreter, 1, make_cstring!("%c"), &mut slen);
         let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) {
             time(null_mut())
         } else {
@@ -345,20 +302,10 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                 };
                 lual_checktype(interpreter, 1, TagType::Table);
                 lua_settop(interpreter, 1);
-                ts.tm_year = getfield(
-                    interpreter,
-                    make_cstring!("year"),
-                    -1,
-                    1900 as i32,
-                );
+                ts.tm_year = getfield(interpreter, make_cstring!("year"), -1, 1900 as i32);
                 ts.tm_mon = getfield(interpreter, make_cstring!("month"), -1, 1);
                 ts.tm_mday = getfield(interpreter, make_cstring!("day"), -1, 0);
-                ts.tm_hour = getfield(
-                    interpreter,
-                    make_cstring!("hour"),
-                    12 as i32,
-                    0,
-                );
+                ts.tm_hour = getfield(interpreter, make_cstring!("hour"), 12 as i32, 0);
                 ts.tm_min = getfield(interpreter, make_cstring!("min"), 0, 0);
                 ts.tm_sec = getfield(interpreter, make_cstring!("sec"), 0, 0);
                 ts.tm_isdst = getboolfield(interpreter, make_cstring!("isdst"));

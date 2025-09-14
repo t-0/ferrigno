@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::tag::*;
@@ -6,6 +5,7 @@ use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::toupper;
+use rlua::*;
 use std::ptr::*;
 #[derive(PartialEq)]
 #[repr(C)]
@@ -163,10 +163,7 @@ pub unsafe fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("attempt to divide by zero"),
-                );
+                luag_runerror(interpreter, make_cstring!("attempt to divide by zero"));
             }
             return (0usize).wrapping_sub(m as usize) as i64;
         } else {
@@ -182,10 +179,7 @@ pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("attempt to perform 'n%%0'"),
-                );
+                luag_runerror(interpreter, make_cstring!("attempt to perform 'n%%0'"));
             }
             return 0;
         } else {

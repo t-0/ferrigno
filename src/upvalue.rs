@@ -1,8 +1,8 @@
 use crate::interpreter::*;
 use crate::object::*;
-use crate::tvalue::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::tvalue::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -79,10 +79,7 @@ pub unsafe fn newupval(
         return uv;
     }
 }
-pub unsafe fn luaf_findupval(
-    interpreter: *mut Interpreter,
-    level: *mut TValue,
-) -> *mut UpValue {
+pub unsafe fn luaf_findupval(interpreter: *mut Interpreter, level: *mut TValue) -> *mut UpValue {
     unsafe {
         let mut pp: *mut *mut UpValue = &mut (*interpreter).open_upvalue;
         loop {

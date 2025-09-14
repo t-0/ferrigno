@@ -25,13 +25,22 @@ pub enum ExpressionKind {
 impl ExpressionKind {
     pub fn is_index(&self) -> bool {
         match self {
-            ExpressionKind::Indexed | ExpressionKind::IndexUpValue | ExpressionKind::IndexInteger | ExpressionKind::Field => true,
+            ExpressionKind::Indexed
+            | ExpressionKind::IndexUpValue
+            | ExpressionKind::IndexInteger
+            | ExpressionKind::Field => true,
             _ => false,
         }
     }
     pub fn is_index_plus(&self) -> bool {
         match self {
-            ExpressionKind::Local | ExpressionKind::UpValue | ExpressionKind::Constant2 | ExpressionKind::Indexed | ExpressionKind::IndexUpValue | ExpressionKind::IndexInteger | ExpressionKind::Field => true,
+            ExpressionKind::Local
+            | ExpressionKind::UpValue
+            | ExpressionKind::Constant2
+            | ExpressionKind::Indexed
+            | ExpressionKind::IndexUpValue
+            | ExpressionKind::IndexInteger
+            | ExpressionKind::Field => true,
             _ => false,
         }
     }

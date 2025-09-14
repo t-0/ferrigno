@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::buffer::*;
 use crate::interpreter::*;
 use crate::new::*;
@@ -6,6 +5,7 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use rlua::*;
 use std::ptr::*;
 pub unsafe fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> bool {
     unsafe {
@@ -53,11 +53,8 @@ pub unsafe fn table_insert(interpreter: *mut Interpreter) -> i32 {
                 pos = lual_checkinteger(interpreter, 2);
                 ((((pos as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64
                     != 0
-                    || lual_argerror(
-                        interpreter,
-                        2,
-                        make_cstring!("position out of bounds"),
-                    ) != 0) as i32;
+                    || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0)
+                    as i32;
                 i = e;
                 while i > pos {
                     lua_geti(interpreter, 1, i - 1);
@@ -84,11 +81,8 @@ pub unsafe fn table_remove(interpreter: *mut Interpreter) -> i32 {
         if pos != size {
             ((((pos as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64
                 != 0
-                || lual_argerror(
-                    interpreter,
-                    2,
-                    make_cstring!("position out of bounds"),
-                ) != 0) as i32;
+                || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0)
+                as i32;
         }
         lua_geti(interpreter, 1, pos);
         while pos < size {
@@ -116,18 +110,12 @@ pub unsafe fn table_move(interpreter: *mut Interpreter) -> i32 {
             let n: i64;
             let mut i: i64;
             (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0
-                || lual_argerror(
-                    interpreter,
-                    3,
-                    make_cstring!("too many elements to move"),
-                ) != 0) as i32;
+                || lual_argerror(interpreter, 3, make_cstring!("too many elements to move")) != 0)
+                as i32;
             n = e - f + 1;
             (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
-                || lual_argerror(
-                    interpreter,
-                    4,
-                    make_cstring!("destination wrap around"),
-                ) != 0) as i32;
+                || lual_argerror(interpreter, 4, make_cstring!("destination wrap around")) != 0)
+                as i32;
             if t > e || t <= f || tag != 1 && lua_compare(interpreter, 1, tag, 0) == 0 {
                 for i in 0..n {
                     lua_geti(interpreter, 1, f + i);
@@ -166,8 +154,7 @@ pub unsafe fn table_concat(interpreter: *mut Interpreter) -> i32 {
         checktab(interpreter, 1, 1 | 4);
         let mut last: i64 = lual_len(interpreter, 1);
         let mut lsep: usize = 0;
-        let sep: *const i8 =
-            lual_optlstring(interpreter, 2, make_cstring!(""), &mut lsep);
+        let sep: *const i8 = lual_optlstring(interpreter, 2, make_cstring!(""), &mut lsep);
         let mut i: i64 = lual_optinteger(interpreter, 3, 1);
         last = lual_optinteger(interpreter, 4, last);
         b.initialize(interpreter);
@@ -332,12 +319,7 @@ pub unsafe fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
         .wrapping_add(lo.wrapping_add(r4));
     return p;
 }
-pub unsafe fn auxsort(
-    interpreter: *mut Interpreter,
-    mut lo: u32,
-    mut up: u32,
-    mut rnd: u32,
-) {
+pub unsafe fn auxsort(interpreter: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
     unsafe {
         while lo < up {
             let mut p: u32;

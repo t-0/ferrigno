@@ -813,7 +813,11 @@ pub unsafe fn luak_concat(
         };
     }
 }
-pub unsafe fn luak_jump(interpreter: *mut Interpreter, lexical_state: * mut LexicalState, function_state: *mut FunctionState) -> i32 {
+pub unsafe fn luak_jump(
+    interpreter: *mut Interpreter,
+    lexical_state: *mut LexicalState,
+    function_state: *mut FunctionState,
+) -> i32 {
     unsafe {
         return codesj(interpreter, lexical_state, function_state, OP_JMP, -1, 0);
     }
@@ -1324,13 +1328,7 @@ pub unsafe fn addk(
         let io: *mut TValue = &mut value;
         (*io).value.integer = count_constants as i64;
         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
-        luah_finishset(
-            interpreter,
-            (*lexical_state).table,
-            key,
-            index,
-            &mut value,
-        );
+        luah_finishset(interpreter, (*lexical_state).table, key, index, &mut value);
         (*prototype).prototype_constants.grow(
             interpreter,
             count_constants as usize,
@@ -2635,7 +2633,7 @@ pub unsafe fn finishbinexpval(
         let v1: i32 = luak_exp2anyreg(interpreter, lexical_state, function_state, e1);
         let program_counter: i32 =
             code_abck(interpreter, lexical_state, function_state, op, 0, v1, v2, 0);
-        freeexps(lexical_state,function_state, e1, e2);
+        freeexps(lexical_state, function_state, e1, e2);
         (*e1).value.info = program_counter;
         (*e1).expression_kind = ExpressionKind::Relocatable;
         luak_fixline(interpreter, lexical_state, function_state, line);
@@ -2916,7 +2914,7 @@ pub unsafe fn codeorder(
             r2 = luak_exp2anyreg(interpreter, lexical_state, function_state, e2);
             op = binopr2op(opr, OperatorBinary::Less, OP_LT);
         }
-        freeexps(lexical_state,function_state, e1, e2);
+        freeexps(lexical_state, function_state, e1, e2);
         (*e1).value.info = condjump(
             interpreter,
             lexical_state,
@@ -2958,7 +2956,7 @@ pub unsafe fn codeeq(
             op = OP_EQ;
             r2 = luak_exp2anyreg(interpreter, lexical_state, function_state, e2);
         }
-        freeexps(lexical_state,function_state, e1, e2);
+        freeexps(lexical_state, function_state, e1, e2);
         (*e1).value.info = condjump(
             interpreter,
             lexical_state,

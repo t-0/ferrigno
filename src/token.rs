@@ -1,8 +1,8 @@
-use rlua::*;
-use std::ptr::*;
 use crate::character::*;
 use crate::new::*;
 use crate::value::*;
+use rlua::*;
+use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Token {

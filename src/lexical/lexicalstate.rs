@@ -91,7 +91,12 @@ impl LexicalState {
                     check_match(interpreter, self, TK_END as i32, TK_DO as i32, line);
                 }
                 TK_FOR => {
-                    handle_for_statement(interpreter, self, self.lexical_state_function_state, line);
+                    handle_for_statement(
+                        interpreter,
+                        self,
+                        self.lexical_state_function_state,
+                        line,
+                    );
                 }
                 TK_REPEAT => {
                     handle_repeat_statement(
@@ -114,7 +119,11 @@ impl LexicalState {
                     if testnext(interpreter, self, TK_FUNCTION as i32) != 0 {
                         handle_local_function(interpreter, self, self.lexical_state_function_state);
                     } else {
-                        handle_local_statement(interpreter, self, self.lexical_state_function_state);
+                        handle_local_statement(
+                            interpreter,
+                            self,
+                            self.lexical_state_function_state,
+                        );
                     }
                 }
                 TK_DBCOLON => {
@@ -139,7 +148,11 @@ impl LexicalState {
                     gotostat(interpreter, self, self.lexical_state_function_state);
                 }
                 _ => {
-                    handle_expression_statement(interpreter, self, self.lexical_state_function_state);
+                    handle_expression_statement(
+                        interpreter,
+                        self,
+                        self.lexical_state_function_state,
+                    );
                 }
             }
             (*self.lexical_state_function_state).freereg =
@@ -339,7 +352,8 @@ pub unsafe fn solvegotos(
 ) -> bool {
     unsafe {
         let gl: *mut VectorT<LabelDescription> = &mut (*(*lexical_state).dynamic_data).goto_;
-        let mut i: i32 = (*(*(*lexical_state).lexical_state_function_state).block_control).first_goto;
+        let mut i: i32 =
+            (*(*(*lexical_state).lexical_state_function_state).block_control).first_goto;
         let mut needsclose = false;
         while i < (*gl).get_length() as i32 {
             if (*((*gl).vectort_pointer).offset(i as isize)).name == (*label_description).name {
@@ -410,7 +424,7 @@ pub unsafe fn open_function(
     interpreter: *mut Interpreter,
     lexical_state: *mut LexicalState,
     function_state: *mut FunctionState,
-    previous: * mut FunctionState,
+    previous: *mut FunctionState,
     block_control: *mut BlockControl,
 ) {
     unsafe {
@@ -785,7 +799,13 @@ pub unsafe fn body(
         let mut block_control = BlockControl::new();
         new_fs.prototype = (*lexical_state).add_prototype(interpreter);
         (*new_fs.prototype).prototype_line_defined = line;
-        open_function(interpreter, lexical_state, &mut new_fs, (*lexical_state).lexical_state_function_state, &mut block_control);
+        open_function(
+            interpreter,
+            lexical_state,
+            &mut new_fs,
+            (*lexical_state).lexical_state_function_state,
+            &mut block_control,
+        );
         checknext(
             interpreter,
             lexical_state,

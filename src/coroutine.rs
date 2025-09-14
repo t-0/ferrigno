@@ -1,6 +1,6 @@
-use rlua::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
+use rlua::*;
 use std::ptr::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
     make_cstring!("running"),

@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::callinfo::*;
 use crate::character::*;
 use crate::debuginfo::*;
@@ -11,6 +10,7 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -118,9 +118,7 @@ impl Closure {
 pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-            (*(*interpreter).top.stkidrel_pointer)
-                
-                .set_tag_variant(TagVariant::NilNil as u8);
+            (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil as u8);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
@@ -162,12 +160,13 @@ pub unsafe fn auxgetinfo(
                     funcinfo(ar, closure);
                 }
                 CHARACTER_LOWER_L => {
-                    (*ar).currentline =
-                        if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
-                            getcurrentline(call_info)
-                        } else {
-                            -1
-                        };
+                    (*ar).currentline = if !call_info.is_null()
+                        && (*call_info).call_info_call_status as i32 & 1 << 1 == 0
+                    {
+                        getcurrentline(call_info)
+                    } else {
+                        -1
+                    };
                 }
                 CHARACTER_LOWER_U => {
                     (*ar).nups = (if closure.is_null() {
@@ -202,7 +201,9 @@ pub unsafe fn auxgetinfo(
                     }
                 }
                 CHARACTER_LOWER_R => {
-                    if call_info.is_null() || (*call_info).call_info_call_status as i32 & 1 << 8 == 0 {
+                    if call_info.is_null()
+                        || (*call_info).call_info_call_status as i32 & 1 << 8 == 0
+                    {
                         (*ar).ntransfer = 0;
                         (*ar).ftransfer = (*ar).ntransfer;
                     } else {
@@ -226,10 +227,7 @@ pub unsafe fn size_cclosure(count_upvalues: usize) -> usize {
 pub unsafe fn size_lclosure(count_upvalues: usize) -> usize {
     core::mem::size_of::<Closure>() + size_of::<*mut TValue>() * count_upvalues
 }
-pub unsafe fn luaf_newcclosure(
-    interpreter: *mut Interpreter,
-    count_upvalues: i32,
-) -> *mut Closure {
+pub unsafe fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
         let object: *mut Object = luac_newobj(
             interpreter,

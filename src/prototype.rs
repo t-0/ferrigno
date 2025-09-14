@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::character::*;
 use crate::debugger::absolutelineinfo::*;
 use crate::dumpstate::*;
@@ -19,6 +18,7 @@ use crate::vectort::*;
 use crate::vm::instruction::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -63,11 +63,7 @@ impl Prototype {
             );
         }
     }
-    pub unsafe fn dump_function(
-        &self,
-        dump_state: &mut DumpState,
-        source: *mut TString,
-    ) {
+    pub unsafe fn dump_function(&self, dump_state: &mut DumpState, source: *mut TString) {
         unsafe {
             if dump_state.is_strip || self.prototype_source == source {
                 dump_state.dump_string(null());
@@ -362,10 +358,7 @@ pub unsafe fn getbaseline(
         };
     }
 }
-pub unsafe fn luag_getfuncline(
-    prototype: *const Prototype,
-    program_counter: i32,
-) -> i32 {
+pub unsafe fn luag_getfuncline(prototype: *const Prototype, program_counter: i32) -> i32 {
     unsafe {
         if ((*prototype).prototype_line_info.vectort_pointer).is_null() {
             return -1;
@@ -395,11 +388,7 @@ pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
         };
     }
 }
-pub unsafe fn nextline(
-    p: *const Prototype,
-    currentline: i32,
-    program_counter: i32,
-) -> i32 {
+pub unsafe fn nextline(p: *const Prototype, currentline: i32, program_counter: i32) -> i32 {
     unsafe {
         if *((*p).prototype_line_info.vectort_pointer).offset(program_counter as isize) as i32
             != -(0x80 as i32)
@@ -525,12 +514,7 @@ pub unsafe fn basicgetobjname(
         return null();
     }
 }
-pub unsafe fn rname(
-    p: *const Prototype,
-    mut program_counter: i32,
-    c: i32,
-    name: *mut *const i8,
-) {
+pub unsafe fn rname(p: *const Prototype, mut program_counter: i32, c: i32, name: *mut *const i8) {
     unsafe {
         let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
         if !(!what.is_null() && *what as i32 == CHARACTER_LOWER_C as i32) {
@@ -538,12 +522,7 @@ pub unsafe fn rname(
         }
     }
 }
-pub unsafe fn rkname(
-    p: *const Prototype,
-    program_counter: i32,
-    i: u32,
-    name: *mut *const i8,
-) {
+pub unsafe fn rkname(p: *const Prototype, program_counter: i32, i: u32, name: *mut *const i8) {
     unsafe {
         let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
         if (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 != 0 {
@@ -642,7 +621,11 @@ pub unsafe fn funcnamefromcode(
                 *name = make_cstring!("for iterator");
                 return make_cstring!("for iterator");
             }
-            OP_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
+            OP_SELF
+            | OPCODE_GET_TABLE_UPVALUE
+            | OPCODE_GET_TABLE
+            | OPCODE_INDEX_INTEGER
+            | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
             }
             OP_SETTABUP | OP_SETTABLE | OP_SETI | OP_SETFIELD => {
@@ -682,11 +665,7 @@ pub unsafe fn funcnamefromcode(
         return make_cstring!("metamethod");
     }
 }
-pub unsafe fn changedline(
-    p: *const Prototype,
-    old_program_counter: i32,
-    newpc: i32,
-) -> i32 {
+pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: i32) -> i32 {
     unsafe {
         if ((*p).prototype_line_info.vectort_pointer).is_null() {
             return 0;

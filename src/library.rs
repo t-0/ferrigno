@@ -9,7 +9,6 @@ mod package;
 mod string;
 mod table;
 mod utf8;
-use rlua::*;
 use crate::interpreter::*;
 use crate::library::base::*;
 use crate::library::coroutine::*;
@@ -22,6 +21,7 @@ use crate::library::string::*;
 use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
+use rlua::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {

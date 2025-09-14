@@ -1,5 +1,4 @@
 #![allow(unpredictable_function_pointer_comparisons, unused)]
-use rlua::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::f2i::*;
@@ -15,6 +14,7 @@ use crate::user::*;
 use crate::utility::*;
 use crate::value::*;
 use libc::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -198,21 +198,10 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
         let mut length: usize;
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            length = snprintf(
-                buffer,
-                44,
-                make_cstring!("%lld"),
-                (*obj).value.integer,
-            ) as usize;
+            length = snprintf(buffer, 44, make_cstring!("%lld"), (*obj).value.integer) as usize;
         } else {
-            length = snprintf(
-                buffer,
-                44,
-                make_cstring!("%.14g"),
-                (*obj).value.number,
-            ) as usize;
-            if *buffer.offset(strspn(buffer, make_cstring!("-0123456789")) as isize)
-                as i32
+            length = snprintf(buffer, 44, make_cstring!("%.14g"), (*obj).value.number) as usize;
+            if *buffer.offset(strspn(buffer, make_cstring!("-0123456789")) as isize) as i32
                 == Character::Null as i32
             {
                 let fresh = length;
@@ -461,21 +450,13 @@ pub unsafe fn luav_equalobj(
             return false;
         } else {
             luat_calltmres(interpreter, tm, t1, t2, (*interpreter).top.stkidrel_pointer);
-            return !((*(*interpreter).top.stkidrel_pointer)
-                
-                .get_tag_variant()
+            return !((*(*interpreter).top.stkidrel_pointer).get_tag_variant()
                 == TAG_VARIANT_BOOLEAN_FALSE
-                || (*(*interpreter).top.stkidrel_pointer)
-                    
-                    .is_tagtype_nil());
+                || (*(*interpreter).top.stkidrel_pointer).is_tagtype_nil());
         };
     }
 }
-pub unsafe fn luav_objlen(
-    interpreter: *mut Interpreter,
-    ra: *mut TValue,
-    rb: *const TValue,
-) {
+pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *const TValue) {
     unsafe {
         let tm: *const TValue;
         match (*rb).get_tag_variant() {
@@ -514,11 +495,7 @@ pub unsafe fn luav_objlen(
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
                 if ((*tm).get_tag_type()) == TagType::Nil {
-                    luag_typeerror(
-                        interpreter,
-                        rb,
-                        make_cstring!("get length of"),
-                    );
+                    luag_typeerror(interpreter, rb, make_cstring!("get length of"));
                 }
             }
         }

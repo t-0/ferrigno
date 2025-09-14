@@ -22,12 +22,12 @@ impl BuffFS {
     }
     pub unsafe fn clear(&mut self) {
         unsafe {
-            let io: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer);
-            let ts: *mut TString =
+            let tvalue: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer);
+            let tstring: *mut TString =
                 luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size);
-            (*io).value.object = &mut (*(ts as *mut Object));
-            (*io).set_tag_variant((*ts).get_tag_variant());
-            (*io).set_collectable(true);
+            (*tvalue).value.object = &mut (*(tstring as *mut Object));
+            (*tvalue).set_tag_variant((*tstring).get_tag_variant());
+            (*tvalue).set_collectable(true);
             (*self.interpreter).top.stkidrel_pointer =
                 (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {

@@ -1,15 +1,15 @@
 #![allow(unpredictable_function_pointer_comparisons)]
-use rlua::*;
 use crate::callinfo::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::prototype::*;
-use crate::tvalue::*;
 use crate::tag::*;
+use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -40,16 +40,13 @@ pub unsafe fn lua_getlocal(
     unsafe {
         let name;
         if ar.is_null() {
-            if !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
-                
-                .get_tag_variant()
+            if !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant()
                 == TAG_VARIANT_CLOSURE_L)
             {
                 name = null();
             } else {
                 name = luaf_getlocalname(
                     (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)))
-                        
                         .value
                         .object as *mut Closure))
                         .payload

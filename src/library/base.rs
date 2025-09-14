@@ -1,11 +1,12 @@
 #![allow(unpredictable_function_pointer_comparisons, unsafe_code)]
-use rlua::*;
+use crate::calls::*;
 use crate::character::*;
 use crate::f2i::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
+use rlua::*;
 use std::ptr::*;
 pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -33,11 +34,8 @@ pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
                 lual_checktype(interpreter, 1, TagType::String);
                 s_0 = lua_tolstring(interpreter, 1, &mut l_0);
                 (((2 as i64 <= base && base <= 36 as i64) as i32 != 0) as i64 != 0
-                    || lual_argerror(
-                        interpreter,
-                        2,
-                        make_cstring!("base out of range"),
-                    ) != 0) as i32;
+                    || lual_argerror(interpreter, 2, make_cstring!("base out of range")) != 0)
+                    as i32;
                 if b_str2int(s_0, base as i32, &mut n) == s_0.offset(l_0 as isize) {
                     (*interpreter).push_integer(n);
                     return 1;
@@ -81,9 +79,7 @@ pub unsafe fn luab_setmetatable(interpreter: *mut Interpreter) -> i32 {
                 lual_typeerror(interpreter, 2, make_cstring!("nil or table"));
             }
         };
-        if lual_getmetafield(interpreter, 1, make_cstring!("__metatable"))
-            != TagType::Nil
-        {
+        if lual_getmetafield(interpreter, 1, make_cstring!("__metatable")) != TagType::Nil {
             return lual_error(
                 interpreter,
                 make_cstring!("cannot change a protected metatable"),
@@ -107,11 +103,7 @@ pub unsafe fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
         match lua_type(interpreter, 1) {
             Some(TagType::Table) | Some(TagType::String) => {}
             _ => {
-                lual_typeerror(
-                    interpreter,
-                    1,
-                    make_cstring!("table or string"),
-                );
+                lual_typeerror(interpreter, 1, make_cstring!("table or string"));
             }
         };
         (*interpreter).push_integer(get_length_raw(interpreter, 1) as usize as i64);
@@ -170,12 +162,8 @@ pub unsafe fn luab_collectgarbage(interpreter: *mut Interpreter) -> i32 {
             null(),
         ];
         pub const OPTS_NUMBERS: [i32; 10] = [0, 1, 2, 3, 5, 6, 7, 9 as i32, 10 as i32, 11 as i32];
-        let o: i32 = OPTS_NUMBERS[lual_checkoption(
-            interpreter,
-            1,
-            make_cstring!("collect"),
-            OPTS.as_ptr(),
-        ) as usize];
+        let o: i32 = OPTS_NUMBERS
+            [lual_checkoption(interpreter, 1, make_cstring!("collect"), OPTS.as_ptr()) as usize];
         match o {
             3 => {
                 let k: i32 = lua_gc(interpreter, o);
@@ -239,11 +227,7 @@ pub unsafe fn luab_type(interpreter: *mut Interpreter) -> i32 {
         let t = lua_type(interpreter, 1);
         match t {
             None => {
-                lual_argerror(
-                    interpreter,
-                    1,
-                    make_cstring!("value expected"),
-                );
+                lual_argerror(interpreter, 1, make_cstring!("value expected"));
             }
             _ => {
                 lua_pushstring(interpreter, lua_typename(interpreter, t));
@@ -264,18 +248,13 @@ pub unsafe fn luab_next(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe fn pairscont(
-    mut _state: *mut Interpreter,
-    mut _status: i32,
-    mut _k: i64,
-) -> i32 {
+pub unsafe fn pairscont(mut _state: *mut Interpreter, mut _status: i32, mut _k: i64) -> i32 {
     return 3;
 }
 pub unsafe fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkany(interpreter, 1);
-        if lual_getmetafield(interpreter, 1, make_cstring!("__pairs")) == TagType::Nil
-        {
+        if lual_getmetafield(interpreter, 1, make_cstring!("__pairs")) == TagType::Nil {
             lua_pushcclosure(
                 interpreter,
                 Some(luab_next as unsafe fn(*mut Interpreter) -> i32),
@@ -357,11 +336,7 @@ pub unsafe fn generic_reader(
     size: *mut usize,
 ) -> *const i8 {
     unsafe {
-        lual_checkstack(
-            interpreter,
-            2,
-            make_cstring!("too many nested functions"),
-        );
+        lual_checkstack(interpreter, 2, make_cstring!("too many nested functions"));
         lua_pushvalue(interpreter, 1);
         lua_callk(interpreter, 0, 1, 0, None);
         if lua_type(interpreter, -1) == Some(TagType::Nil) {
@@ -384,12 +359,7 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
         let status: i32;
         let mut l: usize = 0;
         let s: *const i8 = lua_tolstring(interpreter, 1, &mut l);
-        let mode: *const i8 = lual_optlstring(
-            interpreter,
-            3,
-            make_cstring!("bt"),
-            null_mut(),
-        );
+        let mode: *const i8 = lual_optlstring(interpreter, 3, make_cstring!("bt"), null_mut());
         let env: i32 = if !(lua_type(interpreter, 4) == None) {
             4
         } else {
@@ -399,23 +369,15 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
             let chunkname: *const i8 = lual_optlstring(interpreter, 2, s, null_mut());
             status = lual_loadbufferx(interpreter, s, l, chunkname, mode);
         } else {
-            let chunkname_0: *const i8 = lual_optlstring(
-                interpreter,
-                2,
-                make_cstring!("=(load)"),
-                null_mut(),
-            );
+            let chunkname_0: *const i8 =
+                lual_optlstring(interpreter, 2, make_cstring!("=(load)"), null_mut());
             lual_checktype(interpreter, 1, TagType::Closure);
             lua_settop(interpreter, 5);
             status = lua_load(
                 interpreter,
                 Some(
                     generic_reader
-                        as unsafe fn(
-                            *mut Interpreter,
-                            *mut libc::c_void,
-                            *mut usize,
-                        ) -> *const i8,
+                        as unsafe fn(*mut Interpreter, *mut libc::c_void, *mut usize) -> *const i8,
                 ),
                 null_mut(),
                 chunkname_0,
@@ -425,11 +387,7 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
         return load_aux(interpreter, status, env);
     }
 }
-pub unsafe fn dofilecont(
-    interpreter: *mut Interpreter,
-    mut _d1: i32,
-    mut _d2: i64,
-) -> i32 {
+pub unsafe fn dofilecont(interpreter: *mut Interpreter, mut _d1: i32, mut _d2: i64) -> i32 {
     unsafe {
         return (*interpreter).get_top() - 1;
     }
@@ -459,10 +417,7 @@ pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
             lual_checkany(interpreter, 1);
             lua_rotate(interpreter, 1, -1);
             lua_settop(interpreter, -2);
-            lua_pushstring(
-                interpreter,
-                make_cstring!("assertion failed!"),
-            );
+            lua_pushstring(interpreter, make_cstring!("assertion failed!"));
             lua_settop(interpreter, 1);
             return luab_error(interpreter);
         };
@@ -484,11 +439,8 @@ pub unsafe fn luab_select(interpreter: *mut Interpreter) -> i32 {
                 i = n as i64;
             }
             (((1 <= i) as i32 != 0) as i64 != 0
-                || lual_argerror(
-                    interpreter,
-                    1,
-                    make_cstring!("index out of range"),
-                ) != 0) as i32;
+                || lual_argerror(interpreter, 1, make_cstring!("index out of range")) != 0)
+                as i32;
             return n - i as i32;
         };
     }
@@ -530,9 +482,7 @@ pub const BASE_FUNCTIONS: [RegisteredFunction; 26] = {
         {
             RegisteredFunction {
                 name: make_cstring!("collectgarbage"),
-                function: Some(
-                    luab_collectgarbage as unsafe fn(*mut Interpreter) -> i32,
-                ),
+                function: Some(luab_collectgarbage as unsafe fn(*mut Interpreter) -> i32),
             }
         },
         {

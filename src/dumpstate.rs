@@ -1,8 +1,8 @@
-use rlua::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use crate::tstring::*;
+use rlua::*;
 use std::ptr::*;
 pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
 #[repr(C)]

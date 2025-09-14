@@ -1,14 +1,14 @@
-use rlua::*;
 use crate::character::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
-use crate::tvalue::*;
 use crate::stringtable::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use rlua::*;
 use std::ptr::*;
 pub const STRING_SHORT_MAX: usize = 40;
 #[derive(Copy, Clone)]
@@ -310,10 +310,9 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     })
             {
                 luat_tryconcattm(interpreter);
-            } else if (*top.offset(-(1 as isize))).get_tag_variant()
-                == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(1 as isize))).value.object as *mut TString))
-                    .get_length() as i32
+            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT
+                && (*((*top.offset(-(1 as isize))).value.object as *mut TString)).get_length()
+                    as i32
                     == 0
             {
                 (((*top.offset(-(2 as isize))).is_tagtype_string())
@@ -321,27 +320,22 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                         luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))));
                         1 != 0
                     }) as i32;
-            } else if (*top.offset(-(2 as isize))).get_tag_variant()
-                == TAG_VARIANT_STRING_SHORT
-                && (*((*top.offset(-(2 as isize))).value.object as *mut TString))
-                    .get_length() as i32
+            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT
+                && (*((*top.offset(-(2 as isize))).value.object as *mut TString)).get_length()
+                    as i32
                     == 0
             {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize)));
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
             } else {
-                let mut tl = (*((*top.offset(-(1 as isize))).value.object as *mut TString))
-                    .get_length();
+                let mut tl =
+                    (*((*top.offset(-(1 as isize))).value.object as *mut TString)).get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
-                    && ((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                        
-                        .is_tagtype_string()
-                        || (*top.offset(-(n as isize)).offset(-(1 as isize)))
-                            
-                            .is_tagtype_numeric()
+                    && ((*top.offset(-(n as isize)).offset(-(1 as isize))).is_tagtype_string()
+                        || (*top.offset(-(n as isize)).offset(-(1 as isize))).is_tagtype_numeric()
                             && {
                                 luao_tostring(
                                     interpreter,
@@ -351,7 +345,6 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                             })
                 {
                     let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize)))
-                        
                         .value
                         .object as *mut TString))
                         .get_length();
@@ -367,10 +360,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                         != 0
                     {
                         (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
-                        luag_runerror(
-                            interpreter,
-                            make_cstring!("string length overflow"),
-                        );
+                        luag_runerror(interpreter, make_cstring!("string length overflow"));
                     }
                     tl = tl.wrapping_add(l);
                     n += 1;

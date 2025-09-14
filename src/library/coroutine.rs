@@ -1,8 +1,8 @@
-use rlua::*;
 use crate::coroutine::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
+use rlua::*;
 use std::ptr::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -178,19 +178,12 @@ pub unsafe fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
         return co;
     }
 }
-pub unsafe fn auxresume(
-    interpreter: *mut Interpreter,
-    co: *mut Interpreter,
-    narg: i32,
-) -> i32 {
+pub unsafe fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, narg: i32) -> i32 {
     unsafe {
         let status: i32;
         let mut nres: i32 = 0;
         if lua_checkstack(co, narg) == 0 {
-            lua_pushstring(
-                interpreter,
-                make_cstring!("too many arguments to resume"),
-            );
+            lua_pushstring(interpreter, make_cstring!("too many arguments to resume"));
             return -1;
         }
         lua_xmove(interpreter, co, narg);
@@ -198,10 +191,7 @@ pub unsafe fn auxresume(
         if status == 0 || status == 1 {
             if lua_checkstack(interpreter, nres + 1) == 0 {
                 lua_settop(co, -nres - 1);
-                lua_pushstring(
-                    interpreter,
-                    make_cstring!("too many results to resume"),
-                );
+                lua_pushstring(interpreter, make_cstring!("too many results to resume"));
                 return -1;
             }
             lua_xmove(co, interpreter, nres);

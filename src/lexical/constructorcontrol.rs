@@ -1,5 +1,5 @@
-use std::ptr::*;
 use crate::expressiondescription::*;
+use std::ptr::*;
 #[repr(C)]
 pub struct ConstructorControl {
     pub expression_description: ExpressionDescription,

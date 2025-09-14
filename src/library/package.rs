@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::buffer::*;
 use crate::character::*;
 use crate::functions::*;
@@ -8,6 +7,7 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use libc::{dlclose, dlerror, dlopen, dlsym};
+use rlua::*;
 use std::ptr::*;
 pub const CLIBS: *const i8 = make_cstring!("_CLIBS");
 pub unsafe fn lsys_unloadlib(lib: *mut libc::c_void) {
@@ -93,8 +93,7 @@ pub unsafe fn setpath(
                     let fresh193 = b.loads.get_length();
                     b.loads
                         .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh193 as isize) =
-                        *(make_cstring!(";"));
+                    *(b.loads.loads_pointer).offset(fresh193 as isize) = *(make_cstring!(";"));
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
@@ -103,8 +102,7 @@ pub unsafe fn setpath(
                     let fresh194 = b.loads.get_length();
                     b.loads
                         .set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh194 as isize) =
-                        *(make_cstring!(";"));
+                    *(b.loads.loads_pointer).offset(fresh194 as isize) = *(make_cstring!(";"));
                     b.add_string_with_length(
                         dftmark.offset(2 as isize),
                         path.offset(length as isize)
@@ -119,10 +117,7 @@ pub unsafe fn setpath(
         lua_settop(interpreter, -2);
     }
 }
-pub unsafe fn checkclib(
-    interpreter: *mut Interpreter,
-    path: *const i8,
-) -> *mut libc::c_void {
+pub unsafe fn checkclib(interpreter: *mut Interpreter, path: *const i8) -> *mut libc::c_void {
     unsafe {
         let plib: *mut libc::c_void;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, CLIBS);
@@ -132,11 +127,7 @@ pub unsafe fn checkclib(
         return plib;
     }
 }
-pub unsafe fn addtoclib(
-    interpreter: *mut Interpreter,
-    path: *const i8,
-    plib: *mut libc::c_void,
-) {
+pub unsafe fn addtoclib(interpreter: *mut Interpreter, path: *const i8, plib: *mut libc::c_void) {
     unsafe {
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, CLIBS);
         lua_pushlightuserdata(interpreter, plib);
@@ -158,11 +149,7 @@ pub unsafe fn gctm(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub unsafe fn lookforfunc(
-    interpreter: *mut Interpreter,
-    path: *const i8,
-    sym: *const i8,
-) -> i32 {
+pub unsafe fn lookforfunc(interpreter: *mut Interpreter, path: *const i8, sym: *const i8) -> i32 {
     unsafe {
         let mut reg: *mut libc::c_void = checkclib(interpreter, path);
         if reg.is_null() {
@@ -330,20 +317,10 @@ pub unsafe fn findfile(
                 pname,
             );
         }
-        return searchpath(
-            interpreter,
-            name,
-            path,
-            make_cstring!("."),
-            dirsep,
-        );
+        return searchpath(interpreter, name, path, make_cstring!("."), dirsep);
     }
 }
-pub unsafe fn checkload(
-    interpreter: *mut Interpreter,
-    stat: i32,
-    filename: *const i8,
-) -> i32 {
+pub unsafe fn checkload(interpreter: *mut Interpreter, stat: i32, filename: *const i8) -> i32 {
     unsafe {
         if (stat != 0) as i64 != 0 {
             lua_pushstring(interpreter, filename);
@@ -362,12 +339,8 @@ pub unsafe fn checkload(
 pub unsafe fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let filename: *const i8 = findfile(
-            interpreter,
-            name,
-            make_cstring!("path"),
-            make_cstring!("/"),
-        );
+        let filename: *const i8 =
+            findfile(interpreter, name, make_cstring!("path"), make_cstring!("/"));
         if filename.is_null() {
             return 1;
         }
@@ -384,32 +357,19 @@ pub unsafe fn loadfunc(
     mut modname: *const i8,
 ) -> i32 {
     unsafe {
-        modname = lual_gsub(
-            interpreter,
-            modname,
-            make_cstring!("."),
-            make_cstring!("_"),
-        );
+        modname = lual_gsub(interpreter, modname, make_cstring!("."), make_cstring!("_"));
         let mut openfunc: *const i8;
         let mark: *const i8 = strchr(modname, *(make_cstring!("-")) as i32);
         if !mark.is_null() {
             openfunc = lua_pushlstring(interpreter, modname, mark.offset_from(modname) as usize);
-            openfunc = lua_pushfstring(
-                interpreter,
-                make_cstring!("luaopen_%s"),
-                openfunc,
-            );
+            openfunc = lua_pushfstring(interpreter, make_cstring!("luaopen_%s"), openfunc);
             let stat: i32 = lookforfunc(interpreter, filename, openfunc);
             if stat != 2 {
                 return stat;
             }
             modname = mark.offset(1 as isize);
         }
-        openfunc = lua_pushfstring(
-            interpreter,
-            make_cstring!("luaopen_%s"),
-            modname,
-        );
+        openfunc = lua_pushfstring(interpreter, make_cstring!("luaopen_%s"), modname);
         return lookforfunc(interpreter, filename, openfunc);
     }
 }
@@ -704,17 +664,9 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         );
         lua_pushstring(interpreter, make_cstring!("/\n;\n?\n!\n-\n"));
         lua_setfield(interpreter, -2, make_cstring!("config"));
-        lual_getsubtable(
-            interpreter,
-            -1000000 - 1000,
-            make_cstring!("_LOADED"),
-        );
+        lual_getsubtable(interpreter, -1000000 - 1000, make_cstring!("_LOADED"));
         lua_setfield(interpreter, -2, make_cstring!("loaded"));
-        lual_getsubtable(
-            interpreter,
-            -1000000 - 1000,
-            make_cstring!("_PRELOAD"),
-        );
+        lual_getsubtable(interpreter, -1000000 - 1000, make_cstring!("_PRELOAD"));
         lua_setfield(interpreter, -2, make_cstring!("preload"));
         lua_rawgeti(interpreter, -1000000 - 1000, 2 as i64);
         lua_pushvalue(interpreter, -2);

@@ -1,11 +1,11 @@
-use rlua::*;
 use crate::closure::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
-use crate::tvalue::*;
 use crate::stkidrel::*;
 use crate::tag::*;
+use crate::tvalue::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -86,7 +86,10 @@ pub unsafe fn settraps(mut call_info: *mut CallInfo) {
                 break;
             } else {
                 if (*call_info).call_info_call_status as i32 & (1 << 1) == 0 {
-                    ::core::ptr::write_volatile(&mut (*call_info).call_info_u.l.trap as *mut i32, 1);
+                    ::core::ptr::write_volatile(
+                        &mut (*call_info).call_info_u.l.trap as *mut i32,
+                        1,
+                    );
                 }
                 call_info = (*call_info).call_info_previous;
             }
@@ -100,7 +103,8 @@ pub unsafe fn luag_findlocal(
     pos: *mut *mut TValue,
 ) -> *const i8 {
     unsafe {
-        let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue =
+            ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
         let mut name: *const i8 = null();
         if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
@@ -121,7 +125,9 @@ pub unsafe fn luag_findlocal(
             let limit: *mut TValue = if call_info == (*interpreter).call_info {
                 (*interpreter).top.stkidrel_pointer
             } else {
-                (*(*call_info).call_info_next).call_info_function.stkidrel_pointer
+                (*(*call_info).call_info_next)
+                    .call_info_function
+                    .stkidrel_pointer
             };
             if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
                 name = if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
@@ -139,11 +145,7 @@ pub unsafe fn luag_findlocal(
         return name;
     }
 }
-pub unsafe fn findvararg(
-    call_info: *mut CallInfo,
-    n: i32,
-    pos: *mut *mut TValue,
-) -> *const i8 {
+pub unsafe fn findvararg(call_info: *mut CallInfo, n: i32, pos: *mut *mut TValue) -> *const i8 {
     unsafe {
         if (*(*((*(*call_info).call_info_function.stkidrel_pointer)
             .value
@@ -206,13 +208,12 @@ pub unsafe fn funcnamefromcall(
 }
 pub unsafe fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
-        let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue =
+            ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
         let mut pos: i32 = 0;
         loop {
             if base.offset(pos as isize) < (*call_info).call_info_top.stkidrel_pointer {
-                if tvalue
-                    == &mut (*base.offset(pos as isize)) as *mut TValue as *const TValue
-                {
+                if tvalue == &mut (*base.offset(pos as isize)) as *mut TValue as *const TValue {
                     return pos;
                 } else {
                     pos += 1;

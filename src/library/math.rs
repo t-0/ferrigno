@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::interpreter::*;
 use crate::randomstate::*;
 use crate::registeredfunction::*;
@@ -6,6 +5,7 @@ use crate::tag::*;
 use crate::user::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use rlua::*;
 use std::ptr::*;
 pub const PI: f64 = 3.141592653589793238462643383279502884f64;
 pub unsafe fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
@@ -286,11 +286,7 @@ unsafe fn math_min(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = (*interpreter).get_top();
         let mut imin: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(
-                interpreter,
-                1,
-                make_cstring!("value expected"),
-            ) != 0) as i32;
+            || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, i, imin, 1) != 0 {
                 imin = i;
@@ -305,11 +301,7 @@ unsafe fn math_max(interpreter: *mut Interpreter) -> i32 {
         let n: i32 = (*interpreter).get_top();
         let mut imax: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(
-                interpreter,
-                1,
-                make_cstring!("value expected"),
-            ) != 0) as i32;
+            || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, imax, i, 1) != 0 {
                 imax = i;
@@ -367,11 +359,8 @@ unsafe fn math_random(interpreter: *mut Interpreter) -> i32 {
             }
         }
         (((low <= up) as i32 != 0) as i64 != 0
-            || lual_argerror(
-                interpreter,
-                1,
-                make_cstring!("interval is empty"),
-            ) != 0) as i32;
+            || lual_argerror(interpreter, 1, make_cstring!("interval is empty")) != 0)
+            as i32;
         p = project(
             (rv & 0xffffffffffffffff as usize) as usize,
             (up as usize).wrapping_sub(low as usize),

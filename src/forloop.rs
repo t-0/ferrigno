@@ -1,9 +1,9 @@
-use rlua::*;
 use crate::f2i::*;
 use crate::interpreter::*;
-use crate::tvalue::*;
 use crate::tag::*;
+use crate::tvalue::*;
 use crate::utility::*;
+use rlua::*;
 pub unsafe fn forlimit(
     interpreter: *mut Interpreter,
     init: i64,
@@ -48,9 +48,9 @@ pub unsafe fn forlimit(
 }
 pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
     unsafe {
-        let pinit: *mut TValue = &mut (*ra);
-        let plimit: *mut TValue = &mut (*ra.offset(1 as isize));
-        let pstep: *mut TValue = &mut (*ra.offset(2 as isize));
+        let pinit = &mut (*ra);
+        let plimit = &mut (*ra.offset(1 as isize));
+        let pstep = &mut (*ra.offset(2 as isize));
         if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
             && (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
         {
@@ -58,12 +58,9 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             let step: i64 = (*pstep).value.integer;
             let mut limit: i64 = 0;
             if step == 0 {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("'for' step is zero"),
-                );
+                luag_runerror(interpreter, make_cstring!("'for' step is zero"));
             }
-            let io: *mut TValue = &mut (*ra.offset(3 as isize));
+            let io = &mut (*ra.offset(3 as isize));
             (*io).value.integer = init;
             (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
             if forlimit(interpreter, init, plimit, &mut limit, step) != 0 {
@@ -81,9 +78,8 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                         .wrapping_div((-(step + 1) as usize).wrapping_add(1 as usize))
                         as usize;
                 }
-                let io_0: *mut TValue = plimit;
-                (*io_0).value.integer = count as i64;
-                (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
+                (*plimit).value.integer = count as i64;
+                (*plimit).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
             }
         } else {
             let mut init_0: f64 = 0.0;
@@ -132,17 +128,10 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 != 0) as i64
                 != 0
             {
-                luag_forerror(
-                    interpreter,
-                    pinit,
-                    make_cstring!("initial value"),
-                );
+                luag_forerror(interpreter, pinit, make_cstring!("initial value"));
             }
             if step_0 == 0.0 {
-                luag_runerror(
-                    interpreter,
-                    make_cstring!("'for' step is zero"),
-                );
+                luag_runerror(interpreter, make_cstring!("'for' step is zero"));
             }
             if if (0.0) < step_0 {
                 (limit_0 < init_0) as i32
@@ -152,12 +141,10 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             {
                 return 1;
             } else {
-                let io_1: *mut TValue = plimit;
-                (*io_1).value.number = limit_0;
-                (*io_1).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
-                let io_2: *mut TValue = pstep;
-                (*io_2).value.number = step_0;
-                (*io_2).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
+                (*plimit).value.number = limit_0;
+                (*plimit).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
+                (*pstep).value.number = step_0;
+                (*pstep).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                 let io_3: *mut TValue = &mut (*ra);
                 (*io_3).value.number = init_0;
                 (*io_3).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);

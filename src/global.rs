@@ -1,4 +1,3 @@
-use rlua::*;
 use crate::closure::*;
 use crate::functions::*;
 use crate::interpreter::*;
@@ -12,6 +11,7 @@ use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
+use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -222,8 +222,7 @@ impl Global {
             if !(self.sweep_gc).is_null() {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
-                self.sweep_gc =
-                    (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
+                self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
                 self.gc_estimate = (self.gc_estimate as usize)
                     .wrapping_add((self.gc_debt - olddebt) as usize)
                     as usize as usize;
@@ -235,13 +234,16 @@ impl Global {
             };
         }
     }
-    pub unsafe fn sweepstep_finalized(&mut self, interpreter: *mut Interpreter, nextstate: i32) -> i32 {
+    pub unsafe fn sweepstep_finalized(
+        &mut self,
+        interpreter: *mut Interpreter,
+        nextstate: i32,
+    ) -> i32 {
         unsafe {
             if !(self.sweep_gc).is_null() {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
-                self.sweep_gc =
-                    (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
+                self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
                 self.gc_estimate = (self.gc_estimate as usize)
                     .wrapping_add((self.gc_debt - olddebt) as usize)
                     as usize as usize;
@@ -253,13 +255,16 @@ impl Global {
             };
         }
     }
-    pub unsafe fn sweepstep_to_be_finalized(&mut self, interpreter: *mut Interpreter, nextstate: i32) -> i32 {
+    pub unsafe fn sweepstep_to_be_finalized(
+        &mut self,
+        interpreter: *mut Interpreter,
+        nextstate: i32,
+    ) -> i32 {
         unsafe {
             if !(self.sweep_gc).is_null() {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
-                self.sweep_gc =
-                    (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
+                self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
                 self.gc_estimate = (self.gc_estimate as usize)
                     .wrapping_add((self.gc_debt - olddebt) as usize)
                     as usize as usize;
@@ -271,7 +276,7 @@ impl Global {
             };
         }
     }
-    pub unsafe fn genstep(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn genstep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.last_atomic != 0 {
                 self.stepgenfull(interpreter);
@@ -281,8 +286,7 @@ impl Global {
                     .wrapping_div(100 as usize)
                     .wrapping_mul(self.generational_major_multiplier * 4);
                 if self.gc_debt > 0
-                    && (self.total_bytes + self.gc_debt) as usize
-                        > majorbase.wrapping_add(majorinc)
+                    && (self.total_bytes + self.gc_debt) as usize > majorbase.wrapping_add(majorinc)
                 {
                     let numobjs: usize = self.fullgen(interpreter);
                     if !(((self.total_bytes + self.gc_debt) as usize)
@@ -299,7 +303,7 @@ impl Global {
             };
         }
     }
-    pub unsafe fn entersweep(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn entersweep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             self.gc_state = 3 as u8;
             self.sweep_gc = sweeptolive(interpreter, &mut self.all_gc);
@@ -324,13 +328,13 @@ impl Global {
             self.is_emergency = false;
         }
     }
-    pub unsafe fn fullgen(& mut self, interpreter: *mut Interpreter) -> usize {
+    pub unsafe fn fullgen(&mut self, interpreter: *mut Interpreter) -> usize {
         unsafe {
             self.enter_incremental();
             return self.entergen(interpreter);
         }
     }
-    pub unsafe fn luac_changemode(& mut self, interpreter: *mut Interpreter, new_mode: i32) {
+    pub unsafe fn luac_changemode(&mut self, interpreter: *mut Interpreter, new_mode: i32) {
         unsafe {
             if new_mode != self.gc_kind as i32 {
                 if new_mode == 1 {
@@ -362,7 +366,7 @@ impl Global {
             };
         }
     }
-    pub unsafe fn entergen(& mut self, interpreter: *mut Interpreter) -> usize {
+    pub unsafe fn entergen(&mut self, interpreter: *mut Interpreter) -> usize {
         unsafe {
             self.luac_runtilstate(interpreter, 1 << 8);
             self.luac_runtilstate(interpreter, 1 << 0);
@@ -392,14 +396,14 @@ impl Global {
             self.finishgencycle(interpreter);
         }
     }
-    pub unsafe fn callallpendingfinalizers(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn callallpendingfinalizers(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             while !(self.to_be_finalized).is_null() {
                 gctm_function(interpreter);
             }
         }
     }
-    pub unsafe fn youngcollection(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn youngcollection(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if !(self.first_old1).is_null() {
                 markold(self, self.first_old1, self.really_old);
@@ -434,13 +438,7 @@ impl Global {
                 self.finobjsur,
                 &mut dummy,
             );
-            sweepgen(
-                interpreter,
-                self,
-                psurvival,
-                self.finobjold1,
-                &mut dummy,
-            );
+            sweepgen(interpreter, self, psurvival, self.finobjold1, &mut dummy);
             self.finobjrold = self.finobjold1;
             self.finobjold1 = *psurvival;
             self.finobjsur = self.finalized_objects;
@@ -454,7 +452,7 @@ impl Global {
             self.finishgencycle(interpreter);
         }
     }
-    pub unsafe fn luac_freeallobjects(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn luac_freeallobjects(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             self.gc_step = 4 as u8;
             self.luac_changemode(interpreter, 0);
@@ -478,7 +476,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn luas_init_global(& mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn luas_init_global(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let string_table: *mut StringTable = &mut self.string_table;
             (*string_table).initialize(interpreter);
@@ -791,8 +789,9 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node =
-                &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
+            let limit: *mut Node = &mut *((*table).node)
+                .offset((1 << (*table).log_size_node as i32) as isize)
+                as *mut Node;
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(
@@ -819,8 +818,9 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
     unsafe {
         while l != f {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node =
-                &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
+            let limit: *mut Node = &mut *((*table).node)
+                .offset((1 << (*table).log_size_node as i32) as isize)
+                as *mut Node;
             let asize: u32 = luah_realasize(table);
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;

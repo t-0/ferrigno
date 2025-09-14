@@ -1,6 +1,6 @@
-use rlua::*;
 use crate::character::*;
 use libc::*;
+use rlua::*;
 use std::ptr::*;
 pub mod c;
 pub const MAXIMUM_SIZE: usize = 0x7FFFFFFFFFFFFFFF;
@@ -123,11 +123,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
         };
     }
 }
-pub unsafe fn luao_chunkid(
-    mut out: *mut i8,
-    source: *const i8,
-    mut source_length: usize,
-) {
+pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_length: usize) {
     unsafe {
         let mut bufflen: usize = 60 as usize;
         if *source as i32 == CHARACTER_EQUAL as i32 {
