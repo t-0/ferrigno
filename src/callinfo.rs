@@ -10,14 +10,14 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallInfo {
-    pub function: StkIdRel,
-    pub top: StkIdRel,
-    pub previous: *mut CallInfo,
-    pub next: *mut CallInfo,
-    pub u: CallInfoConstituentA,
-    pub u2: CallInfoConsistuentB,
-    pub count_results: i32,
-    pub call_status: u16,
+    pub call_info_function: StkIdRel,
+    pub call_info_top: StkIdRel,
+    pub call_info_previous: *mut CallInfo,
+    pub call_info_next: *mut CallInfo,
+    pub call_info_u: CallInfoConstituentA,
+    pub call_info_u2: CallInfoConsistuentB,
+    pub call_info_count_results: i32,
+    pub call_info_call_status: u16,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -55,8 +55,8 @@ pub struct CallInfoConsistuentBTransferInfo {
 }
 pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
-        return ((*call_info).u.l.saved_program_counter).offset_from(
-            (*(*((*(*call_info).function.stkidrel_pointer)
+        return ((*call_info).call_info_u.l.saved_program_counter).offset_from(
+            (*(*((*(*call_info).call_info_function.stkidrel_pointer)
                 
                 .value
                 .object as *mut Closure))
@@ -71,7 +71,7 @@ pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
 pub unsafe fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return luag_getfuncline(
-            (*((*(*call_info).function.stkidrel_pointer)
+            (*((*(*call_info).call_info_function.stkidrel_pointer)
                 
                 .value
                 .object as *mut Closure))
@@ -87,10 +87,10 @@ pub unsafe fn settraps(mut call_info: *mut CallInfo) {
             if call_info.is_null() {
                 break;
             } else {
-                if (*call_info).call_status as i32 & (1 << 1) == 0 {
-                    ::core::ptr::write_volatile(&mut (*call_info).u.l.trap as *mut i32, 1);
+                if (*call_info).call_info_call_status as i32 & (1 << 1) == 0 {
+                    ::core::ptr::write_volatile(&mut (*call_info).call_info_u.l.trap as *mut i32, 1);
                 }
-                call_info = (*call_info).previous;
+                call_info = (*call_info).call_info_previous;
             }
         }
     }
@@ -102,14 +102,14 @@ pub unsafe fn luag_findlocal(
     pos: *mut *mut TValue,
 ) -> *const i8 {
     unsafe {
-        let base: *mut TValue = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
         let mut name: *const i8 = null();
-        if (*call_info).call_status as i32 & 1 << 1 == 0 {
+        if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
                 return findvararg(call_info, n, pos);
             } else {
                 name = luaf_getlocalname(
-                    (*((*(*call_info).function.stkidrel_pointer)
+                    (*((*(*call_info).call_info_function.stkidrel_pointer)
                         
                         .value
                         .object as *mut Closure))
@@ -124,10 +124,10 @@ pub unsafe fn luag_findlocal(
             let limit: *mut TValue = if call_info == (*interpreter).call_info {
                 (*interpreter).top.stkidrel_pointer
             } else {
-                (*(*call_info).next).function.stkidrel_pointer
+                (*(*call_info).call_info_next).call_info_function.stkidrel_pointer
             };
             if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
-                name = if (*call_info).call_status as i32 & 1 << 1 == 0 {
+                name = if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
                     make_cstring!("(temporary)")
                 } else {
                     make_cstring!("(C temporary)")
@@ -148,7 +148,7 @@ pub unsafe fn findvararg(
     pos: *mut *mut TValue,
 ) -> *const i8 {
     unsafe {
-        if (*(*((*(*call_info).function.stkidrel_pointer)
+        if (*(*((*(*call_info).call_info_function.stkidrel_pointer)
             
             .value
             .object as *mut Closure))
@@ -156,9 +156,9 @@ pub unsafe fn findvararg(
             .l_prototype)
             .prototype_is_variable_arguments
         {
-            let nextra = (*call_info).u.l.count_extra_arguments;
+            let nextra = (*call_info).call_info_u.l.count_extra_arguments;
             if n >= -nextra {
-                *pos = ((*call_info).function.stkidrel_pointer)
+                *pos = ((*call_info).call_info_function.stkidrel_pointer)
                     .offset(-nextra as isize)
                     .offset(-((n + 1) as isize));
                 return make_cstring!("(vararg)");
@@ -173,8 +173,8 @@ pub unsafe fn getfuncname(
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
-        if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 5 == 0 {
-            return funcnamefromcall(interpreter, (*call_info).previous, name);
+        if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 5 == 0 {
+            return funcnamefromcall(interpreter, (*call_info).call_info_previous, name);
         } else {
             return null();
         };
@@ -186,16 +186,16 @@ pub unsafe fn funcnamefromcall(
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
-        if (*call_info).call_status as i32 & 1 << 3 != 0 {
+        if (*call_info).call_info_call_status as i32 & 1 << 3 != 0 {
             *name = make_cstring!("?");
             return make_cstring!("hook");
-        } else if (*call_info).call_status as i32 & 1 << 7 != 0 {
+        } else if (*call_info).call_info_call_status as i32 & 1 << 7 != 0 {
             *name = make_cstring!("__gc");
             return make_cstring!("metamethod");
-        } else if (*call_info).call_status as i32 & 1 << 1 == 0 {
+        } else if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
                 interpreter,
-                (*((*(*call_info).function.stkidrel_pointer)
+                (*((*(*call_info).call_info_function.stkidrel_pointer)
                     
                     .value
                     .object as *mut Closure))
@@ -211,10 +211,10 @@ pub unsafe fn funcnamefromcall(
 }
 pub unsafe fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
-        let base: *mut TValue = ((*call_info).function.stkidrel_pointer).offset(1 as isize);
+        let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
         let mut pos: i32 = 0;
         loop {
-            if base.offset(pos as isize) < (*call_info).top.stkidrel_pointer {
+            if base.offset(pos as isize) < (*call_info).call_info_top.stkidrel_pointer {
                 if tvalue
                     == &mut (*base.offset(pos as isize)) as *mut TValue as *const TValue
                 {
@@ -234,7 +234,7 @@ pub unsafe fn getupvalname(
     name: *mut *const i8,
 ) -> *const i8 {
     unsafe {
-        let c: *mut Closure = &mut (*((*(*call_info).function.stkidrel_pointer)
+        let c: *mut Closure = &mut (*((*(*call_info).call_info_function.stkidrel_pointer)
             
             .value
             .object as *mut Closure));

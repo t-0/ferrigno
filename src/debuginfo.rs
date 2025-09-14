@@ -141,7 +141,7 @@ pub unsafe fn lua_getinfo(
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
             call_info = (*ar).i_ci;
-            function = &mut (*(*call_info).function.stkidrel_pointer);
+            function = &mut (*(*call_info).call_info_function.stkidrel_pointer);
         }
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {

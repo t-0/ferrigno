@@ -163,7 +163,7 @@ pub unsafe fn auxgetinfo(
                 }
                 CHARACTER_LOWER_L => {
                     (*ar).currentline =
-                        if !call_info.is_null() && (*call_info).call_status as i32 & 1 << 1 == 0 {
+                        if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
                             getcurrentline(call_info)
                         } else {
                             -1
@@ -189,7 +189,7 @@ pub unsafe fn auxgetinfo(
                 }
                 CHARACTER_LOWER_T => {
                     (*ar).is_tail_call = if !call_info.is_null() {
-                        0 != ((*call_info).call_status as i32 & 1 << 5)
+                        0 != ((*call_info).call_info_call_status as i32 & 1 << 5)
                     } else {
                         false
                     };
@@ -202,12 +202,12 @@ pub unsafe fn auxgetinfo(
                     }
                 }
                 CHARACTER_LOWER_R => {
-                    if call_info.is_null() || (*call_info).call_status as i32 & 1 << 8 == 0 {
+                    if call_info.is_null() || (*call_info).call_info_call_status as i32 & 1 << 8 == 0 {
                         (*ar).ntransfer = 0;
                         (*ar).ftransfer = (*ar).ntransfer;
                     } else {
-                        (*ar).ftransfer = (*call_info).u2.transferinfo.ftransfer;
-                        (*ar).ntransfer = (*call_info).u2.transferinfo.ntransfer;
+                        (*ar).ftransfer = (*call_info).call_info_u2.transferinfo.ftransfer;
+                        (*ar).ntransfer = (*call_info).call_info_u2.transferinfo.ntransfer;
                     }
                 }
                 CHARACTER_UPPER_L | CHARACTER_LOWER_F => {}

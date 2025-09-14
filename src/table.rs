@@ -573,7 +573,7 @@ pub unsafe fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
         let mut i: i32;
         let mut twotoi: u32;
         let mut a: u32 = 0u32;
-        let mut na: u32 = 0u32;
+        let mut count_array: u32 = 0u32;
         let mut optimal: u32 = 0u32;
         i = 0;
         twotoi = 1 as u32;
@@ -581,12 +581,12 @@ pub unsafe fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
             a = a.wrapping_add(*nums.offset(i as isize));
             if a > twotoi.wrapping_div(2 as u32) {
                 optimal = twotoi;
-                na = a;
+                count_array = a;
             }
             i += 1;
             twotoi = twotoi.wrapping_mul(2 as u32);
         }
-        *pna = na;
+        *pna = count_array;
         return optimal;
     }
 }
@@ -818,19 +818,19 @@ pub unsafe fn rehash(
             i += 1;
         }
         setlimittosize(table);
-        let mut na: u32 = numusearray(table, nums.as_mut_ptr());
-        totaluse = na as i32;
-        totaluse += numusehash(table, nums.as_mut_ptr(), &mut na);
+        let mut count_array: u32 = numusearray(table, nums.as_mut_ptr());
+        totaluse = count_array as i32;
+        totaluse += numusehash(table, nums.as_mut_ptr(), &mut count_array);
         if (*ek).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            na = na.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
+            count_array = count_array.wrapping_add(countint((*ek).value.integer, nums.as_mut_ptr()) as u32);
         }
         totaluse += 1;
-        let asize: u32 = computesizes(nums.as_mut_ptr(), &mut na);
+        let asize: u32 = computesizes(nums.as_mut_ptr(), &mut count_array);
         luah_resize(
             interpreter,
             table,
             asize as usize,
-            (totaluse as usize).wrapping_sub(na as usize),
+            (totaluse as usize).wrapping_sub(count_array as usize),
         );
     }
 }

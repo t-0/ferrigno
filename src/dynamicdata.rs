@@ -4,7 +4,16 @@ use crate::vectort::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DynamicData {
-    pub active_variable: VectorT<VariableDescription>,
-    pub gt: VectorT<LabelDescription>,
-    pub label: VectorT<LabelDescription>,
+    pub active_variables: VectorT<VariableDescription>,
+    pub goto_: VectorT<LabelDescription>,
+    pub labels: VectorT<LabelDescription>,
+}
+impl DynamicData {
+    pub fn new() -> Self {
+        DynamicData {
+            active_variables: VectorT::<VariableDescription>::new(),
+            goto_: VectorT::<LabelDescription>::new(),
+            labels: VectorT::<LabelDescription>::new(),
+        }
+    }
 }
