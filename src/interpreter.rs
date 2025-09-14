@@ -5008,7 +5008,7 @@ pub unsafe fn luay_parser(
             (*funcstate.prototype).prototype_source,
             firstchar,
         );
-        handle_main_function(&mut lexstate, &mut funcstate);
+        handle_main_function(interpreter, &mut lexstate, &mut funcstate);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         return cl;
     }
