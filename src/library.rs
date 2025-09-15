@@ -22,7 +22,7 @@ use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
 use rlua::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 10] = {
     [
         {
             RegisteredFunction {
@@ -84,21 +84,13 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
                 function: Some(luaopen_debug as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn lual_openlibs(interpreter: *mut Interpreter) {
     unsafe {
-        let mut lib: *const RegisteredFunction = LOADED_FUNCTIONS.as_ptr();
-        while ((*lib).function).is_some() {
-            lual_requiref(interpreter, (*lib).name, (*lib).function, 1);
-            lua_settop(interpreter, -1 - 1);
-            lib = lib.offset(1);
+        for it in LOADED_FUNCTIONS {
+            lual_requiref(interpreter, it.name, it.function, 1);
+            lua_settop(interpreter, -2);
         }
     }
 }

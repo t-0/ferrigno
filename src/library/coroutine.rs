@@ -3,7 +3,6 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use rlua::*;
-use std::ptr::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checktype(interpreter, 1, TagType::Closure);
@@ -97,7 +96,7 @@ unsafe fn luab_yield(interpreter: *mut Interpreter) -> i32 {
         return lua_yieldk(interpreter, (*interpreter).get_top(), 0, None);
     }
 }
-const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
+const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
         {
             RegisteredFunction {
@@ -147,12 +146,6 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 9] = {
                 function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
@@ -165,7 +158,7 @@ pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, COROUTINE_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);
         return 1;
     }
 }

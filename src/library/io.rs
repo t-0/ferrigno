@@ -742,7 +742,7 @@ pub unsafe fn f_flush(interpreter: *mut Interpreter) -> i32 {
         return lual_fileresult(interpreter, (fflush(file) == 0) as i32, null());
     }
 }
-pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
+pub const IO_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {
             RegisteredFunction {
@@ -810,15 +810,9 @@ pub const IO_FUNCTIONS: [RegisteredFunction; 12] = {
                 function: Some(io_write as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
-pub const IO_METHODS: [RegisteredFunction; 8] = {
+pub const IO_METHODS: [RegisteredFunction; 7] = {
     [
         {
             RegisteredFunction {
@@ -862,22 +856,10 @@ pub const IO_METHODS: [RegisteredFunction; 8] = {
                 function: Some(f_setvbuf as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
-pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
+pub const IO_METAMETHODS: [RegisteredFunction; 3] = {
     [
-        {
-            RegisteredFunction {
-                name: make_cstring!("__index"),
-                function: None,
-            }
-        },
         {
             RegisteredFunction {
                 name: make_cstring!("__gc"),
@@ -896,20 +878,14 @@ pub const IO_METAMETHODS: [RegisteredFunction; 5] = {
                 function: Some(f_tostring as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn createmeta(interpreter: *mut Interpreter) {
     unsafe {
         lual_newmetatable(interpreter, make_cstring!("FILE*"));
-        lual_setfuncs(interpreter, IO_METAMETHODS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, IO_METAMETHODS.as_ptr(), IO_METAMETHODS.len(), 0);
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, IO_METHODS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, IO_METHODS.as_ptr(), IO_METHODS.len(), 0);
         lua_setfield(interpreter, -2, make_cstring!("__index"));
         lua_settop(interpreter, -2);
     }
@@ -950,7 +926,7 @@ pub unsafe fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, IO_FUNCTIONS.as_ptr(), IO_FUNCTIONS.len(), 0);
         createmeta(interpreter);
         createstdfile(
             interpreter,

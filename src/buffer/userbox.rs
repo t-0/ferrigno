@@ -34,7 +34,7 @@ impl UserBox {
             return 0;
         }
     }
-    pub const USERBOX_METATABLE: [RegisteredFunction; 3] = {
+    pub const USERBOX_METATABLE: [RegisteredFunction; 2] = {
         [
             {
                 RegisteredFunction {
@@ -48,12 +48,6 @@ impl UserBox {
                     function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
                 }
             },
-            {
-                RegisteredFunction {
-                    name: null(),
-                    function: None,
-                }
-            },
         ]
     };
     pub unsafe fn new_userbox(interpreter: *mut Interpreter) {
@@ -63,7 +57,7 @@ impl UserBox {
             (*box_0).pointer = null_mut();
             (*box_0).size = 0;
             if lual_newmetatable(interpreter, make_cstring!("_UBOX*")) != 0 {
-                lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), 0);
+                lual_setfuncs2(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
             }
             lua_setmetatable(interpreter, -2);
         }

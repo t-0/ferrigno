@@ -375,82 +375,52 @@ pub unsafe fn os_exit(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = {
-    [
-        {
-            RegisteredFunction {
-                name: make_cstring!("clock"),
-                function: Some(os_clock as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("date"),
-                function: Some(os_date as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("difftime"),
-                function: Some(os_difftime as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("execute"),
-                function: Some(os_execute as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("exit"),
-                function: Some(os_exit as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("getenv"),
-                function: Some(os_getenv as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("remove"),
-                function: Some(os_remove as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("rename"),
-                function: Some(os_rename as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("setlocale"),
-                function: Some(os_setlocale as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("time"),
-                function: Some(os_time as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("tmpname"),
-                function: Some(os_tmpname as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
-    ]
-};
+pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [
+    RegisteredFunction {
+        name: make_cstring!("clock"),
+        function: Some(os_clock as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("date"),
+        function: Some(os_date as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("difftime"),
+        function: Some(os_difftime as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("execute"),
+        function: Some(os_execute as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("exit"),
+        function: Some(os_exit as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("getenv"),
+        function: Some(os_getenv as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("remove"),
+        function: Some(os_remove as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("rename"),
+        function: Some(os_rename as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("setlocale"),
+        function: Some(os_setlocale as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("time"),
+        function: Some(os_time as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        name: make_cstring!("tmpname"),
+        function: Some(os_tmpname as unsafe fn(*mut Interpreter) -> i32),
+    },
+];
 pub unsafe fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lual_checkversion_(
@@ -461,7 +431,7 @@ pub unsafe fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, SYSTEM_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, SYSTEM_FUNCTIONS.as_ptr(), SYSTEM_FUNCTIONS.len(), 0);
         return 1;
     }
 }

@@ -532,7 +532,7 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
-pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 8] = {
+pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 2] = {
     [
         {
             RegisteredFunction {
@@ -546,56 +546,14 @@ pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 8] = {
                 function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("preload"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("cpath"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("path"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("searchers"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("loaded"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
-pub const LL_FUNCTIONS: [RegisteredFunction; 2] = {
+pub const LL_FUNCTIONS: [RegisteredFunction; 1] = {
     [
         {
             RegisteredFunction {
                 name: make_cstring!("require"),
                 function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
             }
         },
     ]
@@ -647,7 +605,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
         createsearcherstable(interpreter);
         setpath(
         interpreter,
@@ -670,7 +628,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         lua_setfield(interpreter, -2, make_cstring!("preload"));
         lua_rawgeti(interpreter, -1000000 - 1000, 2 as i64);
         lua_pushvalue(interpreter, -2);
-        lual_setfuncs(interpreter, LL_FUNCTIONS.as_ptr(), 1);
+        lual_setfuncs2(interpreter, LL_FUNCTIONS.as_ptr(), LL_FUNCTIONS.len(), 1);
         lua_settop(interpreter, -2);
         return 1;
     }

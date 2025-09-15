@@ -74,7 +74,7 @@ impl Buffer {
                         as *mut BufferElement;
                 } else {
                     lua_rotate(interpreter, boxidx, -1);
-                    lua_settop(interpreter, -1 - 1);
+                    lua_settop(interpreter, -2);
                     UserBox::new_userbox(interpreter);
                     lua_rotate(interpreter, boxidx, 1);
                     lua_toclose(interpreter, boxidx);
@@ -127,7 +127,7 @@ impl Buffer {
                 lua_closeslot(interpreter, -2);
             }
             lua_rotate(interpreter, -2, -1);
-            lua_settop(interpreter, -1 - 1);
+            lua_settop(interpreter, -2);
         }
     }
     pub unsafe fn add_value(&mut self) {
@@ -142,7 +142,7 @@ impl Buffer {
                 (length as usize).wrapping_mul(size_of::<BufferElement>()),
             );
             self.loads.add_length(length);
-            lua_settop(interpreter, -1 - 1);
+            lua_settop(interpreter, -2);
         }
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {

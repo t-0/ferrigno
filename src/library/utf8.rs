@@ -275,7 +275,7 @@ pub unsafe fn iter_codes(interpreter: *mut Interpreter) -> i32 {
         return 3;
     }
 }
-pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
+pub const UTF8_FUNCTIONS: [RegisteredFunction; 5] = {
     [
         {
             RegisteredFunction {
@@ -307,18 +307,6 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 7] = {
                 function: Some(iter_codes as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("charpattern"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
@@ -331,7 +319,7 @@ pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, UTF8_FUNCTIONS.as_ptr(), UTF8_FUNCTIONS.len(), 0);
         lua_pushlstring(
             interpreter,
             b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*".as_ptr() as *const i8,

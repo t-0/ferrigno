@@ -398,7 +398,7 @@ pub unsafe fn db_traceback(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
+pub const DEBUG_FUNCTIONS: [RegisteredFunction; 16] = {
     [
         {
             RegisteredFunction {
@@ -496,12 +496,6 @@ pub const DEBUG_FUNCTIONS: [RegisteredFunction; 17] = {
                 function: Some(db_traceback as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
@@ -514,7 +508,7 @@ pub unsafe fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, DEBUG_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, DEBUG_FUNCTIONS.as_ptr(), DEBUG_FUNCTIONS.len(), 0);
         return 1;
     }
 }

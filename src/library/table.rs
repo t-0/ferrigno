@@ -395,7 +395,7 @@ pub unsafe fn table_sort(interpreter: *mut Interpreter) -> i32 {
         return 0;
     }
 }
-pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
+pub const TABLE_FUNCTIONS: [RegisteredFunction; 7] = {
     [
         {
             RegisteredFunction {
@@ -439,12 +439,6 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 8] = {
                 function: Some(table_sort as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
@@ -457,7 +451,7 @@ pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
         return 1;
     }
 }

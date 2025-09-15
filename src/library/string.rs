@@ -313,7 +313,7 @@ pub unsafe fn arith_unm(interpreter: *mut Interpreter) -> i32 {
         return arith(interpreter, 12 as i32, make_cstring!("__unm"));
     }
 }
-pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
+pub const STRING_METAMETHODS: [RegisteredFunction; 8] = {
     [
         {
             RegisteredFunction {
@@ -361,18 +361,6 @@ pub const STRING_METAMETHODS: [RegisteredFunction; 10] = {
             RegisteredFunction {
                 name: make_cstring!("__unm"),
                 function: Some(arith_unm as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("__index"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
             }
         },
     ]
@@ -1591,7 +1579,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
         return n + 1;
     }
 }
-pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
+pub const STRING_FUNCTIONS: [RegisteredFunction; 17] = {
     [
         {
             RegisteredFunction {
@@ -1695,18 +1683,12 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 18] = {
                 function: Some(str_unpack as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
     unsafe {
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, STRING_METAMETHODS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, STRING_METAMETHODS.as_ptr(), STRING_METAMETHODS.len(), 0);
         lua_pushstring(interpreter, make_cstring!(""));
         lua_pushvalue(interpreter, -2);
         lua_setmetatable(interpreter, -2);
@@ -1726,7 +1708,7 @@ pub unsafe fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, STRING_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, STRING_FUNCTIONS.as_ptr(), STRING_FUNCTIONS.len(), 0);
         createmetatable(interpreter);
         return 1;
     }

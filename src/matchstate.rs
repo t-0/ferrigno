@@ -50,7 +50,7 @@ impl MatchState {
                 }
             }
             if lua_toboolean(interpreter, -1) == 0 {
-                lua_settop(interpreter, -1 - 1);
+                lua_settop(interpreter, -2);
                 (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;
             } else if !lua_isstring(interpreter, -1) {

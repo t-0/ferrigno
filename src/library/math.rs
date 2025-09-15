@@ -389,7 +389,7 @@ unsafe fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
-const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
+const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 2] = {
     [
         {
             RegisteredFunction {
@@ -403,12 +403,6 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 3] = {
                 function: Some(math_randomseed as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 unsafe fn set_random_function(interpreter: *mut Interpreter) {
@@ -417,10 +411,10 @@ unsafe fn set_random_function(interpreter: *mut Interpreter) {
             User::lua_newuserdatauv(interpreter, size_of::<RandomState>(), 0) as *mut RandomState;
         random_seed(interpreter, ranstate);
         lua_settop(interpreter, -3);
-        lual_setfuncs(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), 1);
+        lual_setfuncs2(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), MATH_RANDOM_FUNCTIONS.len(), 1);
     }
 }
-const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
+const MATH_FUNCTIONS: [RegisteredFunction; 21] = {
     [
         {
             RegisteredFunction {
@@ -548,54 +542,12 @@ const MATH_FUNCTIONS: [RegisteredFunction; 28] = {
                 function: Some(math_type as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("random"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("randomseed"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("pi"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("huge"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("maxinteger"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("mininteger"),
-                function: None,
-            }
-        },
-        {
-            RegisteredFunction {
-                name: null(),
-                function: None,
-            }
-        },
     ]
 };
 pub unsafe fn luaopen_math(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         (*interpreter).lua_createtable();
-        lual_setfuncs(interpreter, MATH_FUNCTIONS.as_ptr(), 0);
+        lual_setfuncs2(interpreter, MATH_FUNCTIONS.as_ptr(), MATH_FUNCTIONS.len(), 0);
         (*interpreter).push_number(PI);
         lua_setfield(interpreter, -2, make_cstring!("pi"));
         (*interpreter).push_number(::core::f64::INFINITY);

@@ -8390,6 +8390,32 @@ pub unsafe fn lual_setfuncs(
         lua_settop(interpreter, -count_upvalues - 1);
     }
 }
+pub unsafe fn lual_setfuncs2(
+    interpreter: *mut Interpreter,
+    registered_functions: * const  RegisteredFunction,
+    count_registered_functions: usize,
+    count_upvalues: i32,
+) {
+    unsafe {
+        lual_checkstack(
+            interpreter,
+            count_upvalues,
+            make_cstring!("too many upvalues"),
+        );
+        for it in 0..count_registered_functions {
+            if (*registered_functions.offset(it as isize)).function.is_none() {
+                (*interpreter).push_boolean(false);
+            } else {
+                for _ in 0..count_upvalues {
+                    lua_pushvalue(interpreter, -count_upvalues);
+                }
+                lua_pushcclosure(interpreter, (*registered_functions.offset(it as isize)).function, count_upvalues);
+            }
+            lua_setfield(interpreter, -(count_upvalues + 2), (*registered_functions.offset(it as isize)).name);
+        }
+        lua_settop(interpreter, -count_upvalues - 1);
+    }
+}
 pub unsafe fn lual_getsubtable(
     interpreter: *mut Interpreter,
     mut index: i32,
