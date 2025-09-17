@@ -43,21 +43,21 @@ pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_result
                 function,
             );
         } else {
-            let call_info = (*interpreter).call_info;
-            (*call_info).call_info_u.c.context_function = k;
-            (*call_info).call_info_u.c.context = ctx;
-            (*call_info).call_info_u2.funcidx = (calls.function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i32;
-            (*call_info).call_info_u.c.old_error_function = (*interpreter).error_function;
+            let ci = (*interpreter).ci;
+            (*ci).call_info_u.c.context_function = k;
+            (*ci).call_info_u.c.context = ctx;
+            (*ci).call_info_u2.funcidx = (calls.function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i32;
+            (*ci).call_info_u.c.old_error_function = (*interpreter).error_function;
             (*interpreter).error_function = function;
-            (*call_info).call_info_call_status = ((*call_info).call_info_call_status as i32 & !(1 << 0) | (*interpreter).allow_hook as i32) as u16;
-            (*call_info).call_info_call_status = ((*call_info).call_info_call_status as i32 | 1 << 4) as u16;
+            (*ci).call_info_call_status = ((*ci).call_info_call_status as i32 & !(1 << 0) | (*interpreter).allow_hook as i32) as u16;
+            (*ci).call_info_call_status = ((*ci).call_info_call_status as i32 | 1 << 4) as u16;
             ccall(interpreter, calls.function, count_results, 1);
-            (*call_info).call_info_call_status = ((*call_info).call_info_call_status as i32 & !(1 << 4)) as u16;
-            (*interpreter).error_function = (*call_info).call_info_u.c.old_error_function;
+            (*ci).call_info_call_status = ((*ci).call_info_call_status as i32 & !(1 << 4)) as u16;
+            (*interpreter).error_function = (*ci).call_info_u.c.old_error_function;
             status = 0;
         }
-        if count_results <= -1 && (*(*interpreter).call_info).call_info_top.stkidrel_pointer < (*interpreter).top.stkidrel_pointer {
-            (*(*interpreter).call_info).call_info_top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
+        if count_results <= -1 && (*(*interpreter).ci).call_info_top.stkidrel_pointer < (*interpreter).top.stkidrel_pointer {
+            (*(*interpreter).ci).call_info_top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
         }
         return status;
     }

@@ -257,11 +257,7 @@ pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), UTF8_FUNCTIONS.len(), 0);
-        lua_pushlstring(
-            interpreter,
-            b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*".as_ptr() as *const i8,
-            (size_of::<[i8; 15]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize),
-        );
+        lua_pushlstring(interpreter, b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*".as_ptr() as *const i8, (size_of::<[i8; 15]>() as usize).wrapping_sub(1 as usize));
         lua_setfield(interpreter, -2, make_cstring!("charpattern"));
         return 1;
     }

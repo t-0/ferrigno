@@ -35,7 +35,7 @@ impl DumpState {
             let mut n: usize = 0;
             loop {
                 n += 1;
-                buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(n)] = (integer & 0x7F) as u8;
+                buffer[(size_of::<usize>() * 8 + 6) / 7 - n] = (integer & 0x7F) as u8;
                 integer >>= 7;
                 if !(integer != 0) {
                     break;

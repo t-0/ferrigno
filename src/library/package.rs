@@ -407,7 +407,7 @@ pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 2] = {
         RegisteredFunction { name: make_cstring!("searchpath"), function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32) }
     }]
 };
-pub const LL_FUNCTIONS: [RegisteredFunction; 1] = { [{ RegisteredFunction { name: make_cstring!("require"), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }] };
+pub const LL_FUNCTIONS: [RegisteredFunction; 1] = [{ RegisteredFunction { name: make_cstring!("require"), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }];
 pub unsafe fn createsearcherstable(interpreter: *mut Interpreter) {
     unsafe {
         pub const SEARCHERS: [CFunction; 5] = {

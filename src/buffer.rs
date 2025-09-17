@@ -66,7 +66,7 @@ impl Buffer {
                     memcpy(
                         new_pointer as *mut libc::c_void,
                         self.loads.loads_pointer as *const libc::c_void,
-                        (self.loads.get_length() as usize).wrapping_mul(size_of::<BufferElement>()),
+                        (self.loads.get_length() as usize) * (size_of::<BufferElement>()),
                     );
                 }
                 self.loads.loads_pointer = new_pointer;
@@ -84,7 +84,7 @@ impl Buffer {
         unsafe {
             if length > 0 {
                 let raw: *mut BufferElement = self.prepare_with_size_and_index(length, -1);
-                memcpy(raw as *mut libc::c_void, s as *const libc::c_void, length.wrapping_mul(size_of::<BufferElement>()));
+                memcpy(raw as *mut libc::c_void, s as *const libc::c_void, length * size_of::<BufferElement>());
                 self.loads.add_length(length);
             }
         }
@@ -111,7 +111,7 @@ impl Buffer {
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
-            memcpy(b as *mut libc::c_void, s as *const libc::c_void, (length as usize).wrapping_mul(size_of::<BufferElement>()));
+            memcpy(b as *mut libc::c_void, s as *const libc::c_void, (length as usize) * (size_of::<BufferElement>()));
             self.loads.add_length(length);
             lua_settop(interpreter, -2);
         }

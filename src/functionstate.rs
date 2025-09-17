@@ -597,11 +597,7 @@ pub unsafe fn savelineinfo(interpreter: *mut Interpreter, _lexical_state: *mut L
         (*prototype).prototype_line_info.grow(
             interpreter,
             program_counter as usize,
-            if 0x7FFFFFFF <= (!(0usize)).wrapping_div(size_of::<i8>()) {
-                0x7FFFFFFF
-            } else {
-                (!(0usize)).wrapping_div(size_of::<i8>() as usize)
-            },
+            if 0x7FFFFFFF <= (!(0usize)).wrapping_div(size_of::<i8>()) { 0x7FFFFFFF } else { !(0usize) },
             make_cstring!("opcodes"),
         );
         *((*prototype).prototype_line_info.vectort_pointer).offset(program_counter as isize) = linedif as i8;

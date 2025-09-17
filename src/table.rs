@@ -434,9 +434,9 @@ pub unsafe fn computesizes(nums: *mut u32, pna: *mut u32) -> u32 {
         let mut optimal: u32 = 0u32;
         i = 0;
         twotoi = 1 as u32;
-        while twotoi > 0u32 && *pna > twotoi.wrapping_div(2 as u32) {
+        while twotoi > 0u32 && *pna > twotoi / 2 {
             a = a.wrapping_add(*nums.offset(i as isize));
-            if a > twotoi.wrapping_div(2 as u32) {
+            if a > twotoi / 2 {
                 optimal = twotoi;
                 count_array = a;
             }
@@ -822,13 +822,13 @@ pub unsafe fn hash_search(table: *mut Table, mut j: usize) -> usize {
         }
         loop {
             i = j;
-            if j <= (MAXIMUM_SIZE as usize).wrapping_div(2 as usize) {
+            if j <= MAXIMUM_SIZE / 2 {
                 j = (j as usize).wrapping_mul(2 as usize) as usize;
                 if (*luah_getint(table, j as i64)).is_tagtype_nil() {
                     break;
                 }
             } else {
-                j = MAXIMUM_SIZE as usize;
+                j = MAXIMUM_SIZE;
                 if (*luah_getint(table, j as i64)).is_tagtype_nil() {
                     break;
                 }
@@ -836,7 +836,7 @@ pub unsafe fn hash_search(table: *mut Table, mut j: usize) -> usize {
             }
         }
         while j.wrapping_sub(i) > 1 as usize {
-            let m: usize = i.wrapping_add(j).wrapping_div(2 as usize);
+            let m: usize = i.wrapping_add(j) / 2;
             if (*luah_getint(table, m as i64)).is_tagtype_nil() {
                 j = m;
             } else {

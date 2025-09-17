@@ -178,15 +178,14 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
         return length;
     }
 }
-pub unsafe fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
+pub unsafe fn luao_tostring(interpreter: *mut Interpreter, object: *mut TValue) {
     unsafe {
         let mut buffer: [i8; 44] = [0; 44];
-        let length = tostringbuff(obj, buffer.as_mut_ptr());
-        let io: *mut TValue = obj;
+        let length = tostringbuff(object, buffer.as_mut_ptr());
         let ts: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
-        (*io).value.object = &mut (*(ts as *mut Object));
-        (*io).set_tag_variant((*ts).get_tag_variant());
-        (*io).set_collectable(true);
+        (*object).value.object = &mut (*(ts as *mut Object));
+        (*object).set_tag_variant((*ts).get_tag_variant());
+        (*object).set_collectable(true);
     }
 }
 pub const ABSENT_KEY: TValue = { TValue::new(TAG_VARIANT_NIL_ABSENTKEY) };
@@ -195,7 +194,7 @@ pub unsafe fn arrayindex(k: i64) -> u32 {
         < (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32) as usize <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize) {
             (1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32
         } else {
-            (!(0usize)).wrapping_div(size_of::<TValue>() as usize) as u32
+            (!0usize).wrapping_div(size_of::<TValue>() as usize) as u32
         }) as usize
     {
         return k as u32;
@@ -205,8 +204,8 @@ pub unsafe fn arrayindex(k: i64) -> u32 {
 }
 pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
     unsafe {
-        while j.wrapping_sub(i) > 1 as u32 {
-            let m: u32 = i.wrapping_add(j).wrapping_div(2 as u32);
+        while j.wrapping_sub(i) > 1 {
+            let m = i.wrapping_add(j) / 2;
             if ((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag_type()) == TagType::Nil {
                 j = m;
             } else {

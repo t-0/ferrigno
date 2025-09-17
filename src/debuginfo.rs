@@ -71,7 +71,7 @@ pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = make_cstring!("=[C]");
-            (*ar).source_length = (size_of::<[i8; 5]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize);
+            (*ar).source_length = (size_of::<[i8; 5]>() as usize).wrapping_sub(1 as usize);
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
             (*ar).what = make_cstring!("C");
@@ -82,7 +82,7 @@ pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
                 (*ar).source = make_cstring!("=?");
-                (*ar).source_length = (size_of::<[i8; 3]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize);
+                (*ar).source_length = (size_of::<[i8; 3]>() as usize).wrapping_sub(1 as usize);
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;
@@ -95,20 +95,20 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
     unsafe {
         let status: i32;
         let function;
-        let call_info;
+        let ci;
         if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
-            call_info = null_mut();
+            ci = null_mut();
             function = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
             what = what.offset(1);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
-            call_info = (*ar).i_ci;
-            function = &mut (*(*call_info).call_info_function.stkidrel_pointer);
+            ci = (*ar).i_ci;
+            function = &mut (*(*ci).call_info_function.stkidrel_pointer);
         }
         match (*function).get_tag_variant() {
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
-                status = auxgetinfo(interpreter, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, ci);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;
@@ -122,7 +122,7 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
             },
             TAG_VARIANT_CLOSURE_C => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
-                status = auxgetinfo(interpreter, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, ci);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;
@@ -136,7 +136,7 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
             },
             _ => {
                 let cl: *mut Closure = null_mut();
-                status = auxgetinfo(interpreter, what, ar, cl, call_info);
+                status = auxgetinfo(interpreter, what, ar, cl, ci);
                 if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;

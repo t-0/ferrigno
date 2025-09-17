@@ -432,12 +432,7 @@ pub unsafe fn body(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
             new_localvar(
                 interpreter,
                 lexical_state,
-                luax_newstring(
-                    interpreter,
-                    lexical_state,
-                    make_cstring!("self"),
-                    (size_of::<[i8; 5]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize),
-                ),
+                luax_newstring(interpreter, lexical_state, make_cstring!("self"), (size_of::<[i8; 5]>() as usize).wrapping_sub(1 as usize)),
             );
             adjustlocalvars(interpreter, lexical_state, 1);
         }

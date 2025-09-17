@@ -86,26 +86,26 @@ pub unsafe fn str_rep(interpreter: *mut Interpreter) -> i32 {
         let sep: *const i8 = lual_optlstring(interpreter, 3, make_cstring!(""), &mut lsep);
         if n <= 0 {
             lua_pushstring(interpreter, make_cstring!(""));
-        } else if ((l.wrapping_add(lsep) < l || l.wrapping_add(lsep) as usize > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as usize).wrapping_div(n as usize)) as i32 != 0) as i64 != 0 {
+        } else if l.wrapping_add(lsep) < l || l.wrapping_add(lsep) as usize > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as usize).wrapping_div(n as usize) {
             return lual_error(interpreter, make_cstring!("resulting string too large"));
         } else {
-            let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize).wrapping_mul(lsep));
+            let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize) * lsep);
             let mut b = Buffer::new();
             let mut p: *mut i8 = b.initialize_with_size(interpreter, totallen as usize);
             loop {
-                let fresh159 = n;
+                let fresh = n;
                 n = n - 1;
-                if !(fresh159 > 1) {
+                if !(fresh > 1) {
                     break;
                 }
-                memcpy(p as *mut libc::c_void, s as *const libc::c_void, (l as usize).wrapping_mul(size_of::<i8>()));
+                memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
                 p = p.offset(l as isize);
                 if lsep > 0 {
-                    memcpy(p as *mut libc::c_void, sep as *const libc::c_void, (lsep as usize).wrapping_mul(size_of::<i8>()));
+                    memcpy(p as *mut libc::c_void, sep as *const libc::c_void, lsep);
                     p = p.offset(lsep as isize);
                 }
             }
-            memcpy(p as *mut libc::c_void, s as *const libc::c_void, (l as usize).wrapping_mul(size_of::<i8>()));
+            memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
             b.push_result_with_size(totallen as usize);
         }
         return 1;
