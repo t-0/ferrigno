@@ -23,11 +23,7 @@ impl<T> VectorT<T> {
         self.vectort_length = 0;
     }
     pub fn new() -> VectorT<T> {
-        VectorT::<T> {
-            vectort_pointer: null_mut(),
-            vectort_length: 0,
-            vectort_size: 0,
-        }
+        VectorT::<T> { vectort_pointer: null_mut(), vectort_length: 0, vectort_size: 0 }
     }
     pub fn add_length(&mut self, length: usize) {
         self.vectort_length += length;
@@ -50,12 +46,8 @@ impl<T> VectorT<T> {
         unsafe {
             let old_total = self.vectort_size as usize * size_of::<T>();
             let new_total = new_size * size_of::<T>();
-            self.vectort_pointer = luam_saferealloc_(
-                interpreter,
-                self.vectort_pointer as *mut libc::c_void,
-                old_total,
-                new_total,
-            ) as *mut T;
+            self.vectort_pointer =
+                luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
             self.vectort_length = 0;
             self.vectort_size = new_size;
         }
@@ -78,8 +70,7 @@ impl<T> VectorT<T> {
     }
     pub unsafe fn initialize_size(&mut self, interpreter: *mut Interpreter, size: usize) {
         unsafe {
-            self.vectort_pointer =
-                luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
+            self.vectort_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
             self.vectort_size = size;
         }
     }
@@ -95,13 +86,7 @@ impl<T> VectorT<T> {
             self.vectort_size = 0;
         }
     }
-    pub unsafe fn grow(
-        &mut self,
-        interpreter: *mut Interpreter,
-        new_length: usize,
-        limit: usize,
-        what: *const i8,
-    ) {
+    pub unsafe fn grow(&mut self, interpreter: *mut Interpreter, new_length: usize, limit: usize, what: *const i8) {
         unsafe {
             let mut new_size = self.vectort_size;
             if new_length + 1 <= new_size {
@@ -109,12 +94,7 @@ impl<T> VectorT<T> {
             }
             if new_size >= limit / 2 {
                 if new_size >= limit {
-                    luag_runerror(
-                        interpreter,
-                        make_cstring!("too many %s (limit is %d)"),
-                        what,
-                        limit,
-                    );
+                    luag_runerror(interpreter, make_cstring!("too many %s (limit is %d)"), what, limit);
                 }
                 new_size = limit;
             } else {

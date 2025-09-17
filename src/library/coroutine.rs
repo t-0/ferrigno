@@ -15,11 +15,7 @@ unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
 unsafe fn luab_cowrap(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         luab_cocreate(interpreter);
-        lua_pushcclosure(
-            interpreter,
-            Some(luab_auxwrap as unsafe fn(*mut Interpreter) -> i32),
-            1,
-        );
+        lua_pushcclosure(interpreter, Some(luab_auxwrap as unsafe fn(*mut Interpreter) -> i32), 1);
         return 1;
     }
 }
@@ -59,34 +55,27 @@ unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
                     lua_xmove(co, interpreter, 1);
                     return 2;
                 }
-            }
+            },
             _ => {
                 return lual_error(
                     interpreter,
                     make_cstring!("cannot close a %s coroutine"),
                     COROUTINE_STATUS_NAMES[status as usize],
                 );
-            }
+            },
         };
     }
 }
 unsafe fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
-        lua_pushstring(
-            interpreter,
-            COROUTINE_STATUS_NAMES[auxstatus(interpreter, co) as usize],
-        );
+        lua_pushstring(interpreter, COROUTINE_STATUS_NAMES[auxstatus(interpreter, co) as usize]);
         return 1;
     }
 }
 unsafe fn luab_yieldable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let coroutine: *mut Interpreter = if lua_type(interpreter, 1) == None {
-            interpreter
-        } else {
-            getco(interpreter)
-        };
+        let coroutine: *mut Interpreter = if lua_type(interpreter, 1) == None { interpreter } else { getco(interpreter) };
         (*interpreter).push_boolean((*coroutine).is_yieldable());
         return 1;
     }
@@ -122,30 +111,15 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
                 function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("wrap"),
-                function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("yield"),
-                function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("wrap"), function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("yield"), function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32) } },
         {
             RegisteredFunction {
                 name: make_cstring!("isyieldable"),
                 function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("close"),
-                function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("close"), function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
@@ -153,9 +127,7 @@ pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
+            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);

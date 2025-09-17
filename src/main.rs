@@ -66,17 +66,8 @@ mod zio;
 pub fn main() {
     let mut args: Vec<*mut i8> = Vec::new();
     for arg in ::std::env::args() {
-        args.push(
-            (::std::ffi::CString::new(arg))
-                .expect("Failed to convert argument into CString.")
-                .into_raw(),
-        );
+        args.push((::std::ffi::CString::new(arg)).expect("Failed to convert argument into CString.").into_raw());
     }
     args.push(::core::ptr::null_mut());
-    unsafe {
-        ::std::process::exit(crate::repl::main_0(
-            (args.len() - 1) as i32,
-            args.as_mut_ptr() as *mut *mut i8,
-        ) as i32)
-    }
+    unsafe { ::std::process::exit(crate::repl::main_0((args.len() - 1) as i32, args.as_mut_ptr() as *mut *mut i8) as i32) }
 }

@@ -1,7 +1,6 @@
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
-use crate::tstring::*;
 use rlua::*;
 use std::ptr::*;
 pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
@@ -14,29 +13,14 @@ pub struct DumpState {
     pub status: i32,
 }
 impl DumpState {
-    pub fn new(
-        interpreter: *mut Interpreter,
-        write_function: WriteFunction,
-        pointer: *mut libc::c_void,
-        is_strip: bool,
-    ) -> Self {
-        return DumpState {
-            dumpstate_interpreter: interpreter,
-            write_function,
-            pointer,
-            is_strip: is_strip,
-            status: 0,
-        };
+    pub fn new(interpreter: *mut Interpreter, write_function: WriteFunction, pointer: *mut libc::c_void, is_strip: bool) -> Self {
+        return DumpState { dumpstate_interpreter: interpreter, write_function, pointer, is_strip: is_strip, status: 0 };
     }
     pub unsafe fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
-                self.status = (Some((self.write_function).expect("non-null function pointer")))
-                    .expect("non-null function pointer")(
-                    self.dumpstate_interpreter,
-                    pointer,
-                    size as usize,
-                    self.pointer,
+                self.status = (Some((self.write_function).expect("non-null function pointer"))).expect("non-null function pointer")(
+                    self.dumpstate_interpreter, pointer, size as usize, self.pointer,
                 );
             }
         }
@@ -53,26 +37,15 @@ impl DumpState {
             let mut n: usize = 0;
             loop {
                 n += 1;
-                buffer[size_of::<usize>()
-                    .wrapping_mul(8)
-                    .wrapping_add(6)
-                    .wrapping_div(7)
-                    .wrapping_sub(n)] = (integer & 0x7F) as u8;
+                buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(n)] = (integer & 0x7F) as u8;
                 integer >>= 7;
                 if !(integer != 0) {
                     break;
                 }
             }
-            buffer[size_of::<usize>()
-                .wrapping_mul(8)
-                .wrapping_add(6)
-                .wrapping_div(7)
-                .wrapping_sub(1)] = (buffer[size_of::<usize>()
-                .wrapping_mul(8)
-                .wrapping_add(6)
-                .wrapping_div(7)
-                .wrapping_sub(1)] as i32
-                | 0x80 as i32) as u8;
+            buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] =
+                (buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] as i32 | 0x80 as i32)
+                    as u8;
             self.dump_block(
                 buffer
                     .as_mut_ptr()
@@ -94,41 +67,17 @@ impl DumpState {
     }
     pub unsafe fn dump_number(&mut self, mut number: f64) {
         unsafe {
-            self.dump_block(
-                &mut number as *mut f64 as *const libc::c_void,
-                size_of::<f64>(),
-            );
+            self.dump_block(&mut number as *mut f64 as *const libc::c_void, size_of::<f64>());
         }
     }
     pub unsafe fn dump_integer(&mut self, mut integer: i64) {
         unsafe {
-            self.dump_block(
-                &mut integer as *mut i64 as *const libc::c_void,
-                size_of::<i64>(),
-            );
-        }
-    }
-    pub unsafe fn dump_string(&mut self, tstring: *const TString) {
-        unsafe {
-            if tstring.is_null() {
-                self.dump_size(0);
-            } else {
-                let size: usize = (*tstring).get_length() as usize;
-                let str: *const i8 = (*tstring).get_contents_mut();
-                self.dump_size(size.wrapping_add(1) as usize);
-                self.dump_block(
-                    str as *const libc::c_void,
-                    size.wrapping_mul(size_of::<i8>()),
-                );
-            };
+            self.dump_block(&mut integer as *mut i64 as *const libc::c_void, size_of::<i64>());
         }
     }
     pub unsafe fn dump_header(&mut self) {
         unsafe {
-            self.dump_block(
-                LUA_SIGNATURE as *const libc::c_void,
-                (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()),
-            );
+            self.dump_block(LUA_SIGNATURE as *const libc::c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
             self.dump_block(
@@ -144,10 +93,7 @@ impl DumpState {
     }
 }
 pub unsafe fn save_prototype(
-    interpreter: *mut Interpreter,
-    prototype: *const Prototype,
-    write_function: WriteFunction,
-    data: *mut libc::c_void,
+    interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut libc::c_void,
     is_strip: bool,
 ) -> i32 {
     unsafe {

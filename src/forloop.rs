@@ -4,13 +4,7 @@ use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
 use rlua::*;
-pub unsafe fn forlimit(
-    interpreter: *mut Interpreter,
-    init: i64,
-    lim: *const TValue,
-    p: *mut i64,
-    step: i64,
-) -> i32 {
+pub unsafe fn forlimit(interpreter: *mut Interpreter, init: i64, lim: *const TValue, p: *mut i64, step: i64) -> i32 {
     unsafe {
         if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
             let mut flim: f64 = 0.0;
@@ -18,11 +12,7 @@ pub unsafe fn forlimit(
                 flim = (*lim).value.number;
                 1
             } else {
-                if (*lim).to_number(&mut flim) {
-                    1
-                } else {
-                    0
-                }
+                if (*lim).to_number(&mut flim) { 1 } else { 0 }
             } == 0
             {
                 luag_forerror(interpreter, lim, make_cstring!("limit"));
@@ -39,11 +29,7 @@ pub unsafe fn forlimit(
                 *p = -(MAXIMUM_SIZE as i64) - 1 as i64;
             }
         }
-        return if step > 0 {
-            (init > *p) as i32
-        } else {
-            (init < *p) as i32
-        };
+        return if step > 0 { (init > *p) as i32 } else { (init < *p) as i32 };
     }
 }
 pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
@@ -51,9 +37,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
         let pinit = &mut (*ra);
         let plimit = &mut (*ra.offset(1 as isize));
         let pstep = &mut (*ra.offset(2 as isize));
-        if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
-            && (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER
-        {
+        if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER && (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             let init: i64 = (*pinit).value.integer;
             let step: i64 = (*pstep).value.integer;
             let mut limit: i64 = 0;
@@ -74,9 +58,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                     }
                 } else {
                     count = (init as usize).wrapping_sub(limit as usize);
-                    count = (count as usize)
-                        .wrapping_div((-(step + 1) as usize).wrapping_add(1 as usize))
-                        as usize;
+                    count = (count as usize).wrapping_div((-(step + 1) as usize).wrapping_add(1 as usize)) as usize;
                 }
                 (*plimit).value.integer = count as i64;
                 (*plimit).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
@@ -89,11 +71,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 limit_0 = (*plimit).value.number;
                 1
             } else {
-                if (*plimit).to_number(&mut limit_0) {
-                    1
-                } else {
-                    0
-                }
+                if (*plimit).to_number(&mut limit_0) { 1 } else { 0 }
             }) == 0) as i32
                 != 0) as i64
                 != 0
@@ -104,11 +82,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 step_0 = (*pstep).value.number;
                 1
             } else {
-                if (*pstep).to_number(&mut step_0) {
-                    1
-                } else {
-                    0
-                }
+                if (*pstep).to_number(&mut step_0) { 1 } else { 0 }
             }) == 0) as i32
                 != 0) as i64
                 != 0
@@ -119,11 +93,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 init_0 = (*pinit).value.number;
                 1
             } else {
-                if (*pinit).to_number(&mut init_0) {
-                    1
-                } else {
-                    0
-                }
+                if (*pinit).to_number(&mut init_0) { 1 } else { 0 }
             }) == 0) as i32
                 != 0) as i64
                 != 0
@@ -133,12 +103,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             if step_0 == 0.0 {
                 luag_runerror(interpreter, make_cstring!("'for' step is zero"));
             }
-            if if (0.0) < step_0 {
-                (limit_0 < init_0) as i32
-            } else {
-                (init_0 < limit_0) as i32
-            } != 0
-            {
+            if if (0.0) < step_0 { (limit_0 < init_0) as i32 } else { (init_0 < limit_0) as i32 } != 0 {
                 return 1;
             } else {
                 (*plimit).value.number = limit_0;
@@ -162,12 +127,7 @@ pub unsafe fn floatforloop(ra: *mut TValue) -> i32 {
         let limit: f64 = (*ra.offset(1 as isize)).value.number;
         let mut index: f64 = (*ra).value.number;
         index = index + step;
-        if if (0.0) < step {
-            (index <= limit) as i32
-        } else {
-            (limit <= index) as i32
-        } != 0
-        {
+        if if (0.0) < step { (index <= limit) as i32 } else { (limit <= index) as i32 } != 0 {
             let io: *mut TValue = &mut (*ra);
             (*io).value.number = index;
             let io_0: *mut TValue = &mut (*ra.offset(3 as isize));

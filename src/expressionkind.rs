@@ -25,10 +25,7 @@ pub enum ExpressionKind {
 impl ExpressionKind {
     pub fn is_index(&self) -> bool {
         match self {
-            ExpressionKind::Indexed
-            | ExpressionKind::IndexUpValue
-            | ExpressionKind::IndexInteger
-            | ExpressionKind::Field => true,
+            ExpressionKind::Indexed | ExpressionKind::IndexUpValue | ExpressionKind::IndexInteger | ExpressionKind::Field => true,
             _ => false,
         }
     }

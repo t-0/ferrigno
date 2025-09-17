@@ -23,11 +23,7 @@ impl<T> LoadS<T> {
         self.loads_length = 0;
     }
     pub fn new() -> LoadS<T> {
-        LoadS::<T> {
-            loads_pointer: null_mut(),
-            loads_length: 0,
-            loads_size: 0,
-        }
+        LoadS::<T> { loads_pointer: null_mut(), loads_length: 0, loads_size: 0 }
     }
     pub fn add_length(&mut self, length: usize) {
         self.loads_length += length as i32;
@@ -50,12 +46,8 @@ impl<T> LoadS<T> {
         unsafe {
             let old_total = self.loads_size as usize * size_of::<T>();
             let new_total = new_size * size_of::<T>();
-            self.loads_pointer = luam_saferealloc_(
-                interpreter,
-                self.loads_pointer as *mut libc::c_void,
-                old_total,
-                new_total,
-            ) as *mut T;
+            self.loads_pointer =
+                luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
             self.loads_length = 0;
             self.loads_size = new_size as i32;
         }
@@ -78,8 +70,7 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn initialize_size(&mut self, interpreter: *mut Interpreter, size: usize) {
         unsafe {
-            self.loads_pointer =
-                luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
+            self.loads_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
             self.loads_size = size as i32;
         }
     }
@@ -95,13 +86,7 @@ impl<T> LoadS<T> {
             self.loads_size = 0;
         }
     }
-    pub unsafe fn grow(
-        &mut self,
-        interpreter: *mut Interpreter,
-        new_length: usize,
-        limit: i32,
-        what: *const i8,
-    ) {
+    pub unsafe fn grow(&mut self, interpreter: *mut Interpreter, new_length: usize, limit: i32, what: *const i8) {
         unsafe {
             let mut new_size: i32 = self.loads_size;
             if new_length + 1 <= new_size as usize {
@@ -109,12 +94,7 @@ impl<T> LoadS<T> {
             }
             if new_size >= limit / 2 {
                 if new_size >= limit {
-                    luag_runerror(
-                        interpreter,
-                        make_cstring!("too many %s (limit is %d)"),
-                        what,
-                        limit,
-                    );
+                    luag_runerror(interpreter, make_cstring!("too many %s (limit is %d)"), what, limit);
                 }
                 new_size = limit;
             } else {

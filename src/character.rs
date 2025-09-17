@@ -291,8 +291,7 @@ pub fn is_whitespace(ch: i32) -> bool {
     return get_character_type(ch) & CHARACTER_TYPE_WHITESPACE != 0;
 }
 pub fn is_alphanumeric(ch: i32) -> bool {
-    return get_character_type(ch) & (CHARACTER_TYPE_IDENTIFIER | CHARACTER_TYPE_DIGIT_DECIMAL)
-        != 0;
+    return get_character_type(ch) & (CHARACTER_TYPE_IDENTIFIER | CHARACTER_TYPE_DIGIT_DECIMAL) != 0;
 }
 pub fn is_printable(ch: i32) -> bool {
     return get_character_type(ch) & CHARACTER_TYPE_PRINTABLE != 0;
@@ -589,8 +588,8 @@ pub unsafe fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
 }
 pub fn is_digit(ch: i32) -> bool {
     match ch {
-        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5
-        | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => true,
+        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7
+        | CHARACTER_8 | CHARACTER_9 => true,
         _ => false,
     }
 }

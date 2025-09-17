@@ -2,12 +2,8 @@ use crate::debuginfo::*;
 use crate::interpreter::*;
 use rlua::*;
 use std::ptr::*;
-pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [
-    make_cstring!("running"),
-    make_cstring!("dead"),
-    make_cstring!("suspended"),
-    make_cstring!("normal"),
-];
+pub const COROUTINE_STATUS_NAMES: [*const i8; 4] =
+    [make_cstring!("running"), make_cstring!("dead"), make_cstring!("suspended"), make_cstring!("normal")];
 pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {
         if interpreter == co {
@@ -42,7 +38,7 @@ pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> 
                     } else {
                         return 2;
                     }
-                }
+                },
                 _ => return 1,
             }
         };

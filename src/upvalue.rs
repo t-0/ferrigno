@@ -31,10 +31,7 @@ impl UpValue {
             if self.v.p != &mut self.u.value as *mut TValue {
                 luaf_unlinkupval(self);
             }
-            (*interpreter).free_memory(
-                self as *mut UpValue as *mut libc::c_void,
-                size_of::<UpValue>(),
-            );
+            (*interpreter).free_memory(self as *mut UpValue as *mut libc::c_void, size_of::<UpValue>());
         }
     }
 }
@@ -56,11 +53,7 @@ pub struct UpValueBA {
     pub next: *mut UpValue,
     pub previous: *mut *mut UpValue,
 }
-pub unsafe fn newupval(
-    interpreter: *mut Interpreter,
-    level: *mut TValue,
-    previous: *mut *mut UpValue,
-) -> *mut UpValue {
+pub unsafe fn newupval(interpreter: *mut Interpreter, level: *mut TValue, previous: *mut *mut UpValue) -> *mut UpValue {
     unsafe {
         let o: *mut Object = luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));

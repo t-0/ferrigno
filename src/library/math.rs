@@ -11,13 +11,10 @@ pub const PI: f64 = 3.141592653589793238462643383279502884f64;
 pub unsafe fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
     unsafe {
         let mut n: i64 = 0;
-        if d >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64
-            && d < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64)
-            && {
-                n = d as i64;
-                1 != 0
-            }
-        {
+        if d >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64 && d < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64) && {
+            n = d as i64;
+            1 != 0
+        } {
             (*interpreter).push_integer(n);
         } else {
             (*interpreter).push_number(d);
@@ -66,19 +63,13 @@ pub unsafe fn project(mut ran: usize, n: usize, ransate: *mut RandomState) -> us
                 if !(ran > n) {
                     break;
                 }
-                ran = (next_random(((*ransate).data).as_mut_ptr()) & 0xffffffffffffffff as usize)
-                    as usize;
+                ran = (next_random(((*ransate).data).as_mut_ptr()) & 0xffffffffffffffff as usize) as usize;
             }
             return ran;
         };
     }
 }
-pub unsafe fn set_seed(
-    interpreter: *mut Interpreter,
-    randomstate: *mut usize,
-    n1: usize,
-    n2: usize,
-) {
+pub unsafe fn set_seed(interpreter: *mut Interpreter, randomstate: *mut usize, n1: usize, n2: usize) {
     unsafe {
         *randomstate.offset(0 as isize) = n1 as usize;
         *randomstate.offset(1 as isize) = 0xFF as usize;
@@ -95,12 +86,7 @@ pub unsafe fn random_seed(interpreter: *mut Interpreter, randomstate: *mut Rando
     unsafe {
         let seed1: usize = time(null_mut()) as usize;
         let seed2: usize = interpreter as usize;
-        set_seed(
-            interpreter,
-            ((*randomstate).data).as_mut_ptr(),
-            seed1,
-            seed2,
-        );
+        set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), seed1, seed2);
     }
 }
 unsafe fn math_abs(interpreter: *mut Interpreter) -> i32 {
@@ -195,18 +181,13 @@ unsafe fn math_fmod(interpreter: *mut Interpreter) -> i32 {
         if lua_isinteger(interpreter, 1) && lua_isinteger(interpreter, 2) {
             let d: i64 = lua_tointegerx(interpreter, 2, null_mut());
             if (d as usize).wrapping_add(1 as usize) <= 1 as usize {
-                (((d != 0) as i32 != 0) as i64 != 0
-                    || lual_argerror(interpreter, 2, make_cstring!("zero")) != 0)
-                    as i32;
+                (((d != 0) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, make_cstring!("zero")) != 0) as i32;
                 (*interpreter).push_integer(0);
             } else {
                 (*interpreter).push_integer(lua_tointegerx(interpreter, 1, null_mut()) % d);
             }
         } else {
-            (*interpreter).push_number(fmod(
-                lual_checknumber(interpreter, 1),
-                lual_checknumber(interpreter, 2),
-            ));
+            (*interpreter).push_number(fmod(lual_checknumber(interpreter, 1), lual_checknumber(interpreter, 2)));
         }
         1
     }
@@ -247,7 +228,7 @@ unsafe fn math_log(interpreter: *mut Interpreter) -> i32 {
         match lua_type(interpreter, 2) {
             None | Some(TagType::Nil) => {
                 res = x.ln();
-            }
+            },
             _ => {
                 let base: f64 = lual_checknumber(interpreter, 2);
                 if base == 2.0f64 {
@@ -257,7 +238,7 @@ unsafe fn math_log(interpreter: *mut Interpreter) -> i32 {
                 } else {
                     res = x.ln() / base.ln();
                 }
-            }
+            },
         }
         (*interpreter).push_number(res);
         1
@@ -285,8 +266,7 @@ unsafe fn math_min(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         let mut imin: i32 = 1;
-        (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
+        (((n >= 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, i, imin, 1) != 0 {
                 imin = i;
@@ -300,8 +280,7 @@ unsafe fn math_max(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = (*interpreter).get_top();
         let mut imax: i32 = 1;
-        (((n >= 1) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
+        (((n >= 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, make_cstring!("value expected")) != 0) as i32;
         for i in 2..(1 + n) {
             if lua_compare(interpreter, imax, i, 1) != 0 {
                 imax = i;
@@ -316,11 +295,7 @@ unsafe fn math_type(interpreter: *mut Interpreter) -> i32 {
         if lua_type(interpreter, 1) == Some(TagType::Numeric) {
             lua_pushstring(
                 interpreter,
-                if lua_isinteger(interpreter, 1) {
-                    make_cstring!("integer")
-                } else {
-                    make_cstring!("float")
-                },
+                if lua_isinteger(interpreter, 1) { make_cstring!("integer") } else { make_cstring!("float") },
             );
         } else {
             lual_checkany(interpreter, 1);
@@ -334,14 +309,13 @@ unsafe fn math_random(interpreter: *mut Interpreter) -> i32 {
         let low: i64;
         let up: i64;
         let p: usize;
-        let ransate: *mut RandomState =
-            (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+        let ransate: *mut RandomState = (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         let rv: usize = next_random(((*ransate).data).as_mut_ptr());
         match (*interpreter).get_top() {
             0 => {
                 (*interpreter).push_number(i2d(rv));
                 return 1;
-            }
+            },
             1 => {
                 low = 1;
                 up = lual_checkinteger(interpreter, 1);
@@ -349,54 +323,37 @@ unsafe fn math_random(interpreter: *mut Interpreter) -> i32 {
                     (*interpreter).push_integer((rv & 0xffffffffffffffff as usize) as i64);
                     return 1;
                 }
-            }
+            },
             2 => {
                 low = lual_checkinteger(interpreter, 1);
                 up = lual_checkinteger(interpreter, 2);
-            }
+            },
             _ => {
                 return lual_error(interpreter, make_cstring!("wrong number of arguments"));
-            }
+            },
         }
-        (((low <= up) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 1, make_cstring!("interval is empty")) != 0)
-            as i32;
-        p = project(
-            (rv & 0xffffffffffffffff as usize) as usize,
-            (up as usize).wrapping_sub(low as usize),
-            ransate,
-        );
+        (((low <= up) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, make_cstring!("interval is empty")) != 0) as i32;
+        p = project((rv & 0xffffffffffffffff as usize) as usize, (up as usize).wrapping_sub(low as usize), ransate);
         (*interpreter).push_integer(p.wrapping_add(low as usize) as i64);
         return 1;
     }
 }
 unsafe fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let randomstate: *mut RandomState =
-            (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
+        let randomstate: *mut RandomState = (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         if lua_type(interpreter, 1) == None {
             random_seed(interpreter, randomstate);
         } else {
             let n1: i64 = lual_checkinteger(interpreter, 1);
             let n2: i64 = lual_optinteger(interpreter, 2, 0);
-            set_seed(
-                interpreter,
-                ((*randomstate).data).as_mut_ptr(),
-                n1 as usize,
-                n2 as usize,
-            );
+            set_seed(interpreter, ((*randomstate).data).as_mut_ptr(), n1 as usize, n2 as usize);
         }
         return 2;
     }
 }
 const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 2] = {
     [
-        {
-            RegisteredFunction {
-                name: make_cstring!("random"),
-                function: Some(math_random as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("random"), function: Some(math_random as unsafe fn(*mut Interpreter) -> i32) } },
         {
             RegisteredFunction {
                 name: make_cstring!("randomseed"),
@@ -407,8 +364,7 @@ const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 2] = {
 };
 unsafe fn set_random_function(interpreter: *mut Interpreter) {
     unsafe {
-        let ranstate: *mut RandomState =
-            User::lua_newuserdatauv(interpreter, size_of::<RandomState>(), 0) as *mut RandomState;
+        let ranstate: *mut RandomState = User::lua_newuserdatauv(interpreter, size_of::<RandomState>(), 0) as *mut RandomState;
         random_seed(interpreter, ranstate);
         lua_settop(interpreter, -3);
         lual_setfuncs(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), MATH_RANDOM_FUNCTIONS.len(), 1);
@@ -416,132 +372,32 @@ unsafe fn set_random_function(interpreter: *mut Interpreter) {
 }
 const MATH_FUNCTIONS: [RegisteredFunction; 21] = {
     [
-        {
-            RegisteredFunction {
-                name: make_cstring!("abs"),
-                function: Some(math_abs as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("acos"),
-                function: Some(math_acos as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("asin"),
-                function: Some(math_asin as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("atan"),
-                function: Some(math_atan as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("ceil"),
-                function: Some(math_ceil as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("cos"),
-                function: Some(math_cos as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("deg"),
-                function: Some(math_deg as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("exp"),
-                function: Some(math_exp as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("abs"), function: Some(math_abs as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("acos"), function: Some(math_acos as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("asin"), function: Some(math_asin as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("atan"), function: Some(math_atan as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("ceil"), function: Some(math_ceil as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("cos"), function: Some(math_cos as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("deg"), function: Some(math_deg as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("exp"), function: Some(math_exp as unsafe fn(*mut Interpreter) -> i32) } },
         {
             RegisteredFunction {
                 name: make_cstring!("tointeger"),
                 function: Some(math_toint as unsafe fn(*mut Interpreter) -> i32),
             }
         },
-        {
-            RegisteredFunction {
-                name: make_cstring!("floor"),
-                function: Some(math_floor as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("fmod"),
-                function: Some(math_fmod as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("ult"),
-                function: Some(math_ult as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("log"),
-                function: Some(math_log as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("max"),
-                function: Some(math_max as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("min"),
-                function: Some(math_min as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("modf"),
-                function: Some(math_modf as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("rad"),
-                function: Some(math_rad as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("sin"),
-                function: Some(math_sin as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("sqrt"),
-                function: Some(math_sqrt as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("tan"),
-                function: Some(math_tan as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("type"),
-                function: Some(math_type as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("floor"), function: Some(math_floor as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("fmod"), function: Some(math_fmod as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("ult"), function: Some(math_ult as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("log"), function: Some(math_log as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("max"), function: Some(math_max as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("min"), function: Some(math_min as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("modf"), function: Some(math_modf as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("rad"), function: Some(math_rad as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("sin"), function: Some(math_sin as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("sqrt"), function: Some(math_sqrt as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("tan"), function: Some(math_tan as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("type"), function: Some(math_type as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn luaopen_math(interpreter: *mut Interpreter) -> i32 {

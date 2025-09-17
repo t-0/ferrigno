@@ -32,12 +32,7 @@ impl Allocator for CountingAllocator {
             }
         }
     }
-    unsafe fn reallocate(
-        &mut self,
-        pointer: *mut libc::c_void,
-        old_size: usize,
-        new_size: usize,
-    ) -> *mut libc::c_void {
+    unsafe fn reallocate(&mut self, pointer: *mut libc::c_void, old_size: usize, new_size: usize) -> *mut libc::c_void {
         unsafe {
             if 0 == new_size {
                 self.free(pointer, old_size);

@@ -47,9 +47,8 @@ impl TValue {
         unsafe {
             match self.get_tag_variant() {
                 TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    ::core::mem::transmute::<CFunction, usize>(self.value.function)
-                        as *mut libc::c_void
-                }
+                    ::core::mem::transmute::<CFunction, usize>(self.value.function) as *mut libc::c_void
+                },
                 TAG_VARIANT_USER => (*(self.value.object as *mut User)).get_raw_memory_mut(),
                 TAG_VARIANT_POINTER => self.value.pointer,
                 _ => {
@@ -58,17 +57,12 @@ impl TValue {
                     } else {
                         null_mut()
                     }
-                }
+                },
             }
         }
     }
     pub const fn new(tag: u8) -> Self {
-        TValue {
-            value: Value::new_object(null_mut()),
-            tag: tag,
-            collectable: false,
-            delta: 0,
-        }
+        TValue { value: Value::new_object(null_mut()), tag: tag, collectable: false, delta: 0 }
     }
     pub fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -120,12 +114,7 @@ impl TValue {
         }
     }
 }
-pub unsafe fn aux_upvalue(
-    fi: *mut TValue,
-    n: i32,
-    value: *mut *mut TValue,
-    owner: *mut *mut Object,
-) -> *const i8 {
+pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owner: *mut *mut Object) -> *const i8 {
     unsafe {
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_C => {
@@ -133,43 +122,25 @@ pub unsafe fn aux_upvalue(
                 if !((n as u32).wrapping_sub(1 as u32) < (*closure).count_upvalues as u32) {
                     return null();
                 }
-                *value = &mut *((*closure).upvalues)
-                    .c_tvalues
-                    .as_mut_ptr()
-                    .offset((n - 1) as isize) as *mut TValue;
+                *value = &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
                 if !owner.is_null() {
                     *owner = &mut (*(closure as *mut Object));
                 }
                 return make_cstring!("");
-            }
+            },
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
                 let p: *mut Prototype = (*f_0).payload.l_prototype;
-                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.get_size() as u32)
-                {
+                if !((n as u32).wrapping_sub(1 as u32) < (*p).prototype_upvalues.get_size() as u32) {
                     return null();
                 }
-                *value = (**((*f_0).upvalues)
-                    .l_upvalues
-                    .as_mut_ptr()
-                    .offset((n - 1) as isize))
-                .v
-                .p;
+                *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)).v.p;
                 if !owner.is_null() {
-                    *owner = &mut (*(*((*f_0).upvalues)
-                        .l_upvalues
-                        .as_mut_ptr()
-                        .offset((n - 1) as isize)
-                        as *mut Object));
+                    *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize) as *mut Object));
                 }
-                let name: *mut TString =
-                    (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).name;
-                return if name.is_null() {
-                    make_cstring!("(no name)")
-                } else {
-                    ((*name).get_contents_mut()) as *const i8
-                };
-            }
+                let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).name;
+                return if name.is_null() { make_cstring!("(no name)") } else { ((*name).get_contents_mut()) as *const i8 };
+            },
             _ => return null(),
         };
     }
@@ -201,9 +172,7 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
             length = snprintf(buffer, 44, make_cstring!("%lld"), (*obj).value.integer) as usize;
         } else {
             length = snprintf(buffer, 44, make_cstring!("%.14g"), (*obj).value.number) as usize;
-            if *buffer.offset(strspn(buffer, make_cstring!("-0123456789")) as isize) as i32
-                == Character::Null as i32
-            {
+            if *buffer.offset(strspn(buffer, make_cstring!("-0123456789")) as isize) as i32 == Character::Null as i32 {
                 let fresh = length;
                 length = length + 1;
                 *buffer.offset(fresh as isize) = CHARACTER_PERIOD as i8;
@@ -229,16 +198,10 @@ pub unsafe fn luao_tostring(interpreter: *mut Interpreter, obj: *mut TValue) {
 pub const ABSENT_KEY: TValue = { TValue::new(TAG_VARIANT_NIL_ABSENTKEY) };
 pub unsafe fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
-        < (if ((1 as u32)
-            << (size_of::<i32>() as usize)
-                .wrapping_mul(8 as usize)
-                .wrapping_sub(1 as usize) as i32) as usize
+        < (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32) as usize
             <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
         {
-            (1 as u32)
-                << (size_of::<i32>() as usize)
-                    .wrapping_mul(8 as usize)
-                    .wrapping_sub(1 as usize) as i32
+            (1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32
         } else {
             (!(0usize)).wrapping_div(size_of::<TValue>() as usize) as u32
         }) as usize
@@ -265,34 +228,22 @@ pub unsafe fn l_strton(obj: *const TValue, result: *mut TValue) -> bool {
     unsafe {
         if (*obj).is_tagtype_string() {
             let st: *mut TString = &mut (*((*obj).value.object as *mut TString));
-            return luao_str2num((*st).get_contents_mut(), result)
-                == (*st).get_length().wrapping_add(1) as usize;
+            return luao_str2num((*st).get_contents_mut(), result) == (*st).get_length().wrapping_add(1) as usize;
         } else {
             return false;
         };
     }
 }
-pub unsafe fn lessthanothers(
-    interpreter: *mut Interpreter,
-    l: *const TValue,
-    r: *const TValue,
-) -> i32 {
+pub unsafe fn lessthanothers(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> i32 {
     unsafe {
         if (*l).is_tagtype_string() && (*r).is_tagtype_string() {
-            return (l_strcmp(
-                &mut (*((*l).value.object as *mut TString)),
-                &mut (*((*r).value.object as *mut TString)),
-            ) < 0) as i32;
+            return (l_strcmp(&mut (*((*l).value.object as *mut TString)), &mut (*((*r).value.object as *mut TString))) < 0) as i32;
         } else {
             return luat_callordertm(interpreter, l, r, TM_LT);
         };
     }
 }
-pub unsafe fn luav_lessthan(
-    interpreter: *mut Interpreter,
-    l: *const TValue,
-    r: *const TValue,
-) -> bool {
+pub unsafe fn luav_lessthan(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).is_tagtype_numeric() && (*r).is_tagtype_numeric() {
             return ltnum(l, r);
@@ -301,27 +252,16 @@ pub unsafe fn luav_lessthan(
         };
     }
 }
-pub unsafe fn lessequalothers(
-    interpreter: *mut Interpreter,
-    l: *const TValue,
-    r: *const TValue,
-) -> bool {
+pub unsafe fn lessequalothers(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).is_tagtype_string() && (*r).is_tagtype_string() {
-            return l_strcmp(
-                &mut (*((*l).value.object as *mut TString)),
-                &mut (*((*r).value.object as *mut TString)),
-            ) <= 0;
+            return l_strcmp(&mut (*((*l).value.object as *mut TString)), &mut (*((*r).value.object as *mut TString))) <= 0;
         } else {
             return 0 != luat_callordertm(interpreter, l, r, TM_LE);
         }
     }
 }
-pub unsafe fn luav_lessequal(
-    interpreter: *mut Interpreter,
-    l: *const TValue,
-    r: *const TValue,
-) -> bool {
+pub unsafe fn luav_lessequal(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).is_tagtype_numeric() && (*r).is_tagtype_numeric() {
             return lenum(l, r);
@@ -330,11 +270,7 @@ pub unsafe fn luav_lessequal(
         };
     }
 }
-pub unsafe fn luav_equalobj(
-    interpreter: *mut Interpreter,
-    t1: *const TValue,
-    t2: *const TValue,
-) -> bool {
+pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2: *const TValue) -> bool {
     unsafe {
         let mut tm: *const TValue;
         if (*t1).get_tag_variant() != (*t2).get_tag_variant() {
@@ -349,9 +285,7 @@ pub unsafe fn luav_equalobj(
             }
         }
         match (*t1).get_tag_variant() {
-            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => {
-                return true
-            }
+            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return true,
             TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.integer == (*t2).value.integer,
             TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.number == (*t2).value.number,
             TAG_VARIANT_POINTER => return (*t1).value.pointer == (*t2).value.pointer,
@@ -359,16 +293,12 @@ pub unsafe fn luav_equalobj(
             TAG_VARIANT_STRING_SHORT => {
                 return &mut (*((*t1).value.object as *mut TString)) as *mut TString
                     == &mut (*((*t2).value.object as *mut TString)) as *mut TString;
-            }
+            },
             TAG_VARIANT_STRING_LONG => {
-                return luas_eqlngstr(
-                    &mut (*((*t1).value.object as *mut TString)),
-                    &mut (*((*t2).value.object as *mut TString)),
-                );
-            }
+                return luas_eqlngstr(&mut (*((*t1).value.object as *mut TString)), &mut (*((*t2).value.object as *mut TString)));
+            },
             TAG_VARIANT_USER => {
-                if &mut (*((*t1).value.object as *mut User)) as *mut User
-                    == &mut (*((*t2).value.object as *mut User)) as *mut User
+                if &mut (*((*t1).value.object as *mut User)) as *mut User == &mut (*((*t2).value.object as *mut User)) as *mut User
                 {
                     return true;
                 } else if interpreter.is_null() {
@@ -376,10 +306,7 @@ pub unsafe fn luav_equalobj(
                 }
                 tm = if ((*((*t1).value.object as *mut User)).get_metatable()).is_null() {
                     null()
-                } else if (*(*((*t1).value.object as *mut User)).get_metatable()).flags as u32
-                    & (1 as u32) << TM_EQ as i32
-                    != 0
-                {
+                } else if (*(*((*t1).value.object as *mut User)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                     null()
                 } else {
                     luat_gettm(
@@ -391,9 +318,7 @@ pub unsafe fn luav_equalobj(
                 if tm.is_null() {
                     tm = if ((*((*t2).value.object as *mut User)).get_metatable()).is_null() {
                         null()
-                    } else if (*(*((*t2).value.object as *mut User)).get_metatable()).flags as u32
-                        & (1 as u32) << TM_EQ as i32
-                        != 0
+                    } else if (*(*((*t2).value.object as *mut User)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0
                     {
                         null()
                     } else {
@@ -404,7 +329,7 @@ pub unsafe fn luav_equalobj(
                         )
                     };
                 }
-            }
+            },
             TAG_VARIANT_TABLE => {
                 if &mut (*((*t1).value.object as *mut Table)) as *mut Table
                     == &mut (*((*t2).value.object as *mut Table)) as *mut Table
@@ -415,10 +340,7 @@ pub unsafe fn luav_equalobj(
                 }
                 tm = if ((*((*t1).value.object as *mut Table)).get_metatable()).is_null() {
                     null()
-                } else if (*(*((*t1).value.object as *mut Table)).get_metatable()).flags as u32
-                    & (1 as u32) << TM_EQ as i32
-                    != 0
-                {
+                } else if (*(*((*t1).value.object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                     null()
                 } else {
                     luat_gettm(
@@ -430,8 +352,7 @@ pub unsafe fn luav_equalobj(
                 if tm.is_null() {
                     tm = if ((*((*t2).value.object as *mut Table)).get_metatable()).is_null() {
                         null()
-                    } else if (*(*((*t2).value.object as *mut Table)).get_metatable()).flags as u32
-                        & (1 as u32) << TM_EQ as i32
+                    } else if (*(*((*t2).value.object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32
                         != 0
                     {
                         null()
@@ -443,15 +364,14 @@ pub unsafe fn luav_equalobj(
                         )
                     };
                 }
-            }
+            },
             _ => return (*t1).value.object == (*t2).value.object,
         }
         if tm.is_null() {
             return false;
         } else {
             luat_calltmres(interpreter, tm, t1, t2, (*interpreter).top.stkidrel_pointer);
-            return !((*(*interpreter).top.stkidrel_pointer).get_tag_variant()
-                == TAG_VARIANT_BOOLEAN_FALSE
+            return !((*(*interpreter).top.stkidrel_pointer).get_tag_variant() == TAG_VARIANT_BOOLEAN_FALSE
                 || (*(*interpreter).top.stkidrel_pointer).is_tagtype_nil());
         };
     }
@@ -467,11 +387,7 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
                 } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm(
-                        (*h).get_metatable(),
-                        TM_LEN,
-                        (*(*interpreter).global).tm_name[TM_LEN as usize],
-                    )
+                    luat_gettm((*h).get_metatable(), TM_LEN, (*(*interpreter).global).tm_name[TM_LEN as usize])
                 };
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*ra);
@@ -479,25 +395,25 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
                     (*io).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     return;
                 }
-            }
+            },
             TAG_VARIANT_STRING_SHORT => {
                 let io_0: *mut TValue = &mut (*ra);
                 (*io_0).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
-            }
+            },
             TAG_VARIANT_STRING_LONG => {
                 let io_1: *mut TValue = &mut (*ra);
                 (*io_1).value.integer = (*((*rb).value.object as *mut TString)).get_length() as i64;
                 (*io_1).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 return;
-            }
+            },
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
                 if ((*tm).get_tag_type()) == TagType::Nil {
                     luag_typeerror(interpreter, rb, make_cstring!("get length of"));
                 }
-            }
+            },
         }
         luat_calltmres(interpreter, tm, rb, rb, ra);
     }

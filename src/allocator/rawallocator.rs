@@ -19,12 +19,7 @@ impl Allocator for RawAllocator {
             free(pointer);
         }
     }
-    unsafe fn reallocate(
-        &mut self,
-        pointer: *mut libc::c_void,
-        _old_size: usize,
-        new_size: usize,
-    ) -> *mut libc::c_void {
+    unsafe fn reallocate(&mut self, pointer: *mut libc::c_void, _old_size: usize, new_size: usize) -> *mut libc::c_void {
         unsafe {
             if 0 == new_size {
                 free(pointer);

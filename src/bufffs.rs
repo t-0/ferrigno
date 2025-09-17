@@ -13,23 +13,16 @@ pub struct BuffFS {
 }
 impl BuffFS {
     pub fn new(interpreter: *mut Interpreter) -> Self {
-        return BuffFS {
-            interpreter: interpreter,
-            is_pushed: false,
-            size: 0,
-            block: [0; BUFFFS_SIZE],
-        };
+        return BuffFS { interpreter: interpreter, is_pushed: false, size: 0, block: [0; BUFFFS_SIZE] };
     }
     pub unsafe fn clear(&mut self) {
         unsafe {
             let tvalue: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer);
-            let tstring: *mut TString =
-                luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size);
+            let tstring: *mut TString = luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size);
             (*tvalue).value.object = &mut (*(tstring as *mut Object));
             (*tvalue).set_tag_variant((*tstring).get_tag_variant());
             (*tvalue).set_collectable(true);
-            (*self.interpreter).top.stkidrel_pointer =
-                (*self.interpreter).top.stkidrel_pointer.offset(1);
+            (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {
                 concatenate(self.interpreter, 2);
             } else {
@@ -50,11 +43,7 @@ impl BuffFS {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);
-                memcpy(
-                    bf as *mut libc::c_void,
-                    pointer as *const libc::c_void,
-                    length as usize,
-                );
+                memcpy(bf as *mut libc::c_void, pointer as *const libc::c_void, length as usize);
                 self.size += length as usize;
             } else {
                 self.clear();
@@ -63,8 +52,7 @@ impl BuffFS {
                 (*io).value.object = &mut (*(ts as *mut Object));
                 (*io).set_tag_variant((*ts).get_tag_variant());
                 (*io).set_collectable(true);
-                (*self.interpreter).top.stkidrel_pointer =
-                    (*self.interpreter).top.stkidrel_pointer.offset(1);
+                (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {
                     concatenate(self.interpreter, 2);
                 } else {

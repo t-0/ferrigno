@@ -12,29 +12,15 @@ pub struct ZIO {
     pub zio_interpreter: *mut Interpreter,
 }
 impl ZIO {
-    pub fn new(
-        interpreter: *mut Interpreter,
-        reader: ReadFunction,
-        data: *mut libc::c_void,
-    ) -> ZIO {
-        return ZIO {
-            zio_interpreter: interpreter,
-            reader: reader,
-            data: data,
-            length: 0,
-            pointer: null(),
-        };
+    pub fn new(interpreter: *mut Interpreter, reader: ReadFunction, data: *mut libc::c_void) -> ZIO {
+        return ZIO { zio_interpreter: interpreter, reader: reader, data: data, length: 0, pointer: null() };
     }
 }
 pub unsafe fn luaz_fill(zio: *mut ZIO) -> i32 {
     unsafe {
         let mut size: usize = 0;
         let interpreter: *mut Interpreter = (*zio).zio_interpreter;
-        let buffer: *const i8 = ((*zio).reader).expect("non-null function pointer")(
-            interpreter,
-            (*zio).data,
-            &mut size,
-        );
+        let buffer: *const i8 = ((*zio).reader).expect("non-null function pointer")(interpreter, (*zio).data, &mut size);
         if buffer.is_null() || size == 0 {
             return -1;
         } else {

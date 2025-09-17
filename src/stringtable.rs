@@ -15,9 +15,8 @@ pub struct StringTable {
 impl StringTable {
     pub unsafe fn remove(&mut self, tstring: *mut TString) {
         unsafe {
-            let mut p: *mut *mut TString = &mut *(self.hash)
-                .offset(((*tstring).hash & (self.size - 1) as u32) as isize)
-                as *mut *mut TString;
+            let mut p: *mut *mut TString =
+                &mut *(self.hash).offset(((*tstring).hash & (self.size - 1) as u32) as isize) as *mut *mut TString;
             while *p != tstring {
                 p = &mut (**p).hash_next;
             }
@@ -52,10 +51,8 @@ impl StringTable {
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            self.hash = luam_malloc_(
-                interpreter,
-                STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>()),
-            ) as *mut *mut TString;
+            self.hash =
+                luam_malloc_(interpreter, STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>())) as *mut *mut TString;
             tablerehash(self.hash, 0, STRINGTABLE_INITIAL_SIZE);
             self.size = STRINGTABLE_INITIAL_SIZE as i32;
         }

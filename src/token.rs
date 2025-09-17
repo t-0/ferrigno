@@ -11,10 +11,7 @@ pub struct Token {
 }
 impl New for Token {
     fn new() -> Self {
-        return Token {
-            token: 0,
-            semantic_info: Value::new_object(null_mut()),
-        };
+        return Token { token: 0, semantic_info: Value::new_object(null_mut()) };
     }
 }
 pub const TK_CHARACTER_HYPHEN: i32 = CHARACTER_HYPHEN;

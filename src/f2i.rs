@@ -24,22 +24,16 @@ pub unsafe fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
                 number += 1.0;
             }
         }
-        return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64
-            && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64)
-            && {
-                *p = number as i64;
-                true
-            };
+        return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64 && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64) && {
+            *p = number as i64;
+            true
+        };
     }
 }
 pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
-            return if luav_flttointeger((*obj).value.number, p, mode) {
-                1
-            } else {
-                0
-            };
+            return if luav_flttointeger((*obj).value.number, p, mode) { 1 } else { 0 };
         } else if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             *p = (*obj).value.integer;
             return 1;
@@ -59,9 +53,7 @@ pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> 
 }
 pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
-            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
-        {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
             return (i as f64) < number;
         } else {
             let mut fi: i64 = 0;
@@ -75,9 +67,7 @@ pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
-            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
-        {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
             return i as f64 <= number;
         } else {
             let mut fi: i64 = 0;
@@ -91,9 +81,7 @@ pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
-            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
-        {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
             return number < i as f64;
         } else {
             let mut fi: i64 = 0;
@@ -107,9 +95,7 @@ pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
 }
 pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize)
-            <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32)
-        {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
             return number <= i as f64;
         } else {
             let mut fi: i64 = 0;
@@ -194,12 +180,7 @@ pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
 pub unsafe fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
     unsafe {
         let mut r: f64 = fmod(m, n);
-        if if r > 0.0 {
-            (n < 0.0) as i32
-        } else {
-            (r < 0.0 && n > 0.0) as i32
-        } != 0
-        {
+        if if r > 0.0 { (n < 0.0) as i32 } else { (r < 0.0 && n > 0.0) as i32 } != 0 {
             r += n;
         }
         return r;
@@ -233,28 +214,22 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
             return null();
         }
         loop {
-            let digit_0: i32 =
-                if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
-                    *s as i32 - CHARACTER_0 as i32
-                } else {
-                    toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
-                };
+            let digit_0: i32 = if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+                *s as i32 - CHARACTER_0 as i32
+            } else {
+                toupper(*s as u8 as i32) - CHARACTER_UPPER_A as i32 + 10 as i32
+            };
             if digit_0 >= base {
                 return null();
             }
             n = n.wrapping_mul(base as usize).wrapping_add(digit_0 as usize);
             s = s.offset(1);
-            if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 != 0)
-            {
+            if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 != 0) {
                 break;
             }
         }
         s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
-        *pn = (if is_negative_ != 0 {
-            (0usize).wrapping_sub(n)
-        } else {
-            n
-        }) as i64;
+        *pn = (if is_negative_ != 0 { (0usize).wrapping_sub(n) } else { n }) as i64;
         return s;
     }
 }

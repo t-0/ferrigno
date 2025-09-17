@@ -79,7 +79,7 @@ impl Global {
                     self.restartcollection();
                     self.gc_state = 0;
                     work = 1 as usize;
-                }
+                },
                 0 => {
                     if (self.gray).is_null() {
                         self.gc_state = 1;
@@ -87,26 +87,26 @@ impl Global {
                     } else {
                         work = self.propagatemark();
                     }
-                }
+                },
                 1 => {
                     work = self.atomic(interpreter);
                     self.entersweep(interpreter);
                     self.gc_estimate = (self.total_bytes + self.gc_debt) as usize;
-                }
+                },
                 3 => {
                     work = self.sweepstep_finalized(interpreter, 4) as usize;
-                }
+                },
                 4 => {
                     work = self.sweepstep_to_be_finalized(interpreter, 5) as usize;
-                }
+                },
                 5 => {
                     work = self.sweepstep(interpreter, 6) as usize;
-                }
+                },
                 6 => {
                     self.check_sizes(interpreter);
                     self.gc_state = 7 as u8;
                     work = 0;
-                }
+                },
                 7 => {
                     if !(self.to_be_finalized).is_null() && !self.is_emergency {
                         self.gcstopem = 0;
@@ -115,7 +115,7 @@ impl Global {
                         self.gc_state = 8 as u8;
                         work = 0;
                     }
-                }
+                },
                 _ => return 0usize,
             }
             self.gcstopem = 0;
@@ -128,9 +128,7 @@ impl Global {
                 if self.string_table.length < self.string_table.size / 4 {
                     let olddebt: i64 = self.gc_debt;
                     luas_resize(interpreter, (self.string_table.size / 2) as usize);
-                    self.gc_estimate = (self.gc_estimate as usize)
-                        .wrapping_add((self.gc_debt - olddebt) as usize)
-                        as usize;
+                    self.gc_estimate = (self.gc_estimate as usize).wrapping_add((self.gc_debt - olddebt) as usize) as usize;
                 }
             }
         }
@@ -149,20 +147,16 @@ impl Global {
     pub unsafe fn incstep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let stepmul: i32 = self.gc_step_multiplier as i32 * 4 | 1;
-            let mut debt: i64 = (self.gc_debt as usize)
-                .wrapping_div(size_of::<TValue>() as usize)
-                .wrapping_mul(stepmul as usize) as i64;
-            let stepsize: i64 = (if self.gc_step_size as usize
-                <= (size_of::<i64>() as usize)
-                    .wrapping_mul(8 as usize)
-                    .wrapping_sub(2 as usize)
-            {
-                ((1 << self.gc_step_size as i32) as usize)
-                    .wrapping_div(size_of::<TValue>() as usize)
-                    .wrapping_mul(stepmul as usize)
-            } else {
-                (!(0usize) >> 1) as usize
-            }) as i64;
+            let mut debt: i64 =
+                (self.gc_debt as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize) as i64;
+            let stepsize: i64 =
+                (if self.gc_step_size as usize <= (size_of::<i64>() as usize).wrapping_mul(8 as usize).wrapping_sub(2 as usize) {
+                    ((1 << self.gc_step_size as i32) as usize)
+                        .wrapping_div(size_of::<TValue>() as usize)
+                        .wrapping_mul(stepmul as usize)
+                } else {
+                    (!(0usize) >> 1) as usize
+                }) as i64;
             loop {
                 let work: usize = self.singlestep(interpreter);
                 debt = (debt as usize).wrapping_sub(work) as i64;
@@ -173,8 +167,7 @@ impl Global {
             if self.gc_state as i32 == 8 {
                 self.setpause();
             } else {
-                debt = ((debt / stepmul as i64) as usize).wrapping_mul(size_of::<TValue>() as usize)
-                    as i64;
+                debt = ((debt / stepmul as i64) as usize).wrapping_mul(size_of::<TValue>() as usize) as i64;
                 self.set_debt(debt);
             };
         }
@@ -188,9 +181,7 @@ impl Global {
             if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, &mut (*(interpreter as *mut Object)));
             }
-            if (self.l_registry.is_collectable())
-                && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
+            if (self.l_registry.is_collectable()) && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, self.l_registry.value.object);
             }
             self.markmt();
@@ -223,9 +214,7 @@ impl Global {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
                 self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
-                self.gc_estimate = (self.gc_estimate as usize)
-                    .wrapping_add((self.gc_debt - olddebt) as usize)
-                    as usize as usize;
+                self.gc_estimate = (self.gc_estimate as usize).wrapping_add((self.gc_debt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.gc_state = nextstate as u8;
@@ -234,19 +223,13 @@ impl Global {
             };
         }
     }
-    pub unsafe fn sweepstep_finalized(
-        &mut self,
-        interpreter: *mut Interpreter,
-        nextstate: i32,
-    ) -> i32 {
+    pub unsafe fn sweepstep_finalized(&mut self, interpreter: *mut Interpreter, nextstate: i32) -> i32 {
         unsafe {
             if !(self.sweep_gc).is_null() {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
                 self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
-                self.gc_estimate = (self.gc_estimate as usize)
-                    .wrapping_add((self.gc_debt - olddebt) as usize)
-                    as usize as usize;
+                self.gc_estimate = (self.gc_estimate as usize).wrapping_add((self.gc_debt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.gc_state = nextstate as u8;
@@ -255,19 +238,13 @@ impl Global {
             };
         }
     }
-    pub unsafe fn sweepstep_to_be_finalized(
-        &mut self,
-        interpreter: *mut Interpreter,
-        nextstate: i32,
-    ) -> i32 {
+    pub unsafe fn sweepstep_to_be_finalized(&mut self, interpreter: *mut Interpreter, nextstate: i32) -> i32 {
         unsafe {
             if !(self.sweep_gc).is_null() {
                 let olddebt: i64 = self.gc_debt;
                 let mut count: i32 = 0;
                 self.sweep_gc = (*interpreter).sweep_list(self.sweep_gc, 100 as i32, &mut count);
-                self.gc_estimate = (self.gc_estimate as usize)
-                    .wrapping_add((self.gc_debt - olddebt) as usize)
-                    as usize as usize;
+                self.gc_estimate = (self.gc_estimate as usize).wrapping_add((self.gc_debt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.gc_state = nextstate as u8;
@@ -282,16 +259,10 @@ impl Global {
                 self.stepgenfull(interpreter);
             } else {
                 let majorbase: usize = self.gc_estimate;
-                let majorinc: usize = majorbase
-                    .wrapping_div(100 as usize)
-                    .wrapping_mul(self.generational_major_multiplier * 4);
-                if self.gc_debt > 0
-                    && (self.total_bytes + self.gc_debt) as usize > majorbase.wrapping_add(majorinc)
-                {
+                let majorinc: usize = majorbase.wrapping_div(100 as usize).wrapping_mul(self.generational_major_multiplier * 4);
+                if self.gc_debt > 0 && (self.total_bytes + self.gc_debt) as usize > majorbase.wrapping_add(majorinc) {
                     let numobjs: usize = self.fullgen(interpreter);
-                    if !(((self.total_bytes + self.gc_debt) as usize)
-                        < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize)))
-                    {
+                    if !(((self.total_bytes + self.gc_debt) as usize) < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize))) {
                         self.last_atomic = numobjs;
                         self.setpause();
                     }
@@ -413,42 +384,19 @@ impl Global {
             markold(self, self.to_be_finalized, null_mut());
             self.atomic(interpreter);
             self.gc_state = 3 as u8;
-            let mut psurvival: *mut *mut Object = sweepgen(
-                interpreter,
-                self,
-                &mut self.all_gc,
-                self.survival,
-                &mut self.first_old1,
-            );
-            sweepgen(
-                interpreter,
-                self,
-                psurvival,
-                self.old1,
-                &mut self.first_old1,
-            );
+            let mut psurvival: *mut *mut Object =
+                sweepgen(interpreter, self, &mut self.all_gc, self.survival, &mut self.first_old1);
+            sweepgen(interpreter, self, psurvival, self.old1, &mut self.first_old1);
             self.really_old = self.old1;
             self.old1 = *psurvival;
             self.survival = self.all_gc;
             let mut dummy: *mut Object = null_mut();
-            psurvival = sweepgen(
-                interpreter,
-                self,
-                &mut self.finalized_objects,
-                self.finobjsur,
-                &mut dummy,
-            );
+            psurvival = sweepgen(interpreter, self, &mut self.finalized_objects, self.finobjsur, &mut dummy);
             sweepgen(interpreter, self, psurvival, self.finobjold1, &mut dummy);
             self.finobjrold = self.finobjold1;
             self.finobjold1 = *psurvival;
             self.finobjsur = self.finalized_objects;
-            sweepgen(
-                interpreter,
-                self,
-                &mut self.to_be_finalized,
-                null_mut(),
-                &mut dummy,
-            );
+            sweepgen(interpreter, self, &mut self.to_be_finalized, null_mut(), &mut dummy);
             self.finishgencycle(interpreter);
         }
     }
@@ -458,11 +406,7 @@ impl Global {
             self.luac_changemode(interpreter, 0);
             self.separatetobefnz(true);
             self.callallpendingfinalizers(interpreter);
-            delete_list(
-                interpreter,
-                self.all_gc,
-                &mut (*(self.main_state as *mut Object)),
-            );
+            delete_list(interpreter, self.all_gc, &mut (*(self.main_state as *mut Object)));
             delete_list(interpreter, self.fixed_gc, null_mut());
         }
     }
@@ -483,9 +427,7 @@ impl Global {
             self.memory_error_message = luas_newlstr(
                 interpreter,
                 make_cstring!("not enough memory"),
-                (size_of::<[i8; 18]>())
-                    .wrapping_div(size_of::<i8>())
-                    .wrapping_sub(1),
+                (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1),
             );
             fix_object_global(self, self.memory_error_message as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
@@ -535,8 +477,7 @@ impl Global {
             } else {
                 (!(0usize) >> 1) as i64
             };
-            let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize)
-                .wrapping_sub(threshold as usize) as i64;
+            let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
             if debt > 0 {
                 debt = 0;
             }
@@ -561,9 +502,7 @@ impl Global {
         unsafe {
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
-                    if (*self.string_cache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4)
-                        != 0
-                    {
+                    if (*self.string_cache[i as usize][j as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         self.string_cache[i as usize][j as usize] = self.memory_error_message;
                     }
                 }
@@ -579,9 +518,7 @@ impl Global {
         unsafe {
             let white = self.current_white & ((1 << 3) | (1 << 4));
             while !p.is_null() {
-                (*p).set_marked(
-                    (*p).get_marked() & !((1 << 5) | ((1 << 3) | (1 << 4)) | 7) | white,
-                );
+                (*p).set_marked((*p).get_marked() & !((1 << 5) | ((1 << 3) | (1 << 4)) | 7) | white);
                 p = (*p).next;
             }
         }
@@ -612,10 +549,7 @@ impl Global {
     }
     pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(
-                -((self.total_bytes + self.gc_debt).wrapping_div(100)
-                    * self.generational_minor_multiplier as i64),
-            );
+            self.set_debt(-((self.total_bytes + self.gc_debt).wrapping_div(100) * self.generational_minor_multiplier as i64));
         }
     }
     pub unsafe fn propagatemark(&mut self) -> usize {
@@ -626,18 +560,10 @@ impl Global {
             match (*object).get_tag_variant() {
                 TAG_VARIANT_TABLE => return traversetable(self, &mut (*(object as *mut Table))),
                 TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as usize,
-                TAG_VARIANT_CLOSURE_L => {
-                    return Closure::traverselclosure(self, &mut (*(object as *mut Closure)))
-                }
-                TAG_VARIANT_CLOSURE_C => {
-                    return Closure::traversecclosure(self, &mut (*(object as *mut Closure)))
-                }
-                TAG_VARIANT_PROTOTYPE => {
-                    return (&mut (*(object as *mut Prototype))).prototype_traverse(self)
-                }
-                TAG_VARIANT_STATE => {
-                    return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize
-                }
+                TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
+                TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
+                TAG_VARIANT_PROTOTYPE => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
+                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
                 _ => return 0,
             };
         }
@@ -647,11 +573,7 @@ impl Global {
             for i in TAGTYPE_SIMPLE_ {
                 if !(self.metatables[i as usize]).is_null() {
                     if (*self.metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(
-                            self,
-                            &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize)
-                                as *mut Object)),
-                        );
+                        really_mark_object(self, &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize) as *mut Object)));
                     }
                 }
             }
@@ -677,9 +599,7 @@ impl Global {
             if (*self.main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, &mut (*(self.main_state as *mut Object)));
             }
-            if (self.l_registry.is_collectable())
-                && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
+            if (self.l_registry.is_collectable()) && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, self.l_registry.value.object);
             }
             self.markmt();
@@ -696,9 +616,7 @@ impl Global {
                     break;
                 }
                 work += 1;
-                if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0
-                    && !((*thread).open_upvalue).is_null()
-                {
+                if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0 && !((*thread).open_upvalue).is_null() {
                     p = &mut (*thread).twups;
                 } else {
                     *p = (*thread).twups;
@@ -707,9 +625,7 @@ impl Global {
                     while !uv.is_null() {
                         work += 1;
                         if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
-                            if ((*(*uv).v.p).is_collectable())
-                                && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4)
-                                    != 0
+                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                             {
                                 really_mark_object(self, (*(*uv).v.p).value.object);
                             }
@@ -775,8 +691,7 @@ impl Global {
             (*object).set_marked((*object).get_marked() & !(1 << 6));
             if 3 <= (*self).gc_state as i32 && (*self).gc_state as i32 <= 6 {
                 (*object).set_marked(
-                    (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
-                        | ((*self).current_white & (1 << 3 | 1 << 4)),
+                    (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*self).current_white & (1 << 3 | 1 << 4)),
                 );
             } else if (*object).get_marked() & 7 == 3 {
                 (*self).first_old1 = object;
@@ -789,20 +704,10 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
     unsafe {
         while !l.is_null() {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*table).node)
-                .offset((1 << (*table).log_size_node as i32) as isize)
-                as *mut Node;
+            let limit: *mut Node = &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(
-                    global,
-                    if (*node).key.is_collectable() {
-                        (*node).key.value.object
-                    } else {
-                        null_mut()
-                    },
-                ) != 0
-                {
+                if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.object } else { null_mut() }) != 0 {
                     (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
                 if (*node).value.is_tagtype_nil() {
@@ -818,35 +723,17 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
     unsafe {
         while l != f {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*table).node)
-                .offset((1 << (*table).log_size_node as i32) as isize)
-                as *mut Node;
+            let limit: *mut Node = &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
             let asize: u32 = luah_realasize(table);
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
-                if iscleared(
-                    global,
-                    if (*tvalue).is_collectable() {
-                        (*tvalue).value.object
-                    } else {
-                        null_mut()
-                    },
-                ) != 0
-                {
+                if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.object } else { null_mut() }) != 0 {
                     (*tvalue).set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
             }
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(
-                    global,
-                    if (*node).value.is_collectable() {
-                        (*node).value.value.object
-                    } else {
-                        null_mut()
-                    },
-                ) != 0
-                {
+                if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.object } else { null_mut() }) != 0 {
                     (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
                 if (*node).value.is_tagtype_nil() {
@@ -884,21 +771,20 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
         match what {
             0 => {
                 (*global).gc_step = 1;
-            }
+            },
             1 => {
                 (*global).set_debt(0);
                 (*global).gc_step = 0;
-            }
+            },
             2 => {
                 (*global).luac_fullgc(interpreter, false);
-            }
+            },
             3 => {
                 res = (((*global).total_bytes + (*global).gc_debt) as usize >> 10 as i32) as i32;
-            }
+            },
             4 => {
-                res =
-                    (((*global).total_bytes + (*global).gc_debt) as usize & 0x3ff as usize) as i32;
-            }
+                res = (((*global).total_bytes + (*global).gc_debt) as usize & 0x3ff as usize) as i32;
+            },
             5 => {
                 let data: i32 = argp.arg::<i32>();
                 let mut debt: i64 = 1;
@@ -918,28 +804,24 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 if debt > 0 && (*global).gc_state as i32 == 8 {
                     res = 1;
                 }
-            }
+            },
             6 => {
                 let data_0: i32 = argp.arg::<i32>();
                 res = (*global).gc_pause as i32 * 4;
                 (*global).gc_pause = (data_0 / 4) as u8;
-            }
+            },
             7 => {
                 let data_1: i32 = argp.arg::<i32>();
                 res = (*global).gc_step_multiplier as i32 * 4;
                 (*global).gc_step_multiplier = (data_1 / 4) as u8;
-            }
+            },
             9 => {
                 res = ((*global).gc_step as i32 == 0) as i32;
-            }
+            },
             10 => {
                 let minormul: i32 = argp.arg::<i32>();
                 let majormul: i32 = argp.arg::<i32>();
-                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
-                    10 as i32
-                } else {
-                    11 as i32
-                };
+                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 { 10 as i32 } else { 11 as i32 };
                 if minormul != 0 {
                     (*global).generational_minor_multiplier = minormul as usize;
                 }
@@ -947,16 +829,12 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                     (*global).generational_major_multiplier = (majormul / 4) as usize;
                 }
                 (*global).luac_changemode(interpreter, 1);
-            }
+            },
             11 => {
                 let pause: i32 = argp.arg::<i32>();
                 let stepmul: i32 = argp.arg::<i32>();
                 let stepsize: i32 = argp.arg::<i32>();
-                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 {
-                    10 as i32
-                } else {
-                    11 as i32
-                };
+                res = if (*global).gc_kind as i32 == 1 || (*global).last_atomic != 0 { 10 as i32 } else { 11 as i32 };
                 if pause != 0 {
                     (*global).gc_pause = (pause / 4) as u8;
                 }
@@ -967,10 +845,10 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                     (*global).gc_step_size = stepsize as u8;
                 }
                 (*global).luac_changemode(interpreter, 0);
-            }
+            },
             _ => {
                 res = -1;
-            }
+            },
         }
         return res;
     }

@@ -26,12 +26,7 @@ pub struct LoadState {
 impl LoadState {
     pub unsafe fn error(&mut self, why: *const i8) -> ! {
         unsafe {
-            luao_pushfstring(
-                self.interpreter,
-                make_cstring!("%s: bad binary format (%s)"),
-                self.name,
-                why,
-            );
+            luao_pushfstring(self.interpreter, make_cstring!("%s: bad binary format (%s)"), self.name, why);
             luad_throw(self.interpreter, 3);
         }
     }
@@ -89,20 +84,14 @@ impl LoadState {
     pub unsafe fn load_number(&mut self) -> f64 {
         unsafe {
             let mut x: f64 = 0.0;
-            self.load_block(
-                &mut x as *mut f64 as *mut libc::c_void,
-                1usize.wrapping_mul(size_of::<f64>() as usize),
-            );
+            self.load_block(&mut x as *mut f64 as *mut libc::c_void, 1usize.wrapping_mul(size_of::<f64>() as usize));
             return x;
         }
     }
     pub unsafe fn load_integer(&mut self) -> i64 {
         unsafe {
             let mut x: i64 = 0;
-            self.load_block(
-                &mut x as *mut i64 as *mut libc::c_void,
-                1usize.wrapping_mul(size_of::<i64>() as usize),
-            );
+            self.load_block(&mut x as *mut i64 as *mut libc::c_void, 1usize.wrapping_mul(size_of::<i64>() as usize));
             return x;
         }
     }
@@ -117,10 +106,7 @@ impl LoadState {
                 size = size.wrapping_sub(1);
                 if size <= 40 as usize {
                     let mut buffer: [i8; 40] = [0; 40];
-                    self.load_block(
-                        buffer.as_mut_ptr() as *mut libc::c_void,
-                        size.wrapping_mul(size_of::<i8>() as usize),
-                    );
+                    self.load_block(buffer.as_mut_ptr() as *mut libc::c_void, size.wrapping_mul(size_of::<i8>() as usize));
                     ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
                     ts = TString::create_long(interpreter, size as usize);
@@ -129,20 +115,12 @@ impl LoadState {
                     (*io).set_tag_variant((*ts).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
-                    self.load_block(
-                        ((*ts).get_contents_mut()) as *mut libc::c_void,
-                        size.wrapping_mul(size_of::<i8>() as usize),
-                    );
-                    (*interpreter).top.stkidrel_pointer =
-                        (*interpreter).top.stkidrel_pointer.offset(-1);
+                    self.load_block(((*ts).get_contents_mut()) as *mut libc::c_void, size.wrapping_mul(size_of::<i8>() as usize));
+                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
             }
             if (*p).get_marked() & 1 << 5 != 0 && (*ts).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(
-                    interpreter,
-                    &mut (*(p as *mut Object)),
-                    &mut (*(ts as *mut Object)),
-                );
+                luac_barrier_(interpreter, &mut (*(p as *mut Object)), &mut (*(ts as *mut Object)));
             } else {
             };
             return ts;
@@ -161,16 +139,14 @@ impl LoadState {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<u32>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<u32>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype).prototype_code.initialize_size(
-                self.interpreter,
-                (n as usize).wrapping_mul(size_of::<u32>()),
-            );
+            (*prototype)
+                .prototype_code
+                .initialize_size(self.interpreter, (n as usize).wrapping_mul(size_of::<u32>()));
             self.load_block(
                 (*prototype).prototype_code.vectort_pointer as *mut libc::c_void,
                 (n as usize).wrapping_mul(size_of::<u32>()) as usize,
@@ -181,51 +157,47 @@ impl LoadState {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_constants
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_constants.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize))
-                    .set_tag_variant(TagVariant::NilNil as u8);
+                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
             }
             for i in 0..n {
-                let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer)
-                    .offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue =
+                    &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
                 let t = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
                         (*tvalue).set_tag_variant(TagVariant::NilNil as u8);
-                    }
+                    },
                     TAG_VARIANT_BOOLEAN_FALSE => {
                         (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_FALSE);
-                    }
+                    },
                     TAG_VARIANT_BOOLEAN_TRUE => {
                         (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_TRUE);
-                    }
+                    },
                     TAG_VARIANT_NUMERIC_NUMBER => {
                         let io: *mut TValue = tvalue;
                         (*io).value.number = self.load_number();
                         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
-                    }
+                    },
                     TAG_VARIANT_NUMERIC_INTEGER => {
                         let io_0: *mut TValue = tvalue;
                         (*io_0).value.integer = self.load_integer();
                         (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
-                    }
+                    },
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = tvalue;
                         let ts: *mut TString = self.load_string(prototype);
                         (*io_1).value.object = &mut (*(ts as *mut Object));
                         (*io_1).set_tag_variant((*ts).get_tag_variant());
                         (*io_1).set_collectable(true);
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -234,33 +206,25 @@ impl LoadState {
         unsafe {
             let n: i32 = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_prototypes
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_prototypes.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) =
-                    null_mut();
+                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) = null_mut();
             }
             for i in 0..n {
-                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) =
-                    luaf_newproto(self.interpreter);
+                *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) = luaf_newproto(self.interpreter);
                 if (*prototype).get_marked() & 1 << 5 != 0
-                    && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize))
-                        .get_marked()
-                        & (1 << 3 | 1 << 4)
+                    && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4)
                         != 0
                 {
                     luac_barrier_(
                         self.interpreter,
                         &mut (*(prototype as *mut Object)),
-                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer)
-                            .offset(i as isize) as *mut Object)),
+                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)),
                     );
                 } else {
                 }
@@ -276,23 +240,18 @@ impl LoadState {
             let n: i32;
             n = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_upvalues
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_upvalues.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                let ref mut fresh29 =
-                    (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
+                let ref mut fresh29 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
                 *fresh29 = null_mut();
             }
             for i in 0..n {
-                let upvalue_description =
-                    &mut *((*prototype).prototype_upvalues.at_mut(i as isize));
+                let upvalue_description = &mut *((*prototype).prototype_upvalues.at_mut(i as isize));
                 upvalue_description.load(self);
             }
         }
@@ -302,68 +261,52 @@ impl LoadState {
             let mut n: i32;
             n = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<i8>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<i8>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_line_info
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_line_info.initialize_size(self.interpreter, n as usize);
             self.load_block(
                 (*prototype).prototype_line_info.vectort_pointer as *mut libc::c_void,
                 (n as usize).wrapping_mul(size_of::<i8>() as usize),
             );
             n = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_absolute_line_info
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_absolute_line_info.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize))
-                    .program_counter = self.load_int();
-                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize))
-                    .line = self.load_int();
+                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).program_counter = self.load_int();
+                (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).line = self.load_int();
             }
             n = self.load_int();
             if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize)
-                    > (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize)
+                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize)
             {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_local_variables
-                .initialize_size(self.interpreter, n as usize);
+            (*prototype).prototype_local_variables.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                let ref mut fresh30 =
-                    (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
+                let ref mut fresh30 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
                 *fresh30 = null_mut();
             }
             for i in 0..n {
-                let ref mut fresh31 =
-                    (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
+                let ref mut fresh31 = (*((*prototype).prototype_local_variables.at_mut(i as isize))).variable_name;
                 *fresh31 = self.load_string_n(prototype);
-                (*((*prototype).prototype_local_variables.at_mut(i as isize)))
-                    .start_program_counter = self.load_int();
-                (*((*prototype).prototype_local_variables.at_mut(i as isize)))
-                    .end_program_counter = self.load_int();
+                (*((*prototype).prototype_local_variables.at_mut(i as isize))).start_program_counter = self.load_int();
+                (*((*prototype).prototype_local_variables.at_mut(i as isize))).end_program_counter = self.load_int();
             }
             n = self.load_int();
             if n != 0 {
                 n = (*prototype).prototype_upvalues.get_size() as i32;
             }
             for i in 0..n {
-                let ref mut fresh32 =
-                    (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
+                let ref mut fresh32 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(i as isize)).name;
                 *fresh32 = self.load_string_n(prototype);
             }
         }
@@ -390,16 +333,8 @@ impl LoadState {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
             let length: usize = strlen(s) as usize;
-            self.load_block(
-                buffer.as_mut_ptr() as *mut libc::c_void,
-                length.wrapping_mul(size_of::<i8>() as usize),
-            );
-            if memcmp(
-                s as *const libc::c_void,
-                buffer.as_mut_ptr() as *const libc::c_void,
-                length as usize,
-            ) != 0
-            {
+            self.load_block(buffer.as_mut_ptr() as *mut libc::c_void, length.wrapping_mul(size_of::<i8>() as usize));
+            if memcmp(s as *const libc::c_void, buffer.as_mut_ptr() as *const libc::c_void, length as usize) != 0 {
                 self.error(message);
             }
         }
@@ -407,32 +342,20 @@ impl LoadState {
     pub unsafe fn f_check_size(&mut self, size: usize, tname: *const i8) {
         unsafe {
             if self.load_byte() as usize != size {
-                self.error(luao_pushfstring(
-                    self.interpreter,
-                    make_cstring!("%s size mismatch"),
-                    tname,
-                ));
+                self.error(luao_pushfstring(self.interpreter, make_cstring!("%s size mismatch"), tname));
             }
         }
     }
     pub unsafe fn check_header(&mut self) {
         unsafe {
-            self.check_literal(
-                &*(LUA_SIGNATURE).offset(1 as isize),
-                make_cstring!("not a binary chunk"),
-            );
-            if self.load_byte() as i32
-                != 504 as i32 / 100 as i32 * 16 as i32 + 504 as i32 % 100 as i32
-            {
+            self.check_literal(&*(LUA_SIGNATURE).offset(1 as isize), make_cstring!("not a binary chunk"));
+            if self.load_byte() as i32 != 504 as i32 / 100 as i32 * 16 as i32 + 504 as i32 % 100 as i32 {
                 self.error(make_cstring!("version mismatch"));
             }
             if self.load_byte() as i32 != 0 {
                 self.error(make_cstring!("format mismatch"));
             }
-            self.check_literal(
-                make_cstring!("\x19\x7F\r\n\x1A\n"),
-                make_cstring!("corrupted chunk"),
-            );
+            self.check_literal(make_cstring!("\x19\x7F\r\n\x1A\n"), make_cstring!("corrupted chunk"));
             self.f_check_size(size_of::<u32>() as usize, make_cstring!("u32"));
             self.f_check_size(size_of::<i64>() as usize, make_cstring!("i64"));
             self.f_check_size(size_of::<f64>() as usize, make_cstring!("f64"));
@@ -445,22 +368,12 @@ impl LoadState {
         }
     }
 }
-pub unsafe fn load_closure(
-    interpreter: *mut Interpreter,
-    zio: *mut ZIO,
-    name: *const i8,
-) -> *mut Closure {
+pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *const i8) -> *mut Closure {
     unsafe {
-        let mut load_state: LoadState = LoadState {
-            interpreter: null_mut(),
-            zio: null_mut(),
-            name: null(),
-        };
+        let mut load_state: LoadState = LoadState { interpreter: null_mut(), zio: null_mut(), name: null() };
         if *name as i32 == CHARACTER_AT as i32 || *name as i32 == CHARACTER_EQUAL as i32 {
             load_state.name = name.offset(1 as isize);
-        } else if *name as i32
-            == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32
-        {
+        } else if *name as i32 == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             load_state.name = make_cstring!("binary string");
         } else {
             load_state.name = name;
@@ -475,14 +388,8 @@ pub unsafe fn load_closure(
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);
-        if (*ret).get_marked() & 1 << 5 != 0
-            && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0
-        {
-            luac_barrier_(
-                interpreter,
-                &mut (*(ret as *mut Object)),
-                &mut (*((*ret).payload.l_prototype as *mut Object)),
-            );
+        if (*ret).get_marked() & 1 << 5 != 0 && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            luac_barrier_(interpreter, &mut (*(ret as *mut Object)), &mut (*((*ret).payload.l_prototype as *mut Object)));
         } else {
         };
         load_state.load_function((*ret).payload.l_prototype, null_mut());

@@ -15,9 +15,7 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
         lual_checkversion_(
             interpreter,
             504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
+            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
         );
         if args == 1 {
             print_usage(*argv.offset(script as isize));
@@ -25,11 +23,7 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
         }
         if args & 16 as i32 != 0 {
             (*interpreter).push_boolean(true);
-            lua_setfield(
-                interpreter,
-                -(1000000 as i32) - 1000 as i32,
-                make_cstring!("LUA_NOENV"),
-            );
+            lua_setfield(interpreter, -(1000000 as i32) - 1000 as i32, make_cstring!("LUA_NOENV"));
         }
         lual_openlibs(interpreter);
         createargtable(interpreter, argv, argc, script);
@@ -65,18 +59,11 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
         let interpreter: *mut Interpreter = lual_newstate();
         if interpreter.is_null() {
-            l_message(
-                *argv.offset(0),
-                make_cstring!("cannot create interpreter: not enough memory"),
-            );
+            l_message(*argv.offset(0), make_cstring!("cannot create interpreter: not enough memory"));
             return 1;
         } else {
             lua_gc(interpreter, 0);
-            lua_pushcclosure(
-                interpreter,
-                Some(pmain as unsafe fn(*mut Interpreter) -> i32),
-                0,
-            );
+            lua_pushcclosure(interpreter, Some(pmain as unsafe fn(*mut Interpreter) -> i32), 0);
             (*interpreter).push_integer(argc as i64);
             lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
             let status: i32 = lua_pcallk(interpreter, 2, 1, 0, 0, None);

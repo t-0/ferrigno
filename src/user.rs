@@ -43,48 +43,33 @@ impl User {
     }
     pub unsafe fn get_raw_memory(&self) -> *const libc::c_void {
         unsafe {
-            return (self as *const User as *mut i8)
-                .offset(User::user_get_offset((*self).count_upvalues as usize))
+            return (self as *const User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *const libc::c_void;
         }
     }
     pub unsafe fn get_raw_memory_mut(&mut self) -> *mut libc::c_void {
         unsafe {
-            return (self as *mut User as *mut i8)
-                .offset(User::user_get_offset((*self).count_upvalues as usize))
+            return (self as *mut User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize))
                 as *mut libc::c_void;
         }
     }
-    pub unsafe fn luas_newudata(
-        interpreter: *mut Interpreter,
-        count_bytes: usize,
-        count_upvalues: usize,
-    ) -> *mut User {
+    pub unsafe fn luas_newudata(interpreter: *mut Interpreter, count_bytes: usize, count_upvalues: usize) -> *mut User {
         unsafe {
             if count_bytes > MAXIMUM_SIZE - User::user_get_size(0, count_upvalues) {
                 (*interpreter).too_big();
             }
-            let object: *mut Object = luac_newobj(
-                interpreter,
-                TAG_VARIANT_USER,
-                User::user_get_size(count_bytes, count_upvalues),
-            );
+            let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_USER, User::user_get_size(count_bytes, count_upvalues));
             let ret: *mut User = &mut (*(object as *mut User));
             (*ret).count_bytes = count_bytes;
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize))
-                    .set_tag_variant(TagVariant::NilNil as u8);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
             }
             return ret;
         }
     }
-    pub unsafe fn lua_newuserdatauv(
-        interpreter: *mut Interpreter,
-        size: usize,
-        count_upvalues: usize,
-    ) -> *mut libc::c_void {
+    pub unsafe fn lua_newuserdatauv(interpreter: *mut Interpreter, size: usize, count_upvalues: usize) -> *mut libc::c_void {
         unsafe {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
@@ -112,25 +97,12 @@ impl User {
             }
             for i in 0..self.count_upvalues {
                 if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable())
-                    && (*(*(self.upvalues).as_mut_ptr().offset(i as isize))
-                        .value
-                        .object)
-                        .get_marked()
-                        & (1 << 3 | 1 << 4)
-                        != 0
+                    && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
                 {
-                    really_mark_object(
-                        global,
-                        (*(self.upvalues).as_mut_ptr().offset(i as isize))
-                            .value
-                            .object,
-                    );
+                    really_mark_object(global, (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object);
                 }
             }
-            generate_link(
-                global,
-                &mut (*(self as *mut User as *mut libc::c_void as *mut Object)),
-            );
+            generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut Object)));
             return 1 + self.count_upvalues as i32;
         }
     }

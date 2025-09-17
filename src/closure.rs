@@ -61,30 +61,12 @@ impl Closure {
     pub unsafe fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             for i in 0..(*closure).count_upvalues {
-                if ((*((*closure).upvalues)
-                    .c_tvalues
-                    .as_mut_ptr()
-                    .offset(i as isize))
-                .is_collectable())
-                    && (*(*((*closure).upvalues)
-                        .c_tvalues
-                        .as_mut_ptr()
-                        .offset(i as isize))
-                    .value
-                    .object)
-                        .get_marked()
+                if ((*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
+                    && (*(*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).value.object).get_marked()
                         & (1 << 3 | 1 << 4)
                         != 0
                 {
-                    really_mark_object(
-                        global,
-                        (*((*closure).upvalues)
-                            .c_tvalues
-                            .as_mut_ptr()
-                            .offset(i as isize))
-                        .value
-                        .object,
-                    );
+                    really_mark_object(global, (*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).value.object);
                 }
             }
             return 1 + (*closure).count_upvalues as usize;
@@ -94,17 +76,11 @@ impl Closure {
         unsafe {
             if !((*closure).payload.l_prototype).is_null() {
                 if (*(*closure).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(
-                        global,
-                        &mut (*((*closure).payload.l_prototype as *mut Object)),
-                    );
+                    really_mark_object(global, &mut (*((*closure).payload.l_prototype as *mut Object)));
                 }
             }
             for i in 0..(*closure).count_upvalues {
-                let upvalue: *mut UpValue = *((*closure).upvalues)
-                    .l_upvalues
-                    .as_mut_ptr()
-                    .offset(i as isize);
+                let upvalue: *mut UpValue = *((*closure).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
                 if !upvalue.is_null() {
                     if (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         really_mark_object(global, &mut (*(upvalue as *mut Object)));
@@ -146,11 +122,7 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
     }
 }
 pub unsafe fn auxgetinfo(
-    interpreter: *mut Interpreter,
-    mut what: *const i8,
-    ar: *mut DebugInfo,
-    closure: *mut Closure,
-    call_info: *mut CallInfo,
+    interpreter: *mut Interpreter, mut what: *const i8, ar: *mut DebugInfo, closure: *mut Closure, call_info: *mut CallInfo,
 ) -> i32 {
     unsafe {
         let mut status: i32 = 1;
@@ -158,63 +130,48 @@ pub unsafe fn auxgetinfo(
             match *what as i32 {
                 CHARACTER_UPPER_S => {
                     funcinfo(ar, closure);
-                }
+                },
                 CHARACTER_LOWER_L => {
-                    (*ar).currentline = if !call_info.is_null()
-                        && (*call_info).call_info_call_status as i32 & 1 << 1 == 0
-                    {
+                    (*ar).currentline = if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
                         getcurrentline(call_info)
                     } else {
                         -1
                     };
-                }
+                },
                 CHARACTER_LOWER_U => {
-                    (*ar).nups = (if closure.is_null() {
-                        0
-                    } else {
-                        (*closure).count_upvalues as i32
-                    }) as u8;
-                    if !(!closure.is_null()
-                        && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L)
-                    {
+                    (*ar).nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
+                    if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
                         (*ar).is_variable_arguments = true;
                         (*ar).nparams = 0;
                     } else {
-                        (*ar).is_variable_arguments =
-                            (*(*closure).payload.l_prototype).prototype_is_variable_arguments;
-                        (*ar).nparams =
-                            (*(*closure).payload.l_prototype).prototype_count_parameters;
+                        (*ar).is_variable_arguments = (*(*closure).payload.l_prototype).prototype_is_variable_arguments;
+                        (*ar).nparams = (*(*closure).payload.l_prototype).prototype_count_parameters;
                     }
-                }
+                },
                 CHARACTER_LOWER_T => {
-                    (*ar).is_tail_call = if !call_info.is_null() {
-                        0 != ((*call_info).call_info_call_status as i32 & 1 << 5)
-                    } else {
-                        false
-                    };
-                }
+                    (*ar).is_tail_call =
+                        if !call_info.is_null() { 0 != ((*call_info).call_info_call_status as i32 & 1 << 5) } else { false };
+                },
                 CHARACTER_LOWER_N => {
                     (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
                         (*ar).namewhat = make_cstring!("");
                         (*ar).name = null();
                     }
-                }
+                },
                 CHARACTER_LOWER_R => {
-                    if call_info.is_null()
-                        || (*call_info).call_info_call_status as i32 & 1 << 8 == 0
-                    {
+                    if call_info.is_null() || (*call_info).call_info_call_status as i32 & 1 << 8 == 0 {
                         (*ar).ntransfer = 0;
                         (*ar).ftransfer = (*ar).ntransfer;
                     } else {
                         (*ar).ftransfer = (*call_info).call_info_u2.transferinfo.ftransfer;
                         (*ar).ntransfer = (*call_info).call_info_u2.transferinfo.ntransfer;
                     }
-                }
-                CHARACTER_UPPER_L | CHARACTER_LOWER_F => {}
+                },
+                CHARACTER_UPPER_L | CHARACTER_LOWER_F => {},
                 _ => {
                     status = 0;
-                }
+                },
             }
             what = what.offset(1);
         }
@@ -229,26 +186,15 @@ pub unsafe fn size_lclosure(count_upvalues: usize) -> usize {
 }
 pub unsafe fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
-        let object: *mut Object = luac_newobj(
-            interpreter,
-            TAG_VARIANT_CLOSURE_C,
-            size_cclosure(count_upvalues as usize),
-        );
+        let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_CLOSURE_C, size_cclosure(count_upvalues as usize));
         let ret: *mut Closure = &mut (*(object as *mut Closure));
         (*ret).count_upvalues = count_upvalues as u8;
         return ret;
     }
 }
-pub unsafe fn luaf_newlclosure(
-    interpreter: *mut Interpreter,
-    mut count_upvalues: i32,
-) -> *mut Closure {
+pub unsafe fn luaf_newlclosure(interpreter: *mut Interpreter, mut count_upvalues: i32) -> *mut Closure {
     unsafe {
-        let object: *mut Object = luac_newobj(
-            interpreter,
-            TAG_VARIANT_CLOSURE_L,
-            size_lclosure(count_upvalues as usize),
-        );
+        let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_CLOSURE_L, size_lclosure(count_upvalues as usize));
         let ret: *mut Closure = &mut (*(object as *mut Closure));
         (*ret).payload.l_prototype = null_mut();
         (*ret).count_upvalues = count_upvalues as u8;
@@ -258,10 +204,7 @@ pub unsafe fn luaf_newlclosure(
             if fresh == 0 {
                 break;
             }
-            let ref mut fresh18 = *((*ret).upvalues)
-                .l_upvalues
-                .as_mut_ptr()
-                .offset(count_upvalues as isize);
+            let ref mut fresh18 = *((*ret).upvalues).l_upvalues.as_mut_ptr().offset(count_upvalues as isize);
             *fresh18 = null_mut();
         }
         return ret;
@@ -270,20 +213,14 @@ pub unsafe fn luaf_newlclosure(
 pub unsafe fn luaf_initupvals(interpreter: *mut Interpreter, cl: *mut Closure) {
     unsafe {
         for i in 0..(*cl).count_upvalues {
-            let object: *mut Object =
-                luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
+            let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;
             (*(*upvalue).v.p).set_tag_variant(TagVariant::NilNil as u8);
             let ref mut fresh = *((*cl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh = upvalue;
-            if (*cl).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
-                luac_barrier_(
-                    interpreter,
-                    &mut (*(cl as *mut Object)),
-                    &mut (*(upvalue as *mut Object)),
-                );
+            if (*cl).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrier_(interpreter, &mut (*(cl as *mut Object)), &mut (*(upvalue as *mut Object)));
             }
         }
     }

@@ -113,21 +113,14 @@ impl TObject for Object {
 }
 impl Object {
     pub fn new(tag: u8) -> Object {
-        Object {
-            next: null_mut(),
-            tag: tag,
-            marked: 0,
-            ..
-        }
+        Object { next: null_mut(), tag: tag, marked: 0, .. }
     }
 }
 pub unsafe fn getgclist(object: *mut Object) -> *mut *mut Object {
     unsafe {
         match (*object).get_tag_variant() {
             TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
-            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
-                return &mut (*(object as *mut Closure)).gc_list
-            }
+            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
             TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
             TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).prototype_gc_list,
             TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
@@ -165,10 +158,8 @@ pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, 
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
         } else if (*global).gc_kind as i32 == 0 {
-            (*object).set_marked(
-                (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4))
-                    | ((*global).current_white & (1 << 3 | 1 << 4)),
-            );
+            (*object)
+                .set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).current_white & (1 << 3 | 1 << 4)));
         }
     }
 }
@@ -178,11 +169,7 @@ pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Obje
         if (*object).get_marked() & 7 == 6 {
             (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
-            linkgclist_(
-                &mut (*(object as *mut Object)),
-                getgclist(object),
-                &mut (*global).gray_again,
-            );
+            linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray_again);
         }
         if (*object).get_marked() & 7 > 1 {
             (*object).set_marked((*object).get_marked() & !7 | 5);
@@ -218,7 +205,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
                 current_block_18 = 18317007320854588510;
-            }
+            },
             TAG_VARIANT_UPVALUE => {
                 let uv: *mut UpValue = &mut (*(object as *mut UpValue));
                 if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
@@ -226,22 +213,17 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
                 } else {
                     (*uv).set_marked(((*uv).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5) as u8);
                 }
-                if ((*(*uv).v.p).is_collectable())
-                    && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                {
+                if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     really_mark_object(global, (*(*uv).v.p).value.object);
                 }
                 current_block_18 = 18317007320854588510;
-            }
+            },
             TAG_VARIANT_USER => {
                 let u: *mut User = &mut (*(object as *mut User));
                 if (*u).count_upvalues as i32 == 0 {
                     if !((*u).get_metatable()).is_null() {
                         if (*(*u).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            really_mark_object(
-                                global,
-                                &mut (*((*u).get_metatable() as *mut Object)),
-                            );
+                            really_mark_object(global, &mut (*((*u).get_metatable() as *mut Object)));
                         }
                     }
                     (*u).set_marked((*u).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -249,38 +231,26 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
                 } else {
                     current_block_18 = 15904375183555213903;
                 }
-            }
-            TAG_VARIANT_CLOSURE_L
-            | TAG_VARIANT_CLOSURE_C
-            | TAG_VARIANT_TABLE
-            | TAG_VARIANT_STATE
-            | TAG_VARIANT_PROTOTYPE => {
+            },
+            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C | TAG_VARIANT_TABLE | TAG_VARIANT_STATE | TAG_VARIANT_PROTOTYPE => {
                 current_block_18 = 15904375183555213903;
-            }
+            },
             _ => {
                 current_block_18 = 18317007320854588510;
-            }
+            },
         }
         match current_block_18 {
             15904375183555213903 => {
-                linkgclist_(
-                    &mut (*(object as *mut Object)),
-                    getgclist(object),
-                    &mut (*global).gray,
-                );
-            }
-            _ => {}
+                linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray);
+            },
+            _ => {},
         };
     }
 }
 pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
-            linkgclist_(
-                &mut (*(object as *mut Object)),
-                getgclist(object),
-                &mut (*global).gray_again,
-            );
+            linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray_again);
         } else if (*object).get_marked() & 7 == 6 {
             (*object).set_marked(((*object).get_marked() ^ (6 ^ 4)) as u8);
         }
@@ -292,32 +262,32 @@ pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
             TAG_VARIANT_PROTOTYPE => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
                 (*prototype).prototype_free(interpreter);
-            }
+            },
             TAG_VARIANT_UPVALUE => {
                 let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
                 (*upvalue).free_upvalue(interpreter);
-            }
+            },
             TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
                 let closure: *mut Closure = &mut (*(object as *mut Closure));
                 (*closure).free_closure(interpreter);
-            }
+            },
             TAG_VARIANT_TABLE => {
                 let table: *mut Table = &mut (*(object as *mut Table));
                 (*table).free_table(interpreter);
-            }
+            },
             TAG_VARIANT_STATE => {
                 let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
                 (*other).free_interpreter(interpreter);
-            }
+            },
             TAG_VARIANT_USER => {
                 let user: *mut User = &mut (*(object as *mut User));
                 (*user).free_user(interpreter);
-            }
+            },
             TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                 let tstring: *mut TString = &mut (*(object as *mut TString));
                 (*tstring).free_tstring(interpreter);
-            }
-            _ => {}
+            },
+            _ => {},
         };
     }
 }
@@ -360,11 +330,11 @@ pub unsafe fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Obje
                     current_block = 6316553219439668466;
                 }
                 match current_block {
-                    6316553219439668466 => {}
+                    6316553219439668466 => {},
                     _ => {
                         objects = next;
                         continue;
-                    }
+                    },
                 }
             }
             *objects = *next;
@@ -372,11 +342,7 @@ pub unsafe fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Obje
         return objects;
     }
 }
-pub unsafe fn delete_list(
-    interpreter: *mut Interpreter,
-    mut object: *mut Object,
-    limit: *mut Object,
-) {
+pub unsafe fn delete_list(interpreter: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
     unsafe {
         while object != limit {
             let next: *mut Object = (*object).next;

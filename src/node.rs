@@ -9,11 +9,7 @@ pub struct Node {
     pub key: TValue,
     pub next: i32,
 }
-pub const DUMMY_NODE: Node = Node {
-    value: TValue::new(TAG_VARIANT_NIL_EMPTY),
-    key: TValue::new(TAG_VARIANT_NIL_NIL),
-    next: 0,
-};
+pub const DUMMY_NODE: Node = Node { value: TValue::new(TAG_VARIANT_NIL_EMPTY), key: TValue::new(TAG_VARIANT_NIL_NIL), next: 0 };
 impl Node {
     pub fn clearkey(&mut self) {
         if self.key.is_collectable() {
@@ -24,28 +20,19 @@ impl Node {
 pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
         return if (*k1).get_tag_variant() != (*node).key.get_tag_variant()
-            && !(deadok != 0
-                && (*node).key.get_tag_variant() == TAG_VARIANT_DEADKEY
-                && ((*k1).is_collectable()))
+            && !(deadok != 0 && (*node).key.get_tag_variant() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable()))
         {
             false
         } else {
             match (*node).key.get_tag_variant() {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
-                TAG_VARIANT_NUMERIC_INTEGER => {
-                    return (*k1).value.integer == (*node).key.value.integer
-                }
-                TAG_VARIANT_NUMERIC_NUMBER => {
-                    return (*k1).value.number == (*node).key.value.number
-                }
+                TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.integer == (*node).key.value.integer,
+                TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.number == (*node).key.value.number,
                 TAG_VARIANT_POINTER => return (*k1).value.pointer == (*node).key.value.pointer,
-                TAG_VARIANT_CLOSURE_CFUNCTION => {
-                    return (*k1).value.function == (*node).key.value.function
-                }
-                TAG_VARIANT_STRING_LONG => luas_eqlngstr(
-                    &mut (*((*k1).value.object as *mut TString)),
-                    &mut (*((*node).key.value.object as *mut TString)),
-                ),
+                TAG_VARIANT_CLOSURE_CFUNCTION => return (*k1).value.function == (*node).key.value.function,
+                TAG_VARIANT_STRING_LONG => {
+                    luas_eqlngstr(&mut (*((*k1).value.object as *mut TString)), &mut (*((*node).key.value.object as *mut TString)))
+                },
                 _ => (*k1).value.object == (*node).key.value.object,
             }
         };

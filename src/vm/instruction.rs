@@ -19,9 +19,8 @@ pub unsafe fn final_target(code: *mut u32, mut index: i32) -> i32 {
             if (program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 != OP_JMP as u32 {
                 break;
             }
-            index += (program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
-                - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
-                + 1;
+            index +=
+                (program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1) + 1;
         }
         return index;
     }
