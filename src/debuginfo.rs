@@ -39,20 +39,14 @@ pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, 
             if !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
                 name = null();
             } else {
-                name = luaf_getlocalname(
-                    (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.object as *mut Closure))
-                        .payload
-                        .l_prototype,
-                    n,
-                    0,
-                );
+                name = luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.object as *mut Closure)).payload.l_prototype, n, 0);
             }
         } else {
-            let mut pos: *mut TValue = null_mut();
-            name = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
+            let mut position: *mut TValue = null_mut();
+            name = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
             if !name.is_null() {
                 let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                let io2: *const TValue = &mut (*pos);
+                let io2: *const TValue = &mut (*position);
                 (*io1).copy_from(&*io2);
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             }
@@ -62,10 +56,10 @@ pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, 
 }
 pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
-        let mut pos: *mut TValue = null_mut();
-        let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut pos);
+        let mut position: *mut TValue = null_mut();
+        let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
         if !name.is_null() {
-            let io1: *mut TValue = &mut (*pos);
+            let io1: *mut TValue = &mut (*position);
             let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
             (*io1).copy_from(&*io2);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -88,8 +82,7 @@ pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
                 (*ar).source = make_cstring!("=?");
-                (*ar).source_length =
-                    (size_of::<[i8; 3]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize);
+                (*ar).source_length = (size_of::<[i8; 3]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize);
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;

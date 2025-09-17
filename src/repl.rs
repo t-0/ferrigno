@@ -12,11 +12,7 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
         let mut script: i32 = 0;
         let args: i32 = collectargs(argv, &mut script);
         let optlim: i32 = if script > 0 { script } else { argc };
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         if args == 1 {
             print_usage(*argv.offset(script as isize));
             return 0;

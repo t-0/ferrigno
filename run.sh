@@ -1,5 +1,6 @@
 #! /usr/bin/env bash
 
+find src -name "*.rs" -exec rustfmt {} \;
 
 RUSTFLAGS="-Awarnings" cargo build || exit 1
 

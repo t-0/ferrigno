@@ -43,14 +43,12 @@ impl User {
     }
     pub unsafe fn get_raw_memory(&self) -> *const libc::c_void {
         unsafe {
-            return (self as *const User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize))
-                as *const libc::c_void;
+            return (self as *const User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize)) as *const libc::c_void;
         }
     }
     pub unsafe fn get_raw_memory_mut(&mut self) -> *mut libc::c_void {
         unsafe {
-            return (self as *mut User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize))
-                as *mut libc::c_void;
+            return (self as *mut User as *mut i8).offset(User::user_get_offset((*self).count_upvalues as usize)) as *mut libc::c_void;
         }
     }
     pub unsafe fn luas_newudata(interpreter: *mut Interpreter, count_bytes: usize, count_upvalues: usize) -> *mut User {
@@ -96,9 +94,7 @@ impl User {
                 }
             }
             for i in 0..self.count_upvalues {
-                if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable())
-                    && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                {
+                if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable()) && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     really_mark_object(global, (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object);
                 }
             }

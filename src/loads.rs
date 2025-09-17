@@ -46,8 +46,7 @@ impl<T> LoadS<T> {
         unsafe {
             let old_total = self.loads_size as usize * size_of::<T>();
             let new_total = new_size * size_of::<T>();
-            self.loads_pointer =
-                luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
+            self.loads_pointer = luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
             self.loads_length = 0;
             self.loads_size = new_size as i32;
         }
@@ -76,12 +75,7 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(
-                interpreter,
-                self.loads_pointer as *mut libc::c_void,
-                (self.loads_size as usize).wrapping_mul(size_of::<i8>()),
-                0,
-            );
+            luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, (self.loads_size as usize).wrapping_mul(size_of::<i8>()), 0);
             self.loads_pointer = null_mut();
             self.loads_size = 0;
         }

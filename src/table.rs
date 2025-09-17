@@ -63,10 +63,7 @@ impl Table {
     pub unsafe fn free_table(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             freehash(interpreter, self);
-            (*interpreter).free_memory(
-                self.array as *mut libc::c_void,
-                (luah_realasize(self) as usize).wrapping_mul(size_of::<TValue>() as usize) as usize,
-            );
+            (*interpreter).free_memory(self.array as *mut libc::c_void, (luah_realasize(self) as usize).wrapping_mul(size_of::<TValue>() as usize) as usize);
             (*interpreter).free_memory(self as *mut Table as *mut libc::c_void, size_of::<Table>());
         }
     }
@@ -121,9 +118,7 @@ pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
                 if (*node).key.is_collectable() && (*(*node).key.value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     really_mark_object(global, (*node).key.value.object);
                 }
-                if hasclears == 0
-                    && iscleared(global, if (*node).value.is_collectable() { (*node).value.value.object } else { null_mut() }) != 0
-                {
+                if hasclears == 0 && iscleared(global, if (*node).value.is_collectable() { (*node).value.value.object } else { null_mut() }) != 0 {
                     hasclears = 1;
                 }
             }
@@ -144,9 +139,7 @@ pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: 
         let asize: u32 = luah_realasize(h);
         let new_size: u32 = (1 << (*h).log_size_node as i32) as u32;
         for i in 0..asize {
-            if ((*((*h).array).offset(i as isize)).is_collectable())
-                && (*(*((*h).array).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
+            if ((*((*h).array).offset(i as isize)).is_collectable()) && (*(*((*h).array).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 marked = 1;
                 really_mark_object(global, (*((*h).array).offset(i as isize)).value.object);
             }
@@ -186,9 +179,7 @@ pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
         let limit: *mut Node = &mut *((*h).node).offset((1 << (*h).log_size_node as i32) as isize) as *mut Node;
         let asize: u32 = luah_realasize(h);
         for i in 0..asize {
-            if ((*((*h).array).offset(i as isize)).is_collectable())
-                && (*(*((*h).array).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
+            if ((*((*h).array).offset(i as isize)).is_collectable()) && (*(*((*h).array).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(global, (*((*h).array).offset(i as isize)).value.object);
             }
         }
@@ -244,8 +235,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
         }
         return (1 as u32)
             .wrapping_add((*h).array_limit)
-            .wrapping_add((2 * (if ((*h).last_free).is_null() { 0 } else { 1 << (*h).log_size_node as i32 })) as u32)
-            as usize;
+            .wrapping_add((2 * (if ((*h).last_free).is_null() { 0 } else { 1 << (*h).log_size_node as i32 })) as u32) as usize;
     }
 }
 pub unsafe fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: usize) {
@@ -275,8 +265,7 @@ pub unsafe fn hashint(t: *const Table, i: i64) -> *mut Node {
         if ui <= 0x7FFFFFFF as usize {
             return &mut *((*t).node).offset((ui as i32 % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize) as *mut Node;
         } else {
-            return &mut *((*t).node).offset(ui.wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as usize) as isize)
-                as *mut Node;
+            return &mut *((*t).node).offset(ui.wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as usize) as isize) as *mut Node;
         };
     }
 }
@@ -289,21 +278,15 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
             },
             TAG_VARIANT_NUMERIC_NUMBER => {
                 let n: f64 = (*key).value.number;
-                return &mut *((*t).node)
-                    .offset(((l_hashfloat as unsafe fn(f64) -> i32)(n) % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize)
-                    as *mut Node;
+                return &mut *((*t).node).offset(((l_hashfloat as unsafe fn(f64) -> i32)(n) % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize) as *mut Node;
             },
             TAG_VARIANT_STRING_SHORT => {
                 let ts: *mut TString = &mut (*((*key).value.object as *mut TString));
-                return &mut *((*t).node).offset(((*ts).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize)
-                    as *mut Node;
+                return &mut *((*t).node).offset(((*ts).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
             },
             TAG_VARIANT_STRING_LONG => {
                 let ts_0: *mut TString = &mut (*((*key).value.object as *mut TString));
-                return &mut *((*t).node).offset(
-                    ((hash_string_long as unsafe fn(*mut TString) -> u32)(ts_0) & ((1 << (*t).log_size_node as i32) - 1) as u32)
-                        as i32 as isize,
-                ) as *mut Node;
+                return &mut *((*t).node).offset(((hash_string_long as unsafe fn(*mut TString) -> u32)(ts_0) & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32 as isize) as *mut Node;
             },
             TAG_VARIANT_BOOLEAN_FALSE => {
                 return &mut *((*t).node).offset((0 & (1 << (*t).log_size_node as i32) - 1) as isize) as *mut Node;
@@ -313,25 +296,17 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
             },
             TAG_VARIANT_POINTER => {
                 let p: *mut libc::c_void = (*key).value.pointer;
-                return &mut *((*t).node).offset(
-                    ((p as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32)
-                        .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize,
-                ) as *mut Node;
+                return &mut *((*t).node).offset(((p as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize) as *mut Node;
             },
             TAG_VARIANT_CLOSURE_CFUNCTION => {
                 let cfunction: CFunction = (*key).value.function;
-                return &mut *((*t).node).offset(
-                    ((::core::mem::transmute::<CFunction, usize>(cfunction)
-                        & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32)
-                        .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize,
-                ) as *mut Node;
+                return &mut *((*t).node)
+                    .offset(((::core::mem::transmute::<CFunction, usize>(cfunction) & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize)
+                    as *mut Node;
             },
             _ => {
                 let o: *mut Object = (*key).value.object;
-                return &mut *((*t).node).offset(
-                    ((o as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32)
-                        .wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize,
-                ) as *mut Node;
+                return &mut *((*t).node).offset(((o as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize) as *mut Node;
             },
         };
     }
@@ -395,11 +370,7 @@ pub unsafe fn findindex(interpreter: *mut Interpreter, table: *mut Table, key: *
         if (*key).is_tagtype_nil() {
             return 0u32;
         }
-        i = if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            arrayindex((*key).value.integer)
-        } else {
-            0u32
-        };
+        i = if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER { arrayindex((*key).value.integer) } else { 0u32 };
         if i.wrapping_sub(1 as u32) < asize {
             return i;
         } else {
@@ -556,10 +527,7 @@ pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mu
             let lsize: i32 = ceiling_log2(size as usize) as i32;
             if lsize > (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1
                 || (1 as u32) << lsize
-                    > (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1)
-                        as usize
-                        <= (!(0usize)).wrapping_div(size_of::<Node>() as usize)
-                    {
+                    > (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1) as usize <= (!(0usize)).wrapping_div(size_of::<Node>() as usize) {
                         (1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1
                     } else {
                         (!(0usize)).wrapping_div(size_of::<Node>() as usize) as u32
@@ -727,8 +695,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         let io_: *const TValue = key;
         (*node).key.copy_from(&*io_);
         if (*key).is_collectable() {
-            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*key).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-            {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*key).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrierback_(interpreter, &mut (*(table as *mut Object)));
             } else {
             };
@@ -744,9 +711,7 @@ pub unsafe fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
         let array_limit: usize = (*table).array_limit as usize;
         if (key as usize).wrapping_sub(1 as usize) < array_limit {
             return &mut *((*table).array).offset((key - 1) as isize) as *mut TValue;
-        } else if (*table).flags as i32 & 1 << 7 != 0
-            && (key as usize).wrapping_sub(1 as usize) & !array_limit.wrapping_sub(1 as usize) < array_limit
-        {
+        } else if (*table).flags as i32 & 1 << 7 != 0 && (key as usize).wrapping_sub(1 as usize) & !array_limit.wrapping_sub(1 as usize) < array_limit {
             (*table).array_limit = key as u32;
             return &mut *((*table).array).offset((key - 1) as isize) as *mut TValue;
         } else {
@@ -768,12 +733,9 @@ pub unsafe fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
 }
 pub unsafe fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const TValue {
     unsafe {
-        let mut node: *mut Node =
-            &mut *((*table).node).offset(((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
+        let mut node: *mut Node = &mut *((*table).node).offset(((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
         loop {
-            if get_tag_variant((*node).key.get_tag_variant()) == TAG_VARIANT_STRING_SHORT
-                && &mut (*((*node).key.value.object as *mut TString)) as *mut TString == key
-            {
+            if get_tag_variant((*node).key.get_tag_variant()) == TAG_VARIANT_STRING_SHORT && &mut (*((*node).key.value.object as *mut TString)) as *mut TString == key {
                 return &mut (*node).value;
             } else {
                 let nx: i32 = (*node).next;
@@ -819,9 +781,7 @@ pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
         return getgeneric(table, key, 0);
     }
 }
-pub unsafe fn luah_finishset(
-    interpreter: *mut Interpreter, table: *mut Table, key: *const TValue, slot: *const TValue, value: *mut TValue,
-) {
+pub unsafe fn luah_finishset(interpreter: *mut Interpreter, table: *mut Table, key: *const TValue, slot: *const TValue, value: *mut TValue) {
     unsafe {
         if (*slot).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
             luah_newkey(interpreter, table, key, value);
@@ -890,11 +850,8 @@ pub unsafe fn luah_getn(table: *mut Table) -> usize {
     unsafe {
         let mut limit: u32 = (*table).array_limit;
         if limit > 0u32 && ((*((*table).array).offset(limit.wrapping_sub(1 as u32) as isize)).get_tag_type()) == TagType::Nil {
-            if limit >= 2 as u32 && (*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag_type() != TagType::Nil
-            {
-                if ispow2realasize(table) != 0
-                    && !(limit.wrapping_sub(1 as u32) & limit.wrapping_sub(1 as u32).wrapping_sub(1 as u32) == 0)
-                {
+            if limit >= 2 as u32 && (*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag_type() != TagType::Nil {
+                if ispow2realasize(table) != 0 && !(limit.wrapping_sub(1 as u32) & limit.wrapping_sub(1 as u32).wrapping_sub(1 as u32) == 0) {
                     (*table).array_limit = limit.wrapping_sub(1 as u32);
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
                 }
@@ -919,18 +876,14 @@ pub unsafe fn luah_getn(table: *mut Table) -> usize {
                 return boundary_0 as usize;
             }
         }
-        if ((*table).last_free).is_null()
-            || ((*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag_type()) == TagType::Nil
-        {
+        if ((*table).last_free).is_null() || ((*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag_type()) == TagType::Nil {
             return limit as usize;
         } else {
             return hash_search(table, limit as usize);
         };
     }
 }
-pub unsafe fn luav_finishget(
-    interpreter: *mut Interpreter, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut slot: *const TValue,
-) {
+pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut slot: *const TValue) {
     unsafe {
         let mut loop_0: i32 = 0;
         let mut tm: *const TValue;
@@ -943,15 +896,10 @@ pub unsafe fn luav_finishget(
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
                     null()
-                } else if (*(*((*t).value.object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_INDEX as i32 != 0
-                {
+                } else if (*(*((*t).value.object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_INDEX as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm(
-                        (*((*t).value.object as *mut Table)).get_metatable(),
-                        TM_INDEX,
-                        (*(*interpreter).global).tm_name[TM_INDEX as usize],
-                    )
+                    luat_gettm((*((*t).value.object as *mut Table)).get_metatable(), TM_INDEX, (*(*interpreter).global).tm_name[TM_INDEX as usize])
                 };
                 if tm.is_null() {
                     (*value).set_tag_variant(TagVariant::NilNil as u8);
@@ -981,9 +929,7 @@ pub unsafe fn luav_finishget(
         luag_runerror(interpreter, make_cstring!("'__index' chain too long; possible loop"));
     }
 }
-pub unsafe fn luav_finishset(
-    interpreter: *mut Interpreter, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut slot: *const TValue,
-) {
+pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut slot: *const TValue) {
     unsafe {
         let mut loop_0: i32 = 0;
         while loop_0 < 2000 as i32 {
@@ -1008,9 +954,7 @@ pub unsafe fn luav_finishset(
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
-                        if (*(h as *mut Object)).get_marked() & 1 << 5 != 0
-                            && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                        {
+                        if (*(h as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                             luac_barrierback_(interpreter, &mut (*(h as *mut Object)));
                         } else {
                         };
@@ -1041,9 +985,7 @@ pub unsafe fn luav_finishset(
                 let io2: *const TValue = value;
                 (*io1).copy_from(&*io2);
                 if (*value).is_collectable() {
-                    if (*(*t).value.object).get_marked() & 1 << 5 != 0
-                        && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                    {
+                    if (*(*t).value.object).get_marked() & 1 << 5 != 0 && (*(*value).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         luac_barrierback_(interpreter, (*t).value.object);
                     } else {
                     };

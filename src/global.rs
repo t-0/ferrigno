@@ -147,16 +147,12 @@ impl Global {
     pub unsafe fn incstep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let stepmul: i32 = self.gc_step_multiplier as i32 * 4 | 1;
-            let mut debt: i64 =
-                (self.gc_debt as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize) as i64;
-            let stepsize: i64 =
-                (if self.gc_step_size as usize <= (size_of::<i64>() as usize).wrapping_mul(8 as usize).wrapping_sub(2 as usize) {
-                    ((1 << self.gc_step_size as i32) as usize)
-                        .wrapping_div(size_of::<TValue>() as usize)
-                        .wrapping_mul(stepmul as usize)
-                } else {
-                    (!(0usize) >> 1) as usize
-                }) as i64;
+            let mut debt: i64 = (self.gc_debt as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize) as i64;
+            let stepsize: i64 = (if self.gc_step_size as usize <= (size_of::<i64>() as usize).wrapping_mul(8 as usize).wrapping_sub(2 as usize) {
+                ((1 << self.gc_step_size as i32) as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize)
+            } else {
+                (!(0usize) >> 1) as usize
+            }) as i64;
             loop {
                 let work: usize = self.singlestep(interpreter);
                 debt = (debt as usize).wrapping_sub(work) as i64;
@@ -384,8 +380,7 @@ impl Global {
             markold(self, self.to_be_finalized, null_mut());
             self.atomic(interpreter);
             self.gc_state = 3 as u8;
-            let mut psurvival: *mut *mut Object =
-                sweepgen(interpreter, self, &mut self.all_gc, self.survival, &mut self.first_old1);
+            let mut psurvival: *mut *mut Object = sweepgen(interpreter, self, &mut self.all_gc, self.survival, &mut self.first_old1);
             sweepgen(interpreter, self, psurvival, self.old1, &mut self.first_old1);
             self.really_old = self.old1;
             self.old1 = *psurvival;
@@ -424,11 +419,7 @@ impl Global {
         unsafe {
             let string_table: *mut StringTable = &mut self.string_table;
             (*string_table).initialize(interpreter);
-            self.memory_error_message = luas_newlstr(
-                interpreter,
-                make_cstring!("not enough memory"),
-                (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1),
-            );
+            self.memory_error_message = luas_newlstr(interpreter, make_cstring!("not enough memory"), (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
             fix_object_global(self, self.memory_error_message as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
@@ -472,11 +463,7 @@ impl Global {
         unsafe {
             let pause: i32 = (*self).gc_pause as i32 * 4;
             let estimate: i64 = ((*self).gc_estimate).wrapping_div(100 as usize) as i64;
-            let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate {
-                estimate * pause as i64
-            } else {
-                (!(0usize) >> 1) as i64
-            };
+            let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate { estimate * pause as i64 } else { (!(0usize) >> 1) as i64 };
             let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
             if debt > 0 {
                 debt = 0;
@@ -625,8 +612,7 @@ impl Global {
                     while !uv.is_null() {
                         work += 1;
                         if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
-                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0
-                            {
+                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                                 really_mark_object(self, (*(*uv).v.p).value.object);
                             }
                         }
@@ -690,9 +676,7 @@ impl Global {
             (*self).all_gc = object;
             (*object).set_marked((*object).get_marked() & !(1 << 6));
             if 3 <= (*self).gc_state as i32 && (*self).gc_state as i32 <= 6 {
-                (*object).set_marked(
-                    (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*self).current_white & (1 << 3 | 1 << 4)),
-                );
+                (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*self).current_white & (1 << 3 | 1 << 4)));
             } else if (*object).get_marked() & 7 == 3 {
                 (*self).first_old1 = object;
             }

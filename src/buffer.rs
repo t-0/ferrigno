@@ -19,11 +19,7 @@ pub struct Buffer {
 }
 impl New for Buffer {
     fn new() -> Self {
-        return Buffer {
-            loads: LoadS::<BufferElement>::new(),
-            buffer_interpreter: null_mut(),
-            initial_data: [0; Buffer::INITIAL_SIZE],
-        };
+        return Buffer { loads: LoadS::<BufferElement>::new(), buffer_interpreter: null_mut(), initial_data: [0; Buffer::INITIAL_SIZE] };
     }
 }
 impl Buffer {
@@ -115,11 +111,7 @@ impl Buffer {
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
-            memcpy(
-                b as *mut libc::c_void,
-                s as *const libc::c_void,
-                (length as usize).wrapping_mul(size_of::<BufferElement>()),
-            );
+            memcpy(b as *mut libc::c_void, s as *const libc::c_void, (length as usize).wrapping_mul(size_of::<BufferElement>()));
             self.loads.add_length(length);
             lua_settop(interpreter, -2);
         }

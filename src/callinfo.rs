@@ -56,9 +56,7 @@ pub struct CallInfoConsistuentBTransferInfo {
 pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
     unsafe {
         return ((*call_info).call_info_u.l.saved_program_counter).offset_from(
-            (*(*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure))
-                .payload
-                .l_prototype)
+            (*(*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype)
                 .prototype_code
                 .vectort_pointer,
         ) as i32
@@ -67,12 +65,7 @@ pub unsafe fn currentpc(call_info: *mut CallInfo) -> i32 {
 }
 pub unsafe fn getcurrentline(call_info: *mut CallInfo) -> i32 {
     unsafe {
-        return luag_getfuncline(
-            (*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure))
-                .payload
-                .l_prototype,
-            currentpc(call_info),
-        );
+        return luag_getfuncline((*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype, currentpc(call_info));
     }
 }
 pub unsafe fn settraps(mut call_info: *mut CallInfo) {
@@ -89,21 +82,15 @@ pub unsafe fn settraps(mut call_info: *mut CallInfo) {
         }
     }
 }
-pub unsafe fn luag_findlocal(interpreter: *mut Interpreter, call_info: *mut CallInfo, n: i32, pos: *mut *mut TValue) -> *const i8 {
+pub unsafe fn luag_findlocal(interpreter: *mut Interpreter, call_info: *mut CallInfo, n: i32, position: *mut *mut TValue) -> *const i8 {
     unsafe {
         let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
         let mut name: *const i8 = null();
         if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
             if n < 0 {
-                return findvararg(call_info, n, pos);
+                return findvararg(call_info, n, position);
             } else {
-                name = luaf_getlocalname(
-                    (*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure))
-                        .payload
-                        .l_prototype,
-                    n,
-                    currentpc(call_info),
-                );
+                name = luaf_getlocalname((*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype, n, currentpc(call_info));
             }
         }
         if name.is_null() {
@@ -113,33 +100,23 @@ pub unsafe fn luag_findlocal(interpreter: *mut Interpreter, call_info: *mut Call
                 (*(*call_info).call_info_next).call_info_function.stkidrel_pointer
             };
             if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
-                name = if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
-                    make_cstring!("(temporary)")
-                } else {
-                    make_cstring!("(C temporary)")
-                };
+                name = if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 { make_cstring!("(temporary)") } else { make_cstring!("(C temporary)") };
             } else {
                 return null();
             }
         }
-        if !pos.is_null() {
-            *pos = base.offset((n - 1) as isize);
+        if !position.is_null() {
+            *position = base.offset((n - 1) as isize);
         }
         return name;
     }
 }
-pub unsafe fn findvararg(call_info: *mut CallInfo, n: i32, pos: *mut *mut TValue) -> *const i8 {
+pub unsafe fn findvararg(call_info: *mut CallInfo, n: i32, position: *mut *mut TValue) -> *const i8 {
     unsafe {
-        if (*(*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure))
-            .payload
-            .l_prototype)
-            .prototype_is_variable_arguments
-        {
+        if (*(*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype).prototype_is_variable_arguments {
             let nextra = (*call_info).call_info_u.l.count_extra_arguments;
             if n >= -nextra {
-                *pos = ((*call_info).call_info_function.stkidrel_pointer)
-                    .offset(-nextra as isize)
-                    .offset(-((n + 1) as isize));
+                *position = ((*call_info).call_info_function.stkidrel_pointer).offset(-nextra as isize).offset(-((n + 1) as isize));
                 return make_cstring!("(vararg)");
             }
         }
@@ -166,9 +143,7 @@ pub unsafe fn funcnamefromcall(interpreter: *mut Interpreter, call_info: *mut Ca
         } else if (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(
                 interpreter,
-                (*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure))
-                    .payload
-                    .l_prototype,
+                (*((*(*call_info).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype,
                 currentpc(call_info),
                 name,
             );
@@ -180,13 +155,13 @@ pub unsafe fn funcnamefromcall(interpreter: *mut Interpreter, call_info: *mut Ca
 pub unsafe fn in_stack(call_info: *mut CallInfo, tvalue: *const TValue) -> i32 {
     unsafe {
         let base: *mut TValue = ((*call_info).call_info_function.stkidrel_pointer).offset(1 as isize);
-        let mut pos: i32 = 0;
+        let mut position: i32 = 0;
         loop {
-            if base.offset(pos as isize) < (*call_info).call_info_top.stkidrel_pointer {
-                if tvalue == &mut (*base.offset(pos as isize)) as *mut TValue as *const TValue {
-                    return pos;
+            if base.offset(position as isize) < (*call_info).call_info_top.stkidrel_pointer {
+                if tvalue == &mut (*base.offset(position as isize)) as *mut TValue as *const TValue {
+                    return position;
                 } else {
-                    pos += 1;
+                    position += 1;
                 }
             } else {
                 return -1;

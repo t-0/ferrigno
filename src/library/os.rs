@@ -113,12 +113,7 @@ pub unsafe fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, de
             }
             res = d as i64;
         } else {
-            if if res >= 0 {
-                (res - delta as i64 <= 0x7FFFFFFF as i64) as i32
-            } else {
-                ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
-            } == 0
-            {
+            if if res >= 0 { (res - delta as i64 <= 0x7FFFFFFF as i64) as i32 } else { ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32 } == 0 {
                 return lual_error(interpreter, make_cstring!("field '%s' is out-of-bound"), key);
             }
             res -= delta as i64;
@@ -141,11 +136,7 @@ pub unsafe fn checkoption(interpreter: *mut Interpreter, conv: *const i8, convle
             }
             option = option.offset(oplen as isize);
         }
-        lual_argerror(
-            interpreter,
-            1,
-            lua_pushfstring(interpreter, make_cstring!("invalid conversion specifier '%%%s'"), conv),
-        );
+        lual_argerror(interpreter, 1, lua_pushfstring(interpreter, make_cstring!("invalid conversion specifier '%%%s'"), conv));
         return conv;
     }
 }
@@ -162,11 +153,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
         let mut s: *const i8 = lual_optlstring(interpreter, 1, make_cstring!("%c"), &mut slen);
-        let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) {
-            time(null_mut())
-        } else {
-            l_checktime(interpreter, 2)
-        };
+        let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) { time(null_mut()) } else { l_checktime(interpreter, 2) };
         let se: *const i8 = s.offset(slen as isize);
         let mut tmr: TM = TM {
             tm_sec: 0,
@@ -320,11 +307,7 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [
 ];
 pub unsafe fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, SYSTEM_FUNCTIONS.as_ptr(), SYSTEM_FUNCTIONS.len(), 0);
         return 1;

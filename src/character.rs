@@ -588,8 +588,7 @@ pub unsafe fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
 }
 pub fn is_digit(ch: i32) -> bool {
     match ch {
-        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7
-        | CHARACTER_8 | CHARACTER_9 => true,
+        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => true,
         _ => false,
     }
 }

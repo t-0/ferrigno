@@ -73,10 +73,7 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
                     let fresh194 = b.loads.get_length();
                     b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
                     *(b.loads.loads_pointer).offset(fresh194 as isize) = *(make_cstring!(";"));
-                    b.add_string_with_length(
-                        dftmark.offset(2 as isize),
-                        path.offset(length as isize).offset(-(2 as isize)).offset_from(dftmark) as usize,
-                    );
+                    b.add_string_with_length(dftmark.offset(2 as isize), path.offset(length as isize).offset(-(2 as isize)).offset_from(dftmark) as usize);
                 }
                 b.push_result();
             }
@@ -193,9 +190,7 @@ pub unsafe fn pusherrornotfound(interpreter: *mut Interpreter, path: *const i8) 
         b.push_result();
     }
 }
-pub unsafe fn searchpath(
-    interpreter: *mut Interpreter, mut name: *const i8, path: *const i8, sep: *const i8, dirsep: *const i8,
-) -> *const i8 {
+pub unsafe fn searchpath(interpreter: *mut Interpreter, mut name: *const i8, path: *const i8, sep: *const i8, dirsep: *const i8) -> *const i8 {
     unsafe {
         let mut pathname;
         let endpathname;
@@ -316,8 +311,7 @@ pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         lua_pushlstring(interpreter, name, p.offset_from(name) as usize);
-        let filename: *const i8 =
-            findfile(interpreter, lua_tolstring(interpreter, -1, null_mut()), make_cstring!("cpath"), make_cstring!("/"));
+        let filename: *const i8 = findfile(interpreter, lua_tolstring(interpreter, -1, null_mut()), make_cstring!("cpath"), make_cstring!("/"));
         if filename.is_null() {
             return 1;
         }
@@ -351,10 +345,7 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
         let mut i: i32;
         let mut message = Buffer::new();
-        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, make_cstring!("searchers")) != TagType::Table) as i32
-            != 0) as i64
-            != 0
-        {
+        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, make_cstring!("searchers")) != TagType::Table) as i32 != 0) as i64 != 0 {
             lual_error(interpreter, make_cstring!("'package.searchers' must be a table"));
         }
         message.initialize(interpreter);
@@ -365,12 +356,7 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
                 lua_settop(interpreter, -2);
                 message.loads.set_length((message.loads.get_length().wrapping_sub(2)) as usize);
                 message.push_result();
-                lual_error(
-                    interpreter,
-                    make_cstring!("module '%s' not found:%s"),
-                    name,
-                    lua_tolstring(interpreter, -1, null_mut()),
-                );
+                lual_error(interpreter, make_cstring!("module '%s' not found:%s"), name, lua_tolstring(interpreter, -1, null_mut()));
             }
             lua_pushstring(interpreter, name);
             lua_callk(interpreter, 1, 2, 0, None);
@@ -417,19 +403,11 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 2] = {
-    [
-        { RegisteredFunction { name: make_cstring!("loadlib"), function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("searchpath"),
-                function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-    ]
+    [{ RegisteredFunction { name: make_cstring!("loadlib"), function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32) } }, {
+        RegisteredFunction { name: make_cstring!("searchpath"), function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32) }
+    }]
 };
-pub const LL_FUNCTIONS: [RegisteredFunction; 1] = {
-    [{ RegisteredFunction { name: make_cstring!("require"), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }]
-};
+pub const LL_FUNCTIONS: [RegisteredFunction; 1] = { [{ RegisteredFunction { name: make_cstring!("require"), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }] };
 pub unsafe fn createsearcherstable(interpreter: *mut Interpreter) {
     unsafe {
         pub const SEARCHERS: [CFunction; 5] = {
@@ -465,11 +443,7 @@ pub unsafe fn createclibstable(interpreter: *mut Interpreter) {
 pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         createclibstable(interpreter);
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
         createsearcherstable(interpreter);
@@ -477,9 +451,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             make_cstring!("path"),
             make_cstring!("LUA_PATH"),
-            make_cstring!(
-                "/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua"
-            ) as *const u8 as *const i8,
+            make_cstring!("/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua") as *const u8 as *const i8,
         );
         setpath(
             interpreter,

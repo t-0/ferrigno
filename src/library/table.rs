@@ -40,21 +40,20 @@ pub unsafe fn checktab(interpreter: *mut Interpreter, arg: i32, what: i32) {
 }
 pub unsafe fn table_insert(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let pos: i64;
+        let position: i64;
         checktab(interpreter, 1, 1 | 2 | 4);
         let mut e: i64 = lual_len(interpreter, 1);
         e = (e as usize).wrapping_add(1 as usize) as i64;
         match (*interpreter).get_top() {
             2 => {
-                pos = e;
+                position = e;
             },
             3 => {
                 let mut i: i64;
-                pos = lual_checkinteger(interpreter, 2);
-                ((((pos as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64 != 0
-                    || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0) as i32;
+                position = lual_checkinteger(interpreter, 2);
+                ((((position as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64 != 0 || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0) as i32;
                 i = e;
-                while i > pos {
+                while i > position {
                     lua_geti(interpreter, 1, i - 1);
                     lua_seti(interpreter, 1, i);
                     i -= 1;
@@ -64,7 +63,7 @@ pub unsafe fn table_insert(interpreter: *mut Interpreter) -> i32 {
                 return lual_error(interpreter, make_cstring!("wrong number of arguments to 'insert'"));
             },
         }
-        lua_seti(interpreter, 1, pos);
+        lua_seti(interpreter, 1, position);
         return 0;
     }
 }
@@ -72,19 +71,18 @@ pub unsafe fn table_remove(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         checktab(interpreter, 1, 1 | 2 | 4);
         let size: i64 = lual_len(interpreter, 1);
-        let mut pos: i64 = lual_optinteger(interpreter, 2, size);
-        if pos != size {
-            ((((pos as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64 != 0
-                || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0) as i32;
+        let mut position: i64 = lual_optinteger(interpreter, 2, size);
+        if position != size {
+            ((((position as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64 != 0 || lual_argerror(interpreter, 2, make_cstring!("position out of bounds")) != 0) as i32;
         }
-        lua_geti(interpreter, 1, pos);
-        while pos < size {
-            lua_geti(interpreter, 1, pos + 1);
-            lua_seti(interpreter, 1, pos);
-            pos += 1;
+        lua_geti(interpreter, 1, position);
+        while position < size {
+            lua_geti(interpreter, 1, position + 1);
+            lua_seti(interpreter, 1, position);
+            position += 1;
         }
         (*interpreter).push_nil();
-        lua_seti(interpreter, 1, pos);
+        lua_seti(interpreter, 1, position);
         return 1;
     }
 }
@@ -102,11 +100,9 @@ pub unsafe fn table_move(interpreter: *mut Interpreter) -> i32 {
         if e >= f {
             let n: i64;
             let mut i: i64;
-            (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0
-                || lual_argerror(interpreter, 3, make_cstring!("too many elements to move")) != 0) as i32;
+            (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, make_cstring!("too many elements to move")) != 0) as i32;
             n = e - f + 1;
-            (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
-                || lual_argerror(interpreter, 4, make_cstring!("destination wrap around")) != 0) as i32;
+            (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 4, make_cstring!("destination wrap around")) != 0) as i32;
             if t > e || t <= f || tag != 1 && lua_compare(interpreter, 1, tag, 0) == 0 {
                 for i in 0..n {
                     lua_geti(interpreter, 1, f + i);
@@ -219,10 +215,7 @@ pub unsafe fn l_randomizepivot() -> u32 {
             (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
         );
         memcpy(
-            buffer
-                .as_mut_ptr()
-                .offset((size_of::<i64>() as usize).wrapping_div(size_of::<u32>() as usize) as isize)
-                as *mut libc::c_void,
+            buffer.as_mut_ptr().offset((size_of::<i64>() as usize).wrapping_div(size_of::<u32>() as usize) as isize) as *mut libc::c_void,
             &mut t as *mut i64 as *const libc::c_void,
             (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
         );
@@ -375,30 +368,18 @@ pub unsafe fn table_sort(interpreter: *mut Interpreter) -> i32 {
 }
 pub const TABLE_FUNCTIONS: [RegisteredFunction; 7] = {
     [
-        {
-            RegisteredFunction { name: make_cstring!("concat"), function: Some(table_concat as unsafe fn(*mut Interpreter) -> i32) }
-        },
-        {
-            RegisteredFunction { name: make_cstring!("insert"), function: Some(table_insert as unsafe fn(*mut Interpreter) -> i32) }
-        },
+        { RegisteredFunction { name: make_cstring!("concat"), function: Some(table_concat as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("insert"), function: Some(table_insert as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("pack"), function: Some(table_pack as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction { name: make_cstring!("unpack"), function: Some(table_unpack as unsafe fn(*mut Interpreter) -> i32) }
-        },
-        {
-            RegisteredFunction { name: make_cstring!("remove"), function: Some(table_remove as unsafe fn(*mut Interpreter) -> i32) }
-        },
+        { RegisteredFunction { name: make_cstring!("unpack"), function: Some(table_unpack as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("remove"), function: Some(table_remove as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("move"), function: Some(table_move as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("sort"), function: Some(table_sort as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
         return 1;

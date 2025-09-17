@@ -19,9 +19,7 @@ impl DumpState {
     pub unsafe fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
-                self.status = (Some((self.write_function).expect("non-null function pointer"))).expect("non-null function pointer")(
-                    self.dumpstate_interpreter, pointer, size as usize, self.pointer,
-                );
+                self.status = (Some((self.write_function).expect("non-null function pointer"))).expect("non-null function pointer")(self.dumpstate_interpreter, pointer, size as usize, self.pointer);
             }
         }
     }
@@ -43,18 +41,11 @@ impl DumpState {
                     break;
                 }
             }
-            buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] =
-                (buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] as i32 | 0x80 as i32)
-                    as u8;
+            buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] = (buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] as i32 | 0x80 as i32) as u8;
             self.dump_block(
                 buffer
                     .as_mut_ptr()
-                    .offset(
-                        (size_of::<usize>() as usize)
-                            .wrapping_mul(8 as usize)
-                            .wrapping_add(6 as usize)
-                            .wrapping_div(7 as usize) as isize,
-                    )
+                    .offset((size_of::<usize>() as usize).wrapping_mul(8 as usize).wrapping_add(6 as usize).wrapping_div(7 as usize) as isize)
                     .offset(-(n as isize)) as *const libc::c_void,
                 n.wrapping_mul(size_of::<u8>()),
             );
@@ -80,10 +71,7 @@ impl DumpState {
             self.dump_block(LUA_SIGNATURE as *const libc::c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
-            self.dump_block(
-                make_cstring!("\x19\x7F\r\n\x1A\n") as *const libc::c_void,
-                (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()),
-            );
+            self.dump_block(make_cstring!("\x19\x7F\r\n\x1A\n") as *const libc::c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
             self.dump_byte(size_of::<u32>() as u8);
             self.dump_byte(size_of::<i64>() as u8);
             self.dump_byte(size_of::<f64>() as u8);
@@ -92,10 +80,7 @@ impl DumpState {
         }
     }
 }
-pub unsafe fn save_prototype(
-    interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut libc::c_void,
-    is_strip: bool,
-) -> i32 {
+pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut libc::c_void, is_strip: bool) -> i32 {
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();

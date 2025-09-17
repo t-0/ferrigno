@@ -148,11 +148,7 @@ pub unsafe fn io_popen(interpreter: *mut Interpreter) -> i32 {
         let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mode: *const i8 = lual_optlstring(interpreter, 2, make_cstring!("r"), null_mut());
         let p: *mut Stream = newprefile(interpreter);
-        ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32
-            || *mode.offset(0 as isize) as i32 == CHARACTER_LOWER_W as i32)
-            && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32
-            != 0) as i64
-            != 0
+        ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32 || *mode.offset(0 as isize) as i32 == CHARACTER_LOWER_W as i32) && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32 != 0) as i64 != 0
             || lual_argerror(interpreter, 2, make_cstring!("invalid mode")) != 0) as i32;
         *__errno_location() = 0;
         fflush(null_mut());
@@ -178,9 +174,7 @@ pub unsafe fn getiofile(interpreter: *mut Interpreter, findex: *const i8) -> *mu
             lual_error(
                 interpreter,
                 make_cstring!("default %s file is closed"),
-                findex.offset(
-                    (size_of::<[i8; 5]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize) as isize
-                ),
+                findex.offset((size_of::<[i8; 5]>() as usize).wrapping_div(size_of::<i8>() as usize).wrapping_sub(1 as usize) as isize),
             );
         }
         return (*p).file;
@@ -215,8 +209,7 @@ pub unsafe fn io_output(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn aux_lines(interpreter: *mut Interpreter, to_close: bool) {
     unsafe {
         let n: i32 = (*interpreter).get_top() - 1;
-        (((n <= 250 as i32) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 250 as i32 + 2, make_cstring!("too many arguments")) != 0) as i32;
+        (((n <= 250 as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 250 as i32 + 2, make_cstring!("too many arguments")) != 0) as i32;
         lua_pushvalue(interpreter, 1);
         (*interpreter).push_integer(n as i64);
         (*interpreter).push_boolean(to_close);
@@ -357,14 +350,10 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut FILE, chop: i3
         let mut c: i32 = 0;
         b.initialize(interpreter);
         loop {
-            let buffer: *mut i8 =
-                b.prepare_with_size((16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()));
+            let buffer: *mut i8 = b.prepare_with_size((16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()));
             let mut i: i32 = 0;
             flockfile(file);
-            while i
-                < (16 as usize)
-                    .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
-                    .wrapping_mul(size_of::<f64>() as usize) as i32
+            while i < (16 as usize).wrapping_mul(size_of::<*mut libc::c_void>() as usize).wrapping_mul(size_of::<f64>() as usize) as i32
                 && {
                     c = getc_unlocked(file);
                     c != -1
@@ -397,8 +386,7 @@ pub unsafe fn read_all(interpreter: *mut Interpreter, file: *mut FILE) {
         let mut b = Buffer::new();
         b.initialize(interpreter);
         loop {
-            let p: *mut i8 =
-                b.prepare_with_size((16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()));
+            let p: *mut i8 = b.prepare_with_size((16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()));
             nr = fread(
                 p as *mut libc::c_void,
                 size_of::<i8>(),
@@ -406,11 +394,7 @@ pub unsafe fn read_all(interpreter: *mut Interpreter, file: *mut FILE) {
                 file,
             ) as usize;
             b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
-            if !(nr
-                == (16 as usize)
-                    .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
-                    .wrapping_mul(size_of::<f64>() as usize) as i32 as usize)
-            {
+            if !(nr == (16 as usize).wrapping_mul(size_of::<*mut libc::c_void>() as usize).wrapping_mul(size_of::<f64>() as usize) as i32 as usize) {
                 break;
             }
         }
@@ -580,8 +564,7 @@ pub unsafe fn f_seek(interpreter: *mut Interpreter) -> i32 {
         let mut op: i32 = lual_checkoption(interpreter, 2, make_cstring!("cur"), MODE_NAMES.as_ptr());
         let p3: i64 = lual_optinteger(interpreter, 3, 0);
         let offset: i64 = p3 as i64;
-        (((offset as i64 == p3) as i32 != 0) as i64 != 0
-            || lual_argerror(interpreter, 3, make_cstring!("not an integer in proper range")) != 0) as i32;
+        (((offset as i64 == p3) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, make_cstring!("not an integer in proper range")) != 0) as i32;
         *__errno_location() = 0;
         op = fseeko(file, offset, MODE[op as usize]);
         if (op != 0) as i64 != 0 {
@@ -598,13 +581,7 @@ pub unsafe fn f_setvbuf(interpreter: *mut Interpreter) -> i32 {
         pub const MODE_NAMES: [*const i8; 4] = [make_cstring!("no"), make_cstring!("full"), make_cstring!("line"), null()];
         let file: *mut FILE = tofile(interpreter);
         let op: i32 = lual_checkoption(interpreter, 2, null(), MODE_NAMES.as_ptr());
-        let size: i64 = lual_optinteger(
-            interpreter,
-            3,
-            (16 as usize)
-                .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
-                .wrapping_mul(size_of::<f64>() as usize) as i64,
-        );
+        let size: i64 = lual_optinteger(interpreter, 3, (16 as usize).wrapping_mul(size_of::<*mut libc::c_void>() as usize).wrapping_mul(size_of::<f64>() as usize) as i64);
         let res: i32;
         *__errno_location() = 0;
         res = setvbuf(file, null_mut(), MODE[op as usize], size as usize);
@@ -655,12 +632,7 @@ pub const IO_METAMETHODS: [RegisteredFunction; 3] = {
     [
         { RegisteredFunction { name: make_cstring!("__gc"), function: Some(f_gc as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("__close"), function: Some(f_gc as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("__tostring"),
-                function: Some(f_tostring as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("__tostring"), function: Some(f_tostring as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn createmeta(interpreter: *mut Interpreter) {
@@ -696,11 +668,7 @@ pub unsafe fn createstdfile(interpreter: *mut Interpreter, file: *mut FILE, k: *
 }
 pub unsafe fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), IO_FUNCTIONS.len(), 0);
         createmeta(interpreter);

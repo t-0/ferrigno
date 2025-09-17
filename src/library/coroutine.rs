@@ -57,11 +57,7 @@ unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
                 }
             },
             _ => {
-                return lual_error(
-                    interpreter,
-                    make_cstring!("cannot close a %s coroutine"),
-                    COROUTINE_STATUS_NAMES[status as usize],
-                );
+                return lual_error(interpreter, make_cstring!("cannot close a %s coroutine"), COROUTINE_STATUS_NAMES[status as usize]);
             },
         };
     }
@@ -87,48 +83,19 @@ unsafe fn luab_yield(interpreter: *mut Interpreter) -> i32 {
 }
 const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
-        {
-            RegisteredFunction {
-                name: make_cstring!("create"),
-                function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("resume"),
-                function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("running"),
-                function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("status"),
-                function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("create"), function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("resume"), function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("running"), function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("status"), function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("wrap"), function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("yield"), function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("isyieldable"),
-                function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("isyieldable"), function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("close"), function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize),
-        );
+        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);
         return 1;

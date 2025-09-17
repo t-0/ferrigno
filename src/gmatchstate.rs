@@ -41,8 +41,7 @@ impl GMatchState {
             let mut lp: usize = 0;
             let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
             let p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
-            let mut init: usize =
-                (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
+            let mut init: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
             lua_settop(interpreter, 2);
             if init > lexical_state {
                 init = lexical_state.wrapping_add(1 as usize);

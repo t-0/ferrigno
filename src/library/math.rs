@@ -293,10 +293,7 @@ unsafe fn math_max(interpreter: *mut Interpreter) -> i32 {
 unsafe fn math_type(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         if lua_type(interpreter, 1) == Some(TagType::Numeric) {
-            lua_pushstring(
-                interpreter,
-                if lua_isinteger(interpreter, 1) { make_cstring!("integer") } else { make_cstring!("float") },
-            );
+            lua_pushstring(interpreter, if lua_isinteger(interpreter, 1) { make_cstring!("integer") } else { make_cstring!("float") });
         } else {
             lual_checkany(interpreter, 1);
             (*interpreter).push_nil();
@@ -352,15 +349,9 @@ unsafe fn math_randomseed(interpreter: *mut Interpreter) -> i32 {
     }
 }
 const MATH_RANDOM_FUNCTIONS: [RegisteredFunction; 2] = {
-    [
-        { RegisteredFunction { name: make_cstring!("random"), function: Some(math_random as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("randomseed"),
-                function: Some(math_randomseed as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-    ]
+    [{ RegisteredFunction { name: make_cstring!("random"), function: Some(math_random as unsafe fn(*mut Interpreter) -> i32) } }, {
+        RegisteredFunction { name: make_cstring!("randomseed"), function: Some(math_randomseed as unsafe fn(*mut Interpreter) -> i32) }
+    }]
 };
 unsafe fn set_random_function(interpreter: *mut Interpreter) {
     unsafe {
@@ -380,12 +371,7 @@ const MATH_FUNCTIONS: [RegisteredFunction; 21] = {
         { RegisteredFunction { name: make_cstring!("cos"), function: Some(math_cos as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("deg"), function: Some(math_deg as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("exp"), function: Some(math_exp as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("tointeger"),
-                function: Some(math_toint as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("tointeger"), function: Some(math_toint as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("floor"), function: Some(math_floor as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("fmod"), function: Some(math_fmod as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("ult"), function: Some(math_ult as unsafe fn(*mut Interpreter) -> i32) } },

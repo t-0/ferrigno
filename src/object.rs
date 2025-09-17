@@ -158,8 +158,7 @@ pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, 
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
         } else if (*global).gc_kind as i32 == 0 {
-            (*object)
-                .set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).current_white & (1 << 3 | 1 << 4)));
+            (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).current_white & (1 << 3 | 1 << 4)));
         }
     }
 }

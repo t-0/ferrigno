@@ -9,10 +9,6 @@ pub struct LongJump {
 }
 impl New for LongJump {
     fn new() -> Self {
-        return LongJump {
-            previous: null_mut(),
-            jbt: [JumpBufferTag { __mask_was_saved: 0, __saved_mask: SIgnalSet { __val: [0; 16] } }; 1],
-            status: 0,
-        };
+        return LongJump { previous: null_mut(), jbt: [JumpBufferTag { __mask_was_saved: 0, __saved_mask: SIgnalSet { __val: [0; 16] } }; 1], status: 0 };
     }
 }

@@ -138,27 +138,18 @@ impl LoadState {
     pub unsafe fn load_code(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<u32>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<u32>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
-            (*prototype)
-                .prototype_code
-                .initialize_size(self.interpreter, (n as usize).wrapping_mul(size_of::<u32>()));
-            self.load_block(
-                (*prototype).prototype_code.vectort_pointer as *mut libc::c_void,
-                (n as usize).wrapping_mul(size_of::<u32>()) as usize,
-            );
+            (*prototype).prototype_code.initialize_size(self.interpreter, (n as usize).wrapping_mul(size_of::<u32>()));
+            self.load_block((*prototype).prototype_code.vectort_pointer as *mut libc::c_void, (n as usize).wrapping_mul(size_of::<u32>()) as usize);
         }
     }
     pub unsafe fn load_constants(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<TValue>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
@@ -167,8 +158,7 @@ impl LoadState {
                 (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
             }
             for i in 0..n {
-                let tvalue: *mut TValue =
-                    &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
+                let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
                 let t = self.load_byte() as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
@@ -205,9 +195,7 @@ impl LoadState {
     pub unsafe fn load_prototypes(&mut self, prototype: *mut Prototype) {
         unsafe {
             let n: i32 = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
@@ -217,10 +205,7 @@ impl LoadState {
             }
             for i in 0..n {
                 *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) = luaf_newproto(self.interpreter);
-                if (*prototype).get_marked() & 1 << 5 != 0
-                    && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4)
-                        != 0
-                {
+                if (*prototype).get_marked() & 1 << 5 != 0 && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     luac_barrier_(
                         self.interpreter,
                         &mut (*(prototype as *mut Object)),
@@ -228,10 +213,7 @@ impl LoadState {
                     );
                 } else {
                 }
-                self.load_function(
-                    *((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize),
-                    (*prototype).prototype_source,
-                );
+                self.load_function(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize), (*prototype).prototype_source);
             }
         }
     }
@@ -239,9 +221,7 @@ impl LoadState {
         unsafe {
             let n: i32;
             n = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
@@ -260,21 +240,14 @@ impl LoadState {
         unsafe {
             let mut n: i32;
             n = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<i8>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<i8>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
             (*prototype).prototype_line_info.initialize_size(self.interpreter, n as usize);
-            self.load_block(
-                (*prototype).prototype_line_info.vectort_pointer as *mut libc::c_void,
-                (n as usize).wrapping_mul(size_of::<i8>() as usize),
-            );
+            self.load_block((*prototype).prototype_line_info.vectort_pointer as *mut libc::c_void, (n as usize).wrapping_mul(size_of::<i8>() as usize));
             n = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };
@@ -284,9 +257,7 @@ impl LoadState {
                 (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).line = self.load_int();
             }
             n = self.load_int();
-            if size_of::<i32>() as usize >= size_of::<usize>() as usize
-                && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize)
-            {
+            if size_of::<i32>() as usize >= size_of::<usize>() as usize && (n as usize).wrapping_add(1usize) > (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) {
                 (*(self.interpreter)).too_big();
             } else {
             };

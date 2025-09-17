@@ -61,11 +61,7 @@ impl Closure {
     pub unsafe fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {
         unsafe {
             for i in 0..(*closure).count_upvalues {
-                if ((*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable())
-                    && (*(*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).value.object).get_marked()
-                        & (1 << 3 | 1 << 4)
-                        != 0
-                {
+                if ((*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).is_collectable()) && (*(*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     really_mark_object(global, (*((*closure).upvalues).c_tvalues.as_mut_ptr().offset(i as isize)).value.object);
                 }
             }
@@ -121,9 +117,7 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
         };
     }
 }
-pub unsafe fn auxgetinfo(
-    interpreter: *mut Interpreter, mut what: *const i8, ar: *mut DebugInfo, closure: *mut Closure, call_info: *mut CallInfo,
-) -> i32 {
+pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar: *mut DebugInfo, closure: *mut Closure, call_info: *mut CallInfo) -> i32 {
     unsafe {
         let mut status: i32 = 1;
         while *what != 0 {
@@ -132,11 +126,7 @@ pub unsafe fn auxgetinfo(
                     funcinfo(ar, closure);
                 },
                 CHARACTER_LOWER_L => {
-                    (*ar).currentline = if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 1 == 0 {
-                        getcurrentline(call_info)
-                    } else {
-                        -1
-                    };
+                    (*ar).currentline = if !call_info.is_null() && (*call_info).call_info_call_status as i32 & 1 << 1 == 0 { getcurrentline(call_info) } else { -1 };
                 },
                 CHARACTER_LOWER_U => {
                     (*ar).nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
@@ -149,8 +139,7 @@ pub unsafe fn auxgetinfo(
                     }
                 },
                 CHARACTER_LOWER_T => {
-                    (*ar).is_tail_call =
-                        if !call_info.is_null() { 0 != ((*call_info).call_info_call_status as i32 & 1 << 5) } else { false };
+                    (*ar).is_tail_call = if !call_info.is_null() { 0 != ((*call_info).call_info_call_status as i32 & 1 << 5) } else { false };
                 },
                 CHARACTER_LOWER_N => {
                     (*ar).namewhat = getfuncname(interpreter, call_info, &mut (*ar).name);

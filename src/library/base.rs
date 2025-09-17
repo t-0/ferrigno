@@ -31,8 +31,7 @@ pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
                 let base: i64 = lual_checkinteger(interpreter, 2);
                 lual_checktype(interpreter, 1, TagType::String);
                 s_0 = lua_tolstring(interpreter, 1, &mut l_0);
-                (((2 as i64 <= base && base <= 36 as i64) as i32 != 0) as i64 != 0
-                    || lual_argerror(interpreter, 2, make_cstring!("base out of range")) != 0) as i32;
+                (((2 as i64 <= base && base <= 36 as i64) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, make_cstring!("base out of range")) != 0) as i32;
                 if b_str2int(s_0, base as i32, &mut n) == s_0.offset(l_0 as isize) {
                     (*interpreter).push_integer(n);
                     return 1;
@@ -128,10 +127,7 @@ pub unsafe fn pushmode(interpreter: *mut Interpreter, oldmode: i32) -> i32 {
         if oldmode == -1 {
             (*interpreter).push_nil();
         } else {
-            lua_pushstring(
-                interpreter,
-                if oldmode == 11 as i32 { make_cstring!("incremental") } else { make_cstring!("generational") },
-            );
+            lua_pushstring(interpreter, if oldmode == 11 as i32 { make_cstring!("incremental") } else { make_cstring!("generational") });
         }
         return 1;
     }
@@ -369,9 +365,7 @@ pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn luab_select(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n = (*interpreter).get_top();
-        if lua_type(interpreter, 1) == Some(TagType::String)
-            && *lua_tolstring(interpreter, 1, null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32
-        {
+        if lua_type(interpreter, 1) == Some(TagType::String) && *lua_tolstring(interpreter, 1, null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32 {
             (*interpreter).push_integer((n - 1) as i64);
             return 1;
         } else {
@@ -394,14 +388,7 @@ pub unsafe fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
         (*interpreter).push_boolean(true);
         lua_pushvalue(interpreter, 1);
         lua_rotate(interpreter, 3, 2);
-        status = lua_pcallk(
-            interpreter,
-            n - 2,
-            -1,
-            2,
-            2 as i64,
-            Some(finishpcall as unsafe fn(*mut Interpreter, i32, i64) -> i32),
-        );
+        status = lua_pcallk(interpreter, n - 2, -1, 2, 2 as i64, Some(finishpcall as unsafe fn(*mut Interpreter, i32, i64) -> i32));
         return finishpcall(interpreter, status, 2 as i64);
     }
 }
@@ -415,61 +402,26 @@ pub unsafe fn luab_tostring(interpreter: *mut Interpreter) -> i32 {
 pub const BASE_FUNCTIONS: [RegisteredFunction; 23] = {
     [
         { RegisteredFunction { name: make_cstring!("assert"), function: Some(luab_assert as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("collectgarbage"),
-                function: Some(luab_collectgarbage as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("collectgarbage"), function: Some(luab_collectgarbage as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("dofile"), function: Some(luab_dofile as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("error"), function: Some(luab_error as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("getmetatable"),
-                function: Some(luab_getmetatable as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("getmetatable"), function: Some(luab_getmetatable as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("ipairs"), function: Some(luab_ipairs as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("loadfile"),
-                function: Some(luab_loadfile as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("loadfile"), function: Some(luab_loadfile as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("load"), function: Some(luab_load as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("next"), function: Some(luab_next as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("pairs"), function: Some(luab_pairs as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("pcall"), function: Some(luab_pcall as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("print"), function: Some(luab_print as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("warn"), function: Some(luab_warn as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("rawequal"),
-                function: Some(luab_rawequal as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("rawequal"), function: Some(luab_rawequal as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("rawlen"), function: Some(luab_rawlen as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("rawget"), function: Some(luab_rawget as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("rawset"), function: Some(luab_rawset as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("select"), function: Some(luab_select as unsafe fn(*mut Interpreter) -> i32) } },
-        {
-            RegisteredFunction {
-                name: make_cstring!("setmetatable"),
-                function: Some(luab_setmetatable as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("tonumber"),
-                function: Some(luab_tonumber as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
-        {
-            RegisteredFunction {
-                name: make_cstring!("tostring"),
-                function: Some(luab_tostring as unsafe fn(*mut Interpreter) -> i32),
-            }
-        },
+        { RegisteredFunction { name: make_cstring!("setmetatable"), function: Some(luab_setmetatable as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("tonumber"), function: Some(luab_tonumber as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: make_cstring!("tostring"), function: Some(luab_tostring as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("type"), function: Some(luab_type as unsafe fn(*mut Interpreter) -> i32) } },
         { RegisteredFunction { name: make_cstring!("xpcall"), function: Some(luab_xpcall as unsafe fn(*mut Interpreter) -> i32) } },
     ]

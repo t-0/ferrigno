@@ -30,20 +30,9 @@ impl UserBox {
         }
     }
     pub const USERBOX_METATABLE: [RegisteredFunction; 2] = {
-        [
-            {
-                RegisteredFunction {
-                    name: make_cstring!("__gc"),
-                    function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
-                }
-            },
-            {
-                RegisteredFunction {
-                    name: make_cstring!("__close"),
-                    function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
-                }
-            },
-        ]
+        [{ RegisteredFunction { name: make_cstring!("__gc"), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) } }, {
+            RegisteredFunction { name: make_cstring!("__close"), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) }
+        }]
     };
     pub unsafe fn new_userbox(interpreter: *mut Interpreter) {
         unsafe {
