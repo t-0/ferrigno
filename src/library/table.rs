@@ -451,7 +451,7 @@ pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
         return 1;
     }
 }

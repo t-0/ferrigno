@@ -57,7 +57,7 @@ impl UserBox {
             (*box_0).pointer = null_mut();
             (*box_0).size = 0;
             if lual_newmetatable(interpreter, make_cstring!("_UBOX*")) != 0 {
-                lual_setfuncs2(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
+                lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
             }
             lua_setmetatable(interpreter, -2);
         }

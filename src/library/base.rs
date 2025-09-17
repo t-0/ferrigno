@@ -616,7 +616,7 @@ pub const BASE_FUNCTIONS: [RegisteredFunction; 23] = {
 pub unsafe fn luaopen_base(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_rawgeti(interpreter, -(1000000 as i32) - 1000 as i32, 2 as i64);
-        lual_setfuncs2(interpreter, BASE_FUNCTIONS.as_ptr(), BASE_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, BASE_FUNCTIONS.as_ptr(), BASE_FUNCTIONS.len(), 0);
         lua_pushvalue(interpreter, -1);
         lua_setfield(interpreter, -2, make_cstring!("_G"));
         lua_pushstring(interpreter, make_cstring!("Lua 5.4"));

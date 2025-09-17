@@ -1688,7 +1688,7 @@ pub const STRING_FUNCTIONS: [RegisteredFunction; 17] = {
 pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
     unsafe {
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, STRING_METAMETHODS.as_ptr(), STRING_METAMETHODS.len(), 0);
+        lual_setfuncs(interpreter, STRING_METAMETHODS.as_ptr(), STRING_METAMETHODS.len(), 0);
         lua_pushstring(interpreter, make_cstring!(""));
         lua_pushvalue(interpreter, -2);
         lua_setmetatable(interpreter, -2);
@@ -1708,7 +1708,7 @@ pub unsafe fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, STRING_FUNCTIONS.as_ptr(), STRING_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, STRING_FUNCTIONS.as_ptr(), STRING_FUNCTIONS.len(), 0);
         createmetatable(interpreter);
         return 1;
     }

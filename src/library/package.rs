@@ -605,7 +605,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
         createsearcherstable(interpreter);
         setpath(
         interpreter,
@@ -628,7 +628,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         lua_setfield(interpreter, -2, make_cstring!("preload"));
         lua_rawgeti(interpreter, -1000000 - 1000, 2 as i64);
         lua_pushvalue(interpreter, -2);
-        lual_setfuncs2(interpreter, LL_FUNCTIONS.as_ptr(), LL_FUNCTIONS.len(), 1);
+        lual_setfuncs(interpreter, LL_FUNCTIONS.as_ptr(), LL_FUNCTIONS.len(), 1);
         lua_settop(interpreter, -2);
         return 1;
     }

@@ -883,9 +883,9 @@ pub const IO_METAMETHODS: [RegisteredFunction; 3] = {
 pub unsafe fn createmeta(interpreter: *mut Interpreter) {
     unsafe {
         lual_newmetatable(interpreter, make_cstring!("FILE*"));
-        lual_setfuncs2(interpreter, IO_METAMETHODS.as_ptr(), IO_METAMETHODS.len(), 0);
+        lual_setfuncs(interpreter, IO_METAMETHODS.as_ptr(), IO_METAMETHODS.len(), 0);
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, IO_METHODS.as_ptr(), IO_METHODS.len(), 0);
+        lual_setfuncs(interpreter, IO_METHODS.as_ptr(), IO_METHODS.len(), 0);
         lua_setfield(interpreter, -2, make_cstring!("__index"));
         lua_settop(interpreter, -2);
     }
@@ -926,7 +926,7 @@ pub unsafe fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
                 .wrapping_add(size_of::<f64>() as usize),
         );
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, IO_FUNCTIONS.as_ptr(), IO_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), IO_FUNCTIONS.len(), 0);
         createmeta(interpreter);
         createstdfile(
             interpreter,

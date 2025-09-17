@@ -8366,32 +8366,6 @@ pub unsafe fn lual_tolstring(
 }
 pub unsafe fn lual_setfuncs(
     interpreter: *mut Interpreter,
-    mut l: *const RegisteredFunction,
-    count_upvalues: i32,
-) {
-    unsafe {
-        lual_checkstack(
-            interpreter,
-            count_upvalues,
-            make_cstring!("too many upvalues"),
-        );
-        while !((*l).name).is_null() {
-            if ((*l).function).is_none() {
-                (*interpreter).push_boolean(false);
-            } else {
-                for _ in 0..count_upvalues {
-                    lua_pushvalue(interpreter, -count_upvalues);
-                }
-                lua_pushcclosure(interpreter, (*l).function, count_upvalues);
-            }
-            lua_setfield(interpreter, -(count_upvalues + 2), (*l).name);
-            l = l.offset(1);
-        }
-        lua_settop(interpreter, -count_upvalues - 1);
-    }
-}
-pub unsafe fn lual_setfuncs2(
-    interpreter: *mut Interpreter,
     registered_functions: * const  RegisteredFunction,
     count_registered_functions: usize,
     count_upvalues: i32,

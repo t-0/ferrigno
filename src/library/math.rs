@@ -411,7 +411,7 @@ unsafe fn set_random_function(interpreter: *mut Interpreter) {
             User::lua_newuserdatauv(interpreter, size_of::<RandomState>(), 0) as *mut RandomState;
         random_seed(interpreter, ranstate);
         lua_settop(interpreter, -3);
-        lual_setfuncs2(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), MATH_RANDOM_FUNCTIONS.len(), 1);
+        lual_setfuncs(interpreter, MATH_RANDOM_FUNCTIONS.as_ptr(), MATH_RANDOM_FUNCTIONS.len(), 1);
     }
 }
 const MATH_FUNCTIONS: [RegisteredFunction; 21] = {
@@ -547,7 +547,7 @@ const MATH_FUNCTIONS: [RegisteredFunction; 21] = {
 pub unsafe fn luaopen_math(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         (*interpreter).lua_createtable();
-        lual_setfuncs2(interpreter, MATH_FUNCTIONS.as_ptr(), MATH_FUNCTIONS.len(), 0);
+        lual_setfuncs(interpreter, MATH_FUNCTIONS.as_ptr(), MATH_FUNCTIONS.len(), 0);
         (*interpreter).push_number(PI);
         lua_setfield(interpreter, -2, make_cstring!("pi"));
         (*interpreter).push_number(::core::f64::INFINITY);
