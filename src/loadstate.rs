@@ -303,13 +303,6 @@ impl LoadState {
             }
         }
     }
-    pub unsafe fn f_check_size(&mut self, size: usize, tname: *const i8) {
-        unsafe {
-            if self.load_byte() as usize != size {
-                self.error(luao_pushfstring(self.interpreter, make_cstring!("%s size mismatch"), tname));
-            }
-        }
-    }
     pub unsafe fn check_header(&mut self) {
         unsafe {
             self.check_literal(&*(LUA_SIGNATURE).offset(1 as isize), make_cstring!("not a binary chunk"));
@@ -320,9 +313,6 @@ impl LoadState {
                 self.error(make_cstring!("format mismatch"));
             }
             self.check_literal(make_cstring!("\x19\x7F\r\n\x1A\n"), make_cstring!("corrupted chunk"));
-            self.f_check_size(size_of::<u32>() as usize, make_cstring!("u32"));
-            self.f_check_size(size_of::<i64>() as usize, make_cstring!("i64"));
-            self.f_check_size(size_of::<f64>() as usize, make_cstring!("f64"));
             if self.load_integer() != 0x5678 as i64 {
                 self.error(make_cstring!("integer format mismatch"));
             }

@@ -72,9 +72,6 @@ impl DumpState {
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
             self.dump_block(make_cstring!("\x19\x7F\r\n\x1A\n") as *const libc::c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
-            self.dump_byte(size_of::<u32>() as u8);
-            self.dump_byte(size_of::<i64>() as u8);
-            self.dump_byte(size_of::<f64>() as u8);
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }

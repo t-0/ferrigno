@@ -865,7 +865,7 @@ pub unsafe fn subexpr(interpreter: *mut Interpreter, lexical_state: *mut Lexical
 }
 pub unsafe fn handle_block(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         enterblock(lexical_state, function_state, &mut block_control, false);
         parse_statement_list(interpreter, lexical_state, function_state);
         leaveblock(interpreter, lexical_state, function_state);
@@ -1008,7 +1008,7 @@ pub unsafe fn handle_label_statement(interpreter: *mut Interpreter, lexical_stat
 }
 pub unsafe fn handle_while_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, line: i32) {
     unsafe {
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         luax_next(interpreter, lexical_state);
         let whileinit: i32 = (*function_state).code_get_label();
         let condexit: i32 = cond(interpreter, lexical_state, function_state);
@@ -1024,8 +1024,8 @@ pub unsafe fn handle_while_statement(interpreter: *mut Interpreter, lexical_stat
 pub unsafe fn handle_repeat_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, line: i32) {
     unsafe {
         let repeat_init: i32 = (*function_state).code_get_label();
-        let mut bl1: BlockControl = BlockControl::new();
-        let mut bl2: BlockControl = BlockControl::new();
+        let mut bl1 = BlockControl::new();
+        let mut bl2 = BlockControl::new();
         enterblock(lexical_state, function_state, &mut bl1, true);
         enterblock(lexical_state, function_state, &mut bl2, false);
         luax_next(interpreter, lexical_state);
@@ -1064,7 +1064,7 @@ pub unsafe fn handle_forbody(interpreter: *mut Interpreter, lexical_state: *mut 
     unsafe {
         static mut FOR_PREP: [u32; 2] = [OP_FORPREP, OP_TFORPREP];
         static mut FOR_LOOP: [u32; 2] = [OP_FORLOOP, OP_TFORLOOP];
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         checknext(interpreter, lexical_state, function_state, TK_DO as i32);
         let prep: i32 = luak_codeabx(interpreter, lexical_state, function_state, FOR_PREP[isgen as usize], base, 0u32);
         enterblock(lexical_state, function_state, &mut block_control, false);
@@ -1136,7 +1136,7 @@ pub unsafe fn handle_for_list(interpreter: *mut Interpreter, lexical_state: *mut
 }
 pub unsafe fn handle_for_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, line: i32) {
     unsafe {
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         enterblock(lexical_state, function_state, &mut block_control, true);
         luax_next(interpreter, lexical_state);
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state, function_state);
@@ -1157,7 +1157,7 @@ pub unsafe fn handle_for_statement(interpreter: *mut Interpreter, lexical_state:
 }
 pub unsafe fn handle_test_then_block(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, escapelist: *mut i32) {
     unsafe {
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         let mut v: ExpressionDescription = ExpressionDescription::new();
         let jf;
         luax_next(interpreter, lexical_state);
@@ -1349,7 +1349,7 @@ pub unsafe fn handle_return_statement(interpreter: *mut Interpreter, lexical_sta
 }
 pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
-        let mut block_control: BlockControl = BlockControl::new();
+        let mut block_control = BlockControl::new();
         let env: *mut UpValueDescription;
         open_function(interpreter, lexical_state, function_state, (*lexical_state).lexical_state_function_state, &mut block_control);
         setvararg(interpreter, lexical_state, function_state, 0);
@@ -1370,7 +1370,7 @@ pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state:
 }
 pub unsafe fn save(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, c: i32) {
     unsafe {
-        let b: *mut Buffer = (*lexical_state).buffer;
+        let b = (*lexical_state).buffer;
         if ((*b).loads.get_length() as usize).wrapping_add(1 as usize) > (*b).loads.get_size() as usize {
             if (*b).loads.get_size() as usize >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_div(2) {
                 lexerror(interpreter, lexical_state, make_cstring!("lexical element too long"), 0);

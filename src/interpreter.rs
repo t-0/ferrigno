@@ -6433,13 +6433,13 @@ pub unsafe fn lual_newstate() -> *mut Interpreter {
         (*global).warn_userdata = null_mut();
         (*global).main_state = interpreter;
         (*global).seed = luai_makeseed(interpreter);
-        (*global).gc_step = 2 as u8;
+        (*global).gc_step = 2;
         (*global).string_table.length = 0;
         (*global).string_table.size = (*global).string_table.length;
         (*global).string_table.hash = null_mut();
         (*global).l_registry.set_tag_variant(TagVariant::NilNil as u8);
         (*global).panic = None;
-        (*global).gc_state = 8 as u8;
+        (*global).gc_state = 8;
         (*global).gc_kind = 0;
         (*global).gcstopem = 0;
         (*global).is_emergency = false;

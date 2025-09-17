@@ -51,7 +51,7 @@ impl Buffer {
             if self.loads.get_size() - self.loads.get_length() >= size as i32 {
                 return self.loads.loads_pointer.offset(self.loads.get_length() as isize);
             } else {
-                let interpreter: *mut Interpreter = self.buffer_interpreter;
+                let interpreter = self.buffer_interpreter;
                 let new_pointer: *mut BufferElement;
                 let new_size = self.new_with_size(size);
                 if self.loads.loads_pointer != (self.initial_data).as_mut_ptr() {
@@ -96,7 +96,7 @@ impl Buffer {
     }
     pub unsafe fn push_result(&mut self) {
         unsafe {
-            let interpreter: *mut Interpreter = self.buffer_interpreter;
+            let interpreter = self.buffer_interpreter;
             lua_pushlstring(interpreter, self.loads.loads_pointer, self.loads.get_length() as usize);
             if self.loads.loads_pointer != (self.initial_data).as_mut_ptr() {
                 lua_closeslot(interpreter, -2);
@@ -107,7 +107,7 @@ impl Buffer {
     }
     pub unsafe fn add_value(&mut self) {
         unsafe {
-            let interpreter: *mut Interpreter = self.buffer_interpreter;
+            let interpreter = self.buffer_interpreter;
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
