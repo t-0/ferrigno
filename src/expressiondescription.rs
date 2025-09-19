@@ -153,7 +153,7 @@ pub unsafe fn is_sc_int(expression_description: *mut ExpressionDescription) -> b
         return is_k_int(expression_description) && fits_c((*expression_description).value.integer);
     }
 }
-pub unsafe fn is_sc_number(expression_description: *mut ExpressionDescription, pi: *mut i32, is_float: *mut bool) -> i32 {
+pub unsafe fn is_sc_number(expression_description: *mut ExpressionDescription, pi: *mut i64, is_float: *mut bool) -> i32 {
     unsafe {
         let mut i: i64 = 0;
         if (*expression_description).expression_kind == ExpressionKind::ConstantInteger {
@@ -164,7 +164,7 @@ pub unsafe fn is_sc_number(expression_description: *mut ExpressionDescription, p
             return 0;
         }
         if !((*expression_description).t != (*expression_description).f) && fits_c(i) {
-            *pi = i as i32 + ((1 << 8) - 1 >> 1);
+            *pi = i + ((1 << 8) - 1 >> 1);
             return 1;
         } else {
             return 0;

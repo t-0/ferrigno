@@ -1338,7 +1338,7 @@ pub unsafe fn handle_return_statement(interpreter: *mut Interpreter, lexical_sta
                 }
                 nret = -1;
             } else if nret == 1 {
-                first = luak_exp2anyreg(interpreter, lexical_state, function_state, &mut expression_description);
+                first = luak_exp2anyreg(interpreter, lexical_state, function_state, &mut expression_description) as i32;
             } else {
                 luak_exp2nextreg(interpreter, lexical_state, function_state, &mut expression_description);
             }
