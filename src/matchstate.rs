@@ -138,7 +138,7 @@ impl MatchState {
                         }
                         let fresh161 = p;
                         p = p.offset(1);
-                        if *fresh161 as i32 == CHARACTER_PERCENT as i32 && p < self.p_end {
+                        if *fresh161 as i32 == Character::Percent as i32 && p < self.p_end {
                             p = p.offset(1);
                         }
                         if !(*p as i32 != CHARACTER_BRACKET_RIGHT as i32) {
@@ -506,13 +506,13 @@ impl MatchState {
             let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
             let mut p: *const i8;
             loop {
-                p = memchr(news as *const c_void, CHARACTER_PERCENT as i32, l as usize) as *mut i8;
+                p = memchr(news as *const c_void, Character::Percent as i32, l as usize) as *mut i8;
                 if p.is_null() {
                     break;
                 }
                 (*b).add_string_with_length(news, p.offset_from(news) as usize);
                 p = p.offset(1);
-                if *p as i32 == CHARACTER_PERCENT as i32 {
+                if *p as i32 == Character::Percent as i32 {
                     ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
                     let fresh164 = (*b).loads.get_length();
                     (*b).loads.set_length(((*b).loads.get_length()).wrapping_add(1) as usize);
@@ -528,7 +528,7 @@ impl MatchState {
                         (*b).add_string_with_length(cap, resl as usize);
                     }
                 } else {
-                    lual_error(interpreter, make_cstring!("invalid use of '%c' in replacement string"), CHARACTER_PERCENT as i32);
+                    lual_error(interpreter, make_cstring!("invalid use of '%c' in replacement string"), Character::Percent as i32);
                 }
                 l = (l as usize).wrapping_sub(p.offset(1 as isize).offset_from(news) as usize) as usize as usize;
                 news = p.offset(1 as isize);
@@ -591,7 +591,7 @@ pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 
             if !(p < ec) {
                 break;
             }
-            if *p as i32 == CHARACTER_PERCENT as i32 {
+            if *p as i32 == Character::Percent as i32 {
                 p = p.offset(1);
                 if match_class(c, *p as u8 as i32) != 0 {
                     return sig;

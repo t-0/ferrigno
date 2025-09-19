@@ -27,7 +27,7 @@ pub unsafe fn is_negative(s: *mut *const i8) -> bool {
 pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
     unsafe {
         let mut endptr: *mut i8 = null_mut();
-        *result = if mode == CHARACTER_LOWER_X as i32 { strtod(s, &mut endptr) } else { strtod(s, &mut endptr) };
+        *result = if mode == Character::LowerX as i32 { strtod(s, &mut endptr) } else { strtod(s, &mut endptr) };
         if endptr == s as *mut i8 {
             return null();
         }
@@ -40,8 +40,8 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8
 pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
         let pmode: *const i8 = strpbrk(s, make_cstring!(".xXnN"));
-        let mode: i32 = if !pmode.is_null() { *pmode as u8 as i32 | CHARACTER_UPPER_A as i32 ^ CHARACTER_LOWER_A as i32 } else { 0 };
-        if mode == CHARACTER_LOWER_N as i32 {
+        let mode: i32 = if !pmode.is_null() { *pmode as u8 as i32 | Character::UpperA as i32 ^ Character::LowerA as i32 } else { 0 };
+        if mode == Character::LowerN as i32 {
             return null();
         }
         let mut endptr: *const i8 = l_str2dloc(s, result, mode);
@@ -69,7 +69,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
             s = s.offset(1);
         }
         let is_negative_: bool = is_negative(&mut s);
-        if *s.offset(0 as isize) as i32 == CHARACTER_0 as i32 && (*s.offset(1 as isize) as i32 == CHARACTER_LOWER_X as i32 || *s.offset(1 as isize) as i32 == CHARACTER_UPPER_X as i32) {
+        if *s.offset(0 as isize) as i32 == CHARACTER_0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
             s = s.offset(2 as isize);
             while is_digit_hexadecimal(*s as i32 + 1) {
                 a = a.wrapping_mul(16 as usize).wrapping_add(get_hexadecimal_digit_value(*s as i32) as usize);
@@ -131,7 +131,7 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 );
             }
         } else {
-            let nl = strchr(source, CHARACTER_LF as i32);
+            let nl = strchr(source, Character::LineFeed as i32);
             memcpy(
                 out as *mut libc::c_void,
                 b"[string \"".as_ptr() as *const libc::c_void,

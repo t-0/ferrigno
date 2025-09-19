@@ -109,13 +109,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
             TAG_VARIANT_CLOSURE_L => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(interpreter, what, ar, cl, ci);
-                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
+                if !(strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
+                if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, cl);
                 }
                 return status;
@@ -123,13 +123,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
             TAG_VARIANT_CLOSURE_C => {
                 let cl: *mut Closure = &mut (*((*function).value.object as *mut Closure));
                 status = auxgetinfo(interpreter, what, ar, cl, ci);
-                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
+                if !(strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
+                if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, cl);
                 }
                 return status;
@@ -137,13 +137,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
             _ => {
                 let cl: *mut Closure = null_mut();
                 status = auxgetinfo(interpreter, what, ar, cl, ci);
-                if !(strchr(what, CHARACTER_LOWER_F as i32)).is_null() {
+                if !(strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, CHARACTER_UPPER_L as i32)).is_null() {
+                if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, cl);
                 }
                 return status;

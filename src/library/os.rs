@@ -1,6 +1,5 @@
 use libc::time;
 use crate::buffer::*;
-use crate::character::CHARACTER_EXCLAMATION;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::new::*;
@@ -170,7 +169,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             __tm_zone: null(),
         };
         let stm: *mut TM;
-        if *s as i32 == CHARACTER_EXCLAMATION as i32 {
+        if *s as i32 == Character::Exclamation as i32 {
             stm = gmtime_r(&mut t, &mut tmr);
             s = s.offset(1);
         } else {
@@ -185,10 +184,10 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
         } else {
             let mut cc: [i8; 4] = [0; 4];
             let mut b = Buffer::new();
-            cc[0] = CHARACTER_PERCENT as i8;
+            cc[0] = Character::Percent as i8;
             b.initialize(interpreter);
             while s < se {
-                if *s as i32 != CHARACTER_PERCENT as i32 {
+                if *s as i32 != Character::Percent as i32 {
                     (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh157 = s;
                     s = s.offset(1);

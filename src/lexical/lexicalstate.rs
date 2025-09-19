@@ -355,15 +355,15 @@ pub unsafe fn constructor(interpreter: *mut Interpreter, lexical_state: *mut Lex
         init_exp(t, ExpressionKind::Nonrelocatable, (*function_state).freereg as i32);
         luak_reserveregs(interpreter, lexical_state, function_state, 1);
         init_exp(&mut constructor_control.expression_description, ExpressionKind::Void, 0);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_BRACE_LEFT as i32);
-        while !((*lexical_state).token.token == CHARACTER_BRACE_RIGHT as i32) {
+        checknext(interpreter, lexical_state, function_state, Character::BraceLeft as i32);
+        while !((*lexical_state).token.token == Character::BraceRight as i32) {
             closelistfield(interpreter, lexical_state, function_state, &mut constructor_control);
             field(interpreter, lexical_state, function_state, &mut constructor_control);
             if !(testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0 || testnext(interpreter, lexical_state, function_state, CHARACTER_SEMICOLON as i32) != 0) {
                 break;
             }
         }
-        check_match(interpreter, lexical_state, function_state, CHARACTER_BRACE_RIGHT as i32, CHARACTER_BRACE_LEFT as i32, line);
+        check_match(interpreter, lexical_state, function_state, Character::BraceRight as i32, Character::BraceLeft as i32, line);
         lastlistfield(interpreter, lexical_state, function_state, &mut constructor_control);
         luak_settablesize(interpreter, function_state, program_counter, (*t).value.info, constructor_control.count_array, constructor_control.count_table);
     }
@@ -1462,7 +1462,7 @@ pub unsafe fn inclinenumber(interpreter: *mut Interpreter, lexical_state: *mut L
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        if ((*lexical_state).current == CHARACTER_LF as i32 || (*lexical_state).current == CHARACTER_CR as i32) && (*lexical_state).current != old {
+        if ((*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32) && (*lexical_state).current != old {
             let fresh53 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
             (*lexical_state).current = if fresh53 > 0 {
@@ -1635,7 +1635,7 @@ pub unsafe fn read_long_string(interpreter: *mut Interpreter, lexical_state: *mu
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        if (*lexical_state).current == CHARACTER_LF as i32 || (*lexical_state).current == CHARACTER_CR as i32 {
+        if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
             inclinenumber(interpreter, lexical_state);
         }
         loop {
@@ -1662,7 +1662,7 @@ pub unsafe fn read_long_string(interpreter: *mut Interpreter, lexical_state: *mu
                     break;
                 },
                 CHARACTER_LF | CHARACTER_CR => {
-                    save(interpreter, lexical_state, CHARACTER_LF as i32);
+                    save(interpreter, lexical_state, Character::LineFeed as i32);
                     inclinenumber(interpreter, lexical_state);
                     if semantic_info.is_null() {
                         (*(*lexical_state).buffer).loads.zero_length();
@@ -1760,7 +1760,7 @@ pub unsafe fn readutf8esc(interpreter: *mut Interpreter, lexical_state: *mut Lex
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        esccheck(interpreter, lexical_state, (*lexical_state).current == CHARACTER_BRACE_LEFT, make_cstring!("missing CHARACTER_BRACE_LEFT"));
+        esccheck(interpreter, lexical_state, (*lexical_state).current == Character::BraceLeft as i32, make_cstring!("missing Character::BraceLeft"));
         let mut r: usize = gethexa(interpreter, lexical_state) as usize;
         loop {
             save(interpreter, lexical_state, (*lexical_state).current);
@@ -1780,7 +1780,7 @@ pub unsafe fn readutf8esc(interpreter: *mut Interpreter, lexical_state: *mut Lex
             esccheck(interpreter, lexical_state, r <= (0x7fffffff as usize >> 4), make_cstring!("UTF-8 value too large"));
             r = (r << 4).wrapping_add(get_hexadecimal_digit_value((*lexical_state).current) as usize);
         }
-        esccheck(interpreter, lexical_state, (*lexical_state).current == CHARACTER_BRACE_RIGHT, make_cstring!("missing CHARACTER_BRACE_RIGHT"));
+        esccheck(interpreter, lexical_state, (*lexical_state).current == Character::BraceRight as i32, make_cstring!("missing Character::BraceRight"));
         let fresh85 = (*(*lexical_state).zio).length;
         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
         (*lexical_state).current = if fresh85 > 0 {
@@ -1863,31 +1863,31 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                     };
                     match (*lexical_state).current {
                         CHARACTER_LOWER_A => {
-                            c = CHARACTER_BEL as i32;
+                            c = Character::Bell as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_B => {
-                            c = CHARACTER_BS as i32;
+                            c = Character::Backspace as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_F => {
-                            c = CHARACTER_FF as i32;
+                            c = Character::FormFeed as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_N => {
-                            c = CHARACTER_LF as i32;
+                            c = Character::LineFeed as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_R => {
-                            c = CHARACTER_CR as i32;
+                            c = Character::CarriageReturn as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_T => {
-                            c = CHARACTER_HT as i32;
+                            c = Character::HorizontalTab as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_V => {
-                            c = CHARACTER_VT as i32;
+                            c = Character::VerticalTab as i32;
                             current_block = 15029063370732930705;
                         },
                         CHARACTER_LOWER_X => {
@@ -1900,7 +1900,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                         },
                         CHARACTER_CR | CHARACTER_LF => {
                             inclinenumber(interpreter, lexical_state);
-                            c = CHARACTER_LF as i32;
+                            c = Character::LineFeed as i32;
                             current_block = 7010296663004816197;
                         },
                         CHARACTER_BACKSLASH | CHARACTER_DOUBLEQUOTE | CHARACTER_QUOTE => {
@@ -1922,7 +1922,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                                 luaz_fill((*lexical_state).zio)
                             };
                             while is_whitespace((*lexical_state).current + 1) {
-                                if (*lexical_state).current == CHARACTER_LF as i32 || (*lexical_state).current == CHARACTER_CR as i32 {
+                                if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
                                     inclinenumber(interpreter, lexical_state);
                                 } else {
                                     let fresh95 = (*(*lexical_state).zio).length;
@@ -2051,7 +2051,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     match current_block_85 {
                         10512632378975961025 => {},
                         _ => {
-                            while !((*lexical_state).current == CHARACTER_LF as i32 || (*lexical_state).current == CHARACTER_CR as i32) && (*lexical_state).current != -1 {
+                            while !((*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32) && (*lexical_state).current != -1 {
                                 let fresh109 = (*(*lexical_state).zio).length;
                                 (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
                                 (*lexical_state).current = if fresh109 > 0 {
@@ -2156,7 +2156,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     if check_next1(lexical_state, CHARACTER_EQUAL) != 0 {
                         return TK_NE as i32;
                     } else {
-                        return CHARACTER_TILDE;
+                        return Character::Tilde as i32;
                     }
                 },
                 CHARACTER_COLON => {

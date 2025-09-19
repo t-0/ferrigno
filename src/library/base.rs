@@ -365,7 +365,7 @@ pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn luab_select(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n = (*interpreter).get_top();
-        if lua_type(interpreter, 1) == Some(TagType::String) && *lua_tolstring(interpreter, 1, null_mut()) as i32 == CHARACTER_OCTOTHORPE as i32 {
+        if lua_type(interpreter, 1) == Some(TagType::String) && *lua_tolstring(interpreter, 1, null_mut()) as i32 == Character::Octothorpe as i32 {
             (*interpreter).push_integer((n - 1) as i64);
             return 1;
         } else {

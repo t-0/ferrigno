@@ -2825,7 +2825,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
         let mut buff_fs = BuffFS::new(interpreter);
         let mut e: *const i8;
         loop {
-            e = strchr(fmt, CHARACTER_PERCENT as i32);
+            e = strchr(fmt, Character::Percent as i32);
             if e.is_null() {
                 break;
             }
@@ -5636,9 +5636,9 @@ pub unsafe fn pushfuncname(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
             lua_settop(interpreter, -2);
         } else if *(*ar).namewhat as i32 != Character::Null as i32 {
             lua_pushfstring(interpreter, make_cstring!("%s '%s'"), (*ar).namewhat, (*ar).name);
-        } else if *(*ar).what as i32 == CHARACTER_LOWER_M as i32 {
+        } else if *(*ar).what as i32 == Character::LowerM as i32 {
             lua_pushstring(interpreter, make_cstring!("main chunk"));
-        } else if *(*ar).what as i32 != CHARACTER_UPPER_C as i32 {
+        } else if *(*ar).what as i32 != Character::UpperC as i32 {
             lua_pushfstring(interpreter, make_cstring!("function <%s:%d>"), ((*ar).short_src).as_mut_ptr(), (*ar).line_defined);
         } else {
             lua_pushstring(interpreter, make_cstring!("?"));
@@ -5713,7 +5713,7 @@ pub unsafe fn lual_traceback(interpreter: *mut Interpreter, other_state: *mut In
             (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh145 = b.loads.get_length();
             b.loads.set_length((b.loads.get_length()).wrapping_add(1) as usize);
-            *(b.loads.loads_pointer).offset(fresh145 as isize) = CHARACTER_LF as i8;
+            *(b.loads.loads_pointer).offset(fresh145 as isize) = Character::LineFeed as i8;
         }
         b.add_string(make_cstring!("stack traceback:"));
         loop {
@@ -5875,7 +5875,7 @@ pub unsafe fn lual_execresult(interpreter: *mut Interpreter, mut stat: i32) -> i
                 stat = stat & 0x7f as i32;
                 what = make_cstring!("signal");
             }
-            if *what as i32 == CHARACTER_LOWER_E as i32 && stat == 0 {
+            if *what as i32 == Character::LowerE as i32 && stat == 0 {
                 (*interpreter).push_boolean(true);
             } else {
                 (*interpreter).push_nil();
@@ -6083,10 +6083,10 @@ pub unsafe fn skipcomment(file: *mut FILE, cp: *mut i32) -> i32 {
     unsafe {
         *cp = skip_bom(file);
         let mut c: i32 = *cp;
-        if c == CHARACTER_OCTOTHORPE as i32 {
+        if c == Character::Octothorpe as i32 {
             loop {
                 c = getc(file);
-                if !(c != -1 && c != CHARACTER_LF as i32) {
+                if !(c != -1 && c != Character::LineFeed as i32) {
                     break;
                 }
             }
@@ -6119,7 +6119,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
         if skipcomment(lf.file, &mut c) != 0 {
             let fresh148 = lf.n;
             lf.n = lf.n + 1;
-            lf.buffer[fresh148 as usize] = CHARACTER_LF as i8;
+            lf.buffer[fresh148 as usize] = Character::LineFeed as i8;
         }
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             lf.n = 0;
@@ -6570,7 +6570,7 @@ pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
         fprintf(stderr, make_cstring!("%s: "), PROGRAM_NAME);
         fflush(stderr);
-        if *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_E as i32 || *badoption.offset(1 as isize) as i32 == CHARACTER_LOWER_L as i32 {
+        if *badoption.offset(1 as isize) as i32 == Character::LowerE as i32 || *badoption.offset(1 as isize) as i32 == Character::LowerL as i32 {
             fprintf(stderr, make_cstring!("'%s' needs argument\n"), badoption);
             fflush(stderr);
         } else {
@@ -6813,7 +6813,7 @@ pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32)
                     if *extra as i32 == Character::Null as i32 {
                         continue;
                     }
-                    status = if option == CHARACTER_LOWER_E as i32 {
+                    status = if option == Character::LowerE as i32 {
                         dostring(interpreter, extra, make_cstring!("=(command line)"))
                     } else {
                         dolibrary(interpreter, extra)
@@ -6868,7 +6868,7 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
             return false;
         } else {
             let mut l: usize = strlen(b) as usize;
-            if l > 0 && *b.offset(l.wrapping_sub(1 as usize) as isize) as i32 == CHARACTER_LF as i32 {
+            if l > 0 && *b.offset(l.wrapping_sub(1 as usize) as isize) as i32 == Character::LineFeed as i32 {
                 l = l.wrapping_sub(1);
                 *b.offset(l as isize) = Character::Null as i8;
             }
@@ -7043,13 +7043,13 @@ pub unsafe fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
 pub unsafe fn makemask(smask: *const i8, count: i32) -> i32 {
     unsafe {
         let mut mask: i32 = 0;
-        if !(strchr(smask, CHARACTER_LOWER_C as i32)).is_null() {
+        if !(strchr(smask, Character::LowerC as i32)).is_null() {
             mask |= 1 << 0;
         }
-        if !(strchr(smask, CHARACTER_LOWER_R as i32)).is_null() {
+        if !(strchr(smask, Character::LowerR as i32)).is_null() {
             mask |= 1 << 1;
         }
-        if !(strchr(smask, CHARACTER_LOWER_L as i32)).is_null() {
+        if !(strchr(smask, Character::LowerL as i32)).is_null() {
             mask |= 1 << 2;
         }
         if count > 0 {

@@ -373,7 +373,7 @@ pub unsafe fn basicgetobjname(p: *const Prototype, ppc: *mut i32, reg: i32, name
 pub unsafe fn rname(p: *const Prototype, mut program_counter: i32, c: i32, name: *mut *const i8) {
     unsafe {
         let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
-        if !(!what.is_null() && *what as i32 == CHARACTER_LOWER_C as i32) {
+        if !(!what.is_null() && *what as i32 == Character::LowerC as i32) {
             *name = make_cstring!("?");
         }
     }

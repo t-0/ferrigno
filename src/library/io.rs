@@ -148,7 +148,7 @@ pub unsafe fn io_popen(interpreter: *mut Interpreter) -> i32 {
         let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mode: *const i8 = lual_optlstring(interpreter, 2, make_cstring!("r"), null_mut());
         let p: *mut Stream = newprefile(interpreter);
-        ((((*mode.offset(0 as isize) as i32 == CHARACTER_LOWER_R as i32 || *mode.offset(0 as isize) as i32 == CHARACTER_LOWER_W as i32) && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32 != 0) as i64 != 0
+        ((((*mode.offset(0 as isize) as i32 == Character::LowerR as i32 || *mode.offset(0 as isize) as i32 == Character::LowerW as i32) && *mode.offset(1 as isize) as i32 == Character::Null as i32) as i32 != 0) as i64 != 0
             || lual_argerror(interpreter, 2, make_cstring!("invalid mode")) != 0) as i32;
         *__errno_location() = 0;
         fflush(null_mut());
@@ -358,7 +358,7 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut FILE, chop: i3
                     c = getc_unlocked(file);
                     c != -1
                 }
-                && c != CHARACTER_LF as i32
+                && c != Character::LineFeed as i32
             {
                 let fresh153 = i;
                 i = i + 1;
@@ -366,18 +366,18 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut FILE, chop: i3
             }
             funlockfile(file);
             b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(i as usize) as i32) as usize);
-            if !(c != -1 && c != CHARACTER_LF as i32) {
+            if !(c != -1 && c != Character::LineFeed as i32) {
                 break;
             }
         }
-        if chop == 0 && c == CHARACTER_LF as i32 {
+        if chop == 0 && c == Character::LineFeed as i32 {
             (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
             let fresh154 = b.loads.get_length();
             b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
             *(b.loads.loads_pointer).offset(fresh154 as isize) = c as i8;
         }
         b.push_result();
-        return (c == CHARACTER_LF as i32 || get_length_raw(interpreter, -1) > 0) as usize as u32 as i32;
+        return (c == Character::LineFeed as i32 || get_length_raw(interpreter, -1) > 0) as usize as u32 as i32;
     }
 }
 pub unsafe fn read_all(interpreter: *mut Interpreter, file: *mut FILE) {

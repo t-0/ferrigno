@@ -14,18 +14,18 @@ impl New for Token {
         return Token { token: 0, semantic_info: Value::new_object(null_mut()) };
     }
 }
-pub const TK_CHARACTER_HYPHEN: i32 = CHARACTER_HYPHEN;
-pub const TK_CHARACTER_TILDE: i32 = CHARACTER_TILDE;
-pub const TK_CHARACTER_OCTOTHORPE: i32 = CHARACTER_OCTOTHORPE;
-pub const TK_CHARACTER_AMPERSAND: i32 = CHARACTER_AMPERSAND;
-pub const TK_CHARACTER_BAR: i32 = CHARACTER_BAR;
-pub const TK_CHARACTER_ANGLE_LEFT: i32 = CHARACTER_ANGLE_LEFT;
-pub const TK_CHARACTER_ANGLE_RIGHT: i32 = CHARACTER_ANGLE_RIGHT;
-pub const TK_CHARACTER_PLUS: i32 = CHARACTER_PLUS;
-pub const TK_CHARACTER_ASTERISK: i32 = CHARACTER_ASTERISK;
-pub const TK_CHARACTER_PERCENT: i32 = CHARACTER_PERCENT;
-pub const TK_CHARACTER_CARET: i32 = CHARACTER_CARET;
-pub const TK_CHARACTER_SOLIDUS: i32 = CHARACTER_SOLIDUS;
+pub const TK_CHARACTER_HYPHEN: i32 = Character::Hyphen as i32;
+pub const TK_CHARACTER_TILDE: i32 = Character::Tilde as i32;
+pub const TK_CHARACTER_OCTOTHORPE: i32 = Character::Octothorpe as i32;
+pub const TK_CHARACTER_AMPERSAND: i32 = Character::Ampersand as i32;
+pub const TK_CHARACTER_BAR: i32 = Character::Bar as i32;
+pub const TK_CHARACTER_ANGLE_LEFT: i32 = Character::AngleLeft as i32;
+pub const TK_CHARACTER_ANGLE_RIGHT: i32 = Character::AngleRight as i32;
+pub const TK_CHARACTER_PLUS: i32 = Character::Plus as i32;
+pub const TK_CHARACTER_ASTERISK: i32 = Character::Asterisk as i32;
+pub const TK_CHARACTER_PERCENT: i32 = Character::Percent as i32;
+pub const TK_CHARACTER_CARET: i32 = Character::Caret as i32;
+pub const TK_CHARACTER_SOLIDUS: i32 = Character::Solidus as i32;
 pub const TK_WHILE: i32 = 277;
 pub const TK_EOS: i32 = 288;
 pub const TK_INT: i32 = 290;

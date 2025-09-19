@@ -455,7 +455,7 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
             if !(fresh168 != 0) {
                 break;
             }
-            if *s as i32 == '"' as i32 || *s as i32 == CHARACTER_BACKSLASH as i32 || *s as i32 == CHARACTER_LF as i32 {
+            if *s as i32 == '"' as i32 || *s as i32 == CHARACTER_BACKSLASH as i32 || *s as i32 == Character::LineFeed as i32 {
                 ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh169 = (*b).loads.get_length();
                 (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
@@ -575,7 +575,7 @@ pub unsafe fn getformat(interpreter: *mut Interpreter, strfrmt: *const i8, mut f
         }
         let fresh173 = form;
         form = form.offset(1);
-        *fresh173 = CHARACTER_PERCENT as i8;
+        *fresh173 = Character::Percent as i8;
         memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, (length as usize).wrapping_mul(size_of::<i8>()));
         *form.offset(length as isize) = Character::Null as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
@@ -603,7 +603,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
         let mut b = Buffer::new();
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
-            if *strfrmt as i32 != CHARACTER_PERCENT as i32 {
+            if *strfrmt as i32 != Character::Percent as i32 {
                 (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
@@ -612,7 +612,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                 *(b.loads.loads_pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
-                if *strfrmt as i32 == CHARACTER_PERCENT as i32 {
+                if *strfrmt as i32 == Character::Percent as i32 {
                     (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);

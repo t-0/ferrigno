@@ -106,7 +106,7 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             return lual_argerror(interpreter, arg + 2, make_cstring!("invalid option"));
         }
         (*interpreter).lua_createtable();
-        if !(strchr(options, CHARACTER_UPPER_S as i32)).is_null() {
+        if !(strchr(options, Character::UpperS as i32)).is_null() {
             lua_pushlstring(interpreter, ar.source, ar.source_length);
             lua_setfield(interpreter, -2, make_cstring!("source"));
             settabss(interpreter, make_cstring!("short_src"), (ar.short_src).as_mut_ptr());
@@ -114,29 +114,29 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             settabsi(interpreter, make_cstring!("lastlinedefined"), ar.last_line_defined);
             settabss(interpreter, make_cstring!("what"), ar.what);
         }
-        if !(strchr(options, CHARACTER_LOWER_L as i32)).is_null() {
+        if !(strchr(options, Character::LowerL as i32)).is_null() {
             settabsi(interpreter, make_cstring!("currentline"), ar.currentline);
         }
-        if !(strchr(options, CHARACTER_LOWER_U as i32)).is_null() {
+        if !(strchr(options, Character::LowerU as i32)).is_null() {
             settabsi(interpreter, make_cstring!("nups"), ar.nups as i32);
             settabsi(interpreter, make_cstring!("nparams"), ar.nparams as i32);
             settabsb(interpreter, make_cstring!("isvararg"), ar.is_variable_arguments as i32);
         }
-        if !(strchr(options, CHARACTER_LOWER_N as i32)).is_null() {
+        if !(strchr(options, Character::LowerN as i32)).is_null() {
             settabss(interpreter, make_cstring!("name"), ar.name);
             settabss(interpreter, make_cstring!("namewhat"), ar.namewhat);
         }
-        if !(strchr(options, CHARACTER_LOWER_R as i32)).is_null() {
+        if !(strchr(options, Character::LowerR as i32)).is_null() {
             settabsi(interpreter, make_cstring!("ftransfer"), ar.ftransfer as i32);
             settabsi(interpreter, make_cstring!("ntransfer"), ar.ntransfer as i32);
         }
-        if !(strchr(options, CHARACTER_LOWER_T as i32)).is_null() {
+        if !(strchr(options, Character::LowerT as i32)).is_null() {
             settabsb(interpreter, make_cstring!("istailcall"), if ar.is_tail_call { 1 } else { 0 });
         }
-        if !(strchr(options, CHARACTER_UPPER_L as i32)).is_null() {
+        if !(strchr(options, Character::UpperL as i32)).is_null() {
             treatstackoption(interpreter, other_state, make_cstring!("activelines"));
         }
-        if !(strchr(options, CHARACTER_LOWER_F as i32)).is_null() {
+        if !(strchr(options, Character::LowerF as i32)).is_null() {
             treatstackoption(interpreter, other_state, make_cstring!("func"));
         }
         return 1;
