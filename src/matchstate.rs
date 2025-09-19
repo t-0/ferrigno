@@ -129,19 +129,19 @@ impl MatchState {
                     return p.offset(1 as isize);
                 },
                 91 => {
-                    if *p as i32 == CHARACTER_CARET as i32 {
+                    if *p as i32 == Character::Caret as i32 {
                         p = p.offset(1);
                     }
                     loop {
                         if p == self.p_end {
-                            lual_error(self.matchstate_interpreter, make_cstring!("malformed pattern (missing CHARACTER_BRACKET_RIGHT)"));
+                            lual_error(self.matchstate_interpreter, make_cstring!("malformed pattern (missing Character::BracketRight)"));
                         }
                         let fresh161 = p;
                         p = p.offset(1);
                         if *fresh161 as i32 == Character::Percent as i32 && p < self.p_end {
                             p = p.offset(1);
                         }
-                        if !(*p as i32 != CHARACTER_BRACKET_RIGHT as i32) {
+                        if !(*p as i32 != Character::BracketRight as i32) {
                             break;
                         }
                     }
@@ -322,8 +322,8 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"));
+                                    if *p as i32 != Character::BracketLeft as i32 {
+                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -363,8 +363,8 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"));
+                                    if *p as i32 != Character::BracketLeft as i32 {
+                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -404,8 +404,8 @@ impl MatchState {
                                     let ep: *const i8;
                                     let previous: i8;
                                     p = p.offset(2 as isize);
-                                    if *p as i32 != CHARACTER_BRACKET_LEFT {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing CHARACTER_BRACKET_LEFT after '%%f' in pattern"));
+                                    if *p as i32 != Character::BracketLeft as i32 {
+                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -517,7 +517,7 @@ impl MatchState {
                     let fresh164 = (*b).loads.get_length();
                     (*b).loads.set_length(((*b).loads.get_length()).wrapping_add(1) as usize);
                     *((*b).loads.at_mut(fresh164 as isize)) = *p;
-                } else if *p as i32 == CHARACTER_0 as i32 {
+                } else if *p as i32 == Character::Digit0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
                     let mut cap: *const i8 = null();
@@ -582,7 +582,7 @@ pub unsafe fn match_class(c: i32, cl: i32) -> i32 {
 pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
     unsafe {
         let mut sig: i32 = 1;
-        if *p.offset(1 as isize) as i32 == CHARACTER_CARET as i32 {
+        if *p.offset(1 as isize) as i32 == Character::Caret as i32 {
             sig = 0;
             p = p.offset(1);
         }

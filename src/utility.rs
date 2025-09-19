@@ -69,7 +69,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
             s = s.offset(1);
         }
         let is_negative_: bool = is_negative(&mut s);
-        if *s.offset(0 as isize) as i32 == CHARACTER_0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
+        if *s.offset(0 as isize) as i32 == Character::Digit0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
             s = s.offset(2 as isize);
             while is_digit_hexadecimal(*s as i32 + 1) {
                 a = a.wrapping_mul(16 as usize).wrapping_add(get_hexadecimal_digit_value(*s as i32) as usize);
@@ -78,7 +78,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
             }
         } else {
             while is_digit_decimal(*s as i32 + 1) {
-                let d: i32 = *s as i32 - CHARACTER_0 as i32;
+                let d: i32 = *s as i32 - Character::Digit0 as i32;
                 if a >= (MAXIMUM_SIZE as i64 / 10 as i64) as usize && (a > (MAXIMUM_SIZE as i64 / 10 as i64) as usize || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32 + if is_negative_ { 1 } else { 0 }) {
                     return null();
                 }

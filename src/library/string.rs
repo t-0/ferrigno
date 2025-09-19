@@ -340,7 +340,7 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
                 capture: [MatchStateCapture { init: null(), length: 0 }; 32],
             };
             let mut s1: *const i8 = s.offset(init as isize);
-            let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
+            let anchor: i32 = (*p as i32 == Character::Caret as i32) as i32;
             if anchor != 0 {
                 p = p.offset(1);
                 lp = lp.wrapping_sub(1);
@@ -389,7 +389,7 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
         let mut lastmatch: *const i8 = null();
         let tr = lua_type(interpreter, 3);
         let max_s: i64 = lual_optinteger(interpreter, 4, srcl.wrapping_add(1 as usize) as i64);
-        let anchor: i32 = (*p as i32 == CHARACTER_CARET as i32) as i32;
+        let anchor: i32 = (*p as i32 == Character::Caret as i32) as i32;
         let mut n: i64 = 0;
         let mut changed: i32 = 0;
         let mut match_state: MatchState = MatchState {
@@ -554,7 +554,7 @@ pub unsafe fn checkformat(interpreter: *mut Interpreter, form: *const i8, flags:
     unsafe {
         let mut spec: *const i8 = form.offset(1 as isize);
         spec = spec.offset(strspn(spec, flags) as isize);
-        if *spec as i32 != CHARACTER_0 as i32 {
+        if *spec as i32 != Character::Digit0 as i32 {
             spec = get2digits(spec);
             if *spec as i32 == Character::Period as i32 && precision != 0 {
                 spec = spec.offset(1);
@@ -732,7 +732,7 @@ pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
             loop {
                 let fresh179 = *fmt;
                 *fmt = (*fmt).offset(1);
-                a = a * 10 as i32 + (*fresh179 as i32 - CHARACTER_0);
+                a = a * 10 as i32 + (*fresh179 as i32 - Character::Digit0 as i32);
                 if !(is_digit(**fmt as i32) && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as i32 - 9 as i32) / 10 as i32) {
                     break;
                 }

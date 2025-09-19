@@ -172,7 +172,7 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
                 *buffer.offset(fresh as isize) = Character::Period as i8;
                 let fresh11 = length;
                 length = length + 1;
-                *buffer.offset(fresh11 as isize) = CHARACTER_0 as i8;
+                *buffer.offset(fresh11 as isize) = Character::Digit0 as i8;
             }
         }
         return length;

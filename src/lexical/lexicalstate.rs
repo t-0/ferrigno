@@ -286,7 +286,7 @@ pub unsafe fn yindex(interpreter: *mut Interpreter, lexical_state: *mut LexicalS
         luax_next(interpreter, lexical_state);
         (*lexical_state).parse_expression(interpreter, function_state, v);
         code_expression_to_value(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, v);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_BRACKET_RIGHT as i32);
+        checknext(interpreter, lexical_state, function_state, Character::BracketRight as i32);
     }
 }
 pub unsafe fn recfield(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, constructor_control: *mut ConstructorControl) {
@@ -1545,7 +1545,7 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        if first == CHARACTER_0 as i32 && check_next2(interpreter, lexical_state, make_cstring!("xX")) != 0 {
+        if first == Character::Digit0 as i32 && check_next2(interpreter, lexical_state, make_cstring!("xX")) != 0 {
             expo = make_cstring!("Pp");
         }
         loop {
@@ -1810,7 +1810,7 @@ pub unsafe fn readdecesc(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         let mut r: i32 = 0;
         i = 0;
         while i < 3 && is_digit_decimal((*lexical_state).current + 1) {
-            r = 10 as i32 * r + (*lexical_state).current - CHARACTER_0 as i32;
+            r = 10 as i32 * r + (*lexical_state).current - Character::Digit0 as i32;
             save(interpreter, lexical_state, (*lexical_state).current);
             let fresh87 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2035,7 +2035,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if (*lexical_state).current == CHARACTER_BRACKET_LEFT as i32 {
+                    if (*lexical_state).current == Character::BracketLeft as i32 {
                         let sep: usize = skip_sep(interpreter, lexical_state);
                         (*(*lexical_state).buffer).loads.zero_length();
                         if sep >= 2 as usize {
@@ -2073,7 +2073,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else if sep_0 == 0 {
                         lexerror(interpreter, lexical_state, make_cstring!("invalid long string delimiter"), TK_STRING as i32);
                     }
-                    return CHARACTER_BRACKET_LEFT as i32;
+                    return Character::BracketLeft as i32;
                 },
                 CHARACTER_EQUAL => {
                     let fresh111 = (*(*lexical_state).zio).length;
