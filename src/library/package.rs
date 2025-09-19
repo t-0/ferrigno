@@ -118,13 +118,13 @@ pub unsafe fn lookforfunc(interpreter: *mut Interpreter, path: *const i8, sym: *
     unsafe {
         let mut reg: *mut libc::c_void = checkclib(interpreter, path);
         if reg.is_null() {
-            reg = lsys_load(interpreter, path, (*sym as i32 == CHARACTER_ASTERISK as i32) as i32);
+            reg = lsys_load(interpreter, path, (*sym as i32 == Character::Asterisk as i32) as i32);
             if reg.is_null() {
                 return 1;
             }
             addtoclib(interpreter, path, reg);
         }
-        if *sym as i32 == CHARACTER_ASTERISK as i32 {
+        if *sym as i32 == Character::Asterisk as i32 {
             (*interpreter).push_boolean(true);
             return 0;
         } else {
@@ -306,7 +306,7 @@ pub unsafe fn searcher_c(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let p: *const i8 = strchr(name, CHARACTER_PERIOD as i32);
+        let p: *const i8 = strchr(name, Character::Period as i32);
         if p.is_null() {
             return 0;
         }

@@ -326,7 +326,7 @@ impl LoadState {
 pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *const i8) -> *mut Closure {
     unsafe {
         let mut load_state = LoadState { interpreter: null_mut(), zio: null_mut(), name: null() };
-        if *name as i32 == CHARACTER_AT as i32 || *name as i32 == CHARACTER_EQUAL as i32 {
+        if *name as i32 == Character::At as i32 || *name as i32 == Character::Equal as i32 {
             load_state.name = name.offset(1 as isize);
         } else if *name as i32 == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             load_state.name = make_cstring!("binary string");

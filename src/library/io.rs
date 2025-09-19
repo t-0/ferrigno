@@ -19,7 +19,7 @@ pub unsafe fn l_checkmode(mut mode: *const i8) -> i32 {
                 mode = mode.offset(1);
                 !(strchr(make_cstring!("rwa"), *fresh151 as i32)).is_null()
             }
-            && (*mode as i32 != CHARACTER_PLUS as i32 || {
+            && (*mode as i32 != Character::Plus as i32 || {
                 mode = mode.offset(1);
                 1 != 0
             })
@@ -300,8 +300,8 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut FILE) -> i32
         let mut decp: [i8; 2] = [0; 2];
         rn.file = file;
         rn.n = 0;
-        decp[0] = CHARACTER_PERIOD as i8;
-        decp[1] = CHARACTER_PERIOD as i8;
+        decp[0] = Character::Period as i8;
+        decp[1] = Character::Period as i8;
         flockfile(rn.file);
         loop {
             rn.c = getc_unlocked(rn.file);
@@ -439,7 +439,7 @@ pub unsafe fn g_read(interpreter: *mut Interpreter, file: *mut FILE, first: i32)
                     success = if l == 0 { test_eof(interpreter, file) } else { read_chars(interpreter, file, l) };
                 } else {
                     let mut p: *const i8 = lual_checklstring(interpreter, n, null_mut());
-                    if *p as i32 == CHARACTER_ASTERISK as i32 {
+                    if *p as i32 == Character::Asterisk as i32 {
                         p = p.offset(1);
                     }
                     match *p as i32 {

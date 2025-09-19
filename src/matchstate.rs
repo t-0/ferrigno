@@ -285,7 +285,7 @@ impl MatchState {
                 }
                 match *p as i32 {
                     CHARACTER_PARENTHESIS_LEFT => {
-                        if *p.offset(1 as isize) as i32 == CHARACTER_PARENTHESIS_RIGHT as i32 {
+                        if *p.offset(1 as isize) as i32 == Character::ParenthesisRight as i32 {
                             s = self.start_capture(s, p.offset(2 as isize), -2);
                         } else {
                             s = self.start_capture(s, p.offset(1 as isize), -1);
@@ -435,7 +435,7 @@ impl MatchState {
                 }
                 ep_0 = self.classend(p);
                 if self.singlematch(s, p, ep_0) == 0 {
-                    if *ep_0 as i32 == CHARACTER_ASTERISK as i32 || *ep_0 as i32 == CHARACTER_QUESTION as i32 || *ep_0 as i32 == CHARACTER_HYPHEN as i32 {
+                    if *ep_0 as i32 == Character::Asterisk as i32 || *ep_0 as i32 == Character::Question as i32 || *ep_0 as i32 == Character::Hyphen as i32 {
                         p = ep_0.offset(1 as isize);
                     } else {
                         s = null();
@@ -596,7 +596,7 @@ pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 
                 if match_class(c, *p as u8 as i32) != 0 {
                     return sig;
                 }
-            } else if *p.offset(1 as isize) as i32 == CHARACTER_HYPHEN as i32 && p.offset(2 as isize) < ec {
+            } else if *p.offset(1 as isize) as i32 == Character::Hyphen as i32 && p.offset(2 as isize) < ec {
                 p = p.offset(2 as isize);
                 if *p.offset(-(2 as isize)) as u8 as i32 <= c && c <= *p as u8 as i32 {
                     return sig;

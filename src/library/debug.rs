@@ -93,7 +93,7 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let mut options: *const i8 = lual_optlstring(interpreter, arg + 2, make_cstring!("flnSrtu"), null_mut());
         checkstack(interpreter, other_state, 3);
-        (((*options.offset(0 as isize) as i32 != CHARACTER_ANGLE_RIGHT as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg + 2, make_cstring!("invalid option CHARACTER_ANGLE_RIGHT")) != 0) as i32;
+        (((*options.offset(0 as isize) as i32 != Character::AngleRight as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg + 2, make_cstring!("invalid option Character::AngleRight")) != 0) as i32;
         if lua_type(interpreter, arg + 1) == Some(TagType::Closure) {
             options = lua_pushfstring(interpreter, make_cstring!(">%s"), options);
             lua_pushvalue(interpreter, arg + 1);

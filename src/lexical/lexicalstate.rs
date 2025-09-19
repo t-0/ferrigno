@@ -89,7 +89,7 @@ impl LexicalState {
         unsafe {
             let mut count: i32 = 1;
             self.parse_expression(interpreter, function_state, expression_description);
-            while testnext(interpreter, self, function_state, CHARACTER_COMMA as i32) != 0 {
+            while testnext(interpreter, self, function_state, Character::Comma as i32) != 0 {
                 luak_exp2nextreg(interpreter, self, self.lexical_state_function_state, expression_description);
                 self.parse_expression(interpreter, function_state, expression_description);
                 count += 1;
@@ -308,7 +308,7 @@ pub unsafe fn recfield(interpreter: *mut Interpreter, lexical_state: *mut Lexica
             make_cstring!("items in a constructor"),
         );
         (*constructor_control).count_table += 1;
-        checknext(interpreter, lexical_state, function_state, CHARACTER_EQUAL as i32);
+        checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
         let mut table: ExpressionDescription = *(*constructor_control).constructor_control_table;
         luak_indexed(interpreter, lexical_state, function_state, &mut table, &mut key);
         (*lexical_state).parse_expression(interpreter, function_state, &mut value);
@@ -327,7 +327,7 @@ pub unsafe fn field(interpreter: *mut Interpreter, lexical_state: *mut LexicalSt
     unsafe {
         match (*lexical_state).token.token {
             291 => {
-                if luax_lookahead(interpreter, lexical_state) != CHARACTER_EQUAL as i32 {
+                if luax_lookahead(interpreter, lexical_state) != Character::Equal as i32 {
                     listfield(interpreter, lexical_state, function_state, constructor_control);
                 } else {
                     recfield(interpreter, lexical_state, function_state, constructor_control);
@@ -359,7 +359,7 @@ pub unsafe fn constructor(interpreter: *mut Interpreter, lexical_state: *mut Lex
         while !((*lexical_state).token.token == Character::BraceRight as i32) {
             closelistfield(interpreter, lexical_state, function_state, &mut constructor_control);
             field(interpreter, lexical_state, function_state, &mut constructor_control);
-            if !(testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0 || testnext(interpreter, lexical_state, function_state, CHARACTER_SEMICOLON as i32) != 0) {
+            if !(testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0 || testnext(interpreter, lexical_state, function_state, Character::Semicolon as i32) != 0) {
                 break;
             }
         }
@@ -374,7 +374,7 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
         let prototype: *mut Prototype = (*function_state).prototype;
         let mut nparams: i32 = 0;
         let mut is_variable_arguments = false;
-        if (*lexical_state).token.token != CHARACTER_PARENTHESIS_RIGHT as i32 {
+        if (*lexical_state).token.token != Character::ParenthesisRight as i32 {
             loop {
                 match (*lexical_state).token.token {
                     291 => {
@@ -389,7 +389,7 @@ pub unsafe fn parlist(interpreter: *mut Interpreter, lexical_state: *mut Lexical
                         luax_syntaxerror(interpreter, lexical_state, make_cstring!("<name> or '...' expected"));
                     },
                 }
-                if !(!is_variable_arguments && testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0) {
+                if !(!is_variable_arguments && testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0) {
                     break;
                 }
             }
@@ -427,7 +427,7 @@ pub unsafe fn body(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         new_fs.prototype = (*lexical_state).add_prototype(interpreter);
         (*new_fs.prototype).prototype_line_defined = line;
         open_function(interpreter, lexical_state, &mut new_fs, function_state, &mut block_control);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_PARENTHESIS_LEFT as i32);
+        checknext(interpreter, lexical_state, function_state, Character::ParenthesisLeft as i32);
         if is_method {
             new_localvar(
                 interpreter,
@@ -437,7 +437,7 @@ pub unsafe fn body(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
             adjustlocalvars(interpreter, lexical_state, 1);
         }
         parlist(interpreter, lexical_state);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_PARENTHESIS_RIGHT as i32);
+        checknext(interpreter, lexical_state, function_state, Character::ParenthesisRight as i32);
         parse_statement_list(interpreter, lexical_state, function_state);
         (*new_fs.prototype).prototype_last_line_defined = (*lexical_state).line_number;
         check_match(interpreter, lexical_state, function_state, TK_END as i32, TK_FUNCTION as i32, line);
@@ -452,7 +452,7 @@ pub unsafe fn funcargs(interpreter: *mut Interpreter, lexical_state: *mut Lexica
         match (*lexical_state).token.token {
             CHARACTER_PARENTHESIS_LEFT => {
                 luax_next(interpreter, lexical_state);
-                if (*lexical_state).token.token == CHARACTER_PARENTHESIS_RIGHT as i32 {
+                if (*lexical_state).token.token == Character::ParenthesisRight as i32 {
                     args.expression_kind = ExpressionKind::Void;
                 } else {
                     (*lexical_state).parse_expression_list(interpreter, function_state, &mut args);
@@ -460,7 +460,7 @@ pub unsafe fn funcargs(interpreter: *mut Interpreter, lexical_state: *mut Lexica
                         luak_setreturns(interpreter, lexical_state, function_state, &mut args, -1);
                     }
                 }
-                check_match(interpreter, lexical_state, function_state, CHARACTER_PARENTHESIS_RIGHT as i32, CHARACTER_PARENTHESIS_LEFT as i32, line);
+                check_match(interpreter, lexical_state, function_state, Character::ParenthesisRight as i32, Character::ParenthesisLeft as i32, line);
             },
             CHARACTER_BRACE_LEFT => {
                 constructor(interpreter, lexical_state, function_state, &mut args);
@@ -499,7 +499,7 @@ pub unsafe fn primaryexp(interpreter: *mut Interpreter, lexical_state: *mut Lexi
                 let line: i32 = (*lexical_state).line_number;
                 luax_next(interpreter, lexical_state);
                 (*lexical_state).parse_expression(interpreter, function_state, v);
-                check_match(interpreter, lexical_state, function_state, CHARACTER_PARENTHESIS_RIGHT as i32, CHARACTER_PARENTHESIS_LEFT as i32, line);
+                check_match(interpreter, lexical_state, function_state, Character::ParenthesisRight as i32, Character::ParenthesisLeft as i32, line);
                 luak_dischargevars(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, v);
                 return;
             },
@@ -914,7 +914,7 @@ pub unsafe fn restassign(interpreter: *mut Interpreter, lexical_state: *mut Lexi
             luax_syntaxerror(interpreter, lexical_state, make_cstring!("syntax error"));
         }
         check_readonly(interpreter, lexical_state, &mut (*lhs_assign));
-        if testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0 {
+        if testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0 {
             let mut new_lhs_assign: ExpressionDescription = ExpressionDescription::new_with_previous(lhs_assign);
             suffixedexp(interpreter, lexical_state, function_state, &mut new_lhs_assign);
             if !(new_lhs_assign.expression_kind.is_index()) {
@@ -925,7 +925,7 @@ pub unsafe fn restassign(interpreter: *mut Interpreter, lexical_state: *mut Lexi
             (*interpreter).count_c_calls = ((*interpreter).count_c_calls).wrapping_sub(1);
             (*interpreter).count_c_calls;
         } else {
-            checknext(interpreter, lexical_state, function_state, CHARACTER_EQUAL as i32);
+            checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
             let count_expressions: i32 = (*lexical_state).parse_expression_list(interpreter, function_state, &mut expression_description);
             if count_expressions != count_variables {
                 adjust_assign(interpreter, lexical_state, count_variables, count_expressions, &mut expression_description);
@@ -999,7 +999,7 @@ pub unsafe fn checkrepeated(interpreter: *mut Interpreter, lexical_state: *mut L
 pub unsafe fn handle_label_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, name: *mut TString, line: i32) {
     unsafe {
         checknext(interpreter, lexical_state, function_state, TK_DBCOLON as i32);
-        while (*lexical_state).token.token == CHARACTER_SEMICOLON as i32 || (*lexical_state).token.token == TK_DBCOLON as i32 {
+        while (*lexical_state).token.token == Character::Semicolon as i32 || (*lexical_state).token.token == TK_DBCOLON as i32 {
             parse_statement(interpreter, lexical_state, function_state);
         }
         checkrepeated(interpreter, lexical_state, name);
@@ -1090,11 +1090,11 @@ pub unsafe fn handle_for_numeric(interpreter: *mut Interpreter, lexical_state: *
         new_localvar(interpreter, lexical_state, luax_newstring(interpreter, lexical_state, s, strlen(s) as usize));
         new_localvar(interpreter, lexical_state, luax_newstring(interpreter, lexical_state, s, strlen(s) as usize));
         new_localvar(interpreter, lexical_state, variable_name);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_EQUAL as i32);
+        checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
         exp1(interpreter, lexical_state, function_state);
-        checknext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32);
+        checknext(interpreter, lexical_state, function_state, Character::Comma as i32);
         exp1(interpreter, lexical_state, function_state);
-        if testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0 {
+        if testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0 {
             exp1(interpreter, lexical_state, function_state);
         } else {
             code_constant_integer(interpreter, lexical_state, function_state, (*function_state).freereg as i32, 1 as i64);
@@ -1115,7 +1115,7 @@ pub unsafe fn handle_for_list(interpreter: *mut Interpreter, lexical_state: *mut
         new_localvar(interpreter, lexical_state, luax_newstring(interpreter, lexical_state, s, strlen(s) as usize));
         new_localvar(interpreter, lexical_state, luax_newstring(interpreter, lexical_state, s, strlen(s) as usize));
         new_localvar(interpreter, lexical_state, indexname);
-        while testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0 {
+        while testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0 {
             new_localvar(interpreter, lexical_state, str_checkname(interpreter, lexical_state, function_state));
             count_variables += 1;
         }
@@ -1148,7 +1148,7 @@ pub unsafe fn handle_for_statement(interpreter: *mut Interpreter, lexical_state:
                 handle_for_list(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, variable_name);
             },
             _ => {
-                luax_syntaxerror(interpreter, lexical_state, make_cstring!("CHARACTER_EQUAL or 'in' expected"));
+                luax_syntaxerror(interpreter, lexical_state, make_cstring!("Character::Equal or 'in' expected"));
             },
         }
         check_match(interpreter, lexical_state, function_state, TK_END as i32, TK_FOR as i32, line);
@@ -1176,7 +1176,7 @@ pub unsafe fn handle_test_then_block(interpreter: *mut Interpreter, lexical_stat
                 line,
                 v.t,
             );
-            while testnext(interpreter, lexical_state, function_state, CHARACTER_SEMICOLON as i32) != 0 {}
+            while testnext(interpreter, lexical_state, function_state, Character::Semicolon as i32) != 0 {}
             if block_follow_without_until((*lexical_state).token.token) {
                 leaveblock(interpreter, lexical_state, function_state);
                 return;
@@ -1222,9 +1222,9 @@ pub unsafe fn handle_local_function(interpreter: *mut Interpreter, lexical_state
 }
 pub unsafe fn getlocalattribute(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) -> i32 {
     unsafe {
-        if testnext(interpreter, lexical_state, function_state, CHARACTER_ANGLE_LEFT) != 0 {
+        if testnext(interpreter, lexical_state, function_state, Character::AngleLeft as i32) != 0 {
             let attr: *const i8 = (*str_checkname(interpreter, lexical_state, function_state)).get_contents_mut();
-            checknext(interpreter, lexical_state, function_state, CHARACTER_ANGLE_RIGHT);
+            checknext(interpreter, lexical_state, function_state, Character::AngleRight as i32);
             if strcmp(attr, make_cstring!("const")) == 0 {
                 return 1;
             } else if strcmp(attr, make_cstring!("close")) == 0 {
@@ -1256,11 +1256,11 @@ pub unsafe fn handle_local_statement(interpreter: *mut Interpreter, lexical_stat
                 toclose = (*function_state).count_active_variables as i32 + count_variables;
             }
             count_variables += 1;
-            if !(testnext(interpreter, lexical_state, function_state, CHARACTER_COMMA as i32) != 0) {
+            if !(testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0) {
                 break;
             }
         }
-        if testnext(interpreter, lexical_state, function_state, CHARACTER_EQUAL as i32) != 0 {
+        if testnext(interpreter, lexical_state, function_state, Character::Equal as i32) != 0 {
             count_expressions = (*lexical_state).parse_expression_list(interpreter, function_state, &mut expression_description);
         } else {
             expression_description.expression_kind = ExpressionKind::Void;
@@ -1283,10 +1283,10 @@ pub unsafe fn handle_function_name(interpreter: *mut Interpreter, lexical_state:
     unsafe {
         let mut is_method = false;
         singlevar(interpreter, lexical_state, function_state, v);
-        while (*lexical_state).token.token == CHARACTER_PERIOD as i32 {
+        while (*lexical_state).token.token == Character::Period as i32 {
             fieldsel(interpreter, lexical_state, function_state, v);
         }
-        if (*lexical_state).token.token == CHARACTER_COLON as i32 {
+        if (*lexical_state).token.token == Character::Colon as i32 {
             is_method = true;
             fieldsel(interpreter, lexical_state, function_state, v);
         }
@@ -1309,7 +1309,7 @@ pub unsafe fn handle_expression_statement(interpreter: *mut Interpreter, lexical
     unsafe {
         let mut new_lhs_assign: ExpressionDescription = ExpressionDescription::new();
         suffixedexp(interpreter, lexical_state, function_state, &mut new_lhs_assign);
-        if (*lexical_state).token.token == CHARACTER_EQUAL as i32 || (*lexical_state).token.token == CHARACTER_COMMA as i32 {
+        if (*lexical_state).token.token == Character::Equal as i32 || (*lexical_state).token.token == Character::Comma as i32 {
             new_lhs_assign.previous = null_mut();
             restassign(interpreter, lexical_state, function_state, &mut new_lhs_assign, 1);
         } else {
@@ -1326,7 +1326,7 @@ pub unsafe fn handle_return_statement(interpreter: *mut Interpreter, lexical_sta
         let mut expression_description: ExpressionDescription = ExpressionDescription::new();
         let mut nret: i32;
         let mut first: i32 = luay_nvarstack(lexical_state, function_state);
-        if block_follow_with_until((*lexical_state).token.token) || (*lexical_state).token.token == CHARACTER_SEMICOLON as i32 {
+        if block_follow_with_until((*lexical_state).token.token) || (*lexical_state).token.token == Character::Semicolon as i32 {
             nret = 0;
         } else {
             nret = (*lexical_state).parse_expression_list(interpreter, function_state, &mut expression_description);
@@ -1344,7 +1344,7 @@ pub unsafe fn handle_return_statement(interpreter: *mut Interpreter, lexical_sta
             }
         }
         luak_ret(interpreter, lexical_state, function_state, first, nret);
-        testnext(interpreter, lexical_state, function_state, CHARACTER_SEMICOLON as i32);
+        testnext(interpreter, lexical_state, function_state, Character::Semicolon as i32);
     }
 }
 pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
@@ -1552,7 +1552,7 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
             if check_next2(interpreter, lexical_state, expo) != 0 {
                 check_next2(interpreter, lexical_state, make_cstring!("-+"));
             } else {
-                if !(is_digit_hexadecimal((*lexical_state).current + 1) || (*lexical_state).current == CHARACTER_PERIOD as i32) {
+                if !(is_digit_hexadecimal((*lexical_state).current + 1) || (*lexical_state).current == Character::Period as i32) {
                     break;
                 }
                 save(interpreter, lexical_state, (*lexical_state).current);
@@ -1606,7 +1606,7 @@ pub unsafe fn skip_sep(interpreter: *mut Interpreter, lexical_state: *mut Lexica
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        while (*lexical_state).current == CHARACTER_EQUAL as i32 {
+        while (*lexical_state).current == Character::Equal as i32 {
             save(interpreter, lexical_state, (*lexical_state).current);
             let fresh67 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2023,8 +2023,8 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if (*lexical_state).current != CHARACTER_HYPHEN as i32 {
-                        return CHARACTER_HYPHEN as i32;
+                    if (*lexical_state).current != Character::Hyphen as i32 {
+                        return Character::Hyphen as i32;
                     }
                     let fresh107 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2085,10 +2085,10 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_EQUAL as i32) != 0 {
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_EQ as i32;
                     } else {
-                        return CHARACTER_EQUAL as i32;
+                        return Character::Equal as i32;
                     }
                 },
                 CHARACTER_ANGLE_LEFT => {
@@ -2101,12 +2101,12 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_EQUAL as i32) != 0 {
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_LE as i32;
-                    } else if check_next1(lexical_state, CHARACTER_ANGLE_LEFT) != 0 {
+                    } else if check_next1(lexical_state, Character::AngleLeft as i32) != 0 {
                         return TK_SHL as i32;
                     } else {
-                        return CHARACTER_ANGLE_LEFT;
+                        return Character::AngleLeft as i32;
                     }
                 },
                 CHARACTER_ANGLE_RIGHT => {
@@ -2119,12 +2119,12 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_EQUAL) != 0 {
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_GE as i32;
-                    } else if check_next1(lexical_state, CHARACTER_ANGLE_RIGHT) != 0 {
+                    } else if check_next1(lexical_state, Character::AngleRight as i32) != 0 {
                         return TK_SHR as i32;
                     } else {
-                        return CHARACTER_ANGLE_RIGHT;
+                        return Character::AngleRight as i32;
                     }
                 },
                 CHARACTER_SOLIDUS => {
@@ -2137,10 +2137,10 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_SOLIDUS) != 0 {
+                    if check_next1(lexical_state, Character::Solidus as i32) != 0 {
                         return TK_IDIV as i32;
                     } else {
-                        return CHARACTER_SOLIDUS;
+                        return Character::Solidus as i32;
                     }
                 },
                 CHARACTER_TILDE => {
@@ -2153,7 +2153,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_EQUAL) != 0 {
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_NE as i32;
                     } else {
                         return Character::Tilde as i32;
@@ -2169,10 +2169,10 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_COLON as i32) != 0 {
+                    if check_next1(lexical_state, Character::Colon as i32) != 0 {
                         return TK_DBCOLON as i32;
                     } else {
-                        return CHARACTER_COLON as i32;
+                        return Character::Colon as i32;
                     }
                 },
                 CHARACTER_QUOTE | CHARACTER_DOUBLEQUOTE => {
@@ -2190,14 +2190,14 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    if check_next1(lexical_state, CHARACTER_PERIOD as i32) != 0 {
-                        if check_next1(lexical_state, CHARACTER_PERIOD as i32) != 0 {
+                    if check_next1(lexical_state, Character::Period as i32) != 0 {
+                        if check_next1(lexical_state, Character::Period as i32) != 0 {
                             return TK_DOTS as i32;
                         } else {
                             return TK_CONCAT as i32;
                         }
                     } else if !is_digit_decimal((*lexical_state).current + 1) {
-                        return CHARACTER_PERIOD as i32;
+                        return Character::Period as i32;
                     } else {
                         return read_numeral(interpreter, lexical_state, semantic_info);
                     }

@@ -96,7 +96,7 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, ar
         let status: i32;
         let function;
         let ci;
-        if *what as i32 == CHARACTER_ANGLE_RIGHT as i32 {
+        if *what as i32 == Character::AngleRight as i32 {
             ci = null_mut();
             function = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
             what = what.offset(1);

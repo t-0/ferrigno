@@ -13,11 +13,11 @@ pub fn ceiling_log2(input: usize) -> usize {
 }
 pub unsafe fn is_negative(s: *mut *const i8) -> bool {
     unsafe {
-        if **s as i32 == CHARACTER_HYPHEN {
+        if **s as i32 == Character::Hyphen as i32 {
             *s = (*s).offset(1);
             return true;
         } else {
-            if **s as i32 == CHARACTER_PLUS {
+            if **s as i32 == Character::Plus as i32 {
                 *s = (*s).offset(1);
             }
             return false;
@@ -47,12 +47,12 @@ pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
         let mut endptr: *const i8 = l_str2dloc(s, result, mode);
         if endptr.is_null() {
             let mut buffer: [i8; 201] = [0; 201];
-            let pdot: *const i8 = strchr(s, CHARACTER_PERIOD as i32);
+            let pdot: *const i8 = strchr(s, Character::Period as i32);
             if pdot.is_null() || strlen(s) > 200 {
                 return null();
             }
             strcpy(buffer.as_mut_ptr(), s);
-            buffer[pdot.offset_from(s) as usize] = CHARACTER_PERIOD as i8;
+            buffer[pdot.offset_from(s) as usize] = Character::Period as i8;
             endptr = l_str2dloc(buffer.as_mut_ptr(), result, mode);
             if !endptr.is_null() {
                 endptr = s.offset(endptr.offset_from(buffer.as_mut_ptr()) as isize);
@@ -101,7 +101,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
 pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_length: usize) {
     unsafe {
         let mut bufflen: usize = 60 as usize;
-        if *source as i32 == CHARACTER_EQUAL as i32 {
+        if *source as i32 == Character::Equal as i32 {
             if source_length <= bufflen {
                 memcpy(out as *mut libc::c_void, source.offset(1 as isize) as *const libc::c_void, (source_length as usize).wrapping_mul(size_of::<i8>()));
             } else {
@@ -113,7 +113,7 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 out = out.offset(bufflen.wrapping_sub(1 as usize) as isize);
                 *out = Character::Null as i8;
             }
-        } else if *source as i32 == CHARACTER_AT as i32 {
+        } else if *source as i32 == Character::At as i32 {
             if source_length <= bufflen {
                 memcpy(out as *mut libc::c_void, source.offset(1 as isize) as *const libc::c_void, (source_length as usize).wrapping_mul(size_of::<i8>()));
             } else {

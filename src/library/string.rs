@@ -455,11 +455,11 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
             if !(fresh168 != 0) {
                 break;
             }
-            if *s as i32 == '"' as i32 || *s as i32 == CHARACTER_BACKSLASH as i32 || *s as i32 == Character::LineFeed as i32 {
+            if *s as i32 == '"' as i32 || *s as i32 == Character::Backslash as i32 || *s as i32 == Character::LineFeed as i32 {
                 ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh169 = (*b).loads.get_length();
                 (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-                *((*b).loads.loads_pointer).offset(fresh169 as isize) = CHARACTER_BACKSLASH as i8;
+                *((*b).loads.loads_pointer).offset(fresh169 as isize) = Character::Backslash as i8;
                 ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
                 let fresh170 = (*b).loads.get_length();
                 (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
@@ -497,11 +497,11 @@ pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) 
             s = make_cstring!("(0/0)");
         } else {
             let nb: i32 = snprintf(buffer, 120, make_cstring!("%a"), n);
-            if (memchr(buffer as *const libc::c_void, CHARACTER_PERIOD as i32, nb as usize)).is_null() {
-                let point: i8 = CHARACTER_PERIOD as i8;
+            if (memchr(buffer as *const libc::c_void, Character::Period as i32, nb as usize)).is_null() {
+                let point: i8 = Character::Period as i8;
                 let ppoint: *mut i8 = memchr(buffer as *const libc::c_void, point as i32, nb as usize) as *mut i8;
                 if !ppoint.is_null() {
-                    *ppoint = CHARACTER_PERIOD as i8;
+                    *ppoint = Character::Period as i8;
                 }
             }
             return nb;
@@ -556,7 +556,7 @@ pub unsafe fn checkformat(interpreter: *mut Interpreter, form: *const i8, flags:
         spec = spec.offset(strspn(spec, flags) as isize);
         if *spec as i32 != CHARACTER_0 as i32 {
             spec = get2digits(spec);
-            if *spec as i32 == CHARACTER_PERIOD as i32 && precision != 0 {
+            if *spec as i32 == Character::Period as i32 && precision != 0 {
                 spec = spec.offset(1);
                 spec = get2digits(spec);
             }
@@ -688,7 +688,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             } else {
                                 (((l == strlen(s) as usize) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, make_cstring!("string contains zeros")) != 0) as i32;
                                 checkformat(interpreter, form.as_mut_ptr(), make_cstring!("-"), 1);
-                                if (strchr(form.as_mut_ptr(), CHARACTER_PERIOD as i32)).is_null() && l >= 100 as usize {
+                                if (strchr(form.as_mut_ptr(), Character::Period as i32)).is_null() && l >= 100 as usize {
                                     b.add_value();
                                 } else {
                                     nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), s);

@@ -1636,7 +1636,7 @@ pub unsafe fn handle_luainit(interpreter: *mut Interpreter) -> i32 {
         }
         if init.is_null() {
             return 0;
-        } else if *init.offset(0 as isize) as i32 == CHARACTER_AT as i32 {
+        } else if *init.offset(0 as isize) as i32 == Character::At as i32 {
             return dofile(interpreter, init.offset(1 as isize));
         } else {
             return dostring(interpreter, init, name);
@@ -2505,7 +2505,7 @@ pub unsafe fn luag_addinfo(interpreter: *mut Interpreter, message: *const i8, sr
         if !src.is_null() {
             luao_chunkid(buffer.as_mut_ptr(), (*src).get_contents_mut(), (*src).get_length() as usize);
         } else {
-            buffer[0] = CHARACTER_QUESTION as i8;
+            buffer[0] = Character::Question as i8;
             buffer[1] = Character::Null as i8;
         }
         return luao_pushfstring(interpreter, make_cstring!("%s:%d: %s"), buffer.as_mut_ptr(), line, message);
@@ -6370,7 +6370,7 @@ pub unsafe fn checkcontrol(interpreter: *mut Interpreter, mut message: *const i8
         if tocont != 0 || {
             let fresh150 = message;
             message = message.offset(1);
-            *fresh150 as i32 != CHARACTER_AT as i32
+            *fresh150 as i32 != Character::At as i32
         } {
             return 0;
         } else {
@@ -6671,7 +6671,7 @@ pub unsafe fn dolibrary(interpreter: *mut Interpreter, globname: *mut i8) -> i32
     unsafe {
         let status: i32;
         let mut suffix: *mut i8 = null_mut();
-        let mut modname: *mut i8 = strchr(globname, CHARACTER_EQUAL as i32);
+        let mut modname: *mut i8 = strchr(globname, Character::Equal as i32);
         if modname.is_null() {
             modname = globname;
             suffix = strchr(modname, *(make_cstring!("-")) as i32);
@@ -6737,7 +6737,7 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
         i = 1;
         while !(*argv.offset(i as isize)).is_null() {
             *first = i;
-            if *(*argv.offset(i as isize)).offset(0 as isize) as i32 != CHARACTER_HYPHEN as i32 {
+            if *(*argv.offset(i as isize)).offset(0 as isize) as i32 != Character::Hyphen as i32 {
                 return args;
             }
             let current_block_31: usize;
@@ -6789,7 +6789,7 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
                 15172496195422792753 => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 == Character::Null as i32 {
                         i += 1;
-                        if (*argv.offset(i as isize)).is_null() || *(*argv.offset(i as isize)).offset(0 as isize) as i32 == CHARACTER_HYPHEN as i32 {
+                        if (*argv.offset(i as isize)).is_null() || *(*argv.offset(i as isize)).offset(0 as isize) as i32 == Character::Hyphen as i32 {
                             return 1;
                         }
                     }
@@ -6872,7 +6872,7 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
                 l = l.wrapping_sub(1);
                 *b.offset(l as isize) = Character::Null as i8;
             }
-            if firstline != 0 && *b.offset(0 as isize) as i32 == CHARACTER_EQUAL as i32 {
+            if firstline != 0 && *b.offset(0 as isize) as i32 == Character::Equal as i32 {
                 lua_pushfstring(interpreter, make_cstring!("return %s"), b.offset(1 as isize));
             } else {
                 lua_pushlstring(interpreter, b, l);

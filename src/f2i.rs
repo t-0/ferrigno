@@ -204,10 +204,10 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
         s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
-        if *s as i32 == CHARACTER_HYPHEN as i32 {
+        if *s as i32 == Character::Hyphen as i32 {
             s = s.offset(1);
             is_negative_ = 1;
-        } else if *s as i32 == CHARACTER_PLUS as i32 {
+        } else if *s as i32 == Character::Plus as i32 {
             s = s.offset(1);
         }
         if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 == 0 {
