@@ -1,4 +1,5 @@
 #![feature(default_field_values, extern_types, c_variadic)]
+use std::ptr::*;
 mod allocator;
 mod buffer;
 mod bufffs;
@@ -68,6 +69,6 @@ pub fn main() {
     for arg in ::std::env::args() {
         args.push((::std::ffi::CString::new(arg)).expect("Failed to convert argument into CString.").into_raw());
     }
-    args.push(::core::ptr::null_mut());
+    args.push(null_mut());
     unsafe { ::std::process::exit(crate::repl::main_0((args.len() - 1) as i32, args.as_mut_ptr() as *mut *mut i8) as i32) }
 }

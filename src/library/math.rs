@@ -1,3 +1,4 @@
+use libc::time;
 use crate::interpreter::*;
 use crate::randomstate::*;
 use crate::registeredfunction::*;

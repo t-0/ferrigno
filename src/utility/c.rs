@@ -43,8 +43,6 @@ unsafe extern "C" {
     pub fn getenv(__name: *const i8) -> *mut i8;
     pub fn mkstemp(__template: *mut i8) -> i32;
     pub fn memcpy(_: *mut libc::c_void, _: *const libc::c_void, _: usize) -> *mut libc::c_void;
-    pub fn memcmp(_: *const libc::c_void, _: *const libc::c_void, _: usize) -> i32;
-    pub fn memchr(_: *const libc::c_void, _: i32, _: usize) -> *mut libc::c_void;
     pub fn strcpy(_: *mut i8, _: *const i8) -> *mut i8;
     pub fn strcmp(_: *const i8, _: *const i8) -> i32;
     pub fn strncmp(_: *const i8, _: *const i8, _: usize) -> i32;
@@ -56,7 +54,6 @@ unsafe extern "C" {
     pub fn strlen(_: *const i8) -> usize;
     pub fn strerror(_: i32) -> *mut i8;
     pub fn clock() -> i64;
-    pub fn time(timer: *mut i64) -> i64;
     pub fn difftime(time1: i64, time0: i64) -> f64;
     pub fn mktime(tp: *mut TM) -> i64;
     pub fn strftime(s: *mut i8, __maxsize: usize, __format: *const i8, tp: *const TM) -> usize;

@@ -1,4 +1,5 @@
 use crate::functions::*;
+use libc::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use rlua::*;
@@ -8,15 +9,15 @@ pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
 pub struct DumpState {
     pub dumpstate_interpreter: *mut Interpreter,
     pub write_function: WriteFunction,
-    pub pointer: *mut libc::c_void,
+    pub pointer: *mut c_void,
     pub is_strip: bool,
     pub status: i32,
 }
 impl DumpState {
-    pub fn new(interpreter: *mut Interpreter, write_function: WriteFunction, pointer: *mut libc::c_void, is_strip: bool) -> Self {
+    pub fn new(interpreter: *mut Interpreter, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool) -> Self {
         return DumpState { dumpstate_interpreter: interpreter, write_function, pointer, is_strip: is_strip, status: 0 };
     }
-    pub unsafe fn dump_block(&mut self, pointer: *const libc::c_void, size: usize) {
+    pub unsafe fn dump_block(&mut self, pointer: *const c_void, size: usize) {
         unsafe {
             if self.status == 0 && size > 0 {
                 self.status = (Some((self.write_function).expect("non-null function pointer"))).expect("non-null function pointer")(self.dumpstate_interpreter, pointer, size as usize, self.pointer);
@@ -26,7 +27,7 @@ impl DumpState {
     pub unsafe fn dump_byte(&mut self, integer: u8) {
         unsafe {
             let mut x: u8 = integer;
-            self.dump_block(&mut x as *mut u8 as *const libc::c_void, size_of::<u8>());
+            self.dump_block(&mut x as *mut u8 as *const c_void, size_of::<u8>());
         }
     }
     pub unsafe fn dump_size(&mut self, mut integer: usize) {
@@ -46,7 +47,7 @@ impl DumpState {
                 buffer
                     .as_mut_ptr()
                     .offset((size_of::<usize>() as usize).wrapping_mul(8 as usize).wrapping_add(6 as usize).wrapping_div(7 as usize) as isize)
-                    .offset(-(n as isize)) as *const libc::c_void,
+                    .offset(-(n as isize)) as *const c_void,
                 n.wrapping_mul(size_of::<u8>()),
             );
         }
@@ -58,26 +59,26 @@ impl DumpState {
     }
     pub unsafe fn dump_number(&mut self, mut number: f64) {
         unsafe {
-            self.dump_block(&mut number as *mut f64 as *const libc::c_void, size_of::<f64>());
+            self.dump_block(&mut number as *mut f64 as *const c_void, size_of::<f64>());
         }
     }
     pub unsafe fn dump_integer(&mut self, mut integer: i64) {
         unsafe {
-            self.dump_block(&mut integer as *mut i64 as *const libc::c_void, size_of::<i64>());
+            self.dump_block(&mut integer as *mut i64 as *const c_void, size_of::<i64>());
         }
     }
     pub unsafe fn dump_header(&mut self) {
         unsafe {
-            self.dump_block(LUA_SIGNATURE as *const libc::c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
+            self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
-            self.dump_block(make_cstring!("\x19\x7F\r\n\x1A\n") as *const libc::c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
+            self.dump_block(make_cstring!("\x19\x7F\r\n\x1A\n") as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }
     }
 }
-pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut libc::c_void, is_strip: bool) -> i32 {
+pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut c_void, is_strip: bool) -> i32 {
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
         dump_state.dump_header();

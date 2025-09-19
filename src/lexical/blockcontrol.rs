@@ -26,3 +26,14 @@ impl New for BlockControl {
         };
     }
 }
+impl BlockControl {
+    pub unsafe fn mark_upvalue_delegated(&mut self, level: i32) {
+        unsafe {
+            let mut block_control: *mut BlockControl = self;
+            while (*block_control).count_active_variables as i32 > level {
+                block_control = (*block_control).previous;
+            }
+            (*block_control).count_upvalues = 1;
+        }
+    }
+}

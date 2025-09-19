@@ -1,8 +1,8 @@
 use crate::interpreter::*;
 use crate::object::*;
+use libc::*;
 use crate::tstring::*;
 use crate::tvalue::*;
-use crate::utility::c::*;
 const BUFFFS_SIZE: usize = 0x100;
 #[repr(C)]
 pub struct BuffFS {
@@ -43,7 +43,7 @@ impl BuffFS {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);
-                memcpy(bf as *mut libc::c_void, pointer as *const libc::c_void, length as usize);
+                memcpy(bf as *mut c_void, pointer as *const c_void, length as usize);
                 self.size += length as usize;
             } else {
                 self.clear();

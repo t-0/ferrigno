@@ -1,4 +1,5 @@
 #![allow(unused)]
+use libc::*;
 use crate::interpreter::*;
 use rlua::*;
 use std::ptr::*;
@@ -46,7 +47,7 @@ impl<T> LoadS<T> {
         unsafe {
             let old_total = self.loads_size as usize * size_of::<T>();
             let new_total = new_size * size_of::<T>();
-            self.loads_pointer = luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
+            self.loads_pointer = luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, old_total, new_total) as *mut T;
             self.loads_length = 0;
             self.loads_size = new_size as i32;
         }
@@ -75,7 +76,7 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(interpreter, self.loads_pointer as *mut libc::c_void, (self.loads_size as usize).wrapping_mul(size_of::<i8>()), 0);
+            luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, (self.loads_size as usize).wrapping_mul(size_of::<i8>()), 0);
             self.loads_pointer = null_mut();
             self.loads_size = 0;
         }
@@ -99,7 +100,7 @@ impl<T> LoadS<T> {
             }
             self.loads_pointer = luam_saferealloc_(
                 interpreter,
-                self.loads_pointer as *mut libc::c_void,
+                self.loads_pointer as *mut c_void,
                 (self.loads_size as usize).wrapping_mul(size_of::<T>()),
                 (new_size as usize).wrapping_mul(size_of::<T>()),
             ) as *mut T;
@@ -110,7 +111,7 @@ impl<T> LoadS<T> {
         unsafe {
             self.loads_pointer = luam_saferealloc_(
                 interpreter,
-                self.loads_pointer as *mut libc::c_void,
+                self.loads_pointer as *mut c_void,
                 (self.loads_size as usize).wrapping_mul(size_of::<T>()),
                 new_size.wrapping_mul(size_of::<T>()),
             ) as *mut T;

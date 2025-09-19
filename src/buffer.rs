@@ -1,9 +1,9 @@
 pub mod userbox;
+use libc::*;
 use crate::buffer::userbox::*;
 use crate::interpreter::*;
 use crate::loads::*;
 use crate::new::*;
-use crate::utility::c::*;
 use rlua::*;
 use std::ptr::*;
 pub type BufferElement = i8;
@@ -64,8 +64,8 @@ impl Buffer {
                     lua_toclose(interpreter, boxidx);
                     new_pointer = UserBox::resize_userbox(interpreter, boxidx, new_size) as *mut BufferElement;
                     memcpy(
-                        new_pointer as *mut libc::c_void,
-                        self.loads.loads_pointer as *const libc::c_void,
+                        new_pointer as *mut c_void,
+                        self.loads.loads_pointer as *const c_void,
                         (self.loads.get_length() as usize) * (size_of::<BufferElement>()),
                     );
                 }
@@ -84,7 +84,7 @@ impl Buffer {
         unsafe {
             if length > 0 {
                 let raw: *mut BufferElement = self.prepare_with_size_and_index(length, -1);
-                memcpy(raw as *mut libc::c_void, s as *const libc::c_void, length * size_of::<BufferElement>());
+                memcpy(raw as *mut c_void, s as *const c_void, length * size_of::<BufferElement>());
                 self.loads.add_length(length);
             }
         }
@@ -111,7 +111,7 @@ impl Buffer {
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
-            memcpy(b as *mut libc::c_void, s as *const libc::c_void, (length as usize) * (size_of::<BufferElement>()));
+            memcpy(b as *mut c_void, s as *const c_void, (length as usize) * (size_of::<BufferElement>()));
             self.loads.add_length(length);
             lua_settop(interpreter, -2);
         }
@@ -120,7 +120,7 @@ impl Buffer {
         unsafe {
             self.buffer_interpreter = interpreter;
             self.loads.inject(self.initial_data.as_mut_ptr(), Buffer::INITIAL_SIZE);
-            lua_pushlightuserdata(interpreter, self as *mut Buffer as *mut libc::c_void);
+            lua_pushlightuserdata(interpreter, self as *mut Buffer as *mut c_void);
         }
     }
 }

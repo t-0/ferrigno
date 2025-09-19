@@ -70,7 +70,7 @@ pub unsafe fn settraps(mut ci: *mut CallInfo) {
                 break;
             } else {
                 if (*ci).call_info_call_status as i32 & (1 << 1) == 0 {
-                    ::core::ptr::write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1);
+                    write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1);
                 }
                 ci = (*ci).call_info_previous;
             }

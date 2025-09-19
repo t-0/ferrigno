@@ -78,6 +78,12 @@ impl FunctionState {
         self.last_target = self.program_counter;
         return self.program_counter;
     }
+    pub unsafe fn mark_upvalue(&mut self, level: i32) {
+        unsafe {
+            (*self.block_control).mark_upvalue_delegated(level);
+            self.needs_close = true;
+        }
+    }
 }
 pub unsafe fn movegotosout(lexical_state: *mut LexicalState, function_state: *mut FunctionState, block_control: *mut BlockControl) {
     unsafe {
@@ -348,16 +354,6 @@ pub unsafe fn searchvar(lexical_state: *mut LexicalState, function_state: *mut F
         return -1;
     }
 }
-pub unsafe fn markupval(function_state: *mut FunctionState, level: i32) {
-    unsafe {
-        let mut block_control: *mut BlockControl = (*function_state).block_control;
-        while (*block_control).count_active_variables as i32 > level {
-            block_control = (*block_control).previous;
-        }
-        (*block_control).count_upvalues = 1;
-        (*function_state).needs_close = true;
-    }
-}
 pub unsafe fn marktobeclosed(function_state: *mut FunctionState) {
     unsafe {
         let block_control: *mut BlockControl = (*function_state).block_control;
@@ -374,7 +370,7 @@ pub unsafe fn singlevaraux(interpreter: *mut Interpreter, lexical_state: *mut Le
             let v: i32 = searchvar(lexical_state, function_state, n, var);
             if v >= 0 {
                 if v == ExpressionKind::Local as i32 && base == 0 {
-                    markupval(function_state, (*var).value.variable.value_index as i32);
+                    (*function_state).mark_upvalue((*var).value.variable.value_index as i32);
                 }
             } else {
                 let mut index: i32 = searchupvalue(function_state, n);

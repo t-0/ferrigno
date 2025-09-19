@@ -1,4 +1,5 @@
 use crate::callinfo::*;
+use libc::*;
 use crate::character::*;
 use crate::debuginfo::*;
 use crate::functions::*;
@@ -55,7 +56,7 @@ impl Closure {
                 TAG_VARIANT_CLOSURE_L => size_lclosure(self.count_upvalues as usize),
                 _ => 0,
             };
-            (*interpreter).free_memory(self as *mut Closure as *mut libc::c_void, size);
+            (*interpreter).free_memory(self as *mut Closure as *mut c_void, size);
         }
     }
     pub unsafe fn traversecclosure(global: *mut Global, closure: *mut Closure) -> usize {

@@ -1,5 +1,6 @@
 use crate::closure::*;
 use crate::functions::*;
+use libc::*;
 use crate::interpreter::*;
 use crate::node::*;
 use crate::object::*;
@@ -60,7 +61,7 @@ pub struct Global {
     pub metatables: [*mut Table; 9],
     pub string_cache: [[*mut TString; 2]; 53],
     pub warn_function: WarnFunction,
-    pub warn_userdata: *mut libc::c_void,
+    pub warn_userdata: *mut c_void,
 }
 impl Global {
     pub unsafe fn luac_runtilstate(&mut self, interpreter: *mut Interpreter, statesmask: i32) {

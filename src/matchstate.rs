@@ -1,9 +1,10 @@
 use crate::buffer::*;
 use crate::character::*;
 use crate::interpreter::*;
+use libc::*;
 use crate::tag::*;
 use crate::utility::c::*;
-use libc::tolower;
+use libc::memcmp;
 use rlua::*;
 use std::ptr::*;
 pub const MAX_CAPTURES: usize = 32;
@@ -261,7 +262,7 @@ impl MatchState {
             let length: usize;
             l = self.check_capture(l);
             length = self.capture[l as usize].length as usize;
-            if (self.src_end).offset_from(s) as usize >= length && memcmp(self.capture[l as usize].init as *const libc::c_void, s as *const libc::c_void, length as usize) == 0 {
+            if (self.src_end).offset_from(s) as usize >= length && memcmp(self.capture[l as usize].init as *const c_void, s as *const c_void, length as usize) == 0 {
                 return s.offset(length as isize);
             } else {
                 return null();
@@ -505,7 +506,7 @@ impl MatchState {
             let mut news: *const i8 = lua_tolstring(interpreter, 3, &mut l);
             let mut p: *const i8;
             loop {
-                p = memchr(news as *const libc::c_void, CHARACTER_PERCENT as i32, l as usize) as *mut i8;
+                p = memchr(news as *const c_void, CHARACTER_PERCENT as i32, l as usize) as *mut i8;
                 if p.is_null() {
                     break;
                 }

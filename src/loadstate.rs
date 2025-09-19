@@ -1,3 +1,4 @@
+use libc::memcmp;
 use crate::character::*;
 use crate::closure::*;
 use crate::debugger::absolutelineinfo::*;

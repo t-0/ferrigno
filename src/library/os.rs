@@ -1,3 +1,4 @@
+use libc::time;
 use crate::buffer::*;
 use crate::character::CHARACTER_EXCLAMATION;
 use crate::character::*;
@@ -6,7 +7,7 @@ use crate::new::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
-use libc::{remove, rename, setlocale, system};
+use libc::{remove, rename, setlocale, system,memcmp};
 use rlua::*;
 use std::ptr::*;
 pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {

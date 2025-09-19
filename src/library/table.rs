@@ -1,4 +1,5 @@
 use crate::buffer::*;
+use libc::{time, c_void};
 use crate::interpreter::*;
 use crate::new::*;
 use crate::registeredfunction::*;
@@ -210,13 +211,13 @@ pub unsafe fn l_randomizepivot() -> u32 {
         let mut i: u32;
         let mut rnd: u32 = 0u32;
         memcpy(
-            buffer.as_mut_ptr() as *mut libc::c_void,
-            &mut c as *mut i64 as *const libc::c_void,
+            buffer.as_mut_ptr() as *mut c_void,
+            &mut c as *mut i64 as *const c_void,
             (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
         );
         memcpy(
-            buffer.as_mut_ptr().offset((size_of::<i64>() as usize).wrapping_div(size_of::<u32>() as usize) as isize) as *mut libc::c_void,
-            &mut t as *mut i64 as *const libc::c_void,
+            buffer.as_mut_ptr().offset((size_of::<i64>() as usize).wrapping_div(size_of::<u32>() as usize) as isize) as *mut c_void,
+            &mut t as *mut i64 as *const c_void,
             (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
         );
         i = 0u32;

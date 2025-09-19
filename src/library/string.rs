@@ -13,7 +13,7 @@ use crate::tag::*;
 use crate::tstring::*;
 use crate::utility::c::*;
 use crate::utility::*;
-use libc::{memcpy, tolower, toupper};
+use libc::{memcpy, tolower, toupper, memchr, memcmp};
 use rlua::*;
 use std::ptr::*;
 pub unsafe fn str_len(interpreter: *mut Interpreter) -> i32 {

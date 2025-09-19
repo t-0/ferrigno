@@ -9,6 +9,7 @@ use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
+use libc::memcmp;
 use rlua::*;
 use std::ptr::*;
 pub const STRING_SHORT_MAX: usize = 40;

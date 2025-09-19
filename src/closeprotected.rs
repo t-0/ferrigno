@@ -1,4 +1,5 @@
 use crate::interpreter::*;
+use libc::*;
 use crate::new::*;
 use crate::tvalue::*;
 use std::ptr::*;
@@ -13,7 +14,7 @@ impl New for CloseProtected {
     }
 }
 impl CloseProtected {
-    unsafe fn auxiliary(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
+    unsafe fn auxiliary(interpreter: *mut Interpreter, arbitrary_data: *mut c_void) {
         unsafe {
             let close_protected: *mut CloseProtected = arbitrary_data as *mut CloseProtected;
             luaf_close(interpreter, (*close_protected).level, (*close_protected).status, 0);
@@ -30,8 +31,8 @@ pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut 
             close_protected.status = status;
             status = luad_rawrunprotected(
                 interpreter,
-                Some(CloseProtected::auxiliary as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
-                &mut close_protected as *mut CloseProtected as *mut libc::c_void,
+                Some(CloseProtected::auxiliary as unsafe fn(*mut Interpreter, *mut c_void) -> ()),
+                &mut close_protected as *mut CloseProtected as *mut c_void,
             );
             if status == 0 {
                 return close_protected.status;

@@ -1,3 +1,5 @@
+use std::ptr::*;
+use libc::time;
 use crate::buffer::*;
 use crate::bufffs::*;
 use crate::callinfo::*;
@@ -41,7 +43,6 @@ use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::zio::*;
 use rlua::*;
-use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
@@ -147,7 +148,7 @@ impl Interpreter {
                 (*ci).call_info_top.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8).offset((*ci).call_info_top.stkidrel_offset as isize) as *mut TValue;
                 (*ci).call_info_function.stkidrel_pointer = ((*self).stack.stkidrel_pointer as *mut i8).offset((*ci).call_info_function.stkidrel_offset as isize) as *mut TValue;
                 if (*ci).call_info_call_status as i32 & (1i32) << 1i32 == 0 {
-                    ::core::ptr::write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1i32);
+                    write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1i32);
                 }
                 ci = (*ci).call_info_previous;
             }
@@ -443,7 +444,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
 pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut error_code: i32) -> ! {
     unsafe {
         if !((*interpreter).long_jump).is_null() {
-            ::core::ptr::write_volatile(&mut (*(*interpreter).long_jump).status as *mut i32, error_code);
+            write_volatile(&mut (*(*interpreter).long_jump).status as *mut i32, error_code);
             _longjmp(((*(*interpreter).long_jump).jbt).as_mut_ptr(), 1);
         } else {
             let global: *mut Global = (*interpreter).global;
@@ -469,7 +470,7 @@ pub unsafe fn luad_rawrunprotected(interpreter: *mut Interpreter, f: ProtectedFu
     unsafe {
         let old_count_c_calls: u32 = (*interpreter).count_c_calls;
         let mut long_jump = LongJump::new();
-        ::core::ptr::write_volatile(&mut long_jump.status as *mut i32, 0);
+        write_volatile(&mut long_jump.status as *mut i32, 0);
         long_jump.previous = (*interpreter).long_jump;
         (*interpreter).long_jump = &mut long_jump;
         if _setjmp((long_jump.jbt).as_mut_ptr()) == 0 {
@@ -2120,7 +2121,7 @@ pub unsafe fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
         (*(*interpreter).ci).call_info_next = ret;
         (*ret).call_info_previous = (*interpreter).ci;
         (*ret).call_info_next = null_mut();
-        ::core::ptr::write_volatile(&mut (*ret).call_info_u.l.trap as *mut i32, 0);
+        write_volatile(&mut (*ret).call_info_u.l.trap as *mut i32, 0);
         (*interpreter).count_call_info = ((*interpreter).count_call_info).wrapping_add(1);
         (*interpreter).count_call_info;
         return ret;
@@ -2244,8 +2245,8 @@ pub unsafe fn preinit_thread(interpreter: *mut Interpreter, global: *mut Global)
         (*interpreter).twups = interpreter;
         (*interpreter).count_c_calls = 0;
         (*interpreter).long_jump = null_mut();
-        ::core::ptr::write_volatile(&mut (*interpreter).hook as *mut HookFunction, None);
-        ::core::ptr::write_volatile(&mut (*interpreter).hook_mask as *mut i32, 0);
+        write_volatile(&mut (*interpreter).hook as *mut HookFunction, None);
+        write_volatile(&mut (*interpreter).hook_mask as *mut i32, 0);
         (*interpreter).base_hook_count = 0;
         (*interpreter).allow_hook = 1;
         (*interpreter).hook_count = (*interpreter).base_hook_count;
@@ -2289,9 +2290,9 @@ pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         preinit_thread(ret, global);
-        ::core::ptr::write_volatile(&mut (*ret).hook_mask as *mut i32, (*interpreter).hook_mask);
+        write_volatile(&mut (*ret).hook_mask as *mut i32, (*interpreter).hook_mask);
         (*ret).base_hook_count = (*interpreter).base_hook_count;
-        ::core::ptr::write_volatile(&mut (*ret).hook as *mut HookFunction, (*interpreter).hook);
+        write_volatile(&mut (*ret).hook as *mut HookFunction, (*interpreter).hook);
         (*ret).hook_count = (*ret).base_hook_count;
         stack_init(ret, interpreter);
         return ret;
@@ -2363,10 +2364,10 @@ pub unsafe fn lua_sethook(interpreter: *mut Interpreter, mut function: HookFunct
             mask = 0;
             function = None;
         }
-        ::core::ptr::write_volatile(&mut (*interpreter).hook as *mut HookFunction, function);
+        write_volatile(&mut (*interpreter).hook as *mut HookFunction, function);
         (*interpreter).base_hook_count = count;
         (*interpreter).hook_count = (*interpreter).base_hook_count;
-        ::core::ptr::write_volatile(&mut (*interpreter).hook_mask as *mut i32, mask as u8 as i32);
+        write_volatile(&mut (*interpreter).hook_mask as *mut i32, mask as u8 as i32);
         if mask != 0 {
             settraps((*interpreter).ci);
         }
@@ -2555,7 +2556,7 @@ pub unsafe fn luag_tracecall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let ci = (*interpreter).ci;
         let p: *mut Prototype = (*((*(*ci).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype;
-        ::core::ptr::write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1);
+        write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 1);
         if (*ci).call_info_u.l.saved_program_counter == (*p).prototype_code.vectort_pointer as *const u32 {
             if (*p).prototype_is_variable_arguments {
                 return 0;
@@ -2572,7 +2573,7 @@ pub unsafe fn luag_traceexec(interpreter: *mut Interpreter, mut program_counter:
         let mask: u8 = (*interpreter).hook_mask as u8;
         let p: *const Prototype = (*((*(*ci).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype;
         if mask as i32 & (1 << 2 | 1 << 3) == 0 {
-            ::core::ptr::write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 0);
+            write_volatile(&mut (*ci).call_info_u.l.trap as *mut i32, 0);
             return 0;
         }
         program_counter = program_counter.offset(1);

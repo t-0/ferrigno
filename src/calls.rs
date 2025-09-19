@@ -1,6 +1,7 @@
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::tvalue::*;
+use libc::*;
 #[repr(C)]
 struct CallS {
     pub function: *mut TValue,
@@ -15,7 +16,7 @@ impl CallS {
             luad_callnoyield(interpreter, self.function, self.count_results as i32);
         }
     }
-    unsafe fn call_wrapper(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
+    unsafe fn call_wrapper(interpreter: *mut Interpreter, arbitrary_data: *mut c_void) {
         unsafe {
             let calls: *mut CallS = arbitrary_data as *mut CallS;
             (*calls).call(interpreter);
@@ -37,8 +38,8 @@ pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_result
             calls.count_results = count_results as usize;
             status = luad_pcall(
                 interpreter,
-                Some(CallS::call_wrapper as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
-                &mut calls as *mut CallS as *mut libc::c_void,
+                Some(CallS::call_wrapper as unsafe fn(*mut Interpreter, *mut c_void) -> ()),
+                &mut calls as *mut CallS as *mut c_void,
                 (calls.function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
                 function,
             );
