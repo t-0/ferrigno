@@ -450,7 +450,7 @@ pub unsafe fn funcargs(interpreter: *mut Interpreter, lexical_state: *mut Lexica
         let mut args: ExpressionDescription = ExpressionDescription::new();
         let line: i32 = (*lexical_state).line_number;
         match (*lexical_state).token.token {
-            CHARACTER_PARENTHESIS_LEFT => {
+            TK_CHARACTER_PARENTHESIS_LEFT => {
                 luax_next(interpreter, lexical_state);
                 if (*lexical_state).token.token == Character::ParenthesisRight as i32 {
                     args.expression_kind = ExpressionKind::Void;
@@ -462,7 +462,7 @@ pub unsafe fn funcargs(interpreter: *mut Interpreter, lexical_state: *mut Lexica
                 }
                 check_match(interpreter, lexical_state, function_state, Character::ParenthesisRight as i32, Character::ParenthesisLeft as i32, line);
             },
-            CHARACTER_BRACE_LEFT => {
+            TK_CHARACTER_BRACE_LEFT => {
                 constructor(interpreter, lexical_state, function_state, &mut args);
             },
             292 => {
@@ -1141,10 +1141,10 @@ pub unsafe fn handle_for_statement(interpreter: *mut Interpreter, lexical_state:
         luax_next(interpreter, lexical_state);
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state, function_state);
         match (*lexical_state).token.token {
-            CHARACTER_EQUAL => {
+            TK_CHARACTER_EQUAL => {
                 handle_for_numeric(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, variable_name, line);
             },
-            CHARACTER_COMMA | TK_IN => {
+            TK_CHARACTER_COMMA | TK_IN => {
                 handle_for_list(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, variable_name);
             },
             _ => {
@@ -1639,59 +1639,60 @@ pub unsafe fn read_long_string(interpreter: *mut Interpreter, lexical_state: *mu
             inclinenumber(interpreter, lexical_state);
         }
         loop {
-            match (*lexical_state).current {
-                -1 => {
-                    let what: *const i8 = if !semantic_info.is_null() { make_cstring!("string") } else { make_cstring!("comment") };
-                    let message: *const i8 = luao_pushfstring(interpreter, make_cstring!("unfinished long %s (starting at line %d)"), what, line);
-                    lexerror(interpreter, lexical_state, message, TK_EOS as i32);
-                },
-                CHARACTER_BRACKET_RIGHT => {
-                    if !(skip_sep(interpreter, lexical_state) == sep) {
-                        continue;
-                    }
-                    save(interpreter, lexical_state, (*lexical_state).current);
-                    let fresh71 = (*(*lexical_state).zio).length;
-                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                    (*lexical_state).current = if fresh71 > 0 {
-                        let fresh72 = (*(*lexical_state).zio).pointer;
-                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                        *fresh72 as u8 as i32
-                    } else {
-                        luaz_fill((*lexical_state).zio)
-                    };
-                    break;
-                },
-                CHARACTER_LF | CHARACTER_CR => {
-                    save(interpreter, lexical_state, Character::LineFeed as i32);
-                    inclinenumber(interpreter, lexical_state);
-                    if semantic_info.is_null() {
-                        (*(*lexical_state).buffer).loads.zero_length();
-                    }
-                },
-                _ => {
-                    if !semantic_info.is_null() {
+            if -1 == (*lexical_state).current {
+                let what: *const i8 = if !semantic_info.is_null() { make_cstring!("string") } else { make_cstring!("comment") };
+                let message: *const i8 = luao_pushfstring(interpreter, make_cstring!("unfinished long %s (starting at line %d)"), what, line);
+                lexerror(interpreter, lexical_state, message, TK_EOS as i32);
+            } else {
+                match Character::from((*lexical_state).current) {
+                    Character::BracketRight => {
+                        if !(skip_sep(interpreter, lexical_state) == sep) {
+                            continue;
+                        }
                         save(interpreter, lexical_state, (*lexical_state).current);
-                        let fresh73 = (*(*lexical_state).zio).length;
+                        let fresh71 = (*(*lexical_state).zio).length;
                         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh73 > 0 {
-                            let fresh74 = (*(*lexical_state).zio).pointer;
+                        (*lexical_state).current = if fresh71 > 0 {
+                            let fresh72 = (*(*lexical_state).zio).pointer;
                             (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh74 as u8 as i32
+                            *fresh72 as u8 as i32
                         } else {
                             luaz_fill((*lexical_state).zio)
                         };
-                    } else {
-                        let fresh75 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh75 > 0 {
-                            let fresh76 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh76 as u8 as i32
+                        break;
+                    },
+                    Character::LineFeed | Character::CarriageReturn => {
+                        save(interpreter, lexical_state, Character::LineFeed as i32);
+                        inclinenumber(interpreter, lexical_state);
+                        if semantic_info.is_null() {
+                            (*(*lexical_state).buffer).loads.zero_length();
+                        }
+                    },
+                    _ => {
+                        if !semantic_info.is_null() {
+                            save(interpreter, lexical_state, (*lexical_state).current);
+                            let fresh73 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                            (*lexical_state).current = if fresh73 > 0 {
+                                let fresh74 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                *fresh74 as u8 as i32
+                            } else {
+                                luaz_fill((*lexical_state).zio)
+                            };
                         } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                    }
-                },
+                            let fresh75 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                            (*lexical_state).current = if fresh75 > 0 {
+                                let fresh76 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                *fresh76 as u8 as i32
+                            } else {
+                                luaz_fill((*lexical_state).zio)
+                            };
+                        }
+                    },
+                }
             }
         }
         if !semantic_info.is_null() {
@@ -1842,137 +1843,138 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
             luaz_fill((*lexical_state).zio)
         };
         while (*lexical_state).current != del {
-            match (*lexical_state).current {
-                -1 => {
-                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_EOS as i32);
-                },
-                CHARACTER_LF | CHARACTER_CR => {
-                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_STRING as i32);
-                },
-                CHARACTER_BACKSLASH => {
-                    let c: i32;
-                    save(interpreter, lexical_state, (*lexical_state).current);
-                    let fresh91 = (*(*lexical_state).zio).length;
-                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                    (*lexical_state).current = if fresh91 > 0 {
-                        let fresh92 = (*(*lexical_state).zio).pointer;
-                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                        *fresh92 as u8 as i32
-                    } else {
-                        luaz_fill((*lexical_state).zio)
-                    };
-                    match Character::from((*lexical_state).current) {
-                        Character::LowerA => {
-                            c = Character::Bell as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerB => {
-                            c = Character::Backspace as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerF => {
-                            c = Character::FormFeed as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerN => {
-                            c = Character::LineFeed as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerR => {
-                            c = Character::CarriageReturn as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerT => {
-                            c = Character::HorizontalTab as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerV => {
-                            c = Character::VerticalTab as i32;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerX => {
-                            c = readhexaesc(interpreter, lexical_state);
-                            current_block = 15029063370732930705;
-                        },
-                        Character::LowerU => {
-                            utf8esc(interpreter, lexical_state);
-                            continue;
-                        },
-                        Character::CarriageReturn | Character::LineFeed => {
-                            inclinenumber(interpreter, lexical_state);
-                            c = Character::LineFeed as i32;
-                            current_block = 7010296663004816197;
-                        },
-                        Character::Backslash | Character::DoubleQuote | Character::Quote => {
-                            c = (*lexical_state).current;
-                            current_block = 15029063370732930705;
-                        },
-                        Character::Null => {
-                            continue;
-                        },
-                        Character::LowerZ => {
-                            (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
-                            let fresh93 = (*(*lexical_state).zio).length;
-                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                            (*lexical_state).current = if fresh93 > 0 {
-                                let fresh94 = (*(*lexical_state).zio).pointer;
-                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                *fresh94 as u8 as i32
-                            } else {
-                                luaz_fill((*lexical_state).zio)
-                            };
-                            while is_whitespace((*lexical_state).current + 1) {
-                                if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
-                                    inclinenumber(interpreter, lexical_state);
+            if -1 == (*lexical_state).current {
+                lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_EOS as i32);
+            } else {
+                match Character::from((*lexical_state).current) {
+                    Character::LineFeed | Character::CarriageReturn => {
+                        lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_STRING as i32);
+                    },
+                    Character::Backslash => {
+                        let c: i32;
+                        save(interpreter, lexical_state, (*lexical_state).current);
+                        let fresh91 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                        (*lexical_state).current = if fresh91 > 0 {
+                            let fresh92 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                            *fresh92 as u8 as i32
+                        } else {
+                            luaz_fill((*lexical_state).zio)
+                        };
+                        match Character::from((*lexical_state).current) {
+                            Character::LowerA => {
+                                c = Character::Bell as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerB => {
+                                c = Character::Backspace as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerF => {
+                                c = Character::FormFeed as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerN => {
+                                c = Character::LineFeed as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerR => {
+                                c = Character::CarriageReturn as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerT => {
+                                c = Character::HorizontalTab as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerV => {
+                                c = Character::VerticalTab as i32;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerX => {
+                                c = readhexaesc(interpreter, lexical_state);
+                                current_block = 15029063370732930705;
+                            },
+                            Character::LowerU => {
+                                utf8esc(interpreter, lexical_state);
+                                continue;
+                            },
+                            Character::CarriageReturn | Character::LineFeed => {
+                                inclinenumber(interpreter, lexical_state);
+                                c = Character::LineFeed as i32;
+                                current_block = 7010296663004816197;
+                            },
+                            Character::Backslash | Character::DoubleQuote | Character::Quote => {
+                                c = (*lexical_state).current;
+                                current_block = 15029063370732930705;
+                            },
+                            Character::Null => {
+                                continue;
+                            },
+                            Character::LowerZ => {
+                                (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
+                                let fresh93 = (*(*lexical_state).zio).length;
+                                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                                (*lexical_state).current = if fresh93 > 0 {
+                                    let fresh94 = (*(*lexical_state).zio).pointer;
+                                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                    *fresh94 as u8 as i32
                                 } else {
-                                    let fresh95 = (*(*lexical_state).zio).length;
-                                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                    (*lexical_state).current = if fresh95 > 0 {
-                                        let fresh96 = (*(*lexical_state).zio).pointer;
-                                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                        *fresh96 as u8 as i32
+                                    luaz_fill((*lexical_state).zio)
+                                };
+                                while is_whitespace((*lexical_state).current + 1) {
+                                    if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
+                                        inclinenumber(interpreter, lexical_state);
                                     } else {
-                                        luaz_fill((*lexical_state).zio)
-                                    };
+                                        let fresh95 = (*(*lexical_state).zio).length;
+                                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                                        (*lexical_state).current = if fresh95 > 0 {
+                                            let fresh96 = (*(*lexical_state).zio).pointer;
+                                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                            *fresh96 as u8 as i32
+                                        } else {
+                                            luaz_fill((*lexical_state).zio)
+                                        };
+                                    }
                                 }
-                            }
-                            continue;
-                        },
-                        _ => {
-                            esccheck(interpreter, lexical_state, is_digit_decimal((*lexical_state).current + 1), make_cstring!("invalid escape sequence"));
-                            c = readdecesc(interpreter, lexical_state);
-                            current_block = 7010296663004816197;
-                        },
-                    }
-                    match current_block {
-                        15029063370732930705 => {
-                            let fresh97 = (*(*lexical_state).zio).length;
-                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                            (*lexical_state).current = if fresh97 > 0 {
-                                let fresh98 = (*(*lexical_state).zio).pointer;
-                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                *fresh98 as u8 as i32
-                            } else {
-                                luaz_fill((*lexical_state).zio)
-                            };
-                        },
-                        _ => {},
-                    }
-                    (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
-                    save(interpreter, lexical_state, c);
-                },
-                _ => {
-                    save(interpreter, lexical_state, (*lexical_state).current);
-                    let fresh99 = (*(*lexical_state).zio).length;
-                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                    (*lexical_state).current = if fresh99 > 0 {
-                        let fresh100 = (*(*lexical_state).zio).pointer;
-                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                        *fresh100 as u8 as i32
-                    } else {
-                        luaz_fill((*lexical_state).zio)
-                    };
-                },
+                                continue;
+                            },
+                            _ => {
+                                esccheck(interpreter, lexical_state, is_digit_decimal((*lexical_state).current + 1), make_cstring!("invalid escape sequence"));
+                                c = readdecesc(interpreter, lexical_state);
+                                current_block = 7010296663004816197;
+                            },
+                        }
+                        match current_block {
+                            15029063370732930705 => {
+                                let fresh97 = (*(*lexical_state).zio).length;
+                                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                                (*lexical_state).current = if fresh97 > 0 {
+                                    let fresh98 = (*(*lexical_state).zio).pointer;
+                                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                    *fresh98 as u8 as i32
+                                } else {
+                                    luaz_fill((*lexical_state).zio)
+                                };
+                            },
+                            _ => {},
+                        }
+                        (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
+                        save(interpreter, lexical_state, c);
+                    },
+                    _ => {
+                        save(interpreter, lexical_state, (*lexical_state).current);
+                        let fresh99 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                        (*lexical_state).current = if fresh99 > 0 {
+                            let fresh100 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                            *fresh100 as u8 as i32
+                        } else {
+                            luaz_fill((*lexical_state).zio)
+                        };
+                    },
+                }
             }
         }
         save(interpreter, lexical_state, (*lexical_state).current);
@@ -2291,7 +2293,7 @@ pub unsafe fn parse_statement(interpreter: *mut Interpreter, lexical_state: *mut
         let line: i32 = (*lexical_state).line_number;
         (*interpreter).luae_inccstack();
         match (*lexical_state).token.token {
-            CHARACTER_SEMICOLON => {
+            TK_CHARACTER_SEMICOLON => {
                 luax_next(interpreter, lexical_state);
             },
             TK_IF => {

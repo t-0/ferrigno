@@ -268,33 +268,7 @@ impl Character {
 }
 pub const CHARACTER_LF: i32 = Character::LineFeed as i32;
 pub const CHARACTER_CR: i32 = Character::CarriageReturn as i32;
-pub const CHARACTER_DOLLAR: i32 = Character::Dollar as i32;
-pub const CHARACTER_PERCENT: i32 = Character::Percent as i32;
-pub const CHARACTER_PARENTHESIS_LEFT: i32 = Character::ParenthesisLeft as i32;
-pub const CHARACTER_PARENTHESIS_RIGHT: i32 = Character::ParenthesisRight as i32;
-pub const CHARACTER_COMMA: i32 = Character::Comma as i32;
-pub const CHARACTER_0: i32 = Character::Digit0 as i32;
-pub const CHARACTER_1: i32 = Character::Digit1 as i32;
-pub const CHARACTER_2: i32 = Character::Digit2 as i32;
-pub const CHARACTER_3: i32 = Character::Digit3 as i32;
-pub const CHARACTER_4: i32 = Character::Digit4 as i32;
-pub const CHARACTER_5: i32 = Character::Digit5 as i32;
-pub const CHARACTER_6: i32 = Character::Digit6 as i32;
-pub const CHARACTER_7: i32 = Character::Digit7 as i32;
-pub const CHARACTER_8: i32 = Character::Digit8 as i32;
-pub const CHARACTER_9: i32 = Character::Digit9 as i32;
-pub const CHARACTER_COLON: i32 = Character::Colon as i32;
-pub const CHARACTER_SEMICOLON: i32 = Character::Semicolon as i32;
-pub const CHARACTER_ANGLE_LEFT: i32 = Character::AngleLeft as i32;
-pub const CHARACTER_EQUAL: i32 = Character::Equal as i32;
-pub const CHARACTER_ANGLE_RIGHT: i32 = Character::AngleRight as i32;
-pub const CHARACTER_BRACKET_LEFT: i32 = Character::BracketLeft as i32;
-pub const CHARACTER_BACKSLASH: i32 = Character::Backslash as i32;
 pub const CHARACTER_BRACKET_RIGHT: i32 = Character::BracketRight as i32;
-pub const CHARACTER_LOWER_B: i32 = Character::LowerB as i32;
-pub const CHARACTER_LOWER_F: i32 = Character::LowerF as i32;
-pub const CHARACTER_BRACE_LEFT: i32 = Character::BraceLeft as i32;
-pub const CHARACTER_TILDE: i32 = Character::Tilde as i32;
 pub unsafe fn get_hexadecimal_digit_value(ch: Character) -> i32 {
     match ch {
         Character::Digit0 => 0,
@@ -624,9 +598,9 @@ pub unsafe fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {
         return n;
     }
 }
-pub fn is_digit(ch: i32) -> bool {
+pub fn is_digit(ch: Character) -> bool {
     match ch {
-        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => true,
+        Character::Digit0 | Character::Digit1 | Character::Digit2 | Character::Digit3 | Character::Digit4 | Character::Digit5 | Character::Digit6 | Character::Digit7 | Character::Digit8 | Character::Digit9 => true,
         _ => false,
     }
 }

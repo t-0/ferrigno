@@ -16,10 +16,15 @@ impl New for Token {
 }
 pub const TK_CHARACTER_HYPHEN: i32 = Character::Hyphen as i32;
 pub const TK_CHARACTER_TILDE: i32 = Character::Tilde as i32;
+pub const TK_CHARACTER_EQUAL: i32 = Character::Equal as i32;
+pub const TK_CHARACTER_COMMA: i32 = Character::Comma as i32;
+pub const TK_CHARACTER_SEMICOLON: i32 = Character::Semicolon as i32;
 pub const TK_CHARACTER_OCTOTHORPE: i32 = Character::Octothorpe as i32;
 pub const TK_CHARACTER_AMPERSAND: i32 = Character::Ampersand as i32;
 pub const TK_CHARACTER_BAR: i32 = Character::Bar as i32;
 pub const TK_CHARACTER_ANGLE_LEFT: i32 = Character::AngleLeft as i32;
+pub const TK_CHARACTER_BRACE_LEFT: i32 = Character::BraceLeft as i32;
+pub const TK_CHARACTER_PARENTHESIS_LEFT: i32 = Character::ParenthesisLeft as i32;
 pub const TK_CHARACTER_ANGLE_RIGHT: i32 = Character::AngleRight as i32;
 pub const TK_CHARACTER_PLUS: i32 = Character::Plus as i32;
 pub const TK_CHARACTER_ASTERISK: i32 = Character::Asterisk as i32;

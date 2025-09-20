@@ -97,7 +97,7 @@ impl MatchState {
     }
     pub unsafe fn check_capture(&mut self, mut l: i32) -> i32 {
         unsafe {
-            l -= CHARACTER_1 as i32;
+            l -= Character::Digit1 as i32;
             if ((l < 0 || l >= self.level as i32 || self.capture[l as usize].length == -1 as i64) as i32 != 0) as i64 != 0 {
                 return lual_error(self.matchstate_interpreter, make_cstring!("invalid capture index %%%d"), l + 1);
             }
@@ -283,8 +283,8 @@ impl MatchState {
                     current_block = 6476622998065200121;
                     break;
                 }
-                match *p as i32 {
-                    CHARACTER_PARENTHESIS_LEFT => {
+                match Character::from(*p as i32) {
+                    Character::ParenthesisLeft => {
                         if *p.offset(1 as isize) as i32 == Character::ParenthesisRight as i32 {
                             s = self.start_capture(s, p.offset(2 as isize), -2);
                         } else {
@@ -293,19 +293,19 @@ impl MatchState {
                         current_block = 6476622998065200121;
                         break;
                     },
-                    CHARACTER_PARENTHESIS_RIGHT => {
+                    Character::ParenthesisRight => {
                         s = self.end_capture(s, p.offset(1 as isize));
                         current_block = 6476622998065200121;
                         break;
                     },
-                    CHARACTER_DOLLAR => {
+                    Character::Dollar => {
                         if !(p.offset(1 as isize) != self.p_end) {
                             s = if s == self.src_end { s } else { null() };
                             current_block = 6476622998065200121;
                             break;
                         }
                     },
-                    CHARACTER_PERCENT => match Character::from(*p.offset(1 as isize) as i32) {
+                    Character::Percent => match Character::from(*p.offset(1 as isize) as i32) {
                         Character::LowerB => {
                             current_block = 17965632435239708295;
                             match current_block {
@@ -521,7 +521,7 @@ impl MatchState {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
                     let mut cap: *const i8 = null();
-                    let resl: i64 = self.get_onecapture(*p as i32 - CHARACTER_1 as i32, s, e, &mut cap) as i64;
+                    let resl: i64 = self.get_onecapture(*p as i32 - Character::Digit1 as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
                         (*b).add_value();
                     } else {
