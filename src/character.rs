@@ -266,23 +266,13 @@ impl Character {
         }
     }
 }
-pub const CHARACTER_HT: i32 = Character::HorizontalTab as i32;
 pub const CHARACTER_LF: i32 = Character::LineFeed as i32;
-pub const CHARACTER_VT: i32 = Character::VerticalTab as i32;
-pub const CHARACTER_FF: i32 = Character::FormFeed as i32;
 pub const CHARACTER_CR: i32 = Character::CarriageReturn as i32;
-pub const CHARACTER_SPACE: i32 = Character::Space as i32;
-pub const CHARACTER_EXCLAMATION: i32 = Character::Exclamation as i32;
-pub const CHARACTER_DOUBLEQUOTE: i32 = Character::DoubleQuote as i32;
 pub const CHARACTER_DOLLAR: i32 = Character::Dollar as i32;
 pub const CHARACTER_PERCENT: i32 = Character::Percent as i32;
-pub const CHARACTER_QUOTE: i32 = Character::Quote as i32;
 pub const CHARACTER_PARENTHESIS_LEFT: i32 = Character::ParenthesisLeft as i32;
 pub const CHARACTER_PARENTHESIS_RIGHT: i32 = Character::ParenthesisRight as i32;
 pub const CHARACTER_COMMA: i32 = Character::Comma as i32;
-pub const CHARACTER_HYPHEN: i32 = Character::Hyphen as i32;
-pub const CHARACTER_PERIOD: i32 = Character::Period as i32;
-pub const CHARACTER_SOLIDUS: i32 = Character::Solidus as i32;
 pub const CHARACTER_0: i32 = Character::Digit0 as i32;
 pub const CHARACTER_1: i32 = Character::Digit1 as i32;
 pub const CHARACTER_2: i32 = Character::Digit2 as i32;
