@@ -2830,49 +2830,49 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                 break;
             }
             buff_fs.add_string(fmt, e.offset_from(fmt) as usize);
-            match *e.offset(1 as isize) as i32 {
-                CHARACTER_LOWER_S => {
+            match Character::from(*e.offset(1 as isize) as i32) {
+                Character::LowerS => {
                     let mut s: *const i8 = argp.arg::<*mut i8>();
                     if s.is_null() {
                         s = make_cstring!("(null)");
                     }
                     buff_fs.add_string(s, strlen(s) as usize);
                 },
-                CHARACTER_LOWER_C => {
+                Character::LowerC => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
                     buff_fs.add_string(&mut c, size_of::<i8>() as usize);
                 },
-                CHARACTER_LOWER_D => {
+                Character::LowerD => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     tvalue.value.integer = argp.arg::<i32>() as i64;
                     tvalue.set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     buff_fs.add_number(&mut tvalue);
                 },
-                CHARACTER_UPPER_I => {
+                Character::UpperI => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     tvalue.value.integer = argp.arg::<i64>();
                     tvalue.set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     buff_fs.add_number(&mut tvalue);
                 },
-                CHARACTER_LOWER_F => {
+                Character::LowerF => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
                     tvalue.value.number = argp.arg::<f64>();
                     tvalue.set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                     buff_fs.add_number(&mut tvalue);
                 },
-                CHARACTER_LOWER_P => {
+                Character::LowerP => {
                     let size = (3 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_add(8);
                     let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
                     let length = snprintf(bf, size, make_cstring!("%p"), p);
                     buff_fs.add_length(length as usize);
                 },
-                CHARACTER_UPPER_U => {
+                Character::UpperU => {
                     let mut bf_0: [i8; 8] = [0; 8];
                     let length_0: i32 = luao_utf8esc(bf_0.as_mut_ptr(), argp.arg::<i64>() as usize);
                     buff_fs.add_string(bf_0.as_mut_ptr().offset(8 as isize).offset(-(length_0 as isize)), length_0 as usize);
                 },
-                CHARACTER_PERCENT => {
+                Character::Percent => {
                     buff_fs.add_string(make_cstring!("%"), 1 as usize);
                 },
                 _ => {
@@ -6580,7 +6580,7 @@ pub unsafe fn print_usage(badoption: *const i8) {
         fprintf(
             stderr,
             make_cstring!(
-                "usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global CHARACTER_LOWER_G\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n"
+                "usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global Character::LowerG\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n"
             ),
             PROGRAM_NAME,
         );
@@ -6805,15 +6805,15 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
 pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32) -> i32 {
     unsafe {
         for i in 0..n {
-            let option: i32 = *(*argv.offset(i as isize)).offset(1 as isize) as i32;
+            let option: Character = Character::from(*(*argv.offset(i as isize)).offset(1 as isize) as i32);
             match option {
-                CHARACTER_LOWER_E | CHARACTER_LOWER_L => {
+                Character::LowerE | Character::LowerL => {
                     let status: i32;
                     let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
                     if *extra as i32 == Character::Null as i32 {
                         continue;
                     }
-                    status = if option == Character::LowerE as i32 {
+                    status = if option == Character::LowerE {
                         dostring(interpreter, extra, make_cstring!("=(command line)"))
                     } else {
                         dolibrary(interpreter, extra)
@@ -6822,7 +6822,7 @@ pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32)
                         return 0;
                     }
                 },
-                CHARACTER_UPPER_W => {
+                Character::UpperW => {
                     lua_warning(interpreter, make_cstring!("@on"), 0);
                 },
                 _ => {},
@@ -7064,17 +7064,17 @@ pub unsafe fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
         if mask & 1 << 0 != 0 {
             let fresh190 = i;
             i = i + 1;
-            *smask.offset(fresh190 as isize) = CHARACTER_LOWER_C as i8;
+            *smask.offset(fresh190 as isize) = Character::LowerC as i8;
         }
         if mask & 1 << 1 != 0 {
             let fresh191 = i;
             i = i + 1;
-            *smask.offset(fresh191 as isize) = CHARACTER_LOWER_R as i8;
+            *smask.offset(fresh191 as isize) = Character::LowerR as i8;
         }
         if mask & 1 << 2 != 0 {
             let fresh192 = i;
             i = i + 1;
-            *smask.offset(fresh192 as isize) = CHARACTER_LOWER_L as i8;
+            *smask.offset(fresh192 as isize) = Character::LowerL as i8;
         }
         *smask.offset(i as isize) = Character::Null as i8;
         return smask;

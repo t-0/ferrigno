@@ -631,56 +631,56 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                     strfrmt = getformat(interpreter, strfrmt, form.as_mut_ptr());
                     let fresh178 = strfrmt;
                     strfrmt = strfrmt.offset(1);
-                    match *fresh178 as i32 {
-                        CHARACTER_LOWER_C => {
+                    match Character::from(*fresh178 as i32) {
+                        Character::LowerC => {
                             checkformat(interpreter, form.as_mut_ptr(), make_cstring!("-"), 0);
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checkinteger(interpreter, arg) as i32);
                             current_block = 11793792312832361944;
                         },
-                        CHARACTER_LOWER_D | CHARACTER_LOWER_I => {
+                        Character::LowerD | Character::LowerI => {
                             flags = make_cstring!("-+0 ");
                             current_block = 5689001924483802034;
                         },
-                        CHARACTER_LOWER_U => {
+                        Character::LowerU => {
                             flags = make_cstring!("-0");
                             current_block = 5689001924483802034;
                         },
-                        CHARACTER_LOWER_O | CHARACTER_LOWER_X | CHARACTER_UPPER_X => {
+                        Character::LowerO | Character::LowerX | Character::UpperX => {
                             flags = make_cstring!("-#0");
                             current_block = 5689001924483802034;
                         },
-                        CHARACTER_LOWER_A | CHARACTER_UPPER_A => {
+                        Character::LowerA | Character::UpperA => {
                             checkformat(interpreter, form.as_mut_ptr(), make_cstring!("-+#0 "), 1);
                             addlenmod(form.as_mut_ptr(), make_cstring!(""));
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checknumber(interpreter, arg));
                             current_block = 11793792312832361944;
                         },
-                        CHARACTER_LOWER_F => {
+                        Character::LowerF => {
                             maxitem = 110 as i32 + 308 as i32;
                             buffer = b.prepare_with_size(maxitem as usize);
                             current_block = 6669252993407410313;
                         },
-                        CHARACTER_LOWER_E | CHARACTER_UPPER_E | CHARACTER_LOWER_G | CHARACTER_UPPER_G => {
+                        Character::LowerE | Character::UpperE | Character::LowerG | Character::UpperG => {
                             current_block = 6669252993407410313;
                         },
-                        CHARACTER_LOWER_P => {
+                        Character::LowerP => {
                             let mut p: *const libc::c_void = (*interpreter).to_pointer(arg);
                             checkformat(interpreter, form.as_mut_ptr(), make_cstring!("-"), 0);
                             if p.is_null() {
                                 p = make_cstring!("(null)") as *const libc::c_void;
-                                form[(strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] = CHARACTER_LOWER_S as i8;
+                                form[(strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] = Character::LowerS as i8;
                             }
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
                         },
-                        CHARACTER_LOWER_Q => {
+                        Character::LowerQ => {
                             if form[2 as usize] as i32 != Character::Null as i32 {
                                 return lual_error(interpreter, make_cstring!("specifier '%%q' cannot have modifiers"));
                             }
                             addliteral(interpreter, &mut b, arg);
                             current_block = 11793792312832361944;
                         },
-                        CHARACTER_LOWER_S => {
+                        Character::LowerS => {
                             let mut l: usize = 0;
                             let s: *const i8 = lual_tolstring(interpreter, arg, &mut l);
                             if form[2 as usize] as i32 == Character::Null as i32 {
@@ -765,91 +765,91 @@ pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32
         *fmt = (*fmt).offset(1);
         let opt: i32 = *fresh180 as i32;
         *size = 0;
-        match opt {
-            CHARACTER_LOWER_B => {
+        match Character::from(opt) {
+            Character::LowerB => {
                 *size = size_of::<i8>() as i32;
                 return K::Integer;
             },
-            CHARACTER_UPPER_B => {
+            Character::UpperB => {
                 *size = size_of::<i8>() as i32;
                 return K::Unsigned;
             },
-            CHARACTER_LOWER_H => {
+            Character::LowerH => {
                 *size = size_of::<i16>() as i32;
                 return K::Integer;
             },
-            CHARACTER_UPPER_H => {
+            Character::UpperH => {
                 *size = size_of::<i16>() as i32;
                 return K::Unsigned;
             },
-            CHARACTER_LOWER_L => {
+            Character::LowerL => {
                 *size = size_of::<i64>() as i32;
                 return K::Integer;
             },
-            CHARACTER_UPPER_L => {
+            Character::UpperL => {
                 *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             },
-            CHARACTER_LOWER_J => {
+            Character::LowerJ => {
                 *size = size_of::<i64>() as i32;
                 return K::Integer;
             },
-            CHARACTER_UPPER_J => {
+            Character::UpperJ => {
                 *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             },
-            CHARACTER_UPPER_T => {
+            Character::UpperT => {
                 *size = size_of::<usize>() as i32;
                 return K::Unsigned;
             },
-            CHARACTER_LOWER_F => {
+            Character::LowerF => {
                 *size = size_of::<libc::c_float>() as i32;
                 return K::Float;
             },
-            CHARACTER_LOWER_N => {
+            Character::LowerN => {
                 *size = size_of::<f64>() as i32;
                 return K::Number;
             },
-            CHARACTER_LOWER_D => {
+            Character::LowerD => {
                 *size = size_of::<f64>() as i32;
                 return K::Double;
             },
-            CHARACTER_LOWER_I => {
+            Character::LowerI => {
                 *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Integer;
             },
-            CHARACTER_UPPER_I => {
+            Character::UpperI => {
                 *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Unsigned;
             },
-            CHARACTER_LOWER_S => {
+            Character::LowerS => {
                 *size = getnumlimit(header, fmt, size_of::<usize>() as i32);
                 return K::String;
             },
-            CHARACTER_LOWER_C => {
+            Character::LowerC => {
                 *size = getnum(fmt, -1);
                 if *size == -1 {
-                    lual_error((*header).header_interpreter, make_cstring!("missing size for format option CHARACTER_LOWER_C"));
+                    lual_error((*header).header_interpreter, make_cstring!("missing size for format option Character::LowerC"));
                 }
                 return K::Character;
             },
-            CHARACTER_LOWER_Z => return K::ZString,
-            CHARACTER_LOWER_X => {
+            Character::LowerZ => return K::ZString,
+            Character::LowerX => {
                 *size = 1;
                 return K::Padding;
             },
-            CHARACTER_UPPER_X => return K::PaddingAlignment,
-            CHARACTER_SPACE => {},
-            CHARACTER_ANGLE_LEFT => {
+            Character::UpperX => return K::PaddingAlignment,
+            Character::Space => {},
+            Character::AngleLeft => {
                 (*header).is_little_endian = 1;
             },
-            CHARACTER_ANGLE_RIGHT => {
+            Character::AngleRight => {
                 (*header).is_little_endian = 0;
             },
-            CHARACTER_EQUAL => {
+            Character::Equal => {
                 (*header).is_little_endian = NATIVE_ENDIAN.little as i32;
             },
-            CHARACTER_EXCLAMATION => {
+            Character::Exclamation => {
                 let maxalign: i32 = 8;
                 (*header).maxmimum_alignment = getnumlimit(header, fmt, maxalign);
             },
@@ -866,7 +866,7 @@ pub unsafe fn getdetails(header: *mut Header, totalsize: usize, fmt: *mut *const
         let mut align: i32 = *total_size;
         if opt as u32 == K::PaddingAlignment as u32 {
             if **fmt as i32 == Character::Null as i32 || getoption(header, fmt, &mut align) as u32 == K::Character as u32 || align == 0 {
-                lual_argerror((*header).header_interpreter, 1, make_cstring!("invalid next option for option CHARACTER_UPPER_X"));
+                lual_argerror((*header).header_interpreter, 1, make_cstring!("invalid next option for option X"));
             }
         }
         if align <= 1 || opt as u32 == K::Character as u32 {

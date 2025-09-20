@@ -72,7 +72,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
         if *s.offset(0 as isize) as i32 == Character::Digit0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
             s = s.offset(2 as isize);
             while is_digit_hexadecimal(*s as i32 + 1) {
-                a = a.wrapping_mul(16 as usize).wrapping_add(get_hexadecimal_digit_value(*s as i32) as usize);
+                a = a.wrapping_mul(16 as usize).wrapping_add(get_hexadecimal_digit_value(Character::from(*s as i32)) as usize);
                 empty = 0;
                 s = s.offset(1);
             }

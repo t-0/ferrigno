@@ -122,14 +122,14 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar:
     unsafe {
         let mut status: i32 = 1;
         while *what != 0 {
-            match *what as i32 {
-                CHARACTER_UPPER_S => {
+            match Character::from(*what as i32) {
+                Character::UpperS => {
                     funcinfo(ar, closure);
                 },
-                CHARACTER_LOWER_L => {
+                Character::LowerL => {
                     (*ar).currentline = if !ci.is_null() && (*ci).call_info_call_status as i32 & 1 << 1 == 0 { getcurrentline(ci) } else { -1 };
                 },
-                CHARACTER_LOWER_U => {
+                Character::LowerU => {
                     (*ar).nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
                     if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
                         (*ar).is_variable_arguments = true;
@@ -139,17 +139,17 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar:
                         (*ar).nparams = (*(*closure).payload.l_prototype).prototype_count_parameters;
                     }
                 },
-                CHARACTER_LOWER_T => {
+                Character::LowerT => {
                     (*ar).is_tail_call = if !ci.is_null() { 0 != ((*ci).call_info_call_status as i32 & 1 << 5) } else { false };
                 },
-                CHARACTER_LOWER_N => {
+                Character::LowerN => {
                     (*ar).namewhat = getfuncname(interpreter, ci, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
                         (*ar).namewhat = make_cstring!("");
                         (*ar).name = null();
                     }
                 },
-                CHARACTER_LOWER_R => {
+                Character::LowerR => {
                     if ci.is_null() || (*ci).call_info_call_status as i32 & 1 << 8 == 0 {
                         (*ar).ntransfer = 0;
                         (*ar).ftransfer = (*ar).ntransfer;
@@ -158,7 +158,7 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar:
                         (*ar).ntransfer = (*ci).call_info_u2.transferinfo.ntransfer;
                     }
                 },
-                CHARACTER_UPPER_L | CHARACTER_LOWER_F => {},
+                Character::UpperL | Character::LowerF => {},
                 _ => {
                     status = 0;
                 },

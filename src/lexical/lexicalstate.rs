@@ -1736,7 +1736,7 @@ pub unsafe fn gethexa(interpreter: *mut Interpreter, lexical_state: *mut Lexical
             luaz_fill((*lexical_state).zio)
         };
         esccheck(interpreter, lexical_state, is_digit_hexadecimal((*lexical_state).current + 1), make_cstring!("hexadecimal digit expected"));
-        return get_hexadecimal_digit_value((*lexical_state).current);
+        return get_hexadecimal_digit_value(Character::from((*lexical_state).current));
     }
 }
 pub unsafe fn readhexaesc(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) -> i32 {
@@ -1778,7 +1778,7 @@ pub unsafe fn readutf8esc(interpreter: *mut Interpreter, lexical_state: *mut Lex
             }
             i += 1;
             esccheck(interpreter, lexical_state, r <= (0x7fffffff as usize >> 4), make_cstring!("UTF-8 value too large"));
-            r = (r << 4).wrapping_add(get_hexadecimal_digit_value((*lexical_state).current) as usize);
+            r = (r << 4).wrapping_add(get_hexadecimal_digit_value(Character::from((*lexical_state).current)) as usize);
         }
         esccheck(interpreter, lexical_state, (*lexical_state).current == Character::BraceRight as i32, make_cstring!("missing Character::BraceRight"));
         let fresh85 = (*(*lexical_state).zio).length;
@@ -1861,56 +1861,56 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                     } else {
                         luaz_fill((*lexical_state).zio)
                     };
-                    match (*lexical_state).current {
-                        CHARACTER_LOWER_A => {
+                    match Character::from((*lexical_state).current) {
+                        Character::LowerA => {
                             c = Character::Bell as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_B => {
+                        Character::LowerB => {
                             c = Character::Backspace as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_F => {
+                        Character::LowerF => {
                             c = Character::FormFeed as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_N => {
+                        Character::LowerN => {
                             c = Character::LineFeed as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_R => {
+                        Character::LowerR => {
                             c = Character::CarriageReturn as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_T => {
+                        Character::LowerT => {
                             c = Character::HorizontalTab as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_V => {
+                        Character::LowerV => {
                             c = Character::VerticalTab as i32;
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_X => {
+                        Character::LowerX => {
                             c = readhexaesc(interpreter, lexical_state);
                             current_block = 15029063370732930705;
                         },
-                        CHARACTER_LOWER_U => {
+                        Character::LowerU => {
                             utf8esc(interpreter, lexical_state);
                             continue;
                         },
-                        CHARACTER_CR | CHARACTER_LF => {
+                        Character::CarriageReturn | Character::LineFeed => {
                             inclinenumber(interpreter, lexical_state);
                             c = Character::LineFeed as i32;
                             current_block = 7010296663004816197;
                         },
-                        CHARACTER_BACKSLASH | CHARACTER_DOUBLEQUOTE | CHARACTER_QUOTE => {
+                        Character::Backslash | Character::DoubleQuote | Character::Quote => {
                             c = (*lexical_state).current;
                             current_block = 15029063370732930705;
                         },
-                        -1 => {
+                        Character::Null => {
                             continue;
                         },
-                        CHARACTER_LOWER_Z => {
+                        Character::LowerZ => {
                             (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
                             let fresh93 = (*(*lexical_state).zio).length;
                             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);

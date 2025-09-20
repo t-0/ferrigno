@@ -305,8 +305,8 @@ impl MatchState {
                             break;
                         }
                     },
-                    CHARACTER_PERCENT => match *p.offset(1 as isize) as i32 {
-                        CHARACTER_LOWER_B => {
+                    CHARACTER_PERCENT => match Character::from(*p.offset(1 as isize) as i32) {
+                        Character::LowerB => {
                             current_block = 17965632435239708295;
                             match current_block {
                                 17965632435239708295 => {
@@ -347,7 +347,7 @@ impl MatchState {
                                 },
                             }
                         },
-                        CHARACTER_LOWER_F => {
+                        Character::LowerF => {
                             current_block = 8236137900636309791;
                             match current_block {
                                 17965632435239708295 => {
@@ -388,7 +388,7 @@ impl MatchState {
                                 },
                             }
                         },
-                        CHARACTER_0 | CHARACTER_1 | CHARACTER_2 | CHARACTER_3 | CHARACTER_4 | CHARACTER_5 | CHARACTER_6 | CHARACTER_7 | CHARACTER_8 | CHARACTER_9 => {
+                        Character::Digit0 | Character::Digit1 | Character::Digit2 | Character::Digit3 | Character::Digit4 | Character::Digit5 | Character::Digit6 | Character::Digit7 | Character::Digit8 | Character::Digit9 => {
                             current_block = 14576567515993809846;
                             match current_block {
                                 17965632435239708295 => {
@@ -540,38 +540,38 @@ impl MatchState {
 pub unsafe fn match_class(c: i32, cl: i32) -> i32 {
     unsafe {
         let res: i32;
-        match tolower(cl) {
-            CHARACTER_LOWER_A => {
+        match Character::from(tolower(cl)) {
+            Character::LowerA => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA as i32;
             },
-            CHARACTER_LOWER_C => {
+            Character::LowerC => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL as i32;
             },
-            CHARACTER_LOWER_D => {
+            Character::LowerD => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISDIGIT as i32;
             },
-            CHARACTER_LOWER_G => {
+            Character::LowerG => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH as i32;
             },
-            CHARACTER_LOWER_L => {
+            Character::LowerL => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISLOWER as i32;
             },
-            CHARACTER_LOWER_P => {
+            Character::LowerP => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISPUNCTUATION as i32;
             },
-            CHARACTER_LOWER_S => {
+            Character::LowerS => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISSPACE as i32;
             },
-            CHARACTER_LOWER_U => {
+            Character::LowerU => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISUPPER as i32;
             },
-            CHARACTER_LOWER_W => {
+            Character::LowerW => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHANUMERIC as i32;
             },
-            CHARACTER_LOWER_X => {
+            Character::LowerX => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT as i32;
             },
-            CHARACTER_LOWER_Z => {
+            Character::LowerZ => {
                 res = (c == 0) as i32;
             },
             _ => return (cl == c) as i32,
