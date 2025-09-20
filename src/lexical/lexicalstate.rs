@@ -1639,60 +1639,59 @@ pub unsafe fn read_long_string(interpreter: *mut Interpreter, lexical_state: *mu
             inclinenumber(interpreter, lexical_state);
         }
         loop {
-            if -1 == (*lexical_state).current {
-                let what: *const i8 = if !semantic_info.is_null() { make_cstring!("string") } else { make_cstring!("comment") };
-                let message: *const i8 = luao_pushfstring(interpreter, make_cstring!("unfinished long %s (starting at line %d)"), what, line);
-                lexerror(interpreter, lexical_state, message, TK_EOS as i32);
-            } else {
-                match Character::from((*lexical_state).current) {
-                    Character::BracketRight => {
-                        if !(skip_sep(interpreter, lexical_state) == sep) {
-                            continue;
-                        }
+            match Character::from2((*lexical_state).current) {
+                None => {
+                    let what: *const i8 = if !semantic_info.is_null() { make_cstring!("string") } else { make_cstring!("comment") };
+                    let message: *const i8 = luao_pushfstring(interpreter, make_cstring!("unfinished long %s (starting at line %d)"), what, line);
+                    lexerror(interpreter, lexical_state, message, TK_EOS as i32);
+                },
+                Some(Character::BracketRight) => {
+                    if !(skip_sep(interpreter, lexical_state) == sep) {
+                        continue;
+                    }
+                    save(interpreter, lexical_state, (*lexical_state).current);
+                    let fresh71 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh71 > 0 {
+                        let fresh72 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh72 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    break;
+                },
+                Some(Character::LineFeed) | Some(Character::CarriageReturn) => {
+                    save(interpreter, lexical_state, Character::LineFeed as i32);
+                    inclinenumber(interpreter, lexical_state);
+                    if semantic_info.is_null() {
+                        (*(*lexical_state).buffer).loads.zero_length();
+                    }
+                },
+                _ => {
+                    if !semantic_info.is_null() {
                         save(interpreter, lexical_state, (*lexical_state).current);
-                        let fresh71 = (*(*lexical_state).zio).length;
+                        let fresh73 = (*(*lexical_state).zio).length;
                         (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh71 > 0 {
-                            let fresh72 = (*(*lexical_state).zio).pointer;
+                        (*lexical_state).current = if fresh73 > 0 {
+                            let fresh74 = (*(*lexical_state).zio).pointer;
                             (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh72 as u8 as i32
+                            *fresh74 as u8 as i32
                         } else {
                             luaz_fill((*lexical_state).zio)
                         };
-                        break;
-                    },
-                    Character::LineFeed | Character::CarriageReturn => {
-                        save(interpreter, lexical_state, Character::LineFeed as i32);
-                        inclinenumber(interpreter, lexical_state);
-                        if semantic_info.is_null() {
-                            (*(*lexical_state).buffer).loads.zero_length();
-                        }
-                    },
-                    _ => {
-                        if !semantic_info.is_null() {
-                            save(interpreter, lexical_state, (*lexical_state).current);
-                            let fresh73 = (*(*lexical_state).zio).length;
-                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                            (*lexical_state).current = if fresh73 > 0 {
-                                let fresh74 = (*(*lexical_state).zio).pointer;
-                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                *fresh74 as u8 as i32
-                            } else {
-                                luaz_fill((*lexical_state).zio)
-                            };
+                    } else {
+                        let fresh75 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                        (*lexical_state).current = if fresh75 > 0 {
+                            let fresh76 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                            *fresh76 as u8 as i32
                         } else {
-                            let fresh75 = (*(*lexical_state).zio).length;
-                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                            (*lexical_state).current = if fresh75 > 0 {
-                                let fresh76 = (*(*lexical_state).zio).pointer;
-                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                *fresh76 as u8 as i32
-                            } else {
-                                luaz_fill((*lexical_state).zio)
-                            };
-                        }
-                    },
-                }
+                            luaz_fill((*lexical_state).zio)
+                        };
+                    }
+                },
             }
         }
         if !semantic_info.is_null() {
@@ -1843,138 +1842,137 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
             luaz_fill((*lexical_state).zio)
         };
         while (*lexical_state).current != del {
-            if -1 == (*lexical_state).current {
-                lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_EOS as i32);
-            } else {
-                match Character::from((*lexical_state).current) {
-                    Character::LineFeed | Character::CarriageReturn => {
-                        lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_STRING as i32);
-                    },
-                    Character::Backslash => {
-                        let c: i32;
-                        save(interpreter, lexical_state, (*lexical_state).current);
-                        let fresh91 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh91 > 0 {
-                            let fresh92 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh92 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        match Character::from((*lexical_state).current) {
-                            Character::LowerA => {
-                                c = Character::Bell as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerB => {
-                                c = Character::Backspace as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerF => {
-                                c = Character::FormFeed as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerN => {
-                                c = Character::LineFeed as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerR => {
-                                c = Character::CarriageReturn as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerT => {
-                                c = Character::HorizontalTab as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerV => {
-                                c = Character::VerticalTab as i32;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerX => {
-                                c = readhexaesc(interpreter, lexical_state);
-                                current_block = 15029063370732930705;
-                            },
-                            Character::LowerU => {
-                                utf8esc(interpreter, lexical_state);
-                                continue;
-                            },
-                            Character::CarriageReturn | Character::LineFeed => {
-                                inclinenumber(interpreter, lexical_state);
-                                c = Character::LineFeed as i32;
-                                current_block = 7010296663004816197;
-                            },
-                            Character::Backslash | Character::DoubleQuote | Character::Quote => {
-                                c = (*lexical_state).current;
-                                current_block = 15029063370732930705;
-                            },
-                            Character::Null => {
-                                continue;
-                            },
-                            Character::LowerZ => {
-                                (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
-                                let fresh93 = (*(*lexical_state).zio).length;
-                                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                (*lexical_state).current = if fresh93 > 0 {
-                                    let fresh94 = (*(*lexical_state).zio).pointer;
-                                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                    *fresh94 as u8 as i32
+            match Character::from2((*lexical_state).current) {
+                None => {
+                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_EOS as i32);
+                },
+                Some(Character::LineFeed) | Some(Character::CarriageReturn) => {
+                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_STRING as i32);
+                },
+                Some(Character::Backslash) => {
+                    let c: i32;
+                    save(interpreter, lexical_state, (*lexical_state).current);
+                    let fresh91 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh91 > 0 {
+                        let fresh92 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh92 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    match Character::from((*lexical_state).current) {
+                        Character::LowerA => {
+                            c = Character::Bell as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerB => {
+                            c = Character::Backspace as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerF => {
+                            c = Character::FormFeed as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerN => {
+                            c = Character::LineFeed as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerR => {
+                            c = Character::CarriageReturn as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerT => {
+                            c = Character::HorizontalTab as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerV => {
+                            c = Character::VerticalTab as i32;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerX => {
+                            c = readhexaesc(interpreter, lexical_state);
+                            current_block = 15029063370732930705;
+                        },
+                        Character::LowerU => {
+                            utf8esc(interpreter, lexical_state);
+                            continue;
+                        },
+                        Character::CarriageReturn | Character::LineFeed => {
+                            inclinenumber(interpreter, lexical_state);
+                            c = Character::LineFeed as i32;
+                            current_block = 7010296663004816197;
+                        },
+                        Character::Backslash | Character::DoubleQuote | Character::Quote => {
+                            c = (*lexical_state).current;
+                            current_block = 15029063370732930705;
+                        },
+                        Character::Null => {
+                            continue;
+                        },
+                        Character::LowerZ => {
+                            (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
+                            let fresh93 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                            (*lexical_state).current = if fresh93 > 0 {
+                                let fresh94 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                *fresh94 as u8 as i32
+                            } else {
+                                luaz_fill((*lexical_state).zio)
+                            };
+                            while is_whitespace((*lexical_state).current + 1) {
+                                if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
+                                    inclinenumber(interpreter, lexical_state);
                                 } else {
-                                    luaz_fill((*lexical_state).zio)
-                                };
-                                while is_whitespace((*lexical_state).current + 1) {
-                                    if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
-                                        inclinenumber(interpreter, lexical_state);
+                                    let fresh95 = (*(*lexical_state).zio).length;
+                                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                                    (*lexical_state).current = if fresh95 > 0 {
+                                        let fresh96 = (*(*lexical_state).zio).pointer;
+                                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                        *fresh96 as u8 as i32
                                     } else {
-                                        let fresh95 = (*(*lexical_state).zio).length;
-                                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                        (*lexical_state).current = if fresh95 > 0 {
-                                            let fresh96 = (*(*lexical_state).zio).pointer;
-                                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                            *fresh96 as u8 as i32
-                                        } else {
-                                            luaz_fill((*lexical_state).zio)
-                                        };
-                                    }
+                                        luaz_fill((*lexical_state).zio)
+                                    };
                                 }
-                                continue;
-                            },
-                            _ => {
-                                esccheck(interpreter, lexical_state, is_digit_decimal((*lexical_state).current + 1), make_cstring!("invalid escape sequence"));
-                                c = readdecesc(interpreter, lexical_state);
-                                current_block = 7010296663004816197;
-                            },
-                        }
-                        match current_block {
-                            15029063370732930705 => {
-                                let fresh97 = (*(*lexical_state).zio).length;
-                                (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                (*lexical_state).current = if fresh97 > 0 {
-                                    let fresh98 = (*(*lexical_state).zio).pointer;
-                                    (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                    *fresh98 as u8 as i32
-                                } else {
-                                    luaz_fill((*lexical_state).zio)
-                                };
-                            },
-                            _ => {},
-                        }
-                        (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
-                        save(interpreter, lexical_state, c);
-                    },
-                    _ => {
-                        save(interpreter, lexical_state, (*lexical_state).current);
-                        let fresh99 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh99 > 0 {
-                            let fresh100 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh100 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                    },
-                }
+                            }
+                            continue;
+                        },
+                        _ => {
+                            esccheck(interpreter, lexical_state, is_digit_decimal((*lexical_state).current + 1), make_cstring!("invalid escape sequence"));
+                            c = readdecesc(interpreter, lexical_state);
+                            current_block = 7010296663004816197;
+                        },
+                    }
+                    match current_block {
+                        15029063370732930705 => {
+                            let fresh97 = (*(*lexical_state).zio).length;
+                            (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                            (*lexical_state).current = if fresh97 > 0 {
+                                let fresh98 = (*(*lexical_state).zio).pointer;
+                                (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                                *fresh98 as u8 as i32
+                            } else {
+                                luaz_fill((*lexical_state).zio)
+                            };
+                        },
+                        _ => {},
+                    }
+                    (*(*lexical_state).buffer).loads.set_length(((*(*lexical_state).buffer).loads.get_length()).wrapping_sub(1) as usize);
+                    save(interpreter, lexical_state, c);
+                },
+                _ => {
+                    save(interpreter, lexical_state, (*lexical_state).current);
+                    let fresh99 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh99 > 0 {
+                        let fresh100 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh100 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                },
             }
         }
         save(interpreter, lexical_state, (*lexical_state).current);
@@ -2000,255 +1998,254 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         (*(*lexical_state).buffer).loads.zero_length();
         loop {
             let current_block_85: usize;
-            if -1 == (*lexical_state).current {
-                return TK_EOS as i32;
-            } else {
-                match Character::from((*lexical_state).current) {
-                    Character::LineFeed | Character::CarriageReturn => {
-                        inclinenumber(interpreter, lexical_state);
-                    },
-                    Character::Space | Character::FormFeed | Character::HorizontalTab | Character::VerticalTab => {
-                        let fresh103 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh103 > 0 {
-                            let fresh104 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh104 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                    },
-                    Character::Hyphen => {
-                        let fresh105 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh105 > 0 {
-                            let fresh106 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh106 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if (*lexical_state).current != Character::Hyphen as i32 {
-                            return Character::Hyphen as i32;
-                        }
-                        let fresh107 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh107 > 0 {
-                            let fresh108 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh108 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if (*lexical_state).current == Character::BracketLeft as i32 {
-                            let sep: usize = skip_sep(interpreter, lexical_state);
+            match Character::from2((*lexical_state).current) {
+                None => {
+                    return TK_EOS as i32;
+                },
+                Some(Character::LineFeed) | Some(Character::CarriageReturn) => {
+                    inclinenumber(interpreter, lexical_state);
+                },
+                Some(Character::Space) | Some(Character::FormFeed) | Some(Character::HorizontalTab) | Some(Character::VerticalTab) => {
+                    let fresh103 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh103 > 0 {
+                        let fresh104 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh104 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                },
+                Some(Character::Hyphen) => {
+                    let fresh105 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh105 > 0 {
+                        let fresh106 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh106 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if (*lexical_state).current != Character::Hyphen as i32 {
+                        return Character::Hyphen as i32;
+                    }
+                    let fresh107 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh107 > 0 {
+                        let fresh108 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh108 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if (*lexical_state).current == Character::BracketLeft as i32 {
+                        let sep: usize = skip_sep(interpreter, lexical_state);
+                        (*(*lexical_state).buffer).loads.zero_length();
+                        if sep >= 2 as usize {
+                            read_long_string(interpreter, lexical_state, null_mut(), sep);
                             (*(*lexical_state).buffer).loads.zero_length();
-                            if sep >= 2 as usize {
-                                read_long_string(interpreter, lexical_state, null_mut(), sep);
-                                (*(*lexical_state).buffer).loads.zero_length();
-                                current_block_85 = 10512632378975961025;
-                            } else {
-                                current_block_85 = 3512920355445576850;
-                            }
+                            current_block_85 = 10512632378975961025;
                         } else {
                             current_block_85 = 3512920355445576850;
                         }
-                        match current_block_85 {
-                            10512632378975961025 => {},
-                            _ => {
-                                while !((*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32) && (*lexical_state).current != -1 {
-                                    let fresh109 = (*(*lexical_state).zio).length;
-                                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                    (*lexical_state).current = if fresh109 > 0 {
-                                        let fresh110 = (*(*lexical_state).zio).pointer;
-                                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                        *fresh110 as u8 as i32
-                                    } else {
-                                        luaz_fill((*lexical_state).zio)
-                                    };
-                                }
-                            },
-                        }
-                    },
-                    Character::BracketLeft => {
-                        let sep_0: usize = skip_sep(interpreter, lexical_state);
-                        if sep_0 >= 2 as usize {
-                            read_long_string(interpreter, lexical_state, semantic_info, sep_0);
-                            return TK_STRING as i32;
-                        } else if sep_0 == 0 {
-                            lexerror(interpreter, lexical_state, make_cstring!("invalid long string delimiter"), TK_STRING as i32);
-                        }
-                        return Character::BracketLeft as i32;
-                    },
-                    Character::Equal => {
-                        let fresh111 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh111 > 0 {
-                            let fresh112 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh112 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                            return TK_EQ as i32;
-                        } else {
-                            return Character::Equal as i32;
-                        }
-                    },
-                    Character::AngleLeft => {
-                        let fresh113 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh113 > 0 {
-                            let fresh114 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh114 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                            return TK_LE as i32;
-                        } else if check_next1(lexical_state, Character::AngleLeft as i32) != 0 {
-                            return TK_SHL as i32;
-                        } else {
-                            return Character::AngleLeft as i32;
-                        }
-                    },
-                    Character::AngleRight => {
-                        let fresh115 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh115 > 0 {
-                            let fresh116 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh116 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                            return TK_GE as i32;
-                        } else if check_next1(lexical_state, Character::AngleRight as i32) != 0 {
-                            return TK_SHR as i32;
-                        } else {
-                            return Character::AngleRight as i32;
-                        }
-                    },
-                    Character::Solidus => {
-                        let fresh117 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh117 > 0 {
-                            let fresh118 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh118 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Solidus as i32) != 0 {
-                            return TK_IDIV as i32;
-                        } else {
-                            return Character::Solidus as i32;
-                        }
-                    },
-                    Character::Tilde => {
-                        let fresh119 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh119 > 0 {
-                            let fresh120 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh120 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                            return TK_NE as i32;
-                        } else {
-                            return Character::Tilde as i32;
-                        }
-                    },
-                    Character::Colon => {
-                        let fresh121 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh121 > 0 {
-                            let fresh122 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh122 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Colon as i32) != 0 {
-                            return TK_DBCOLON as i32;
-                        } else {
-                            return Character::Colon as i32;
-                        }
-                    },
-                    Character::Quote | Character::DoubleQuote => {
-                        read_string(interpreter, lexical_state, (*lexical_state).current, semantic_info);
-                        return TK_STRING as i32;
-                    },
-                    Character::Period => {
-                        save(interpreter, lexical_state, (*lexical_state).current);
-                        let fresh123 = (*(*lexical_state).zio).length;
-                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                        (*lexical_state).current = if fresh123 > 0 {
-                            let fresh124 = (*(*lexical_state).zio).pointer;
-                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                            *fresh124 as u8 as i32
-                        } else {
-                            luaz_fill((*lexical_state).zio)
-                        };
-                        if check_next1(lexical_state, Character::Period as i32) != 0 {
-                            if check_next1(lexical_state, Character::Period as i32) != 0 {
-                                return TK_DOTS as i32;
-                            } else {
-                                return TK_CONCAT as i32;
-                            }
-                        } else if !is_digit_decimal((*lexical_state).current + 1) {
-                            return Character::Period as i32;
-                        } else {
-                            return read_numeral(interpreter, lexical_state, semantic_info);
-                        }
-                    },
-                    Character::Digit0 | Character::Digit1 | Character::Digit2 | Character::Digit3 | Character::Digit4 | Character::Digit5 | Character::Digit6 | Character::Digit7 | Character::Digit8 | Character::Digit9 => {
-                        return read_numeral(interpreter, lexical_state, semantic_info);
-                    },
-                    _ => {
-                        if is_identifier((*lexical_state).current + 1) {
-                            loop {
-                                save(interpreter, lexical_state, (*lexical_state).current);
-                                let fresh125 = (*(*lexical_state).zio).length;
+                    } else {
+                        current_block_85 = 3512920355445576850;
+                    }
+                    match current_block_85 {
+                        10512632378975961025 => {},
+                        _ => {
+                            while !((*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32) && (*lexical_state).current != -1 {
+                                let fresh109 = (*(*lexical_state).zio).length;
                                 (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                                (*lexical_state).current = if fresh125 > 0 {
-                                    let fresh126 = (*(*lexical_state).zio).pointer;
+                                (*lexical_state).current = if fresh109 > 0 {
+                                    let fresh110 = (*(*lexical_state).zio).pointer;
                                     (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                    *fresh126 as u8 as i32
+                                    *fresh110 as u8 as i32
                                 } else {
                                     luaz_fill((*lexical_state).zio)
                                 };
-                                if !is_alphanumeric((*lexical_state).current + 1) {
-                                    break;
-                                }
                             }
-                            let ts: *mut TString = luax_newstring(interpreter, lexical_state, (*(*lexical_state).buffer).loads.loads_pointer, (*(*lexical_state).buffer).loads.get_length() as usize);
-                            (*semantic_info).tstring = ts;
-                            if (*ts).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
-                                return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
-                            } else {
-                                return TK_NAME as i32;
-                            }
+                        },
+                    }
+                },
+                Some(Character::BracketLeft) => {
+                    let sep_0: usize = skip_sep(interpreter, lexical_state);
+                    if sep_0 >= 2 as usize {
+                        read_long_string(interpreter, lexical_state, semantic_info, sep_0);
+                        return TK_STRING as i32;
+                    } else if sep_0 == 0 {
+                        lexerror(interpreter, lexical_state, make_cstring!("invalid long string delimiter"), TK_STRING as i32);
+                    }
+                    return Character::BracketLeft as i32;
+                },
+                Some(Character::Equal) => {
+                    let fresh111 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh111 > 0 {
+                        let fresh112 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh112 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
+                        return TK_EQ as i32;
+                    } else {
+                        return Character::Equal as i32;
+                    }
+                },
+                Some(Character::AngleLeft) => {
+                    let fresh113 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh113 > 0 {
+                        let fresh114 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh114 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
+                        return TK_LE as i32;
+                    } else if check_next1(lexical_state, Character::AngleLeft as i32) != 0 {
+                        return TK_SHL as i32;
+                    } else {
+                        return Character::AngleLeft as i32;
+                    }
+                },
+                Some(Character::AngleRight) => {
+                    let fresh115 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh115 > 0 {
+                        let fresh116 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh116 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
+                        return TK_GE as i32;
+                    } else if check_next1(lexical_state, Character::AngleRight as i32) != 0 {
+                        return TK_SHR as i32;
+                    } else {
+                        return Character::AngleRight as i32;
+                    }
+                },
+                Some(Character::Solidus) => {
+                    let fresh117 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh117 > 0 {
+                        let fresh118 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh118 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Solidus as i32) != 0 {
+                        return TK_IDIV as i32;
+                    } else {
+                        return Character::Solidus as i32;
+                    }
+                },
+                Some(Character::Tilde) => {
+                    let fresh119 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh119 > 0 {
+                        let fresh120 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh120 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Equal as i32) != 0 {
+                        return TK_NE as i32;
+                    } else {
+                        return Character::Tilde as i32;
+                    }
+                },
+                Some(Character::Colon) => {
+                    let fresh121 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh121 > 0 {
+                        let fresh122 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh122 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Colon as i32) != 0 {
+                        return TK_DBCOLON as i32;
+                    } else {
+                        return Character::Colon as i32;
+                    }
+                },
+                Some(Character::Quote) | Some(Character::DoubleQuote) => {
+                    read_string(interpreter, lexical_state, (*lexical_state).current, semantic_info);
+                    return TK_STRING as i32;
+                },
+                Some(Character::Period) => {
+                    save(interpreter, lexical_state, (*lexical_state).current);
+                    let fresh123 = (*(*lexical_state).zio).length;
+                    (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                    (*lexical_state).current = if fresh123 > 0 {
+                        let fresh124 = (*(*lexical_state).zio).pointer;
+                        (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                        *fresh124 as u8 as i32
+                    } else {
+                        luaz_fill((*lexical_state).zio)
+                    };
+                    if check_next1(lexical_state, Character::Period as i32) != 0 {
+                        if check_next1(lexical_state, Character::Period as i32) != 0 {
+                            return TK_DOTS as i32;
                         } else {
-                            let c: i32 = (*lexical_state).current;
-                            let fresh127 = (*(*lexical_state).zio).length;
+                            return TK_CONCAT as i32;
+                        }
+                    } else if !is_digit_decimal((*lexical_state).current + 1) {
+                        return Character::Period as i32;
+                    } else {
+                        return read_numeral(interpreter, lexical_state, semantic_info);
+                    }
+                },
+                Some(Character::Digit0) | Some(Character::Digit1) | Some(Character::Digit2) | Some(Character::Digit3) | Some(Character::Digit4) | Some(Character::Digit5) | Some(Character::Digit6) | Some(Character::Digit7) | Some(Character::Digit8) | Some(Character::Digit9) => {
+                    return read_numeral(interpreter, lexical_state, semantic_info);
+                },
+                _ => {
+                    if is_identifier((*lexical_state).current + 1) {
+                        loop {
+                            save(interpreter, lexical_state, (*lexical_state).current);
+                            let fresh125 = (*(*lexical_state).zio).length;
                             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
-                            (*lexical_state).current = if fresh127 > 0 {
-                                let fresh128 = (*(*lexical_state).zio).pointer;
+                            (*lexical_state).current = if fresh125 > 0 {
+                                let fresh126 = (*(*lexical_state).zio).pointer;
                                 (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
-                                *fresh128 as u8 as i32
+                                *fresh126 as u8 as i32
                             } else {
                                 luaz_fill((*lexical_state).zio)
                             };
-                            return c;
+                            if !is_alphanumeric((*lexical_state).current + 1) {
+                                break;
+                            }
                         }
-                    },
-                };
+                        let ts: *mut TString = luax_newstring(interpreter, lexical_state, (*(*lexical_state).buffer).loads.loads_pointer, (*(*lexical_state).buffer).loads.get_length() as usize);
+                        (*semantic_info).tstring = ts;
+                        if (*ts).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
+                            return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
+                        } else {
+                            return TK_NAME as i32;
+                        }
+                    } else {
+                        let c: i32 = (*lexical_state).current;
+                        let fresh127 = (*(*lexical_state).zio).length;
+                        (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
+                        (*lexical_state).current = if fresh127 > 0 {
+                            let fresh128 = (*(*lexical_state).zio).pointer;
+                            (*(*lexical_state).zio).pointer = ((*(*lexical_state).zio).pointer).offset(1);
+                            *fresh128 as u8 as i32
+                        } else {
+                            luaz_fill((*lexical_state).zio)
+                        };
+                        return c;
+                    }
+                },
             }
         }
     }
