@@ -1386,7 +1386,7 @@ pub unsafe fn save(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
 pub unsafe fn luax_token2str(interpreter: *mut Interpreter, _lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         if token < 127 as i32 * 2 + 1 + 1 {
-            if is_printable(token + 1) {
+            if Character::from(token).is_printable() {
                 return luao_pushfstring(interpreter, make_cstring!("'%c'"), token);
             } else {
                 return luao_pushfstring(interpreter, make_cstring!("'<\\%d>'"), token);
@@ -1552,7 +1552,7 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
             if check_next2(interpreter, lexical_state, expo) != 0 {
                 check_next2(interpreter, lexical_state, make_cstring!("-+"));
             } else {
-                if !(is_digit_hexadecimal((*lexical_state).current + 1) || (*lexical_state).current == Character::Period as i32) {
+                if !(Character::from((*lexical_state).current).is_digit_hexadecimal() || (*lexical_state).current == Character::Period as i32) {
                     break;
                 }
                 save(interpreter, lexical_state, (*lexical_state).current);
@@ -1567,7 +1567,7 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
                 };
             }
         }
-        if is_identifier((*lexical_state).current + 1) {
+        if Character::from((*lexical_state).current).is_identifier() {
             save(interpreter, lexical_state, (*lexical_state).current);
             let fresh63 = (*(*lexical_state).zio).length;
             (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -1735,8 +1735,8 @@ pub unsafe fn gethexa(interpreter: *mut Interpreter, lexical_state: *mut Lexical
         } else {
             luaz_fill((*lexical_state).zio)
         };
-        esccheck(interpreter, lexical_state, is_digit_hexadecimal((*lexical_state).current + 1), make_cstring!("hexadecimal digit expected"));
-        return get_hexadecimal_digit_value(Character::from((*lexical_state).current));
+        esccheck(interpreter, lexical_state, Character::from((*lexical_state).current).is_digit_hexadecimal(), make_cstring!("hexadecimal digit expected"));
+        return Character::from((*lexical_state).current).get_hexadecimal_digit_value() as i32;
     }
 }
 pub unsafe fn readhexaesc(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) -> i32 {
@@ -1773,12 +1773,12 @@ pub unsafe fn readutf8esc(interpreter: *mut Interpreter, lexical_state: *mut Lex
             } else {
                 luaz_fill((*lexical_state).zio)
             };
-            if !is_digit_hexadecimal((*lexical_state).current + 1) {
+            if !Character::from((*lexical_state).current).is_digit_hexadecimal() {
                 break;
             }
             i += 1;
             esccheck(interpreter, lexical_state, r <= (0x7fffffff as usize >> 4), make_cstring!("UTF-8 value too large"));
-            r = (r << 4).wrapping_add(get_hexadecimal_digit_value(Character::from((*lexical_state).current)) as usize);
+            r = (r << 4).wrapping_add(Character::from((*lexical_state).current).get_hexadecimal_digit_value() as usize);
         }
         esccheck(interpreter, lexical_state, (*lexical_state).current == Character::BraceRight as i32, make_cstring!("missing Character::BraceRight"));
         let fresh85 = (*(*lexical_state).zio).length;
@@ -1809,7 +1809,7 @@ pub unsafe fn readdecesc(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         let mut i: i32;
         let mut r: i32 = 0;
         i = 0;
-        while i < 3 && is_digit_decimal((*lexical_state).current + 1) {
+        while i < 3 && Character::from((*lexical_state).current).is_digit_decimal() {
             r = 10 as i32 * r + (*lexical_state).current - Character::Digit0 as i32;
             save(interpreter, lexical_state, (*lexical_state).current);
             let fresh87 = (*(*lexical_state).zio).length;
@@ -1921,7 +1921,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                             } else {
                                 luaz_fill((*lexical_state).zio)
                             };
-                            while is_whitespace((*lexical_state).current + 1) {
+                            while Character::from((*lexical_state).current).is_whitespace() {
                                 if (*lexical_state).current == Character::LineFeed as i32 || (*lexical_state).current == Character::CarriageReturn as i32 {
                                     inclinenumber(interpreter, lexical_state);
                                 } else {
@@ -1939,7 +1939,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
                             continue;
                         },
                         _ => {
-                            esccheck(interpreter, lexical_state, is_digit_decimal((*lexical_state).current + 1), make_cstring!("invalid escape sequence"));
+                            esccheck(interpreter, lexical_state, Character::from((*lexical_state).current).is_digit_decimal(), make_cstring!("invalid escape sequence"));
                             c = readdecesc(interpreter, lexical_state);
                             current_block = 7010296663004816197;
                         },
@@ -2199,7 +2199,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         } else {
                             return TK_CONCAT as i32;
                         }
-                    } else if !is_digit_decimal((*lexical_state).current + 1) {
+                    } else if !Character::from((*lexical_state).current).is_digit_decimal() {
                         return Character::Period as i32;
                     } else {
                         return read_numeral(interpreter, lexical_state, semantic_info);
@@ -2209,7 +2209,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     return read_numeral(interpreter, lexical_state, semantic_info);
                 },
                 _ => {
-                    if is_identifier((*lexical_state).current + 1) {
+                    if Character::from((*lexical_state).current).is_identifier() {
                         loop {
                             save(interpreter, lexical_state, (*lexical_state).current);
                             let fresh125 = (*(*lexical_state).zio).length;
@@ -2221,7 +2221,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                             } else {
                                 luaz_fill((*lexical_state).zio)
                             };
-                            if !is_alphanumeric((*lexical_state).current + 1) {
+                            if !Character::from((*lexical_state).current).is_alphanumeric() {
                                 break;
                             }
                         }

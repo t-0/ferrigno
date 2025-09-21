@@ -31,7 +31,7 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8
         if endptr == s as *mut i8 {
             return null();
         }
-        while is_whitespace(*endptr as i32 + 1) {
+        while Character::from(*endptr as i32).is_whitespace() {
             endptr = endptr.offset(1);
         }
         return if *endptr as i32 == Character::Null as i32 { endptr } else { null_mut() };
@@ -65,19 +65,19 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
     unsafe {
         let mut a: usize = 0;
         let mut empty: i32 = 1;
-        while is_whitespace(*s as i32 + 1) {
+        while Character::from(*s as i32).is_whitespace() {
             s = s.offset(1);
         }
         let is_negative_: bool = is_negative(&mut s);
         if *s.offset(0 as isize) as i32 == Character::Digit0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
             s = s.offset(2 as isize);
-            while is_digit_hexadecimal(*s as i32 + 1) {
-                a = a.wrapping_mul(16 as usize).wrapping_add(get_hexadecimal_digit_value(Character::from(*s as i32)) as usize);
+            while Character::from(*s as i32).is_digit_hexadecimal() {
+                a = a.wrapping_mul(16 as usize).wrapping_add(Character::from(*s as i32).get_hexadecimal_digit_value() as usize);
                 empty = 0;
                 s = s.offset(1);
             }
         } else {
-            while is_digit_decimal(*s as i32 + 1) {
+            while Character::from(*s as i32).is_digit_decimal() {
                 let d: i32 = *s as i32 - Character::Digit0 as i32;
                 if a >= (MAXIMUM_SIZE as i64 / 10 as i64) as usize && (a > (MAXIMUM_SIZE as i64 / 10 as i64) as usize || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32 + if is_negative_ { 1 } else { 0 }) {
                     return null();
@@ -87,7 +87,7 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
                 s = s.offset(1);
             }
         }
-        while is_whitespace(*s as i32 + 1) {
+        while Character::from(*s as i32).is_whitespace() {
             s = s.offset(1);
         }
         if empty != 0 || *s as i32 != Character::Null as i32 {
