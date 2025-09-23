@@ -1,7 +1,7 @@
 use crate::functions::*;
-use libc::*;
 use crate::interpreter::*;
 use crate::prototype::*;
+use libc::*;
 use rlua::*;
 use std::ptr::*;
 pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
@@ -26,8 +26,8 @@ impl DumpState {
     }
     pub unsafe fn dump_byte(&mut self, integer: u8) {
         unsafe {
-            let mut x: u8 = integer;
-            self.dump_block(&mut x as *mut u8 as *const c_void, size_of::<u8>());
+            let x: u8 = integer;
+            self.dump_block(&x as *const u8 as *const c_void, size_of::<u8>());
         }
     }
     pub unsafe fn dump_size(&mut self, mut integer: usize) {
@@ -57,14 +57,14 @@ impl DumpState {
             self.dump_size(integer as usize);
         }
     }
-    pub unsafe fn dump_number(&mut self, mut number: f64) {
+    pub unsafe fn dump_number(&mut self, number: f64) {
         unsafe {
-            self.dump_block(&mut number as *mut f64 as *const c_void, size_of::<f64>());
+            self.dump_block(&number as *const f64 as *const c_void, size_of::<f64>());
         }
     }
-    pub unsafe fn dump_integer(&mut self, mut integer: i64) {
+    pub unsafe fn dump_integer(&mut self, integer: i64) {
         unsafe {
-            self.dump_block(&mut integer as *mut i64 as *const c_void, size_of::<i64>());
+            self.dump_block(&integer as *const i64 as *const c_void, size_of::<i64>());
         }
     }
     pub unsafe fn dump_header(&mut self) {
@@ -78,9 +78,9 @@ impl DumpState {
         }
     }
 }
-pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, data: *mut c_void, is_strip: bool) -> i32 {
+pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool) -> i32 {
     unsafe {
-        let mut dump_state = DumpState::new(interpreter, write_function, data, is_strip);
+        let mut dump_state = DumpState::new(interpreter, write_function, pointer, is_strip);
         dump_state.dump_header();
         dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
         (*prototype).dump_function(&mut dump_state, null_mut());

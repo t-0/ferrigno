@@ -34,37 +34,34 @@ pub struct DebugInfo {
 }
 pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
-        let name;
-        if ar.is_null() {
-            if !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-                name = null();
+        return if ar.is_null() {
+            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_CLOSURE_L {
+                luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.object as *mut Closure)).payload.l_prototype, n, 0)
             } else {
-                name = luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.object as *mut Closure)).payload.l_prototype, n, 0);
+                null()
             }
         } else {
             let mut position: *mut TValue = null_mut();
-            name = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
-            if !name.is_null() {
-                let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                let io2: *const TValue = &mut (*position);
-                (*io1).copy_from(&*io2);
+            let ret = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
+            if !ret.is_null() {
+                (*(*interpreter).top.stkidrel_pointer).copy_from(&*position);
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             }
+            ret
         }
-        return name;
     }
 }
 pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut position: *mut TValue = null_mut();
-        let name: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
-        if !name.is_null() {
+        let ret: *const i8 = luag_findlocal(interpreter, (*ar).i_ci, n, &mut position);
+        if !ret.is_null() {
             let io1: *mut TValue = &mut (*position);
             let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
             (*io1).copy_from(&*io2);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         }
-        return name;
+        return ret;
     }
 }
 pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
