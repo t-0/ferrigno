@@ -1059,57 +1059,53 @@ pub unsafe fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *cons
 }
 pub unsafe fn f_parser(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
     unsafe {
-        let cl: *mut Closure;
-        let p: *mut SParser = arbitrary_data as *mut SParser;
-        let fresh2 = (*(*p).zio).length;
-        (*(*p).zio).length = ((*(*p).zio).length).wrapping_sub(1);
+        let sparser = arbitrary_data as *mut SParser;
+        let fresh2 = (*(*sparser).zio).length;
+        (*(*sparser).zio).length = ((*(*sparser).zio).length).wrapping_sub(1);
         let c: i32 = if fresh2 > 0 {
-            let fresh3 = (*(*p).zio).pointer;
-            (*(*p).zio).pointer = ((*(*p).zio).pointer).offset(1);
+            let fresh3 = (*(*sparser).zio).pointer;
+            (*(*sparser).zio).pointer = ((*(*sparser).zio).pointer).offset(1);
             *fresh3 as u8 as i32
         } else {
-            luaz_fill((*p).zio)
+            luaz_fill((*sparser).zio)
         };
-        if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
-            checkmode(interpreter, (*p).mode, make_cstring!("binary"));
-            cl = load_closure(interpreter, (*p).zio, (*p).name);
+        let closure = if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
+            checkmode(interpreter, (*sparser).mode, make_cstring!("binary"));
+            load_closure(interpreter, (*sparser).zio, (*sparser).name)
         } else {
-            checkmode(interpreter, (*p).mode, make_cstring!("text"));
-            cl = luay_parser(interpreter, (*p).zio, &mut (*p).buffer, &mut (*p).dynamic_data, (*p).name, c);
-        }
-        luaf_initupvals(interpreter, cl);
+            checkmode(interpreter, (*sparser).mode, make_cstring!("text"));
+            luay_parser(interpreter, (*sparser).zio, &mut (*sparser).buffer, &mut (*sparser).dynamic_data, (*sparser).name, c)
+        };
+        luaf_initupvals(interpreter, closure);
     }
 }
 pub unsafe fn luad_protectedparser(interpreter: *mut Interpreter, zio: *mut ZIO, name: *const i8, mode: *const i8) -> i32 {
     unsafe {
-        let mut p: SParser = SParser { zio: null_mut(), buffer: Buffer::new(), dynamic_data: DynamicData::new(), mode: null(), name: null() };
+        let mut sparser = SParser::new(zio, name, mode);
         (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
-        p.zio = zio;
-        p.name = name;
-        p.mode = mode;
-        p.dynamic_data.active_variables.initialize();
-        p.dynamic_data.goto_.initialize();
-        p.dynamic_data.labels.initialize();
-        p.buffer.loads.initialize();
+        sparser.dynamic_data.active_variables.initialize();
+        sparser.dynamic_data.goto_.initialize();
+        sparser.dynamic_data.labels.initialize();
+        sparser.buffer.loads.initialize();
         let status = luad_pcall(
             interpreter,
             Some(f_parser as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
-            &mut p as *mut SParser as *mut libc::c_void,
+            &mut sparser as *mut SParser as *mut libc::c_void,
             ((*interpreter).top.stkidrel_pointer as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64,
             (*interpreter).error_function,
         );
-        p.buffer.loads.destroy(interpreter);
+        sparser.buffer.loads.destroy(interpreter);
         (*interpreter).free_memory(
-            p.dynamic_data.active_variables.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.active_variables.get_size() as usize).wrapping_mul(size_of::<VariableDescription>() as usize) as usize,
+            sparser.dynamic_data.active_variables.vectort_pointer as *mut libc::c_void,
+            (sparser.dynamic_data.active_variables.get_size() as usize).wrapping_mul(size_of::<VariableDescription>() as usize) as usize,
         );
         (*interpreter).free_memory(
-            p.dynamic_data.goto_.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.goto_.get_size() as usize).wrapping_mul(size_of::<LabelDescription>() as usize) as usize,
+            sparser.dynamic_data.goto_.vectort_pointer as *mut libc::c_void,
+            (sparser.dynamic_data.goto_.get_size() as usize).wrapping_mul(size_of::<LabelDescription>() as usize) as usize,
         );
         (*interpreter).free_memory(
-            p.dynamic_data.labels.vectort_pointer as *mut libc::c_void,
-            (p.dynamic_data.labels.get_size() as usize).wrapping_mul(size_of::<LabelDescription>() as usize) as usize,
+            sparser.dynamic_data.labels.vectort_pointer as *mut libc::c_void,
+            (sparser.dynamic_data.labels.get_size() as usize).wrapping_mul(size_of::<LabelDescription>() as usize) as usize,
         );
         (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_sub(0x10000 as u32) as u32;
         return status;
