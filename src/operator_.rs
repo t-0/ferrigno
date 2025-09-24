@@ -23,7 +23,7 @@ pub unsafe fn binopr2op(binary: OperatorBinary, baser: OperatorBinary, base: u32
     return (binary as i32 - baser as i32 + base as i32) as u32;
 }
 pub unsafe fn unopr2op(unary: OperatorUnary) -> u32 {
-    return (unary as i32 - OperatorUnary::Minus as i32 + OP_UNM as i32) as u32;
+    return (unary as i32 - OperatorUnary::Minus as i32 + OPCODE_UNM as i32) as u32;
 }
 pub unsafe fn binopr2tm(binary: OperatorBinary) -> u32 {
     return (binary as i32 - OperatorBinary::Add as i32 + TM_ADD as i32) as u32;

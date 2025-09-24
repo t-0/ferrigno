@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crate::coroutine::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
@@ -40,12 +41,16 @@ unsafe fn luab_corunning(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
+pub const COS_RUN: i32 = 0;
+pub const COS_DEAD: i32 = 1;
+pub const COS_YIELD: i32 = 2;
+pub const COS_NORM: i32 = 3;
 unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
         let mut status: i32 = auxstatus(interpreter, co);
         match status {
-            1 | 2 => {
+            COS_DEAD | COS_YIELD => {
                 status = lua_closethread(co, interpreter);
                 if status == 0 {
                     (*interpreter).push_boolean(true);
@@ -112,39 +117,39 @@ pub unsafe fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
 }
 pub unsafe fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, narg: i32) -> i32 {
     unsafe {
-        let status: i32;
-        let mut nres: i32 = 0;
         if lua_checkstack(co, narg) == 0 {
             lua_pushstring(interpreter, make_cstring!("too many arguments to resume"));
             return -1;
-        }
-        lua_xmove(interpreter, co, narg);
-        status = lua_resume(co, interpreter, narg, &mut nres);
-        if status == 0 || status == 1 {
-            if lua_checkstack(interpreter, nres + 1) == 0 {
-                lua_settop(co, -nres - 1);
-                lua_pushstring(interpreter, make_cstring!("too many results to resume"));
-                return -1;
-            }
-            lua_xmove(co, interpreter, nres);
-            return nres;
         } else {
-            lua_xmove(co, interpreter, 1);
-            return -1;
-        };
+            lua_xmove(interpreter, co, narg);
+            let mut nres: i32 = 0;
+            let status = lua_resume(co, interpreter, narg, &mut nres);
+            if status == 0 || status == 1 {
+                if lua_checkstack(interpreter, nres + 1) == 0 {
+                    lua_settop(co, -nres - 1);
+                    lua_pushstring(interpreter, make_cstring!("too many results to resume"));
+                    return -1;
+                }
+                lua_xmove(co, interpreter, nres);
+                return nres;
+            } else {
+                lua_xmove(co, interpreter, 1);
+                return -1;
+            };
+        }
     }
 }
 pub unsafe fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let co: *mut Interpreter = lua_tothread(interpreter, -(1000000 as i32) - 1000 as i32 - 1);
-        let r: i32 = auxresume(interpreter, co, (*interpreter).get_top());
+        let co = lua_tothread(interpreter, -(1000000 as i32) - 1000 as i32 - 1);
+        let r = auxresume(interpreter, co, (*interpreter).get_top());
         if r < 0 {
-            let mut stat: i32 = (*co).get_status();
-            if stat != 0 && stat != 1 {
-                stat = lua_closethread(co, interpreter);
+            let mut status = (*co).get_status();
+            if status != LUA_OK && status != LUA_YIELD {
+                status = lua_closethread(co, interpreter);
                 lua_xmove(co, interpreter, 1);
             }
-            if stat != 4 && lua_type(interpreter, -1) == Some(TagType::String) {
+            if status != LUA_ERRMEM && lua_type(interpreter, -1) == Some(TagType::String) {
                 lual_where(interpreter, 1);
                 lua_rotate(interpreter, -2, 1);
                 lua_concat(interpreter, 2);

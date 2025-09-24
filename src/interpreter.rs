@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::ptr::*;
 use libc::time;
 use crate::buffer::*;
@@ -43,6 +44,16 @@ use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::zio::*;
 use rlua::*;
+// status
+pub type Status = i32;
+pub const LUA_OK: Status = 0;
+pub const LUA_YIELD: Status = 1;
+pub const LUA_ERRRUN: Status = 2;
+pub const LUA_ERRSYNTAX: Status = 3;
+pub const LUA_ERRMEM: Status = 4;
+pub const LUA_ERRERR: Status = 5;
+pub const LUA_ERRFILE: Status = 6;
+// /
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
@@ -1330,24 +1341,6 @@ pub unsafe fn lua_rawequal(interpreter: *mut Interpreter, index1: i32, index2: i
         } else {
             false
         };
-    }
-}
-pub unsafe fn lua_arith(interpreter: *mut Interpreter, op: i32) {
-    unsafe {
-        if !(op != 12 as i32 && op != 13 as i32) {
-            let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
-            (*io1).copy_from(&*io2);
-            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        }
-        luao_arith(
-            interpreter,
-            op,
-            &mut (*(*interpreter).top.stkidrel_pointer.offset(-(2 as isize))),
-            &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))),
-            (*interpreter).top.stkidrel_pointer.offset(-(2 as isize)),
-        );
-        (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
     }
 }
 pub unsafe fn lua_compare(interpreter: *mut Interpreter, index1: i32, index2: i32, op: i32) -> i32 {
@@ -2809,13 +2802,6 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
         };
     }
 }
-pub unsafe fn luao_arith(interpreter: *mut Interpreter, op: i32, p1: *const TValue, p2: *const TValue, res: *mut TValue) {
-    unsafe {
-        if luao_rawarith(interpreter, op, p1, p2, &mut (*res)) == 0 {
-            luat_trybintm(interpreter, p1, p2, res, (op - 0 + TM_ADD as i32) as u32);
-        }
-    }
-}
 pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i8, mut argp: ::core::ffi::VaList) -> *const i8 {
     unsafe {
         let mut buff_fs = BuffFS::new(interpreter);
@@ -4020,7 +4006,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_NEWTABLE => {
+                        OPCODE_NEWTABLE => {
                             let ra_17: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let mut new_table_size = (i >> POSITION_B & !(!(0u32) << 8) << 0) as usize;
                             let mut new_array_size: usize = (i >> POSITION_C & !(!(0u32) << 8) << 0) as usize;
@@ -4147,7 +4133,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_SUBK => {
+                        OPCODE_SUBK => {
                             let v1_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_0: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_21: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
@@ -4192,7 +4178,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_MULK => {
+                        OPCODE_MULK => {
                             let v1_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_1: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_22: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
@@ -4237,7 +4223,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_MODK => {
+                        OPCODE_MODK => {
                             (*ci).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*ci).call_info_top.stkidrel_pointer;
                             let v1_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
@@ -4284,7 +4270,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_POWK => {
+                        OPCODE_POWK => {
                             let ra_24: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_4: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_3: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
@@ -4320,7 +4306,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_DIVK => {
+                        OPCODE_DIVK => {
                             let ra_25: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_5: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_4: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
@@ -4356,7 +4342,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_IDIVK => {
+                        OPCODE_IDIVK => {
                             (*ci).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*ci).call_info_top.stkidrel_pointer;
                             let v1_6: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
@@ -4403,7 +4389,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BANDK => {
+                        OPCODE_BANDK => {
                             let ra_27: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_7: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_6: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
@@ -4423,7 +4409,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BORK => {
+                        OPCODE_BORK => {
                             let ra_28: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_8: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_7: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
@@ -4443,7 +4429,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BXORK => {
+                        OPCODE_BXORK => {
                             let ra_29: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_9: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_8: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
@@ -4546,7 +4532,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_SUB => {
+                        OPCODE_SUB => {
                             let v1_11: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_10: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
                             let ra_33: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
@@ -4591,7 +4577,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_MUL => {
+                        OPCODE_MUL => {
                             let v1_12: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_11: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
                             let ra_34: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
@@ -4636,7 +4622,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_MOD => {
+                        OPCODE_MOD => {
                             (*ci).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*ci).call_info_top.stkidrel_pointer;
                             let v1_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
@@ -4683,7 +4669,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_POW => {
+                        OPCODE_POW => {
                             let ra_36: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_14: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_13: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4719,7 +4705,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_DIV => {
+                        OPCODE_DIV => {
                             let ra_37: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_15: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_14: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4755,7 +4741,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_IDIV => {
+                        OPCODE_IDIV => {
                             (*ci).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*ci).call_info_top.stkidrel_pointer;
                             let v1_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
@@ -4802,7 +4788,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BAND => {
+                        OPCODE_BAND => {
                             let ra_39: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_17: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_16: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4828,7 +4814,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BOR => {
+                        OPCODE_BOR => {
                             let ra_40: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_18: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_17: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4854,7 +4840,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_BXOR => {
+                        OPCODE_BXOR => {
                             let ra_41: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_19: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_18: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4880,7 +4866,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_SHR => {
+                        OPCODE_SHR => {
                             let ra_42: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_20: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_19: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -4906,7 +4892,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_SHL => {
+                        OPCODE_SHL => {
                             let ra_43: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1_21: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_20: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
@@ -5032,7 +5018,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_LEN => {
+                        OPCODE_LEN => {
                             let ra_50: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             (*ci).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*ci).call_info_top.stkidrel_pointer;
@@ -5117,7 +5103,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_LE => {
+                        OPCODE_LE => {
                             let ra_56: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let cond_2: i32;
                             let rb_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
@@ -5201,7 +5187,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_LEI => {
+                        OPCODE_LEI => {
                             let ra_60: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let cond_6: i32;
                             let im_1: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
@@ -5253,7 +5239,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             continue;
                         },
-                        OP_GEI => {
+                        OPCODE_GEI => {
                             let ra_62: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let cond_8: i32;
                             let im_3: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
@@ -5422,7 +5408,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut ci: *mut CallInfo)
                             }
                             break;
                         },
-                        OP_FORLOOP => {
+                        OPCODE_FORLOOP => {
                             let ra_71: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             if (*ra_71.offset(2 as isize)).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
                                 let count: usize = (*ra_71.offset(1 as isize)).value.integer as usize;
@@ -6062,7 +6048,7 @@ pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex
         }
         lua_rotate(interpreter, fnameindex, -1);
         lua_settop(interpreter, -2);
-        return 5 + 1;
+        return LUA_ERRFILE;
     }
 }
 pub unsafe fn skip_bom(file: *mut FILE) -> i32 {
@@ -6737,40 +6723,40 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
                 return args;
             }
             let current_block_31: usize;
-            match *(*argv.offset(i as isize)).offset(1 as isize) as i32 {
-                45 => {
+            match Character::from2(*(*argv.offset(i as isize)).offset(1 as isize) as i32) {
+                Some(Character::Hyphen) => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     *first = i + 1;
                     return args;
                 },
-                0 => return args,
-                69 => {
+                None => return args,
+                Some(Character::UpperE) => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     args |= 16 as i32;
                     current_block_31 = 4761528863920922185;
                 },
-                87 => {
+                Some(Character::UpperW) => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
                     }
                     current_block_31 = 4761528863920922185;
                 },
-                105 => {
+                Some(Character::LowerI) => {
                     args |= 2;
                     current_block_31 = 6636775023221328366;
                 },
-                118 => {
+                Some(Character::LowerV) => {
                     current_block_31 = 6636775023221328366;
                 },
-                101 => {
+                Some(Character::LowerE) => {
                     args |= 8;
                     current_block_31 = 15172496195422792753;
                 },
-                108 => {
+                Some(Character::LowerL) => {
                     current_block_31 = 15172496195422792753;
                 },
                 _ => return 1,

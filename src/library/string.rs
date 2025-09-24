@@ -12,6 +12,8 @@ use crate::streamwriter::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::utility::c::*;
+use crate::tvalue::*;
+use crate::tm::*;
 use crate::utility::*;
 use libc::{memcpy, tolower, toupper, memchr, memcmp};
 use rlua::*;
@@ -178,7 +180,19 @@ pub unsafe fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
 pub unsafe fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -> i32 {
     unsafe {
         if tonum(interpreter, 1) != 0 && tonum(interpreter, 2) != 0 {
-            lua_arith(interpreter, op);
+            if !(op != 12 as i32 && op != 13 as i32) {
+                let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
+                let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
+                (*io1).copy_from(&*io2);
+                (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+            }
+            let p1 = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(2 as isize)));
+            let p2 = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
+            let res = (*interpreter).top.stkidrel_pointer.offset(-(2 as isize));
+            if luao_rawarith(interpreter, op, p1, p2, &mut (*res)) == 0 {
+                luat_trybintm(interpreter, p1, p2, res, (op - 0 + TM_ADD as i32) as u32);
+            }
+            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
             trymt(interpreter, mtname);
         }

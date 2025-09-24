@@ -1,4 +1,3 @@
-#![allow(unused)]
 const CHARACTER_TYPE_NONE: u8 = 0x00;
 const CHARACTER_TYPE_IDENTIFIER: u8 = 0x01;
 const CHARACTER_TYPE_DIGIT_DECIMAL: u8 = 0x02;
@@ -145,7 +144,7 @@ impl Character {
         }
     }
     pub fn from(input: i32) -> Self {
-        match (input) {
+        match input {
             | 00 => Character::Null,
             | 01 => Character::StartOfHeader,
             | 02 => Character::StartOfText,
@@ -414,7 +413,6 @@ impl Character {
             | Character::LowerY
             | Character::LowerZ => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
             | Character::Underscore => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
-            | _ => CHARACTER_TYPE_NONE,
         }
     }
     pub fn is_whitespace(& self) -> bool {

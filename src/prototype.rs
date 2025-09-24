@@ -446,44 +446,44 @@ pub unsafe fn funcnamefromcode(interpreter: *mut Interpreter, p: *const Prototyp
         let tm: u32;
         let i: u32 = *((*p).prototype_code.vectort_pointer).offset(program_counter as isize);
         match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
-            OP_CALL | OP_TAILCALL => {
+            OPCODE_CALL | OPCODE_TAILCALL => {
                 return getobjname(p, program_counter, (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32, name);
             },
-            OP_TFORCALL => {
+            OPCODE_TFORCALL => {
                 *name = make_cstring!("for iterator");
                 return make_cstring!("for iterator");
             },
-            OP_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
+            OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
             },
-            OP_SETTABUP | OP_SETTABLE | OP_SETI | OP_SETFIELD => {
+            OPCODE_SETTABUP | OPCODE_SETTABLE | OPCODE_SETI | OPCODE_SETFIELD => {
                 tm = TM_NEWINDEX;
             },
-            OP_MMBIN | OP_MMBINI | OP_MMBINK => {
+            OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
                 tm = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
             },
-            OP_UNM => {
+            OPCODE_UNM => {
                 tm = TM_UNM;
             },
-            OP_BNOT => {
+            OPCODE_BNOT => {
                 tm = TM_BNOT;
             },
-            OP_LEN => {
+            OPCODE_LEN => {
                 tm = TM_LEN;
             },
-            OP_CONCAT => {
+            OPCODE_CONCAT => {
                 tm = TM_CONCAT;
             },
-            OP_EQ => {
+            OPCODE_EQ => {
                 tm = TM_EQ;
             },
-            OP_LT | OP_LTI | OP_GTI => {
+            OPCODE_LT | OPCODE_LTI | OPCODE_GTI => {
                 tm = TM_LT;
             },
-            OP_LE | OP_LEI | OP_GEI => {
+            OPCODE_LE | OPCODE_LEI | OPCODE_GEI => {
                 tm = TM_LE;
             },
-            OP_CLOSE | OP_RETURN => {
+            OPCODE_CLOSE | OPCODE_RETURN => {
                 tm = TM_CLOSE;
             },
             _ => return null(),

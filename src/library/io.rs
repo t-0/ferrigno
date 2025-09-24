@@ -442,17 +442,17 @@ pub unsafe fn g_read(interpreter: *mut Interpreter, file: *mut FILE, first: i32)
                     if *p as i32 == Character::Asterisk as i32 {
                         p = p.offset(1);
                     }
-                    match *p as i32 {
-                        110 => {
+                    match Character::from2(*p as i32) {
+                        Some(Character::LowerN) => {
                             success = read_number(interpreter, file);
                         },
-                        108 => {
+                        Some(Character::LowerL) => {
                             success = read_line(interpreter, file, 1);
                         },
-                        76 => {
+                        Some(Character::UpperL) => {
                             success = read_line(interpreter, file, 0);
                         },
-                        97 => {
+                        Some(Character::LowerA) => {
                             read_all(interpreter, file);
                             success = 1;
                         },
