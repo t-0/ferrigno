@@ -37,8 +37,8 @@ pub struct LexicalState {
     pub current: i32,
     pub line_number: i32,
     pub last_line: i32,
-    pub token: Token,
-    pub look_ahead: Token,
+    pub token: TokenInfo,
+    pub look_ahead: TokenInfo,
     pub lexical_state_function_state: *mut FunctionState,
     pub zio: *mut ZIO,
     pub buffer: *mut Buffer,
@@ -53,8 +53,8 @@ impl New for LexicalState {
             current: 0,
             line_number: 0,
             last_line: 0,
-            token: Token::new(),
-            look_ahead: Token::new(),
+            token: TokenInfo::new(),
+            look_ahead: TokenInfo::new(),
             lexical_state_function_state: null_mut(),
             zio: null_mut(),
             buffer: null_mut(),
@@ -546,11 +546,11 @@ pub unsafe fn suffixedexp(interpreter: *mut Interpreter, lexical_state: *mut Lex
 pub unsafe fn simpleexp(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, v: *mut ExpressionDescription) {
     unsafe {
         match (*lexical_state).token.token {
-            TK_FLT => {
+            TK_FLOAT => {
                 init_exp(v, ExpressionKind::ConstantNumber, 0);
                 (*v).value.number = (*lexical_state).token.semantic_info.number;
             },
-            TK_INT => {
+            TK_INTEGER => {
                 init_exp(v, ExpressionKind::ConstantInteger, 0);
                 (*v).value.integer = (*lexical_state).token.semantic_info.integer;
             },
@@ -998,8 +998,8 @@ pub unsafe fn checkrepeated(interpreter: *mut Interpreter, lexical_state: *mut L
 }
 pub unsafe fn handle_label_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, name: *mut TString, line: i32) {
     unsafe {
-        checknext(interpreter, lexical_state, function_state, TK_DBCOLON as i32);
-        while (*lexical_state).token.token == Character::Semicolon as i32 || (*lexical_state).token.token == TK_DBCOLON as i32 {
+        checknext(interpreter, lexical_state, function_state, TK_DOUBLECOLON as i32);
+        while (*lexical_state).token.token == Character::Semicolon as i32 || (*lexical_state).token.token == TK_DOUBLECOLON as i32 {
             parse_statement(interpreter, lexical_state, function_state);
         }
         checkrepeated(interpreter, lexical_state, name);
@@ -1364,7 +1364,7 @@ pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state:
         };
         luax_next(interpreter, lexical_state);
         parse_statement_list(interpreter, lexical_state, function_state);
-        check(interpreter, lexical_state, function_state, TK_EOS as i32);
+        check(interpreter, lexical_state, function_state, TK_ENDOFSTREAM as i32);
         close_function(interpreter, lexical_state, (*lexical_state).lexical_state_function_state);
     }
 }
@@ -1393,7 +1393,7 @@ pub unsafe fn luax_token2str(interpreter: *mut Interpreter, _lexical_state: *mut
             }
         } else {
             let s: *const i8 = TOKENS[(token - (127 as i32 * 2 + 1 + 1)) as usize];
-            if token < TK_EOS as i32 {
+            if token < TK_ENDOFSTREAM as i32 {
                 return luao_pushfstring(interpreter, make_cstring!("'%s'"), s);
             } else {
                 return s;
@@ -1404,7 +1404,7 @@ pub unsafe fn luax_token2str(interpreter: *mut Interpreter, _lexical_state: *mut
 pub unsafe fn text_token(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, token: i32) -> *const i8 {
     unsafe {
         match token {
-            TK_NAME | TK_STRING | TK_FLT | TK_INT => {
+            TK_NAME | TK_STRING | TK_FLOAT | TK_INTEGER => {
                 save(interpreter, lexical_state, Character::Null as i32);
                 return luao_pushfstring(interpreter, make_cstring!("'%s'"), (*(*lexical_state).buffer).loads.loads_pointer);
             },
@@ -1483,7 +1483,7 @@ pub unsafe fn luax_setinput(interpreter: *mut Interpreter, lexical_state: *mut L
     unsafe {
         (*lexical_state).token.token = 0;
         (*lexical_state).current = firstchar;
-        (*lexical_state).look_ahead.token = TK_EOS as i32;
+        (*lexical_state).look_ahead.token = TK_ENDOFSTREAM as i32;
         (*lexical_state).zio = zio;
         (*lexical_state).lexical_state_function_state = null_mut();
         (*lexical_state).line_number = 1;
@@ -1581,14 +1581,14 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
         }
         save(interpreter, lexical_state, Character::Null as i32);
         if luao_str2num((*(*lexical_state).buffer).loads.loads_pointer, &mut obj) == 0 {
-            lexerror(interpreter, lexical_state, make_cstring!("malformed number"), TK_FLT as i32);
+            lexerror(interpreter, lexical_state, make_cstring!("malformed number"), TK_FLOAT as i32);
         }
         if obj.get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             (*semantic_info).integer = obj.value.integer;
-            return TK_INT as i32;
+            return TK_INTEGER as i32;
         } else {
             (*semantic_info).number = obj.value.number;
-            return TK_FLT as i32;
+            return TK_FLOAT as i32;
         };
     }
 }
@@ -1643,7 +1643,7 @@ pub unsafe fn read_long_string(interpreter: *mut Interpreter, lexical_state: *mu
                 None => {
                     let what: *const i8 = if !semantic_info.is_null() { make_cstring!("string") } else { make_cstring!("comment") };
                     let message: *const i8 = luao_pushfstring(interpreter, make_cstring!("unfinished long %s (starting at line %d)"), what, line);
-                    lexerror(interpreter, lexical_state, message, TK_EOS as i32);
+                    lexerror(interpreter, lexical_state, message, TK_ENDOFSTREAM as i32);
                 },
                 Some(Character::BracketRight) => {
                     if !(skip_sep(interpreter, lexical_state) == sep) {
@@ -1843,7 +1843,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
         while (*lexical_state).current != del {
             match Character::from2((*lexical_state).current) {
                 None => {
-                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_EOS as i32);
+                    lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_ENDOFSTREAM as i32);
                 },
                 Some(Character::LineFeed) | Some(Character::CarriageReturn) => {
                     lexerror(interpreter, lexical_state, make_cstring!("unfinished string"), TK_STRING as i32);
@@ -1999,7 +1999,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
             let current_block_85: usize;
             match Character::from2((*lexical_state).current) {
                 None => {
-                    return TK_EOS;
+                    return TK_ENDOFSTREAM;
                 },
                 Some(Character::LineFeed) | Some(Character::CarriageReturn) => {
                     inclinenumber(interpreter, lexical_state);
@@ -2088,7 +2088,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                        return TK_EQ as i32;
+                        return TK_EQUAL as i32;
                     } else {
                         return TK_CHARACTER_EQUAL;
                     }
@@ -2104,9 +2104,9 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                        return TK_LE;
+                        return TK_LESSEQUAL;
                     } else if check_next1(lexical_state, Character::AngleLeft as i32) != 0 {
-                        return TK_SHL;
+                        return TK_SHIFTLEFT;
                     } else {
                         return TK_CHARACTER_ANGLE_LEFT;
                     }
@@ -2122,9 +2122,9 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                        return TK_GE;
+                        return TK_GREATEREQUAL;
                     } else if check_next1(lexical_state, Character::AngleRight as i32) != 0 {
-                        return TK_SHR;
+                        return TK_SHIFTRIGHT;
                     } else {
                         return TK_CHARACTER_ANGLE_RIGHT;
                     }
@@ -2140,7 +2140,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Solidus as i32) != 0 {
-                        return TK_IDIV;
+                        return TK_INTEGRALDIVIDE;
                     } else {
                         return TK_CHARACTER_SOLIDUS;
                     }
@@ -2156,7 +2156,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
-                        return TK_NE as i32;
+                        return TK_INEQUAL as i32;
                     } else {
                         return TK_CHARACTER_TILDE;
                     }
@@ -2172,7 +2172,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if check_next1(lexical_state, Character::Colon as i32) != 0 {
-                        return TK_DBCOLON as i32;
+                        return TK_DOUBLECOLON as i32;
                     } else {
                         return TK_CHARACTER_COLON;
                     }
@@ -2196,7 +2196,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         if check_next1(lexical_state, Character::Period as i32) != 0 {
                             return TK_DOTS;
                         } else {
-                            return TK_CONCAT;
+                            return TK_CONCATENATE;
                         }
                     } else if !Character::from((*lexical_state).current).is_digit_decimal() {
                         return TK_CHARACTER_PERIOD;
@@ -2252,9 +2252,9 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
 pub unsafe fn luax_next(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) {
     unsafe {
         (*lexical_state).last_line = (*lexical_state).line_number;
-        if (*lexical_state).look_ahead.token != TK_EOS as i32 {
+        if (*lexical_state).look_ahead.token != TK_ENDOFSTREAM as i32 {
             (*lexical_state).token = (*lexical_state).look_ahead;
-            (*lexical_state).look_ahead.token = TK_EOS as i32;
+            (*lexical_state).look_ahead.token = TK_ENDOFSTREAM as i32;
         } else {
             (*lexical_state).token.token = llex(interpreter, lexical_state, &mut (*lexical_state).token.semantic_info);
         };
@@ -2274,13 +2274,13 @@ pub unsafe fn luak_semerror(interpreter: *mut Interpreter, lexical_state: *mut L
 }
 pub fn block_follow_without_until(token: i32) -> bool {
     match token {
-        TK_ELSE | TK_ELSEIF | TK_END | TK_EOS => return true,
+        TK_ELSE | TK_ELSEIF | TK_END | TK_ENDOFSTREAM => return true,
         _ => return false,
     };
 }
 pub fn block_follow_with_until(token: i32) -> bool {
     match token {
-        TK_ELSE | TK_ELSEIF | TK_END | TK_EOS | TK_UNTIL => return true,
+        TK_ELSE | TK_ELSEIF | TK_END | TK_ENDOFSTREAM | TK_UNTIL => return true,
         _ => return false,
     };
 }
@@ -2320,7 +2320,7 @@ pub unsafe fn parse_statement(interpreter: *mut Interpreter, lexical_state: *mut
                     handle_local_statement(interpreter, lexical_state, (*lexical_state).lexical_state_function_state);
                 }
             },
-            TK_DBCOLON => {
+            TK_DOUBLECOLON => {
                 luax_next(interpreter, lexical_state);
                 handle_label_statement(
                     interpreter,
