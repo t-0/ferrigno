@@ -48,7 +48,7 @@ pub unsafe fn db_getuservalue(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn db_setuservalue(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let n: i32 = lual_optinteger(interpreter, 3, 1) as i32;
-        lual_checktype(interpreter, 1, TagType::User);
+        (*interpreter).lual_checktype(1, TagType::User);
         lual_checkany(interpreter, 2);
         lua_settop(interpreter, 2);
         if lua_setiuservalue(interpreter, 1, n) == 0 {
@@ -269,7 +269,7 @@ pub unsafe fn db_sethook(interpreter: *mut Interpreter) -> i32 {
             },
             _ => {
                 let smask: *const i8 = lual_checklstring(interpreter, arg + 2, null_mut());
-                lual_checktype(interpreter, arg + 1, TagType::Closure);
+                (*interpreter).lual_checktype(arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
                 function = Some(hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);

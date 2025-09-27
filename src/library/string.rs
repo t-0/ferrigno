@@ -174,7 +174,7 @@ pub unsafe fn trymt(interpreter: *mut Interpreter, mtname: *const i8) {
             );
         }
         lua_rotate(interpreter, -3, 1);
-        lua_callk(interpreter, 2, 1, 0, None);
+        (*interpreter).lua_callk(2, 1, 0, None);
     }
 }
 pub unsafe fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -> i32 {

@@ -95,6 +95,28 @@ impl TObject for Interpreter {
     }
 }
 impl Interpreter {
+    pub unsafe fn lua_callk(& mut self, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
+        unsafe {
+            let function: *mut TValue = self.top.stkidrel_pointer.offset(-((nargs + 1) as isize));
+            if k.is_some() && self.count_c_calls & 0xffff0000 as u32 == 0 {
+                (*self.ci).call_info_u.c.context_function = k;
+                (*self.ci).call_info_u.c.context = ctx;
+                ccall(self, function, count_results, 1);
+            } else {
+                luad_callnoyield(self, function, count_results);
+            }
+            if count_results <= -1 && (*self.ci).call_info_top.stkidrel_pointer < self.top.stkidrel_pointer {
+                (*self.ci).call_info_top.stkidrel_pointer = self.top.stkidrel_pointer;
+            }
+        }
+    }
+    pub unsafe fn lual_checktype(& mut self, arg: i32, tag: TagType) {
+        unsafe {
+            if lua_type(self, arg) != Some(tag) {
+                tag_error2(self, arg, Some(tag));
+            }
+        }
+    }
     pub unsafe fn luac_step(&mut self) {
         unsafe {
             (*self.global).luac_step(self);
@@ -1880,21 +1902,6 @@ pub unsafe fn lua_setiuservalue(interpreter: *mut Interpreter, index: i32, n: i3
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         return res;
-    }
-}
-pub unsafe fn lua_callk(interpreter: *mut Interpreter, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
-    unsafe {
-        let function: *mut TValue = (*interpreter).top.stkidrel_pointer.offset(-((nargs + 1) as isize));
-        if k.is_some() && (*interpreter).count_c_calls & 0xffff0000 as u32 == 0 {
-            (*(*interpreter).ci).call_info_u.c.context_function = k;
-            (*(*interpreter).ci).call_info_u.c.context = ctx;
-            ccall(interpreter, function, count_results, 1);
-        } else {
-            luad_callnoyield(interpreter, function, count_results);
-        }
-        if count_results <= -1 && (*(*interpreter).ci).call_info_top.stkidrel_pointer < (*interpreter).top.stkidrel_pointer {
-            (*(*interpreter).ci).call_info_top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
-        }
     }
 }
 pub unsafe fn lua_load(interpreter: *mut Interpreter, reader: ReadFunction, data: *mut libc::c_void, mut chunkname: *const i8, mode: *const i8) -> i32 {
@@ -5939,13 +5946,6 @@ pub unsafe fn lual_checkstack(interpreter: *mut Interpreter, space: i32, message
         }
     }
 }
-pub unsafe fn lual_checktype(interpreter: *mut Interpreter, arg: i32, tag: TagType) {
-    unsafe {
-        if lua_type(interpreter, arg) != Some(tag) {
-            tag_error2(interpreter, arg, Some(tag));
-        }
-    }
-}
 pub unsafe fn lual_checkany(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         if lua_type(interpreter, arg) == None {
@@ -6189,7 +6189,7 @@ pub unsafe fn lual_callmeta(interpreter: *mut Interpreter, mut obj: i32, event: 
             return false;
         }
         lua_pushvalue(interpreter, obj);
-        lua_callk(interpreter, 1, 1, 0, None);
+        (*interpreter).lua_callk(1, 1, 0, None);
         return true;
     }
 }
@@ -6288,7 +6288,7 @@ pub unsafe fn lual_requiref(interpreter: *mut Interpreter, modname: *const i8, o
             lua_settop(interpreter, -2);
             lua_pushcclosure(interpreter, openf, 0);
             lua_pushstring(interpreter, modname);
-            lua_callk(interpreter, 1, 1, 0, None);
+            (*interpreter).lua_callk(1, 1, 0, None);
             lua_pushvalue(interpreter, -1);
             lua_setfield(interpreter, -3, modname);
         }
@@ -6980,7 +6980,7 @@ pub unsafe fn treatstackoption(interpreter: *mut Interpreter, other_state: *mut 
 pub unsafe fn auxupvalue(interpreter: *mut Interpreter, get: i32) -> i32 {
     unsafe {
         let n: i32 = lual_checkinteger(interpreter, 2) as i32;
-        lual_checktype(interpreter, 1, TagType::Closure);
+        (*interpreter).lual_checktype(1, TagType::Closure);
         let name: *const i8 = if get != 0 { lua_getupvalue(interpreter, 1, n) } else { lua_setupvalue(interpreter, 1, n) };
         if name.is_null() {
             return 0;
@@ -6995,7 +6995,7 @@ pub unsafe fn checkupval(interpreter: *mut Interpreter, argf: i32, argnup: i32, 
     unsafe {
         let id: *mut libc::c_void;
         let count_upvalues: i32 = lual_checkinteger(interpreter, argnup) as i32;
-        lual_checktype(interpreter, argf, TagType::Closure);
+        (*interpreter).lual_checktype(argf, TagType::Closure);
         id = lua_upvalueid(interpreter, argf, count_upvalues);
         if !pnup.is_null() {
             if id.is_null() {
@@ -7018,7 +7018,7 @@ pub unsafe fn hookf(interpreter: *mut Interpreter, ar: *mut DebugInfo) {
             } else {
                 (*interpreter).push_nil();
             }
-            lua_callk(interpreter, 2, 0, 0, None);
+            (*interpreter).lua_callk(2, 0, 0, None);
         }
     }
 }

@@ -24,7 +24,7 @@ impl StreamWriter {
     pub unsafe fn dump(&mut self, interpreter: *mut Interpreter) -> i32 {
         unsafe {
             let is_strip = 0 != lua_toboolean(interpreter, 2);
-            lual_checktype(interpreter, 1, TagType::Closure);
+            (*interpreter).lual_checktype(1, TagType::Closure);
             lua_settop(interpreter, 1);
             self.is_initialized = false;
             if ((lua_dump(

@@ -33,7 +33,7 @@ impl MatchState {
                 TagType::Closure => {
                     lua_pushvalue(interpreter, 3);
                     let n: i32 = self.push_captures(s, e);
-                    lua_callk(interpreter, n, 1, 0, None);
+                    (*interpreter).lua_callk(n, 1, 0, None);
                 },
                 TagType::Table => {
                     self.push_onecapture(0, s, e);

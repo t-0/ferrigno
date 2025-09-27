@@ -29,7 +29,7 @@ pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
                 let s_0: *const i8;
                 let mut n: i64 = 0;
                 let base: i64 = lual_checkinteger(interpreter, 2);
-                lual_checktype(interpreter, 1, TagType::String);
+                (*interpreter).lual_checktype(1, TagType::String);
                 s_0 = lua_tolstring(interpreter, 1, &mut l_0);
                 (((2 as i64 <= base && base <= 36 as i64) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, make_cstring!("base out of range")) != 0) as i32;
                 if b_str2int(s_0, base as i32, &mut n) == s_0.offset(l_0 as isize) {
@@ -68,7 +68,7 @@ pub unsafe fn luab_getmetatable(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TagType::Table);
+        (*interpreter).lual_checktype(1, TagType::Table);
         match lua_type(interpreter, 2) {
             Some(TagType::Nil) | Some(TagType::Table) => {},
             _ => {
@@ -105,7 +105,7 @@ pub unsafe fn luab_rawlen(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TagType::Table);
+        (*interpreter).lual_checktype(1, TagType::Table);
         lual_checkany(interpreter, 2);
         lua_settop(interpreter, 2);
         lua_rawget(interpreter, 1);
@@ -114,7 +114,7 @@ pub unsafe fn luab_rawget(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_rawset(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TagType::Table);
+        (*interpreter).lual_checktype(1, TagType::Table);
         lual_checkany(interpreter, 2);
         lual_checkany(interpreter, 3);
         lua_settop(interpreter, 3);
@@ -220,7 +220,7 @@ pub unsafe fn luab_type(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_next(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TagType::Table);
+        (*interpreter).lual_checktype(1, TagType::Table);
         lua_settop(interpreter, 2);
         if lua_next(interpreter, 1) != 0 {
             return 2;
@@ -242,7 +242,7 @@ pub unsafe fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
             (*interpreter).push_nil();
         } else {
             lua_pushvalue(interpreter, 1);
-            lua_callk(interpreter, 1, 3, 0, Some(pairscont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
+            (*interpreter).lua_callk(1, 3, 0, Some(pairscont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
         }
         return 3;
     }
@@ -294,7 +294,7 @@ pub unsafe fn generic_reader(interpreter: *mut Interpreter, mut _ud: *mut libc::
     unsafe {
         lual_checkstack(interpreter, 2, make_cstring!("too many nested functions"));
         lua_pushvalue(interpreter, 1);
-        lua_callk(interpreter, 0, 1, 0, None);
+        (*interpreter).lua_callk(0, 1, 0, None);
         if lua_type(interpreter, -1) == Some(TagType::Nil) {
             lua_settop(interpreter, -2);
             *size = 0;
@@ -319,7 +319,7 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
             status = lual_loadbufferx(interpreter, s, l, chunkname, mode);
         } else {
             let chunkname_0: *const i8 = lual_optlstring(interpreter, 2, make_cstring!("=(load)"), null_mut());
-            lual_checktype(interpreter, 1, TagType::Closure);
+            (*interpreter).lual_checktype(1, TagType::Closure);
             lua_settop(interpreter, 5);
             status = lua_load(
                 interpreter,
@@ -344,7 +344,7 @@ pub unsafe fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
         if lual_loadfilex(interpreter, fname, null()) != 0 {
             return lua_error(interpreter);
         }
-        lua_callk(interpreter, 0, -1, 0, Some(dofilecont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
+        (*interpreter).lua_callk(0, -1, 0, Some(dofilecont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
         return dofilecont(interpreter, 0, 0);
     }
 }
@@ -384,7 +384,7 @@ pub unsafe fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let status: i32;
         let n: i32 = (*interpreter).get_top();
-        lual_checktype(interpreter, 2, TagType::Closure);
+        (*interpreter).lual_checktype(2, TagType::Closure);
         (*interpreter).push_boolean(true);
         lua_pushvalue(interpreter, 1);
         lua_rotate(interpreter, 3, 2);

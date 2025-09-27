@@ -6,7 +6,7 @@ use crate::tag::*;
 use rlua::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checktype(interpreter, 1, TagType::Closure);
+        (*interpreter).lual_checktype(1, TagType::Closure);
         let nl: *mut Interpreter = lua_newthread(interpreter);
         lua_pushvalue(interpreter, 1);
         lua_xmove(interpreter, nl, 1);

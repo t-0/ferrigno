@@ -229,7 +229,7 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                     __tm_gmtoff: 0,
                     __tm_zone: null(),
                 };
-                lual_checktype(interpreter, 1, TagType::Table);
+                (*interpreter).lual_checktype(1, TagType::Table);
                 lua_settop(interpreter, 1);
                 ts.tm_year = getfield(interpreter, make_cstring!("year"), -1, 1900 as i32);
                 ts.tm_mon = getfield(interpreter, make_cstring!("month"), -1, 1);

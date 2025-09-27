@@ -182,12 +182,12 @@ pub unsafe fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *const i8 {
 }
 pub unsafe fn pusherrornotfound(interpreter: *mut Interpreter, path: *const i8) {
     unsafe {
-        let mut b = Buffer::new();
-        b.initialize(interpreter);
-        b.add_string(make_cstring!("no file '"));
-        lual_addgsub(&mut b, path, make_cstring!(";"), make_cstring!("'\n\tno file '"));
-        b.add_string(make_cstring!("'"));
-        b.push_result();
+        let mut buffer = Buffer::new();
+        buffer.initialize(interpreter);
+        buffer.add_string(make_cstring!("no file '"));
+        lual_addgsub(&mut buffer, path, make_cstring!(";"), make_cstring!("'\n\tno file '"));
+        buffer.add_string(make_cstring!("'"));
+        buffer.push_result();
     }
 }
 pub unsafe fn searchpath(interpreter: *mut Interpreter, mut name: *const i8, path: *const i8, sep: *const i8, dirsep: *const i8) -> *const i8 {
@@ -359,7 +359,7 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
                 lual_error(interpreter, make_cstring!("module '%s' not found:%s"), name, lua_tolstring(interpreter, -1, null_mut()));
             }
             lua_pushstring(interpreter, name);
-            lua_callk(interpreter, 1, 2, 0, None);
+            (*interpreter).lua_callk(1, 2, 0, None);
             if lua_type(interpreter, -2) == Some(TagType::Closure) {
                 return;
             } else if lua_isstring(interpreter, -2) {
@@ -387,7 +387,7 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
         lua_rotate(interpreter, -2, 1);
         lua_pushvalue(interpreter, 1);
         lua_pushvalue(interpreter, -3);
-        lua_callk(interpreter, 2, 1, 0, None);
+        (*interpreter).lua_callk(2, 1, 0, None);
         if !(lua_type(interpreter, -1) == Some(TagType::Nil)) {
             lua_setfield(interpreter, 2, name);
         } else {

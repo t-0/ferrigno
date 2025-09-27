@@ -34,7 +34,7 @@ pub unsafe fn checktab(interpreter: *mut Interpreter, arg: i32, what: i32) {
             {
                 lua_settop(interpreter, -n - 1);
             } else {
-                lual_checktype(interpreter, arg, TagType::Table);
+                (*interpreter).lual_checktype(arg, TagType::Table);
             }
         }
     }
@@ -243,7 +243,7 @@ pub unsafe fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> i32 {
             lua_pushvalue(interpreter, 2);
             lua_pushvalue(interpreter, a - 1);
             lua_pushvalue(interpreter, b - 2);
-            lua_callk(interpreter, 2, 1, 0, None);
+            (*interpreter).lua_callk(2, 1, 0, None);
             res = lua_toboolean(interpreter, -1);
             lua_settop(interpreter, -2);
             return res;
@@ -358,7 +358,7 @@ pub unsafe fn table_sort(interpreter: *mut Interpreter) -> i32 {
             match lua_type(interpreter, 2) {
                 None | Some(TagType::Nil) => {},
                 _ => {
-                    lual_checktype(interpreter, 2, TagType::Closure);
+                    (*interpreter).lual_checktype(2, TagType::Closure);
                 },
             }
             lua_settop(interpreter, 2);
