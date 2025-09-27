@@ -47,6 +47,52 @@ pub struct LexicalState {
     pub source: *mut TString,
     pub environment: *mut TString,
 }
+pub const TK_CHARACTER_COMMA: i32 = Character::Comma as i32;
+pub const TK_CHARACTER_COLON: i32 = Character::Colon as i32;
+pub const TK_CHARACTER_PERIOD: i32 = Character::Period as i32;
+pub const TK_CHARACTER_BRACKET_LEFT: i32 = Character::BracketLeft as i32;
+pub const TK_CHARACTER_SEMICOLON: i32 = Character::Semicolon as i32;
+pub const TK_CHARACTER_ANGLE_LEFT: i32 = Character::AngleLeft as i32;
+pub const TK_CHARACTER_BRACE_LEFT: i32 = Character::BraceLeft as i32;
+pub const TK_CHARACTER_PARENTHESIS_LEFT: i32 = Character::ParenthesisLeft as i32;
+pub const TK_CHARACTER_ANGLE_RIGHT: i32 = Character::AngleRight as i32;
+pub const TK_CHARACTER_SOLIDUS: i32 = Character::Solidus as i32;
+pub const TK_ENDOFSTREAM: i32 = 288;
+pub const TK_INTEGER: i32 = 290;
+pub const TK_FLOAT: i32 = 289;
+pub const TK_STRING: i32 = 292;
+pub const TK_NAME: i32 = 291;
+pub const TK_CONCATENATE: i32 = 279;
+pub const TK_DOTS: i32 = 280;
+pub const TK_DOUBLECOLON: i32 = 287;
+pub const TK_INEQUAL: i32 = 284;
+pub const TK_INTEGRALDIVIDE: i32 = 278;
+pub const TK_SHIFTRIGHT: i32 = 286;
+pub const TK_GREATEREQUAL: i32 = 282;
+pub const TK_SHIFTLEFT: i32 = 285;
+pub const TK_LESSEQUAL: i32 = 283;
+pub const TK_EQUAL: i32 = 281;
+pub const TK_OR: i32 = 271;
+pub const TK_AND: i32 = 256;
+pub const TK_FUNCTION: i32 = 264;
+pub const TK_END: i32 = 261;
+pub const TK_FALSE: i32 = 262;
+pub const TK_TRUE: i32 = 275;
+pub const TK_NIL: i32 = 269;
+pub const TK_NOT: i32 = 270;
+pub const TK_GOTO: i32 = 265;
+pub const TK_BREAK: i32 = 257;
+pub const TK_UNTIL: i32 = 276;
+pub const TK_ELSEIF: i32 = 260;
+pub const TK_ELSE: i32 = 259;
+pub const TK_RETURN: i32 = 273;
+pub const TK_LOCAL: i32 = 268;
+pub const TK_REPEAT: i32 = 272;
+pub const TK_FOR: i32 = 263;
+pub const TK_DO: i32 = 258;
+pub const TK_IN: i32 = 267;
+pub const TK_IF: i32 = 266;
+pub const TK_THEN: i32 = 274;
 impl New for LexicalState {
     fn new() -> Self {
         return LexicalState {
@@ -1016,7 +1062,7 @@ pub unsafe fn handle_while_statement(interpreter: *mut Interpreter, lexical_stat
         checknext(interpreter, lexical_state, function_state, TK_DO as i32);
         handle_block(interpreter, lexical_state, function_state);
         luak_patchlist(interpreter, lexical_state, function_state, luak_jump(interpreter, lexical_state, function_state), whileinit);
-        check_match(interpreter, lexical_state, function_state, TK_END as i32, TK_WHILE as i32, line);
+        check_match(interpreter, lexical_state, function_state, TK_END as i32, Token::While as i32, line);
         leaveblock(interpreter, lexical_state, function_state);
         luak_patchtohere(interpreter, lexical_state, function_state, condexit);
     }
@@ -1140,6 +1186,7 @@ pub unsafe fn handle_for_statement(interpreter: *mut Interpreter, lexical_state:
         enterblock(lexical_state, function_state, &mut block_control, true);
         luax_next(interpreter, lexical_state);
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state, function_state);
+        const TK_CHARACTER_EQUAL: i32 = Character::Equal as i32;
         match (*lexical_state).token.token {
             TK_CHARACTER_EQUAL => {
                 handle_for_numeric(interpreter, lexical_state, (*lexical_state).lexical_state_function_state, variable_name, line);
@@ -2026,7 +2073,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         luaz_fill((*lexical_state).zio)
                     };
                     if (*lexical_state).current != Character::Hyphen as i32 {
-                        return TK_CHARACTER_HYPHEN;
+                        return Character::Hyphen as i32;
                     }
                     let fresh107 = (*(*lexical_state).zio).length;
                     (*(*lexical_state).zio).length = ((*(*lexical_state).zio).length).wrapping_sub(1);
@@ -2090,7 +2137,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_EQUAL as i32;
                     } else {
-                        return TK_CHARACTER_EQUAL;
+                        return Character::Equal as i32;
                     }
                 },
                 Some(Character::AngleLeft) => {
@@ -2158,7 +2205,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     if check_next1(lexical_state, Character::Equal as i32) != 0 {
                         return TK_INEQUAL as i32;
                     } else {
-                        return TK_CHARACTER_TILDE;
+                        return Character::Tilde as i32;
                     }
                 },
                 Some(Character::Colon) => {
@@ -2174,7 +2221,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                     if check_next1(lexical_state, Character::Colon as i32) != 0 {
                         return TK_DOUBLECOLON as i32;
                     } else {
-                        return TK_CHARACTER_COLON;
+                        return Character::Colon as i32;
                     }
                 },
                 Some(Character::Quote) | Some(Character::DoubleQuote) => {
@@ -2286,6 +2333,7 @@ pub fn block_follow_with_until(token: i32) -> bool {
 }
 pub unsafe fn parse_statement(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
+        pub const TK_WHILE: i32 = Token::While as i32;
         let line: i32 = (*lexical_state).line_number;
         (*interpreter).luae_inccstack();
         match (*lexical_state).token.token {

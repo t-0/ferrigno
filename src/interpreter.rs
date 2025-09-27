@@ -3518,7 +3518,7 @@ pub unsafe fn luax_init(interpreter: *mut Interpreter) {
         let env_string: *mut TString = luas_newlstr(interpreter, make_cstring!("_ENV"), (size_of::<[i8; 5]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
         fix_object_state(interpreter, &mut (*(env_string as *mut Object)));
         i = 0;
-        while i < TK_WHILE as i32 - (127 as i32 * 2 + 1 + 1) + 1 {
+        while i < Token::While as i32 - (127 as i32 * 2 + 1 + 1) + 1 {
             let ts: *mut TString = luas_new(interpreter, TOKENS[i as usize]);
             fix_object_state(interpreter, &mut (*(ts as *mut Object)));
             (*ts).extra = (i + 1) as u8;

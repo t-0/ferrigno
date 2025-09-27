@@ -1,3 +1,4 @@
+#![allow(unused,dead_code)]
 use crate::character::*;
 use crate::new::*;
 use crate::value::*;
@@ -66,47 +67,47 @@ pub enum Token {
 }
 impl Token {
     pub fn from (character: i32) -> Token {
-        const CharacterHyphen: i32 = Token::CharacterHyphen as i32;
-        const CharacterTilde: i32 = Token::CharacterTilde as i32;
-        const CharacterEqual: i32 = Token::CharacterEqual as i32;
-        const CharacterComma: i32 = Token::CharacterComma as i32;
-        const CharacterColon: i32 = Token::CharacterColon as i32;
-        const CharacterPeriod: i32 = Token::CharacterPeriod as i32;
-        const CharacterBracketLeft: i32 = Token::CharacterBracketLeft as i32;
-        const CharacterSemicolon: i32 = Token::CharacterSemicolon as i32;
-        const CharacterOctothorpe: i32 = Token::CharacterOctothorpe as i32;
-        const CharacterAmpersand: i32 = Token::CharacterAmpersand as i32;
-        const CharacterBar: i32 = Token::CharacterBar as i32;
-        const CharacterAngleLeft: i32 = Token::CharacterAngleLeft as i32;
-        const CharacterBraceLeft: i32 = Token::CharacterBraceLeft as i32;
-        const CharacterParenthesisLeft: i32 = Token::CharacterParenthesisLeft as i32;
-        const CharacterAngleRight: i32 = Token::CharacterAngleRight as i32;
-        const CharacterPlus: i32 = Token::CharacterPlus as i32;
-        const CharacterAsterisk: i32 = Token::CharacterAsterisk as i32;
-        const CharacterPercent: i32 = Token::CharacterPercent as i32;
-        const CharacterCaret: i32 = Token::CharacterCaret as i32;
-        const CharacterSolidus: i32 = Token::CharacterSolidus as i32;
+        const CHARACTERHYPHEN: i32 = Token::CharacterHyphen as i32;
+        const CHARACTERTILDE: i32 = Token::CharacterTilde as i32;
+        const CHARACTEREQUAL: i32 = Token::CharacterEqual as i32;
+        const CHARACTERCOMMA: i32 = Token::CharacterComma as i32;
+        const CHARACTERCOLON: i32 = Token::CharacterColon as i32;
+        const CHARACTERPERIOD: i32 = Token::CharacterPeriod as i32;
+        const CHARACTERBRACKETLEFT: i32 = Token::CharacterBracketLeft as i32;
+        const CHARACTERSEMICOLON: i32 = Token::CharacterSemicolon as i32;
+        const CHARACTEROCTOTHORPE: i32 = Token::CharacterOctothorpe as i32;
+        const CHARACTERAMPERSAND: i32 = Token::CharacterAmpersand as i32;
+        const CHARACTERBAR: i32 = Token::CharacterBar as i32;
+        const CHARACTERANGLELEFT: i32 = Token::CharacterAngleLeft as i32;
+        const CHARACTERBRACELEFT: i32 = Token::CharacterBraceLeft as i32;
+        const CHARACTERPARENTHESISLEFT: i32 = Token::CharacterParenthesisLeft as i32;
+        const CHARACTERANGLERIGHT: i32 = Token::CharacterAngleRight as i32;
+        const CHARACTERPLUS: i32 = Token::CharacterPlus as i32;
+        const CHARACTERASTERISK: i32 = Token::CharacterAsterisk as i32;
+        const CHARACTERPERCENT: i32 = Token::CharacterPercent as i32;
+        const CHARACTERCARET: i32 = Token::CharacterCaret as i32;
+        const CHARACTERSOLIDUS: i32 = Token::CharacterSolidus as i32;
         match character {
-            CharacterHyphen => Token::CharacterHyphen,
-            CharacterTilde => Token::CharacterTilde,
-            CharacterEqual => Token::CharacterEqual,
-            CharacterComma => Token::CharacterComma,
-            CharacterColon => Token::CharacterColon,
-            CharacterPeriod => Token::CharacterPeriod,
-            CharacterBracketLeft => Token::CharacterBracketLeft,
-            CharacterSemicolon => Token::CharacterSemicolon,
-            CharacterOctothorpe => Token::CharacterOctothorpe,
-            CharacterAmpersand => Token::CharacterAmpersand,
-            CharacterBar => Token::CharacterBar,
-            CharacterAngleLeft => Token::CharacterAngleLeft,
-            CharacterBraceLeft => Token::CharacterBraceLeft,
-            CharacterParenthesisLeft => Token::CharacterParenthesisLeft,
-            CharacterAngleRight => Token::CharacterAngleRight,
-            CharacterPlus => Token::CharacterPlus,
-            CharacterAsterisk => Token::CharacterAsterisk,
-            CharacterPercent => Token::CharacterPercent,
-            CharacterCaret => Token::CharacterCaret,
-            CharacterSolidus => Token::CharacterSolidus,
+            CHARACTERHYPHEN => Token::CharacterHyphen,
+            CHARACTERTILDE => Token::CharacterTilde,
+            CHARACTEREQUAL => Token::CharacterEqual,
+            CHARACTERCOMMA => Token::CharacterComma,
+            CHARACTERCOLON => Token::CharacterColon,
+            CHARACTERPERIOD => Token::CharacterPeriod,
+            CHARACTERBRACKETLEFT => Token::CharacterBracketLeft,
+            CHARACTERSEMICOLON => Token::CharacterSemicolon,
+            CHARACTEROCTOTHORPE => Token::CharacterOctothorpe,
+            CHARACTERAMPERSAND => Token::CharacterAmpersand,
+            CHARACTERBAR => Token::CharacterBar,
+            CHARACTERANGLELEFT => Token::CharacterAngleLeft,
+            CHARACTERBRACELEFT => Token::CharacterBraceLeft,
+            CHARACTERPARENTHESISLEFT => Token::CharacterParenthesisLeft,
+            CHARACTERANGLERIGHT => Token::CharacterAngleRight,
+            CHARACTERPLUS => Token::CharacterPlus,
+            CHARACTERASTERISK => Token::CharacterAsterisk,
+            CHARACTERPERCENT => Token::CharacterPercent,
+            CHARACTERCARET => Token::CharacterCaret,
+            CHARACTERSOLIDUS => Token::CharacterSolidus,
             256 => Token::And,
             257 => Token::Break,
             258 => Token::Do,
@@ -159,63 +160,6 @@ impl New for TokenInfo {
         return TokenInfo { token: 0, semantic_info: Value::new_object(null_mut()) };
     }
 }
-pub const TK_CHARACTER_HYPHEN: i32 = Character::Hyphen as i32;
-pub const TK_CHARACTER_TILDE: i32 = Character::Tilde as i32;
-pub const TK_CHARACTER_EQUAL: i32 = Character::Equal as i32;
-pub const TK_CHARACTER_COMMA: i32 = Character::Comma as i32;
-pub const TK_CHARACTER_COLON: i32 = Character::Colon as i32;
-pub const TK_CHARACTER_PERIOD: i32 = Character::Period as i32;
-pub const TK_CHARACTER_BRACKET_LEFT: i32 = Character::BracketLeft as i32;
-pub const TK_CHARACTER_SEMICOLON: i32 = Character::Semicolon as i32;
-pub const TK_CHARACTER_OCTOTHORPE: i32 = Character::Octothorpe as i32;
-pub const TK_CHARACTER_AMPERSAND: i32 = Character::Ampersand as i32;
-pub const TK_CHARACTER_BAR: i32 = Character::Bar as i32;
-pub const TK_CHARACTER_ANGLE_LEFT: i32 = Character::AngleLeft as i32;
-pub const TK_CHARACTER_BRACE_LEFT: i32 = Character::BraceLeft as i32;
-pub const TK_CHARACTER_PARENTHESIS_LEFT: i32 = Character::ParenthesisLeft as i32;
-pub const TK_CHARACTER_ANGLE_RIGHT: i32 = Character::AngleRight as i32;
-pub const TK_CHARACTER_PLUS: i32 = Character::Plus as i32;
-pub const TK_CHARACTER_ASTERISK: i32 = Character::Asterisk as i32;
-pub const TK_CHARACTER_PERCENT: i32 = Character::Percent as i32;
-pub const TK_CHARACTER_CARET: i32 = Character::Caret as i32;
-pub const TK_CHARACTER_SOLIDUS: i32 = Character::Solidus as i32;
-pub const TK_WHILE: i32 = 277;
-pub const TK_ENDOFSTREAM: i32 = 288;
-pub const TK_INTEGER: i32 = 290;
-pub const TK_FLOAT: i32 = 289;
-pub const TK_STRING: i32 = 292;
-pub const TK_NAME: i32 = 291;
-pub const TK_CONCATENATE: i32 = 279;
-pub const TK_DOTS: i32 = 280;
-pub const TK_DOUBLECOLON: i32 = 287;
-pub const TK_INEQUAL: i32 = 284;
-pub const TK_INTEGRALDIVIDE: i32 = 278;
-pub const TK_SHIFTRIGHT: i32 = 286;
-pub const TK_GREATEREQUAL: i32 = 282;
-pub const TK_SHIFTLEFT: i32 = 285;
-pub const TK_LESSEQUAL: i32 = 283;
-pub const TK_EQUAL: i32 = 281;
-pub const TK_OR: i32 = 271;
-pub const TK_AND: i32 = 256;
-pub const TK_FUNCTION: i32 = 264;
-pub const TK_END: i32 = 261;
-pub const TK_FALSE: i32 = 262;
-pub const TK_TRUE: i32 = 275;
-pub const TK_NIL: i32 = 269;
-pub const TK_NOT: i32 = 270;
-pub const TK_GOTO: i32 = 265;
-pub const TK_BREAK: i32 = 257;
-pub const TK_UNTIL: i32 = 276;
-pub const TK_ELSEIF: i32 = 260;
-pub const TK_ELSE: i32 = 259;
-pub const TK_RETURN: i32 = 273;
-pub const TK_LOCAL: i32 = 268;
-pub const TK_REPEAT: i32 = 272;
-pub const TK_FOR: i32 = 263;
-pub const TK_DO: i32 = 258;
-pub const TK_IN: i32 = 267;
-pub const TK_IF: i32 = 266;
-pub const TK_THEN: i32 = 274;
 pub const TOKENS: [*const i8; 37] = [
     make_cstring!("and"),
     make_cstring!("break"),

@@ -27,7 +27,27 @@ pub enum OperatorBinary {
 }
 impl OperatorBinary {
     pub unsafe fn from_token(token: i32) -> OperatorBinary {
-        match token {
+        const TK_CHARACTER_HYPHEN: i32 = Token::CharacterHyphen as i32;
+        const TK_CHARACTER_PLUS: i32 = Token::CharacterPlus as i32;
+        const TK_CHARACTER_ASTERISK: i32 = Token::CharacterAsterisk as i32;
+        const TK_CHARACTER_PERCENT: i32 = Token::CharacterPercent as i32;
+        const TK_CHARACTER_CARET: i32 = Token::CharacterCaret as i32;
+        const TK_CHARACTER_SOLIDUS: i32 = Token::CharacterSolidus as i32;
+        const TK_CHARACTER_ANGLE_LEFT: i32 = Token::CharacterAngleLeft as i32;
+        const TK_CHARACTER_ANGLE_RIGHT: i32 = Token::CharacterAngleRight as i32;
+        const TK_CHARACTER_AMPERSAND: i32 = Token::CharacterAmpersand as i32;
+        const TK_CHARACTER_BAR: i32 = Token::CharacterBar as i32;
+        const TK_CHARACTER_TILDE: i32 = Token::CharacterTilde as i32;
+        const TK_INTEGRALDIVIDE: i32 = Token::IntegralDivide as i32;
+        const TK_SHIFTLEFT: i32 = Token::ShiftLeft as i32;
+        const TK_SHIFTRIGHT: i32 = Token::ShiftRight as i32;
+        const TK_CONCATENATE: i32 = Token::Concatenate as i32;
+        const TK_INEQUAL: i32 = Token::Inequal as i32;
+        const TK_EQUAL: i32 = Token::Equal as i32;
+        const TK_LESSEQUAL: i32 = Token::LessEqual as i32;
+        const TK_GREATEREQUAL: i32 = Token::GreaterEqual as i32;
+        const TK_AND: i32 = Token::And as i32;
+        const TK_OR: i32 = Token::Or as i32;        match token {
             TK_CHARACTER_PLUS => return OperatorBinary::Add,
             TK_CHARACTER_HYPHEN => return OperatorBinary::Subtract,
             TK_CHARACTER_ASTERISK => return OperatorBinary::Multiply,
