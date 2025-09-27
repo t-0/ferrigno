@@ -5,7 +5,6 @@ use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::toupper;
-use rlua::*;
 use std::ptr::*;
 #[derive(PartialEq)]
 #[repr(C)]
@@ -149,7 +148,7 @@ pub unsafe fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
-                luag_runerror(interpreter, make_cstring!("attempt to divide by zero"));
+                luag_runerror(interpreter, c"attempt to divide by zero".as_ptr());
             }
             return (0usize).wrapping_sub(m as usize) as i64;
         } else {
@@ -165,7 +164,7 @@ pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
         if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
             if n == 0 {
-                luag_runerror(interpreter, make_cstring!("attempt to perform 'n%%0'"));
+                luag_runerror(interpreter, c"attempt to perform 'n%%0'".as_ptr());
             }
             return 0;
         } else {
@@ -203,7 +202,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
     unsafe {
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
-        s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
+        s = s.offset(strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
         if *s as i32 == Character::Hyphen as i32 {
             s = s.offset(1);
             is_negative_ = 1;
@@ -228,7 +227,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
                 break;
             }
         }
-        s = s.offset(strspn(s, make_cstring!(" \x0C\n\r\t\x0B")) as isize);
+        s = s.offset(strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
         *pn = (if is_negative_ != 0 { (0usize).wrapping_sub(n) } else { n }) as i64;
         return s;
     }

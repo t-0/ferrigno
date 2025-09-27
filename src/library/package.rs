@@ -7,9 +7,8 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use libc::{dlclose, dlerror, dlopen, dlsym};
-use rlua::*;
 use std::ptr::*;
-pub const CLIBS: *const i8 = make_cstring!("_CLIBS");
+pub const CLIBS: *const i8 = c"_CLIBS".as_ptr();
 pub unsafe fn lsys_unloadlib(lib: *mut libc::c_void) {
     unsafe {
         dlclose(lib);
@@ -36,7 +35,7 @@ pub unsafe fn lsys_sym(interpreter: *mut Interpreter, lib: *mut libc::c_void, sy
 pub unsafe fn noenv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let b: i32;
-        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, make_cstring!("LUA_NOENV"));
+        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, c"LUA_NOENV".as_ptr());
         b = lua_toboolean(interpreter, -1);
         lua_settop(interpreter, -2);
         return b;
@@ -45,7 +44,7 @@ pub unsafe fn noenv(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envname: *const i8, dft: *const i8) {
     unsafe {
         let dftmark: *const i8;
-        let nver: *const i8 = lua_pushfstring(interpreter, make_cstring!("%s%s"), envname, make_cstring!("_5_4"));
+        let nver: *const i8 = lua_pushfstring(interpreter, c"%s%s".as_ptr(), envname, c"_5_4".as_ptr());
         let mut path: *const i8 = getenv(nver);
         if path.is_null() {
             path = getenv(envname);
@@ -53,7 +52,7 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
         if path.is_null() || noenv(interpreter) != 0 {
             lua_pushstring(interpreter, dft);
         } else {
-            dftmark = strstr(path, make_cstring!(";;"));
+            dftmark = strstr(path, c";;".as_ptr());
             if dftmark.is_null() {
                 lua_pushstring(interpreter, path);
             } else {
@@ -65,14 +64,14 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
                     (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh193 = b.loads.get_length();
                     b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh193 as isize) = *(make_cstring!(";"));
+                    *(b.loads.loads_pointer).offset(fresh193 as isize) = *(c";".as_ptr());
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
                     (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh194 = b.loads.get_length();
                     b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh194 as isize) = *(make_cstring!(";"));
+                    *(b.loads.loads_pointer).offset(fresh194 as isize) = *(c";".as_ptr());
                     b.add_string_with_length(dftmark.offset(2 as isize), path.offset(length as isize).offset(-(2 as isize)).offset_from(dftmark) as usize);
                 }
                 b.push_result();
@@ -147,14 +146,14 @@ pub unsafe fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
         } else {
             (*interpreter).push_nil();
             lua_rotate(interpreter, -2, 1);
-            lua_pushstring(interpreter, if stat == 1 { make_cstring!("open") } else { make_cstring!("init") });
+            lua_pushstring(interpreter, if stat == 1 { c"open".as_ptr() } else { c"init".as_ptr() });
             return 3;
         };
     }
 }
 pub unsafe fn readable(filename: *const i8) -> i32 {
     unsafe {
-        let file: *mut FILE = fopen(filename, make_cstring!("r"));
+        let file: *mut FILE = fopen(filename, c"r".as_ptr());
         if file.is_null() {
             return 0;
         }
@@ -168,10 +167,10 @@ pub unsafe fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *const i8 {
         if name == end {
             return null();
         } else if *name as i32 == Character::Null as i32 {
-            *name = *(make_cstring!(";"));
+            *name = *(c";".as_ptr());
             name = name.offset(1);
         }
-        let mut sep: *mut i8 = strchr(name, *(make_cstring!(";")) as i32);
+        let mut sep: *mut i8 = strchr(name, *(c";".as_ptr()) as i32);
         if sep.is_null() {
             sep = end;
         }
@@ -184,9 +183,9 @@ pub unsafe fn pusherrornotfound(interpreter: *mut Interpreter, path: *const i8) 
     unsafe {
         let mut buffer = Buffer::new();
         buffer.initialize(interpreter);
-        buffer.add_string(make_cstring!("no file '"));
-        lual_addgsub(&mut buffer, path, make_cstring!(";"), make_cstring!("'\n\tno file '"));
-        buffer.add_string(make_cstring!("'"));
+        buffer.add_string(c"no file '".as_ptr());
+        lual_addgsub(&mut buffer, path, c";".as_ptr(), c"'\n\tno file '".as_ptr());
+        buffer.add_string(c"'".as_ptr());
         buffer.push_result();
     }
 }
@@ -200,7 +199,7 @@ pub unsafe fn searchpath(interpreter: *mut Interpreter, mut name: *const i8, pat
         }
         let mut buffer = Buffer::new();
         buffer.initialize(interpreter);
-        lual_addgsub(&mut buffer, path, make_cstring!("?"), name);
+        lual_addgsub(&mut buffer, path, c"?".as_ptr(), name);
         (buffer.loads.get_length() < buffer.loads.get_size() || !(buffer.prepare_with_size(1)).is_null()) as i32;
         let fresh195 = buffer.loads.get_length();
         buffer.loads.set_length(((buffer.loads.get_length()).wrapping_add(1)) as usize);
@@ -227,8 +226,8 @@ pub unsafe fn ll_searchpath(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             lual_checklstring(interpreter, 1, null_mut()),
             lual_checklstring(interpreter, 2, null_mut()),
-            lual_optlstring(interpreter, 3, make_cstring!("."), null_mut()),
-            lual_optlstring(interpreter, 4, make_cstring!("/"), null_mut()),
+            lual_optlstring(interpreter, 3, c".".as_ptr(), null_mut()),
+            lual_optlstring(interpreter, 4, c"/".as_ptr(), null_mut()),
         );
         if !f.is_null() {
             return 1;
@@ -244,9 +243,9 @@ pub unsafe fn findfile(interpreter: *mut Interpreter, name: *const i8, pname: *c
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, pname);
         let path: *const i8 = lua_tolstring(interpreter, -1, null_mut());
         if path.is_null() {
-            lual_error(interpreter, make_cstring!("'package.%s' must be a string"), pname);
+            lual_error(interpreter, c"'package.%s' must be a string".as_ptr(), pname);
         }
-        return searchpath(interpreter, name, path, make_cstring!("."), dirsep);
+        return searchpath(interpreter, name, path, c".".as_ptr(), dirsep);
     }
 }
 pub unsafe fn checkload(interpreter: *mut Interpreter, stat: i32, filename: *const i8) -> i32 {
@@ -257,7 +256,7 @@ pub unsafe fn checkload(interpreter: *mut Interpreter, stat: i32, filename: *con
         } else {
             return lual_error(
                 interpreter,
-                make_cstring!("error loading module '%s' from file '%s':\n\t%s"),
+                c"error loading module '%s' from file '%s':\n\t%s".as_ptr(),
                 lua_tolstring(interpreter, 1, null_mut()),
                 filename,
                 lua_tolstring(interpreter, -1, null_mut()),
@@ -268,7 +267,7 @@ pub unsafe fn checkload(interpreter: *mut Interpreter, stat: i32, filename: *con
 pub unsafe fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let filename: *const i8 = findfile(interpreter, name, make_cstring!("path"), make_cstring!("/"));
+        let filename: *const i8 = findfile(interpreter, name, c"path".as_ptr(), c"/".as_ptr());
         if filename.is_null() {
             return 1;
         }
@@ -277,26 +276,26 @@ pub unsafe fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn loadfunc(interpreter: *mut Interpreter, filename: *const i8, mut modname: *const i8) -> i32 {
     unsafe {
-        modname = lual_gsub(interpreter, modname, make_cstring!("."), make_cstring!("_"));
+        modname = lual_gsub(interpreter, modname, c".".as_ptr(), c"_".as_ptr());
         let mut openfunc: *const i8;
-        let mark: *const i8 = strchr(modname, *(make_cstring!("-")) as i32);
+        let mark: *const i8 = strchr(modname, *(c"-".as_ptr()) as i32);
         if !mark.is_null() {
             openfunc = lua_pushlstring(interpreter, modname, mark.offset_from(modname) as usize);
-            openfunc = lua_pushfstring(interpreter, make_cstring!("luaopen_%s"), openfunc);
+            openfunc = lua_pushfstring(interpreter, c"luaopen_%s".as_ptr(), openfunc);
             let stat: i32 = lookforfunc(interpreter, filename, openfunc);
             if stat != 2 {
                 return stat;
             }
             modname = mark.offset(1 as isize);
         }
-        openfunc = lua_pushfstring(interpreter, make_cstring!("luaopen_%s"), modname);
+        openfunc = lua_pushfstring(interpreter, c"luaopen_%s".as_ptr(), modname);
         return lookforfunc(interpreter, filename, openfunc);
     }
 }
 pub unsafe fn searcher_c(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let filename: *const i8 = findfile(interpreter, name, make_cstring!("cpath"), make_cstring!("/"));
+        let filename: *const i8 = findfile(interpreter, name, c"cpath".as_ptr(), c"/".as_ptr());
         if filename.is_null() {
             return 1;
         }
@@ -311,7 +310,7 @@ pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         lua_pushlstring(interpreter, name, p.offset_from(name) as usize);
-        let filename: *const i8 = findfile(interpreter, lua_tolstring(interpreter, -1, null_mut()), make_cstring!("cpath"), make_cstring!("/"));
+        let filename: *const i8 = findfile(interpreter, lua_tolstring(interpreter, -1, null_mut()), c"cpath".as_ptr(), c"/".as_ptr());
         if filename.is_null() {
             return 1;
         }
@@ -320,7 +319,7 @@ pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
             if stat != 2 {
                 return checkload(interpreter, 0, filename);
             } else {
-                lua_pushfstring(interpreter, make_cstring!("no module '%s' in file '%s'"), name, filename);
+                lua_pushfstring(interpreter, c"no module '%s' in file '%s'".as_ptr(), name, filename);
                 return 1;
             }
         }
@@ -331,12 +330,12 @@ pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn searcher_preload(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, make_cstring!("_PRELOAD"));
+        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, c"_PRELOAD".as_ptr());
         if lua_getfield(interpreter, -1, name) == TagType::Nil {
-            lua_pushfstring(interpreter, make_cstring!("no field package.preload['%s']"), name);
+            lua_pushfstring(interpreter, c"no field package.preload['%s']".as_ptr(), name);
             return 1;
         } else {
-            lua_pushstring(interpreter, make_cstring!(":preload:"));
+            lua_pushstring(interpreter, c":preload:".as_ptr());
             return 2;
         };
     }
@@ -345,18 +344,18 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
         let mut i: i32;
         let mut message = Buffer::new();
-        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, make_cstring!("searchers")) != TagType::Table) as i32 != 0) as i64 != 0 {
-            lual_error(interpreter, make_cstring!("'package.searchers' must be a table"));
+        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, c"searchers".as_ptr()) != TagType::Table) as i32 != 0) as i64 != 0 {
+            lual_error(interpreter, c"'package.searchers' must be a table".as_ptr());
         }
         message.initialize(interpreter);
         i = 1;
         loop {
-            message.add_string(make_cstring!("\n\t"));
+            message.add_string(c"\n\t".as_ptr());
             if lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil {
                 lua_settop(interpreter, -2);
                 message.loads.set_length((message.loads.get_length().wrapping_sub(2)) as usize);
                 message.push_result();
-                lual_error(interpreter, make_cstring!("module '%s' not found:%s"), name, lua_tolstring(interpreter, -1, null_mut()));
+                lual_error(interpreter, c"module '%s' not found:%s".as_ptr(), name, lua_tolstring(interpreter, -1, null_mut()));
             }
             lua_pushstring(interpreter, name);
             (*interpreter).lua_callk(1, 2, 0, None);
@@ -377,7 +376,7 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         lua_settop(interpreter, 1);
-        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, make_cstring!("_LOADED"));
+        lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, c"_LOADED".as_ptr());
         lua_getfield(interpreter, 2, name);
         if lua_toboolean(interpreter, -1) != 0 {
             return 1;
@@ -403,11 +402,11 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 2] = {
-    [{ RegisteredFunction { name: make_cstring!("loadlib"), function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32) } }, {
-        RegisteredFunction { name: make_cstring!("searchpath"), function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32) }
+    [{ RegisteredFunction { name: c"loadlib".as_ptr(), function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32) } }, {
+        RegisteredFunction { name: c"searchpath".as_ptr(), function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32) }
     }]
 };
-pub const LL_FUNCTIONS: [RegisteredFunction; 1] = [{ RegisteredFunction { name: make_cstring!("require"), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }];
+pub const LL_FUNCTIONS: [RegisteredFunction; 1] = [{ RegisteredFunction { name: c"require".as_ptr(), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }];
 pub unsafe fn createsearcherstable(interpreter: *mut Interpreter) {
     unsafe {
         pub const SEARCHERS: [CFunction; 5] = {
@@ -428,7 +427,7 @@ pub unsafe fn createsearcherstable(interpreter: *mut Interpreter) {
             lua_rawseti(interpreter, -2, (i + 1) as i64);
             i += 1;
         }
-        lua_setfield(interpreter, -2, make_cstring!("searchers"));
+        lua_setfield(interpreter, -2, c"searchers".as_ptr());
     }
 }
 pub unsafe fn createclibstable(interpreter: *mut Interpreter) {
@@ -436,7 +435,7 @@ pub unsafe fn createclibstable(interpreter: *mut Interpreter) {
         lual_getsubtable(interpreter, -(1000000 as i32) - 1000 as i32, CLIBS);
         (*interpreter).lua_createtable();
         lua_pushcclosure(interpreter, Some(gctm as unsafe fn(*mut Interpreter) -> i32), 0);
-        lua_setfield(interpreter, -2, make_cstring!("__gc"));
+        lua_setfield(interpreter, -2, c"__gc".as_ptr());
         lua_setmetatable(interpreter, -2);
     }
 }
@@ -449,22 +448,22 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
         createsearcherstable(interpreter);
         setpath(
             interpreter,
-            make_cstring!("path"),
-            make_cstring!("LUA_PATH"),
-            make_cstring!("/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua") as *const u8 as *const i8,
+            c"path".as_ptr(),
+            c"LUA_PATH".as_ptr(),
+            c"/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua".as_ptr() as *const u8 as *const i8,
         );
         setpath(
             interpreter,
-            make_cstring!("cpath"),
-            make_cstring!("LUA_CPATH"),
-            make_cstring!("/usr/local/lib/lua/5.4/?.so;/usr/local/lib/lua/5.4/loadall.so;./?.so\0"),
+            c"cpath".as_ptr(),
+            c"LUA_CPATH".as_ptr(),
+            c"/usr/local/lib/lua/5.4/?.so;/usr/local/lib/lua/5.4/loadall.so;./?.so".as_ptr(),
         );
-        lua_pushstring(interpreter, make_cstring!("/\n;\n?\n!\n-\n"));
-        lua_setfield(interpreter, -2, make_cstring!("config"));
-        lual_getsubtable(interpreter, -1000000 - 1000, make_cstring!("_LOADED"));
-        lua_setfield(interpreter, -2, make_cstring!("loaded"));
-        lual_getsubtable(interpreter, -1000000 - 1000, make_cstring!("_PRELOAD"));
-        lua_setfield(interpreter, -2, make_cstring!("preload"));
+        lua_pushstring(interpreter, c"/\n;\n?\n!\n-\n".as_ptr());
+        lua_setfield(interpreter, -2, c"config".as_ptr());
+        lual_getsubtable(interpreter, -1000000 - 1000, c"_LOADED".as_ptr());
+        lua_setfield(interpreter, -2, c"loaded".as_ptr());
+        lual_getsubtable(interpreter, -1000000 - 1000, c"_PRELOAD".as_ptr());
+        lua_setfield(interpreter, -2, c"preload".as_ptr());
         lua_rawgeti(interpreter, -1000000 - 1000, 2 as i64);
         lua_pushvalue(interpreter, -2);
         lual_setfuncs(interpreter, LL_FUNCTIONS.as_ptr(), LL_FUNCTIONS.len(), 1);

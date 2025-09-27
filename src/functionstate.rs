@@ -27,7 +27,6 @@ use crate::vm::instruction::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use libc::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -119,7 +118,7 @@ pub unsafe fn leaveblock(interpreter: *mut Interpreter, lexical_state: *mut Lexi
             has_close = (*lexical_state).create_label(
                 interpreter,
                 function_state,
-                luas_newlstr(interpreter, make_cstring!("break"), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)),
+                luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)),
                 0,
                 false,
             );
@@ -206,8 +205,8 @@ pub unsafe fn errorlimit(interpreter: *mut Interpreter, lexical_state: *mut Lexi
     unsafe {
         let message: *const i8;
         let line: i32 = (*(*function_state).prototype).prototype_line_defined;
-        let where_0: *const i8 = if line == 0 { make_cstring!("main function") } else { luao_pushfstring(interpreter, make_cstring!("function at line %d"), line) };
-        message = luao_pushfstring(interpreter, make_cstring!("too many %s (limit is %d) in %s"), what, limit, where_0);
+        let where_0: *const i8 = if line == 0 { c"main function".as_ptr() } else { luao_pushfstring(interpreter, c"function at line %d".as_ptr(), line) };
+        message = luao_pushfstring(interpreter, c"too many %s (limit is %d) in %s".as_ptr(), what, limit, where_0);
         luax_syntaxerror(interpreter, lexical_state, message);
     }
 }
@@ -292,7 +291,7 @@ pub unsafe fn searchupvalue(function_state: *mut FunctionState, name: *mut TStri
 pub unsafe fn allocate_upvalue_description(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, prototype: *mut Prototype) -> *mut UpValueDescription {
     unsafe {
         let mut old_size = (*prototype).prototype_upvalues.get_size();
-        checklimit(interpreter, lexical_state, function_state, (*function_state).count_upvalues as i32 + 1, 255 as i32, make_cstring!("upvalues"));
+        checklimit(interpreter, lexical_state, function_state, (*function_state).count_upvalues as i32 + 1, 255 as i32, c"upvalues".as_ptr());
         (*prototype).prototype_upvalues.grow(
             interpreter,
             (*function_state).count_upvalues as usize,
@@ -301,7 +300,7 @@ pub unsafe fn allocate_upvalue_description(interpreter: *mut Interpreter, lexica
             } else {
                 (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
             },
-            make_cstring!("upvalues"),
+            c"upvalues".as_ptr(),
         );
         while old_size < (*prototype).prototype_upvalues.get_size() {
             let fresh41 = old_size;
@@ -395,7 +394,7 @@ pub unsafe fn fixforjump(interpreter: *mut Interpreter, lexical_state: *mut Lexi
             offset = -offset;
         }
         if offset > (1 << 8 + 8 + 1) - 1 {
-            luax_syntaxerror(interpreter, lexical_state, make_cstring!("control structure too long"));
+            luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
         *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1) << POSITION_K) | (offset as u32) << POSITION_K & !(!(0u32) << 8 + 8 + 1) << POSITION_K;
     }
@@ -455,7 +454,7 @@ pub unsafe fn fixjump(interpreter: *mut Interpreter, lexical_state: *mut Lexical
         let jmp: *mut u32 = &mut *((*(*function_state).prototype).prototype_code.vectort_pointer).offset(program_counter as isize) as *mut u32;
         let offset: i32 = dest - (program_counter + 1);
         if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) {
-            luax_syntaxerror(interpreter, lexical_state, make_cstring!("control structure too long"));
+            luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
         *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A) | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A;
     }
@@ -581,7 +580,7 @@ pub unsafe fn savelineinfo(interpreter: *mut Interpreter, _lexical_state: *mut L
                 } else {
                     (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
                 },
-                make_cstring!("lines"),
+                c"lines".as_ptr(),
             );
             (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset((*function_state).count_abslineinfo as isize)).program_counter = program_counter;
             let fresh133 = (*function_state).count_abslineinfo;
@@ -594,7 +593,7 @@ pub unsafe fn savelineinfo(interpreter: *mut Interpreter, _lexical_state: *mut L
             interpreter,
             program_counter as usize,
             if 0x7FFFFFFF <= (!(0usize)).wrapping_div(size_of::<i8>()) { 0x7FFFFFFF } else { !(0usize) },
-            make_cstring!("opcodes"),
+            c"opcodes".as_ptr(),
         );
         *((*prototype).prototype_line_info.vectort_pointer).offset(program_counter as isize) = linedif as i8;
         (*function_state).previous_line = line;
@@ -633,7 +632,7 @@ pub unsafe fn luak_code(interpreter: *mut Interpreter, lexical_state: *mut Lexic
             } else {
                 (!(0usize)).wrapping_div(size_of::<u32>() as usize)
             },
-            make_cstring!("opcodes"),
+            c"opcodes".as_ptr(),
         );
         let fresh134 = (*function_state).program_counter;
         (*function_state).program_counter = (*function_state).program_counter + 1;
@@ -690,7 +689,7 @@ pub unsafe fn luak_checkstack(interpreter: *mut Interpreter, lexical_state: *mut
         let new_stack: i32 = (*function_state).freereg as i32 + n;
         if new_stack > (*(*function_state).prototype).prototype_maximum_stack_size as i32 {
             if new_stack >= 255 as i32 {
-                luax_syntaxerror(interpreter, lexical_state, make_cstring!("function or expression needs too many registers"));
+                luax_syntaxerror(interpreter, lexical_state, c"function or expression needs too many registers".as_ptr());
             }
             (*(*function_state).prototype).prototype_maximum_stack_size = new_stack as u8;
         }
@@ -764,7 +763,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
             } else {
                 (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
             },
-            make_cstring!("constants"),
+            c"constants".as_ptr(),
         );
         while old_size < (*prototype).prototype_constants.get_size() {
             let fresh135 = old_size;

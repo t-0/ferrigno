@@ -39,7 +39,7 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8
 }
 pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
-        let pmode: *const i8 = strpbrk(s, make_cstring!(".xXnN"));
+        let pmode: *const i8 = strpbrk(s, c".xXnN".as_ptr());
         let mode: i32 = if !pmode.is_null() { *pmode as u8 as i32 | Character::UpperA as i32 ^ Character::LowerA as i32 } else { 0 };
         if mode == Character::LowerN as i32 {
             return null();
@@ -119,7 +119,7 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
             } else {
                 memcpy(
                     out as *mut libc::c_void,
-                    make_cstring!("...") as *const libc::c_void,
+                    c"...".as_ptr() as *const libc::c_void,
                     (size_of::<[i8; 4]>()).wrapping_sub(1).wrapping_mul(size_of::<i8>()),
                 );
                 out = out.offset((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize) as isize);
@@ -153,7 +153,7 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 out = out.offset(source_length as isize);
                 memcpy(
                     out as *mut libc::c_void,
-                    make_cstring!("...") as *const libc::c_void,
+                    c"...".as_ptr() as *const libc::c_void,
                     (size_of::<[i8; 4]>()).wrapping_sub(1).wrapping_mul(size_of::<i8>()),
                 );
                 out = out.offset((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize) as isize);

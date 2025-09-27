@@ -11,7 +11,6 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -145,7 +144,7 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar:
                 Character::LowerN => {
                     (*ar).namewhat = getfuncname(interpreter, ci, &mut (*ar).name);
                     if ((*ar).namewhat).is_null() {
-                        (*ar).namewhat = make_cstring!("");
+                        (*ar).namewhat = c"".as_ptr();
                         (*ar).name = null();
                     }
                 },

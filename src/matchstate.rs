@@ -5,7 +5,6 @@ use libc::*;
 use crate::tag::*;
 use crate::utility::c::*;
 use libc::memcmp;
-use rlua::*;
 use std::ptr::*;
 pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]
@@ -49,7 +48,7 @@ impl MatchState {
                 (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;
             } else if !lua_isstring(interpreter, -1) {
-                return lual_error(interpreter, make_cstring!("invalid replacement value (a %s)"), lua_typename(interpreter, lua_type(interpreter, -1)));
+                return lual_error(interpreter, c"invalid replacement value (a %s)".as_ptr(), lua_typename(interpreter, lua_type(interpreter, -1)));
             } else {
                 (*b).add_value();
                 return 1;
@@ -59,7 +58,7 @@ impl MatchState {
     pub unsafe fn push_captures(&mut self, s: *const i8, e: *const i8) -> i32 {
         unsafe {
             let nlevels: i32 = if self.level as i32 == 0 && !s.is_null() { 1 } else { self.level as i32 };
-            lual_checkstack(self.matchstate_interpreter, nlevels, make_cstring!("too many captures"));
+            lual_checkstack(self.matchstate_interpreter, nlevels, c"too many captures".as_ptr());
             for i in 0..nlevels {
                 self.push_onecapture(i, s, e);
             }
@@ -79,7 +78,7 @@ impl MatchState {
         unsafe {
             if i >= self.level as i32 {
                 if i != 0 {
-                    lual_error(self.matchstate_interpreter, make_cstring!("invalid capture index %%%d"), i + 1);
+                    lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), i + 1);
                 }
                 *cap = s;
                 return e.offset_from(s) as usize;
@@ -87,7 +86,7 @@ impl MatchState {
                 let capl: i64 = self.capture[i as usize].length;
                 *cap = self.capture[i as usize].init;
                 if capl == -1 {
-                    lual_error(self.matchstate_interpreter, make_cstring!("unfinished capture"));
+                    lual_error(self.matchstate_interpreter, c"unfinished capture".as_ptr());
                 } else if capl == -2 as i64 {
                     (*(self.matchstate_interpreter)).push_integer(((self.capture[i as usize].init).offset_from(self.src_init) as i64 + 1) as i64);
                 }
@@ -99,7 +98,7 @@ impl MatchState {
         unsafe {
             l -= Character::Digit1 as i32;
             if ((l < 0 || l >= self.level as i32 || self.capture[l as usize].length == -1 as i64) as i32 != 0) as i64 != 0 {
-                return lual_error(self.matchstate_interpreter, make_cstring!("invalid capture index %%%d"), l + 1);
+                return lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), l + 1);
             }
             return l;
         }
@@ -114,7 +113,7 @@ impl MatchState {
                 }
                 level -= 1;
             }
-            return lual_error(self.matchstate_interpreter, make_cstring!("invalid pattern capture"));
+            return lual_error(self.matchstate_interpreter, c"invalid pattern capture".as_ptr());
         }
     }
     pub unsafe fn classend(&mut self, mut p: *const i8) -> *const i8 {
@@ -124,7 +123,7 @@ impl MatchState {
             match *fresh160 as i32 {
                 37 => {
                     if p == self.p_end {
-                        lual_error(self.matchstate_interpreter, make_cstring!("malformed pattern (ends with '%%')"));
+                        lual_error(self.matchstate_interpreter, c"malformed pattern (ends with '%%')".as_ptr());
                     }
                     return p.offset(1 as isize);
                 },
@@ -134,7 +133,7 @@ impl MatchState {
                     }
                     loop {
                         if p == self.p_end {
-                            lual_error(self.matchstate_interpreter, make_cstring!("malformed pattern (missing Character::BracketRight)"));
+                            lual_error(self.matchstate_interpreter, c"malformed pattern (missing Character::BracketRight)".as_ptr());
                         }
                         let fresh161 = p;
                         p = p.offset(1);
@@ -171,7 +170,7 @@ impl MatchState {
     pub unsafe fn matchbalance(&mut self, mut s: *const i8, p: *const i8) -> *const i8 {
         unsafe {
             if p >= self.p_end.offset(-1) {
-                lual_error(self.matchstate_interpreter, make_cstring!("malformed pattern (missing arguments to '%%b')"));
+                lual_error(self.matchstate_interpreter, c"malformed pattern (missing arguments to '%%b')".as_ptr());
             }
             if *s as i32 != *p as i32 {
                 return null();
@@ -232,7 +231,7 @@ impl MatchState {
             let res: *const i8;
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
-                lual_error(self.matchstate_interpreter, make_cstring!("too many captures"));
+                lual_error(self.matchstate_interpreter, c"too many captures".as_ptr());
             }
             self.capture[level].init = s;
             self.capture[level].length = what as i64;
@@ -276,7 +275,7 @@ impl MatchState {
             let fresh162 = self.matchdepth;
             self.matchdepth = self.matchdepth - 1;
             if fresh162 == 0 {
-                lual_error(self.matchstate_interpreter, make_cstring!("pattern too complex"));
+                lual_error(self.matchstate_interpreter, c"pattern too complex".as_ptr());
             }
             loop {
                 if !(p != self.p_end) {
@@ -323,7 +322,7 @@ impl MatchState {
                                     let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != Character::BracketLeft as i32 {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
+                                        lual_error(self.matchstate_interpreter, c"missing Character::BracketLeft after '%%f' in pattern".as_ptr());
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -364,7 +363,7 @@ impl MatchState {
                                     let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != Character::BracketLeft as i32 {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
+                                        lual_error(self.matchstate_interpreter, c"missing Character::BracketLeft after '%%f' in pattern".as_ptr());
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -405,7 +404,7 @@ impl MatchState {
                                     let previous: i8;
                                     p = p.offset(2 as isize);
                                     if *p as i32 != Character::BracketLeft as i32 {
-                                        lual_error(self.matchstate_interpreter, make_cstring!("missing Character::BracketLeft after '%%f' in pattern"));
+                                        lual_error(self.matchstate_interpreter, c"missing Character::BracketLeft after '%%f' in pattern".as_ptr());
                                     }
                                     ep = self.classend(p);
                                     previous = (if s == self.src_init { Character::Null as i32 } else { *s.offset(-(1 as isize)) as i32 }) as i8;
@@ -528,7 +527,7 @@ impl MatchState {
                         (*b).add_string_with_length(cap, resl as usize);
                     }
                 } else {
-                    lual_error(interpreter, make_cstring!("invalid use of '%c' in replacement string"), Character::Percent as i32);
+                    lual_error(interpreter, c"invalid use of '%c' in replacement string".as_ptr(), Character::Percent as i32);
                 }
                 l = (l as usize).wrapping_sub(p.offset(1 as isize).offset_from(news) as usize) as usize as usize;
                 news = p.offset(1 as isize);

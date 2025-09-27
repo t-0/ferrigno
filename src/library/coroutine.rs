@@ -62,7 +62,7 @@ unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
                 }
             },
             _ => {
-                return lual_error(interpreter, make_cstring!("cannot close a %s coroutine"), COROUTINE_STATUS_NAMES[status as usize]);
+                return lual_error(interpreter, c"cannot close a %s coroutine".as_ptr(), COROUTINE_STATUS_NAMES[status as usize]);
             },
         };
     }
@@ -88,14 +88,14 @@ unsafe fn luab_yield(interpreter: *mut Interpreter) -> i32 {
 }
 const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
-        { RegisteredFunction { name: make_cstring!("create"), function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("resume"), function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("running"), function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("status"), function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("wrap"), function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("yield"), function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("isyieldable"), function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: make_cstring!("close"), function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"create".as_ptr(), function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"resume".as_ptr(), function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"running".as_ptr(), function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"status".as_ptr(), function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"wrap".as_ptr(), function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"yield".as_ptr(), function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"isyieldable".as_ptr(), function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32) } },
+        { RegisteredFunction { name: c"close".as_ptr(), function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32) } },
     ]
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
@@ -110,7 +110,7 @@ pub unsafe fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let co: *mut Interpreter = lua_tothread(interpreter, 1);
         if co.is_null() {
-            lual_typeerror(interpreter, 1, make_cstring!("thread"));
+            lual_typeerror(interpreter, 1, c"thread".as_ptr());
         }
         return co;
     }
@@ -118,7 +118,7 @@ pub unsafe fn getco(interpreter: *mut Interpreter) -> *mut Interpreter {
 pub unsafe fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, narg: i32) -> i32 {
     unsafe {
         if lua_checkstack(co, narg) == 0 {
-            lua_pushstring(interpreter, make_cstring!("too many arguments to resume"));
+            lua_pushstring(interpreter, c"too many arguments to resume".as_ptr());
             return -1;
         } else {
             lua_xmove(interpreter, co, narg);
@@ -127,7 +127,7 @@ pub unsafe fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, nar
             if status == 0 || status == 1 {
                 if lua_checkstack(interpreter, nres + 1) == 0 {
                     lua_settop(co, -nres - 1);
-                    lua_pushstring(interpreter, make_cstring!("too many results to resume"));
+                    lua_pushstring(interpreter, c"too many results to resume".as_ptr());
                     return -1;
                 }
                 lua_xmove(co, interpreter, nres);

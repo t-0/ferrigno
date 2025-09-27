@@ -18,7 +18,6 @@ use crate::vectort::*;
 use crate::vm::instruction::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -260,7 +259,7 @@ pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
     unsafe {
         let s: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset(uv as isize)).name;
         if s.is_null() {
-            return make_cstring!("?");
+            return c"?".as_ptr();
         } else {
             return (*s).get_contents_mut();
         };
@@ -324,9 +323,9 @@ pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *c
         let kvalue: *mut TValue = &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
         if (*kvalue).is_tagtype_string() {
             *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
-            return make_cstring!("code_constant");
+            return c"code_constant".as_ptr();
         } else {
-            *name = make_cstring!("?");
+            *name = c"?".as_ptr();
             return null();
         };
     }
@@ -374,7 +373,7 @@ pub unsafe fn rname(p: *const Prototype, mut program_counter: i32, c: i32, name:
     unsafe {
         let what: *const i8 = basicgetobjname(p, &mut program_counter, c, name);
         if !(!what.is_null() && *what as i32 == Character::LowerC as i32) {
-            *name = make_cstring!("?");
+            *name = c"?".as_ptr();
         }
     }
 }
@@ -400,7 +399,7 @@ pub unsafe fn is_environment(p: *const Prototype, mut program_counter: i32, i: u
                 name = null();
             }
         }
-        return if !name.is_null() && strcmp(name, make_cstring!("_ENV")) == 0 { make_cstring!("global") } else { make_cstring!("field") };
+        return if !name.is_null() && strcmp(name, c"_ENV".as_ptr()) == 0 { c"global".as_ptr() } else { c"field".as_ptr() };
     }
 }
 pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *mut *const i8) -> *const i8 {
@@ -423,8 +422,8 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
                     return is_environment(p, lastpc, i, 0);
                 },
                 13 => {
-                    *name = make_cstring!("integer index");
-                    return make_cstring!("field");
+                    *name = c"integer index".as_ptr();
+                    return c"field".as_ptr();
                 },
                 14 => {
                     let k_1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
@@ -433,7 +432,7 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
                 },
                 20 => {
                     rkname(p, lastpc, i, name);
-                    return make_cstring!("method");
+                    return c"method".as_ptr();
                 },
                 _ => {},
             }
@@ -450,8 +449,8 @@ pub unsafe fn funcnamefromcode(interpreter: *mut Interpreter, p: *const Prototyp
                 return getobjname(p, program_counter, (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32, name);
             },
             OPCODE_TFORCALL => {
-                *name = make_cstring!("for iterator");
-                return make_cstring!("for iterator");
+                *name = c"for iterator".as_ptr();
+                return c"for iterator".as_ptr();
             },
             OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
@@ -489,7 +488,7 @@ pub unsafe fn funcnamefromcode(interpreter: *mut Interpreter, p: *const Prototyp
             _ => return null(),
         }
         *name = ((*(*(*interpreter).global).tm_name[tm as usize]).get_contents()).offset(2 as isize);
-        return make_cstring!("metamethod");
+        return c"metamethod".as_ptr();
     }
 }
 pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: i32) -> i32 {

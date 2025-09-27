@@ -2,9 +2,8 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use libc::*;
-use rlua::*;
 use std::ptr::*;
-pub const LUA_SIGNATURE: *const i8 = make_cstring!("\x1BLua");
+pub const LUA_SIGNATURE: *const i8 = c"\x1BLua".as_ptr();
 #[repr(C)]
 pub struct DumpState {
     pub dumpstate_interpreter: *mut Interpreter,
@@ -72,7 +71,7 @@ impl DumpState {
             self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
-            self.dump_block(make_cstring!("\x19\x7F\r\n\x1A\n") as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
+            self.dump_block(c"\x19\x7F\r\n\x1A\n".as_ptr() as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }

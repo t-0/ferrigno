@@ -14,7 +14,6 @@ use crate::user::*;
 use crate::utility::*;
 use crate::value::*;
 use libc::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -120,7 +119,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                 if !owner.is_null() {
                     *owner = &mut (*(closure as *mut Object));
                 }
-                return make_cstring!("");
+                return c"".as_ptr();
             },
             TAG_VARIANT_CLOSURE_L => {
                 let f_0: *mut Closure = &mut (*((*fi).value.object as *mut Closure));
@@ -133,7 +132,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                     *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize) as *mut Object));
                 }
                 let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).name;
-                return if name.is_null() { make_cstring!("(no name)") } else { ((*name).get_contents_mut()) as *const i8 };
+                return if name.is_null() { c"(no name)".as_ptr() } else { ((*name).get_contents_mut()) as *const i8 };
             },
             _ => return null(),
         };
@@ -163,10 +162,10 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
         let mut length: usize;
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            length = snprintf(buffer, 44, make_cstring!("%lld"), (*obj).value.integer) as usize;
+            length = snprintf(buffer, 44, c"%lld".as_ptr(), (*obj).value.integer) as usize;
         } else {
-            length = snprintf(buffer, 44, make_cstring!("%.14g"), (*obj).value.number) as usize;
-            if *buffer.offset(strspn(buffer, make_cstring!("-0123456789")) as isize) as i32 == Character::Null as i32 {
+            length = snprintf(buffer, 44, c"%.14g".as_ptr(), (*obj).value.number) as usize;
+            if *buffer.offset(strspn(buffer, c"-0123456789".as_ptr()) as isize) as i32 == Character::Null as i32 {
                 let fresh = length;
                 length = length + 1;
                 *buffer.offset(fresh as isize) = Character::Period as i8;
@@ -376,7 +375,7 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
             _ => {
                 tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
                 if ((*tm).get_tag_type()) == TagType::Nil {
-                    luag_typeerror(interpreter, rb, make_cstring!("get length of"));
+                    luag_typeerror(interpreter, rb, c"get length of".as_ptr());
                 }
             },
         }

@@ -3,7 +3,6 @@ use crate::interpreter::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
-use rlua::*;
 pub unsafe fn forlimit(interpreter: *mut Interpreter, init: i64, lim: *const TValue, p: *mut i64, step: i64) -> i32 {
     unsafe {
         if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
@@ -15,7 +14,7 @@ pub unsafe fn forlimit(interpreter: *mut Interpreter, init: i64, lim: *const TVa
                 if (*lim).to_number(&mut flim) { 1 } else { 0 }
             } == 0
             {
-                luag_forerror(interpreter, lim, make_cstring!("limit"));
+                luag_forerror(interpreter, lim, c"limit".as_ptr());
             }
             if (0.0) < flim {
                 if step < 0 {
@@ -42,7 +41,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             let step: i64 = (*pstep).value.integer;
             let mut limit: i64 = 0;
             if step == 0 {
-                luag_runerror(interpreter, make_cstring!("'for' step is zero"));
+                luag_runerror(interpreter, c"'for' step is zero".as_ptr());
             }
             let io = &mut (*ra.offset(3 as isize));
             (*io).value.integer = init;
@@ -76,7 +75,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, plimit, make_cstring!("limit"));
+                luag_forerror(interpreter, plimit, c"limit".as_ptr());
             }
             if (((if (*pstep).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 step_0 = (*pstep).value.number;
@@ -87,7 +86,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, pstep, make_cstring!("step"));
+                luag_forerror(interpreter, pstep, c"step".as_ptr());
             }
             if (((if (*pinit).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
                 init_0 = (*pinit).value.number;
@@ -98,10 +97,10 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 != 0) as i64
                 != 0
             {
-                luag_forerror(interpreter, pinit, make_cstring!("initial value"));
+                luag_forerror(interpreter, pinit, c"initial value".as_ptr());
             }
             if step_0 == 0.0 {
-                luag_runerror(interpreter, make_cstring!("'for' step is zero"));
+                luag_runerror(interpreter, c"'for' step is zero".as_ptr());
             }
             if if (0.0) < step_0 { (limit_0 < init_0) as i32 } else { (init_0 < limit_0) as i32 } != 0 {
                 return 1;

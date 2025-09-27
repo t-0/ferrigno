@@ -5,7 +5,6 @@ use crate::prototype::*;
 use crate::stkidrel::*;
 use crate::tag::*;
 use crate::tvalue::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -95,7 +94,7 @@ pub unsafe fn luag_findlocal(interpreter: *mut Interpreter, ci: *mut CallInfo, n
                 (*(*ci).call_info_next).call_info_function.stkidrel_pointer
             };
             if limit.offset_from(base) as i64 >= n as i64 && n > 0 {
-                name = if (*ci).call_info_call_status as i32 & 1 << 1 == 0 { make_cstring!("(temporary)") } else { make_cstring!("(C temporary)") };
+                name = if (*ci).call_info_call_status as i32 & 1 << 1 == 0 { c"(temporary)".as_ptr() } else { c"(C temporary)".as_ptr() };
             } else {
                 return null();
             }
@@ -112,7 +111,7 @@ pub unsafe fn findvararg(ci: *mut CallInfo, n: i32, position: *mut *mut TValue) 
             let nextra = (*ci).call_info_u.l.count_extra_arguments;
             if n >= -nextra {
                 *position = ((*ci).call_info_function.stkidrel_pointer).offset(-nextra as isize).offset(-((n + 1) as isize));
-                return make_cstring!("(vararg)");
+                return c"(vararg)".as_ptr();
             }
         }
         return null();
@@ -130,11 +129,11 @@ pub unsafe fn getfuncname(interpreter: *mut Interpreter, ci: *mut CallInfo, name
 pub unsafe fn funcnamefromcall(interpreter: *mut Interpreter, ci: *mut CallInfo, name: *mut *const i8) -> *const i8 {
     unsafe {
         if (*ci).call_info_call_status as i32 & 1 << 3 != 0 {
-            *name = make_cstring!("?");
-            return make_cstring!("hook");
+            *name = c"?".as_ptr();
+            return c"hook".as_ptr();
         } else if (*ci).call_info_call_status as i32 & 1 << 7 != 0 {
-            *name = make_cstring!("__gc");
-            return make_cstring!("metamethod");
+            *name = c"__gc".as_ptr();
+            return c"metamethod".as_ptr();
         } else if (*ci).call_info_call_status as i32 & 1 << 1 == 0 {
             return funcnamefromcode(interpreter, (*((*(*ci).call_info_function.stkidrel_pointer).value.object as *mut Closure)).payload.l_prototype, currentpc(ci), name);
         } else {

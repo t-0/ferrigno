@@ -2,7 +2,6 @@ use crate::buffer::*;
 use crate::interpreter::*;
 use crate::new::*;
 use crate::tag::*;
-use rlua::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct StreamWriter {
@@ -36,7 +35,7 @@ impl StreamWriter {
                 != 0) as i64
                 != 0
             {
-                return lual_error(interpreter, make_cstring!("unable to dump given function"));
+                return lual_error(interpreter, c"unable to dump given function".as_ptr());
             }
             self.buffer.push_result();
             return 1;

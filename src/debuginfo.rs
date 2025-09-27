@@ -9,7 +9,6 @@ use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -67,23 +66,23 @@ pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, ar: *const DebugInfo, 
 pub unsafe fn funcinfo(ar: *mut DebugInfo, cl: *mut Closure) {
     unsafe {
         if !(!cl.is_null() && (*cl).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-            (*ar).source = make_cstring!("=[C]");
+            (*ar).source = c"=[C]".as_ptr();
             (*ar).source_length = (size_of::<[i8; 5]>() as usize).wrapping_sub(1 as usize);
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
-            (*ar).what = make_cstring!("C");
+            (*ar).what = c"C".as_ptr();
         } else {
             let p: *const Prototype = (*cl).payload.l_prototype;
             if !((*p).prototype_source).is_null() {
                 (*ar).source = (*(*p).prototype_source).get_contents_mut();
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
-                (*ar).source = make_cstring!("=?");
+                (*ar).source = c"=?".as_ptr();
                 (*ar).source_length = (size_of::<[i8; 3]>() as usize).wrapping_sub(1 as usize);
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;
-            (*ar).what = if (*ar).line_defined == 0 { make_cstring!("main") } else { make_cstring!("Lua") };
+            (*ar).what = if (*ar).line_defined == 0 { c"main".as_ptr() } else { c"Lua".as_ptr() };
         }
         luao_chunkid(((*ar).short_src).as_mut_ptr(), (*ar).source, (*ar).source_length);
     }

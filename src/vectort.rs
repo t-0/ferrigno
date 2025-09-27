@@ -88,7 +88,7 @@ impl<T> VectorT<T> {
             }
             if new_size >= limit / 2 {
                 if new_size >= limit {
-                    luag_runerror(interpreter, make_cstring!("too many %s (limit is %d)"), what, limit);
+                    luag_runerror(interpreter, c"too many %s (limit is %d)".as_ptr(), what, limit);
                 }
                 new_size = limit;
             } else {

@@ -2,7 +2,6 @@
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::user::*;
-use rlua::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct UserBox {
@@ -15,7 +14,7 @@ impl UserBox {
             let user_box: *mut UserBox = (*interpreter).to_pointer(index) as *mut UserBox;
             let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
             if temp.is_null() && new_size > 0 {
-                lua_pushstring(interpreter, make_cstring!("not enough memory"));
+                lua_pushstring(interpreter, c"not enough memory".as_ptr());
                 lua_error(interpreter);
             }
             (*user_box).pointer = temp;
@@ -30,8 +29,8 @@ impl UserBox {
         }
     }
     pub const USERBOX_METATABLE: [RegisteredFunction; 2] = {
-        [{ RegisteredFunction { name: make_cstring!("__gc"), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) } }, {
-            RegisteredFunction { name: make_cstring!("__close"), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) }
+        [{ RegisteredFunction { name: c"__gc".as_ptr(), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) } }, {
+            RegisteredFunction { name: c"__close".as_ptr(), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) }
         }]
     };
     pub unsafe fn new_userbox(interpreter: *mut Interpreter) {
@@ -39,7 +38,7 @@ impl UserBox {
             let box_0: *mut UserBox = User::lua_newuserdatauv(interpreter, size_of::<UserBox>(), 0) as *mut UserBox;
             (*box_0).pointer = null_mut();
             (*box_0).size = 0;
-            if lual_newmetatable(interpreter, make_cstring!("_UBOX*")) != 0 {
+            if lual_newmetatable(interpreter, c"_UBOX*".as_ptr()) != 0 {
                 lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
             }
             lua_setmetatable(interpreter, -2);

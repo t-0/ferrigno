@@ -10,7 +10,6 @@ use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::memcmp;
-use rlua::*;
 use std::ptr::*;
 pub const STRING_SHORT_MAX: usize = 40;
 #[derive(Copy, Clone)]
@@ -283,7 +282,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize))).value.object as *mut TString)).get_length();
                     if ((l >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_sub(size_of::<TString>()).wrapping_sub(tl)) as i32 != 0) as i64 != 0 {
                         (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
-                        luag_runerror(interpreter, make_cstring!("string length overflow"));
+                        luag_runerror(interpreter, c"string length overflow".as_ptr());
                     }
                     tl = tl.wrapping_add(l);
                     n += 1;

@@ -4,7 +4,6 @@ use crate::buffer::userbox::*;
 use crate::interpreter::*;
 use crate::loads::*;
 use crate::new::*;
-use rlua::*;
 use std::ptr::*;
 pub type BufferElement = i8;
 impl Buffer {
@@ -39,7 +38,7 @@ impl Buffer {
         unsafe {
             let mut new_size = 2 * self.loads.get_size();
             if (!0usize).wrapping_sub(size) < self.loads.get_length() as usize {
-                return lual_error(self.buffer_interpreter, make_cstring!("buffer too large")) as usize;
+                return lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize;
             } else {
                 new_size = new_size.max(self.loads.get_length() + size as i32);
                 return new_size as usize;

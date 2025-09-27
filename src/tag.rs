@@ -1,4 +1,3 @@
-use rlua::*;
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum TagType {
@@ -107,19 +106,19 @@ pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
 pub const fn set_collectable(tag: u8) -> u8 {
     tag | TAG_COLLECTABLE
 }
-pub const STRING_LOCAL: *const i8 = make_cstring!("local");
-pub const STRING_UPVALUE: *const i8 = make_cstring!("upvalue");
+pub const STRING_LOCAL: *const i8 = c"local".as_ptr();
+pub const STRING_UPVALUE: *const i8 = c"upvalue".as_ptr();
 pub const TYPE_NAMES: [*const i8; 12] = [
-    make_cstring!("no value"),
-    make_cstring!("nil"),
-    make_cstring!("boolean"),
-    make_cstring!("userdata"),
-    make_cstring!("number"),
-    make_cstring!("string"),
-    make_cstring!("table"),
-    make_cstring!("function"),
-    make_cstring!("userdata"),
-    make_cstring!("thread"),
-    make_cstring!("upvalue"),
-    make_cstring!("proto"),
+    c"no value".as_ptr(),
+    c"nil".as_ptr(),
+    c"boolean".as_ptr(),
+    c"userdata".as_ptr(),
+    c"number".as_ptr(),
+    c"string".as_ptr(),
+    c"table".as_ptr(),
+    c"function".as_ptr(),
+    c"userdata".as_ptr(),
+    c"thread".as_ptr(),
+    c"upvalue".as_ptr(),
+    c"proto".as_ptr(),
 ];

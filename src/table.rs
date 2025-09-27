@@ -12,7 +12,6 @@ use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
 use libc::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -376,7 +375,7 @@ pub unsafe fn findindex(interpreter: *mut Interpreter, table: *mut Table, key: *
         } else {
             let n_value: *const TValue = getgeneric(table, key, 1);
             if (*n_value).get_tag_variant() == TAG_VARIANT_NIL_ABSENTKEY {
-                luag_runerror(interpreter, make_cstring!("invalid key to 'next'"));
+                luag_runerror(interpreter, c"invalid key to 'next'".as_ptr());
             }
             i = (n_value as *mut Node).offset_from(&mut *((*table).node).offset(0 as isize) as *mut Node) as u32;
             return i.wrapping_add(1 as u32).wrapping_add(asize);
@@ -533,7 +532,7 @@ pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mu
                         (!(0usize)).wrapping_div(size_of::<Node>() as usize) as u32
                     })
             {
-                luag_runerror(interpreter, make_cstring!("table overflow"));
+                luag_runerror(interpreter, c"table overflow".as_ptr());
             }
             size = (1 << lsize) as u32;
             (*table).node = luam_malloc_(interpreter, (size as usize).wrapping_mul(size_of::<Node>())) as *mut Node;
@@ -647,7 +646,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         let mut mp;
         let mut aux: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
         if (*key).is_tagtype_nil() {
-            luag_runerror(interpreter, make_cstring!("table index is nil"));
+            luag_runerror(interpreter, c"table index is nil".as_ptr());
         } else if (*key).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
             let number = (*key).value.number;
             let mut k: i64 = 0;
@@ -656,7 +655,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
                 aux.set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                 key = &mut aux;
             } else if number != number {
-                luag_runerror(interpreter, make_cstring!("table index is NaN"));
+                luag_runerror(interpreter, c"table index is NaN".as_ptr());
             }
         }
         if (*value).is_tagtype_nil() {
@@ -891,7 +890,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
             if slot.is_null() {
                 tm = luat_gettmbyobj(interpreter, t, TM_INDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, make_cstring!("index"));
+                    luag_typeerror(interpreter, t, c"index".as_ptr());
                 }
             } else {
                 tm = if ((*((*t).value.object as *mut Table)).get_metatable()).is_null() {
@@ -926,7 +925,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
             }
             loop_0 += 1;
         }
-        luag_runerror(interpreter, make_cstring!("'__index' chain too long; possible loop"));
+        luag_runerror(interpreter, c"'__index' chain too long; possible loop".as_ptr());
     }
 }
 pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut slot: *const TValue) {
@@ -965,7 +964,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
             } else {
                 tm = luat_gettmbyobj(interpreter, t, TM_NEWINDEX);
                 if (*tm).is_tagtype_nil() {
-                    luag_typeerror(interpreter, t, make_cstring!("index"));
+                    luag_typeerror(interpreter, t, c"index".as_ptr());
                 }
             }
             if (*tm).is_tagtype_closure() {
@@ -995,6 +994,6 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
             }
             loop_0 += 1;
         }
-        luag_runerror(interpreter, make_cstring!("'__newindex' chain too long; possible loop"));
+        luag_runerror(interpreter, c"'__newindex' chain too long; possible loop".as_ptr());
     }
 }

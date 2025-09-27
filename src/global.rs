@@ -12,7 +12,6 @@ use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -420,7 +419,7 @@ impl Global {
         unsafe {
             let string_table: *mut StringTable = &mut self.string_table;
             (*string_table).initialize(interpreter);
-            self.memory_error_message = luas_newlstr(interpreter, make_cstring!("not enough memory"), (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
+            self.memory_error_message = luas_newlstr(interpreter, c"not enough memory".as_ptr(), (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
             fix_object_global(self, self.memory_error_message as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {

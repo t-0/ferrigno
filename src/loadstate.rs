@@ -15,7 +15,6 @@ use crate::upvaluedescription::*;
 use crate::utility::c::*;
 use crate::zio::*;
 use core::mem::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -27,14 +26,14 @@ pub struct LoadState {
 impl LoadState {
     pub unsafe fn error(&mut self, why: *const i8) -> ! {
         unsafe {
-            luao_pushfstring(self.interpreter, make_cstring!("%s: bad binary format (%s)"), self.name, why);
+            luao_pushfstring(self.interpreter, c"%s: bad binary format (%s)".as_ptr(), self.name, why);
             luad_throw(self.interpreter, 3);
         }
     }
     pub unsafe fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
             if luaz_read(self.zio, b, size) != 0 {
-                self.error(make_cstring!("truncated chunk"));
+                self.error(c"truncated chunk".as_ptr());
             }
         }
     }
@@ -50,7 +49,7 @@ impl LoadState {
                 luaz_fill(self.zio)
             };
             if ret == -1 {
-                self.error(make_cstring!("truncated chunk"));
+                self.error(c"truncated chunk".as_ptr());
             }
             return ret as u8;
         }
@@ -62,7 +61,7 @@ impl LoadState {
             loop {
                 let b: i32 = self.load_byte() as i32;
                 if ret >= limit {
-                    self.error(make_cstring!("integer overflow"));
+                    self.error(c"integer overflow".as_ptr());
                 }
                 ret = ret << 7 | (b & 0x7f as i32) as usize;
                 if !(b & 0x80 as i32 == 0) {
@@ -131,7 +130,7 @@ impl LoadState {
         unsafe {
             let tstring = self.load_string_n(p);
             if tstring.is_null() {
-                self.error(make_cstring!("bad format for code_constant string"));
+                self.error(c"bad format for code_constant string".as_ptr());
             }
             return tstring;
         }
@@ -306,19 +305,19 @@ impl LoadState {
     }
     pub unsafe fn check_header(&mut self) {
         unsafe {
-            self.check_literal(&*(LUA_SIGNATURE).offset(1 as isize), make_cstring!("not a binary chunk"));
+            self.check_literal(&*(LUA_SIGNATURE).offset(1 as isize), c"not a binary chunk".as_ptr());
             if self.load_byte() as i32 != 504 as i32 / 100 as i32 * 16 as i32 + 504 as i32 % 100 as i32 {
-                self.error(make_cstring!("version mismatch"));
+                self.error(c"version mismatch".as_ptr());
             }
             if self.load_byte() as i32 != 0 {
-                self.error(make_cstring!("format mismatch"));
+                self.error(c"format mismatch".as_ptr());
             }
-            self.check_literal(make_cstring!("\x19\x7F\r\n\x1A\n"), make_cstring!("corrupted chunk"));
+            self.check_literal(c"\x19\x7F\r\n\x1A\n".as_ptr(), c"corrupted chunk".as_ptr());
             if self.load_integer() != 0x5678 as i64 {
-                self.error(make_cstring!("integer format mismatch"));
+                self.error(c"integer format mismatch".as_ptr());
             }
             if self.load_number() != 370.5f64 {
-                self.error(make_cstring!("float format mismatch"));
+                self.error(c"float format mismatch".as_ptr());
             }
         }
     }
@@ -329,7 +328,7 @@ pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *
         if *name as i32 == Character::At as i32 || *name as i32 == Character::Equal as i32 {
             load_state.name = name.offset(1 as isize);
         } else if *name as i32 == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
-            load_state.name = make_cstring!("binary string");
+            load_state.name = c"binary string".as_ptr();
         } else {
             load_state.name = name;
         }
