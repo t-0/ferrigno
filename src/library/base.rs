@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons, unsafe_code)]
+use crate::status::*;
 use crate::calls::*;
 use crate::character::*;
 use crate::f2i::*;

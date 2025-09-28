@@ -10,6 +10,7 @@ mod closure;
 mod coroutine;
 mod debugger;
 mod debuginfo;
+mod status;
 mod dumpstate;
 mod dynamicdata;
 mod expressiondescription;

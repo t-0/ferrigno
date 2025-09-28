@@ -1,7 +1,7 @@
 use crate::new::*;
 use crate::utility::c::*;
-use crate::interpreter::*;
 use std::ptr::*;
+use crate::status::*;
 #[repr(C)]
 pub struct LongJump {
     pub previous: *mut LongJump,

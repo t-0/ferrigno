@@ -43,43 +43,7 @@ use crate::vectort::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::zio::*;
-// status
-#[derive(Copy,Clone,PartialEq, PartialOrd, Eq, Ord)]
-#[repr(i32)]
-pub enum Status {
-    OK = 0,
-    Yield = 1,
-    RuntimeError = 2,
-    SyntaxError = 3,
-    MemoryError = 4,
-    GenericError = 5,
-    FileError = 6,
-    M1 = -1,
-}
-impl Status {
-    pub fn from (input: i32) -> Self {
-        match input {
-            0 => Status::OK,
-            1 => Status::Yield,
-            2 => Status::RuntimeError,
-            3 => Status::SyntaxError,
-            4 => Status::MemoryError,
-            5 => Status::GenericError,
-            6 => Status::FileError,
-            -1 => Status::M1,
-            _ => Status::M1,
-        }
-    }
-}
-pub type StatusInteger = i32;
-pub const LUA_OK: StatusInteger = 0;
-pub const LUA_YIELD: StatusInteger = 1;
-pub const LUA_RUNTIMEERROR: StatusInteger = 2;
-pub const LUA_SYNTAXERROR: StatusInteger = 3;
-pub const LUA_MEMORYERROR: StatusInteger = 4;
-pub const LUA_GENERICERROR: StatusInteger = 5;
-pub const LUA_FILEERROR: StatusInteger = 6;
-// /
+use crate::status::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
@@ -482,7 +446,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
         PROGRAM_NAME = null();
         loop {
             status = loadline(interpreter);
-            if !(status != Status::M1) {
+            if !(status != Status::Closing) {
                 break;
             }
             if status == Status::OK {
@@ -742,7 +706,7 @@ pub unsafe fn moveresults(interpreter: *mut Interpreter, mut res: *mut TValue, m
                 if wanted < -1 {
                     (*(*interpreter).callinfo).call_info_call_status = ((*(*interpreter).callinfo).call_info_call_status as i32 | 1 << 9 as i32) as u16;
                     (*(*interpreter).callinfo).call_info_u2.nres = nres;
-                    res = luaf_close(interpreter, res, Status::M1, 1);
+                    res = luaf_close(interpreter, res, Status::Closing, 1);
                     (*(*interpreter).callinfo).call_info_call_status = ((*(*interpreter).callinfo).call_info_call_status as i32 & !(1 << 9 as i32)) as u16;
                     if (*interpreter).hook_mask != 0 {
                         let savedres: i64 = (res as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
@@ -1238,7 +1202,7 @@ pub unsafe fn lua_settop(interpreter: *mut Interpreter, index: i32) {
         }
         newtop = (*interpreter).top.stkidrel_pointer.offset(diff as isize);
         if diff < 0 && (*interpreter).tbc_list.stkidrel_pointer >= newtop {
-            newtop = luaf_close(interpreter, newtop, Status::M1, 0);
+            newtop = luaf_close(interpreter, newtop, Status::Closing, 0);
         }
         (*interpreter).top.stkidrel_pointer = newtop;
     }
@@ -1246,7 +1210,7 @@ pub unsafe fn lua_settop(interpreter: *mut Interpreter, index: i32) {
 pub unsafe fn lua_closeslot(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let mut level = index2stack(interpreter, index);
-        level = luaf_close(interpreter, level, Status::M1, 0);
+        level = luaf_close(interpreter, level, Status::Closing, 0);
         (*level).set_tag_variant(TagVariant::NilNil as u8);
     }
 }
@@ -3410,7 +3374,7 @@ pub unsafe fn prepcallclosemth(interpreter: *mut Interpreter, level: *mut TValue
     unsafe {
         let uv: *mut TValue = &mut (*level);
         let errobj: *mut TValue;
-        if status == Status::M1 {
+        if status == Status::Closing {
             errobj = &mut (*(*interpreter).global).none_value;
         } else {
             errobj = &mut (*level.offset(1 as isize));
@@ -5364,7 +5328,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 if (*interpreter).top.stkidrel_pointer < (*callinfo).call_info_top.stkidrel_pointer {
                                     (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
                                 }
-                                luaf_close(interpreter, base, Status::M1, 1);
+                                luaf_close(interpreter, base, Status::Closing, 1);
                                 trap = (*callinfo).call_info_u.l.trap;
                                 if (trap != 0) as i64 != 0 {
                                     base = ((*callinfo).call_info_function.stkidrel_pointer).offset(1 as isize);
@@ -6906,7 +6870,7 @@ pub unsafe fn loadline(interpreter: *mut Interpreter) -> Status {
     unsafe {
         lua_settop(interpreter, 0);
         if !pushline(interpreter, 1) {
-            return Status::M1;
+            return Status::Closing;
         }
         let mut status = addreturn(interpreter);
         if status != Status::OK {

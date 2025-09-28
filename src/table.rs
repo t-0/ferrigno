@@ -1,4 +1,5 @@
 use crate::character::*;
+use crate::status::*;
 use crate::f2i::*;
 use crate::functions::*;
 use crate::global::*;

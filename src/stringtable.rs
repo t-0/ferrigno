@@ -1,4 +1,5 @@
 use crate::interpreter::*;
+use crate::status::*;
 use crate::table::*;
 use crate::tstring::*;
 pub const STRINGTABLE_INITIAL_SIZE: usize = 128;
