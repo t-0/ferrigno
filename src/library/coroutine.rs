@@ -42,16 +42,12 @@ unsafe fn luab_corunning(interpreter: *mut Interpreter) -> i32 {
         return 2;
     }
 }
-pub const COS_RUN: i32 = 0;
-pub const COS_DEAD: i32 = 1;
-pub const COS_YIELD: i32 = 2;
-pub const COS_NORM: i32 = 3;
 unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
-        let mut couroutinestatus: i32 = auxstatus(interpreter, co);
+        let mut couroutinestatus = auxstatus(interpreter, co);
         match couroutinestatus {
-            COS_DEAD | COS_YIELD => {
+            CoroutineStatus::Dead | CoroutineStatus::Yield => {
                 let status = lua_closethread(co, interpreter);
                 if status == Status::OK {
                     (*interpreter).push_boolean(true);
