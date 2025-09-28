@@ -32,7 +32,7 @@ impl LoadState {
     }
     pub unsafe fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
         unsafe {
-            if luaz_read(self.zio, b, size) != 0 {
+            if (*self.zio).luaz_read(b, size) != 0 {
                 self.error(c"truncated chunk".as_ptr());
             }
         }
