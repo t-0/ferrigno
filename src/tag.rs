@@ -55,25 +55,6 @@ pub enum TagVariant {
     Prototype = TagType::Prototype as u8 | TagVariantRaw::Alpha as u8,
     DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
 }
-pub const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
-pub const TAG_VARIANT_NIL_EMPTY: u8 = TagVariant::NilEmpty as u8;
-pub const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagVariant::NilAbsentKey as u8;
-pub const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
-pub const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
-pub const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
-pub const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-pub const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-pub const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-pub const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-pub const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-pub const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-pub const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-pub const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-pub const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-pub const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
-pub const TAG_VARIANT_UPVALUE: u8 = TagVariant::UpValue as u8;
-pub const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
-pub const TAG_VARIANT_DEADKEY: u8 = TagVariant::DeadKey as u8;
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
 pub const fn get_tag_type(tag: u8) -> TagType {

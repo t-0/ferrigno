@@ -154,25 +154,32 @@ impl LoadState {
             for i in 0..n {
                 let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
                 let t = self.load_byte() as u8;
+                const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
+                const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
+                const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
+                const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
+                const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
+                const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
+                const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
                 match t {
                     TAG_VARIANT_NIL_NIL => {
                         (*tvalue).set_tag_variant(TagVariant::NilNil as u8);
                     },
                     TAG_VARIANT_BOOLEAN_FALSE => {
-                        (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_FALSE);
+                        (*tvalue).set_tag_variant(TagVariant::BooleanFalse as u8);
                     },
                     TAG_VARIANT_BOOLEAN_TRUE => {
-                        (*tvalue).set_tag_variant(TAG_VARIANT_BOOLEAN_TRUE);
+                        (*tvalue).set_tag_variant(TagVariant::BooleanTrue as u8);
                     },
                     TAG_VARIANT_NUMERIC_NUMBER => {
                         let io: *mut TValue = tvalue;
                         (*io).value.value_number = self.load_number();
-                        (*io).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
+                        (*io).set_tag_variant(TagVariant::NumericNumber as u8);
                     },
                     TAG_VARIANT_NUMERIC_INTEGER => {
                         let io_0: *mut TValue = tvalue;
                         (*io_0).value.value_integer = self.load_integer();
-                        (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
+                        (*io_0).set_tag_variant(TagVariant::NumericInteger as u8);
                     },
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = tvalue;
@@ -334,7 +341,7 @@ pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *
         let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         (*io).value.value_object = &mut (*(ret as *mut Object));
-        (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
+        (*io).set_tag_variant(TagVariant::ClosureL as u8);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);

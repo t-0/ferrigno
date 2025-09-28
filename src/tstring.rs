@@ -39,7 +39,7 @@ impl TObject for TString {
 impl TString {
     pub unsafe fn free_tstring(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            if self.get_tag_variant() == TAG_VARIANT_STRING_SHORT {
+            if self.get_tag_variant() == TagVariant::StringShort as u8 {
                 self.remove_from_state(interpreter);
                 (*interpreter).free_memory(self as *mut TString as *mut libc::c_void, core::mem::size_of::<TString>() + 1 + self.get_length() as usize);
             } else {
@@ -70,7 +70,7 @@ impl TString {
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
-            let ret: *mut TString = createstrobj(interpreter, length as usize, TAG_VARIANT_STRING_LONG, (*(*interpreter).global).seed);
+            let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong as u8, (*(*interpreter).global).seed);
             (*ret).long_length = length;
             return ret;
         }
@@ -95,7 +95,7 @@ impl TString {
                 growstrtab(interpreter, tb);
                 list = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             }
-            tstring = createstrobj(interpreter, length as usize, TAG_VARIANT_STRING_SHORT, h);
+            tstring = createstrobj(interpreter, length as usize, TagVariant::StringShort as u8, h);
             (*tstring).long_length = length;
             memcpy((*tstring).get_contents() as *mut libc::c_void, str as *const libc::c_void, length);
             (*tstring).hash_next = *list;
@@ -257,13 +257,13 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     })
             {
                 luat_tryconcattm(interpreter);
-            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TagVariant::StringShort as u8 && (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 (((*top.offset(-(2 as isize))).is_tagtype_string())
                     || (*top.offset(-(2 as isize))).is_tagtype_numeric() && {
                         (*top.offset(-(2 as isize))).from_interpreter_to_string(interpreter);
                         1 != 0
                     }) as i32;
-            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(2 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TagVariant::StringShort as u8 && (*((*top.offset(-(2 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize)));
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);

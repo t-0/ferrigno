@@ -136,6 +136,10 @@ impl Prototype {
                 let tvalue: *const TValue = &mut *(self.prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
                 let tag = (*tvalue).get_tag_variant();
                 dump_state.dump_byte(tag);
+                const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
+                const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
+                const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
+                const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
                 match tag {
                     TAG_VARIANT_NUMERIC_NUMBER => {
                         dump_state.dump_number((*tvalue).value.value_number);
@@ -516,7 +520,7 @@ pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: 
 }
 pub unsafe fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TAG_VARIANT_PROTOTYPE, size_of::<Prototype>());
+        let object: *mut Object = luac_newobj(interpreter, TagVariant::Prototype as u8, size_of::<Prototype>());
         let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
         (*prototype).prototype_constants.initialize();
         (*prototype).prototype_prototypes.initialize();

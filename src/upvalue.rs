@@ -55,7 +55,7 @@ pub struct UpValueBA {
 }
 pub unsafe fn newupval(interpreter: *mut Interpreter, level: *mut TValue, previous: *mut *mut UpValue) -> *mut UpValue {
     unsafe {
-        let o: *mut Object = luac_newobj(interpreter, TAG_VARIANT_UPVALUE, size_of::<UpValue>());
+        let o: *mut Object = luac_newobj(interpreter, TagVariant::UpValue as u8, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level);

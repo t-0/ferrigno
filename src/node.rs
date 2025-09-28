@@ -9,19 +9,27 @@ pub struct Node {
     pub key: TValue,
     pub next: i32,
 }
-pub const DUMMY_NODE: Node = Node { value: TValue::new(TAG_VARIANT_NIL_EMPTY), key: TValue::new(TAG_VARIANT_NIL_NIL), next: 0 };
+pub const DUMMY_NODE: Node = Node { value: TValue::new(TagVariant::NilEmpty as u8), key: TValue::new(TagVariant::NilNil as u8), next: 0 };
 impl Node {
     pub fn clearkey(&mut self) {
         if self.key.is_collectable() {
-            self.key.set_tag_variant(TAG_VARIANT_DEADKEY);
+            self.key.set_tag_variant(TagVariant::DeadKey as u8);
         }
     }
 }
 pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
-        return if (*k1).get_tag_variant() != (*node).key.get_tag_variant() && !(deadok != 0 && (*node).key.get_tag_variant() == TAG_VARIANT_DEADKEY && ((*k1).is_collectable())) {
+        return if (*k1).get_tag_variant() != (*node).key.get_tag_variant() && !(deadok != 0 && (*node).key.get_tag_variant() == TagVariant::DeadKey as u8 && ((*k1).is_collectable())) {
             false
         } else {
+            const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
+            const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
+            const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
+            const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
+            const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
+            const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
+            const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
+            const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
             match (*node).key.get_tag_variant() {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
                 TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.value_integer == (*node).key.value.value_integer,

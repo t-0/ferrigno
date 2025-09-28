@@ -53,14 +53,14 @@ pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v:
                 ExpressionKind::ConstantInteger => {
                     if !v.is_null() {
                         (*v).value.value_integer = (*expression_description).value.value_integer;
-                        (*v).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
+                        (*v).set_tag_variant(TagVariant::NumericInteger as u8);
                     }
                     return true;
                 },
                 ExpressionKind::ConstantNumber => {
                     if !v.is_null() {
                         (*v).value.value_number = (*expression_description).value.value_number;
-                        (*v).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
+                        (*v).set_tag_variant(TagVariant::NumericNumber as u8);
                     }
                     return true;
                 },
@@ -83,11 +83,11 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
         }
         match (*expression_description).expression_kind {
             ExpressionKind::False => {
-                (*v).set_tag_variant(TAG_VARIANT_BOOLEAN_FALSE);
+                (*v).set_tag_variant(TagVariant::BooleanFalse as u8);
                 return true;
             },
             ExpressionKind::True => {
-                (*v).set_tag_variant(TAG_VARIANT_BOOLEAN_TRUE);
+                (*v).set_tag_variant(TagVariant::BooleanTrue as u8);
                 return true;
             },
             ExpressionKind::Nil => {
@@ -112,6 +112,13 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
 }
 pub unsafe fn const2exp(v: *mut TValue, expression_description: *mut ExpressionDescription) {
     unsafe {
+        const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
+        const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
+        const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
+        const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
+        const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
+        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
+        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
         match (*v).get_tag_variant() {
             TAG_VARIANT_NUMERIC_INTEGER => {
                 (*expression_description).expression_kind = ExpressionKind::ConstantInteger;
