@@ -1,6 +1,5 @@
 #![feature(default_field_values, extern_types, c_variadic)]
 use std::ptr::*;
-mod allocator;
 mod buffer;
 mod bufffs;
 mod callinfo;
