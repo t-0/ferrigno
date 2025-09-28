@@ -496,13 +496,13 @@ pub unsafe fn io_readline(interpreter: *mut Interpreter) -> i32 {
             lua_pushvalue(interpreter, -(1000000 as i32) - 1000 as i32 - (3 + i));
         }
         n = g_read(interpreter, (*p).file, 2);
-        if lua_toboolean(interpreter, -n) != 0 {
+        if lua_toboolean(interpreter, -n) {
             return n;
         } else {
             if n > 1 {
                 return lual_error(interpreter, c"%s".as_ptr(), lua_tolstring(interpreter, -n + 1, null_mut()));
             }
-            if lua_toboolean(interpreter, -(1000000 as i32) - 1000 as i32 - 3) != 0 {
+            if lua_toboolean(interpreter, -(1000000 as i32) - 1000 as i32 - 3) {
                 lua_settop(interpreter, 0);
                 lua_pushvalue(interpreter, -(1000000 as i32) - 1000 as i32 - 1);
                 aux_close(interpreter);

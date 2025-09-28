@@ -103,7 +103,7 @@ pub unsafe fn table_move(interpreter: *mut Interpreter) -> i32 {
             (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"too many elements to move".as_ptr()) != 0) as i32;
             n = e - f + 1;
             (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 4, c"destination wrap around".as_ptr()) != 0) as i32;
-            if t > e || t <= f || tag != 1 && lua_compare(interpreter, 1, tag, 0) == 0 {
+            if t > e || t <= f || tag != 1 && !lua_compare(interpreter, 1, tag, 0) {
                 for i in 0..n {
                     lua_geti(interpreter, 1, f + i);
                     lua_seti(interpreter, tag, t + i);
@@ -233,17 +233,16 @@ pub unsafe fn set2(interpreter: *mut Interpreter, i: u32, j: u32) {
         lua_seti(interpreter, 1, j as i64);
     }
 }
-pub unsafe fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> i32 {
+pub unsafe fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> bool {
     unsafe {
         if lua_type(interpreter, 2) == Some(TagType::Nil) {
             return lua_compare(interpreter, a, b, 1);
         } else {
-            let res: i32;
             lua_pushvalue(interpreter, 2);
             lua_pushvalue(interpreter, a - 1);
             lua_pushvalue(interpreter, b - 2);
             (*interpreter).lua_callk(2, 1, 0, None);
-            res = lua_toboolean(interpreter, -1);
+            let res = lua_toboolean(interpreter, -1);
             lua_settop(interpreter, -2);
             return res;
         };
@@ -257,7 +256,7 @@ pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u
             loop {
                 i = i.wrapping_add(1);
                 lua_geti(interpreter, 1, i as i64);
-                if !(sort_comp(interpreter, -1, -2) != 0) {
+                if !sort_comp(interpreter, -1, -2) {
                     break;
                 }
                 if i == high - 1 {
@@ -268,7 +267,7 @@ pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u
             loop {
                 j -= 1;
                 lua_geti(interpreter, 1, j as i64);
-                if !(sort_comp(interpreter, -3, -1) != 0) {
+                if !sort_comp(interpreter, -3, -1) {
                     break;
                 }
                 if j < i {
@@ -297,7 +296,7 @@ pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32
             let n: u32;
             lua_geti(interpreter, 1, low as i64);
             lua_geti(interpreter, 1, high as i64);
-            if sort_comp(interpreter, -1, -2) != 0 {
+            if sort_comp(interpreter, -1, -2) {
                 set2(interpreter, low, high);
             } else {
                 lua_settop(interpreter, -2 - 1);
@@ -312,12 +311,12 @@ pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32
             }
             lua_geti(interpreter, 1, p as i64);
             lua_geti(interpreter, 1, low as i64);
-            if sort_comp(interpreter, -2, -1) != 0 {
+            if sort_comp(interpreter, -2, -1) {
                 set2(interpreter, p, low);
             } else {
                 lua_settop(interpreter, -2);
                 lua_geti(interpreter, 1, high as i64);
-                if sort_comp(interpreter, -1, -2) != 0 {
+                if sort_comp(interpreter, -1, -2) {
                     set2(interpreter, p, high);
                 } else {
                     lua_settop(interpreter, -2 - 1);

@@ -12,7 +12,7 @@ pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
         return length as i64 + position + 1;
     };
 }
-pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: i32) -> *const i8 {
+pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: bool) -> *const i8 {
     unsafe {
         pub const LIMITS: [u32; 6] = [!(0u32), 0x80 as u32, 0x800 as u32, 0x10000 as u32, 0x200000 as u32, 0x4000000 as u32];
         let mut c: u32 = *s.offset(0 as isize) as u8 as u32;
@@ -36,7 +36,7 @@ pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: i32) -> *co
             }
             s = s.offset(count as isize);
         }
-        if strict != 0 {
+        if strict {
             if res > 0x10ffff as u32 || 0xd800 as u32 <= res && res <= 0xdfff as u32 {
                 return null();
             }
@@ -54,7 +54,7 @@ pub unsafe fn utflen(interpreter: *mut Interpreter) -> i32 {
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let mut posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let mut posj: i64 = u_posrelat(lual_optinteger(interpreter, 3, -1 as i64), length);
-        let lax: i32 = lua_toboolean(interpreter, 4);
+        let lax = lua_toboolean(interpreter, 4);
         (((1 <= posi && {
             posi -= 1;
             posi <= length as i64
@@ -65,7 +65,7 @@ pub unsafe fn utflen(interpreter: *mut Interpreter) -> i32 {
         posj -= 1;
         (((posj < length as i64) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"final position out of bounds".as_ptr()) != 0) as i32;
         while posi <= posj {
-            let s1: *const i8 = utf8_decode(s.offset(posi as isize), null_mut(), (lax == 0) as i32);
+            let s1: *const i8 = utf8_decode(s.offset(posi as isize), null_mut(), !lax);
             if s1.is_null() {
                 (*interpreter).push_nil();
                 (*interpreter).push_integer(posi + 1);
@@ -81,12 +81,11 @@ pub unsafe fn utflen(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn codepoint(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut length: usize = 0;
-        let mut s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
+        let mut stringpointer: *const i8 = lual_checklstring(interpreter, 1, &mut length);
         let posi: i64 = u_posrelat(lual_optinteger(interpreter, 2, 1 as i64), length);
         let pose: i64 = u_posrelat(lual_optinteger(interpreter, 3, posi), length);
-        let lax: i32 = lua_toboolean(interpreter, 4);
+        let lax = lua_toboolean(interpreter, 4);
         let mut n: i32;
-        let se: *const i8;
         (((posi >= 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, c"out of bounds".as_ptr()) != 0) as i32;
         (((pose <= length as i64) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"out of bounds".as_ptr()) != 0) as i32;
         if posi > pose {
@@ -98,12 +97,12 @@ pub unsafe fn codepoint(interpreter: *mut Interpreter) -> i32 {
         n = (pose - posi) as i32 + 1;
         lual_checkstack(interpreter, n, c"string slice too long".as_ptr());
         n = 0;
-        se = s.offset(pose as isize);
-        s = s.offset((posi - 1) as isize);
-        while s < se {
+        let stringend: *const i8 = stringpointer.offset(pose as isize);
+        stringpointer = stringpointer.offset((posi - 1) as isize);
+        while stringpointer < stringend {
             let mut code: u32 = 0;
-            s = utf8_decode(s, &mut code, (lax == 0) as i32);
-            if s.is_null() {
+            stringpointer = utf8_decode(stringpointer, &mut code, !lax);
+            if stringpointer.is_null() {
                 return lual_error(interpreter, c"invalid UTF-8 code".as_ptr());
             }
             (*interpreter).push_integer(code as i64);
@@ -189,7 +188,7 @@ pub unsafe fn byteoffset(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
+pub unsafe fn iter_aux(interpreter: *mut Interpreter, strict: bool) -> i32 {
     unsafe {
         let mut length: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut length);
@@ -215,22 +214,22 @@ pub unsafe fn iter_aux(interpreter: *mut Interpreter, strict: i32) -> i32 {
 }
 pub unsafe fn iter_auxstrict(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return iter_aux(interpreter, 1);
+        return iter_aux(interpreter, true);
     }
 }
 pub unsafe fn iter_auxlax(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        return iter_aux(interpreter, 0);
+        return iter_aux(interpreter, false);
     }
 }
 pub unsafe fn iter_codes(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let lax: i32 = lua_toboolean(interpreter, 2);
+        let lax = lua_toboolean(interpreter, 2);
         let s: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"invalid UTF-8 code".as_ptr()) != 0) as i32;
         lua_pushcclosure(
             interpreter,
-            if lax != 0 {
+            if lax {
                 Some(iter_auxlax as unsafe fn(*mut Interpreter) -> i32)
             } else {
                 Some(iter_auxstrict as unsafe fn(*mut Interpreter) -> i32)

@@ -279,8 +279,8 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
                 return &mut *((*t).node).offset(((l_hashfloat as unsafe fn(f64) -> i32)(n) % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize) as *mut Node;
             },
             TAG_VARIANT_STRING_SHORT => {
-                let ts: *mut TString = &mut (*((*key).value.value_object as *mut TString));
-                return &mut *((*t).node).offset(((*ts).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
+                let tstring: *mut TString = &mut (*((*key).value.value_object as *mut TString));
+                return &mut *((*t).node).offset(((*tstring).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
             },
             TAG_VARIANT_STRING_LONG => {
                 let ts_0: *mut TString = &mut (*((*key).value.value_object as *mut TString));
@@ -751,9 +751,9 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
         } else {
             let mut ko: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             let io: *mut TValue = &mut ko;
-            let ts: *mut TString = key;
-            (*io).value.value_object = &mut (*(ts as *mut Object));
-            (*io).set_tag_variant((*ts).get_tag_variant());
+            let tstring: *mut TString = key;
+            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             return getgeneric(table, &mut ko, 0);
         };

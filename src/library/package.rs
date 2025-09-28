@@ -33,11 +33,10 @@ pub unsafe fn lsys_sym(interpreter: *mut Interpreter, lib: *mut libc::c_void, sy
         return cfunction;
     }
 }
-pub unsafe fn noenv(interpreter: *mut Interpreter) -> i32 {
+pub unsafe fn noenv(interpreter: *mut Interpreter) -> bool {
     unsafe {
-        let b: i32;
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, c"LUA_NOENV".as_ptr());
-        b = lua_toboolean(interpreter, -1);
+        let b = lua_toboolean(interpreter, -1);
         lua_settop(interpreter, -2);
         return b;
     }
@@ -50,7 +49,7 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
         if path.is_null() {
             path = getenv(envname);
         }
-        if path.is_null() || noenv(interpreter) != 0 {
+        if path.is_null() || noenv(interpreter) {
             lua_pushstring(interpreter, dft);
         } else {
             dftmark = strstr(path, c";;".as_ptr());
@@ -379,7 +378,7 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
         lua_settop(interpreter, 1);
         lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, c"_LOADED".as_ptr());
         lua_getfield(interpreter, 2, name);
-        if lua_toboolean(interpreter, -1) != 0 {
+        if lua_toboolean(interpreter, -1) {
             return 1;
         }
         lua_settop(interpreter, -2);

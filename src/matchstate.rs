@@ -43,7 +43,7 @@ impl MatchState {
                     return 1;
                 },
             }
-            if lua_toboolean(interpreter, -1) == 0 {
+            if !lua_toboolean(interpreter, -1) {
                 lua_settop(interpreter, -2);
                 (*b).add_string_with_length(s, e.offset_from(s) as usize);
                 return 0;

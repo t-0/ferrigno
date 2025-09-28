@@ -63,10 +63,10 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             (*interpreter).push_integer(argc as i64);
             lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
             let status = CallS::api_call(interpreter, 2, 1, 0, 0, None);
-            let result: i32 = lua_toboolean(interpreter, -1);
+            let result = lua_toboolean(interpreter, -1);
             report(interpreter, status);
             lua_close(interpreter);
-            return if result != 0 && status == Status::OK { 0 } else { 1 };
+            return if result && status == Status::OK { 0 } else { 1 };
         }
     }
 }

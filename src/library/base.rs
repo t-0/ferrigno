@@ -352,7 +352,7 @@ pub unsafe fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        if (lua_toboolean(interpreter, 1) != 0) as i64 != 0 {
+        if lua_toboolean(interpreter, 1) {
             return (*interpreter).get_top();
         } else {
             lual_checkany(interpreter, 1);

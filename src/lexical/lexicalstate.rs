@@ -68,12 +68,12 @@ impl New for LexicalState {
 impl LexicalState {
     pub unsafe fn create_label(&mut self, interpreter: *mut Interpreter, function_state: *mut FunctionState, name: *mut TString, line: i32, is_last: bool) -> bool {
         unsafe {
-            let ll: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;
-            let l: i32 = newlabelentry(interpreter, self, function_state, ll, name, line, (*function_state).code_get_label());
+            let labeldescriptions: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;
+            let l: i32 = newlabelentry(interpreter, self, function_state, labeldescriptions, name, line, (*function_state).code_get_label());
             if is_last {
-                (*((*ll).vectort_pointer).offset(l as isize)).count_active_variables = (*(*function_state).block_control).count_active_variables;
+                (*((*labeldescriptions).vectort_pointer).offset(l as isize)).count_active_variables = (*(*function_state).block_control).count_active_variables;
             }
-            if solvegotos(interpreter, self, function_state, &mut *((*ll).vectort_pointer).offset(l as isize)) {
+            if solvegotos(interpreter, self, function_state, &mut *((*labeldescriptions).vectort_pointer).offset(l as isize)) {
                 code_abck(interpreter, self, function_state, OPCODE_CLOSE, luay_nvarstack(self, function_state), 0, 0, 0);
                 return true;
             }
@@ -671,9 +671,9 @@ pub unsafe fn check_match(interpreter: *mut Interpreter, lexical_state: *mut Lex
 pub unsafe fn str_checkname(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) -> *mut TString {
     unsafe {
         check(interpreter, lexical_state, function_state, Token::Name as i32);
-        let ts: *mut TString = (*lexical_state).token.semantic_info.value_tstring;
+        let tstring: *mut TString = (*lexical_state).token.semantic_info.value_tstring;
         luax_next(interpreter, lexical_state);
-        return ts;
+        return tstring;
     }
 }
 pub unsafe fn codename(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, expression_description: *mut ExpressionDescription) {
@@ -1461,16 +1461,16 @@ pub unsafe fn luax_syntaxerror(interpreter: *mut Interpreter, lexical_state: *mu
 }
 pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, str: *const i8, length: usize) -> *mut TString {
     unsafe {
-        let mut ts: *mut TString = luas_newlstr(interpreter, str, length as usize);
-        let o: *const TValue = luah_getstr((*lexical_state).table, ts);
+        let mut tstring: *mut TString = luas_newlstr(interpreter, str, length as usize);
+        let o: *const TValue = luah_getstr((*lexical_state).table, tstring);
         if (*o).is_tagtype_nil() {
             let fresh50 = (*interpreter).top.stkidrel_pointer;
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             let stv: *mut TValue = &mut (*fresh50);
             let io: *mut TValue = stv;
-            let ts: *mut TString = ts;
-            (*io).value.value_object = &mut (*(ts as *mut Object));
-            (*io).set_tag_variant((*ts).get_tag_variant());
+            let tstring: *mut TString = tstring;
+            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
             if (*(*interpreter).global).gc_debt > 0 {
@@ -1478,9 +1478,9 @@ pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut 
             }
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
-            ts = &mut (*((*(o as *mut Node)).key.value.value_object as *mut TString));
+            tstring = &mut (*((*(o as *mut Node)).key.value.value_object as *mut TString));
         }
-        return ts;
+        return tstring;
     }
 }
 pub unsafe fn inclinenumber(interpreter: *mut Interpreter, lexical_state: *mut LexicalState) {
@@ -1953,10 +1953,10 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                                 break;
                             }
                         }
-                        let ts: *mut TString = luax_newstring(interpreter, lexical_state, (*(*lexical_state).buffer).loads.loads_pointer, (*(*lexical_state).buffer).loads.get_length() as usize);
-                        (*semantic_info).value_tstring = ts;
-                        if (*ts).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*ts).extra as i32 > 0 {
-                            return (*ts).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
+                        let tstring: *mut TString = luax_newstring(interpreter, lexical_state, (*(*lexical_state).buffer).loads.loads_pointer, (*(*lexical_state).buffer).loads.get_length() as usize);
+                        (*semantic_info).value_tstring = tstring;
+                        if (*tstring).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*tstring).extra as i32 > 0 {
+                            return (*tstring).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
                         } else {
                             return Token::Name as i32;
                         }

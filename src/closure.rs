@@ -117,44 +117,44 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
         };
     }
 }
-pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, ar: *mut DebugInfo, closure: *mut Closure, callinfo: *mut CallInfo) -> i32 {
+pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, debuginfo: *mut DebugInfo, closure: *mut Closure, callinfo: *mut CallInfo) -> i32 {
     unsafe {
         let mut status: i32 = 1;
         while *what != 0 {
             match Character::from(*what as i32) {
                 Character::UpperS => {
-                    funcinfo(ar, closure);
+                    funcinfo(debuginfo, closure);
                 },
                 Character::LowerL => {
-                    (*ar).currentline = if !callinfo.is_null() && (*callinfo).call_info_call_status as i32 & 1 << 1 == 0 { getcurrentline(callinfo) } else { -1 };
+                    (*debuginfo).debuginfo_currentline = if !callinfo.is_null() && (*callinfo).call_info_call_status as i32 & 1 << 1 == 0 { getcurrentline(callinfo) } else { -1 };
                 },
                 Character::LowerU => {
-                    (*ar).nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
+                    (*debuginfo).debuginfo_nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
                     if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
-                        (*ar).is_variable_arguments = true;
-                        (*ar).nparams = 0;
+                        (*debuginfo).debuginfo_isvariablearguments = true;
+                        (*debuginfo).debuginfo_nparams = 0;
                     } else {
-                        (*ar).is_variable_arguments = (*(*closure).payload.l_prototype).prototype_is_variable_arguments;
-                        (*ar).nparams = (*(*closure).payload.l_prototype).prototype_count_parameters;
+                        (*debuginfo).debuginfo_isvariablearguments = (*(*closure).payload.l_prototype).prototype_is_variable_arguments;
+                        (*debuginfo).debuginfo_nparams = (*(*closure).payload.l_prototype).prototype_count_parameters;
                     }
                 },
                 Character::LowerT => {
-                    (*ar).is_tail_call = if !callinfo.is_null() { 0 != ((*callinfo).call_info_call_status as i32 & 1 << 5) } else { false };
+                    (*debuginfo).debuginfo_istailcall = if !callinfo.is_null() { 0 != ((*callinfo).call_info_call_status as i32 & 1 << 5) } else { false };
                 },
                 Character::LowerN => {
-                    (*ar).namewhat = getfuncname(interpreter, callinfo, &mut (*ar).name);
-                    if ((*ar).namewhat).is_null() {
-                        (*ar).namewhat = c"".as_ptr();
-                        (*ar).name = null();
+                    (*debuginfo).debuginfo_namewhat = getfuncname(interpreter, callinfo, &mut (*debuginfo).debuginfo_name);
+                    if ((*debuginfo).debuginfo_namewhat).is_null() {
+                        (*debuginfo).debuginfo_namewhat = c"".as_ptr();
+                        (*debuginfo).debuginfo_name = null();
                     }
                 },
                 Character::LowerR => {
                     if callinfo.is_null() || (*callinfo).call_info_call_status as i32 & 1 << 8 == 0 {
-                        (*ar).ntransfer = 0;
-                        (*ar).ftransfer = (*ar).ntransfer;
+                        (*debuginfo).debuginfo_ntransfer = 0;
+                        (*debuginfo).debuginfo_ftransfer = (*debuginfo).debuginfo_ntransfer;
                     } else {
-                        (*ar).ftransfer = (*callinfo).call_info_u2.transferinfo.ftransfer;
-                        (*ar).ntransfer = (*callinfo).call_info_u2.transferinfo.ntransfer;
+                        (*debuginfo).debuginfo_ftransfer = (*callinfo).call_info_u2.transferinfo.ftransfer;
+                        (*debuginfo).debuginfo_ntransfer = (*callinfo).call_info_u2.transferinfo.ntransfer;
                     }
                 },
                 Character::UpperL | Character::LowerF => {},

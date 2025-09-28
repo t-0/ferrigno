@@ -1,7 +1,6 @@
 use crate::status::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
-use std::ptr::*;
 pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [c"running".as_ptr(), c"dead".as_ptr(), c"suspended".as_ptr(), c"normal".as_ptr()];
 pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> i32 {
     unsafe {
@@ -11,26 +10,8 @@ pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> 
             match (*co).get_status() {
                 Status::Yield => return 2,
                 Status::OK => {
-                    let mut ar: DebugInfo = DebugInfo {
-                        event: 0,
-                        name: null(),
-                        namewhat: null(),
-                        what: null(),
-                        source: null(),
-                        source_length: 0,
-                        currentline: 0,
-                        line_defined: 0,
-                        last_line_defined: 0,
-                        nups: 0,
-                        nparams: 0,
-                        is_variable_arguments: false,
-                        is_tail_call: false,
-                        ftransfer: 0,
-                        ntransfer: 0,
-                        short_src: [0; 60],
-                        i_ci: null_mut(),
-                    };
-                    if lua_getstack(co, 0, &mut ar) != 0 {
+                    let mut debuginfo =  DebugInfo::new();
+                    if lua_getstack(co, 0, &mut debuginfo) != 0 {
                         return 3;
                     } else if (*co).get_top() == 0 {
                         return 1;

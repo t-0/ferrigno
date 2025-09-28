@@ -70,25 +70,7 @@ pub unsafe fn db_setupvalue(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut ar: DebugInfo = DebugInfo {
-            event: 0,
-            name: null(),
-            namewhat: null(),
-            what: null(),
-            source: null(),
-            source_length: 0,
-            currentline: 0,
-            line_defined: 0,
-            last_line_defined: 0,
-            nups: 0,
-            nparams: 0,
-            is_variable_arguments: false,
-            is_tail_call: false,
-            ftransfer: 0,
-            ntransfer: 0,
-            short_src: [0; 60],
-            i_ci: null_mut(),
-        };
+        let mut debuginfo: DebugInfo = DebugInfo::new();
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let mut options: *const i8 = lual_optlstring(interpreter, arg + 2, c"flnSrtu".as_ptr(), null_mut());
@@ -98,40 +80,40 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             options = lua_pushfstring(interpreter, c">%s".as_ptr(), options);
             lua_pushvalue(interpreter, arg + 1);
             lua_xmove(interpreter, other_state, 1);
-        } else if lua_getstack(other_state, lual_checkinteger(interpreter, arg + 1) as i32, &mut ar) == 0 {
+        } else if lua_getstack(other_state, lual_checkinteger(interpreter, arg + 1) as i32, &mut debuginfo) == 0 {
             (*interpreter).push_nil();
             return 1;
         }
-        if lua_getinfo(other_state, options, &mut ar) == 0 {
+        if lua_getinfo(other_state, options, &mut debuginfo) == 0 {
             return lual_argerror(interpreter, arg + 2, c"invalid option".as_ptr());
         }
         (*interpreter).lua_createtable();
         if !(strchr(options, Character::UpperS as i32)).is_null() {
-            lua_pushlstring(interpreter, ar.source, ar.source_length);
+            lua_pushlstring(interpreter, debuginfo.debuginfo_source, debuginfo.debuginfo_sourcelength);
             lua_setfield(interpreter, -2, c"source".as_ptr());
-            settabss(interpreter, c"short_src".as_ptr(), (ar.short_src).as_mut_ptr());
-            settabsi(interpreter, c"linedefined".as_ptr(), ar.line_defined);
-            settabsi(interpreter, c"lastlinedefined".as_ptr(), ar.last_line_defined);
-            settabss(interpreter, c"what".as_ptr(), ar.what);
+            settabss(interpreter, c"short_src".as_ptr(), (debuginfo.debuginfo_shortsrc).as_mut_ptr());
+            settabsi(interpreter, c"linedefined".as_ptr(), debuginfo.debuginfo_linedefined);
+            settabsi(interpreter, c"lastlinedefined".as_ptr(), debuginfo.debuginfo_lastlinedefined);
+            settabss(interpreter, c"what".as_ptr(), debuginfo.debuginfo_what);
         }
         if !(strchr(options, Character::LowerL as i32)).is_null() {
-            settabsi(interpreter, c"currentline".as_ptr(), ar.currentline);
+            settabsi(interpreter, c"currentline".as_ptr(), debuginfo.debuginfo_currentline);
         }
         if !(strchr(options, Character::LowerU as i32)).is_null() {
-            settabsi(interpreter, c"nups".as_ptr(), ar.nups as i32);
-            settabsi(interpreter, c"nparams".as_ptr(), ar.nparams as i32);
-            settabsb(interpreter, c"isvararg".as_ptr(), ar.is_variable_arguments as i32);
+            settabsi(interpreter, c"nups".as_ptr(), debuginfo.debuginfo_nups as i32);
+            settabsi(interpreter, c"nparams".as_ptr(), debuginfo.debuginfo_nparams as i32);
+            settabsb(interpreter, c"isvararg".as_ptr(), debuginfo.debuginfo_isvariablearguments as i32);
         }
         if !(strchr(options, Character::LowerN as i32)).is_null() {
-            settabss(interpreter, c"name".as_ptr(), ar.name);
-            settabss(interpreter, c"namewhat".as_ptr(), ar.namewhat);
+            settabss(interpreter, c"name".as_ptr(), debuginfo.debuginfo_name);
+            settabss(interpreter, c"namewhat".as_ptr(), debuginfo.debuginfo_namewhat);
         }
         if !(strchr(options, Character::LowerR as i32)).is_null() {
-            settabsi(interpreter, c"ftransfer".as_ptr(), ar.ftransfer as i32);
-            settabsi(interpreter, c"ntransfer".as_ptr(), ar.ntransfer as i32);
+            settabsi(interpreter, c"ftransfer".as_ptr(), debuginfo.debuginfo_ftransfer as i32);
+            settabsi(interpreter, c"ntransfer".as_ptr(), debuginfo.debuginfo_ntransfer as i32);
         }
         if !(strchr(options, Character::LowerT as i32)).is_null() {
-            settabsb(interpreter, c"istailcall".as_ptr(), if ar.is_tail_call { 1 } else { 0 });
+            settabsb(interpreter, c"istailcall".as_ptr(), if debuginfo.debuginfo_istailcall { 1 } else { 0 });
         }
         if !(strchr(options, Character::UpperL as i32)).is_null() {
             treatstackoption(interpreter, other_state, c"activelines".as_ptr());
@@ -152,31 +134,13 @@ pub unsafe fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
             lua_pushstring(interpreter, lua_getlocal(interpreter, null(), nvar));
             return 1;
         } else {
-            let mut ar: DebugInfo = DebugInfo {
-                event: 0,
-                name: null(),
-                namewhat: null(),
-                what: null(),
-                source: null(),
-                source_length: 0,
-                currentline: 0,
-                line_defined: 0,
-                last_line_defined: 0,
-                nups: 0,
-                nparams: 0,
-                is_variable_arguments: false,
-                is_tail_call: false,
-                ftransfer: 0,
-                ntransfer: 0,
-                short_src: [0; 60],
-                i_ci: null_mut(),
-            };
+            let mut debuginfo: DebugInfo = DebugInfo::new();
             let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
-            if lua_getstack(other_state, level, &mut ar) == 0 {
+            if lua_getstack(other_state, level, &mut debuginfo) == 0 {
                 return lual_argerror(interpreter, arg + 1, c"level out of range".as_ptr());
             }
             checkstack(interpreter, other_state, 1);
-            let name: *const i8 = lua_getlocal(other_state, &mut ar, nvar);
+            let name: *const i8 = lua_getlocal(other_state, &mut debuginfo, nvar);
             if !name.is_null() {
                 lua_xmove(other_state, interpreter, 1);
                 lua_pushstring(interpreter, name);
@@ -192,42 +156,24 @@ pub unsafe fn db_getlocal(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn db_setlocal(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut arg: i32 = 0;
-        let name: *const i8;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
-        let mut ar: DebugInfo = DebugInfo {
-            event: 0,
-            name: null(),
-            namewhat: null(),
-            what: null(),
-            source: null(),
-            source_length: 0,
-            currentline: 0,
-            line_defined: 0,
-            last_line_defined: 0,
-            nups: 0,
-            nparams: 0,
-            is_variable_arguments: false,
-            is_tail_call: false,
-            ftransfer: 0,
-            ntransfer: 0,
-            short_src: [0; 60],
-            i_ci: null_mut(),
-        };
+        let mut debuginfo: DebugInfo = DebugInfo::new();
         let level: i32 = lual_checkinteger(interpreter, arg + 1) as i32;
         let nvar: i32 = lual_checkinteger(interpreter, arg + 2) as i32;
-        if lua_getstack(other_state, level, &mut ar) == 0 {
+        if lua_getstack(other_state, level, &mut debuginfo) == 0 {
             return lual_argerror(interpreter, arg + 1, c"level out of range".as_ptr());
+        } else {
+            lual_checkany(interpreter, arg + 3);
+            lua_settop(interpreter, arg + 3);
+            checkstack(interpreter, other_state, 1);
+            lua_xmove(interpreter, other_state, 1);
+            let name: *const i8 = lua_setlocal(other_state, &mut debuginfo, nvar);
+            if name.is_null() {
+                lua_settop(other_state, -2);
+            }
+            lua_pushstring(interpreter, name);
+            return 1;
         }
-        lual_checkany(interpreter, arg + 3);
-        lua_settop(interpreter, arg + 3);
-        checkstack(interpreter, other_state, 1);
-        lua_xmove(interpreter, other_state, 1);
-        name = lua_setlocal(other_state, &mut ar, nvar);
-        if name.is_null() {
-            lua_settop(other_state, -2);
-        }
-        lua_pushstring(interpreter, name);
-        return 1;
     }
 }
 pub unsafe fn db_upvalueid(interpreter: *mut Interpreter) -> i32 {
@@ -271,7 +217,7 @@ pub unsafe fn db_sethook(interpreter: *mut Interpreter) -> i32 {
                 let smask: *const i8 = lual_checklstring(interpreter, arg + 2, null_mut());
                 (*interpreter).lual_checktype(arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
-                function = Some(hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ());
+                function = Some(DebugInfo::hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ());
                 mask = makemask(smask, count);
             },
         };
@@ -300,7 +246,7 @@ pub unsafe fn db_gethook(interpreter: *mut Interpreter) -> i32 {
         if hook.is_none() {
             (*interpreter).push_nil();
             return 1;
-        } else if hook != Some(hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()) {
+        } else if hook != Some(DebugInfo::hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()) {
             lua_pushstring(interpreter, c"external hook".as_ptr());
         } else {
             lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);

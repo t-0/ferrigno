@@ -302,7 +302,7 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
             (*interpreter).push_nil();
             return 1;
         }
-        if find != 0 && (lua_toboolean(interpreter, 4) != 0 || nospecials(p, lp) != 0) {
+        if find != 0 && (lua_toboolean(interpreter, 4) || nospecials(p, lp) != 0) {
             let s2: *const i8 = lmemfind(s.offset(initial as isize), lexical_state.wrapping_sub(initial), p, lp);
             if !s2.is_null() {
                 (*interpreter).push_integer((s2.offset_from(s) as i64 + 1) as i64);

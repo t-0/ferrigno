@@ -24,13 +24,23 @@ pub struct TValue {
     pub delta: u16,
 }
 impl TValue {
+    pub unsafe fn from_string_to_number(&mut self, obj: *const TValue) -> bool {
+        unsafe {
+            if (*obj).is_tagtype_string() {
+                let tstring: *mut TString = &mut (*((*obj).value.value_object as *mut TString));
+                return luao_str2num((*tstring).get_contents_mut(), self) == (*tstring).get_length().wrapping_add(1) as usize;
+            } else {
+                return false;
+            };
+        }
+    }
     pub unsafe fn to_number(&self, result: *mut f64) -> bool {
         unsafe {
             let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
             if (*self).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
                 *result = (*self).value.value_integer as f64;
                 return true;
-            } else if l_strton(self, &mut tvalue) {
+            } else if tvalue.from_string_to_number(self) {
                 *result = if tvalue.get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER { tvalue.value.value_integer as f64 } else { tvalue.value.value_number };
                 return true;
             } else {
@@ -106,6 +116,16 @@ impl TValue {
             self.collectable = false;
         }
     }
+    pub unsafe fn from_interpreter_to_string(& mut self, interpreter: *mut Interpreter) {
+        unsafe {
+            let mut buffer: [i8; 44] = [0; 44];
+            let length = tostringbuff(self, buffer.as_mut_ptr());
+            let tstring: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
+            self.value.value_object = &mut (*(tstring as *mut Object));
+            self.set_tag_variant((*tstring).get_tag_variant());
+            self.set_collectable(true);
+        }
+    }
 }
 pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owner: *mut *mut Object) -> *const i8 {
     unsafe {
@@ -177,16 +197,6 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
         return length;
     }
 }
-pub unsafe fn luao_tostring(interpreter: *mut Interpreter, object: *mut TValue) {
-    unsafe {
-        let mut buffer: [i8; 44] = [0; 44];
-        let length = tostringbuff(object, buffer.as_mut_ptr());
-        let ts: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
-        (*object).value.value_object = &mut (*(ts as *mut Object));
-        (*object).set_tag_variant((*ts).get_tag_variant());
-        (*object).set_collectable(true);
-    }
-}
 pub const ABSENT_KEY: TValue = { TValue::new(TAG_VARIANT_NIL_ABSENTKEY) };
 pub unsafe fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
@@ -212,16 +222,6 @@ pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
             }
         }
         return i;
-    }
-}
-pub unsafe fn l_strton(obj: *const TValue, result: *mut TValue) -> bool {
-    unsafe {
-        if (*obj).is_tagtype_string() {
-            let st: *mut TString = &mut (*((*obj).value.value_object as *mut TString));
-            return luao_str2num((*st).get_contents_mut(), result) == (*st).get_length().wrapping_add(1) as usize;
-        } else {
-            return false;
-        };
     }
 }
 pub unsafe fn lessthanothers(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> i32 {

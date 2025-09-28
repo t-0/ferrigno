@@ -93,8 +93,7 @@ pub unsafe fn setallfields(interpreter: *mut Interpreter, stm: *mut TM) {
 }
 pub unsafe fn getboolfield(interpreter: *mut Interpreter, key: *const i8) -> i32 {
     unsafe {
-        let res: i32;
-        res = if lua_getfield(interpreter, -1, key) == TagType::Nil { -1 } else { lua_toboolean(interpreter, -1) };
+        let res = if lua_getfield(interpreter, -1, key) == TagType::Nil { -1 } else { lua_toboolean(interpreter, -1) as i32 };
         lua_settop(interpreter, -2);
         return res;
     }
@@ -151,9 +150,9 @@ pub unsafe fn l_checktime(interpreter: *mut Interpreter, arg: i32) -> i64 {
 pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
-        let mut s: *const i8 = lual_optlstring(interpreter, 1, c"%c".as_ptr(), &mut slen);
+        let mut stringpointer: *const i8 = lual_optlstring(interpreter, 1, c"%c".as_ptr(), &mut slen);
         let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) { time(null_mut()) } else { l_checktime(interpreter, 2) };
-        let se: *const i8 = s.offset(slen as isize);
+        let stringend: *const i8 = stringpointer.offset(slen as isize);
         let mut tmr: TM = TM {
             tm_sec: 0,
             tm_min: 0,
@@ -168,16 +167,16 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             __tm_zone: null(),
         };
         let stm: *mut TM;
-        if *s as i32 == Character::Exclamation as i32 {
+        if *stringpointer as i32 == Character::Exclamation as i32 {
             stm = gmtime_r(&mut t, &mut tmr);
-            s = s.offset(1);
+            stringpointer = stringpointer.offset(1);
         } else {
             stm = localtime_r(&mut t, &mut tmr);
         }
         if stm.is_null() {
             return lual_error(interpreter, c"date result cannot be represented in this installation".as_ptr());
         }
-        if strcmp(s, c"*t".as_ptr()) == 0 {
+        if strcmp(stringpointer, c"*t".as_ptr()) == 0 {
             (*interpreter).lua_createtable();
             setallfields(interpreter, stm);
         } else {
@@ -185,19 +184,19 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             let mut b = Buffer::new();
             cc[0] = Character::Percent as i8;
             b.initialize(interpreter);
-            while s < se {
-                if *s as i32 != Character::Percent as i32 {
+            while stringpointer < stringend {
+                if *stringpointer as i32 != Character::Percent as i32 {
                     (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh157 = s;
-                    s = s.offset(1);
+                    let fresh157 = stringpointer;
+                    stringpointer = stringpointer.offset(1);
                     let fresh158 = b.loads.get_length();
                     b.loads.set_length((b.loads.get_length()).wrapping_add(1) as usize);
                     *(b.loads.loads_pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
                     let reslen: usize;
                     let buffer: *mut i8 = b.prepare_with_size(250);
-                    s = s.offset(1);
-                    s = checkoption(interpreter, s, se.offset_from(s) as i64, cc.as_mut_ptr().offset(1 as isize));
+                    stringpointer = stringpointer.offset(1);
+                    stringpointer = checkoption(interpreter, stringpointer, stringend.offset_from(stringpointer) as i64, cc.as_mut_ptr().offset(1 as isize));
                     reslen = strftime(buffer, 250, cc.as_mut_ptr(), stm);
                     b.loads.set_length((b.loads.get_length() as usize).wrapping_add(reslen as usize));
                 }
@@ -209,13 +208,13 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let t: i64;
+        let sometime: i64;
         match lua_type(interpreter, 1) {
             None | Some(TagType::Nil) => {
-                t = time(null_mut());
+                sometime = time(null_mut());
             },
             _ => {
-                let mut ts: TM = TM {
+                let mut timestruct: TM = TM {
                     tm_sec: 0,
                     tm_min: 0,
                     tm_hour: 0,
@@ -230,29 +229,29 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                 };
                 (*interpreter).lual_checktype(1, TagType::Table);
                 lua_settop(interpreter, 1);
-                ts.tm_year = getfield(interpreter, c"year".as_ptr(), -1, 1900 as i32);
-                ts.tm_mon = getfield(interpreter, c"month".as_ptr(), -1, 1);
-                ts.tm_mday = getfield(interpreter, c"day".as_ptr(), -1, 0);
-                ts.tm_hour = getfield(interpreter, c"hour".as_ptr(), 12 as i32, 0);
-                ts.tm_min = getfield(interpreter, c"min".as_ptr(), 0, 0);
-                ts.tm_sec = getfield(interpreter, c"sec".as_ptr(), 0, 0);
-                ts.tm_isdst = getboolfield(interpreter, c"isdst".as_ptr());
-                t = mktime(&mut ts);
-                setallfields(interpreter, &mut ts);
+                timestruct.tm_year = getfield(interpreter, c"year".as_ptr(), -1, 1900 as i32);
+                timestruct.tm_mon = getfield(interpreter, c"month".as_ptr(), -1, 1);
+                timestruct.tm_mday = getfield(interpreter, c"day".as_ptr(), -1, 0);
+                timestruct.tm_hour = getfield(interpreter, c"hour".as_ptr(), 12 as i32, 0);
+                timestruct.tm_min = getfield(interpreter, c"min".as_ptr(), 0, 0);
+                timestruct.tm_sec = getfield(interpreter, c"sec".as_ptr(), 0, 0);
+                timestruct.tm_isdst = getboolfield(interpreter, c"isdst".as_ptr());
+                sometime = mktime(&mut timestruct);
+                setallfields(interpreter, &mut timestruct);
             },
         };
-        if t != t as i64 || t == -1 as i64 {
+        if sometime != sometime as i64 || sometime == -1 as i64 {
             return lual_error(interpreter, c"time result cannot be represented in this installation".as_ptr());
         }
-        (*interpreter).push_integer(t as i64);
+        (*interpreter).push_integer(sometime as i64);
         return 1;
     }
 }
 pub unsafe fn os_difftime(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let t1: i64 = l_checktime(interpreter, 1);
-        let t2: i64 = l_checktime(interpreter, 2);
-        (*interpreter).push_number(difftime(t1, t2));
+        let sometime1: i64 = l_checktime(interpreter, 1);
+        let sometime2: i64 = l_checktime(interpreter, 2);
+        (*interpreter).push_number(difftime(sometime1, sometime2));
         return 1;
     }
 }
@@ -268,27 +267,27 @@ pub unsafe fn os_setlocale(interpreter: *mut Interpreter) -> i32 {
             c"time".as_ptr(),
             null(),
         ];
-        let l: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
+        let text: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let op: i32 = lual_checkoption(interpreter, 2, c"all".as_ptr(), CATEGORY_NAMES.as_ptr());
-        lua_pushstring(interpreter, setlocale(CATEGORY[op as usize], l));
+        lua_pushstring(interpreter, setlocale(CATEGORY[op as usize], text));
         return 1;
     }
 }
 pub unsafe fn os_exit(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let status: i32;
-        if lua_type(interpreter, 1) == Some(TagType::Boolean) {
-            status = if lua_toboolean(interpreter, 1) != 0 { 0 } else { 1 };
+        let status: i32 = if lua_type(interpreter, 1) == Some(TagType::Boolean) {
+            if lua_toboolean(interpreter, 1) { 0 } else { 1 }
         } else {
-            status = lual_optinteger(interpreter, 1, 0) as i32;
-        }
-        if lua_toboolean(interpreter, 2) != 0 {
+            lual_optinteger(interpreter, 1, 0) as i32
+        };
+        if lua_toboolean(interpreter, 2) {
             lua_close(interpreter);
         }
-        if !interpreter.is_null() {
+        if interpreter.is_null() {
+            return 0;
+        } else {
             exit(status);
         }
-        return 0;
     }
 }
 pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [

@@ -94,7 +94,7 @@ impl LoadState {
     pub unsafe fn load_string_n(&mut self, p: *mut Prototype) -> *mut TString {
         unsafe {
             let interpreter: *mut Interpreter = self.interpreter;
-            let ts: *mut TString;
+            let tstring: *mut TString;
             let mut size: usize = self.load_size();
             if size == 0 {
                 return null_mut();
@@ -103,23 +103,23 @@ impl LoadState {
                 if size <= 40 as usize {
                     let mut buffer: [i8; 40] = [0; 40];
                     self.load_block(buffer.as_mut_ptr() as *mut libc::c_void, size.wrapping_mul(1 as usize));
-                    ts = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
+                    tstring = luas_newlstr(interpreter, buffer.as_mut_ptr(), size as usize);
                 } else {
-                    ts = TString::create_long(interpreter, size as usize);
+                    tstring = TString::create_long(interpreter, size as usize);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                    (*io).value.value_object = &mut (*(ts as *mut Object));
-                    (*io).set_tag_variant((*ts).get_tag_variant());
+                    (*io).value.value_object = &mut (*(tstring as *mut Object));
+                    (*io).set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
-                    self.load_block(((*ts).get_contents_mut()) as *mut libc::c_void, size.wrapping_mul(1 as usize));
+                    self.load_block(((*tstring).get_contents_mut()) as *mut libc::c_void, size.wrapping_mul(1 as usize));
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 }
             }
-            if (*p).get_marked() & 1 << 5 != 0 && (*ts).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(p as *mut Object)), &mut (*(ts as *mut Object)));
+            if (*p).get_marked() & 1 << 5 != 0 && (*tstring).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrier_(interpreter, &mut (*(p as *mut Object)), &mut (*(tstring as *mut Object)));
             } else {
             };
-            return ts;
+            return tstring;
         }
     }
     pub unsafe fn load_string(&mut self, p: *mut Prototype) -> *mut TString {
@@ -176,9 +176,9 @@ impl LoadState {
                     },
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = tvalue;
-                        let ts: *mut TString = self.load_string(prototype);
-                        (*io_1).value.value_object = &mut (*(ts as *mut Object));
-                        (*io_1).set_tag_variant((*ts).get_tag_variant());
+                        let tstring: *mut TString = self.load_string(prototype);
+                        (*io_1).value.value_object = &mut (*(tstring as *mut Object));
+                        (*io_1).set_tag_variant((*tstring).get_tag_variant());
                         (*io_1).set_collectable(true);
                     },
                     _ => {},

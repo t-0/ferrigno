@@ -44,7 +44,7 @@ pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i3
 pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         let mut tvalue = TValue::new(TAG_VARIANT_NIL_NIL);
-        if l_strton(obj, &mut tvalue) {
+        if tvalue.from_string_to_number(obj) {
             obj = &mut tvalue;
         }
         return luav_tointegerns(obj, p, mode);

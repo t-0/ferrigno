@@ -48,9 +48,9 @@ impl BuffFS {
             } else {
                 self.clear();
                 let io = &mut (*(*self.interpreter).top.stkidrel_pointer);
-                let ts = luas_newlstr(self.interpreter, pointer, length as usize);
-                (*io).value.value_object = &mut (*(ts as *mut Object));
-                (*io).set_tag_variant((*ts).get_tag_variant());
+                let tstring = luas_newlstr(self.interpreter, pointer, length as usize);
+                (*io).value.value_object = &mut (*(tstring as *mut Object));
+                (*io).set_tag_variant((*tstring).get_tag_variant());
                 (*io).set_collectable(true);
                 (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {

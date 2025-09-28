@@ -42,7 +42,7 @@ pub unsafe fn i2d(x: usize) -> f64 {
     let sx: i64 = ((x & 0xffffffffffffffff as usize) >> (64 - 53)) as i64;
     let mut res: f64 = sx as f64 * (0.5f64 / ((1 as usize) << (53 - 1)) as f64);
     if sx < 0 {
-        res += 1.0f64;
+        res += 1.0;
     }
     res
 }
@@ -268,7 +268,7 @@ unsafe fn math_min(interpreter: *mut Interpreter) -> i32 {
         let mut imin: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"value expected".as_ptr()) != 0) as i32;
         for i in 2..(1 + n) {
-            if lua_compare(interpreter, i, imin, 1) != 0 {
+            if lua_compare(interpreter, i, imin, 1) {
                 imin = i;
             }
         }
@@ -282,7 +282,7 @@ unsafe fn math_max(interpreter: *mut Interpreter) -> i32 {
         let mut imax: i32 = 1;
         (((n >= 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"value expected".as_ptr()) != 0) as i32;
         for i in 2..(1 + n) {
-            if lua_compare(interpreter, imax, i, 1) != 0 {
+            if lua_compare(interpreter, imax, i, 1) {
                 imax = i;
             }
         }
