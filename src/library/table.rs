@@ -212,15 +212,15 @@ pub unsafe fn l_randomizepivot() -> u32 {
         memcpy(
             buffer.as_mut_ptr() as *mut c_void,
             &mut c as *mut i64 as *const c_void,
-            (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
+            size_of::<i64>(),
         );
         memcpy(
-            buffer.as_mut_ptr().offset((size_of::<i64>() as usize).wrapping_div(size_of::<u32>() as usize) as isize) as *mut c_void,
+            buffer.as_mut_ptr().offset((size_of::<i64>() / size_of::<u32>()) as isize) as *mut c_void,
             &mut t as *mut i64 as *const c_void,
-            (size_of::<i64>()).wrapping_div(size_of::<u32>()).wrapping_mul(size_of::<u32>()),
+            size_of::<i64>(),
         );
         i = 0u32;
-        while (i as usize) < (size_of::<[u32; 4]>() as usize).wrapping_div(size_of::<u32>() as usize) {
+        while (i as usize) < 4 {
             rnd = rnd.wrapping_add(buffer[i as usize]);
             i = i.wrapping_add(1);
         }
@@ -286,7 +286,7 @@ pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u
     }
 }
 pub unsafe fn choose_pivot(low: u32, high: u32, rnd: u32) -> u32 {
-    let r4: u32 = high.wrapping_sub(low).wrapping_div(4 as u32);
+    let r4: u32 = (high - low) / 4;
     let p: u32 = rnd.wrapping_rem(r4.wrapping_mul(2 as u32)).wrapping_add(low.wrapping_add(r4));
     return p;
 }
@@ -306,7 +306,7 @@ pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32
                 return;
             }
             if high.wrapping_sub(low) < 100 as u32 || rnd == 0 {
-                p = low.wrapping_add(high).wrapping_div(2 as u32);
+                p = (low + high) / 2;
             } else {
                 p = choose_pivot(low, high, rnd);
             }
@@ -340,7 +340,7 @@ pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32
                 n = high.wrapping_sub(p);
                 high = p.wrapping_sub(1 as u32);
             }
-            if high.wrapping_sub(low).wrapping_div(128 as u32) > n {
+            if ((high - low) / 128) > n {
                 rnd = l_randomizepivot();
             }
         }

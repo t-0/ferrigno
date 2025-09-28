@@ -105,10 +105,10 @@ impl LexicalState {
                 (*prototype).prototype_prototypes.grow(
                     interpreter,
                     (*function_state).count_prototypes as usize,
-                    if ((1 << 8 + 8 + 1) - 1) as usize <= (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize) {
+                    if ((1 << 8 + 8 + 1) - 1) as usize <= (!0usize) / size_of::<*mut Prototype>() {
                         (1 << 8 + 8 + 1) - 1
                     } else {
-                        (!(0usize)).wrapping_div(size_of::<*mut Prototype>() as usize)
+                        (!0usize) / size_of::<*mut Prototype>()
                     },
                     c"functions".as_ptr(),
                 );
@@ -149,10 +149,10 @@ pub unsafe fn newlabelentry(interpreter: *mut Interpreter, _lexical_state: *mut 
         (*l).grow(
             interpreter,
             n as usize,
-            if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize) {
+            if 32767 as usize <= (!0usize) / size_of::<LabelDescription>() {
                 32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<LabelDescription>() as usize)
+                (!0usize) / size_of::<LabelDescription>()
             },
             c"labels/gotos".as_ptr(),
         );
@@ -190,7 +190,7 @@ pub unsafe fn solvegotos(interpreter: *mut Interpreter, lexical_state: *mut Lexi
 pub unsafe fn undefgoto(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, _function_state: *mut FunctionState, goto_label_description: *mut LabelDescription) -> ! {
     unsafe {
         let mut message: *const i8;
-        if (*goto_label_description).name == luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)) {
+        if (*goto_label_description).name == luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_sub(1)) {
             message = c"break outside loop at line %d".as_ptr();
             message = luao_pushfstring(interpreter, message, (*goto_label_description).line);
         } else {
@@ -687,10 +687,10 @@ pub unsafe fn registerlocalvar(interpreter: *mut Interpreter, _lexical_state: *m
         (*prototype).prototype_local_variables.grow(
             interpreter,
             (*function_state).count_debug_variables as usize,
-            if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize) {
+            if 32767 as usize <= (!0usize) / size_of::<LocalVariable>() {
                 32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<LocalVariable>() as usize)
+                (!0usize) / size_of::<LocalVariable>()
             },
             c"local variables".as_ptr(),
         );
@@ -728,10 +728,10 @@ pub unsafe fn new_localvar(interpreter: *mut Interpreter, lexical_state: *mut Le
         (*dynamic_data).active_variables.grow(
             interpreter,
             ((*dynamic_data).active_variables.get_length() + 1) as usize,
-            if 32767 as usize <= (!(0usize)).wrapping_div(size_of::<VariableDescription>()) {
+            if 32767 as usize <= (!0usize) / size_of::<VariableDescription>() {
                 32767
             } else {
-                (!(0usize)).wrapping_div(size_of::<VariableDescription>() as usize)
+                (!0usize) / size_of::<VariableDescription>()
             },
             c"local variables".as_ptr(),
         );
@@ -761,8 +761,8 @@ pub unsafe fn check_readonly(interpreter: *mut Interpreter, lexical_state: *mut 
             },
             ExpressionKind::UpValue => {
                 let upvaluedescription: *mut UpValueDescription = &mut *((*(*function_state).prototype).prototype_upvalues.vectort_pointer).offset((*expression_description).value.value_info as isize) as *mut UpValueDescription;
-                if (*upvaluedescription).kind as i32 != 0 {
-                    variable_name = (*upvaluedescription).name;
+                if (*upvaluedescription).upvaluedescription_kind as i32 != 0 {
+                    variable_name = (*upvaluedescription).upvaluedescription_name;
                 }
             },
             _ => return,
@@ -1004,7 +1004,7 @@ pub unsafe fn breakstat(interpreter: *mut Interpreter, lexical_state: *mut Lexic
             interpreter,
             lexical_state,
             function_state,
-            luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)),
+            luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_sub(1)),
             line,
             luak_jump(interpreter, lexical_state, function_state),
         );
@@ -1200,7 +1200,7 @@ pub unsafe fn handle_test_then_block(interpreter: *mut Interpreter, lexical_stat
                 interpreter,
                 lexical_state,
                 function_state,
-                luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)),
+                luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_sub(1)),
                 line,
                 v.t,
             );
@@ -1382,12 +1382,12 @@ pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state:
         open_function(interpreter, lexical_state, function_state, (*lexical_state).lexical_state_function_state, &mut block_control);
         setvararg(interpreter, lexical_state, function_state, 0);
         env = allocate_upvalue_description(interpreter, lexical_state, function_state, (*function_state).prototype);
-        (*env).is_in_stack = true;
-        (*env).index = 0;
-        (*env).kind = 0;
-        (*env).name = (*lexical_state).environment;
-        if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*(*env).name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*((*env).name as *mut Object)));
+        (*env).upvaluedescription_isinstack = true;
+        (*env).upvaluedescription_index = 0;
+        (*env).upvaluedescription_kind = 0;
+        (*env).upvaluedescription_name = (*lexical_state).environment;
+        if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*(*env).upvaluedescription_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*((*env).upvaluedescription_name as *mut Object)));
         } else {
         };
         luax_next(interpreter, lexical_state);
@@ -1400,7 +1400,7 @@ pub unsafe fn save(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
     unsafe {
         let b = (*lexical_state).buffer;
         if ((*b).loads.get_length() as usize).wrapping_add(1 as usize) > (*b).loads.get_size() as usize {
-            if (*b).loads.get_size() as usize >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_div(2) {
+            if (*b).loads.get_size() as usize >= (if (size_of::<usize>()) < size_of::<i64>() { !0usize } else { MAXIMUM_SIZE }) / 2 {
                 lexerror(interpreter, lexical_state, c"lexical element too long".as_ptr(), 0);
             }
             let new_size = (*b).loads.get_size().wrapping_mul(2);
@@ -1505,7 +1505,7 @@ pub unsafe fn luax_setinput(interpreter: *mut Interpreter, lexical_state: *mut L
         (*lexical_state).line_number = 1;
         (*lexical_state).last_line = 1;
         (*lexical_state).source = source;
-        (*lexical_state).environment = luas_newlstr(interpreter, c"_ENV".as_ptr(), (size_of::<[i8; 5]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
+        (*lexical_state).environment = luas_newlstr(interpreter, c"_ENV".as_ptr(), (size_of::<[i8; 5]>()).wrapping_sub(1));
         (*(*lexical_state).buffer).loads.resize(interpreter, 32 as usize);
     }
 }

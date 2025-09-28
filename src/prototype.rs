@@ -82,7 +82,7 @@ impl Prototype {
         unsafe {
             let n = if dump_state.is_strip { 0 } else { self.prototype_line_info.get_size() as usize };
             dump_state.dump_int(n as i32);
-            dump_state.dump_block(self.prototype_line_info.vectort_pointer as *const libc::c_void, n.wrapping_mul(size_of::<i8>()));
+            dump_state.dump_block(self.prototype_line_info.vectort_pointer as *const libc::c_void, n);
         }
         unsafe {
             let n = if dump_state.is_strip { 0 } else { self.prototype_absolute_line_info.get_size() as usize };
@@ -105,7 +105,7 @@ impl Prototype {
             let n = if dump_state.is_strip { 0 } else { self.prototype_upvalues.get_size() as usize };
             dump_state.dump_int(n as i32);
             for i in 0..n {
-                TString::dump_string(dump_state, (*(self.prototype_upvalues.at(i as isize))).name);
+                TString::dump_string(dump_state, (*(self.prototype_upvalues.at(i as isize))).upvaluedescription_name);
             }
         }
     }
@@ -164,9 +164,9 @@ impl Prototype {
                 }
             }
             for i in 0..self.prototype_upvalues.get_size() {
-                if !((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).name).is_null() {
-                    if (*(*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).name as *mut Object)));
+                if !((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).is_null() {
+                    if (*(*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                        really_mark_object(global, &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name as *mut Object)));
                     }
                 }
             }
@@ -203,7 +203,7 @@ impl Prototype {
             );
             (*interpreter).free_memory(
                 self.prototype_line_info.vectort_pointer as *mut libc::c_void,
-                (self.prototype_line_info.get_size() as usize).wrapping_mul(size_of::<i8>() as usize) as usize,
+                (self.prototype_line_info.get_size() as usize).wrapping_mul(1 as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_absolute_line_info.vectort_pointer as *mut libc::c_void,
@@ -227,7 +227,7 @@ pub unsafe fn getbaseline(prototype: *const Prototype, program_counter: i32, bas
             *basepc = -1;
             return (*prototype).prototype_line_defined;
         } else {
-            let mut i: i32 = (program_counter as u32).wrapping_div(128u32).wrapping_sub(1u32) as i32;
+            let mut i = ((program_counter as u32) / 128).wrapping_sub(1) as i32;
             while (i + 1) < (*prototype).prototype_absolute_line_info.get_size() as i32 && program_counter >= (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset((i + 1) as isize)).program_counter {
                 i += 1;
             }
@@ -257,7 +257,7 @@ pub unsafe fn luag_getfuncline(prototype: *const Prototype, program_counter: i32
 }
 pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
     unsafe {
-        let s: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset(uv as isize)).name;
+        let s: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset(uv as isize)).upvaluedescription_name;
         if s.is_null() {
             return c"?".as_ptr();
         } else {

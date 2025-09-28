@@ -118,7 +118,7 @@ pub unsafe fn leaveblock(interpreter: *mut Interpreter, lexical_state: *mut Lexi
             has_close = (*lexical_state).create_label(
                 interpreter,
                 function_state,
-                luas_newlstr(interpreter, c"break".as_ptr(), (size_of::<[i8; 6]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1)),
+                luas_newlstr(interpreter, c"break".as_ptr(), "break".len()),
                 0,
                 false,
             );
@@ -281,7 +281,7 @@ pub unsafe fn searchupvalue(function_state: *mut FunctionState, name: *mut TStri
     unsafe {
         let upvaluedescription: *mut UpValueDescription = (*(*function_state).prototype).prototype_upvalues.vectort_pointer;
         for i in 0..(*function_state).count_upvalues {
-            if (*upvaluedescription.offset(i as isize)).name == name {
+            if (*upvaluedescription.offset(i as isize)).upvaluedescription_name == name {
                 return i as i32;
             }
         }
@@ -295,22 +295,22 @@ pub unsafe fn allocate_upvalue_description(interpreter: *mut Interpreter, lexica
         (*prototype).prototype_upvalues.grow(
             interpreter,
             (*function_state).count_upvalues as usize,
-            if 255 as usize <= (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize) {
+            if 255 as usize <= (!0usize) / size_of::<UpValueDescription>() {
                 255
             } else {
-                (!(0usize)).wrapping_div(size_of::<UpValueDescription>() as usize)
+                (!0usize) / size_of::<UpValueDescription>()
             },
             c"upvalues".as_ptr(),
         );
         while old_size < (*prototype).prototype_upvalues.get_size() {
             let fresh41 = old_size;
             old_size = old_size + 1;
-            let ref mut fresh42 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(fresh41 as isize)).name;
+            let ref mut fresh42 = (*((*prototype).prototype_upvalues.vectort_pointer).offset(fresh41 as isize)).upvaluedescription_name;
             *fresh42 = null_mut();
         }
-        let fresh43 = (*function_state).count_upvalues;
-        (*function_state).count_upvalues = ((*function_state).count_upvalues).wrapping_add(1);
-        return &mut *((*prototype).prototype_upvalues.vectort_pointer).offset(fresh43 as isize) as *mut UpValueDescription;
+        let count_upvalues = (*function_state).count_upvalues;
+        (*function_state).count_upvalues += 1;
+        return &mut *((*prototype).prototype_upvalues.vectort_pointer).offset(count_upvalues as isize) as *mut UpValueDescription;
     }
 }
 pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, name: *mut TString, v: *mut ExpressionDescription) -> i32 {
@@ -318,15 +318,15 @@ pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         let upvalue_description: *mut UpValueDescription = allocate_upvalue_description(interpreter, lexical_state, function_state, (*function_state).prototype);
         let previous: *mut FunctionState = (*function_state).function_state_previous;
         if (*v).expression_kind == ExpressionKind::Local {
-            (*upvalue_description).is_in_stack = true;
-            (*upvalue_description).index = (*v).value.value_variable.valueregister_registerindex;
-            (*upvalue_description).kind = (*getlocalvardesc(lexical_state, previous, (*v).value.value_variable.valueregister_valueindex as i32)).content.kind;
+            (*upvalue_description).upvaluedescription_isinstack = true;
+            (*upvalue_description).upvaluedescription_index = (*v).value.value_variable.valueregister_registerindex;
+            (*upvalue_description).upvaluedescription_kind = (*getlocalvardesc(lexical_state, previous, (*v).value.value_variable.valueregister_valueindex as i32)).content.kind;
         } else {
-            (*upvalue_description).is_in_stack = false;
-            (*upvalue_description).index = (*v).value.value_info as u8;
-            (*upvalue_description).kind = (*((*(*previous).prototype).prototype_upvalues.vectort_pointer).offset((*v).value.value_info as isize)).kind;
+            (*upvalue_description).upvaluedescription_isinstack = false;
+            (*upvalue_description).upvaluedescription_index = (*v).value.value_info as u8;
+            (*upvalue_description).upvaluedescription_kind = (*((*(*previous).prototype).prototype_upvalues.vectort_pointer).offset((*v).value.value_info as isize)).upvaluedescription_kind;
         }
-        (*upvalue_description).name = name;
+        (*upvalue_description).upvaluedescription_name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
             luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*(name as *mut Object)));
         } else {
@@ -575,10 +575,10 @@ pub unsafe fn savelineinfo(interpreter: *mut Interpreter, _lexical_state: *mut L
             (*prototype).prototype_absolute_line_info.grow(
                 interpreter,
                 (*function_state).count_abslineinfo as usize,
-                if 0x7FFFFFFF as usize <= (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize) {
+                if 0x7FFFFFFF as usize <= (!0usize) / size_of::<AbsoluteLineInfo>() {
                     0x7FFFFFFF
                 } else {
-                    (!(0usize)).wrapping_div(size_of::<AbsoluteLineInfo>() as usize)
+                    (!0usize) / size_of::<AbsoluteLineInfo>()
                 },
                 c"lines".as_ptr(),
             );
@@ -592,7 +592,7 @@ pub unsafe fn savelineinfo(interpreter: *mut Interpreter, _lexical_state: *mut L
         (*prototype).prototype_line_info.grow(
             interpreter,
             program_counter as usize,
-            if 0x7FFFFFFF <= (!(0usize)).wrapping_div(size_of::<i8>()) { 0x7FFFFFFF } else { !(0usize) },
+            if 0x7FFFFFFF <= (!(0usize)) { 0x7FFFFFFF } else { !(0usize) },
             c"opcodes".as_ptr(),
         );
         *((*prototype).prototype_line_info.vectort_pointer).offset(program_counter as isize) = linedif as i8;
@@ -627,10 +627,10 @@ pub unsafe fn luak_code(interpreter: *mut Interpreter, lexical_state: *mut Lexic
         (*prototype).prototype_code.grow(
             interpreter,
             (*function_state).program_counter as usize,
-            if 0x7FFFFFFF as usize <= (!(0usize)).wrapping_div(size_of::<u32>() as usize) {
+            if 0x7FFFFFFF as usize <= (!0usize) / size_of::<u32>() {
                 0x7FFFFFFF
             } else {
-                (!(0usize)).wrapping_div(size_of::<u32>() as usize)
+                (!0usize) / size_of::<u32>()
             },
             c"opcodes".as_ptr(),
         );
@@ -758,10 +758,10 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         (*prototype).prototype_constants.grow(
             interpreter,
             count_constants as usize,
-            if ((1 << 8 + 8 + 1 + 8) - 1) as usize <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize) {
+            if ((1 << 8 + 8 + 1 + 8) - 1) as usize <= (!0usize) / size_of::<TValue>() {
                 (1 << 8 + 8 + 1 + 8) - 1
             } else {
-                (!(0usize)).wrapping_div(size_of::<TValue>() as usize)
+                (!0usize) / size_of::<TValue>()
             },
             c"constants".as_ptr(),
         );
@@ -1634,7 +1634,7 @@ pub unsafe fn luak_posfix(
                 interpreter,
                 lexical_state,
                 function_state,
-                (binary as u32).wrapping_add(0u32) as i32,
+                binary as i32,
                 expression_description_a,
                 expression_description_b,
             ) != 0

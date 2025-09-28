@@ -87,7 +87,7 @@ pub unsafe fn str_rep(interpreter: *mut Interpreter) -> i32 {
         let sep: *const i8 = lual_optlstring(interpreter, 3, c"".as_ptr(), &mut lsep);
         if n <= 0 {
             lua_pushstring(interpreter, c"".as_ptr());
-        } else if l.wrapping_add(lsep) < l || l.wrapping_add(lsep) as usize > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as usize).wrapping_div(n as usize) {
+        } else if l.wrapping_add(lsep) < l || l.wrapping_add(lsep) as usize > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as usize) / n as usize {
             return lual_error(interpreter, c"resulting string too large".as_ptr());
         } else {
             let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize) * lsep);
@@ -556,7 +556,7 @@ pub unsafe fn getformat(interpreter: *mut Interpreter, strfrmt: *const i8, mut f
         let fresh173 = form;
         form = form.offset(1);
         *fresh173 = Character::Percent as i8;
-        memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, (length as usize).wrapping_mul(size_of::<i8>()));
+        memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, (length as usize));
         *form.offset(length as isize) = Character::Null as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }
@@ -747,11 +747,11 @@ pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32
         *size = 0;
         match Character::from(opt) {
             Character::LowerB => {
-                *size = size_of::<i8>() as i32;
+                *size = 1 as i32;
                 return K::Integer;
             },
             Character::UpperB => {
-                *size = size_of::<i8>() as i32;
+                *size = 1 as i32;
                 return K::Unsigned;
             },
             Character::LowerH => {

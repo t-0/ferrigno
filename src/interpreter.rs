@@ -468,7 +468,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
             }
         }
         lua_settop(interpreter, 0);
-        fwrite(c"\n".as_ptr() as *const libc::c_void, size_of::<i8>(), 1, stdout);
+        fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
         fflush(stdout);
         PROGRAM_NAME = oldprogname;
     }
@@ -2819,7 +2819,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                 },
                 Character::LowerC => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
-                    buff_fs.add_string(&mut c, size_of::<i8>() as usize);
+                    buff_fs.add_string(&mut c, 1 as usize);
                 },
                 Character::LowerD => {
                     let mut tvalue: TValue = TValue::new(TAG_VARIANT_NIL_NIL);
@@ -3504,11 +3504,10 @@ pub unsafe fn luay_parser(interpreter: *mut Interpreter, zio: *mut ZIO, buffer: 
 }
 pub unsafe fn luax_init(interpreter: *mut Interpreter) {
     unsafe {
-        let mut i: i32;
-        let env_string: *mut TString = luas_newlstr(interpreter, c"_ENV".as_ptr(), (size_of::<[i8; 5]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
+        let env_string: *mut TString = luas_newlstr(interpreter, c"_ENV".as_ptr(), "_ENV".len());
         fix_object_state(interpreter, &mut (*(env_string as *mut Object)));
-        i = 0;
-        while i < Token::While as i32 - (127 as i32 * 2 + 1 + 1) + 1 {
+        let mut i: i32 = 0;
+        while i < Token::While as i32 - 255 {
             let ts: *mut TString = luas_new(interpreter, TOKENS[i as usize]);
             fix_object_state(interpreter, &mut (*(ts as *mut Object)));
             (*ts).extra = (i + 1) as u8;
@@ -3528,12 +3527,12 @@ pub unsafe fn pushclosure(interpreter: *mut Interpreter, p: *mut Prototype, encu
         (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable(true);
         for i in 0..count_upvalues {
-            if (*uv.offset(i as isize)).is_in_stack {
+            if (*uv.offset(i as isize)).upvaluedescription_isinstack {
                 let ref mut fresh136 = *((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
-                *fresh136 = luaf_findupval(interpreter, base.offset((*uv.offset(i as isize)).index as isize));
+                *fresh136 = luaf_findupval(interpreter, base.offset((*uv.offset(i as isize)).upvaluedescription_index as isize));
             } else {
                 let ref mut fresh137 = *((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
-                *fresh137 = *encup.offset((*uv.offset(i as isize)).index as isize);
+                *fresh137 = *encup.offset((*uv.offset(i as isize)).upvaluedescription_index as isize);
             }
             if (*ncl).get_marked() & 1 << 5 != 0 && (**((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrier_(interpreter, &mut (*(ncl as *mut Object)), &mut (*(*((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize) as *mut Object)));
@@ -6479,12 +6478,12 @@ pub unsafe fn luab_print(interpreter: *mut Interpreter) -> i32 {
             let mut l: usize = 0;
             let s: *const i8 = lual_tolstring(interpreter, i, &mut l);
             if i > 1 {
-                fwrite(c"\t".as_ptr() as *const libc::c_void, size_of::<i8>(), 1, stdout);
+                fwrite(c"\t".as_ptr() as *const libc::c_void, 1, 1, stdout);
             }
-            fwrite(s as *const libc::c_void, size_of::<i8>(), l as usize, stdout);
+            fwrite(s as *const libc::c_void, 1, l as usize, stdout);
             lua_settop(interpreter, -2);
         }
-        fwrite(c"\n".as_ptr() as *const libc::c_void, size_of::<i8>(), 1, stdout);
+        fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
         fflush(stdout);
         return 0;
     }

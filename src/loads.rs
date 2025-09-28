@@ -76,7 +76,7 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, (self.loads_size as usize).wrapping_mul(size_of::<i8>()), 0);
+            luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, (self.loads_size as usize), 0);
             self.loads_pointer = null_mut();
             self.loads_size = 0;
         }

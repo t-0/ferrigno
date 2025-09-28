@@ -71,10 +71,10 @@ pub unsafe fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {
             }
         }
         if (*tb).size
-            <= (if STRINGTABLE_LENGTH_MAX <= (!(0usize)).wrapping_div(size_of::<*mut TString>()) {
+            <= (if STRINGTABLE_LENGTH_MAX <= ((!0usize) / size_of::<*mut TString>()) {
                 STRINGTABLE_LENGTH_MAX
             } else {
-                (!(0usize)).wrapping_div(size_of::<*mut TString>())
+                (!0usize) / size_of::<*mut TString>()
             }) as i32
                 / 2
         {

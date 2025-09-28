@@ -52,7 +52,7 @@ pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> 
 }
 pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
             return (i as f64) < number;
         } else {
             let mut fi: i64 = 0;
@@ -66,7 +66,7 @@ pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
             return i as f64 <= number;
         } else {
             let mut fi: i64 = 0;
@@ -80,7 +80,7 @@ pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
 }
 pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
             return number < i as f64;
         } else {
             let mut fi: i64 = 0;
@@ -94,7 +94,7 @@ pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
 }
 pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
     unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= (2 as usize).wrapping_mul((1 as usize) << 53 as i32) {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
             return number <= i as f64;
         } else {
             let mut fi: i64 = 0;
@@ -187,12 +187,12 @@ pub unsafe fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
 }
 pub unsafe fn luav_shiftl(x: i64, y: i64) -> i64 {
     if y < 0 {
-        if y <= -((size_of::<i64>() as usize).wrapping_mul(8 as usize) as i32) as i64 {
+        if y <= -(((size_of::<i64>() as usize) * 8) as i32) as i64 {
             return 0;
         } else {
             return (x as usize >> -y as usize) as i64;
         }
-    } else if y >= (size_of::<i64>() as usize).wrapping_mul(8 as usize) as i64 {
+    } else if y >= ((size_of::<i64>() as usize) * 8) as i64 {
         return 0;
     } else {
         return ((x as usize) << y as usize) as i64;

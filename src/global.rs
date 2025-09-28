@@ -147,9 +147,9 @@ impl Global {
     pub unsafe fn incstep(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             let stepmul: i32 = self.gc_step_multiplier as i32 * 4 | 1;
-            let mut debt: i64 = (self.gc_debt as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize) as i64;
-            let stepsize: i64 = (if self.gc_step_size as usize <= (size_of::<i64>() as usize).wrapping_mul(8 as usize).wrapping_sub(2 as usize) {
-                ((1 << self.gc_step_size as i32) as usize).wrapping_div(size_of::<TValue>() as usize).wrapping_mul(stepmul as usize)
+            let mut debt: i64 = (((self.gc_debt as usize) / size_of::<TValue>()) * (stepmul as usize)) as i64;
+            let stepsize: i64 = (if self.gc_step_size as usize <= size_of::<i64>() * 8 - 2 {
+                ((1 << self.gc_step_size as i32) as usize) / (size_of::<TValue>()) * (stepmul as usize)
             } else {
                 (!(0usize) >> 1) as usize
             }) as i64;
@@ -255,10 +255,10 @@ impl Global {
                 self.stepgenfull(interpreter);
             } else {
                 let majorbase: usize = self.gc_estimate;
-                let majorinc: usize = majorbase.wrapping_div(100 as usize).wrapping_mul(self.generational_major_multiplier * 4);
+                let majorinc: usize = (majorbase / 100) * (self.generational_major_multiplier * 4);
                 if self.gc_debt > 0 && (self.total_bytes + self.gc_debt) as usize > majorbase.wrapping_add(majorinc) {
                     let numobjs: usize = self.fullgen(interpreter);
-                    if !(((self.total_bytes + self.gc_debt) as usize) < majorbase.wrapping_add(majorinc.wrapping_div(2 as usize))) {
+                    if !(((self.total_bytes + self.gc_debt) as usize) < majorbase + (majorinc / 2)) {
                         self.last_atomic = numobjs;
                         self.setpause();
                     }
@@ -419,7 +419,7 @@ impl Global {
         unsafe {
             let string_table: *mut StringTable = &mut self.string_table;
             (*string_table).initialize(interpreter);
-            self.memory_error_message = luas_newlstr(interpreter, c"not enough memory".as_ptr(), (size_of::<[i8; 18]>()).wrapping_div(size_of::<i8>()).wrapping_sub(1));
+            self.memory_error_message = luas_newlstr(interpreter, c"not enough memory".as_ptr(), "not enough memory".len());
             fix_object_global(self, self.memory_error_message as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
@@ -462,7 +462,7 @@ impl Global {
     pub unsafe fn setpause(&mut self) {
         unsafe {
             let pause: i32 = (*self).gc_pause as i32 * 4;
-            let estimate: i64 = ((*self).gc_estimate).wrapping_div(100 as usize) as i64;
+            let estimate: i64 = ((*self).gc_estimate / 100) as i64;
             let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate { estimate * pause as i64 } else { (!(0usize) >> 1) as i64 };
             let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
             if debt > 0 {
@@ -536,7 +536,7 @@ impl Global {
     }
     pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(-((self.total_bytes + self.gc_debt).wrapping_div(100) * self.generational_minor_multiplier as i64));
+            self.set_debt(-(((self.total_bytes + self.gc_debt) / 100) * self.generational_minor_multiplier as i64));
         }
     }
     pub unsafe fn propagatemark(&mut self) -> usize {

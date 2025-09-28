@@ -388,7 +388,7 @@ pub unsafe fn read_all(interpreter: *mut Interpreter, file: *mut FILE) {
             let p: *mut i8 = b.prepare_with_size((16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()));
             nr = fread(
                 p as *mut libc::c_void,
-                size_of::<i8>(),
+                1,
                 (16 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_mul(size_of::<f64>()),
                 file,
             ) as usize;
@@ -407,7 +407,7 @@ pub unsafe fn read_chars(interpreter: *mut Interpreter, file: *mut FILE, n: usiz
         let mut b = Buffer::new();
         b.initialize(interpreter);
         p = b.prepare_with_size(n as usize);
-        nr = fread(p as *mut libc::c_void, size_of::<i8>(), n as usize, file) as usize;
+        nr = fread(p as *mut libc::c_void, 1, n as usize, file) as usize;
         b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nr as usize) as i32) as usize);
         b.push_result();
         return (nr > 0) as i32;
@@ -532,7 +532,7 @@ pub unsafe fn g_write(interpreter: *mut Interpreter, file: *mut FILE, mut arg: i
             } else {
                 let mut l: usize = 0;
                 let s: *const i8 = lual_checklstring(interpreter, arg, &mut l);
-                status = (status != 0 && fwrite(s as *const libc::c_void, size_of::<i8>(), l as usize, file) == l as usize) as i32;
+                status = (status != 0 && fwrite(s as *const libc::c_void, 1, l as usize, file) == l as usize) as i32;
             }
             arg += 1;
         }

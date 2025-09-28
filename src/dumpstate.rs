@@ -26,7 +26,7 @@ impl DumpState {
     pub unsafe fn dump_byte(&mut self, integer: u8) {
         unsafe {
             let x: u8 = integer;
-            self.dump_block(&x as *const u8 as *const c_void, size_of::<u8>());
+            self.dump_block(&x as *const u8 as *const c_void, 1);
         }
     }
     pub unsafe fn dump_size(&mut self, mut integer: usize) {
@@ -41,13 +41,13 @@ impl DumpState {
                     break;
                 }
             }
-            buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] = (buffer[size_of::<usize>().wrapping_mul(8).wrapping_add(6).wrapping_div(7).wrapping_sub(1)] as i32 | 0x80 as i32) as u8;
+            buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] = (buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] as i32 | 0x80 as i32) as u8;
             self.dump_block(
                 buffer
                     .as_mut_ptr()
-                    .offset((size_of::<usize>() as usize).wrapping_mul(8 as usize).wrapping_add(6 as usize).wrapping_div(7 as usize) as isize)
+                    .offset((((size_of::<usize>()) * 8 + 6) / 7) as isize)
                     .offset(-(n as isize)) as *const c_void,
-                n.wrapping_mul(size_of::<u8>()),
+                n,
             );
         }
     }
@@ -68,10 +68,10 @@ impl DumpState {
     }
     pub unsafe fn dump_header(&mut self) {
         unsafe {
-            self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()).wrapping_sub(size_of::<i8>()));
+            self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()).wrapping_sub(1));
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
-            self.dump_block(c"\x19\x7F\r\n\x1A\n".as_ptr() as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(size_of::<i8>()));
+            self.dump_block(c"\x19\x7F\r\n\x1A\n".as_ptr() as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(1));
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }

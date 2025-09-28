@@ -53,11 +53,11 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 if step > 0 {
                     count = (limit as usize).wrapping_sub(initial as usize);
                     if step != 1 {
-                        count = (count as usize).wrapping_div(step as usize) as usize;
+                        count /= step as usize;
                     }
                 } else {
                     count = (initial as usize).wrapping_sub(limit as usize);
-                    count = (count as usize).wrapping_div((-(step + 1) as usize).wrapping_add(1 as usize)) as usize;
+                    count = count / ((-(step + 1) as usize) + 1) as usize;
                 }
                 (*plimit).value.value_integer = count as i64;
                 (*plimit).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);

@@ -131,7 +131,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                 if !owner.is_null() {
                     *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize) as *mut Object));
                 }
-                let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).name;
+                let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).upvaluedescription_name;
                 return if name.is_null() { c"(no name)".as_ptr() } else { ((*name).get_contents_mut()) as *const i8 };
             },
             _ => return null(),
@@ -190,10 +190,10 @@ pub unsafe fn luao_tostring(interpreter: *mut Interpreter, object: *mut TValue) 
 pub const ABSENT_KEY: TValue = { TValue::new(TAG_VARIANT_NIL_ABSENTKEY) };
 pub unsafe fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
-        < (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32) as usize <= (!(0usize)).wrapping_div(size_of::<TValue>() as usize) {
+        < (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32) as usize <= (((!0usize) / size_of::<TValue>()) as usize) {
             (1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32
         } else {
-            (!0usize).wrapping_div(size_of::<TValue>() as usize) as u32
+            ((!0usize) / size_of::<TValue>()) as u32
         }) as usize
     {
         return k as u32;

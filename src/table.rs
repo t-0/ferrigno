@@ -524,10 +524,10 @@ pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mu
             let lsize: i32 = ceiling_log2(size as usize) as i32;
             if lsize > (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1
                 || (1 as u32) << lsize
-                    > (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1) as usize <= (!(0usize)).wrapping_div(size_of::<Node>() as usize) {
+                    > (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1) as usize <= ((!0usize) / size_of::<Node>()) {
                         (1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 - 1
                     } else {
-                        (!(0usize)).wrapping_div(size_of::<Node>() as usize) as u32
+                        ((!0usize) / size_of::<Node>()) as u32
                     })
             {
                 luag_runerror(interpreter, c"table overflow".as_ptr());
@@ -855,7 +855,7 @@ pub unsafe fn luah_getn(table: *mut Table) -> usize {
                 return limit.wrapping_sub(1 as u32) as usize;
             } else {
                 let boundary: u32 = binsearch((*table).array, 0u32, limit);
-                if ispow2realasize(table) != 0 && boundary > (luah_realasize(table)).wrapping_div(2 as u32) {
+                if ispow2realasize(table) != 0 && boundary > ((luah_realasize(table)) / 2) {
                     (*table).array_limit = boundary;
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
                 }
