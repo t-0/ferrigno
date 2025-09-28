@@ -83,6 +83,6 @@ pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Pr
         dump_state.dump_header();
         dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
         (*prototype).dump_function(&mut dump_state, null_mut());
-        return dump_state.status;
+        dump_state.status
     }
 }

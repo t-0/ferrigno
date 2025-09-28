@@ -47,7 +47,7 @@ pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> 
         if tvalue.from_string_to_number(obj) {
             obj = &mut tvalue;
         }
-        return luav_tointegerns(obj, p, mode);
+        luav_tointegerns(obj, p, mode)
     }
 }
 pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {

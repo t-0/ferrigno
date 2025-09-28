@@ -18,14 +18,14 @@ pub struct Buffer {
 }
 impl New for Buffer {
     fn new() -> Self {
-        return Buffer { loads: LoadS::<BufferElement>::new(), buffer_interpreter: null_mut(), initial_data: [0; Buffer::INITIAL_SIZE] };
+        Buffer { loads: LoadS::<BufferElement>::new(), buffer_interpreter: null_mut(), initial_data: [0; Buffer::INITIAL_SIZE] }
     }
 }
 impl Buffer {
     pub unsafe fn initialize_with_size(&mut self, interpreter: *mut Interpreter, size: usize) -> *mut BufferElement {
         unsafe {
             self.initialize(interpreter);
-            return self.prepare_with_size_and_index(size, -1);
+            self.prepare_with_size_and_index(size, -1)
         }
     }
     pub unsafe fn push_result_with_size(&mut self, size: usize) {
@@ -38,10 +38,10 @@ impl Buffer {
         unsafe {
             let mut new_size = 2 * self.loads.get_size();
             if (!0usize) - size < self.loads.get_length() as usize {
-                return lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize;
+                lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize
             } else {
                 new_size = new_size.max(self.loads.get_length() + size as i32);
-                return new_size as usize;
+                new_size as usize
             }
         }
     }
@@ -76,7 +76,7 @@ impl Buffer {
     }
     pub unsafe fn prepare_with_size(&mut self, size: usize) -> *mut BufferElement {
         unsafe {
-            return self.prepare_with_size_and_index(size, -1);
+            self.prepare_with_size_and_index(size, -1)
         }
     }
     pub unsafe fn add_string_with_length(&mut self, s: *const BufferElement, length: usize) {

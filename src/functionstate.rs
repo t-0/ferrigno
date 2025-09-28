@@ -336,8 +336,7 @@ pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut Lexi
 }
 pub unsafe fn searchvar(lexical_state: *mut LexicalState, function_state: *mut FunctionState, n: *mut TString, var: *mut ExpressionDescription) -> i32 {
     unsafe {
-        let mut i: i32;
-        i = (*function_state).count_active_variables as i32 - 1;
+        let mut i = (*function_state).count_active_variables as i32 - 1;
         while i >= 0 {
             let variable_description: *mut VariableDescription = getlocalvardesc(lexical_state, function_state, i);
             if n == (*variable_description).content.name {
@@ -350,7 +349,7 @@ pub unsafe fn searchvar(lexical_state: *mut LexicalState, function_state: *mut F
             }
             i -= 1;
         }
-        return -1;
+        -1
     }
 }
 pub unsafe fn marktobeclosed(function_state: *mut FunctionState) {

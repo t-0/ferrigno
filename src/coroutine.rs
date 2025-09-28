@@ -9,25 +9,38 @@ pub enum CoroutineStatus {
     Yield = 2,
     Normal = 3,
 }
-pub const COROUTINE_STATUS_NAMES: [*const i8; 4] = [c"running".as_ptr(), c"dead".as_ptr(), c"suspended".as_ptr(), c"normal".as_ptr()];
-pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> CoroutineStatus {
+impl CoroutineStatus {
+    pub fn get_name (& self) -> *const i8 {
+        match *self {
+            CoroutineStatus::Dead => c"dead".as_ptr(),
+            CoroutineStatus::Yield => c"suspended".as_ptr(),
+            CoroutineStatus::Running => c"running".as_ptr(),
+            CoroutineStatus::Normal => c"normal".as_ptr(),
+        }
+    }
+}
+pub unsafe fn auxiliary_status(interpreter: *mut Interpreter, coroutine: *mut Interpreter) -> CoroutineStatus {
     unsafe {
-        if interpreter == co {
+        if interpreter == coroutine {
             return CoroutineStatus::Running;
         } else {
-            match (*co).get_status() {
-                Status::Yield => return CoroutineStatus::Yield,
+            match (*coroutine).get_status() {
+                Status::Yield => {
+                    return CoroutineStatus::Yield;
+                },
                 Status::OK => {
-                    let mut debuginfo =  DebugInfo::new();
-                    if lua_getstack(co, 0, &mut debuginfo) != 0 {
+                    let mut debuginfo = DebugInfo::new();
+                    if lua_getstack(coroutine, 0, &mut debuginfo) != 0 {
                         return CoroutineStatus::Normal;
-                    } else if (*co).get_top() == 0 {
+                    } else if (*coroutine).get_top() == 0 {
                         return CoroutineStatus::Dead;
                     } else {
                         return CoroutineStatus::Yield;
                     }
                 },
-                _ => return CoroutineStatus::Dead,
+                _ => {
+                    return CoroutineStatus::Dead;
+                },
             }
         };
     }

@@ -54,12 +54,12 @@ pub struct CallInfoConsistuentBTransferInfo {
 }
 pub unsafe fn currentpc(callinfo: *mut CallInfo) -> i32 {
     unsafe {
-        return ((*callinfo).call_info_u.l.saved_program_counter).offset_from((*(*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure)).payload.l_prototype).prototype_code.vectort_pointer) as i32 - 1;
+        ((*callinfo).call_info_u.l.saved_program_counter).offset_from((*(*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure)).payload.l_prototype).prototype_code.vectort_pointer) as i32 - 1
     }
 }
 pub unsafe fn getcurrentline(callinfo: *mut CallInfo) -> i32 {
     unsafe {
-        return luag_getfuncline((*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure)).payload.l_prototype, currentpc(callinfo));
+        luag_getfuncline((*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure)).payload.l_prototype, currentpc(callinfo))
     }
 }
 pub unsafe fn settraps(mut callinfo: *mut CallInfo) {
@@ -102,7 +102,7 @@ pub unsafe fn luag_findlocal(interpreter: *mut Interpreter, callinfo: *mut CallI
         if !position.is_null() {
             *position = base.offset((n - 1) as isize);
         }
-        return name;
+        name
     }
 }
 pub unsafe fn findvararg(callinfo: *mut CallInfo, n: i32, position: *mut *mut TValue) -> *const i8 {
@@ -114,7 +114,7 @@ pub unsafe fn findvararg(callinfo: *mut CallInfo, n: i32, position: *mut *mut TV
                 return c"(vararg)".as_ptr();
             }
         }
-        return null();
+        null()
     }
 }
 pub unsafe fn getfuncname(interpreter: *mut Interpreter, callinfo: *mut CallInfo, name: *mut *const i8) -> *const i8 {
@@ -160,13 +160,13 @@ pub unsafe fn in_stack(callinfo: *mut CallInfo, tvalue: *const TValue) -> i32 {
 }
 pub unsafe fn getupvalname(callinfo: *mut CallInfo, tvalue: *const TValue, name: *mut *const i8) -> *const i8 {
     unsafe {
-        let c: *mut Closure = &mut (*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure));
-        for i in 0..(*c).count_upvalues {
-            if (**((*c).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).v.p == tvalue as *mut TValue {
-                *name = upvalname((*c).payload.l_prototype, i as i32);
+        let closure: *mut Closure = &mut (*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure));
+        for it in 0..(*closure).count_upvalues {
+            if (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(it as isize)).v.p == tvalue as *mut TValue {
+                *name = upvalname((*closure).payload.l_prototype, it as i32);
                 return STRING_UPVALUE;
             }
         }
-        return null();
+        null()
     }
 }
