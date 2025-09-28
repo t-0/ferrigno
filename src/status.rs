@@ -1,5 +1,5 @@
-#[derive(Copy,Clone,PartialEq, PartialOrd, Eq, Ord)]
-#[repr(i32)]
+#[derive(Copy,Clone,PartialEq, Eq)]
+#[repr(u8)]
 pub enum Status {
     OK = 0,
     Yield = 1,
@@ -8,7 +8,8 @@ pub enum Status {
     MemoryError = 4,
     GenericError = 5,
     FileError = 6,
-    Closing = -1,
+    Closing = 7,
+    Unknown = 8,
 }
 impl Status {
     pub fn from (input: i32) -> Self {
@@ -20,8 +21,14 @@ impl Status {
             4 => Status::MemoryError,
             5 => Status::GenericError,
             6 => Status::FileError,
-            -1 => Status::Closing,
-            _ => Status::Closing,
+            7 => Status::Closing,
+            _ => Status::Unknown,
+        }
+    }
+    pub fn is_error (& self) -> bool {
+        match *self {
+            Status::OK | Status::Yield | Status::Closing => false,
+            Status::RuntimeError | Status::SyntaxError | Status::MemoryError | Status::GenericError | Status::FileError | _ => true,
         }
     }
 }

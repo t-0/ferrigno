@@ -467,7 +467,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
 pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut status: Status) -> ! {
     unsafe {
         if !((*interpreter).long_jump).is_null() {
-            write_volatile(&mut (*(*interpreter).long_jump).status as *mut Status as *mut i32, status as i32);
+            (*(*interpreter).long_jump).status = status;
             _longjmp(((*(*interpreter).long_jump).jbt).as_mut_ptr(), 1);
         } else {
             let global: *mut Global = (*interpreter).global;
@@ -963,7 +963,7 @@ pub unsafe fn resume(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c
         let mut n: i32 = *(arbitrary_data as *mut i32);
         let first_argument: *mut TValue = (*interpreter).top.stkidrel_pointer.offset(-(n as isize));
         let callinfo = (*interpreter).callinfo;
-        if (*interpreter).status as i32 == 0 {
+        if (*interpreter).status == Status::OK {
             ccall(interpreter, first_argument.offset(-(1 as isize)), -1, 0);
         } else {
             (*interpreter).status = Status::OK;
@@ -985,7 +985,7 @@ pub unsafe fn resume(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c
 pub unsafe fn precover(interpreter: *mut Interpreter, mut status: Status) -> Status {
     unsafe {
         let mut callinfo;
-        while status as i32 > 1 && {
+        while status.is_error() && {
             callinfo = (*interpreter).find_pcall();
             !callinfo.is_null()
         } {
@@ -999,13 +999,13 @@ pub unsafe fn precover(interpreter: *mut Interpreter, mut status: Status) -> Sta
 pub unsafe fn lua_resume(interpreter: *mut Interpreter, from: *mut Interpreter, mut nargs: i32, count_results: *mut i32) -> Status {
     unsafe {
         let mut status;
-        if (*interpreter).status as i32 == 0 {
+        if (*interpreter).status == Status::OK {
             if (*interpreter).callinfo != &mut (*interpreter).base_callinfo as *mut CallInfo {
                 return resume_error(interpreter, c"cannot resume non-suspended coroutine".as_ptr(), nargs);
             } else if ((*interpreter).top.stkidrel_pointer).offset_from(((*(*interpreter).callinfo).call_info_function.stkidrel_pointer).offset(1 as isize)) as i64 == nargs as i64 {
                 return resume_error(interpreter, c"cannot resume dead coroutine".as_ptr(), nargs);
             }
-        } else if (*interpreter).status as i32 != 1 {
+        } else if (*interpreter).status != Status::Yield {
             return resume_error(interpreter, c"cannot resume dead coroutine".as_ptr(), nargs);
         }
         (*interpreter).count_c_calls = if !from.is_null() { (*from).count_c_calls & 0xffff as u32 } else { 0 };
@@ -1016,7 +1016,7 @@ pub unsafe fn lua_resume(interpreter: *mut Interpreter, from: *mut Interpreter, 
         (*interpreter).count_c_calls;
         status = luad_rawrunprotected(interpreter, Some(resume as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()), &mut nargs as *mut i32 as *mut libc::c_void);
         status = precover(interpreter, status);
-        if status as i32 > 1 {
+        if status.is_error() {
             (*interpreter).status = status;
             (*interpreter).set_error_object(status, (*interpreter).top.stkidrel_pointer);
             (*(*interpreter).callinfo).call_info_top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
@@ -2583,7 +2583,7 @@ pub unsafe fn luag_traceexec(interpreter: *mut Interpreter, mut program_counter:
             }
             (*interpreter).old_program_counter = npci;
         }
-        if (*interpreter).status as i32 == 1 {
+        if (*interpreter).status == Status::Yield {
             if counthook != 0 {
                 (*interpreter).hook_count = 1;
             }
@@ -6496,7 +6496,7 @@ pub unsafe fn l_print(interpreter: *mut Interpreter) {
             lual_checkstack(interpreter, 20 as i32, c"too many results to print".as_ptr());
             lua_getglobal(interpreter, c"print".as_ptr());
             lua_rotate(interpreter, 1, 1);
-            if lua_pcallk(interpreter, n, 0, 0, 0, None) != Status::OK {
+            if CallS::api_call(interpreter, n, 0, 0, 0, None) != Status::OK {
                 l_message(PROGRAM_NAME, lua_pushfstring(interpreter, c"error calling 'print' (%s)".as_ptr(), lua_tolstring(interpreter, -1, null_mut())));
             }
         }
@@ -6589,7 +6589,7 @@ pub unsafe fn docall(interpreter: *mut Interpreter, narg: i32, nres: i32) -> Sta
         lua_rotate(interpreter, base, 1);
         GLOBAL_STATE = interpreter;
         setsignal(2, Some(laction as unsafe fn(i32) -> ()));
-        let status = lua_pcallk(interpreter, narg, nres, base, 0, None);
+        let status = CallS::api_call(interpreter, narg, nres, base, 0, None);
         setsignal(2, None);
         lua_rotate(interpreter, base, -1);
         lua_settop(interpreter, -2);
@@ -6898,7 +6898,7 @@ pub unsafe fn luab_pcall(interpreter: *mut Interpreter) -> i32 {
         lual_checkany(interpreter, 1);
         (*interpreter).push_boolean(true);
         lua_rotate(interpreter, 1, 1);
-        let status = lua_pcallk(interpreter, (*interpreter).get_top() - 2, -1, 0, 0, Some(finishpcall as unsafe fn(*mut Interpreter, Status, i64) -> i32));
+        let status = CallS::api_call(interpreter, (*interpreter).get_top() - 2, -1, 0, 0, Some(finishpcall as unsafe fn(*mut Interpreter, Status, i64) -> i32));
         return finishpcall(interpreter, status, 0);
     }
 }

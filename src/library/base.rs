@@ -389,7 +389,7 @@ pub unsafe fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
         (*interpreter).push_boolean(true);
         lua_pushvalue(interpreter, 1);
         lua_rotate(interpreter, 3, 2);
-        let status = lua_pcallk(interpreter, n - 2, -1, 2, 2 as i64, Some(finishpcall as unsafe fn(*mut Interpreter, Status, i64) -> i32));
+        let status = CallS::api_call(interpreter, n - 2, -1, 2, 2 as i64, Some(finishpcall as unsafe fn(*mut Interpreter, Status, i64) -> i32));
         return finishpcall(interpreter, status, 2 as i64);
     }
 }

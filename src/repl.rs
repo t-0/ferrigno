@@ -62,7 +62,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             lua_pushcclosure(interpreter, Some(pmain as unsafe fn(*mut Interpreter) -> i32), 0);
             (*interpreter).push_integer(argc as i64);
             lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
-            let status = lua_pcallk(interpreter, 2, 1, 0, 0, None);
+            let status = CallS::api_call(interpreter, 2, 1, 0, 0, None);
             let result: i32 = lua_toboolean(interpreter, -1);
             report(interpreter, status);
             lua_close(interpreter);
