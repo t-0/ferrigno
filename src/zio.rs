@@ -5,8 +5,8 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ZIO {
-    pub zio_length: usize,
-    pub zio_pointer: *const i8,
+    zio_length: usize,
+    zio_pointer: *const i8,
     zio_reader: Reader,
     zio_data: *mut libc::c_void,
     zio_interpreter: *mut Interpreter,
