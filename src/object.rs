@@ -212,8 +212,8 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
                 } else {
                     (*uv).set_marked(((*uv).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5) as u8);
                 }
-                if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, (*(*uv).v.p).value.object);
+                if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(global, (*(*uv).v.p).value.value_object);
                 }
                 current_block_18 = 18317007320854588510;
             },

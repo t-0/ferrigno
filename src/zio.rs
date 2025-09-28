@@ -5,50 +5,79 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct ZIO {
-    pub length: usize,
-    pub pointer: *const i8,
-    pub reader: ReadFunction,
-    pub data: *mut libc::c_void,
-    pub zio_interpreter: *mut Interpreter,
+    pub zio_length: usize,
+    pub zio_pointer: *const i8,
+    zio_reader: Reader,
+    zio_data: *mut libc::c_void,
+    zio_interpreter: *mut Interpreter,
 }
 impl ZIO {
-    pub fn new(interpreter: *mut Interpreter, reader: ReadFunction, data: *mut libc::c_void) -> ZIO {
-        return ZIO { zio_interpreter: interpreter, reader: reader, data: data, length: 0, pointer: null() };
-    }
-}
-pub unsafe fn luaz_fill(zio: *mut ZIO) -> i32 {
-    unsafe {
-        let mut size: usize = 0;
-        let interpreter: *mut Interpreter = (*zio).zio_interpreter;
-        let buffer: *const i8 = ((*zio).reader).expect("non-null function pointer")(interpreter, (*zio).data, &mut size);
-        if buffer.is_null() || size == 0 {
-            return -1;
+    pub fn get_char(&mut self) -> i32 { unsafe {
+        let length = self.zio_length;
+        self.zio_length = self.zio_length.wrapping_sub(1);
+        if length > 0 {
+            let ret =  *self.zio_pointer as u8 as i32;
+            self.zio_pointer = (self.zio_pointer).offset(1);
+            return ret;
         } else {
-            (*zio).length = size.wrapping_sub(1 as usize);
-            (*zio).pointer = buffer;
-            let fresh14 = (*zio).pointer;
-            (*zio).pointer = ((*zio).pointer).offset(1);
-            return *fresh14 as u8 as i32;
+            return self.luaz_fill()
+        };
+    } }
+    pub fn new(interpreter: *mut Interpreter, reader: Reader, data: *mut libc::c_void) -> ZIO {
+        return ZIO { zio_interpreter: interpreter, zio_reader: reader, zio_data: data, zio_length: 0, zio_pointer: null() };
+    }
+    pub unsafe fn load_byte(&mut self) -> Option<u8> {
+        unsafe {
+            let aa = self.zio_length;
+            self.zio_length = (self.zio_length).wrapping_sub(1);
+            let ret: i32 = if aa > 0 {
+                let bb = self.zio_pointer;
+                self.zio_pointer = (self.zio_pointer).offset(1);
+                *bb as u8 as i32
+            } else {
+                self.luaz_fill()
+            };
+            if ret == -1 {
+                return None;
+            } else {
+                return Some(ret as u8);
+            }
+        }
+    }
+    pub unsafe fn luaz_fill(& mut self) -> i32 {
+        unsafe {
+            let mut size: usize = 0;
+            let interpreter: *mut Interpreter = self.zio_interpreter;
+            let buffer: *const i8 = (self.zio_reader).reader_readfunction.expect("non-null function pointer")(interpreter, self.zio_data, &mut size);
+            if buffer.is_null() || size == 0 {
+                return -1;
+            } else {
+                self.zio_length = size.wrapping_sub(1 as usize);
+                self.zio_pointer = buffer;
+                let fresh14 = self.zio_pointer;
+                self.zio_pointer = (self.zio_pointer).offset(1);
+                return *fresh14 as u8 as i32;
+            }
         }
     }
 }
 pub unsafe fn luaz_read(zio: *mut ZIO, mut b: *mut libc::c_void, mut n: usize) -> usize {
     unsafe {
         while n != 0 {
-            if (*zio).length == 0 {
-                if luaz_fill(zio) == -1 {
+            if (*zio).zio_length == 0 {
+                if (*zio).luaz_fill() == -1 {
                     return n;
                 } else {
-                    (*zio).length = ((*zio).length).wrapping_add(1);
-                    (*zio).length;
-                    (*zio).pointer = ((*zio).pointer).offset(-1);
-                    (*zio).pointer;
+                    (*zio).zio_length = ((*zio).zio_length).wrapping_add(1);
+                    (*zio).zio_length;
+                    (*zio).zio_pointer = ((*zio).zio_pointer).offset(-1);
+                    (*zio).zio_pointer;
                 }
             }
-            let m: usize = if n <= (*zio).length { n } else { (*zio).length };
-            memcpy(b, (*zio).pointer as *const libc::c_void, m as usize);
-            (*zio).length = ((*zio).length as usize).wrapping_sub(m) as usize;
-            (*zio).pointer = ((*zio).pointer).offset(m as isize);
+            let m: usize = if n <= (*zio).zio_length { n } else { (*zio).zio_length };
+            memcpy(b, (*zio).zio_pointer as *const libc::c_void, m as usize);
+            (*zio).zio_length = ((*zio).zio_length as usize).wrapping_sub(m) as usize;
+            (*zio).zio_pointer = ((*zio).zio_pointer).offset(m as isize);
             b = (b as *mut i8).offset(m as isize) as *mut libc::c_void;
             n = (n as usize).wrapping_sub(m) as usize;
         }

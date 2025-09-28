@@ -257,19 +257,19 @@ pub unsafe fn lmemfind(mut s1: *const i8, mut l1: usize, s2: *const i8, mut l2: 
         } else if l2 > l1 {
             return null();
         } else {
-            let mut init: *const i8 = null();
+            let mut initial: *const i8 = null();
             l2 = l2.wrapping_sub(1);
             l1 = l1.wrapping_sub(l2);
             while l1 > 0 && {
-                init = memchr(s1 as *const libc::c_void, *s2 as i32, l1 as usize) as *const i8;
-                !init.is_null()
+                initial = memchr(s1 as *const libc::c_void, *s2 as i32, l1 as usize) as *const i8;
+                !initial.is_null()
             } {
-                init = init.offset(1);
-                if memcmp(init as *const libc::c_void, s2.offset(1 as isize) as *const libc::c_void, l2 as usize) == 0 {
-                    return init.offset(-(1 as isize));
+                initial = initial.offset(1);
+                if memcmp(initial as *const libc::c_void, s2.offset(1 as isize) as *const libc::c_void, l2 as usize) == 0 {
+                    return initial.offset(-(1 as isize));
                 } else {
-                    l1 = (l1 as usize).wrapping_sub(init.offset_from(s1) as usize) as usize;
-                    s1 = init;
+                    l1 = (l1 as usize).wrapping_sub(initial.offset_from(s1) as usize) as usize;
+                    s1 = initial;
                 }
             }
             return null();
@@ -297,13 +297,13 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
         let mut lp: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
         let mut p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
-        let init: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
-        if init > lexical_state {
+        let initial: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
+        if initial > lexical_state {
             (*interpreter).push_nil();
             return 1;
         }
         if find != 0 && (lua_toboolean(interpreter, 4) != 0 || nospecials(p, lp) != 0) {
-            let s2: *const i8 = lmemfind(s.offset(init as isize), lexical_state.wrapping_sub(init), p, lp);
+            let s2: *const i8 = lmemfind(s.offset(initial as isize), lexical_state.wrapping_sub(initial), p, lp);
             if !s2.is_null() {
                 (*interpreter).push_integer((s2.offset_from(s) as i64 + 1) as i64);
                 (*interpreter).push_integer((s2.offset_from(s) as usize).wrapping_add(lp) as i64);
@@ -317,9 +317,9 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
                 matchstate_interpreter: null_mut(),
                 matchdepth: 0,
                 level: 0,
-                capture: [MatchStateCapture { init: null(), length: 0 }; 32],
+                capture: [MatchStateCapture { initial: null(), length: 0 }; 32],
             };
-            let mut s1: *const i8 = s.offset(init as isize);
+            let mut s1: *const i8 = s.offset(initial as isize);
             let anchor: i32 = (*p as i32 == Character::Caret as i32) as i32;
             if anchor != 0 {
                 p = p.offset(1);
@@ -379,7 +379,7 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             matchstate_interpreter: null_mut(),
             matchdepth: 0,
             level: 0,
-            capture: [MatchStateCapture { init: null(), length: 0 }; 32],
+            capture: [MatchStateCapture { initial: null(), length: 0 }; 32],
         };
         let mut b = Buffer::new();
         (((tr == Some(TagType::Numeric) || tr == Some(TagType::String) || tr == Some(TagType::Closure) || tr == Some(TagType::Table)) as i32 != 0) as i64 != 0 || lual_typeerror(interpreter, 3, c"string/function/table".as_ptr()) != 0) as i32;

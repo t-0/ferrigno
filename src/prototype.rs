@@ -138,13 +138,13 @@ impl Prototype {
                 dump_state.dump_byte(tag);
                 match tag {
                     TAG_VARIANT_NUMERIC_NUMBER => {
-                        dump_state.dump_number((*tvalue).value.number);
+                        dump_state.dump_number((*tvalue).value.value_number);
                     },
                     TAG_VARIANT_NUMERIC_INTEGER => {
-                        dump_state.dump_integer((*tvalue).value.integer);
+                        dump_state.dump_integer((*tvalue).value.value_integer);
                     },
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
-                        TString::dump_string(dump_state, &mut (*((*tvalue).value.object as *mut TString)));
+                        TString::dump_string(dump_state, &mut (*((*tvalue).value.value_object as *mut TString)));
                     },
                     _ => {},
                 }
@@ -159,8 +159,8 @@ impl Prototype {
                 }
             }
             for i in 0..self.prototype_constants.get_size() {
-                if ((*(self.prototype_constants.vectort_pointer).offset(i as isize)).is_collectable()) && (*(*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, (*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.object);
+                if ((*(self.prototype_constants.vectort_pointer).offset(i as isize)).is_collectable()) && (*(*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(global, (*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.value_object);
                 }
             }
             for i in 0..self.prototype_upvalues.get_size() {
@@ -322,7 +322,7 @@ pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *c
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
         if (*kvalue).is_tagtype_string() {
-            *name = (*((*kvalue).value.object as *mut TString)).get_contents_mut();
+            *name = (*((*kvalue).value.value_object as *mut TString)).get_contents_mut();
             return c"code_constant".as_ptr();
         } else {
             *name = c"?".as_ptr();

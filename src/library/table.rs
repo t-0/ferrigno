@@ -249,10 +249,10 @@ pub unsafe fn sort_comp(interpreter: *mut Interpreter, a: i32, b: i32) -> i32 {
         };
     }
 }
-pub unsafe fn partition(interpreter: *mut Interpreter, lo: u32, up: u32) -> u32 {
+pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u32 {
     unsafe {
-        let mut i: u32 = lo;
-        let mut j: u32 = up.wrapping_sub(1 as u32);
+        let mut i: u32 = low;
+        let mut j: u32 = high.wrapping_sub(1 as u32);
         loop {
             loop {
                 i = i.wrapping_add(1);
@@ -260,7 +260,7 @@ pub unsafe fn partition(interpreter: *mut Interpreter, lo: u32, up: u32) -> u32 
                 if !(sort_comp(interpreter, -1, -2) != 0) {
                     break;
                 }
-                if i == up.wrapping_sub(1) {
+                if i == high.wrapping_sub(1) {
                     lual_error(interpreter, c"invalid order function for sorting".as_ptr());
                 }
                 lua_settop(interpreter, -2);
@@ -278,69 +278,69 @@ pub unsafe fn partition(interpreter: *mut Interpreter, lo: u32, up: u32) -> u32 
             }
             if j < i {
                 lua_settop(interpreter, -2);
-                set2(interpreter, up.wrapping_sub(1 as u32), i);
+                set2(interpreter, high.wrapping_sub(1 as u32), i);
                 return i;
             }
             set2(interpreter, i, j);
         }
     }
 }
-pub unsafe fn choose_pivot(lo: u32, up: u32, rnd: u32) -> u32 {
-    let r4: u32 = up.wrapping_sub(lo).wrapping_div(4 as u32);
-    let p: u32 = rnd.wrapping_rem(r4.wrapping_mul(2 as u32)).wrapping_add(lo.wrapping_add(r4));
+pub unsafe fn choose_pivot(low: u32, high: u32, rnd: u32) -> u32 {
+    let r4: u32 = high.wrapping_sub(low).wrapping_div(4 as u32);
+    let p: u32 = rnd.wrapping_rem(r4.wrapping_mul(2 as u32)).wrapping_add(low.wrapping_add(r4));
     return p;
 }
-pub unsafe fn auxsort(interpreter: *mut Interpreter, mut lo: u32, mut up: u32, mut rnd: u32) {
+pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32, mut rnd: u32) {
     unsafe {
-        while lo < up {
+        while low < high {
             let mut p: u32;
             let n: u32;
-            lua_geti(interpreter, 1, lo as i64);
-            lua_geti(interpreter, 1, up as i64);
+            lua_geti(interpreter, 1, low as i64);
+            lua_geti(interpreter, 1, high as i64);
             if sort_comp(interpreter, -1, -2) != 0 {
-                set2(interpreter, lo, up);
+                set2(interpreter, low, high);
             } else {
                 lua_settop(interpreter, -2 - 1);
             }
-            if up.wrapping_sub(lo) == 1 as u32 {
+            if high.wrapping_sub(low) == 1 as u32 {
                 return;
             }
-            if up.wrapping_sub(lo) < 100 as u32 || rnd == 0 {
-                p = lo.wrapping_add(up).wrapping_div(2 as u32);
+            if high.wrapping_sub(low) < 100 as u32 || rnd == 0 {
+                p = low.wrapping_add(high).wrapping_div(2 as u32);
             } else {
-                p = choose_pivot(lo, up, rnd);
+                p = choose_pivot(low, high, rnd);
             }
             lua_geti(interpreter, 1, p as i64);
-            lua_geti(interpreter, 1, lo as i64);
+            lua_geti(interpreter, 1, low as i64);
             if sort_comp(interpreter, -2, -1) != 0 {
-                set2(interpreter, p, lo);
+                set2(interpreter, p, low);
             } else {
                 lua_settop(interpreter, -2);
-                lua_geti(interpreter, 1, up as i64);
+                lua_geti(interpreter, 1, high as i64);
                 if sort_comp(interpreter, -1, -2) != 0 {
-                    set2(interpreter, p, up);
+                    set2(interpreter, p, high);
                 } else {
                     lua_settop(interpreter, -2 - 1);
                 }
             }
-            if up.wrapping_sub(lo) == 2 as u32 {
+            if high.wrapping_sub(low) == 2 as u32 {
                 return;
             }
             lua_geti(interpreter, 1, p as i64);
             lua_pushvalue(interpreter, -1);
-            lua_geti(interpreter, 1, up.wrapping_sub(1 as u32) as i64);
-            set2(interpreter, p, up.wrapping_sub(1 as u32));
-            p = partition(interpreter, lo, up);
-            if p.wrapping_sub(lo) < up.wrapping_sub(p) {
-                auxsort(interpreter, lo, p.wrapping_sub(1 as u32), rnd);
-                n = p.wrapping_sub(lo);
-                lo = p.wrapping_add(1 as u32);
+            lua_geti(interpreter, 1, high.wrapping_sub(1 as u32) as i64);
+            set2(interpreter, p, high.wrapping_sub(1 as u32));
+            p = partition(interpreter, low, high);
+            if p.wrapping_sub(low) < high.wrapping_sub(p) {
+                auxsort(interpreter, low, p.wrapping_sub(1 as u32), rnd);
+                n = p.wrapping_sub(low);
+                low = p.wrapping_add(1 as u32);
             } else {
-                auxsort(interpreter, p.wrapping_add(1 as u32), up, rnd);
-                n = up.wrapping_sub(p);
-                up = p.wrapping_sub(1 as u32);
+                auxsort(interpreter, p.wrapping_add(1 as u32), high, rnd);
+                n = high.wrapping_sub(p);
+                high = p.wrapping_sub(1 as u32);
             }
-            if up.wrapping_sub(lo).wrapping_div(128 as u32) > n {
+            if high.wrapping_sub(low).wrapping_div(128 as u32) > n {
                 rnd = l_randomizepivot();
             }
         }

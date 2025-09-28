@@ -177,8 +177,8 @@ impl Global {
             if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, &mut (*(interpreter as *mut Object)));
             }
-            if (self.l_registry.is_collectable()) && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, self.l_registry.value.object);
+            if (self.l_registry.is_collectable()) && (*self.l_registry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(self, self.l_registry.value.value_object);
             }
             self.markmt();
             work = (work as usize).wrapping_add(self.propagateall()) as usize;
@@ -586,8 +586,8 @@ impl Global {
             if (*self.main_state).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, &mut (*(self.main_state as *mut Object)));
             }
-            if (self.l_registry.is_collectable()) && (*self.l_registry.value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, self.l_registry.value.object);
+            if (self.l_registry.is_collectable()) && (*self.l_registry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                really_mark_object(self, self.l_registry.value.value_object);
             }
             self.markmt();
             self.markbeingfnz();
@@ -612,8 +612,8 @@ impl Global {
                     while !uv.is_null() {
                         work += 1;
                         if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
-                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                really_mark_object(self, (*(*uv).v.p).value.object);
+                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                                really_mark_object(self, (*(*uv).v.p).value.value_object);
                             }
                         }
                         uv = (*uv).u.open.next;
@@ -691,7 +691,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
             let limit: *mut Node = &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.object } else { null_mut() }) != 0 {
+                if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.value_object } else { null_mut() }) != 0 {
                     (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
                 if (*node).value.is_tagtype_nil() {
@@ -711,13 +711,13 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
             let asize: u32 = luah_realasize(table);
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
-                if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.object } else { null_mut() }) != 0 {
+                if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.value_object } else { null_mut() }) != 0 {
                     (*tvalue).set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
             }
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.object } else { null_mut() }) != 0 {
+                if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.value_object } else { null_mut() }) != 0 {
                     (*node).value.set_tag_variant(TAG_VARIANT_NIL_EMPTY);
                 }
                 if (*node).value.is_tagtype_nil() {

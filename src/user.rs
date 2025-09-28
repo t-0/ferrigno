@@ -71,7 +71,7 @@ impl User {
         unsafe {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.object = &mut (*(new_user as *mut Object));
+            (*io).value.value_object = &mut (*(new_user as *mut Object));
             (*io).set_tag_variant(TAG_VARIANT_USER);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -94,8 +94,8 @@ impl User {
                 }
             }
             for i in 0..self.count_upvalues {
-                if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable()) && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.object);
+                if ((*(self.upvalues).as_mut_ptr().offset(i as isize)).is_collectable()) && (*(*(self.upvalues).as_mut_ptr().offset(i as isize)).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                    really_mark_object(global, (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.value_object);
                 }
             }
             generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut Object)));

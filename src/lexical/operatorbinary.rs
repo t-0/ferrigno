@@ -42,8 +42,8 @@ impl OperatorBinary {
         const TK_SHIFTLEFT: i32 = Token::ShiftLeft as i32;
         const TK_SHIFTRIGHT: i32 = Token::ShiftRight as i32;
         const TK_CONCATENATE: i32 = Token::Concatenate as i32;
-        const TK_INEQUAL: i32 = Token::Inequal as i32;
-        const TK_EQUAL: i32 = Token::Equal as i32;
+        const TK_INEQUAL: i32 = Token::Inequality as i32;
+        const TK_EQUAL: i32 = Token::Equality as i32;
         const TK_LESSEQUAL: i32 = Token::LessEqual as i32;
         const TK_GREATEREQUAL: i32 = Token::GreaterEqual as i32;
         const TK_AND: i32 = Token::And as i32;

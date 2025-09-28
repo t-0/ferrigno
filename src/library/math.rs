@@ -304,7 +304,7 @@ unsafe fn math_type(interpreter: *mut Interpreter) -> i32 {
 unsafe fn math_random(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let low: i64;
-        let up: i64;
+        let high: i64;
         let p: usize;
         let ransate: *mut RandomState = (*interpreter).to_pointer(-(1000000 as i32) - 1000 as i32 - 1) as *mut RandomState;
         let rv: usize = next_random(((*ransate).data).as_mut_ptr());
@@ -315,22 +315,22 @@ unsafe fn math_random(interpreter: *mut Interpreter) -> i32 {
             },
             1 => {
                 low = 1;
-                up = lual_checkinteger(interpreter, 1);
-                if up == 0 {
+                high = lual_checkinteger(interpreter, 1);
+                if high == 0 {
                     (*interpreter).push_integer((rv & 0xffffffffffffffff as usize) as i64);
                     return 1;
                 }
             },
             2 => {
                 low = lual_checkinteger(interpreter, 1);
-                up = lual_checkinteger(interpreter, 2);
+                high = lual_checkinteger(interpreter, 2);
             },
             _ => {
                 return lual_error(interpreter, c"wrong number of arguments".as_ptr());
             },
         }
-        (((low <= up) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"interval is empty".as_ptr()) != 0) as i32;
-        p = project((rv & 0xffffffffffffffff as usize) as usize, (up as usize).wrapping_sub(low as usize), ransate);
+        (((low <= high) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"interval is empty".as_ptr()) != 0) as i32;
+        p = project((rv & 0xffffffffffffffff as usize) as usize, (high as usize).wrapping_sub(low as usize), ransate);
         (*interpreter).push_integer(p.wrapping_add(low as usize) as i64);
         return 1;
     }

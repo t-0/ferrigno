@@ -231,7 +231,7 @@ pub unsafe fn copy2buff(top: *mut TValue, mut n: i32, buffer: *mut i8) {
     unsafe {
         let mut tl: usize = 0;
         loop {
-            let st: *mut TString = &mut (*((*top.offset(-(n as isize))).value.object as *mut TString));
+            let st: *mut TString = &mut (*((*top.offset(-(n as isize))).value.value_object as *mut TString));
             let length = (*st).get_length();
             memcpy(buffer.offset(tl as isize) as *mut libc::c_void, ((*st).get_contents_mut()) as *const libc::c_void, length);
             tl = tl.wrapping_add(length as usize);
@@ -258,18 +258,18 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     })
             {
                 luat_tryconcattm(interpreter);
-            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(1 as isize))).value.object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 (((*top.offset(-(2 as isize))).is_tagtype_string())
                     || (*top.offset(-(2 as isize))).is_tagtype_numeric() && {
                         luao_tostring(interpreter, &mut (*top.offset(-(2 as isize))));
                         1 != 0
                     }) as i32;
-            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(2 as isize))).value.object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TAG_VARIANT_STRING_SHORT && (*((*top.offset(-(2 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize)));
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
             } else {
-                let mut tl = (*((*top.offset(-(1 as isize))).value.object as *mut TString)).get_length();
+                let mut tl = (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length();
                 let ts: *mut TString;
                 n = 1;
                 while n < total
@@ -279,7 +279,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                             1 != 0
                         })
                 {
-                    let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize))).value.object as *mut TString)).get_length();
+                    let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize))).value.value_object as *mut TString)).get_length();
                     if ((l >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_sub(size_of::<TString>()).wrapping_sub(tl)) as i32 != 0) as i64 != 0 {
                         (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
                         luag_runerror(interpreter, c"string length overflow".as_ptr());
@@ -296,7 +296,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     copy2buff(top, n, (*ts).get_contents());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize)));
-                (*io).value.object = &mut (*(ts as *mut Object));
+                (*io).value.value_object = &mut (*(ts as *mut Object));
                 (*io).set_tag_variant((*ts).get_tag_variant());
                 (*io).set_collectable(true);
             }

@@ -23,7 +23,7 @@ impl CloseProtected {
 }
 pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut status: i32) -> i32 {
     unsafe {
-        let old_call_info = (*interpreter).ci;
+        let old_call_info = (*interpreter).callinfo;
         let old_allowhooks: u8 = (*interpreter).allow_hook;
         loop {
             let mut close_protected = CloseProtected::new();
@@ -37,7 +37,7 @@ pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut 
             if status == 0 {
                 return close_protected.closeprotected_status;
             } else {
-                (*interpreter).ci = old_call_info;
+                (*interpreter).callinfo = old_call_info;
                 (*interpreter).allow_hook = old_allowhooks;
             }
         }

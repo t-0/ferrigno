@@ -32,9 +32,9 @@ pub unsafe fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
 pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
-            return if luav_flttointeger((*obj).value.number, p, mode) { 1 } else { 0 };
+            return if luav_flttointeger((*obj).value.value_number, p, mode) { 1 } else { 0 };
         } else if (*obj).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            *p = (*obj).value.integer;
+            *p = (*obj).value.value_integer;
             return 1;
         } else {
             return 0;
@@ -109,18 +109,18 @@ pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
 pub unsafe fn ltnum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            let li: i64 = (*l).value.integer;
+            let li: i64 = (*l).value.value_integer;
             if (*r).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-                return li < (*r).value.integer;
+                return li < (*r).value.value_integer;
             } else {
-                return ltintfloat(li, (*r).value.number);
+                return ltintfloat(li, (*r).value.value_number);
             }
         } else {
-            let lf: f64 = (*l).value.number;
+            let lf: f64 = (*l).value.value_number;
             if (*r).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
-                return lf < (*r).value.number;
+                return lf < (*r).value.value_number;
             } else {
-                return ltfloatint(lf, (*r).value.integer);
+                return ltfloatint(lf, (*r).value.value_integer);
             }
         };
     }
@@ -128,18 +128,18 @@ pub unsafe fn ltnum(l: *const TValue, r: *const TValue) -> bool {
 pub unsafe fn lenum(l: *const TValue, r: *const TValue) -> bool {
     unsafe {
         if (*l).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-            let li: i64 = (*l).value.integer;
+            let li: i64 = (*l).value.value_integer;
             if (*r).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
-                return li <= (*r).value.integer;
+                return li <= (*r).value.value_integer;
             } else {
-                return leintfloat(li, (*r).value.number);
+                return leintfloat(li, (*r).value.value_number);
             }
         } else {
-            let lf: f64 = (*l).value.number;
+            let lf: f64 = (*l).value.value_number;
             if (*r).get_tag_variant() == TAG_VARIANT_NUMERIC_NUMBER {
-                return lf <= (*r).value.number;
+                return lf <= (*r).value.value_number;
             } else {
-                return lefloatint(lf, (*r).value.integer);
+                return lefloatint(lf, (*r).value.value_integer);
             }
         };
     }

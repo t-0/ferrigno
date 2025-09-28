@@ -10,7 +10,7 @@ pub const MAX_CAPTURES: usize = 32;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct MatchStateCapture {
-    pub init: *const i8,
+    pub initial: *const i8,
     pub length: i64,
 }
 #[derive(Copy, Clone)]
@@ -84,11 +84,11 @@ impl MatchState {
                 return e.offset_from(s) as usize;
             } else {
                 let capl: i64 = self.capture[i as usize].length;
-                *cap = self.capture[i as usize].init;
+                *cap = self.capture[i as usize].initial;
                 if capl == -1 {
                     lual_error(self.matchstate_interpreter, c"unfinished capture".as_ptr());
                 } else if capl == -2 as i64 {
-                    (*(self.matchstate_interpreter)).push_integer(((self.capture[i as usize].init).offset_from(self.src_init) as i64 + 1) as i64);
+                    (*(self.matchstate_interpreter)).push_integer(((self.capture[i as usize].initial).offset_from(self.src_init) as i64 + 1) as i64);
                 }
                 return capl as usize;
             };
@@ -233,7 +233,7 @@ impl MatchState {
             if level >= MAX_CAPTURES {
                 lual_error(self.matchstate_interpreter, c"too many captures".as_ptr());
             }
-            self.capture[level].init = s;
+            self.capture[level].initial = s;
             self.capture[level].length = what as i64;
             self.level = level + 1;
             res = self.match_0(s, p);
@@ -248,7 +248,7 @@ impl MatchState {
         unsafe {
             let l: i32 = self.capture_to_close();
             let res: *const i8;
-            self.capture[l as usize].length = s.offset_from(self.capture[l as usize].init) as i64;
+            self.capture[l as usize].length = s.offset_from(self.capture[l as usize].initial) as i64;
             res = self.match_0(s, p);
             if res.is_null() {
                 self.capture[l as usize].length = -1 as i64;
@@ -261,7 +261,7 @@ impl MatchState {
             let length: usize;
             l = self.check_capture(l);
             length = self.capture[l as usize].length as usize;
-            if (self.src_end).offset_from(s) as usize >= length && memcmp(self.capture[l as usize].init as *const c_void, s as *const c_void, length as usize) == 0 {
+            if (self.src_end).offset_from(s) as usize >= length && memcmp(self.capture[l as usize].initial as *const c_void, s as *const c_void, length as usize) == 0 {
                 return s.offset(length as isize);
             } else {
                 return null();
@@ -536,10 +536,10 @@ impl MatchState {
         }
     }
 }
-pub unsafe fn match_class(c: i32, cl: i32) -> i32 {
+pub unsafe fn match_class(c: i32, class_: i32) -> i32 {
     unsafe {
         let res: i32;
-        match Character::from(tolower(cl)) {
+        match Character::from(tolower(class_)) {
             Character::LowerA => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA as i32;
             },
@@ -573,9 +573,9 @@ pub unsafe fn match_class(c: i32, cl: i32) -> i32 {
             Character::LowerZ => {
                 res = (c == 0) as i32;
             },
-            _ => return (cl == c) as i32,
+            _ => return (class_ == c) as i32,
         }
-        return if *(*__ctype_b_loc()).offset(cl as isize) as i32 & _ISLOWER as i32 != 0 { res } else { (res == 0) as i32 };
+        return if *(*__ctype_b_loc()).offset(class_ as isize) as i32 & _ISLOWER as i32 != 0 { res } else { (res == 0) as i32 };
     }
 }
 pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {

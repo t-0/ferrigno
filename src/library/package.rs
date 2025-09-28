@@ -139,14 +139,14 @@ pub unsafe fn lookforfunc(interpreter: *mut Interpreter, path: *const i8, sym: *
 pub unsafe fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let path: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let init: *const i8 = lual_checklstring(interpreter, 2, null_mut());
-        let stat: i32 = lookforfunc(interpreter, path, init);
+        let initial: *const i8 = lual_checklstring(interpreter, 2, null_mut());
+        let stat: i32 = lookforfunc(interpreter, path, initial);
         if stat == 0 {
             return 1;
         } else {
             (*interpreter).push_nil();
             lua_rotate(interpreter, -2, 1);
-            lua_pushstring(interpreter, if stat == 1 { c"open".as_ptr() } else { c"init".as_ptr() });
+            lua_pushstring(interpreter, if stat == 1 { c"open".as_ptr() } else { c"initial".as_ptr() });
             return 3;
         };
     }
@@ -450,7 +450,7 @@ pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
             interpreter,
             c"path".as_ptr(),
             c"LUA_PATH".as_ptr(),
-            c"/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/init.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/init.lua;./?.lua;./?/init.lua".as_ptr() as *const u8 as *const i8,
+            c"/usr/local/share/lua/5.4/?.lua;/usr/local/share/lua/5.4/?/initial.lua;/usr/local/lib/lua/5.4/?.lua;/usr/local/lib/lua/5.4/?/initial.lua;./?.lua;./?/initial.lua".as_ptr() as *const u8 as *const i8,
         );
         setpath(
             interpreter,

@@ -2,6 +2,7 @@
 use crate::calls::*;
 use crate::character::*;
 use crate::f2i::*;
+use crate::functions::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
@@ -320,9 +321,10 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
             let chunkname_0: *const i8 = lual_optlstring(interpreter, 2, c"=(load)".as_ptr(), null_mut());
             (*interpreter).lual_checktype(1, TagType::Closure);
             lua_settop(interpreter, 5);
+            let reader: Reader = Reader::new(Some(generic_reader as unsafe fn(*mut Interpreter, *mut libc::c_void, *mut usize) -> *const i8));
             status = lua_load(
                 interpreter,
-                Some(generic_reader as unsafe fn(*mut Interpreter, *mut libc::c_void, *mut usize) -> *const i8),
+                reader,
                 null_mut(),
                 chunkname_0,
                 mode,

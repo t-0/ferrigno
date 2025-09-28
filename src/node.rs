@@ -24,12 +24,12 @@ pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bo
         } else {
             match (*node).key.get_tag_variant() {
                 TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => true,
-                TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.integer == (*node).key.value.integer,
-                TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.number == (*node).key.value.number,
-                TAG_VARIANT_POINTER => return (*k1).value.pointer == (*node).key.value.pointer,
-                TAG_VARIANT_CLOSURE_CFUNCTION => return (*k1).value.function == (*node).key.value.function,
-                TAG_VARIANT_STRING_LONG => luas_eqlngstr(&mut (*((*k1).value.object as *mut TString)), &mut (*((*node).key.value.object as *mut TString))),
-                _ => (*k1).value.object == (*node).key.value.object,
+                TAG_VARIANT_NUMERIC_INTEGER => return (*k1).value.value_integer == (*node).key.value.value_integer,
+                TAG_VARIANT_NUMERIC_NUMBER => return (*k1).value.value_number == (*node).key.value.value_number,
+                TAG_VARIANT_POINTER => return (*k1).value.value_pointer == (*node).key.value.value_pointer,
+                TAG_VARIANT_CLOSURE_CFUNCTION => return (*k1).value.value_function == (*node).key.value.value_function,
+                TAG_VARIANT_STRING_LONG => luas_eqlngstr(&mut (*((*k1).value.value_object as *mut TString)), &mut (*((*node).key.value.value_object as *mut TString))),
+                _ => (*k1).value.value_object == (*node).key.value.value_object,
             }
         };
     }

@@ -41,14 +41,14 @@ impl GMatchState {
             let mut lp: usize = 0;
             let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
             let p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
-            let mut init: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
+            let mut initial: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
             lua_settop(interpreter, 2);
-            if init > lexical_state {
-                init = lexical_state.wrapping_add(1 as usize);
+            if initial > lexical_state {
+                initial = lexical_state.wrapping_add(1 as usize);
             }
             let gm: *mut GMatchState = User::lua_newuserdatauv(interpreter, size_of::<GMatchState>(), 0) as *mut GMatchState;
             (*gm).match_state.prepstate(interpreter, s, lexical_state, p, lp);
-            (*gm).source = s.offset(init as isize);
+            (*gm).source = s.offset(initial as isize);
             (*gm).pointer = p;
             (*gm).last_match = null();
             lua_pushcclosure(interpreter, Some(GMatchState::gmatch_aux as unsafe fn(*mut Interpreter) -> i32), 3);

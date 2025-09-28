@@ -8,3 +8,14 @@ pub type ContextFunction = Option<unsafe fn(*mut Interpreter, i32, i64) -> i32>;
 pub type CFunction = Option<unsafe fn(*mut Interpreter) -> i32>;
 pub type WriteFunction = Option<unsafe fn(*mut Interpreter, *const c_void, usize, *mut c_void) -> i32>;
 pub type ProtectedFunction = Option<unsafe fn(*mut Interpreter, *mut c_void) -> ()>;
+#[derive(Copy, Clone)]
+pub struct Reader {
+    pub reader_readfunction: ReadFunction,
+}
+impl Reader {
+    pub fn new (function: ReadFunction) -> Self {
+        Reader {
+            reader_readfunction: function,
+        }
+    }
+}

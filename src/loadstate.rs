@@ -39,19 +39,14 @@ impl LoadState {
     }
     pub unsafe fn load_byte(&mut self) -> u8 {
         unsafe {
-            let aa = (*self.zio).length;
-            (*self.zio).length = ((*self.zio).length).wrapping_sub(1);
-            let ret: i32 = if aa > 0 {
-                let bb = (*self.zio).pointer;
-                (*self.zio).pointer = ((*self.zio).pointer).offset(1);
-                *bb as u8 as i32
-            } else {
-                luaz_fill(self.zio)
-            };
-            if ret == -1 {
-                self.error(c"truncated chunk".as_ptr());
+            match (*(self.zio)).load_byte() {
+                None => {
+                    self.error(c"truncated chunk".as_ptr());
+                },
+                Some(x) => {
+                    return x;
+                },
             }
-            return ret as u8;
         }
     }
     pub unsafe fn load_unsigned(&mut self, mut limit: usize) -> usize {
@@ -111,7 +106,7 @@ impl LoadState {
                 } else {
                     ts = TString::create_long(interpreter, size as usize);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                    (*io).value.object = &mut (*(ts as *mut Object));
+                    (*io).value.value_object = &mut (*(ts as *mut Object));
                     (*io).set_tag_variant((*ts).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
@@ -170,18 +165,18 @@ impl LoadState {
                     },
                     TAG_VARIANT_NUMERIC_NUMBER => {
                         let io: *mut TValue = tvalue;
-                        (*io).value.number = self.load_number();
+                        (*io).value.value_number = self.load_number();
                         (*io).set_tag_variant(TAG_VARIANT_NUMERIC_NUMBER);
                     },
                     TAG_VARIANT_NUMERIC_INTEGER => {
                         let io_0: *mut TValue = tvalue;
-                        (*io_0).value.integer = self.load_integer();
+                        (*io_0).value.value_integer = self.load_integer();
                         (*io_0).set_tag_variant(TAG_VARIANT_NUMERIC_INTEGER);
                     },
                     TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
                         let io_1: *mut TValue = tvalue;
                         let ts: *mut TString = self.load_string(prototype);
-                        (*io_1).value.object = &mut (*(ts as *mut Object));
+                        (*io_1).value.value_object = &mut (*(ts as *mut Object));
                         (*io_1).set_tag_variant((*ts).get_tag_variant());
                         (*io_1).set_collectable(true);
                     },
@@ -337,7 +332,7 @@ pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *
         load_state.check_header();
         let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).value.object = &mut (*(ret as *mut Object));
+        (*io).value.value_object = &mut (*(ret as *mut Object));
         (*io).set_tag_variant(TAG_VARIANT_CLOSURE_L);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();

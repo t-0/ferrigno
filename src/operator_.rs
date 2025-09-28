@@ -13,7 +13,7 @@ pub unsafe fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
                 return (luav_tointegerns(v1, &mut i, F2I::Equal) != 0 && luav_tointegerns(v2, &mut i, F2I::Equal) != 0) as i32;
             },
             5 | 6 | 3 => {
-                return ((if (*v2).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER { (*v2).value.integer as f64 } else { (*v2).value.number }) != 0.0) as i32;
+                return ((if (*v2).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER { (*v2).value.value_integer as f64 } else { (*v2).value.value_number }) != 0.0) as i32;
             },
             _ => return 1,
         };
