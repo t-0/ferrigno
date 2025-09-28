@@ -23,9 +23,8 @@ impl CallS {
         }
     }
 }
-pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_results: i32, error_function: i32, ctx: i64, k: ContextFunction) -> i32 {
+pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_results: i32, error_function: i32, ctx: i64, k: ContextFunction) -> Status {
     unsafe {
-        let status: i32;
         let function: i64;
         if error_function == 0 {
             function = 0;
@@ -34,6 +33,7 @@ pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_result
             function = (o as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
         }
         let mut calls = CallS::new((*interpreter).top.stkidrel_pointer.offset(-((nargs + 1) as isize)));
+        let status: Status;
         if k.is_none() || !((*interpreter).count_c_calls & 0xffff0000 as u32 == 0) {
             calls.count_results = count_results as usize;
             status = luad_pcall(
@@ -55,7 +55,7 @@ pub unsafe fn lua_pcallk(interpreter: *mut Interpreter, nargs: i32, count_result
             ccall(interpreter, calls.function, count_results, 1);
             (*callinfo).call_info_call_status = ((*callinfo).call_info_call_status as i32 & !(1 << 4)) as u16;
             (*interpreter).error_function = (*callinfo).call_info_u.c.old_error_function;
-            status = 0;
+            status = Status::OK;
         }
         if count_results <= -1 && (*(*interpreter).callinfo).call_info_top.stkidrel_pointer < (*interpreter).top.stkidrel_pointer {
             (*(*interpreter).callinfo).call_info_top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;

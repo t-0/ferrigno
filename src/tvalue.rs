@@ -205,7 +205,7 @@ pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
     unsafe {
         while j.wrapping_sub(i) > 1 {
             let m = i.wrapping_add(j) / 2;
-            if ((*array.offset(m.wrapping_sub(1 as u32) as isize)).get_tag_type()) == TagType::Nil {
+            if ((*array.offset((m - 1) as isize)).get_tag_type()) == TagType::Nil {
                 j = m;
             } else {
                 i = m;

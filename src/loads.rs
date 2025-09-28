@@ -101,8 +101,8 @@ impl<T> LoadS<T> {
             self.loads_pointer = luam_saferealloc_(
                 interpreter,
                 self.loads_pointer as *mut c_void,
-                (self.loads_size as usize).wrapping_mul(size_of::<T>()),
-                (new_size as usize).wrapping_mul(size_of::<T>()),
+                (self.loads_size as usize) * size_of::<T>(),
+                (new_size as usize) * size_of::<T>(),
             ) as *mut T;
             self.loads_size = new_size;
         }
@@ -112,8 +112,8 @@ impl<T> LoadS<T> {
             self.loads_pointer = luam_saferealloc_(
                 interpreter,
                 self.loads_pointer as *mut c_void,
-                (self.loads_size as usize).wrapping_mul(size_of::<T>()),
-                new_size.wrapping_mul(size_of::<T>()),
+                (self.loads_size as usize) * size_of::<T>(),
+                new_size * size_of::<T>(),
             ) as *mut T;
             self.loads_size = new_size as i32;
         }

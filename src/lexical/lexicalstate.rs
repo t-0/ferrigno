@@ -1450,7 +1450,7 @@ pub unsafe fn lexerror(interpreter: *mut Interpreter, lexical_state: *mut Lexica
         if token != 0 {
             luao_pushfstring(interpreter, c"%s near %s".as_ptr(), message, text_token(interpreter, lexical_state, token));
         }
-        luad_throw(interpreter, 3);
+        luad_throw(interpreter, Status::SyntaxError);
     }
 }
 pub unsafe fn luax_syntaxerror(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, message: *const i8) -> ! {

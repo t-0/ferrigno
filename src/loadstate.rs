@@ -27,7 +27,7 @@ impl LoadState {
     pub unsafe fn error(&mut self, why: *const i8) -> ! {
         unsafe {
             luao_pushfstring(self.interpreter, c"%s: bad binary format (%s)".as_ptr(), self.name, why);
-            luad_throw(self.interpreter, 3);
+            luad_throw(self.interpreter, Status::SyntaxError);
         }
     }
     pub unsafe fn load_block(&mut self, b: *mut libc::c_void, size: usize) {
@@ -79,14 +79,14 @@ impl LoadState {
     pub unsafe fn load_number(&mut self) -> f64 {
         unsafe {
             let mut x: f64 = 0.0;
-            self.load_block(&mut x as *mut f64 as *mut libc::c_void, 1usize.wrapping_mul(size_of::<f64>() as usize));
+            self.load_block(&mut x as *mut f64 as *mut libc::c_void, size_of::<f64>());
             return x;
         }
     }
     pub unsafe fn load_integer(&mut self) -> i64 {
         unsafe {
             let mut x: i64 = 0;
-            self.load_block(&mut x as *mut i64 as *mut libc::c_void, 1usize.wrapping_mul(size_of::<i64>() as usize));
+            self.load_block(&mut x as *mut i64 as *mut libc::c_void, size_of::<i64>());
             return x;
         }
     }

@@ -25,7 +25,7 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
         lua_gc(interpreter, 1);
         lua_gc(interpreter, 10 as i32, 0, 0);
         if args & 16 as i32 == 0 {
-            if handle_luainit(interpreter) != 0 {
+            if handle_luainit(interpreter) != Status::OK {
                 return 0;
             }
         }
@@ -33,7 +33,7 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         if script > 0 {
-            if handle_script(interpreter, argv.offset(script as isize)) != 0 {
+            if handle_script(interpreter, argv.offset(script as isize)) != Status::OK {
                 return 0;
             }
         }
@@ -61,11 +61,11 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             lua_pushcclosure(interpreter, Some(pmain as unsafe fn(*mut Interpreter) -> i32), 0);
             (*interpreter).push_integer(argc as i64);
             lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
-            let status: i32 = lua_pcallk(interpreter, 2, 1, 0, 0, None);
+            let status = lua_pcallk(interpreter, 2, 1, 0, 0, None);
             let result: i32 = lua_toboolean(interpreter, -1);
             report(interpreter, status);
             lua_close(interpreter);
-            return if result != 0 && status == 0 { 0 } else { 1 };
+            return if result != 0 && status == Status::OK { 0 } else { 1 };
         }
     }
 }

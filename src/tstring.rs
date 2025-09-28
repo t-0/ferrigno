@@ -49,7 +49,7 @@ impl TString {
     }
     pub unsafe fn remove_from_global(&mut self, global: *mut Global) {
         unsafe {
-            let stringtable: *mut StringTable = &mut (*global).string_table;
+            let stringtable: *mut StringTable = &mut (*global).stringtable;
             (*stringtable).remove(self);
         }
     }
@@ -78,9 +78,9 @@ impl TString {
     pub unsafe fn intern(interpreter: *mut Interpreter, str: *const i8, length: usize) -> *mut TString {
         unsafe {
             let global: *mut Global = (*interpreter).global;
-            let tb: *mut StringTable = &mut (*global).string_table;
+            let tb: *mut StringTable = &mut (*global).stringtable;
             let h: u32 = luas_hash(str, length as usize, (*global).seed);
-            let mut list: *mut *mut TString = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as isize) as *mut *mut TString;
+            let mut list: *mut *mut TString = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             let mut ts: *mut TString = *list;
             while !ts.is_null() {
                 if length as usize == (*ts).get_length() as usize && memcmp(str as *const libc::c_void, (*ts).get_contents() as *const libc::c_void, length) == 0 {
@@ -91,17 +91,16 @@ impl TString {
                 }
                 ts = (*ts).hash_next;
             }
-            if (*tb).length >= (*tb).size {
+            if (*tb).stringtable_length >= (*tb).stringtable_size {
                 growstrtab(interpreter, tb);
-                list = &mut *((*tb).hash).offset((h & ((*tb).size - 1) as u32) as isize) as *mut *mut TString;
+                list = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             }
             ts = createstrobj(interpreter, length as usize, TAG_VARIANT_STRING_SHORT, h);
             (*ts).long_length = length;
             memcpy((*ts).get_contents() as *mut libc::c_void, str as *const libc::c_void, length);
             (*ts).hash_next = *list;
             *list = ts;
-            (*tb).length += 1;
-            (*tb).length;
+            (*tb).stringtable_length += 1;
             return ts;
         }
     }

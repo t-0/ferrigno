@@ -48,11 +48,11 @@ pub const COS_NORM: i32 = 3;
 unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let co: *mut Interpreter = getco(interpreter);
-        let mut status: i32 = auxstatus(interpreter, co);
-        match status {
+        let mut couroutinestatus: i32 = auxstatus(interpreter, co);
+        match couroutinestatus {
             COS_DEAD | COS_YIELD => {
-                status = lua_closethread(co, interpreter);
-                if status == 0 {
+                let status = lua_closethread(co, interpreter);
+                if status == Status::OK {
                     (*interpreter).push_boolean(true);
                     return 1;
                 } else {
@@ -62,7 +62,7 @@ unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
                 }
             },
             _ => {
-                return lual_error(interpreter, c"cannot close a %s coroutine".as_ptr(), COROUTINE_STATUS_NAMES[status as usize]);
+                return lual_error(interpreter, c"cannot close a %s coroutine".as_ptr(), COROUTINE_STATUS_NAMES[couroutinestatus as usize]);
             },
         };
     }
@@ -124,7 +124,7 @@ pub unsafe fn auxresume(interpreter: *mut Interpreter, co: *mut Interpreter, nar
             lua_xmove(interpreter, co, narg);
             let mut nres: i32 = 0;
             let status = lua_resume(co, interpreter, narg, &mut nres);
-            if status == 0 || status == 1 {
+            if status == Status::OK || status == Status::Yield {
                 if lua_checkstack(interpreter, nres + 1) == 0 {
                     lua_settop(co, -nres - 1);
                     lua_pushstring(interpreter, c"too many results to resume".as_ptr());
@@ -145,11 +145,11 @@ pub unsafe fn luab_auxwrap(interpreter: *mut Interpreter) -> i32 {
         let r = auxresume(interpreter, co, (*interpreter).get_top());
         if r < 0 {
             let mut status = (*co).get_status();
-            if status != LUA_OK && status != LUA_YIELD {
+            if status != Status::OK && status != Status::Yield {
                 status = lua_closethread(co, interpreter);
                 lua_xmove(co, interpreter, 1);
             }
-            if status != LUA_ERRMEM && lua_type(interpreter, -1) == Some(TagType::String) {
+            if status != Status::MemoryError && lua_type(interpreter, -1) == Some(TagType::String) {
                 lual_where(interpreter, 1);
                 lua_rotate(interpreter, -2, 1);
                 lua_concat(interpreter, 2);

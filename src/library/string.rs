@@ -556,7 +556,7 @@ pub unsafe fn getformat(interpreter: *mut Interpreter, strfrmt: *const i8, mut f
         let fresh173 = form;
         form = form.offset(1);
         *fresh173 = Character::Percent as i8;
-        memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, (length as usize));
+        memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, length);
         *form.offset(length as isize) = Character::Null as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }

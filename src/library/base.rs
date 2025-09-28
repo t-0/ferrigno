@@ -230,7 +230,7 @@ pub unsafe fn luab_next(interpreter: *mut Interpreter) -> i32 {
         };
     }
 }
-pub unsafe fn pairscont(mut _state: *mut Interpreter, mut _status: i32, mut _k: i64) -> i32 {
+pub unsafe fn pairscont(mut _state: *mut Interpreter, mut _status: Status, mut _k: i64) -> i32 {
     return 3;
 }
 pub unsafe fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
@@ -242,7 +242,7 @@ pub unsafe fn luab_pairs(interpreter: *mut Interpreter) -> i32 {
             (*interpreter).push_nil();
         } else {
             lua_pushvalue(interpreter, 1);
-            (*interpreter).lua_callk(1, 3, 0, Some(pairscont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
+            (*interpreter).lua_callk(1, 3, 0, Some(pairscont as unsafe fn(*mut Interpreter, Status, i64) -> i32));
         }
         return 3;
     }
@@ -264,9 +264,9 @@ pub unsafe fn luab_ipairs(interpreter: *mut Interpreter) -> i32 {
         return 3;
     }
 }
-pub unsafe fn load_aux(interpreter: *mut Interpreter, status: i32, envidx: i32) -> i32 {
+pub unsafe fn load_aux(interpreter: *mut Interpreter, status: Status, envidx: i32) -> i32 {
     unsafe {
-        if status == 0 {
+        if status == Status::OK {
             if envidx != 0 {
                 lua_pushvalue(interpreter, envidx);
                 if (lua_setupvalue(interpreter, -2, 1)).is_null() {
@@ -286,7 +286,7 @@ pub unsafe fn luab_loadfile(interpreter: *mut Interpreter) -> i32 {
         let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let mode: *const i8 = lual_optlstring(interpreter, 2, null(), null_mut());
         let env: i32 = if lua_type(interpreter, 3) == None { 0 } else { 3 };
-        let status: i32 = lual_loadfilex(interpreter, fname, mode);
+        let status = lual_loadfilex(interpreter, fname, mode);
         return load_aux(interpreter, status, env);
     }
 }
@@ -309,7 +309,7 @@ pub unsafe fn generic_reader(interpreter: *mut Interpreter, mut _ud: *mut libc::
 }
 pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let status: i32;
+        let status: Status;
         let mut l: usize = 0;
         let s: *const i8 = lua_tolstring(interpreter, 1, &mut l);
         let mode: *const i8 = lual_optlstring(interpreter, 3, c"bt".as_ptr(), null_mut());
@@ -333,7 +333,7 @@ pub unsafe fn luab_load(interpreter: *mut Interpreter) -> i32 {
         return load_aux(interpreter, status, env);
     }
 }
-pub unsafe fn dofilecont(interpreter: *mut Interpreter, mut _d1: i32, mut _d2: i64) -> i32 {
+pub unsafe fn dofilecont(interpreter: *mut Interpreter, mut _d1: Status, mut _d2: i64) -> i32 {
     unsafe {
         return (*interpreter).get_top() - 1;
     }
@@ -342,11 +342,11 @@ pub unsafe fn luab_dofile(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fname: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         lua_settop(interpreter, 1);
-        if lual_loadfilex(interpreter, fname, null()) != 0 {
+        if lual_loadfilex(interpreter, fname, null()) != Status::OK {
             return lua_error(interpreter);
         }
-        (*interpreter).lua_callk(0, -1, 0, Some(dofilecont as unsafe fn(*mut Interpreter, i32, i64) -> i32));
-        return dofilecont(interpreter, 0, 0);
+        (*interpreter).lua_callk(0, -1, 0, Some(dofilecont as unsafe fn(*mut Interpreter, Status, i64) -> i32));
+        return dofilecont(interpreter, Status::OK, 0);
     }
 }
 pub unsafe fn luab_assert(interpreter: *mut Interpreter) -> i32 {
@@ -383,13 +383,12 @@ pub unsafe fn luab_select(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn luab_xpcall(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let status: i32;
         let n: i32 = (*interpreter).get_top();
         (*interpreter).lual_checktype(2, TagType::Closure);
         (*interpreter).push_boolean(true);
         lua_pushvalue(interpreter, 1);
         lua_rotate(interpreter, 3, 2);
-        status = lua_pcallk(interpreter, n - 2, -1, 2, 2 as i64, Some(finishpcall as unsafe fn(*mut Interpreter, i32, i64) -> i32));
+        let status = lua_pcallk(interpreter, n - 2, -1, 2, 2 as i64, Some(finishpcall as unsafe fn(*mut Interpreter, Status, i64) -> i32));
         return finishpcall(interpreter, status, 2 as i64);
     }
 }

@@ -1,16 +1,16 @@
 use crate::interpreter::*;
-use libc::*;
 use crate::new::*;
 use crate::tvalue::*;
+use libc::*;
 use std::ptr::*;
 #[repr(C)]
 struct CloseProtected {
     closeprotected_level: *mut TValue,
-    closeprotected_status: i32,
+    closeprotected_status: Status,
 }
 impl New for CloseProtected {
     fn new() -> Self {
-        return CloseProtected { closeprotected_level: null_mut(), closeprotected_status: 0 };
+        return CloseProtected { closeprotected_level: null_mut(), closeprotected_status: Status::OK };
     }
 }
 impl CloseProtected {
@@ -21,7 +21,7 @@ impl CloseProtected {
         }
     }
 }
-pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut status: i32) -> i32 {
+pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut status: Status) -> Status {
     unsafe {
         let old_call_info = (*interpreter).callinfo;
         let old_allowhooks: u8 = (*interpreter).allow_hook;
@@ -34,7 +34,7 @@ pub unsafe fn do_close_protected(interpreter: *mut Interpreter, level: i64, mut 
                 Some(CloseProtected::auxiliary as unsafe fn(*mut Interpreter, *mut c_void) -> ()),
                 &mut close_protected as *mut CloseProtected as *mut c_void,
             );
-            if status == 0 {
+            if status == Status::OK {
                 return close_protected.closeprotected_status;
             } else {
                 (*interpreter).callinfo = old_call_info;

@@ -8,8 +8,8 @@ pub unsafe fn auxstatus(interpreter: *mut Interpreter, co: *mut Interpreter) -> 
             return 0;
         } else {
             match (*co).get_status() {
-                1 => return 2,
-                0 => {
+                Status::Yield => return 2,
+                Status::OK => {
                     let mut ar: DebugInfo = DebugInfo {
                         event: 0,
                         name: null(),

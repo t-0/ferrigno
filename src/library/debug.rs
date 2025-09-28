@@ -324,7 +324,7 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
             if (fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null() || strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0 {
                 return 0;
             }
-            if lual_loadbufferx(interpreter, buffer.as_mut_ptr(), strlen(buffer.as_mut_ptr()) as usize, c"=(debug command)".as_ptr(), null()) != 0 || lua_pcallk(interpreter, 0, 0, 0, 0, None) != 0 {
+            if lual_loadbufferx(interpreter, buffer.as_mut_ptr(), strlen(buffer.as_mut_ptr()) as usize, c"=(debug command)".as_ptr(), null()) != Status::OK || lua_pcallk(interpreter, 0, 0, 0, 0, None) != Status::OK {
                 fprintf(stderr, c"%s\n".as_ptr(), lual_tolstring(interpreter, -1, null_mut()));
                 fflush(stderr);
             }

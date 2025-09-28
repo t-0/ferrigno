@@ -20,7 +20,7 @@ pub struct Global {
     pub gc_debt: i64,
     pub gc_estimate: usize,
     pub last_atomic: usize,
-    pub string_table: StringTable,
+    pub stringtable: StringTable,
     pub l_registry: TValue,
     pub none_value: TValue,
     pub seed: u32,
@@ -104,19 +104,19 @@ impl Global {
                 },
                 6 => {
                     self.check_sizes(interpreter);
-                    self.gc_state = 7 as u8;
+                    self.gc_state = 7;
                     work = 0;
                 },
                 7 => {
                     if !(self.to_be_finalized).is_null() && !self.is_emergency {
                         self.gcstopem = 0;
-                        work = (runafewfinalizers(interpreter, 10 as i32) * 50 as i32) as usize;
+                        work = (runafewfinalizers(interpreter, 10 as i32) * 50) as usize;
                     } else {
-                        self.gc_state = 8 as u8;
+                        self.gc_state = 8;
                         work = 0;
                     }
                 },
-                _ => return 0usize,
+                _ => return 0,
             }
             self.gcstopem = 0;
             return work;
@@ -125,9 +125,9 @@ impl Global {
     pub unsafe fn check_sizes(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if !self.is_emergency {
-                if self.string_table.length < self.string_table.size / 4 {
+                if self.stringtable.stringtable_length < self.stringtable.stringtable_size / 4 {
                     let olddebt: i64 = self.gc_debt;
-                    luas_resize(interpreter, (self.string_table.size / 2) as usize);
+                    luas_resize(interpreter, self.stringtable.stringtable_size / 2);
                     self.gc_estimate = (self.gc_estimate as usize).wrapping_add((self.gc_debt - olddebt) as usize) as usize;
                 }
             }
@@ -417,8 +417,8 @@ impl Global {
     }
     pub unsafe fn luas_init_global(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            let string_table: *mut StringTable = &mut self.string_table;
-            (*string_table).initialize(interpreter);
+            let stringtable: *mut StringTable = &mut self.stringtable;
+            (*stringtable).initialize(interpreter);
             self.memory_error_message = luas_newlstr(interpreter, c"not enough memory".as_ptr(), "not enough memory".len());
             fix_object_global(self, self.memory_error_message as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {

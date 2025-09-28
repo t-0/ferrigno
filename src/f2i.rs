@@ -221,7 +221,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
             if digit_0 >= base {
                 return null();
             }
-            n = n.wrapping_mul(base as usize).wrapping_add(digit_0 as usize);
+            n = n * base as usize + digit_0 as usize;
             s = s.offset(1);
             if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 != 0) {
                 break;

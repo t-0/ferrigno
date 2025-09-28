@@ -271,7 +271,7 @@ pub unsafe fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
         if filename.is_null() {
             return 1;
         }
-        return checkload(interpreter, (lual_loadfilex(interpreter, filename, null()) == 0) as i32, filename);
+        return checkload(interpreter, (lual_loadfilex(interpreter, filename, null()) == Status::OK) as i32, filename);
     }
 }
 pub unsafe fn loadfunc(interpreter: *mut Interpreter, filename: *const i8, mut modname: *const i8) -> i32 {

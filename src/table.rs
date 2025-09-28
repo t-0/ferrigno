@@ -588,7 +588,7 @@ pub unsafe fn luah_resize(interpreter: *mut Interpreter, table: *mut Table, new_
         ) as *mut TValue;
         if new_array.is_null() && new_array_size > 0 {
             freehash(interpreter, &mut new_table);
-            luad_throw(interpreter, 4);
+            luad_throw(interpreter, Status::MemoryError);
         }
         Table::exchange_hash_part(table, &mut new_table);
         (*table).array = new_array;
@@ -602,14 +602,13 @@ pub unsafe fn luah_resize(interpreter: *mut Interpreter, table: *mut Table, new_
 }
 pub unsafe fn luah_resizearray(interpreter: *mut Interpreter, table: *mut Table, new_array_size: usize) {
     unsafe {
-        let new_table_size = if ((*table).last_free).is_null() { 0 } else { 1usize << (*table).log_size_node };
+        let new_table_size = if ((*table).last_free).is_null() { 0 } else { 1 << (*table).log_size_node };
         luah_resize(interpreter, table, new_array_size, new_table_size);
     }
 }
 pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *const TValue) {
     unsafe {
         let mut nums: [u32; 32] = [0; 32];
-        let mut totaluse: i32;
         let mut i: i32 = 0;
         while i <= (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32 {
             nums[i as usize] = 0u32;
@@ -617,7 +616,7 @@ pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *cons
         }
         setlimittosize(table);
         let mut count_array: u32 = numusearray(table, nums.as_mut_ptr());
-        totaluse = count_array as i32;
+        let mut totaluse = count_array as i32;
         totaluse += numusehash(table, nums.as_mut_ptr(), &mut count_array);
         if (*ek).get_tag_variant() == TAG_VARIANT_NUMERIC_INTEGER {
             count_array = count_array.wrapping_add(countint((*ek).value.value_integer, nums.as_mut_ptr()) as u32);
