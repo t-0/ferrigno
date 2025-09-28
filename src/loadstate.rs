@@ -98,7 +98,7 @@ impl LoadState {
             if size == 0 {
                 return null_mut();
             } else {
-                size = size.wrapping_sub(1);
+                size -= 1;
                 if size <= 40 as usize {
                     let mut buffer: [i8; 40] = [0; 40];
                     self.load_block(buffer.as_mut_ptr() as *mut libc::c_void, size.wrapping_mul(1 as usize));

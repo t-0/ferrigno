@@ -136,8 +136,8 @@ pub unsafe fn luas_hash(pointer: *const i8, mut length: usize, seed: u32) -> u32
     unsafe {
         let mut ret: u32 = seed ^ length as u32;
         while length > 0 {
-            ret ^= (ret << 5).wrapping_add(ret >> 2).wrapping_add(*pointer.offset(length.wrapping_sub(1 as usize) as isize) as u8 as u32);
-            length = length.wrapping_sub(1);
+            ret ^= (ret << 5).wrapping_add(ret >> 2).wrapping_add(*pointer.offset((length - 1) as isize) as u8 as u32);
+            length -= 1;
         }
         return ret;
     }
@@ -168,7 +168,7 @@ pub unsafe fn luas_newlstr(interpreter: *mut Interpreter, str: *const i8, length
         if length <= STRING_SHORT_MAX {
             return TString::intern(interpreter, str, length);
         } else {
-            if length >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_sub(size_of::<TString>()) {
+            if length >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }) - size_of::<TString>() {
                 (*interpreter).too_big();
             }
             let ts: *mut TString = TString::create_long(interpreter, length);
@@ -217,12 +217,12 @@ pub unsafe fn l_strcmp(ts1: *const TString, ts2: *const TString) -> i32 {
                 } else if zl1 == rl1 {
                     return -1;
                 }
-                zl1 = zl1.wrapping_add(1);
-                zl2 = zl2.wrapping_add(1);
+                zl1 += 1;
+                zl2 += 1;
                 s1 = s1.offset(zl1 as isize);
-                rl1 = rl1.wrapping_sub(zl1);
+                rl1 -= zl1;
                 s2 = s2.offset(zl2 as isize);
-                rl2 = rl2.wrapping_sub(zl2);
+                rl2 -= zl2;
             }
         }
     }
@@ -280,7 +280,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                         })
                 {
                     let l = (*((*top.offset(-(n as isize)).offset(-(1 as isize))).value.value_object as *mut TString)).get_length();
-                    if ((l >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }).wrapping_sub(size_of::<TString>()).wrapping_sub(tl)) as i32 != 0) as i64 != 0 {
+                    if ((l >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }) - size_of::<TString>() - tl) as i32 != 0) as i64 != 0 {
                         (*interpreter).top.stkidrel_pointer = top.offset(-(total as isize));
                         luag_runerror(interpreter, c"string length overflow".as_ptr());
                     }

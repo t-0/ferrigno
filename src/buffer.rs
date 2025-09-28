@@ -37,7 +37,7 @@ impl Buffer {
     pub unsafe fn new_with_size(&mut self, size: usize) -> usize {
         unsafe {
             let mut new_size = 2 * self.loads.get_size();
-            if (!0usize).wrapping_sub(size) < self.loads.get_length() as usize {
+            if (!0usize) - size < self.loads.get_length() as usize {
                 return lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize;
             } else {
                 new_size = new_size.max(self.loads.get_length() + size as i32);

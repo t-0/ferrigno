@@ -173,7 +173,7 @@ pub unsafe fn getiofile(interpreter: *mut Interpreter, findex: *const i8) -> *mu
             lual_error(
                 interpreter,
                 c"default %s file is closed".as_ptr(),
-                findex.offset((size_of::<[i8; 5]>() as usize).wrapping_sub(1 as usize) as isize),
+                findex.offset(4),
             );
         }
         return (*p).file;

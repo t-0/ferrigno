@@ -238,7 +238,7 @@ impl MatchState {
             self.level = level + 1;
             res = self.match_0(s, p);
             if res.is_null() {
-                self.level = (self.level).wrapping_sub(1);
+                self.level -= 1;
                 self.level;
             }
             return res;
@@ -529,7 +529,7 @@ impl MatchState {
                 } else {
                     lual_error(interpreter, c"invalid use of '%c' in replacement string".as_ptr(), Character::Percent as i32);
                 }
-                l = (l as usize).wrapping_sub(p.offset(1 as isize).offset_from(news) as usize) as usize as usize;
+                l = l.wrapping_sub(p.offset(1).offset_from(news) as usize);
                 news = p.offset(1 as isize);
             }
             (*b).add_string_with_length(news, l as usize);

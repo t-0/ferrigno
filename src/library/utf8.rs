@@ -6,7 +6,7 @@ use std::ptr::*;
 pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
     if position >= 0 {
         return position;
-    } else if (0usize).wrapping_sub(position as usize) > length {
+    } else if -position as usize > length {
         return 0;
     } else {
         return length as i64 + position + 1;

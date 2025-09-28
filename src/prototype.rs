@@ -227,7 +227,7 @@ pub unsafe fn getbaseline(prototype: *const Prototype, program_counter: i32, bas
             *basepc = -1;
             return (*prototype).prototype_line_defined;
         } else {
-            let mut i = ((program_counter as u32) / 128).wrapping_sub(1) as i32;
+            let mut i = program_counter / 128 - 1;
             while (i + 1) < (*prototype).prototype_absolute_line_info.get_size() as i32 && program_counter >= (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset((i + 1) as isize)).program_counter {
                 i += 1;
             }

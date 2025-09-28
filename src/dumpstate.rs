@@ -68,10 +68,10 @@ impl DumpState {
     }
     pub unsafe fn dump_header(&mut self) {
         unsafe {
-            self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()).wrapping_sub(1));
+            self.dump_block(LUA_SIGNATURE as *const c_void, (size_of::<[i8; 5]>()) - 1);
             self.dump_byte(5 * 16 + 4);
             self.dump_byte(0);
-            self.dump_block(c"\x19\x7F\r\n\x1A\n".as_ptr() as *const c_void, (size_of::<[i8; 7]>()).wrapping_sub(1));
+            self.dump_block(c"\x19\x7F\r\n\x1A\n".as_ptr() as *const c_void, (size_of::<[i8; 7]>()) - 1);
             self.dump_integer(0x5678);
             self.dump_number(370.5);
         }

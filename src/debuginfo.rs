@@ -67,7 +67,7 @@ pub unsafe fn funcinfo(ar: *mut DebugInfo, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TAG_VARIANT_CLOSURE_L) {
             (*ar).source = c"=[C]".as_ptr();
-            (*ar).source_length = (size_of::<[i8; 5]>() as usize).wrapping_sub(1 as usize);
+            (*ar).source_length = (size_of::<[i8; 5]>() as usize) - 1;
             (*ar).line_defined = -1;
             (*ar).last_line_defined = -1;
             (*ar).what = c"C".as_ptr();
@@ -78,7 +78,7 @@ pub unsafe fn funcinfo(ar: *mut DebugInfo, closure: *mut Closure) {
                 (*ar).source_length = (*(*p).prototype_source).get_length() as usize;
             } else {
                 (*ar).source = c"=?".as_ptr();
-                (*ar).source_length = (size_of::<[i8; 3]>() as usize).wrapping_sub(1 as usize);
+                (*ar).source_length = (size_of::<[i8; 3]>() as usize) - 1;
             }
             (*ar).line_defined = (*p).prototype_line_defined;
             (*ar).last_line_defined = (*p).prototype_last_line_defined;

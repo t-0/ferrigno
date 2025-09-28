@@ -155,7 +155,7 @@ impl Global {
             }) as i64;
             loop {
                 let work: usize = self.singlestep(interpreter);
-                debt = (debt as usize).wrapping_sub(work) as i64;
+                debt = debt - (work as i64);
                 if !(debt > -stepsize && self.gc_state as i32 != 8) {
                     break;
                 }
@@ -464,7 +464,7 @@ impl Global {
             let pause: i32 = (*self).gc_pause as i32 * 4;
             let estimate: i64 = ((*self).gc_estimate / 100) as i64;
             let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate { estimate * pause as i64 } else { (!(0usize) >> 1) as i64 };
-            let mut debt: i64 = (((*self).total_bytes + (*self).gc_debt) as usize).wrapping_sub(threshold as usize) as i64;
+            let mut debt: i64 = (*self).total_bytes + (*self).gc_debt - threshold;
             if debt > 0 {
                 debt = 0;
             }

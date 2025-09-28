@@ -112,7 +112,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
         match (*fi).get_tag_variant() {
             TAG_VARIANT_CLOSURE_C => {
                 let closure: *mut Closure = &mut (*((*fi).value.value_object as *mut Closure));
-                if !((n as u32).wrapping_sub(1 as u32) < (*closure).count_upvalues as u32) {
+                if n > (*closure).count_upvalues as i32 {
                     return null();
                 }
                 *value = &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;

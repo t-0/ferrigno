@@ -260,13 +260,13 @@ pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u
                 if !(sort_comp(interpreter, -1, -2) != 0) {
                     break;
                 }
-                if i == high.wrapping_sub(1) {
+                if i == high - 1 {
                     lual_error(interpreter, c"invalid order function for sorting".as_ptr());
                 }
                 lua_settop(interpreter, -2);
             }
             loop {
-                j = j.wrapping_sub(1);
+                j -= 1;
                 lua_geti(interpreter, 1, j as i64);
                 if !(sort_comp(interpreter, -3, -1) != 0) {
                     break;
@@ -302,10 +302,10 @@ pub unsafe fn auxsort(interpreter: *mut Interpreter, mut low: u32, mut high: u32
             } else {
                 lua_settop(interpreter, -2 - 1);
             }
-            if high.wrapping_sub(low) == 1 as u32 {
+            if high - low == 1 {
                 return;
             }
-            if high.wrapping_sub(low) < 100 as u32 || rnd == 0 {
+            if high - low < 100 || rnd == 0 {
                 p = (low + high) / 2;
             } else {
                 p = choose_pivot(low, high, rnd);
