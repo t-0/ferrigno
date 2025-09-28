@@ -28,12 +28,12 @@ impl ZIO {
     }
     pub unsafe fn load_byte(&mut self) -> Option<u8> {
         unsafe {
-            let aa = self.zio_length;
+            let length = self.zio_length;
             self.zio_length = (self.zio_length).wrapping_sub(1);
-            let ret: i32 = if aa > 0 {
-                let bb = self.zio_pointer;
+            let ret: i32 = if length > 0 {
+                let ret = self.zio_pointer;
                 self.zio_pointer = (self.zio_pointer).offset(1);
-                *bb as u8 as i32
+                *ret as u8 as i32
             } else {
                 self.luaz_fill()
             };
