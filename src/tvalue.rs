@@ -99,29 +99,18 @@ impl TValue {
     pub fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
     }
-    pub fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-        self.collectable = (0 == TAG_COLLECTABLE & tag);
+    pub fn get_tag_variant2(&self) -> TagVariant {
+        get_tag_variant2(self.get_tag())
     }
-    pub fn set_tag_variant(&mut self, tag: u8) {
-        self.set_tag((tag & !TAG_COLLECTABLE) | (self.tag & TAG_COLLECTABLE));
-        self.collectable = 0 != (TAG_COLLECTABLE & tag);
-    }
-    pub fn set_tag_variant2(&mut self, tagvariant: TagVariant) {
-        self.set_tag(tagvariant as u8);
+    pub fn set_tag_variant(&mut self, tagvariant: TagVariant) {
+        self.tag = tagvariant as u8;
         self.collectable = false;
     }
     pub fn is_collectable(&self) -> bool {
         self.collectable
     }
     pub fn set_collectable(&mut self, value: bool) {
-        if value {
-            self.set_tag(set_collectable(self.get_tag()));
-            self.collectable = true;
-        } else {
-            self.set_tag(self.get_tag_variant());
-            self.collectable = false;
-        }
+        self.collectable = value;
     }
     pub unsafe fn from_interpreter_to_string(& mut self, interpreter: *mut Interpreter) {
         unsafe {
@@ -129,7 +118,7 @@ impl TValue {
             let length = tostringbuff(self, buffer.as_mut_ptr());
             let tstring: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
             self.value.value_object = &mut (*(tstring as *mut Object));
-            self.set_tag_variant((*tstring).get_tag_variant());
+            self.set_tag_variant((*tstring).get_tag_variant2());
             self.set_collectable(true);
         }
     }
@@ -178,11 +167,11 @@ pub unsafe fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
                 return 0usize;
             } else {
                 (*o).value.value_number = n;
-                (*o).set_tag_variant2(TagVariant::NumericNumber);
+                (*o).set_tag_variant(TagVariant::NumericNumber);
             }
         } else {
             (*o).value.value_integer = i;
-            (*o).set_tag_variant2(TagVariant::NumericInteger);
+            (*o).set_tag_variant(TagVariant::NumericInteger);
         }
         return (e.offset_from(s) as i64 + 1) as usize;
     }
@@ -379,20 +368,20 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*ra);
                     (*io).value.value_integer = luah_getn(h) as i64;
-                    (*io).set_tag_variant2(TagVariant::NumericInteger);
+                    (*io).set_tag_variant(TagVariant::NumericInteger);
                     return;
                 }
             },
             TAG_VARIANT_STRING_SHORT => {
                 let io_0: *mut TValue = &mut (*ra);
                 (*io_0).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_0).set_tag_variant2(TagVariant::NumericInteger);
+                (*io_0).set_tag_variant(TagVariant::NumericInteger);
                 return;
             },
             TAG_VARIANT_STRING_LONG => {
                 let io_1: *mut TValue = &mut (*ra);
                 (*io_1).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_1).set_tag_variant2(TagVariant::NumericInteger);
+                (*io_1).set_tag_variant(TagVariant::NumericInteger);
                 return;
             },
             _ => {

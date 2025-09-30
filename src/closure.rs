@@ -92,7 +92,7 @@ impl Closure {
 pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL as u8) {
-            (*(*interpreter).top.stkidrel_pointer).set_tag_variant2(TagVariant::NilNil);
+            (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
@@ -100,7 +100,7 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
             let table: *mut Table = luah_new(interpreter);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.value_object = &mut (*(table as *mut Object));
-            (*io).set_tag_variant2(TagVariant::Table);
+            (*io).set_tag_variant(TagVariant::Table);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).prototype_line_info.vectort_pointer).is_null() {
@@ -177,7 +177,7 @@ pub unsafe fn size_lclosure(count_upvalues: usize) -> usize {
 }
 pub unsafe fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i32) -> *mut Closure {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TagVariant::ClosureC as u8, size_cclosure(count_upvalues as usize));
+        let object: *mut Object = luac_newobj(interpreter, TagVariant::ClosureC, size_cclosure(count_upvalues as usize));
         let ret: *mut Closure = &mut (*(object as *mut Closure));
         (*ret).count_upvalues = count_upvalues as u8;
         return ret;
@@ -185,7 +185,7 @@ pub unsafe fn luaf_newcclosure(interpreter: *mut Interpreter, count_upvalues: i3
 }
 pub unsafe fn luaf_newlclosure(interpreter: *mut Interpreter, mut count_upvalues: i32) -> *mut Closure {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TagVariant::ClosureL as u8, size_lclosure(count_upvalues as usize));
+        let object: *mut Object = luac_newobj(interpreter, TagVariant::ClosureL, size_lclosure(count_upvalues as usize));
         let ret: *mut Closure = &mut (*(object as *mut Closure));
         (*ret).payload.l_prototype = null_mut();
         (*ret).count_upvalues = count_upvalues as u8;
@@ -204,10 +204,10 @@ pub unsafe fn luaf_newlclosure(interpreter: *mut Interpreter, mut count_upvalues
 pub unsafe fn luaf_initupvals(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         for i in 0..(*closure).count_upvalues {
-            let object: *mut Object = luac_newobj(interpreter, TagVariant::UpValue as u8, size_of::<UpValue>());
+            let object: *mut Object = luac_newobj(interpreter, TagVariant::UpValue, size_of::<UpValue>());
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;
-            (*(*upvalue).v.p).set_tag_variant2(TagVariant::NilNil);
+            (*(*upvalue).v.p).set_tag_variant(TagVariant::NilNil);
             let ref mut fresh = *((*closure).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh = upvalue;
             if (*closure).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {

@@ -65,7 +65,7 @@ impl TString {
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
-            let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong as u8, (*(*interpreter).global).seed);
+            let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong, (*(*interpreter).global).seed);
             (*ret).long_length = length;
             return ret;
         }
@@ -90,7 +90,7 @@ impl TString {
                 growstrtab(interpreter, tb);
                 list = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             }
-            tstring = createstrobj(interpreter, length as usize, TagVariant::StringShort as u8, h);
+            tstring = createstrobj(interpreter, length as usize, TagVariant::StringShort, h);
             (*tstring).long_length = length;
             memcpy((*tstring).get_contents() as *mut libc::c_void, str as *const libc::c_void, length);
             (*tstring).hash_next = *list;
@@ -146,10 +146,10 @@ pub unsafe fn hash_string_long(tstring: *mut TString) -> u32 {
         return (*tstring).hash;
     }
 }
-pub unsafe fn createstrobj(interpreter: *mut Interpreter, l: usize, tag: u8, h: u32) -> *mut TString {
+pub unsafe fn createstrobj(interpreter: *mut Interpreter, l: usize, tagvariant: TagVariant, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
-        let object: *mut Object = luac_newobj(interpreter, tag, total_size);
+        let object: *mut Object = luac_newobj(interpreter, tagvariant, total_size);
         let ret: *mut TString = &mut (*(object as *mut TString));
         (*ret).hash = h;
         (*ret).extra = 0;
@@ -291,7 +291,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize)));
                 (*io).value.value_object = &mut (*(tstring as *mut Object));
-                (*io).set_tag_variant((*tstring).get_tag_variant());
+                (*io).set_tag_variant((*tstring).get_tag_variant2());
                 (*io).set_collectable(true);
             }
             total -= n - 1;

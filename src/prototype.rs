@@ -519,7 +519,7 @@ pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: 
 }
 pub unsafe fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TagVariant::Prototype as u8, size_of::<Prototype>());
+        let object: *mut Object = luac_newobj(interpreter, TagVariant::Prototype, size_of::<Prototype>());
         let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
         (*prototype).prototype_constants.initialize();
         (*prototype).prototype_prototypes.initialize();

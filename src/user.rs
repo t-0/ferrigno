@@ -59,13 +59,13 @@ impl User {
             if count_bytes > MAXIMUM_SIZE - User::user_get_size(0, count_upvalues) {
                 (*interpreter).too_big();
             }
-            let object: *mut Object = luac_newobj(interpreter, TagVariant::User as u8, User::user_get_size(count_bytes, count_upvalues));
+            let object: *mut Object = luac_newobj(interpreter, TagVariant::User, User::user_get_size(count_bytes, count_upvalues));
             let ret: *mut User = &mut (*(object as *mut User));
             (*ret).count_bytes = count_bytes;
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant2(TagVariant::NilNil);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil);
             }
             return ret;
         }
@@ -75,7 +75,7 @@ impl User {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.value_object = &mut (*(new_user as *mut Object));
-            (*io).set_tag_variant2(TagVariant::User);
+            (*io).set_tag_variant(TagVariant::User);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {

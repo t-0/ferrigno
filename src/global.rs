@@ -709,7 +709,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant2(TagVariant::NilEmpty);
+                    (*node).value.set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();
@@ -729,13 +729,13 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.value_object } else { null_mut() }) != 0 {
-                    (*tvalue).set_tag_variant2(TagVariant::NilEmpty);
+                    (*tvalue).set_tag_variant(TagVariant::NilEmpty);
                 }
             }
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant2(TagVariant::NilEmpty);
+                    (*node).value.set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();

@@ -37,14 +37,8 @@ pub trait TObject {
     fn get_tag(&self) -> u8 {
         self.as_object().get_tag()
     }
-    fn set_tag(&mut self, tag: u8) {
-        self.as_object_mut().set_tag(tag);
-    }
-    fn set_tag_variant(&mut self, tag: u8) {
-        self.as_object_mut().set_tag_variant(tag);
-    }
-    fn set_tag_variant2(&mut self, tagvariant: TagVariant) {
-        self.as_object_mut().set_tag_variant2(tagvariant);
+    fn set_tag_variant(&mut self, tagvariant: TagVariant) {
+        self.as_object_mut().set_tag_variant(tagvariant);
     }
     fn get_marked(&self) -> u8 {
         self.as_object().get_marked()
@@ -63,6 +57,9 @@ pub trait TObject {
     }
     fn get_tag_variant(&self) -> u8 {
         get_tag_variant(self.get_tag())
+    }
+    fn get_tag_variant2(&self) -> TagVariant {
+        get_tag_variant2(self.get_tag())
     }
     fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -106,13 +103,7 @@ impl TObject for Object {
     fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag())
     }
-    fn set_tag(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn set_tag_variant(&mut self, tag: u8) {
-        self.tag = tag;
-    }
-    fn set_tag_variant2(&mut self, tagvariant: TagVariant) {
+    fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.tag = tagvariant as u8;
     }
     fn get_class_name(&mut self) -> String {

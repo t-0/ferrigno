@@ -752,7 +752,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         count_constants = (*function_state).count_constants;
         let io: *mut TValue = &mut value;
         (*io).value.value_integer = count_constants as i64;
-        (*io).set_tag_variant2(TagVariant::NumericInteger);
+        (*io).set_tag_variant(TagVariant::NumericInteger);
         luah_finishset(interpreter, (*lexical_state).table, key, index, &mut value);
         (*prototype).prototype_constants.grow(
             interpreter,
@@ -767,7 +767,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         while old_size < (*prototype).prototype_constants.get_size() {
             let fresh135 = old_size;
             old_size = old_size + 1;
-            (*((*prototype).prototype_constants.vectort_pointer).offset(fresh135 as isize)).set_tag_variant2(TagVariant::NilNil);
+            (*((*prototype).prototype_constants.vectort_pointer).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil);
         }
         let io1: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(count_constants as isize) as *mut TValue;
         let io2: *const TValue = v;
@@ -789,7 +789,7 @@ pub unsafe fn string_constant(interpreter: *mut Interpreter, lexical_state: *mut
         let mut o: TValue = TValue::new(TagVariant::NilNil as u8);
         let io: *mut TValue = &mut o;
         (*io).value.value_object = &mut (*(s as *mut Object));
-        (*io).set_tag_variant((*s).get_tag_variant());
+        (*io).set_tag_variant((*s).get_tag_variant2());
         (*io).set_collectable(true);
         return addk(interpreter, lexical_state, function_state, &mut o, &mut o);
     }
@@ -798,7 +798,7 @@ pub unsafe fn luak_int_k(interpreter: *mut Interpreter, lexical_state: *mut Lexi
     unsafe {
         let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
         tvalue.value.value_integer = integer;
-        tvalue.set_tag_variant2(TagVariant::NumericInteger);
+        tvalue.set_tag_variant(TagVariant::NumericInteger);
         return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
     }
 }
@@ -807,7 +807,7 @@ pub unsafe fn luak_number_k(interpreter: *mut Interpreter, lexical_state: *mut L
         let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
         let mut ik: i64 = 0;
         tvalue.value.value_number = number;
-        tvalue.set_tag_variant2(TagVariant::NumericNumber);
+        tvalue.set_tag_variant(TagVariant::NumericNumber);
         if !luav_flttointeger(number, &mut ik, F2I::Equal) {
             return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
         } else {

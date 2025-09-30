@@ -53,14 +53,14 @@ pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v:
                 ExpressionKind::ConstantInteger => {
                     if !v.is_null() {
                         (*v).value.value_integer = (*expression_description).value.value_integer;
-                        (*v).set_tag_variant2(TagVariant::NumericInteger);
+                        (*v).set_tag_variant(TagVariant::NumericInteger);
                     }
                     return true;
                 },
                 ExpressionKind::ConstantNumber => {
                     if !v.is_null() {
                         (*v).value.value_number = (*expression_description).value.value_number;
-                        (*v).set_tag_variant2(TagVariant::NumericNumber);
+                        (*v).set_tag_variant(TagVariant::NumericNumber);
                     }
                     return true;
                 },
@@ -83,21 +83,21 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
         }
         match (*expression_description).expression_kind {
             ExpressionKind::False => {
-                (*v).set_tag_variant2(TagVariant::BooleanFalse);
+                (*v).set_tag_variant(TagVariant::BooleanFalse);
                 return true;
             },
             ExpressionKind::True => {
-                (*v).set_tag_variant2(TagVariant::BooleanTrue);
+                (*v).set_tag_variant(TagVariant::BooleanTrue);
                 return true;
             },
             ExpressionKind::Nil => {
-                (*v).set_tag_variant2(TagVariant::NilNil);
+                (*v).set_tag_variant(TagVariant::NilNil);
                 return true;
             },
             ExpressionKind::ConstantString => {
                 let tstring: *mut TString = (*expression_description).value.value_tstring;
                 (*v).value.value_object = &mut (*(tstring as *mut Object));
-                (*v).set_tag_variant((*tstring).get_tag_variant());
+                (*v).set_tag_variant((*tstring).get_tag_variant2());
                 (*v).set_collectable(true);
                 return true;
             },

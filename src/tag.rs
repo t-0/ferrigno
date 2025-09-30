@@ -45,7 +45,7 @@ pub enum TagVariant {
     DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
 }
 impl TagVariant {
-    pub fn from (value: u8) -> Self {
+    pub const fn from (value: u8) -> Self {
         if value == TagType::Nil as u8 | TagVariantRaw::Alpha as u8 {
             return TagVariant::NilNil;
         } else if value == TagType::Nil as u8 | TagVariantRaw::Beta as u8 {
@@ -110,6 +110,9 @@ pub const fn get_tag_type(tag: u8) -> TagType {
 }
 pub const fn get_tag_variant(tag: u8) -> u8 {
     TAG_VARIANT_MASK_ & tag
+}
+pub const fn get_tag_variant2(tag: u8) -> TagVariant {
+    TagVariant::from(TAG_VARIANT_MASK_ & tag)
 }
 pub const TAG_COLLECTABLE: u8 = 0x40;
 pub fn is_none_or_nil(tag: Option<TagType>) -> bool {

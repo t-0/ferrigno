@@ -1470,7 +1470,7 @@ pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut 
             let io: *mut TValue = stv;
             let tstring: *mut TString = tstring;
             (*io).value.value_object = &mut (*(tstring as *mut Object));
-            (*io).set_tag_variant((*tstring).get_tag_variant());
+            (*io).set_tag_variant((*tstring).get_tag_variant2());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
             if (*(*interpreter).global).gc_debt > 0 {
