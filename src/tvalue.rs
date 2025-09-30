@@ -94,13 +94,13 @@ impl TValue {
         self.collectable = other.collectable;
     }
     pub fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.get_tag())
+        get_tag_type(self.tag)
     }
     pub fn get_tag_variant(&self) -> u8 {
-        get_tag_variant(self.get_tag())
+        get_tag_variant(self.tag)
     }
     pub fn get_tag_variant2(&self) -> TagVariant {
-        get_tag_variant2(self.get_tag())
+        get_tag_variant2(self.tag)
     }
     pub fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.tag = tagvariant as u8;
