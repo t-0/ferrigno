@@ -27,6 +27,13 @@ use std::ptr::*;
 pub trait TObject {
     fn as_object(&self) -> &Object;
     fn as_object_mut(&mut self) -> &mut Object;
+    fn get_class_name(&mut self) -> String;
+    fn get_metatable(&mut self) -> *mut Table {
+        null_mut()
+    }
+    fn getgclist(& mut self) -> *mut *mut Object {
+        null_mut()
+    }
     fn get_tag(&self) -> u8 {
         self.as_object().get_tag()
     }
@@ -69,8 +76,6 @@ pub trait TObject {
     fn is_tagtype_closure(&self) -> bool {
         self.get_tag_type() == TagType::Closure
     }
-    fn get_class_name(&mut self) -> String;
-    fn get_metatable(&mut self) -> *mut Table;
 }
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -107,31 +112,22 @@ impl TObject for Object {
     fn get_class_name(&mut self) -> String {
         "object".to_string()
     }
-    fn get_metatable(&mut self) -> *mut Table {
-        null_mut()
+    fn getgclist(& mut self) -> *mut *mut Object {
+        unsafe {
+            match TagVariant::from(self.get_tag_variant()) {
+                TagVariant::Table => return (*(self as *mut Object as *mut Table)).getgclist(),
+                TagVariant::ClosureL | TagVariant::ClosureC => return (*(self as *mut Object as *mut Closure)).getgclist(),
+                TagVariant::State => return (*(self as *mut Object as *mut Interpreter)).getgclist(),
+                TagVariant::Prototype => return (*(self as *mut Object as *mut Prototype)).getgclist(),
+                TagVariant::User => return (*(self as *mut Object as *mut User)).getgclist(),
+                _ => return null_mut(),
+            };
+        }
     }
 }
 impl Object {
     pub fn new(tag: u8) -> Object {
         Object { next: null_mut(), tag: tag, marked: 0, .. }
-    }
-}
-pub unsafe fn getgclist(object: *mut Object) -> *mut *mut Object {
-    unsafe {
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
-        const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
-        const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-        match (*object).get_tag_variant() {
-            TAG_VARIANT_TABLE => return &mut (*(object as *mut Table)).gc_list,
-            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => return &mut (*(object as *mut Closure)).gc_list,
-            TAG_VARIANT_STATE => return &mut (*(object as *mut Interpreter)).gc_list,
-            TAG_VARIANT_PROTOTYPE => return &mut (*(object as *mut Prototype)).prototype_gc_list,
-            TAG_VARIANT_USER => return &mut (*(object as *mut User)).gc_list,
-            _ => return null_mut(),
-        };
     }
 }
 pub unsafe fn linkgclist_(object: *mut Object, pnext: *mut *mut Object, list: *mut *mut Object) {
@@ -174,7 +170,7 @@ pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Obje
         if (*object).get_marked() & 7 == 6 {
             (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
-            linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray_again);
+            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray_again);
         }
         if (*object).get_marked() & 7 > 1 {
             (*object).set_marked((*object).get_marked() & !7 | 5);
@@ -255,7 +251,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
         }
         match current_block_18 {
             15904375183555213903 => {
-                linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray);
+                linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray);
             },
             _ => {},
         };
@@ -264,7 +260,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
 pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
-            linkgclist_(&mut (*(object as *mut Object)), getgclist(object), &mut (*global).gray_again);
+            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray_again);
         } else if (*object).get_marked() & 7 == 6 {
             (*object).set_marked(((*object).get_marked() ^ (6 ^ 4)) as u8);
         }
@@ -337,7 +333,7 @@ pub unsafe fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Obje
             if curr.is_null() {
                 break;
             }
-            let next: *mut *mut Object = getgclist(curr);
+            let next: *mut *mut Object = (*curr).getgclist();
             if !((*curr).get_marked() & (1 << 3 | 1 << 4) != 0) {
                 if (*curr).get_marked() & 7 == 5 {
                     (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);

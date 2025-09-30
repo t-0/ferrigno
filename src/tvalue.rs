@@ -107,6 +107,10 @@ impl TValue {
         self.set_tag((tag & !TAG_COLLECTABLE) | (self.tag & TAG_COLLECTABLE));
         self.collectable = 0 != (TAG_COLLECTABLE & tag);
     }
+    pub fn set_tag_variant2(&mut self, tagvariant: TagVariant) {
+        self.set_tag(tagvariant as u8);
+        self.collectable = false;
+    }
     pub fn is_collectable(&self) -> bool {
         self.collectable
     }
@@ -174,11 +178,11 @@ pub unsafe fn luao_str2num(s: *const i8, o: *mut TValue) -> usize {
                 return 0usize;
             } else {
                 (*o).value.value_number = n;
-                (*o).set_tag_variant(TagVariant::NumericNumber as u8);
+                (*o).set_tag_variant2(TagVariant::NumericNumber);
             }
         } else {
             (*o).value.value_integer = i;
-            (*o).set_tag_variant(TagVariant::NumericInteger as u8);
+            (*o).set_tag_variant2(TagVariant::NumericInteger);
         }
         return (e.offset_from(s) as i64 + 1) as usize;
     }
@@ -375,20 +379,20 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*ra);
                     (*io).value.value_integer = luah_getn(h) as i64;
-                    (*io).set_tag_variant(TagVariant::NumericInteger as u8);
+                    (*io).set_tag_variant2(TagVariant::NumericInteger);
                     return;
                 }
             },
             TAG_VARIANT_STRING_SHORT => {
                 let io_0: *mut TValue = &mut (*ra);
                 (*io_0).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_0).set_tag_variant(TagVariant::NumericInteger as u8);
+                (*io_0).set_tag_variant2(TagVariant::NumericInteger);
                 return;
             },
             TAG_VARIANT_STRING_LONG => {
                 let io_1: *mut TValue = &mut (*ra);
                 (*io_1).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_1).set_tag_variant(TagVariant::NumericInteger as u8);
+                (*io_1).set_tag_variant2(TagVariant::NumericInteger);
                 return;
             },
             _ => {

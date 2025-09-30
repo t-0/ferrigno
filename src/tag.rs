@@ -14,17 +14,6 @@ pub enum TagType {
     Prototype = 0x0A,
     DeadKey = 0x0B,
 }
-pub const TAGTYPE_SIMPLE_: [TagType; 9] = [
-    TagType::Nil,
-    TagType::Boolean,
-    TagType::Pointer,
-    TagType::Numeric,
-    TagType::String,
-    TagType::Table,
-    TagType::Closure,
-    TagType::User,
-    TagType::State,
-];
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum TagVariantRaw {
@@ -54,6 +43,51 @@ pub enum TagVariant {
     UpValue = TagType::UpValue as u8 | TagVariantRaw::Alpha as u8,
     Prototype = TagType::Prototype as u8 | TagVariantRaw::Alpha as u8,
     DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
+}
+impl TagVariant {
+    pub fn from (value: u8) -> Self {
+        if value == TagType::Nil as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::NilNil;
+        } else if value == TagType::Nil as u8 | TagVariantRaw::Beta as u8 {
+            return TagVariant::NilEmpty;
+        } else if value == TagType::Nil as u8 | TagVariantRaw::Gamma as u8 {
+            return TagVariant::NilAbsentKey;
+        } else if value == TagType::Boolean as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::BooleanFalse;
+        } else if value == TagType::Boolean as u8 | TagVariantRaw::Beta as u8 {
+            return TagVariant::BooleanTrue;
+        } else if value == TagType::Pointer as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::Pointer;
+        } else if value == TagType::Numeric as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::NumericInteger;
+        } else if value == TagType::Numeric as u8 | TagVariantRaw::Beta as u8 {
+            return TagVariant::NumericNumber;
+        } else if value == TagType::String as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::StringShort;
+        } else if value == TagType::String as u8 | TagVariantRaw::Beta as u8 {
+            return TagVariant::StringLong;
+        } else if value == TagType::Table as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::Table;
+        } else if value == TagType::Closure as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::ClosureL;
+        } else if value == TagType::Closure as u8 | TagVariantRaw::Beta as u8 {
+            return TagVariant::ClosureCFunction;
+        } else if value == TagType::Closure as u8 | TagVariantRaw::Gamma as u8 {
+            return TagVariant::ClosureC;
+        } else if value == TagType::User as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::User;
+        } else if value == TagType::State as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::State;
+        } else if value == TagType::UpValue as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::UpValue;
+        } else if value == TagType::Prototype as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::Prototype;
+        } else if value == TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::DeadKey;
+        } else {
+            return TagVariant::DeadKey;
+        }
+    }
 }
 const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;

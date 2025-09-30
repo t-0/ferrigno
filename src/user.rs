@@ -30,6 +30,9 @@ impl TObject for User {
     fn get_metatable(&mut self) -> *mut Table {
         self.metatable
     }
+    fn getgclist(& mut self) -> *mut *mut Object {
+        &mut self.gc_list
+    }
 }
 impl User {
     pub fn user_get_size(count_bytes: usize, count_upvalues: usize) -> usize {
@@ -62,7 +65,7 @@ impl User {
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).metatable = null_mut();
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil as u8);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant2(TagVariant::NilNil);
             }
             return ret;
         }
@@ -72,7 +75,7 @@ impl User {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.value_object = &mut (*(new_user as *mut Object));
-            (*io).set_tag_variant(TagVariant::User as u8);
+            (*io).set_tag_variant2(TagVariant::User);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).gc_debt > 0 {
@@ -99,7 +102,7 @@ impl User {
                 }
             }
             generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut Object)));
-            return 1 + self.count_upvalues as i32;
+            return 1 + self.count_upvalues;
         }
     }
 }

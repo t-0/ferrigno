@@ -43,8 +43,8 @@ impl TObject for Closure {
     fn get_class_name(&mut self) -> String {
         "closure".to_string()
     }
-    fn get_metatable(&mut self) -> *mut Table {
-        null_mut()
+    fn getgclist(&mut self) -> *mut *mut Object {
+        &mut self.gc_list
     }
 }
 impl Closure {

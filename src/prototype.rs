@@ -7,7 +7,6 @@ use crate::interpreter::*;
 use crate::loadable::*;
 use crate::localvariable::*;
 use crate::object::*;
-use crate::table::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tstring::*;
@@ -48,8 +47,8 @@ impl TObject for Prototype {
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()
     }
-    fn get_metatable(&mut self) -> *mut Table {
-        null_mut()
+    fn getgclist(& mut self) -> *mut *mut Object {
+        &mut self.prototype_gc_list
     }
 }
 impl Prototype {

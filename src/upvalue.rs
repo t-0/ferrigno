@@ -1,9 +1,7 @@
 use crate::interpreter::*;
 use crate::object::*;
-use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
-use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
@@ -20,9 +18,6 @@ impl TObject for UpValue {
     }
     fn get_class_name(&mut self) -> String {
         "upvalue".to_string()
-    }
-    fn get_metatable(&mut self) -> *mut Table {
-        null_mut()
     }
 }
 impl UpValue {

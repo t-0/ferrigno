@@ -53,14 +53,14 @@ pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v:
                 ExpressionKind::ConstantInteger => {
                     if !v.is_null() {
                         (*v).value.value_integer = (*expression_description).value.value_integer;
-                        (*v).set_tag_variant(TagVariant::NumericInteger as u8);
+                        (*v).set_tag_variant2(TagVariant::NumericInteger);
                     }
                     return true;
                 },
                 ExpressionKind::ConstantNumber => {
                     if !v.is_null() {
                         (*v).value.value_number = (*expression_description).value.value_number;
-                        (*v).set_tag_variant(TagVariant::NumericNumber as u8);
+                        (*v).set_tag_variant2(TagVariant::NumericNumber);
                     }
                     return true;
                 },

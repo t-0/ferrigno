@@ -40,6 +40,9 @@ impl TObject for Table {
     fn get_metatable(&mut self) -> *mut Table {
         self.metatable
     }
+    fn getgclist(& mut self) -> *mut *mut Object {
+        &mut self.gc_list
+    }
 }
 impl New for Table {
     fn new() -> Self {
@@ -397,7 +400,7 @@ pub unsafe fn luah_next(interpreter: *mut Interpreter, table: *mut Table, key: *
             if !(*((*table).array).offset(i as isize)).is_tagtype_nil() {
                 let io: *mut TValue = &mut (*key);
                 (*io).value.value_integer = i.wrapping_add(1 as u32) as i64;
-                (*io).set_tag_variant(TagVariant::NumericInteger as u8);
+                (*io).set_tag_variant2(TagVariant::NumericInteger);
                 let io1: *mut TValue = &mut (*key.offset(1 as isize));
                 let io2: *const TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 (*io1).copy_from(&*io2);
@@ -550,8 +553,8 @@ pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mu
             for i in 0..size {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
                 (*node).next = 0;
-                (*node).key.set_tag_variant(TagVariant::NilNil as u8);
-                (*node).value.set_tag_variant(TagVariant::NilEmpty as u8);
+                (*node).key.set_tag_variant2(TagVariant::NilNil);
+                (*node).value.set_tag_variant2(TagVariant::NilEmpty);
             }
             (*table).log_size_node = lsize as u8;
             (*table).last_free = &mut *((*table).node).offset(size as isize) as *mut Node;
@@ -607,7 +610,7 @@ pub unsafe fn luah_resize(interpreter: *mut Interpreter, table: *mut Table, new_
         (*table).array = new_array;
         (*table).array_limit = new_array_size as u32;
         for i in old_array_size..new_array_size {
-            (*((*table).array).offset(i as isize)).set_tag_variant(TagVariant::NilEmpty as u8);
+            (*((*table).array).offset(i as isize)).set_tag_variant2(TagVariant::NilEmpty);
         }
         reinsert(interpreter, &mut new_table, table);
         freehash(interpreter, &mut new_table);
@@ -662,7 +665,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
             let mut k: i64 = 0;
             if luav_flttointeger(number, &mut k, F2I::Equal) {
                 aux.value.value_integer = k;
-                aux.set_tag_variant(TagVariant::NumericInteger as u8);
+                aux.set_tag_variant2(TagVariant::NumericInteger);
                 key = &mut aux;
             } else if number != number {
                 luag_runerror(interpreter, c"table index is NaN".as_ptr());
@@ -691,7 +694,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
                     (*f_0).next += mp.offset_from(f_0) as i32;
                     (*mp).next = 0;
                 }
-                (*mp).value.set_tag_variant(TagVariant::NilEmpty as u8);
+                (*mp).value.set_tag_variant2(TagVariant::NilEmpty);
             } else {
                 if (*mp).next != 0 {
                     (*f_0).next = mp.offset((*mp).next as isize).offset_from(f_0) as i32;
@@ -818,7 +821,7 @@ pub unsafe fn luah_setint(interpreter: *mut Interpreter, table: *mut Table, key:
             let mut k: TValue = TValue::new(TagVariant::NilNil as u8);
             let io: *mut TValue = &mut k;
             (*io).value.value_integer = key;
-            (*io).set_tag_variant(TagVariant::NumericInteger as u8);
+            (*io).set_tag_variant2(TagVariant::NumericInteger);
             luah_newkey(interpreter, table, &mut k, value);
         } else {
             let io1: *mut TValue = p as *mut TValue;
@@ -915,7 +918,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
                     luat_gettm((*((*t).value.value_object as *mut Table)).get_metatable(), TM_INDEX, (*(*interpreter).global).tm_name[TM_INDEX as usize])
                 };
                 if tm.is_null() {
-                    (*value).set_tag_variant(TagVariant::NilNil as u8);
+                    (*value).set_tag_variant2(TagVariant::NilNil);
                     return;
                 }
             }
@@ -960,7 +963,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let x_: *mut Table = h;
                     (*io).value.value_object = &mut (*(x_ as *mut Object));
-                    (*io).set_tag_variant(TagVariant::Table as u8);
+                    (*io).set_tag_variant2(TagVariant::Table);
                     (*io).set_collectable(true);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                     luah_finishset(interpreter, h, key, slot, value);

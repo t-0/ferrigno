@@ -543,7 +543,7 @@ impl Global {
         unsafe {
             let object: *mut Object = self.gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
-            self.gray = *getgclist(object);
+            self.gray = *(*object).getgclist();
             const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
             const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
             const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
@@ -563,7 +563,18 @@ impl Global {
     }
     pub unsafe fn markmt(&mut self) {
         unsafe {
-            for i in TAGTYPE_SIMPLE_ {
+            const TAGTYPE_SIMPLE: [TagType; 9] = [
+                TagType::Nil,
+                TagType::Boolean,
+                TagType::Pointer,
+                TagType::Numeric,
+                TagType::String,
+                TagType::Table,
+                TagType::Closure,
+                TagType::User,
+                TagType::State,
+            ];
+            for i in TAGTYPE_SIMPLE {
                 if !(self.metatables[i as usize]).is_null() {
                     if (*self.metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         really_mark_object(self, &mut (*(*(self.metatables).as_mut_ptr().offset(i as isize) as *mut Object)));
@@ -698,7 +709,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut Object) {
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant(TagVariant::NilEmpty as u8);
+                    (*node).value.set_tag_variant2(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();
@@ -718,13 +729,13 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut Object, f: *mut Obj
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.value_object } else { null_mut() }) != 0 {
-                    (*tvalue).set_tag_variant(TagVariant::NilEmpty as u8);
+                    (*tvalue).set_tag_variant2(TagVariant::NilEmpty);
                 }
             }
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant(TagVariant::NilEmpty as u8);
+                    (*node).value.set_tag_variant2(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();

@@ -13,7 +13,7 @@ pub const DUMMY_NODE: Node = Node { value: TValue::new(TagVariant::NilEmpty as u
 impl Node {
     pub fn clearkey(&mut self) {
         if self.key.is_collectable() {
-            self.key.set_tag_variant(TagVariant::DeadKey as u8);
+            self.key.set_tag_variant2(TagVariant::DeadKey);
         }
     }
 }

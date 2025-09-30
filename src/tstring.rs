@@ -4,13 +4,11 @@ use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::stringtable::*;
-use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::c::*;
 use crate::utility::*;
 use libc::memcmp;
-use std::ptr::*;
 pub const STRING_SHORT_MAX: usize = 40;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -31,9 +29,6 @@ impl TObject for TString {
     }
     fn get_class_name(&mut self) -> String {
         "string".to_string()
-    }
-    fn get_metatable(&mut self) -> *mut Table {
-        null_mut()
     }
 }
 impl TString {
