@@ -6305,7 +6305,7 @@ pub unsafe fn lual_newstate() -> *mut Interpreter {
             raw_allocate(interpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
             return null_mut();
         }
-        (*interpreter).set_tag_variant(TagVariant::State as u8);
+        (*interpreter).set_tag_variant2(TagVariant::State);
         (*global).current_white = (1 << 3) as u8;
         (*interpreter).set_marked((*global).current_white & (1 << 3 | 1 << 4));
         preinit_thread(interpreter, global);

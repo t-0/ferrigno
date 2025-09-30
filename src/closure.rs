@@ -92,7 +92,7 @@ impl Closure {
 pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
         if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL as u8) {
-            (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil as u8);
+            (*(*interpreter).top.stkidrel_pointer).set_tag_variant2(TagVariant::NilNil);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let prototype: *const Prototype = (*closure).payload.l_prototype;
@@ -100,7 +100,7 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
             let table: *mut Table = luah_new(interpreter);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.value_object = &mut (*(table as *mut Object));
-            (*io).set_tag_variant(TagVariant::Table as u8);
+            (*io).set_tag_variant2(TagVariant::Table);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).prototype_line_info.vectort_pointer).is_null() {
@@ -207,7 +207,7 @@ pub unsafe fn luaf_initupvals(interpreter: *mut Interpreter, closure: *mut Closu
             let object: *mut Object = luac_newobj(interpreter, TagVariant::UpValue as u8, size_of::<UpValue>());
             let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
             (*upvalue).v.p = &mut (*upvalue).u.value;
-            (*(*upvalue).v.p).set_tag_variant(TagVariant::NilNil as u8);
+            (*(*upvalue).v.p).set_tag_variant2(TagVariant::NilNil);
             let ref mut fresh = *((*closure).upvalues).l_upvalues.as_mut_ptr().offset(i as isize);
             *fresh = upvalue;
             if (*closure).get_marked() & 1 << 5 != 0 && (*upvalue).get_marked() & (1 << 3 | 1 << 4) != 0 {

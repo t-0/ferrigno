@@ -83,15 +83,15 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
         }
         match (*expression_description).expression_kind {
             ExpressionKind::False => {
-                (*v).set_tag_variant(TagVariant::BooleanFalse as u8);
+                (*v).set_tag_variant2(TagVariant::BooleanFalse);
                 return true;
             },
             ExpressionKind::True => {
-                (*v).set_tag_variant(TagVariant::BooleanTrue as u8);
+                (*v).set_tag_variant2(TagVariant::BooleanTrue);
                 return true;
             },
             ExpressionKind::Nil => {
-                (*v).set_tag_variant(TagVariant::NilNil as u8);
+                (*v).set_tag_variant2(TagVariant::NilNil);
                 return true;
             },
             ExpressionKind::ConstantString => {

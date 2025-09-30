@@ -45,7 +45,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             }
             let io = &mut (*ra.offset(3 as isize));
             (*io).value.value_integer = initial;
-            (*io).set_tag_variant(TagVariant::NumericInteger as u8);
+            (*io).set_tag_variant2(TagVariant::NumericInteger);
             if forlimit(interpreter, initial, plimit, &mut limit, step) != 0 {
                 return 1;
             } else {
@@ -60,7 +60,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                     count = count / ((-(step + 1) as usize) + 1) as usize;
                 }
                 (*plimit).value.value_integer = count as i64;
-                (*plimit).set_tag_variant(TagVariant::NumericInteger as u8);
+                (*plimit).set_tag_variant2(TagVariant::NumericInteger);
             }
         } else {
             let mut init_0: f64 = 0.0;
@@ -106,15 +106,15 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
                 return 1;
             } else {
                 (*plimit).value.value_number = limit_0;
-                (*plimit).set_tag_variant(TagVariant::NumericNumber as u8);
+                (*plimit).set_tag_variant2(TagVariant::NumericNumber);
                 (*pstep).value.value_number = step_0;
-                (*pstep).set_tag_variant(TagVariant::NumericNumber as u8);
+                (*pstep).set_tag_variant2(TagVariant::NumericNumber);
                 let io_3: *mut TValue = &mut (*ra);
                 (*io_3).value.value_number = init_0;
-                (*io_3).set_tag_variant(TagVariant::NumericNumber as u8);
+                (*io_3).set_tag_variant2(TagVariant::NumericNumber);
                 let io_4: *mut TValue = &mut (*ra.offset(3 as isize));
                 (*io_4).value.value_number = init_0;
-                (*io_4).set_tag_variant(TagVariant::NumericNumber as u8);
+                (*io_4).set_tag_variant2(TagVariant::NumericNumber);
             }
         }
         return 0;
@@ -131,7 +131,7 @@ pub unsafe fn floatforloop(ra: *mut TValue) -> i32 {
             (*io).value.value_number = index;
             let io_0: *mut TValue = &mut (*ra.offset(3 as isize));
             (*io_0).value.value_number = index;
-            (*io_0).set_tag_variant(TagVariant::NumericNumber as u8);
+            (*io_0).set_tag_variant2(TagVariant::NumericNumber);
             return 1;
         } else {
             return 0;
