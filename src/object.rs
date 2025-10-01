@@ -75,7 +75,7 @@ pub trait TObject {
 #[repr(C)]
 pub struct Object {
     pub next: *mut Object = null_mut(),
-    pub tag: TagVariant = TagVariant::NilNil,
+    pub tagvariant: TagVariant = TagVariant::NilNil,
     pub marked: u8 = 0,
 }
 impl TObject for Object {
@@ -92,13 +92,13 @@ impl TObject for Object {
         self.marked = marked;
     }
     fn get_tag_variant(&self) -> TagVariant {
-        self.tag
+        self.tagvariant
     }
     fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag_variant())
     }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
-        self.tag = tagvariant;
+        self.tagvariant = tagvariant;
     }
     fn get_class_name(&mut self) -> String {
         "object".to_string()
@@ -118,7 +118,7 @@ impl TObject for Object {
 }
 impl Object {
     pub fn new(tag: TagVariant) -> Object {
-        Object { next: null_mut(), tag: tag, marked: 0, .. }
+        Object { next: null_mut(), tagvariant: tag, marked: 0, .. }
     }
 }
 pub unsafe fn linkgclist_(object: *mut Object, pnext: *mut *mut Object, list: *mut *mut Object) {

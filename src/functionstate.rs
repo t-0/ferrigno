@@ -735,7 +735,7 @@ pub unsafe fn freeexps(lexical_state: *mut LexicalState, function_state: *mut Fu
 }
 pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, key: *mut TValue, v: *mut TValue) -> i32 {
     unsafe {
-        let mut value: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut value: TValue = TValue::new(TagVariant::NilNil);
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*lexical_state).table, key);
         let mut count_constants: i32;
@@ -786,7 +786,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
 }
 pub unsafe fn string_constant(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, s: *mut TString) -> i32 {
     unsafe {
-        let mut o: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut o: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut o;
         (*io).value.value_object = &mut (*(s as *mut Object));
         (*io).set_tag_variant((*s).get_tag_variant());
@@ -796,7 +796,7 @@ pub unsafe fn string_constant(interpreter: *mut Interpreter, lexical_state: *mut
 }
 pub unsafe fn luak_int_k(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, integer: i64) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
         tvalue.value.value_integer = integer;
         tvalue.set_tag_variant(TagVariant::NumericInteger);
         return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
@@ -804,7 +804,7 @@ pub unsafe fn luak_int_k(interpreter: *mut Interpreter, lexical_state: *mut Lexi
 }
 pub unsafe fn luak_number_k(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, number: f64) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
         let mut ik: i64 = 0;
         tvalue.value.value_number = number;
         tvalue.set_tag_variant(TagVariant::NumericNumber);
@@ -814,7 +814,7 @@ pub unsafe fn luak_number_k(interpreter: *mut Interpreter, lexical_state: *mut L
             let nbm: i32 = 53 as i32;
             let q: f64 = ldexp_(1.0f64, -nbm + 1);
             let k: f64 = if ik == 0 { q } else { number + number * q };
-            let mut kv: TValue = TValue::new(TagVariant::NumericNumber as u8);
+            let mut kv: TValue = TValue::new(TagVariant::NumericNumber);
             kv.value.value_number = k;
             return addk(interpreter, lexical_state, function_state, &mut kv, &mut tvalue);
         };
@@ -822,20 +822,20 @@ pub unsafe fn luak_number_k(interpreter: *mut Interpreter, lexical_state: *mut L
 }
 pub unsafe fn bool_false(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut tvalue: TValue = TValue::new(TagVariant::BooleanFalse as u8);
+        let mut tvalue: TValue = TValue::new(TagVariant::BooleanFalse);
         return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
     }
 }
 pub unsafe fn bool_true(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut value: TValue = TValue::new(TagVariant::BooleanTrue as u8);
+        let mut value: TValue = TValue::new(TagVariant::BooleanTrue);
         return addk(interpreter, lexical_state, function_state, &mut value, &mut value);
     }
 }
 pub unsafe fn nil_k(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) -> i32 {
     unsafe {
-        let mut key: TValue = TValue::new(TagVariant::Table as u8);
-        let mut value: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut key: TValue = TValue::new(TagVariant::Table);
+        let mut value: TValue = TValue::new(TagVariant::NilNil);
         let table: *mut Table = (*lexical_state).table;
         key.value.value_object = &mut (*(table as *mut Object));
         key.set_collectable(true);
@@ -1383,9 +1383,9 @@ pub unsafe fn is_k_string(function_state: *mut FunctionState, expression_descrip
 }
 pub unsafe fn constfolding(interpreter: *mut Interpreter, _lexical_state: *mut LexicalState, _function_state: *mut FunctionState, op: i32, e1: *mut ExpressionDescription, e2: *const ExpressionDescription) -> i32 {
     unsafe {
-        let mut v1: TValue = TValue::new(TagVariant::NilNil as u8);
-        let mut v2: TValue = TValue::new(TagVariant::NilNil as u8);
-        let mut res: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut v1: TValue = TValue::new(TagVariant::NilNil);
+        let mut v2: TValue = TValue::new(TagVariant::NilNil);
+        let mut res: TValue = TValue::new(TagVariant::NilNil);
         if !tonumeral(e1, &mut v1) || !tonumeral(e2, &mut v2) || validop(op, &mut v1, &mut v2) == 0 {
             return 0;
         }

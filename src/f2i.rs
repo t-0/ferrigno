@@ -43,7 +43,7 @@ pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i3
 }
 pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
     unsafe {
-        let mut tvalue = TValue::new(TagVariant::NilNil as u8);
+        let mut tvalue = TValue::new(TagVariant::NilNil);
         if tvalue.from_string_to_number(obj) {
             obj = &mut tvalue;
         }

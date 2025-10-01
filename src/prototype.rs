@@ -133,9 +133,9 @@ impl Prototype {
             dump_state.dump_int(n as i32);
             for i in 0..n {
                 let tvalue: *const TValue = &mut *(self.prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
-                let tag = (*tvalue).get_tag_variant();
-                dump_state.dump_byte(tag as u8);
-                match tag {
+                let tagvariant = (*tvalue).get_tag_variant();
+                dump_state.dump_byte(tagvariant as u8);
+                match tagvariant {
                     TagVariant::NumericNumber => {
                         dump_state.dump_number((*tvalue).value.value_number);
                     },

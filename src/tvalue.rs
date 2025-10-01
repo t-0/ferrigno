@@ -19,7 +19,7 @@ use std::ptr::*;
 #[repr(C)]
 pub struct TValue {
     pub value: Value,
-    tag: u8,
+    tag: TagVariant,
     collectable: bool,
     pub delta: u16,
 }
@@ -36,7 +36,7 @@ impl TValue {
     }
     pub unsafe fn to_number(&self, result: *mut f64) -> bool {
         unsafe {
-            let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+            let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
             if (*self).get_tag_variant() == TagVariant::NumericInteger {
                 *result = (*self).value.value_integer as f64;
                 return true;
@@ -64,8 +64,8 @@ impl TValue {
             }
         }
     }
-    pub const fn new(tag: u8) -> Self {
-        TValue { value: Value::new_object(null_mut()), tag: tag, collectable: false, delta: 0 }
+    pub const fn new(tagvariant: TagVariant) -> Self {
+        TValue { value: Value::new_object(null_mut()), tag: tagvariant, collectable: false, delta: 0 }
     }
     pub fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -91,10 +91,10 @@ impl TValue {
         get_tag_type(self.get_tag_variant())
     }
     pub fn get_tag_variant(&self) -> TagVariant {
-        get_tag_variant(self.tag)
+        self.tag
     }
     pub fn set_tag_variant(&mut self, tagvariant: TagVariant) {
-        self.tag = tagvariant as u8;
+        self.tag = tagvariant;
         self.collectable = false;
     }
     pub fn is_collectable(&self) -> bool {
@@ -184,7 +184,7 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
         return length;
     }
 }
-pub const ABSENT_KEY: TValue = { TValue::new(TagVariant::NilAbsentKey as u8) };
+pub const ABSENT_KEY: TValue = { TValue::new(TagVariant::NilAbsentKey) };
 pub unsafe fn arrayindex(k: i64) -> u32 {
     if (k as usize).wrapping_sub(1 as usize)
         < (if ((1 as u32) << (size_of::<i32>() as usize).wrapping_mul(8 as usize).wrapping_sub(1 as usize) as i32) as usize <= (((!0usize) / size_of::<TValue>()) as usize) {

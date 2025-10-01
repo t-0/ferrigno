@@ -100,10 +100,10 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe fn lual_checktype(& mut self, arg: i32, tag: TagType) {
+    pub unsafe fn lual_checktype(& mut self, arg: i32, tagtype: TagType) {
         unsafe {
-            if lua_type(self, arg) != Some(tag) {
-                tag_error2(self, arg, Some(tag));
+            if lua_type(self, arg) != Some(tagtype) {
+                tag_error2(self, arg, Some(tagtype));
             }
         }
     }
@@ -1196,7 +1196,7 @@ pub unsafe fn lua_closeslot(interpreter: *mut Interpreter, index: i32) {
 pub unsafe fn reverse(mut _state: *mut Interpreter, mut from: *mut TValue, mut to: *mut TValue) {
     unsafe {
         while from < to {
-            let mut temp: TValue = TValue::new(TagVariant::NilNil as u8);
+            let mut temp: TValue = TValue::new(TagVariant::NilNil);
             let io1: *mut TValue = &mut temp;
             let io2: *const TValue = &mut (*from);
             (*io1).copy_from(&*io2);
@@ -1640,7 +1640,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
             let io2: *const TValue = slot;
             (*io1).copy_from(&*io2);
         } else {
-            let mut aux: TValue = TValue::new(TagVariant::NilNil as u8);
+            let mut aux: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut aux;
             (*io).value.value_integer = n;
             (*io).set_tag_variant(TagVariant::NumericInteger);
@@ -1762,7 +1762,7 @@ pub unsafe fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
             } else {
             };
         } else {
-            let mut aux: TValue = TValue::new(TagVariant::NumericInteger as u8);
+            let mut aux: TValue = TValue::new(TagVariant::NumericInteger);
             aux.value.value_integer = n;
             luav_finishset(interpreter, t, &mut aux, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))), slot);
         }
@@ -2790,19 +2790,19 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                     buff_fs.add_string(&mut c, 1 as usize);
                 },
                 Character::LowerD => {
-                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_integer = argp.arg::<i32>() as i64;
                     tvalue.set_tag_variant(TagVariant::NumericInteger);
                     buff_fs.add_number(&mut tvalue);
                 },
                 Character::UpperI => {
-                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_integer = argp.arg::<i64>();
                     tvalue.set_tag_variant(TagVariant::NumericInteger);
                     buff_fs.add_number(&mut tvalue);
                 },
                 Character::LowerF => {
-                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil as u8);
+                    let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_number = argp.arg::<f64>();
                     tvalue.set_tag_variant(TagVariant::NumericNumber);
                     buff_fs.add_number(&mut tvalue);
@@ -3014,7 +3014,7 @@ pub unsafe fn luat_trybinassoctm(interpreter: *mut Interpreter, p1: *const TValu
 }
 pub unsafe fn luat_trybinitm(interpreter: *mut Interpreter, p1: *const TValue, i2: i64, flip: i32, res: *mut TValue, event: u32) {
     unsafe {
-        let mut aux: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut aux: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut aux;
         (*io).value.value_integer = i2;
         (*io).set_tag_variant(TagVariant::NumericInteger);
@@ -3031,7 +3031,7 @@ pub unsafe fn luat_callordertm(interpreter: *mut Interpreter, p1: *const TValue,
 }
 pub unsafe fn luat_callorderitm(interpreter: *mut Interpreter, mut p1: *const TValue, v2: i32, flip: i32, is_float: bool, event: u32) -> i32 {
     unsafe {
-        let mut aux: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut aux: TValue = TValue::new(TagVariant::NilNil);
         let p2: *const TValue;
         if is_float {
             let io: *mut TValue = &mut aux;
@@ -3172,7 +3172,7 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         let tm: *const TValue;
-        let mut v: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut v: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut v;
         let i_g: *mut Object = (*global).udata2finalize();
         (*io).value.value_object = i_g;
@@ -3769,7 +3769,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let io2_6: *const TValue = slot_1;
                                 (*io1_6).copy_from(&(*io2_6));
                             } else {
-                                let mut key_0: TValue = TValue::new(TagVariant::NilNil as u8);
+                                let mut key_0: TValue = TValue::new(TagVariant::NilNil);
                                 let io_1: *mut TValue = &mut key_0;
                                 (*io_1).value.value_integer = c as i64;
                                 (*io_1).set_tag_variant(TagVariant::NumericInteger);
@@ -3922,7 +3922,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 } else {
                                 };
                             } else {
-                                let mut key_3: TValue = TValue::new(TagVariant::NilNil as u8);
+                                let mut key_3: TValue = TValue::new(TagVariant::NilNil);
                                 let io_2: *mut TValue = &mut key_3;
                                 (*io_2).value.value_integer = c_0 as i64;
                                 (*io_2).set_tag_variant(TagVariant::NumericInteger);
@@ -5690,9 +5690,9 @@ pub unsafe fn lual_typeerror(interpreter: *mut Interpreter, arg: i32, tname: *co
         return lual_argerror(interpreter, arg, message);
     }
 }
-pub unsafe fn tag_error2(interpreter: *mut Interpreter, arg: i32, tag: Option<TagType>) {
+pub unsafe fn tag_error2(interpreter: *mut Interpreter, arg: i32, tagtype: Option<TagType>) {
     unsafe {
-        lual_typeerror(interpreter, arg, lua_typename(interpreter, tag));
+        lual_typeerror(interpreter, arg, lua_typename(interpreter, tagtype));
     }
 }
 pub unsafe fn lual_where(interpreter: *mut Interpreter, level: i32) {
@@ -6054,14 +6054,14 @@ pub unsafe fn lual_getmetafield(interpreter: *mut Interpreter, obj: i32, event: 
     unsafe {
         if (*interpreter).lua_getmetatable(obj) {
             lua_pushstring(interpreter, event);
-            let tag = lua_rawget(interpreter, -2);
-            if tag == TagType::Nil {
+            let tagtype = lua_rawget(interpreter, -2);
+            if tagtype == TagType::Nil {
                 lua_settop(interpreter, -3);
             } else {
                 lua_rotate(interpreter, -2, -1);
                 lua_settop(interpreter, -2);
             }
-            return tag;
+            return tagtype;
         } else {
             return TagType::Nil;
         };
@@ -6117,14 +6117,14 @@ pub unsafe fn lual_tolstring(interpreter: *mut Interpreter, mut index: i32, leng
                     lua_pushstring(interpreter, c"nil".as_ptr());
                 },
                 _ => {
-                    let tag = lual_getmetafield(interpreter, index, c"__name".as_ptr());
-                    let kind: *const i8 = if tag == TagType::String {
+                    let tagtype = lual_getmetafield(interpreter, index, c"__name".as_ptr());
+                    let kind: *const i8 = if tagtype == TagType::String {
                         lua_tolstring(interpreter, -1, null_mut())
                     } else {
                         lua_typename(interpreter, lua_type(interpreter, index))
                     };
                     lua_pushfstring(interpreter, c"%s: %p".as_ptr(), kind, (*interpreter).to_pointer(index));
-                    if tag != TagType::Nil {
+                    if tagtype != TagType::Nil {
                         lua_rotate(interpreter, -2, -1);
                         lua_settop(interpreter, -2);
                     }

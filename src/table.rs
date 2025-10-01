@@ -314,7 +314,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
 }
 pub unsafe fn mainpositionfromnode(t: *const Table, nd: *mut Node) -> *mut Node {
     unsafe {
-        let mut key: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut key: TValue = TValue::new(TagVariant::NilNil);
         let io_: *mut TValue = &mut key;
         let node: *const Node = nd;
         (*io_).copy_from(&((*node).key));
@@ -557,7 +557,7 @@ pub unsafe fn reinsert(interpreter: *mut Interpreter, ot: *mut Table, table: *mu
         while j < size {
             let old: *mut Node = &mut *((*ot).node).offset(j as isize) as *mut Node;
             if !(*old).value.is_tagtype_nil() {
-                let mut k: TValue = TValue::new(TagVariant::NilNil as u8);
+                let mut k: TValue = TValue::new(TagVariant::NilNil);
                 let io_: *mut TValue = &mut k;
                 let node: *const Node = old;
                 (*io_).copy_from(&(*node).key);
@@ -645,7 +645,7 @@ pub unsafe fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
 pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut key: *const TValue, value: *mut TValue) {
     unsafe {
         let mut mp;
-        let mut aux: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut aux: TValue = TValue::new(TagVariant::NilNil);
         if (*key).is_tagtype_nil() {
             luag_runerror(interpreter, c"table index is nil".as_ptr());
         } else if (*key).get_tag_variant() == TagVariant::NumericNumber {
@@ -752,7 +752,7 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
         if (*key).get_tag_variant() == TagVariant::StringShort {
             return luah_getshortstr(table, key);
         } else {
-            let mut ko: TValue = TValue::new(TagVariant::NilNil as u8);
+            let mut ko: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut ko;
             let tstring: *mut TString = key;
             (*io).value.value_object = &mut (*(tstring as *mut Object));
@@ -802,7 +802,7 @@ pub unsafe fn luah_setint(interpreter: *mut Interpreter, table: *mut Table, key:
     unsafe {
         let p: *const TValue = luah_getint(table, key);
         if (*p).get_tag_variant() == TagVariant::NilAbsentKey {
-            let mut k: TValue = TValue::new(TagVariant::NilNil as u8);
+            let mut k: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut k;
             (*io).value.value_integer = key;
             (*io).set_tag_variant(TagVariant::NumericInteger);

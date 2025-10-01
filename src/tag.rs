@@ -89,7 +89,6 @@ impl TagVariant {
         }
     }
 }
-const TAG_VARIANT_MASK_: u8 = 0x3F;
 pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
     match tagvariant {
         TagVariant::NilNil => TagType::Nil,
@@ -112,9 +111,6 @@ pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
         TagVariant::Prototype => TagType::Prototype,
         TagVariant::DeadKey => TagType::DeadKey,
     }
-}
-pub const fn get_tag_variant(tag: u8) -> TagVariant {
-    TagVariant::from(TAG_VARIANT_MASK_ & tag)
 }
 pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
     match tag {

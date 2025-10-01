@@ -102,7 +102,7 @@ pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Clo
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if !((*prototype).prototype_line_info.vectort_pointer).is_null() {
-                let mut v: TValue = TValue::new(TagVariant::BooleanTrue as u8);
+                let mut v: TValue = TValue::new(TagVariant::BooleanTrue);
                 let start: i32 = if !(*prototype).prototype_is_variable_arguments {
                     0
                 } else {

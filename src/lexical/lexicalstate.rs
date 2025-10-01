@@ -1533,7 +1533,7 @@ pub unsafe fn check_next2(interpreter: *mut Interpreter, lexical_state: *mut Lex
 }
 pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
     unsafe {
-        let mut obj: TValue = TValue::new(TagVariant::NilNil as u8);
+        let mut obj: TValue = TValue::new(TagVariant::NilNil);
         let mut expo: *const i8 = c"Ee".as_ptr();
         let first: i32 = (*lexical_state).current;
         save(interpreter, lexical_state, (*lexical_state).current);

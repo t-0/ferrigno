@@ -9,7 +9,7 @@ pub struct Node {
     pub key: TValue,
     pub next: i32,
 }
-pub const DUMMY_NODE: Node = Node { value: TValue::new(TagVariant::NilEmpty as u8), key: TValue::new(TagVariant::NilNil as u8), next: 0 };
+pub const DUMMY_NODE: Node = Node { value: TValue::new(TagVariant::NilEmpty), key: TValue::new(TagVariant::NilNil), next: 0 };
 impl Node {
     pub fn clearkey(&mut self) {
         if self.key.is_collectable() {
