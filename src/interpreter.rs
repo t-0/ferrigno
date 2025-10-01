@@ -3024,7 +3024,7 @@ pub unsafe fn luat_trybinitm(interpreter: *mut Interpreter, p1: *const TValue, i
 pub unsafe fn luat_callordertm(interpreter: *mut Interpreter, p1: *const TValue, p2: *const TValue, event: u32) -> i32 {
     unsafe {
         if callbintm(interpreter, p1, p2, (*interpreter).top.stkidrel_pointer, event) != 0 {
-            return !((*(*interpreter).top.stkidrel_pointer).get_tag_variant() == TagVariant::BooleanFalse as u8 || (*(*interpreter).top.stkidrel_pointer).is_tagtype_nil()) as i32;
+            return !((*(*interpreter).top.stkidrel_pointer).get_tag_variant2() == TagVariant::BooleanFalse || (*(*interpreter).top.stkidrel_pointer).is_tagtype_nil()) as i32;
         }
         luag_ordererror(interpreter, p1, p2);
     }
@@ -3274,10 +3274,10 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
                 free_object(interpreter, curr);
             } else {
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
-                if (*curr).get_tag_variant() == TagVariant::State as u8 {
+                if (*curr).get_tag_variant2() == TagVariant::State {
                     let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
                     linkgclist_(&mut (*(other_state as *mut Object)), &mut (*other_state).gc_list, &mut (*global).gray_again);
-                } else if (*curr).get_tag_variant() == TagVariant::UpValue as u8 && (*(curr as *mut UpValue)).v.p != &mut (*(curr as *mut UpValue)).u.value as *mut TValue {
+                } else if (*curr).get_tag_variant2() == TagVariant::UpValue && (*(curr as *mut UpValue)).v.p != &mut (*(curr as *mut UpValue)).u.value as *mut TValue {
                     (*curr).set_marked((*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
                     (*curr).set_marked((*curr).get_marked() | 1 << 5);
@@ -3364,7 +3364,7 @@ pub unsafe fn prepcallclosemth(interpreter: *mut Interpreter, level: *mut TValue
 }
 pub unsafe fn luaf_newtbcupval(interpreter: *mut Interpreter, level: *mut TValue) {
     unsafe {
-        if (*level).get_tag_variant() == TagVariant::BooleanFalse as u8 || (*level).is_tagtype_nil() {
+        if (*level).get_tag_variant2() == TagVariant::BooleanFalse || (*level).is_tagtype_nil() {
             return;
         }
         checkclosemth(interpreter, level);
@@ -3528,7 +3528,7 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
                 (*io1_0).copy_from(&*io2_0);
             },
             58 | 59 | 62 | 63 | 64 | 65 | 57 => {
-                let res: i32 = !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::BooleanFalse as u8 || (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_type() == TagType::Nil) as i32;
+                let res: i32 = !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant2() == TagVariant::BooleanFalse || (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_type() == TagType::Nil) as i32;
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 if res != (inst >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
                     (*callinfo).call_info_u.l.saved_program_counter = ((*callinfo).call_info_u.l.saved_program_counter).offset(1);
@@ -3691,7 +3691,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let count_upvalues: *mut TValue = (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize)).v.p;
                             let rc: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let key: *mut TString = &mut (*((*rc).value.value_object as *mut TString));
-                            if if !((*count_upvalues).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*count_upvalues).get_tag_variant2() == TagVariant::Table) {
                                 slot = null();
                                 0
                             } else {
@@ -3716,9 +3716,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let rb_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let rc_0: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
                             let n: usize;
-                            if if (*rc_0).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if if (*rc_0).get_tag_variant2() == TagVariant::NumericInteger {
                                 n = (*rc_0).value.value_integer as usize;
-                                if !((*rb_1).get_tag_variant() == TagVariant::Table as u8) {
+                                if !((*rb_1).get_tag_variant2() == TagVariant::Table) {
                                     slot_0 = null();
                                     0
                                 } else {
@@ -3729,7 +3729,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     };
                                     !(*slot_0).is_tagtype_nil() as i32
                                 }
-                            } else if !((*rb_1).get_tag_variant() == TagVariant::Table as u8) {
+                            } else if !((*rb_1).get_tag_variant2() == TagVariant::Table) {
                                 slot_0 = null();
                                 0
                             } else {
@@ -3753,7 +3753,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let slot_1: *const TValue;
                             let rb_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
-                            if if !((*rb_2).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*rb_2).get_tag_variant2() == TagVariant::Table) {
                                 slot_1 = null();
                                 0
                             } else {
@@ -3786,7 +3786,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let rb_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let rc_1: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let key_1: *mut TString = &mut (*((*rc_1).value.value_object as *mut TString));
-                            if if !((*rb_3).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*rb_3).get_tag_variant2() == TagVariant::Table) {
                                 slot_2 = null();
                                 0
                             } else {
@@ -3815,7 +3815,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                             };
                             let key_2: *mut TString = &mut (*((*rb_4).value.value_object as *mut TString));
-                            if if !((*upval_0).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*upval_0).get_tag_variant2() == TagVariant::Table) {
                                 slot_3 = null();
                                 0
                             } else {
@@ -3851,9 +3851,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                             };
                             let n_0: usize;
-                            if if (*rb_5).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if if (*rb_5).get_tag_variant2() == TagVariant::NumericInteger {
                                 n_0 = (*rb_5).value.value_integer as usize;
-                                if !((*ra_14).get_tag_variant() == TagVariant::Table as u8) {
+                                if !((*ra_14).get_tag_variant2() == TagVariant::Table) {
                                     slot_4 = null();
                                     0
                                 } else {
@@ -3864,7 +3864,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     };
                                     !(*slot_4).is_tagtype_nil() as i32
                                 }
-                            } else if !((*ra_14).get_tag_variant() == TagVariant::Table as u8) {
+                            } else if !((*ra_14).get_tag_variant2() == TagVariant::Table) {
                                 slot_4 = null();
                                 0
                             } else {
@@ -3899,7 +3899,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                             };
-                            if if !((*ra_15).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*ra_15).get_tag_variant2() == TagVariant::Table) {
                                 slot_5 = null();
                                 0
                             } else {
@@ -3943,7 +3943,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
                             };
                             let key_4: *mut TString = &mut (*((*rb_6).value.value_object as *mut TString));
-                            if if !((*ra_16).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*ra_16).get_tag_variant2() == TagVariant::Table) {
                                 slot_6 = null();
                                 0
                             } else {
@@ -4012,7 +4012,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let io1_12: *mut TValue = &mut (*ra_18.offset(1 as isize));
                             let io2_12: *const TValue = rb_7;
                             (*io1_12).copy_from(&(*io2_12));
-                            if if !((*rb_7).get_tag_variant() == TagVariant::Table as u8) {
+                            if if !((*rb_7).get_tag_variant2() == TagVariant::Table) {
                                 slot_7 = null();
                                 0
                             } else {
@@ -4035,13 +4035,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let ra_19: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let v1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let imm: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
-                            if (*v1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if (*v1).get_tag_variant2() == TagVariant::NumericInteger {
                                 let iv1: i64 = (*v1).value.value_integer;
                                 program_counter = program_counter.offset(1);
                                 let io_4: *mut TValue = &mut (*ra_19);
                                 (*io_4).value.value_integer = (iv1 as usize).wrapping_add(imm as usize) as i64;
                                 (*io_4).set_tag_variant(TagVariant::NumericInteger);
-                            } else if (*v1).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                            } else if (*v1).get_tag_variant2() == TagVariant::NumericNumber {
                                 let nb: f64 = (*v1).value.value_number;
                                 let fimm: f64 = imm as f64;
                                 program_counter = program_counter.offset(1);
@@ -4055,7 +4055,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v1_0: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_20: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            if (*v1_0).get_tag_variant() == TagVariant::NumericInteger as u8 && (*v2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if (*v1_0).get_tag_variant2() == TagVariant::NumericInteger && (*v2).get_tag_variant2() == TagVariant::NumericInteger {
                                 let i1: i64 = (*v1_0).value.value_integer;
                                 let i2: i64 = (*v2).value.value_integer;
                                 program_counter = program_counter.offset(1);
@@ -4065,22 +4065,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 let mut n1: f64 = 0.0;
                                 let mut n2: f64 = 0.0;
-                                if (if (*v1_0).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                if (if (*v1_0).get_tag_variant2() == TagVariant::NumericNumber {
                                     n1 = (*v1_0).value.value_number;
                                     1
                                 } else {
-                                    if (*v1_0).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v1_0).get_tag_variant2() == TagVariant::NumericInteger {
                                         n1 = (*v1_0).value.value_integer as f64;
                                         1
                                     } else {
                                         0
                                     }
                                 }) != 0
-                                    && (if (*v2).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                    && (if (*v2).get_tag_variant2() == TagVariant::NumericNumber {
                                         n2 = (*v2).value.value_number;
                                         1
                                     } else {
-                                        if (*v2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                        if (*v2).get_tag_variant2() == TagVariant::NumericInteger {
                                             n2 = (*v2).value.value_integer as f64;
                                             1
                                         } else {
@@ -4100,7 +4100,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v1_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_0: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_21: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            if (*v1_1).get_tag_variant() == TagVariant::NumericInteger as u8 && (*v2_0).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if (*v1_1).get_tag_variant2() == TagVariant::NumericInteger && (*v2_0).get_tag_variant2() == TagVariant::NumericInteger {
                                 let i1_0: i64 = (*v1_1).value.value_integer;
                                 let i2_0: i64 = (*v2_0).value.value_integer;
                                 program_counter = program_counter.offset(1);
@@ -4110,22 +4110,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 let mut n1_0: f64 = 0.0;
                                 let mut n2_0: f64 = 0.0;
-                                if (if (*v1_1).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                if (if (*v1_1).get_tag_variant2() == TagVariant::NumericNumber {
                                     n1_0 = (*v1_1).value.value_number;
                                     1
                                 } else {
-                                    if (*v1_1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v1_1).get_tag_variant2() == TagVariant::NumericInteger {
                                         n1_0 = (*v1_1).value.value_integer as f64;
                                         1
                                     } else {
                                         0
                                     }
                                 }) != 0
-                                    && (if (*v2_0).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                    && (if (*v2_0).get_tag_variant2() == TagVariant::NumericNumber {
                                         n2_0 = (*v2_0).value.value_number;
                                         1
                                     } else {
-                                        if (*v2_0).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                        if (*v2_0).get_tag_variant2() == TagVariant::NumericInteger {
                                             n2_0 = (*v2_0).value.value_integer as f64;
                                             1
                                         } else {
@@ -4145,7 +4145,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v1_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_1: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_22: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            if (*v1_2).get_tag_variant() == TagVariant::NumericInteger as u8 && (*v2_1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if (*v1_2).get_tag_variant2() == TagVariant::NumericInteger && (*v2_1).get_tag_variant2() == TagVariant::NumericInteger {
                                 let i1_1: i64 = (*v1_2).value.value_integer;
                                 let i2_1: i64 = (*v2_1).value.value_integer;
                                 program_counter = program_counter.offset(1);
@@ -4155,22 +4155,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 let mut n1_1: f64 = 0.0;
                                 let mut n2_1: f64 = 0.0;
-                                if (if (*v1_2).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                if (if (*v1_2).get_tag_variant2() == TagVariant::NumericNumber {
                                     n1_1 = (*v1_2).value.value_number;
                                     1
                                 } else {
-                                    if (*v1_2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v1_2).get_tag_variant2() == TagVariant::NumericInteger {
                                         n1_1 = (*v1_2).value.value_integer as f64;
                                         1
                                     } else {
                                         0
                                     }
                                 }) != 0
-                                    && (if (*v2_1).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                    && (if (*v2_1).get_tag_variant2() == TagVariant::NumericNumber {
                                         n2_1 = (*v2_1).value.value_number;
                                         1
                                     } else {
-                                        if (*v2_1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                        if (*v2_1).get_tag_variant2() == TagVariant::NumericInteger {
                                             n2_1 = (*v2_1).value.value_integer as f64;
                                             1
                                         } else {
@@ -4192,7 +4192,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v1_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             let v2_2: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let ra_23: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            if (*v1_3).get_tag_variant() == TagVariant::NumericInteger as u8 && (*v2_2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                            if (*v1_3).get_tag_variant2() == TagVariant::NumericInteger && (*v2_2).get_tag_variant2() == TagVariant::NumericInteger {
                                 let i1_2: i64 = (*v1_3).value.value_integer;
                                 let i2_2: i64 = (*v2_2).value.value_integer;
                                 program_counter = program_counter.offset(1);
@@ -4202,22 +4202,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 let mut n1_2: f64 = 0.0;
                                 let mut n2_2: f64 = 0.0;
-                                if (if (*v1_3).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                if (if (*v1_3).get_tag_variant2() == TagVariant::NumericNumber {
                                     n1_2 = (*v1_3).value.value_number;
                                     1
                                 } else {
-                                    if (*v1_3).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v1_3).get_tag_variant2() == TagVariant::NumericInteger {
                                         n1_2 = (*v1_3).value.value_integer as f64;
                                         1
                                     } else {
                                         0
                                     }
                                 }) != 0
-                                    && (if (*v2_2).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                    && (if (*v2_2).get_tag_variant2() == TagVariant::NumericNumber {
                                         n2_2 = (*v2_2).value.value_number;
                                         1
                                     } else {
-                                        if (*v2_2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                        if (*v2_2).get_tag_variant2() == TagVariant::NumericInteger {
                                             n2_2 = (*v2_2).value.value_integer as f64;
                                             1
                                         } else {
@@ -4239,22 +4239,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v2_3: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let mut n1_3: f64 = 0.0;
                             let mut n2_3: f64 = 0.0;
-                            if (if (*v1_4).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                            if (if (*v1_4).get_tag_variant2() == TagVariant::NumericNumber {
                                 n1_3 = (*v1_4).value.value_number;
                                 1
                             } else {
-                                if (*v1_4).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                if (*v1_4).get_tag_variant2() == TagVariant::NumericInteger {
                                     n1_3 = (*v1_4).value.value_integer as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_3).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                && (if (*v2_3).get_tag_variant2() == TagVariant::NumericNumber {
                                     n2_3 = (*v2_3).value.value_number;
                                     1
                                 } else {
-                                    if (*v2_3).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v2_3).get_tag_variant2() == TagVariant::NumericInteger {
                                         n2_3 = (*v2_3).value.value_integer as f64;
                                         1
                                     } else {
@@ -4275,22 +4275,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let v2_4: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
                             let mut n1_4: f64 = 0.0;
                             let mut n2_4: f64 = 0.0;
-                            if (if (*v1_5).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                            if (if (*v1_5).get_tag_variant2() == TagVariant::NumericNumber {
                                 n1_4 = (*v1_5).value.value_number;
                                 1
                             } else {
-                                if (*v1_5).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                if (*v1_5).get_tag_variant2() == TagVariant::NumericInteger {
                                     n1_4 = (*v1_5).value.value_integer as f64;
                                     1
                                 } else {
                                     0
                                 }
                             }) != 0
-                                && (if (*v2_4).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                                && (if (*v2_4).get_tag_variant2() == TagVariant::NumericNumber {
                                     n2_4 = (*v2_4).value.value_number;
                                     1
                                 } else {
-                                    if (*v2_4).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                                    if (*v2_4).get_tag_variant2() == TagVariant::NumericInteger {
                                         n2_4 = (*v2_4).value.value_integer as f64;
                                         1
                                     } else {
