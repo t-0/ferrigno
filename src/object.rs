@@ -106,19 +106,42 @@ impl TObject for Object {
     fn getgclist(& mut self) -> *mut *mut Object {
         unsafe {
             match self.get_tag_variant() {
-                TagVariant::Table => return (*(self as *mut Object as *mut Table)).getgclist(),
-                TagVariant::ClosureL | TagVariant::ClosureC => return (*(self as *mut Object as *mut Closure)).getgclist(),
-                TagVariant::State => return (*(self as *mut Object as *mut Interpreter)).getgclist(),
-                TagVariant::Prototype => return (*(self as *mut Object as *mut Prototype)).getgclist(),
-                TagVariant::User => return (*(self as *mut Object as *mut User)).getgclist(),
+                TagVariant::Table | TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::State | TagVariant::Prototype | TagVariant::User => return (*(self as *mut Object as *mut ObjectWithGCList)).getgclist(),
                 _ => return null_mut(),
             };
         }
     }
 }
 impl Object {
-    pub fn new(tagvariant: TagVariant) -> Object {
-        Object { next: null_mut(), tagvariant: tagvariant, marked: 0, .. }
+    pub fn new(tagvariant: TagVariant) -> Self {
+        Self { next: null_mut(), tagvariant: tagvariant, marked: 0, .. }
+    }
+}
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct ObjectWithGCList {
+    pub object: Object,
+    pub gclist: *mut Object,
+}
+impl ObjectWithGCList {
+    pub fn new(tagvariant: TagVariant) -> Self {
+        Self { object: Object::new(tagvariant), gclist: null_mut(), .. }
+    }
+}
+impl TObject for ObjectWithGCList {
+    fn as_object(&self) -> &Object {
+        &self.object
+    }
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.object
+    }
+    fn get_class_name(&mut self) -> String {
+        "gclist".to_string()
+    }
+    fn getgclist(& mut self) -> *mut *mut Object {
+        unsafe {
+            &mut self.gclist
+        }
     }
 }
 pub unsafe fn linkgclist_(object: *mut Object, pnext: *mut *mut Object, list: *mut *mut Object) {
@@ -145,13 +168,13 @@ pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
 pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, v: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if (*global).gc_state as i32 <= 2 {
+        if (*global).global_gcstate as i32 <= 2 {
             really_mark_object(global, v);
             if (*object).get_marked() & 7 > 1 {
                 (*v).set_marked((*v).get_marked() & !(7) | 2);
             }
-        } else if (*global).gc_kind as i32 == 0 {
-            (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).current_white & (1 << 3 | 1 << 4)));
+        } else if (*global).global_gckind as i32 == 0 {
+            (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).global_currentwhite & (1 << 3 | 1 << 4)));
         }
     }
 }
@@ -161,7 +184,7 @@ pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut Obje
         if (*object).get_marked() & 7 == 6 {
             (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
-            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray_again);
+            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).global_grayagain);
         }
         if (*object).get_marked() & 7 > 1 {
             (*object).set_marked((*object).get_marked() & !7 | 5);
@@ -185,9 +208,9 @@ pub unsafe fn fix_object_global(global: *mut Global, object: *mut Object) {
     unsafe {
         (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         (*object).set_marked((*object).get_marked() & !(7) | 4);
-        (*global).all_gc = (*object).next;
-        (*object).next = (*global).fixed_gc;
-        (*global).fixed_gc = object;
+        (*global).global_allgc = (*object).next;
+        (*object).next = (*global).global_fixedgc;
+        (*global).global_fixedgc = object;
     }
 }
 pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
@@ -233,7 +256,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
         }
         match current_block_18 {
             15904375183555213903 => {
-                linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray);
+                linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).global_gray);
             },
             _ => {},
         };
@@ -242,7 +265,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
 pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
-            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).gray_again);
+            linkgclist_(&mut (*(object as *mut Object)), (*object).getgclist(), &mut (*global).global_grayagain);
         } else if (*object).get_marked() & 7 == 6 {
             (*object).set_marked(((*object).get_marked() ^ (6 ^ 4)) as u8);
         }

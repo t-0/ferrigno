@@ -231,8 +231,8 @@ pub unsafe fn reglevel(lexical_state: *mut LexicalState, function_state: *mut Fu
                 break;
             }
             let variable_description: *mut VariableDescription = getlocalvardesc(lexical_state, function_state, nvar);
-            if (*variable_description).content.kind as i32 != 3 {
-                return (*variable_description).content.register_index as i32 + 1;
+            if (*variable_description).content.variabledescriptioncontent_kind as i32 != 3 {
+                return (*variable_description).content.variabledescriptioncontent_registerindex as i32 + 1;
             }
         }
         return 0;
@@ -246,10 +246,10 @@ pub unsafe fn luay_nvarstack(lexical_state: *mut LexicalState, function_state: *
 pub unsafe fn localdebuginfo(lexical_state: *mut LexicalState, function_state: *mut FunctionState, vidx: i32) -> *mut LocalVariable {
     unsafe {
         let variable_description: *mut VariableDescription = getlocalvardesc(lexical_state, function_state, vidx);
-        if (*variable_description).content.kind as i32 == 3 {
+        if (*variable_description).content.variabledescriptioncontent_kind as i32 == 3 {
             return null_mut();
         } else {
-            let index: i32 = (*variable_description).content.pidx as i32;
+            let index: i32 = (*variable_description).content.variabledescriptioncontent_pidx as i32;
             return (*(*function_state).prototype).prototype_local_variables.at_mut(index as isize);
         };
     }
@@ -260,7 +260,7 @@ pub unsafe fn init_var(lexical_state: *mut LexicalState, function_state: *mut Fu
         (*expression_description).f = (*expression_description).t;
         (*expression_description).expression_kind = ExpressionKind::Local;
         (*expression_description).value.value_variable.valueregister_valueindex = vidx as u16;
-        (*expression_description).value.value_variable.valueregister_registerindex = (*getlocalvardesc(lexical_state, function_state, vidx)).content.register_index;
+        (*expression_description).value.value_variable.valueregister_registerindex = (*getlocalvardesc(lexical_state, function_state, vidx)).content.variabledescriptioncontent_registerindex;
     }
 }
 pub unsafe fn removevars(lexical_state: *mut LexicalState, function_state: *mut FunctionState, tolevel: i32) {
@@ -320,7 +320,7 @@ pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         if (*v).expression_kind == ExpressionKind::Local {
             (*upvalue_description).upvaluedescription_isinstack = true;
             (*upvalue_description).upvaluedescription_index = (*v).value.value_variable.valueregister_registerindex;
-            (*upvalue_description).upvaluedescription_kind = (*getlocalvardesc(lexical_state, previous, (*v).value.value_variable.valueregister_valueindex as i32)).content.kind;
+            (*upvalue_description).upvaluedescription_kind = (*getlocalvardesc(lexical_state, previous, (*v).value.value_variable.valueregister_valueindex as i32)).content.variabledescriptioncontent_kind;
         } else {
             (*upvalue_description).upvaluedescription_isinstack = false;
             (*upvalue_description).upvaluedescription_index = (*v).value.value_info as u8;
@@ -339,8 +339,8 @@ pub unsafe fn searchvar(lexical_state: *mut LexicalState, function_state: *mut F
         let mut i = (*function_state).count_active_variables as i32 - 1;
         while i >= 0 {
             let variable_description: *mut VariableDescription = getlocalvardesc(lexical_state, function_state, i);
-            if n == (*variable_description).content.name {
-                if (*variable_description).content.kind as i32 == 3 {
+            if n == (*variable_description).content.variabledescriptioncontent_name {
+                if (*variable_description).content.variabledescriptioncontent_kind as i32 == 3 {
                     init_exp(var, ExpressionKind::Constant2, (*function_state).first_local + i);
                 } else {
                     init_var(lexical_state, function_state, var, i);

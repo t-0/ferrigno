@@ -27,24 +27,23 @@ pub union ClosurePayload {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Closure {
-    pub object: Object,
+    pub gclist: ObjectWithGCList,
     pub count_upvalues: u8,
-    pub gc_list: *mut Object,
     pub payload: ClosurePayload,
     pub upvalues: ClosureUpValue,
 }
 impl TObject for Closure {
     fn as_object(&self) -> &Object {
-        &self.object
+        &self.gclist.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.object
+        self.gclist.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "closure".to_string()
     }
     fn getgclist(&mut self) -> *mut *mut Object {
-        &mut self.gc_list
+        self.gclist.getgclist()
     }
 }
 impl Closure {

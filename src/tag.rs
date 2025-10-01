@@ -120,17 +120,18 @@ pub fn is_none_or_nil(tagtype: Option<TagType>) -> bool {
 }
 pub const STRING_LOCAL: *const i8 = c"local".as_ptr();
 pub const STRING_UPVALUE: *const i8 = c"upvalue".as_ptr();
+pub const STRING_USERDATA: *const i8 = c"userdata".as_ptr();
 pub const TYPE_NAMES: [*const i8; 12] = [
     c"no value".as_ptr(),
     c"nil".as_ptr(),
     c"boolean".as_ptr(),
-    c"userdata".as_ptr(),
+    STRING_USERDATA,
     c"number".as_ptr(),
     c"string".as_ptr(),
     c"table".as_ptr(),
     c"function".as_ptr(),
-    c"userdata".as_ptr(),
+    STRING_USERDATA,
     c"thread".as_ptr(),
-    c"upvalue".as_ptr(),
+    STRING_UPVALUE,
     c"proto".as_ptr(),
 ];

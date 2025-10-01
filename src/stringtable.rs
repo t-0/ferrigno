@@ -59,7 +59,7 @@ impl StringTable {
 }
 pub unsafe fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
-        let stringtable: *mut StringTable = &mut (*(*interpreter).global).stringtable;
+        let stringtable: *mut StringTable = &mut (*(*interpreter).global).global_stringtable;
         (*stringtable).resize(interpreter, new_size);
     }
 }

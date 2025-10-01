@@ -1,6 +1,7 @@
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::value::*;
+use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union VariableDescription {
@@ -11,10 +12,10 @@ pub union VariableDescription {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct VariableDescriptionContent {
-    pub value: Value,
-    pub tag: u8,
-    pub kind: u8,
-    pub register_index: u8,
-    pub pidx: i16,
-    pub name: *mut TString,
+    pub variabledescriptioncontent_value: Value,
+    pub tag: TagVariant,
+    pub variabledescriptioncontent_kind: u8,
+    pub variabledescriptioncontent_registerindex: u8,
+    pub variabledescriptioncontent_pidx: i16,
+    pub variabledescriptioncontent_name: *mut TString,
 }

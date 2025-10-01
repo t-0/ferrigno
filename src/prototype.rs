@@ -21,8 +21,7 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Prototype {
-    pub object: Object,
-    pub prototype_gc_list: *mut Object,
+    pub gclist: ObjectWithGCList,
     pub prototype_is_variable_arguments: bool,
     pub prototype_count_parameters: u8,
     pub prototype_maximum_stack_size: u8,
@@ -39,16 +38,16 @@ pub struct Prototype {
 }
 impl TObject for Prototype {
     fn as_object(&self) -> &Object {
-        &self.object
+        self.gclist.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.object
+        self.gclist.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()
     }
     fn getgclist(& mut self) -> *mut *mut Object {
-        &mut self.prototype_gc_list
+        self.gclist.getgclist()
     }
 }
 impl Prototype {
@@ -486,7 +485,7 @@ pub unsafe fn funcnamefromcode(interpreter: *mut Interpreter, p: *const Prototyp
             },
             _ => return null(),
         }
-        *name = ((*(*(*interpreter).global).tm_name[tm as usize]).get_contents()).offset(2 as isize);
+        *name = ((*(*(*interpreter).global).global_tmname[tm as usize]).get_contents()).offset(2 as isize);
         return c"metamethod".as_ptr();
     }
 }

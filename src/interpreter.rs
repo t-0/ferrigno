@@ -47,7 +47,7 @@ use crate::status::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
-    pub object: Object,
+    pub gclist: ObjectWithGCList,
     pub status: Status,
     pub allow_hook: u8,
     pub count_call_info: u16,
@@ -58,7 +58,6 @@ pub struct Interpreter {
     pub stack: StkIdRel,
     pub open_upvalue: *mut UpValue,
     pub tbc_list: StkIdRel,
-    pub gc_list: *mut Object,
     pub twups: *mut Interpreter,
     pub long_jump: *mut LongJump,
     pub base_callinfo: CallInfo,
@@ -72,19 +71,43 @@ pub struct Interpreter {
 }
 impl TObject for Interpreter {
     fn as_object(&self) -> &Object {
-        &self.object
+        self.gclist.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.object
+        self.gclist.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "interpreter".to_string()
     }
     fn getgclist(&mut self) -> *mut *mut Object {
-        &mut self.gc_list
+        self.gclist.getgclist()
     }
 }
 impl Interpreter {
+    pub unsafe fn preinit_thread(& mut self, global: *mut Global) {
+        unsafe {
+            self.global = global;
+            self.stack.stkidrel_pointer = null_mut();
+            self.callinfo = null_mut();
+            self.count_call_info = 0;
+            self.twups = self as *mut Interpreter;
+            self.count_c_calls = 0;
+            self.long_jump = null_mut();
+            write_volatile(&mut self.hook as *mut HookFunction, None);
+            write_volatile(&mut self.hook_mask as *mut i32, 0);
+            self.base_hook_count = 0;
+            self.allow_hook = 1;
+            self.hook_count = self.base_hook_count;
+            self.open_upvalue = null_mut();
+            self.status = Status::OK;
+            self.error_function = 0;
+            self.old_program_counter = 0;
+        }
+    }
+    pub fn init(&mut self, global: &Global) {
+        self.set_tag_variant(TagVariant::State);
+        self.set_marked(global.global_currentwhite & (1 << 3 | 1 << 4));
+    }
     pub unsafe fn lua_callk(& mut self, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
         unsafe {
             let function: *mut TValue = self.top.stkidrel_pointer.offset(-((nargs + 1) as isize));
@@ -140,7 +163,7 @@ impl Interpreter {
             match status {
                 Status::MemoryError => {
                     let io: *mut TValue = &mut (*old_top);
-                    let tstring: *mut TString = (*(self.global)).memory_error_message;
+                    let tstring: *mut TString = (*(self.global)).global_memoryerrormessage;
                     (*io).value.value_object = &mut (*(tstring as *mut Object));
                     (*io).set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
@@ -233,9 +256,9 @@ impl Interpreter {
     }
     pub unsafe fn sweep_list(&mut self, mut p: *mut *mut Object, countin: i32, countout: *mut i32) -> *mut *mut Object {
         unsafe {
-            let other_white = (*(self.global)).current_white ^ (1 << 3 | 1 << 4);
+            let other_white = (*(self.global)).global_currentwhite ^ (1 << 3 | 1 << 4);
             let mut i: i32;
-            let white = (*(self.global)).current_white & ((1 << 3) | (1 << 4));
+            let white = (*(self.global)).global_currentwhite & ((1 << 3) | (1 << 4));
             i = 0;
             while !(*p).is_null() && i < countin {
                 let curr: *mut Object = *p;
@@ -258,7 +281,7 @@ impl Interpreter {
     pub unsafe fn free_memory(&mut self, block: *mut libc::c_void, old_size: usize) {
         unsafe {
             raw_allocate(block, old_size, 0);
-            (*self.global).gc_debt -= old_size as i64;
+            (*self.global).global_gcdebt -= old_size as i64;
         }
     }
     pub unsafe fn too_big(&mut self) -> ! {
@@ -273,7 +296,7 @@ impl Interpreter {
             (*io).set_tag_variant(TagVariant::State);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
-            return (*self.global).main_state == self;
+            return (*self.global).global_mainstate == self;
         }
     }
     pub unsafe fn relstack(&mut self) {
@@ -366,7 +389,7 @@ impl Interpreter {
             (*io).set_tag_variant(TagVariant::Table);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
-            if (*self.global).gc_debt > 0 {
+            if (*self.global).global_gcdebt > 0 {
                 (*self.global).luac_step(self);
             }
         }
@@ -377,7 +400,7 @@ impl Interpreter {
             let metatable: *mut Table = match (*object).get_tag_type() {
                 TagType::Table => (*((*object).value.value_object as *mut Table)).get_metatable(),
                 TagType::User => (*((*object).value.value_object as *mut User)).get_metatable(),
-                _ => (*self.global).metatables[(*object).get_tag_type() as usize],
+                _ => (*self.global).global_metatables[(*object).get_tag_type() as usize],
             };
             if metatable.is_null() {
                 false
@@ -414,14 +437,14 @@ impl Interpreter {
             if index > 0 {
                 let o: *mut TValue = ((*callinfo).call_info_function.stkidrel_pointer).offset(index as isize);
                 if o >= self.top.stkidrel_pointer {
-                    return &mut (*self.global).none_value;
+                    return &mut (*self.global).global_nonevalue;
                 } else {
                     return &mut (*o);
                 }
             } else if !(index <= -(1000000 as i32) - 1000 as i32) {
                 return &mut (*self.top.stkidrel_pointer.offset(index as isize));
             } else if index == -(1000000 as i32) - 1000 as i32 {
-                return &mut (*self.global).l_registry;
+                return &mut (*self.global).global_lregistry;
             } else {
                 index = -(1000000 as i32) - 1000 as i32 - index;
                 let value = *(*callinfo).call_info_function.stkidrel_pointer;
@@ -430,10 +453,10 @@ impl Interpreter {
                     return if index <= (*function).count_upvalues as i32 {
                         &mut *((*function).upvalues).c_tvalues.as_mut_ptr().offset((index - 1) as isize) as &mut TValue
                     } else {
-                        &mut (*self.global).none_value
+                        &mut (*self.global).global_nonevalue
                     };
                 } else {
-                    return &mut (*self.global).none_value;
+                    return &mut (*self.global).global_nonevalue;
                 }
             };
         }
@@ -473,16 +496,16 @@ pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut status: Status) -> !
             let global: *mut Global = (*interpreter).global;
             let outerstatus = luae_resetthread(interpreter, status);
             (*interpreter).status = outerstatus;
-            if !((*(*global).main_state).long_jump).is_null() {
-                let fresh0 = (*(*global).main_state).top.stkidrel_pointer;
-                (*(*global).main_state).top.stkidrel_pointer = ((*(*global).main_state).top.stkidrel_pointer).offset(1);
+            if !((*(*global).global_mainstate).long_jump).is_null() {
+                let fresh0 = (*(*global).global_mainstate).top.stkidrel_pointer;
+                (*(*global).global_mainstate).top.stkidrel_pointer = ((*(*global).global_mainstate).top.stkidrel_pointer).offset(1);
                 let io1: *mut TValue = &mut (*fresh0);
                 let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
-                luad_throw((*global).main_state, outerstatus);
+                luad_throw((*global).global_mainstate, outerstatus);
             } else {
-                if ((*global).panic).is_some() {
-                    ((*global).panic).expect("non-null function pointer")(interpreter);
+                if ((*global).global_panic).is_some() {
+                    ((*global).global_panic).expect("non-null function pointer")(interpreter);
                 }
                 abort();
             }
@@ -507,16 +530,16 @@ pub unsafe fn luad_rawrunprotected(interpreter: *mut Interpreter, f: ProtectedFu
 pub unsafe fn luad_reallocstack(interpreter: *mut Interpreter, new_size: i32, should_raise_error: bool) -> i32 {
     unsafe {
         let old_size: i32 = ((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).stack.stkidrel_pointer) as i32;
-        let oldgcstop: i32 = (*(*interpreter).global).gcstopem as i32;
+        let oldgcstop: i32 = (*(*interpreter).global).global_gcstopem as i32;
         (*interpreter).relstack();
-        (*(*interpreter).global).gcstopem = 1;
+        (*(*interpreter).global).global_gcstopem = 1;
         let newstack: *mut TValue = luam_realloc_(
             interpreter,
             (*interpreter).stack.stkidrel_pointer as *mut libc::c_void,
             ((old_size + 5) as usize) * size_of::<TValue>(),
             ((new_size + 5) as usize) * size_of::<TValue>(),
         ) as *mut TValue;
-        (*(*interpreter).global).gcstopem = oldgcstop as u8;
+        (*(*interpreter).global).global_gcstopem = oldgcstop as u8;
         if newstack.is_null() {
             (*interpreter).correct_stack();
             if should_raise_error {
@@ -636,7 +659,7 @@ pub unsafe fn tryfunctm(interpreter: *mut Interpreter, mut function: *mut TValue
         let mut p: *mut TValue;
         if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= 1) as i32 != 0) as i32 as i64 != 0 {
             let t__: i64 = (function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
             luad_growstack(interpreter, 1, true);
@@ -739,7 +762,7 @@ pub unsafe fn precallc(interpreter: *mut Interpreter, mut function: *mut TValue,
     unsafe {
         if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= 20 as i64) as i32 != 0) as i64 != 0 {
             let t__: i64 = (function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
             luad_growstack(interpreter, 20 as i32, true);
@@ -772,7 +795,7 @@ pub unsafe fn luad_pretailcall(interpreter: *mut Interpreter, callinfo: *mut Cal
                     let nfixparams: i32 = (*p).prototype_count_parameters as i32;
                     if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= (fsize - delta) as i64) as i32 != 0) as i64 != 0 {
                         let t__: i64 = (function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
-                        if (*(*interpreter).global).gc_debt > 0 {
+                        if (*(*interpreter).global).global_gcdebt > 0 {
                             (*interpreter).luac_step();
                         }
                         luad_growstack(interpreter, fsize - delta, true);
@@ -823,7 +846,7 @@ pub unsafe fn luad_precall(interpreter: *mut Interpreter, mut function: *mut TVa
                     let fsize: i32 = (*p).prototype_maximum_stack_size as i32;
                     if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= fsize as i64) as i32 != 0) as i64 != 0 {
                         let t__: i64 = (function as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
-                        if (*(*interpreter).global).gc_debt > 0 {
+                        if (*(*interpreter).global).global_gcdebt > 0 {
                             (*interpreter).luac_step();
                         }
                         luad_growstack(interpreter, fsize, true);
@@ -1013,7 +1036,7 @@ pub unsafe fn lua_yieldk(interpreter: *mut Interpreter, count_results: i32, ctx:
         let callinfo;
         callinfo = (*interpreter).callinfo;
         if (*interpreter).count_c_calls & 0xffff0000 as u32 != 0 {
-            if interpreter != (*(*interpreter).global).main_state {
+            if interpreter != (*(*interpreter).global).global_mainstate {
                 luag_runerror(interpreter, c"attempt to yield across a C-call boundary".as_ptr());
             } else {
                 luag_runerror(interpreter, c"attempt to yield from outside a coroutine".as_ptr());
@@ -1147,8 +1170,8 @@ pub unsafe fn lua_xmove(from: *mut Interpreter, to: *mut Interpreter, n: i32) {
 }
 pub unsafe fn lua_atpanic(interpreter: *mut Interpreter, panicf: CFunction) -> CFunction {
     unsafe {
-        let old: CFunction = (*(*interpreter).global).panic;
-        (*(*interpreter).global).panic = panicf;
+        let old: CFunction = (*(*interpreter).global).global_panic;
+        (*(*interpreter).global).global_panic = panicf;
         return old;
     }
 }
@@ -1254,7 +1277,7 @@ pub unsafe fn lua_pushvalue(interpreter: *mut Interpreter, index: i32) {
 pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagType> {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        return if !(*tvalue).is_tagtype_nil() || tvalue != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue {
+        return if !(*tvalue).is_tagtype_nil() || tvalue != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue {
             return Some((*tvalue).get_tag_type());
         } else {
             None
@@ -1318,7 +1341,7 @@ pub unsafe fn lua_rawequal(interpreter: *mut Interpreter, index1: i32, index2: i
     unsafe {
         let o1: *const TValue = (*interpreter).index_to_value(index1);
         let o2: *const TValue = (*interpreter).index_to_value(index2);
-        return if (!((*o1).is_tagtype_nil()) || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue) && (!((*o2).is_tagtype_nil()) || o2 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue) {
+        return if (!((*o1).is_tagtype_nil()) || o1 != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue) && (!((*o2).is_tagtype_nil()) || o2 != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue) {
             luav_equalobj(null_mut(), o1, o2)
         } else {
             false
@@ -1330,7 +1353,7 @@ pub unsafe fn lua_compare(interpreter: *mut Interpreter, index1: i32, index2: i3
         let o1: *const TValue = (*interpreter).index_to_value(index1);
         let o2: *const TValue = (*interpreter).index_to_value(index2);
         let mut ret: bool = false;
-        if (!((*o1).is_tagtype_nil()) || o1 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue) && (!((*o2).is_tagtype_nil()) || o2 != &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue) {
+        if (!((*o1).is_tagtype_nil()) || o1 != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue) && (!((*o2).is_tagtype_nil()) || o2 != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue) {
             match op {
                 0 => {
                     ret = luav_equalobj(interpreter, o1, o2);
@@ -1405,7 +1428,7 @@ pub unsafe fn lua_tolstring(interpreter: *mut Interpreter, index: i32, length: *
                 return null();
             }
             (*o).from_interpreter_to_string(interpreter);
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
             o = (*interpreter).index_to_value(index);
@@ -1445,7 +1468,7 @@ pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, lengt
         (*io).set_tag_variant((*tstring).get_tag_variant());
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         return (*tstring).get_contents_mut();
@@ -1464,7 +1487,7 @@ pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) ->
             s = (*tstring).get_contents_mut();
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         return s;
@@ -1473,7 +1496,7 @@ pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) ->
 pub unsafe fn lua_pushvfstring(interpreter: *mut Interpreter, fmt: *const i8, mut argp: ::core::ffi::VaList) -> *const i8 {
     unsafe {
         let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         return ret;
@@ -1484,7 +1507,7 @@ pub unsafe extern "C" fn lua_pushfstring(interpreter: *mut Interpreter, fmt: *co
         let mut argp: ::core::ffi::VaListImpl;
         argp = args.clone();
         let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         return ret;
@@ -1517,7 +1540,7 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
             (*io_0).set_tag_variant(TagVariant::ClosureC);
             (*io_0).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
         };
@@ -1566,7 +1589,7 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
 }
 pub unsafe fn lua_getglobal(interpreter: *mut Interpreter, name: *const i8) -> TagType {
     unsafe {
-        let global_table: *const TValue = &mut *((*((*(*interpreter).global).l_registry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
+        let global_table: *const TValue = &mut *((*((*(*interpreter).global).global_lregistry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
         return auxgetstr(interpreter, global_table, name);
     }
 }
@@ -1725,7 +1748,7 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
 }
 pub unsafe fn lua_setglobal(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
-        let global_table: *const TValue = &mut *((*((*(*interpreter).global).l_registry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
+        let global_table: *const TValue = &mut *((*((*(*interpreter).global).global_lregistry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
         auxsetstr(interpreter, global_table, name);
     }
 }
@@ -1834,7 +1857,7 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
                 }
             },
             _ => {
-                (*(*interpreter).global).metatables[((*object).get_tag_type()) as usize] = metatable;
+                (*(*interpreter).global).global_metatables[((*object).get_tag_type()) as usize] = metatable;
             },
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -1874,7 +1897,7 @@ pub unsafe fn lua_load(interpreter: *mut Interpreter, reader: Reader, data: *mut
         if status == Status::OK {
             let closure: *mut Closure = &mut (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object as *mut Closure));
             if (*closure).count_upvalues as i32 >= 1 {
-                let gt: *const TValue = &mut *((*((*(*interpreter).global).l_registry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
+                let gt: *const TValue = &mut *((*((*(*interpreter).global).global_lregistry.value.value_object as *mut Table)).array).offset((2 - 1) as isize) as *mut TValue;
                 let io1: *mut TValue = (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).v.p;
                 (*io1).copy_from(&*gt);
                 if (*gt).is_collectable() {
@@ -1908,7 +1931,7 @@ pub unsafe fn lua_dump(interpreter: *mut Interpreter, writer_0: WriteFunction, d
 pub unsafe fn lua_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let errobj: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
-        if (*errobj).get_tag_variant() == TagVariant::StringShort && &mut (*((*errobj).value.value_object as *mut TString)) as *mut TString == (*(*interpreter).global).memory_error_message {
+        if (*errobj).get_tag_variant() == TagVariant::StringShort && &mut (*((*errobj).value.value_object as *mut TString)) as *mut TString == (*(*interpreter).global).global_memoryerrormessage {
             luad_throw(interpreter, Status::MemoryError);
         } else {
             luag_errormsg(interpreter);
@@ -1949,7 +1972,7 @@ pub unsafe fn lua_concat(interpreter: *mut Interpreter, n: i32) {
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         }
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
     }
@@ -1963,8 +1986,8 @@ pub unsafe fn lua_len(interpreter: *mut Interpreter, index: i32) {
 }
 pub unsafe fn lua_setwarnf(interpreter: *mut Interpreter, f: WarnFunction, arbitrary_data: *mut libc::c_void) {
     unsafe {
-        (*(*interpreter).global).warn_userdata = arbitrary_data;
-        (*(*interpreter).global).warn_function = f;
+        (*(*interpreter).global).global_warnuserdata = arbitrary_data;
+        (*(*interpreter).global).global_warnfunction = f;
     }
 }
 pub unsafe fn lua_warning(interpreter: *mut Interpreter, message: *const i8, tocont: i32) {
@@ -2161,7 +2184,7 @@ pub unsafe fn freestack(interpreter: *mut Interpreter) {
 pub unsafe fn init_registry(interpreter: *mut Interpreter, global: *mut Global) {
     unsafe {
         let registry: *mut Table = luah_new(interpreter);
-        let io: *mut TValue = &mut (*global).l_registry;
+        let io: *mut TValue = &mut (*global).global_lregistry;
         let x_: *mut Table = registry;
         (*io).value.value_object = &mut (*(x_ as *mut Object));
         (*io).set_tag_variant(TagVariant::Table);
@@ -2187,34 +2210,14 @@ pub unsafe fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut libc::c_voi
         (*interpreter).luas_init_state();
         luat_init(interpreter);
         luax_init(interpreter);
-        (*global).gc_step = 0;
-        (*global).none_value.set_tag_variant(TagVariant::NilNil);
-    }
-}
-pub unsafe fn preinit_thread(interpreter: *mut Interpreter, global: *mut Global) {
-    unsafe {
-        (*interpreter).global = global;
-        (*interpreter).stack.stkidrel_pointer = null_mut();
-        (*interpreter).callinfo = null_mut();
-        (*interpreter).count_call_info = 0;
-        (*interpreter).twups = interpreter;
-        (*interpreter).count_c_calls = 0;
-        (*interpreter).long_jump = null_mut();
-        write_volatile(&mut (*interpreter).hook as *mut HookFunction, None);
-        write_volatile(&mut (*interpreter).hook_mask as *mut i32, 0);
-        (*interpreter).base_hook_count = 0;
-        (*interpreter).allow_hook = 1;
-        (*interpreter).hook_count = (*interpreter).base_hook_count;
-        (*interpreter).open_upvalue = null_mut();
-        (*interpreter).status = Status::OK;
-        (*interpreter).error_function = 0;
-        (*interpreter).old_program_counter = 0;
+        (*global).global_gcstep = 0;
+        (*global).global_nonevalue.set_tag_variant(TagVariant::NilNil);
     }
 }
 pub unsafe fn close_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if (*global).none_value.is_tagtype_nil() {
+        if (*global).global_nonevalue.is_tagtype_nil() {
             (*interpreter).callinfo = &mut (*interpreter).base_callinfo;
             (*interpreter).error_function = 0;
             do_close_protected(interpreter, 1 as i64, Status::OK);
@@ -2224,8 +2227,8 @@ pub unsafe fn close_state(interpreter: *mut Interpreter) {
             (*global).luac_freeallobjects(interpreter);
         }
         (*interpreter).free_memory(
-            (*(*interpreter).global).stringtable.stringtable_hash as *mut libc::c_void,
-            (*(*interpreter).global).stringtable.stringtable_size * size_of::<*mut TString>(),
+            (*(*interpreter).global).global_stringtable.stringtable_hash as *mut libc::c_void,
+            (*(*interpreter).global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
         );
         freestack(interpreter);
         raw_allocate(interpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
@@ -2235,7 +2238,7 @@ pub unsafe fn close_state(interpreter: *mut Interpreter) {
 pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         let ret = luac_newobj(interpreter, TagVariant::State, size_of::<Interpreter>()) as *mut Interpreter;
@@ -2244,7 +2247,7 @@ pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
         (*io).value.value_object = &mut (*(ret as *mut Object));
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        preinit_thread(ret, global);
+        (*ret).preinit_thread(global);
         write_volatile(&mut (*ret).hook_mask as *mut i32, (*interpreter).hook_mask);
         (*ret).base_hook_count = (*interpreter).base_hook_count;
         write_volatile(&mut (*ret).hook as *mut HookFunction, (*interpreter).hook);
@@ -2285,15 +2288,15 @@ pub unsafe fn lua_closethread(interpreter: *mut Interpreter, from: *mut Interpre
 }
 pub unsafe fn lua_close(mut interpreter: *mut Interpreter) {
     unsafe {
-        interpreter = (*(*interpreter).global).main_state;
+        interpreter = (*(*interpreter).global).global_mainstate;
         close_state(interpreter);
     }
 }
 pub unsafe fn luae_warning(interpreter: *mut Interpreter, message: *const i8, tocont: i32) {
     unsafe {
-        let warn_function: WarnFunction = (*(*interpreter).global).warn_function;
+        let warn_function: WarnFunction = (*(*interpreter).global).global_warnfunction;
         if warn_function.is_some() {
-            warn_function.expect("non-null function pointer")((*(*interpreter).global).warn_userdata, message, tocont);
+            warn_function.expect("non-null function pointer")((*(*interpreter).global).global_warnuserdata, message, tocont);
         }
     }
 }
@@ -2486,7 +2489,7 @@ pub unsafe extern "C" fn luag_runerror(interpreter: *mut Interpreter, fmt: *cons
         let callinfo = (*interpreter).callinfo;
         let message: *const i8;
         let mut argp: ::core::ffi::VaListImpl;
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
         argp = args.clone();
@@ -2575,7 +2578,7 @@ pub unsafe fn luag_traceexec(interpreter: *mut Interpreter, mut program_counter:
 pub unsafe fn tryagain(interpreter: *mut Interpreter, block: *mut libc::c_void, old_size: usize, new_size: usize) -> *mut libc::c_void {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        if (*global).none_value.is_tagtype_nil() && (*global).gcstopem == 0 {
+        if (*global).global_nonevalue.is_tagtype_nil() && (*global).global_gcstopem == 0 {
             (*global).luac_fullgc(interpreter, true);
             return raw_allocate(block, old_size, new_size);
         } else {
@@ -2593,7 +2596,7 @@ pub unsafe fn luam_realloc_(interpreter: *mut Interpreter, block: *mut libc::c_v
                 return null_mut();
             }
         }
-        (*global).gc_debt = ((*global).gc_debt as usize).wrapping_add(new_size).wrapping_sub(old_size) as i64;
+        (*global).global_gcdebt = ((*global).global_gcdebt as usize).wrapping_add(new_size).wrapping_sub(old_size) as i64;
         return new_block;
     }
 }
@@ -2619,7 +2622,7 @@ pub unsafe fn luam_malloc_(interpreter: *mut Interpreter, new_size: usize) -> *m
                     luad_throw(interpreter, Status::MemoryError);
                 }
             }
-            (*global).gc_debt = ((*global).gc_debt as usize).wrapping_add(new_size) as i64;
+            (*global).global_gcdebt = ((*global).global_gcdebt as usize).wrapping_add(new_size) as i64;
             return new_block;
         };
     }
@@ -2872,8 +2875,8 @@ pub unsafe fn luat_init(interpreter: *mut Interpreter) {
             c"__close".as_ptr(),
         ];
         for i in 0..TM_N {
-            (*(*interpreter).global).tm_name[i as usize] = luas_new(interpreter, EVENT_NAMES[i as usize]);
-            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).tm_name).as_mut_ptr().offset(i as isize) as *mut Object)));
+            (*(*interpreter).global).global_tmname[i as usize] = luas_new(interpreter, EVENT_NAMES[i as usize]);
+            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).global_tmname).as_mut_ptr().offset(i as isize) as *mut Object)));
         }
     }
 }
@@ -2888,13 +2891,13 @@ pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, e
                 metatable = (*((*o).value.value_object as *mut User)).metatable;
             },
             _ => {
-                metatable = (*(*interpreter).global).metatables[(*o).get_tag_type() as usize];
+                metatable = (*(*interpreter).global).global_metatables[(*o).get_tag_type() as usize];
             },
         }
         return if metatable.is_null() {
-            &mut (*(*interpreter).global).none_value as *mut TValue as *const TValue
+            &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue
         } else {
-            luah_getshortstr(metatable, (*(*interpreter).global).tm_name[event as usize])
+            luah_getshortstr(metatable, (*(*interpreter).global).global_tmname[event as usize])
         };
     }
 }
@@ -3083,7 +3086,7 @@ pub unsafe fn luat_getvarargs(interpreter: *mut Interpreter, callinfo: *mut Call
             wanted = nextra;
             if ((((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).top.stkidrel_pointer) as i64 <= nextra as i64) as i32 != 0) as i64 != 0 {
                 let t__: i64 = (where_0 as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
-                if (*(*interpreter).global).gc_debt > 0 {
+                if (*(*interpreter).global).global_gcdebt > 0 {
                     (*interpreter).luac_step();
                 }
                 luad_growstack(interpreter, nextra, true);
@@ -3106,17 +3109,17 @@ pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant,
         let global: *mut Global = (*interpreter).global;
         let ret = luam_malloc_(interpreter, size as usize) as *mut Object;
         (*ret).set_tag_variant(tagvariant);
-        (*ret).set_marked((*global).current_white & (1 << 3 | 1 << 4));
-        (*ret).next = (*global).all_gc;
-        (*global).all_gc = ret;
+        (*ret).set_marked((*global).global_currentwhite & (1 << 3 | 1 << 4));
+        (*ret).next = (*global).global_allgc;
+        (*global).global_allgc = ret;
         return ret;
     }
 }
 pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut o: *mut TValue = (*interpreter).stack.stkidrel_pointer;
-        if (*interpreter).get_marked() & 7 > 1 || (*global).gc_state as i32 == 0 {
-            linkgclist_(&mut (*(interpreter as *mut Object)), &mut (*interpreter).gc_list, &mut (*global).gray_again);
+        if (*interpreter).get_marked() & 7 > 1 || (*global).global_gcstate as i32 == 0 {
+            linkgclist_(&mut (*(interpreter as *mut Object)), (*interpreter).getgclist(), &mut (*global).global_grayagain);
         }
         if o.is_null() {
             return 1;
@@ -3134,8 +3137,8 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
             }
             uv = (*uv).u.open.next;
         }
-        if (*global).gc_state as i32 == 2 {
-            if !(*global).is_emergency {
+        if (*global).global_gcstate as i32 == 2 {
+            if !(*global).global_isemergency {
                 (*interpreter).luad_shrinkstack();
             }
             o = (*interpreter).top.stkidrel_pointer;
@@ -3144,8 +3147,8 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
                 o = o.offset(1);
             }
             if !((*interpreter).twups != interpreter) && !((*interpreter).open_upvalue).is_null() {
-                (*interpreter).twups = (*global).twups;
-                (*global).twups = interpreter;
+                (*interpreter).twups = (*global).global_twups;
+                (*global).global_twups = interpreter;
             }
         }
         return 1 + ((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).stack.stkidrel_pointer) as i32;
@@ -3181,8 +3184,8 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
         tm = luat_gettmbyobj(interpreter, &mut v, TM_GC);
         if !(*tm).is_tagtype_nil() {
             let oldah: u8 = (*interpreter).allow_hook;
-            let oldgcstp: i32 = (*global).gc_step as i32;
-            (*global).gc_step = ((*global).gc_step as i32 | 2) as u8;
+            let oldgcstp: i32 = (*global).global_gcstep as i32;
+            (*global).global_gcstep = ((*global).global_gcstep as i32 | 2) as u8;
             (*interpreter).allow_hook = 0;
             let fresh15 = (*interpreter).top.stkidrel_pointer;
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -3204,7 +3207,7 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
             );
             (*(*interpreter).callinfo).call_info_call_status = ((*(*interpreter).callinfo).call_info_call_status as i32 & !(1 << 7)) as u16;
             (*interpreter).allow_hook = oldah;
-            (*global).gc_step = oldgcstp as u8;
+            (*global).global_gcstep = oldgcstp as u8;
             if status != Status::OK {
                 luae_warnerror(interpreter, c"__gc".as_ptr());
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -3217,7 +3220,7 @@ pub unsafe fn runafewfinalizers(interpreter: *mut Interpreter, n: i32) -> i32 {
         let global: *mut Global = (*interpreter).global;
         let mut i: i32;
         i = 0;
-        while i < n && !((*global).to_be_finalized).is_null() {
+        while i < n && !((*global).global_tobefinalized).is_null() {
             gctm_function(interpreter);
             i += 1;
         }
@@ -3234,29 +3237,29 @@ pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut Object,
                 if (*metatable).flags as u32 & (1 as u32) << TM_GC as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm(metatable, TM_GC, (*global).tm_name[TM_GC as usize])
+                    luat_gettm(metatable, TM_GC, (*global).global_tmname[TM_GC as usize])
                 }
             })
             .is_null()
-            || (*global).gc_step as i32 & 4 != 0
+            || (*global).global_gcstep as i32 & 4 != 0
         {
             return;
         } else {
-            if 3 <= (*global).gc_state as i32 && (*global).gc_state as i32 <= 6 {
-                (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).current_white & (1 << 3 | 1 << 4)));
-                if (*global).sweep_gc == &mut (*o).next as *mut *mut Object {
-                    (*global).sweep_gc = sweeptolive(interpreter, (*global).sweep_gc);
+            if 3 <= (*global).global_gcstate as i32 && (*global).global_gcstate as i32 <= 6 {
+                (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).global_currentwhite & (1 << 3 | 1 << 4)));
+                if (*global).global_sweepgc == &mut (*o).next as *mut *mut Object {
+                    (*global).global_sweepgc = sweeptolive(interpreter, (*global).global_sweepgc);
                 }
             } else {
                 (*global).correct_pointers(o);
             }
-            let mut p: *mut *mut Object = &mut (*global).all_gc;
+            let mut p: *mut *mut Object = &mut (*global).global_allgc;
             while *p != o {
                 p = &mut (**p).next;
             }
             *p = (*o).next;
-            (*o).next = (*global).finalized_objects;
-            (*global).finalized_objects = o;
+            (*o).next = (*global).global_finalizedobjects;
+            (*global).global_finalizedobjects = o;
             (*o).set_marked(((*o).get_marked() | 1 << 6) as u8);
         };
     }
@@ -3276,7 +3279,7 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
                 if (*curr).get_tag_variant() == TagVariant::State {
                     let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
-                    linkgclist_(&mut (*(other_state as *mut Object)), &mut (*other_state).gc_list, &mut (*global).gray_again);
+                    linkgclist_(&mut (*(other_state as *mut Object)),  (*other_state).getgclist(), &mut (*global).global_grayagain);
                 } else if (*curr).get_tag_variant() == TagVariant::UpValue && (*(curr as *mut UpValue)).v.p != &mut (*(curr as *mut UpValue)).u.value as *mut TValue {
                     (*curr).set_marked((*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
@@ -3290,7 +3293,7 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
 pub unsafe fn sweepgen(interpreter: *mut Interpreter, global: *mut Global, mut p: *mut *mut Object, limit: *mut Object, pfirstold1: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         static mut NEXT_AGE: [u8; 7] = [1, 3 as u8, 3 as u8, 4 as u8, 4 as u8, 5 as u8, 6 as u8];
-        let white = (*global).current_white & (1 << 3 | 1 << 4);
+        let white = (*global).global_currentwhite & (1 << 3 | 1 << 4);
         loop {
             let curr: *mut Object = *p;
             if !(curr != limit) {
@@ -3354,7 +3357,7 @@ pub unsafe fn prepcallclosemth(interpreter: *mut Interpreter, level: *mut TValue
         let uv: *mut TValue = &mut (*level);
         let errobj: *mut TValue;
         if status == Status::Closing {
-            errobj = &mut (*(*interpreter).global).none_value;
+            errobj = &mut (*(*interpreter).global).global_nonevalue;
         } else {
             errobj = &mut (*level.offset(1 as isize));
             (*interpreter).set_error_object(status, level.offset(1 as isize));
@@ -3991,7 +3994,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             if new_table_size != 0 || new_array_size != 0 {
                                 luah_resize(interpreter, table, new_array_size, new_table_size);
                             }
-                            if (*(*interpreter).global).gc_debt > 0 {
+                            if (*(*interpreter).global).global_gcdebt > 0 {
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = ra_17.offset(1 as isize);
                                 (*interpreter).luac_step();
@@ -4996,7 +4999,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                             concatenate(interpreter, n_1);
                             trap = (*callinfo).call_info_u.l.trap;
-                            if (*(*interpreter).global).gc_debt > 0 {
+                            if (*(*interpreter).global).global_gcdebt > 0 {
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer;
                                 (*interpreter).luac_step();
@@ -5461,7 +5464,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                             (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
                             pushclosure(interpreter, p, ((*closure).upvalues).l_upvalues.as_mut_ptr(), base, ra_77);
-                            if (*(*interpreter).global).gc_debt > 0 {
+                            if (*(*interpreter).global).global_gcdebt > 0 {
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = ra_77.offset(1 as isize);
                                 (*interpreter).luac_step();
@@ -6290,60 +6293,16 @@ pub unsafe fn lual_newstate() -> *mut Interpreter {
             raw_allocate(interpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
             return null_mut();
         }
-        (*interpreter).set_tag_variant(TagVariant::State);
-        (*global).current_white = (1 << 3) as u8;
-        (*interpreter).set_marked((*global).current_white & (1 << 3 | 1 << 4));
-        preinit_thread(interpreter, global);
-        (*global).all_gc = &mut (*(interpreter as *mut Object));
-        (*interpreter).object.next = null_mut();
+        (*global).init();
+        (*interpreter).init(&*global);
+        (*global).global_totalbytes += size_of::<Interpreter>() as i64;
+        (*global).global_totalbytes += size_of::<Global>() as i64;
+        (*interpreter).preinit_thread(global);
+        (*global).global_allgc = &mut (*(interpreter as *mut Object));
+        (*interpreter).as_object_mut().next = null_mut();
         (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
-        (*global).warn_function = None;
-        (*global).warn_userdata = null_mut();
-        (*global).main_state = interpreter;
-        (*global).seed = luai_makeseed(interpreter);
-        (*global).gc_step = 2;
-        (*global).stringtable.stringtable_length = 0;
-        (*global).stringtable.stringtable_size = 0;
-        (*global).stringtable.stringtable_hash = null_mut();
-        (*global).l_registry.set_tag_variant(TagVariant::NilNil);
-        (*global).panic = None;
-        (*global).gc_state = 8;
-        (*global).gc_kind = 0;
-        (*global).gcstopem = 0;
-        (*global).is_emergency = false;
-        (*global).fixed_gc = null_mut();
-        (*global).to_be_finalized = (*global).fixed_gc;
-        (*global).finalized_objects = (*global).to_be_finalized;
-        (*global).really_old = null_mut();
-        (*global).old1 = (*global).really_old;
-        (*global).survival = (*global).old1;
-        (*global).first_old1 = (*global).survival;
-        (*global).finobjrold = null_mut();
-        (*global).finobjold1 = (*global).finobjrold;
-        (*global).finobjsur = (*global).finobjold1;
-        (*global).sweep_gc = null_mut();
-        (*global).gray_again = null_mut();
-        (*global).gray = (*global).gray_again;
-        (*global).all_weak = null_mut();
-        (*global).ephemeron = (*global).all_weak;
-        (*global).weak = (*global).ephemeron;
-        (*global).twups = null_mut();
-        (*global).total_bytes = 0;
-        (*global).total_bytes += size_of::<Interpreter>() as i64;
-        (*global).total_bytes += size_of::<Global>() as i64;
-        (*global).gc_debt = 0;
-        (*global).last_atomic = 0;
-        let io: *mut TValue = &mut (*global).none_value;
-        (*io).value.value_integer = 0;
-        (*io).set_tag_variant(TagVariant::NumericInteger);
-        (*global).gc_pause = 200 / 4;
-        (*global).gc_step_multiplier = 100 / 4;
-        (*global).gc_step_size = 13;
-        (*global).generational_major_multiplier = 100 / 4;
-        (*global).generational_minor_multiplier = 20;
-        for i in 0..9 {
-            (*global).metatables[i as usize] = null_mut();
-        }
+        (*global).global_mainstate = interpreter;
+        (*global).global_seed = luai_makeseed(interpreter);
         if luad_rawrunprotected(interpreter, Some(f_luaopen as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()), null_mut()) != Status::OK {
             close_state(interpreter);
             interpreter = null_mut();

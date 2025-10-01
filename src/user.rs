@@ -10,8 +10,7 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
-    pub object: Object,
-    pub gc_list: *mut Object,
+    pub gclist: ObjectWithGCList,
     pub metatable: *mut Table,
     pub count_bytes: usize,
     pub count_upvalues: i32,
@@ -19,10 +18,10 @@ pub struct User {
 }
 impl TObject for User {
     fn as_object(&self) -> &Object {
-        &self.object
+        self.gclist.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.object
+        self.gclist.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "user".to_string()
@@ -31,7 +30,7 @@ impl TObject for User {
         self.metatable
     }
     fn getgclist(& mut self) -> *mut *mut Object {
-        &mut self.gc_list
+        self.gclist.getgclist()
     }
 }
 impl User {
@@ -78,7 +77,7 @@ impl User {
             (*io).set_tag_variant(TagVariant::User);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
             return (*new_user).get_raw_memory_mut();

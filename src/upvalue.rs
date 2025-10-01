@@ -61,8 +61,8 @@ pub unsafe fn newupval(interpreter: *mut Interpreter, level: *mut TValue, previo
         }
         *previous = uv;
         if !((*interpreter).twups != interpreter) {
-            (*interpreter).twups = (*(*interpreter).global).twups;
-            (*(*interpreter).global).twups = interpreter;
+            (*interpreter).twups = (*(*interpreter).global).global_twups;
+            (*(*interpreter).global).global_twups = interpreter;
         }
         return uv;
     }

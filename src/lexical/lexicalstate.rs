@@ -255,7 +255,7 @@ pub unsafe fn close_function(interpreter: *mut Interpreter, lexical_state: *mut 
         (*prototype).prototype_local_variables.shrink(&mut *interpreter, (*function_state).count_debug_variables as usize);
         (*prototype).prototype_upvalues.shrink(&mut *interpreter, (*function_state).count_upvalues as usize);
         (*lexical_state).lexical_state_function_state = (*function_state).function_state_previous;
-        if (*(*interpreter).global).gc_debt > 0 {
+        if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
     }
@@ -739,8 +739,8 @@ pub unsafe fn new_localvar(interpreter: *mut Interpreter, lexical_state: *mut Le
         let fresh37 = (*dynamic_data).active_variables.get_length();
         (*dynamic_data).active_variables.set_length(((*dynamic_data).active_variables.get_length() + 1) as usize);
         var = &mut *((*dynamic_data).active_variables.vectort_pointer).offset(fresh37 as isize) as *mut VariableDescription;
-        (*var).content.kind = 0;
-        (*var).content.name = name;
+        (*var).content.variabledescriptioncontent_kind = 0;
+        (*var).content.variabledescriptioncontent_name = name;
         return (*dynamic_data).active_variables.get_length() as i32 - 1 - (*function_state).first_local;
     }
 }
@@ -752,12 +752,12 @@ pub unsafe fn check_readonly(interpreter: *mut Interpreter, lexical_state: *mut 
             ExpressionKind::Constant2 => {
                 variable_name = (*((*(*lexical_state).dynamic_data).active_variables.vectort_pointer).offset((*expression_description).value.value_info as isize))
                     .content
-                    .name;
+                    .variabledescriptioncontent_name;
             },
             ExpressionKind::Local => {
                 let vardesc: *mut VariableDescription = getlocalvardesc(lexical_state, function_state, (*expression_description).value.value_variable.valueregister_valueindex as i32);
-                if (*vardesc).content.kind as i32 != 0 {
-                    variable_name = (*vardesc).content.name;
+                if (*vardesc).content.variabledescriptioncontent_kind as i32 != 0 {
+                    variable_name = (*vardesc).content.variabledescriptioncontent_name;
                 }
             },
             ExpressionKind::UpValue => {
@@ -785,8 +785,8 @@ pub unsafe fn adjustlocalvars(interpreter: *mut Interpreter, lexical_state: *mut
             let var = getlocalvardesc(lexical_state, function_state, vidx);
             let fresh40 = reglevel_0;
             reglevel_0 += 1;
-            (*var).content.register_index = fresh40 as u8;
-            (*var).content.pidx = registerlocalvar(interpreter, lexical_state, function_state, (*var).content.name) as i16;
+            (*var).content.variabledescriptioncontent_registerindex = fresh40 as u8;
+            (*var).content.variabledescriptioncontent_pidx = registerlocalvar(interpreter, lexical_state, function_state, (*var).content.variabledescriptioncontent_name) as i16;
         }
     }
 }
@@ -832,7 +832,7 @@ pub unsafe fn jumpscopeerror(interpreter: *mut Interpreter, lexical_state: *mut 
     unsafe {
         let variable_name: *const i8 = (*(*getlocalvardesc(lexical_state, (*lexical_state).lexical_state_function_state, (*goto_label_description).count_active_variables as i32))
             .content
-            .name)
+            .variabledescriptioncontent_name)
             .get_contents_mut();
         let mut message: *const i8 = c"<goto %s> at line %d jumps into the scope of local '%s'".as_ptr();
         message = luao_pushfstring(interpreter, message, (*(*goto_label_description).name).get_contents_mut(), (*goto_label_description).line, variable_name);
@@ -1277,7 +1277,7 @@ pub unsafe fn handle_local_statement(interpreter: *mut Interpreter, lexical_stat
         loop {
             vidx = new_localvar(interpreter, lexical_state, str_checkname(interpreter, lexical_state, function_state));
             kind = getlocalattribute(interpreter, lexical_state, function_state);
-            (*getlocalvardesc(lexical_state, function_state, vidx)).content.kind = kind as u8;
+            (*getlocalvardesc(lexical_state, function_state, vidx)).content.variabledescriptioncontent_kind = kind as u8;
             if kind == 2 {
                 if toclose != -1 {
                     luak_semerror(interpreter, lexical_state, c"multiple to-be-closed variables in local list".as_ptr());
@@ -1296,8 +1296,8 @@ pub unsafe fn handle_local_statement(interpreter: *mut Interpreter, lexical_stat
             count_expressions = 0;
         }
         var = getlocalvardesc(lexical_state, function_state, vidx);
-        if count_variables == count_expressions && (*var).content.kind as i32 == 1 && luak_exp2const(lexical_state, function_state, &mut expression_description, &mut (*var).k) {
-            (*var).content.kind = 3 as u8;
+        if count_variables == count_expressions && (*var).content.variabledescriptioncontent_kind as i32 == 1 && luak_exp2const(lexical_state, function_state, &mut expression_description, &mut (*var).k) {
+            (*var).content.variabledescriptioncontent_kind = 3 as u8;
             adjustlocalvars(interpreter, lexical_state, count_variables - 1);
             (*function_state).count_active_variables = ((*function_state).count_active_variables).wrapping_add(1);
             (*function_state).count_active_variables;
@@ -1473,7 +1473,7 @@ pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut 
             (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
-            if (*(*interpreter).global).gc_debt > 0 {
+            if (*(*interpreter).global).global_gcdebt > 0 {
                 (*interpreter).luac_step();
             }
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);

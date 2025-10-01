@@ -44,7 +44,7 @@ impl TString {
     }
     pub unsafe fn remove_from_global(&mut self, global: *mut Global) {
         unsafe {
-            let stringtable: *mut StringTable = &mut (*global).stringtable;
+            let stringtable: *mut StringTable = &mut (*global).global_stringtable;
             (*stringtable).remove(self);
         }
     }
@@ -65,7 +65,7 @@ impl TString {
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
-            let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong, (*(*interpreter).global).seed);
+            let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong, (*(*interpreter).global).global_seed);
             (*ret).long_length = length;
             return ret;
         }
@@ -73,13 +73,13 @@ impl TString {
     pub unsafe fn intern(interpreter: *mut Interpreter, str: *const i8, length: usize) -> *mut TString {
         unsafe {
             let global: *mut Global = (*interpreter).global;
-            let tb: *mut StringTable = &mut (*global).stringtable;
-            let h: u32 = luas_hash(str, length as usize, (*global).seed);
+            let tb: *mut StringTable = &mut (*global).global_stringtable;
+            let h: u32 = luas_hash(str, length as usize, (*global).global_seed);
             let mut list: *mut *mut TString = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             let mut tstring: *mut TString = *list;
             while !tstring.is_null() {
                 if length as usize == (*tstring).get_length() as usize && memcmp(str as *const libc::c_void, (*tstring).get_contents() as *const libc::c_void, length) == 0 {
-                    if (*tstring).get_marked() & ((*global).current_white ^ (1 << 3 | 1 << 4)) != 0 {
+                    if (*tstring).get_marked() & ((*global).global_currentwhite ^ (1 << 3 | 1 << 4)) != 0 {
                         (*tstring).set_marked((*tstring).get_marked() ^ (1 << 3 | 1 << 4));
                     }
                     return tstring;
@@ -174,7 +174,7 @@ pub unsafe fn luas_newlstr(interpreter: *mut Interpreter, str: *const i8, length
 pub unsafe fn luas_new(interpreter: *mut Interpreter, str: *const i8) -> *mut TString {
     unsafe {
         let i: u32 = ((str as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(53 as u32);
-        let p: *mut *mut TString = ((*(*interpreter).global).string_cache[i as usize]).as_mut_ptr();
+        let p: *mut *mut TString = ((*(*interpreter).global).global_stringcache[i as usize]).as_mut_ptr();
         let mut j: i32 = 0;
         while j < 2 {
             if strcmp(str, (**p.offset(j as isize)).get_contents_mut()) == 0 {

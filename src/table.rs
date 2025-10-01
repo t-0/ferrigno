@@ -17,7 +17,7 @@ use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub object: Object,
+    pub gclist: ObjectWithGCList,
     pub flags: u8,
     pub log_size_node: u8,
     pub array_limit: u32,
@@ -25,14 +25,13 @@ pub struct Table {
     pub node: *mut Node,
     pub last_free: *mut Node,
     pub metatable: *mut Table,
-    pub gc_list: *mut Object,
 }
 impl TObject for Table {
     fn as_object(&self) -> &Object {
-        &self.object
+        self.gclist.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.object
+        self.gclist.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "table".to_string()
@@ -41,13 +40,13 @@ impl TObject for Table {
         self.metatable
     }
     fn getgclist(& mut self) -> *mut *mut Object {
-        &mut self.gc_list
+        self.gclist.getgclist()
     }
 }
 impl New for Table {
     fn new() -> Self {
         Table {
-            object: Object::new(TagVariant::Table),
+            gclist: ObjectWithGCList::new(TagVariant::Table),
             flags: 0,
             log_size_node: 0,
             array_limit: 0,
@@ -55,7 +54,6 @@ impl New for Table {
             node: null_mut(),
             last_free: null_mut(),
             metatable: null_mut(),
-            gc_list: null_mut(),
             ..
         }
     }
@@ -125,10 +123,10 @@ pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
             }
             node = node.offset(1);
         }
-        if (*global).gc_state as i32 == 2 && hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).weak);
+        if (*global).global_gcstate as i32 == 2 && hasclears != 0 {
+            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_weak);
         } else {
-            linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).gray_again);
+            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_grayagain);
         };
     }
 }
@@ -163,12 +161,12 @@ pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: 
                 really_mark_object(global, (*node).value.value.value_object);
             }
         }
-        if (*global).gc_state as i32 == 0 {
-            linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).gray_again);
+        if (*global).global_gcstate as i32 == 0 {
+            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_grayagain);
         } else if hasww != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).ephemeron);
+            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_ephemeron);
         } else if hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).all_weak);
+            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_allweak);
         } else {
             generate_link(global, &mut (*(h as *mut Object)));
         }
@@ -210,7 +208,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
         } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
             null()
         } else {
-            luat_gettm((*h).get_metatable(), TM_MODE, (*global).tm_name[TM_MODE as usize])
+            luat_gettm((*h).get_metatable(), TM_MODE, (*global).global_tmname[TM_MODE as usize])
         };
         let smode: *mut TString;
         if !((*h).get_metatable()).is_null() {
@@ -229,7 +227,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
             } else if weakvalue.is_null() {
                 traverseephemeron(global, h, false);
             } else {
-                linkgclist_(&mut (*(h as *mut Object)), &mut (*h).gc_list, &mut (*global).all_weak);
+                linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_allweak);
             }
         } else {
             traversestrongtable(global, h);
@@ -899,7 +897,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
                 } else if (*(*((*t).value.value_object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_INDEX as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*((*t).value.value_object as *mut Table)).get_metatable(), TM_INDEX, (*(*interpreter).global).tm_name[TM_INDEX as usize])
+                    luat_gettm((*((*t).value.value_object as *mut Table)).get_metatable(), TM_INDEX, (*(*interpreter).global).global_tmname[TM_INDEX as usize])
                 };
                 if tm.is_null() {
                     (*value).set_tag_variant(TagVariant::NilNil);
@@ -941,7 +939,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                 } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_NEWINDEX as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*h).get_metatable(), TM_NEWINDEX, (*(*interpreter).global).tm_name[TM_NEWINDEX as usize])
+                    luat_gettm((*h).get_metatable(), TM_NEWINDEX, (*(*interpreter).global).global_tmname[TM_NEWINDEX as usize])
                 };
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);

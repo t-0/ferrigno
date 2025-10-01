@@ -19,7 +19,7 @@ use std::ptr::*;
 #[repr(C)]
 pub struct TValue {
     pub value: Value,
-    tag: TagVariant,
+    tagvariant: TagVariant,
     collectable: bool,
     pub delta: u16,
 }
@@ -65,7 +65,7 @@ impl TValue {
         }
     }
     pub const fn new(tagvariant: TagVariant) -> Self {
-        TValue { value: Value::new_object(null_mut()), tag: tagvariant, collectable: false, delta: 0 }
+        TValue { value: Value::new_object(null_mut()), tagvariant, collectable: false, delta: 0 }
     }
     pub fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -84,17 +84,17 @@ impl TValue {
     }
     pub fn copy_from(&mut self, other: &Self) {
         self.value = other.value;
-        self.tag = other.tag;
+        self.tagvariant = other.tagvariant;
         self.collectable = other.collectable;
     }
     pub fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag_variant())
     }
     pub fn get_tag_variant(&self) -> TagVariant {
-        self.tag
+        self.tagvariant
     }
     pub fn set_tag_variant(&mut self, tagvariant: TagVariant) {
-        self.tag = tagvariant;
+        self.tagvariant = tagvariant;
         self.collectable = false;
     }
     pub fn is_collectable(&self) -> bool {
@@ -282,7 +282,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                 } else if (*(*((*t1).value.value_object as *mut User)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*((*t1).value.value_object as *mut User)).get_metatable(), TM_EQ, (*(*interpreter).global).tm_name[TM_EQ as usize])
+                    luat_gettm((*((*t1).value.value_object as *mut User)).get_metatable(), TM_EQ, (*(*interpreter).global).global_tmname[TM_EQ as usize])
                 };
                 if tm.is_null() {
                     tm = if ((*((*t2).value.value_object as *mut User)).get_metatable()).is_null() {
@@ -290,7 +290,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                     } else if (*(*((*t2).value.value_object as *mut User)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                         null()
                     } else {
-                        luat_gettm((*((*t2).value.value_object as *mut User)).get_metatable(), TM_EQ, (*(*interpreter).global).tm_name[TM_EQ as usize])
+                        luat_gettm((*((*t2).value.value_object as *mut User)).get_metatable(), TM_EQ, (*(*interpreter).global).global_tmname[TM_EQ as usize])
                     };
                 }
             },
@@ -305,7 +305,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                 } else if (*(*((*t1).value.value_object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*((*t1).value.value_object as *mut Table)).get_metatable(), TM_EQ, (*(*interpreter).global).tm_name[TM_EQ as usize])
+                    luat_gettm((*((*t1).value.value_object as *mut Table)).get_metatable(), TM_EQ, (*(*interpreter).global).global_tmname[TM_EQ as usize])
                 };
                 if tm.is_null() {
                     tm = if ((*((*t2).value.value_object as *mut Table)).get_metatable()).is_null() {
@@ -313,7 +313,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                     } else if (*(*((*t2).value.value_object as *mut Table)).get_metatable()).flags as u32 & (1 as u32) << TM_EQ as i32 != 0 {
                         null()
                     } else {
-                        luat_gettm((*((*t2).value.value_object as *mut Table)).get_metatable(), TM_EQ, (*(*interpreter).global).tm_name[TM_EQ as usize])
+                        luat_gettm((*((*t2).value.value_object as *mut Table)).get_metatable(), TM_EQ, (*(*interpreter).global).global_tmname[TM_EQ as usize])
                     };
                 }
             },
@@ -338,7 +338,7 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
                 } else if (*(*table).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*table).get_metatable(), TM_LEN, (*(*interpreter).global).tm_name[TM_LEN as usize])
+                    luat_gettm((*table).get_metatable(), TM_LEN, (*(*interpreter).global).global_tmname[TM_LEN as usize])
                 };
                 if tvalue.is_null() {
                     let io: *mut TValue = &mut (*ra);
