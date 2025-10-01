@@ -34,9 +34,6 @@ pub trait TObject {
     fn getgclist(& mut self) -> *mut *mut Object {
         null_mut()
     }
-    fn get_tag(&self) -> u8 {
-        self.as_object().get_tag()
-    }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.as_object_mut().set_tag_variant(tagvariant);
     }
@@ -56,7 +53,7 @@ pub trait TObject {
         get_tag_type(self.get_tag_variant())
     }
     fn get_tag_variant(&self) -> TagVariant {
-        get_tag_variant(self.get_tag())
+        self.as_object().get_tag_variant()
     }
     fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -78,7 +75,7 @@ pub trait TObject {
 #[repr(C)]
 pub struct Object {
     pub next: *mut Object = null_mut(),
-    pub tag: u8 = TagVariant::NilNil as u8,
+    pub tag: TagVariant = TagVariant::NilNil,
     pub marked: u8 = 0,
 }
 impl TObject for Object {
@@ -94,14 +91,14 @@ impl TObject for Object {
     fn set_marked(&mut self, marked: u8) {
         self.marked = marked;
     }
-    fn get_tag(&self) -> u8 {
-        return self.tag;
+    fn get_tag_variant(&self) -> TagVariant {
+        self.tag
     }
     fn get_tag_type(&self) -> TagType {
         get_tag_type(self.get_tag_variant())
     }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
-        self.tag = tagvariant as u8;
+        self.tag = tagvariant;
     }
     fn get_class_name(&mut self) -> String {
         "object".to_string()
@@ -120,7 +117,7 @@ impl TObject for Object {
     }
 }
 impl Object {
-    pub fn new(tag: u8) -> Object {
+    pub fn new(tag: TagVariant) -> Object {
         Object { next: null_mut(), tag: tag, marked: 0, .. }
     }
 }

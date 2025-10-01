@@ -82,9 +82,6 @@ impl TValue {
     pub fn is_tagtype_closure(&self) -> bool {
         self.get_tag_type() == TagType::Closure
     }
-    fn get_tag(&self) -> u8 {
-        self.tag
-    }
     pub fn copy_from(&mut self, other: &Self) {
         self.value = other.value;
         self.tag = other.tag;

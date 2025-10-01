@@ -47,7 +47,7 @@ impl TObject for Table {
 impl New for Table {
     fn new() -> Self {
         Table {
-            object: Object::new(TagVariant::Table as u8),
+            object: Object::new(TagVariant::Table),
             flags: 0,
             log_size_node: 0,
             array_limit: 0,

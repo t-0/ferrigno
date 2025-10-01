@@ -21,7 +21,7 @@ pub enum TagVariantRaw {
     Beta = 0x01 << 0x04,
     Gamma = 0x02 << 0x04,
 }
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum TagVariant {
     NilNil = TagType::Nil as u8 | TagVariantRaw::Alpha as u8,
