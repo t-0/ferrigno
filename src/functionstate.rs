@@ -739,10 +739,10 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         let prototype: *mut Prototype = (*function_state).prototype;
         let index: *const TValue = luah_get((*lexical_state).table, key);
         let mut count_constants: i32;
-        if (*index).get_tag_variant() == TagVariant::NumericInteger as u8 {
+        if (*index).get_tag_variant2() == TagVariant::NumericInteger {
             count_constants = (*index).value.value_integer as i32;
             if count_constants < (*function_state).count_constants
-                && (*((*prototype).prototype_constants.vectort_pointer).offset(count_constants as isize)).get_tag_variant() == (*v).get_tag_variant()
+                && (*((*prototype).prototype_constants.vectort_pointer).offset(count_constants as isize)).get_tag_variant2() == (*v).get_tag_variant2()
                 && luav_equalobj(null_mut(), &mut *((*prototype).prototype_constants.vectort_pointer).offset(count_constants as isize), v)
             {
                 return count_constants;
@@ -1378,7 +1378,7 @@ pub unsafe fn is_k_string(function_state: *mut FunctionState, expression_descrip
         return (*expression_description).expression_kind == ExpressionKind::Constant
             && !((*expression_description).t != (*expression_description).f)
             && (*expression_description).value.value_info <= ((1 << 8) - 1)
-            && (*((*(*function_state).prototype).prototype_constants.vectort_pointer).offset((*expression_description).value.value_info as isize)).get_tag_variant() == TagVariant::StringShort as u8;
+            && (*((*(*function_state).prototype).prototype_constants.vectort_pointer).offset((*expression_description).value.value_info as isize)).get_tag_variant2() == TagVariant::StringShort;
     }
 }
 pub unsafe fn constfolding(interpreter: *mut Interpreter, _lexical_state: *mut LexicalState, _function_state: *mut FunctionState, op: i32, e1: *mut ExpressionDescription, e2: *const ExpressionDescription) -> i32 {
@@ -1390,7 +1390,7 @@ pub unsafe fn constfolding(interpreter: *mut Interpreter, _lexical_state: *mut L
             return 0;
         }
         luao_rawarith(interpreter, op, &mut v1, &mut v2, &mut res);
-        if res.get_tag_variant() == TagVariant::NumericInteger as u8 {
+        if res.get_tag_variant2() == TagVariant::NumericInteger {
             (*e1).expression_kind = ExpressionKind::ConstantInteger;
             (*e1).value.value_integer = res.value.value_integer;
         } else {

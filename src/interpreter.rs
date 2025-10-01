@@ -425,7 +425,7 @@ impl Interpreter {
             } else {
                 index = -(1000000 as i32) - 1000 as i32 - index;
                 let value = *(*callinfo).call_info_function.stkidrel_pointer;
-                if value.is_collectable() && value.get_tag_variant() == TagVariant::ClosureC as u8 {
+                if value.is_collectable() && value.get_tag_variant2() == TagVariant::ClosureC {
                     let function: *mut Closure = &mut (*(value.value.value_object as *mut Closure));
                     return if index <= (*function).count_upvalues as i32 {
                         &mut *((*function).upvalues).c_tvalues.as_mut_ptr().offset((index - 1) as isize) as &mut TValue
@@ -759,17 +759,14 @@ pub unsafe fn precallc(interpreter: *mut Interpreter, mut function: *mut TValue,
 pub unsafe fn luad_pretailcall(interpreter: *mut Interpreter, callinfo: *mut CallInfo, mut function: *mut TValue, mut narg1: i32, delta: i32) -> i32 {
     unsafe {
         loop {
-            const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-            const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-            const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-            match (*function).get_tag_variant() {
-                TAG_VARIANT_CLOSURE_C => {
+            match (*function).get_tag_variant2() {
+                TagVariant::ClosureC => {
                     return precallc(interpreter, function, -1, (*((*function).value.value_object as *mut Closure)).payload.c_cfunction);
                 },
-                TAG_VARIANT_CLOSURE_CFUNCTION => {
+                TagVariant::ClosureCFunction => {
                     return precallc(interpreter, function, -1, (*function).value.value_function);
                 },
-                TAG_VARIANT_CLOSURE_L => {
+                TagVariant::ClosureL => {
                     let p: *mut Prototype = (*((*function).value.value_object as *mut Closure)).payload.l_prototype;
                     let fsize: i32 = (*p).prototype_maximum_stack_size as i32;
                     let nfixparams: i32 = (*p).prototype_count_parameters as i32;
@@ -809,19 +806,16 @@ pub unsafe fn luad_pretailcall(interpreter: *mut Interpreter, callinfo: *mut Cal
 pub unsafe fn luad_precall(interpreter: *mut Interpreter, mut function: *mut TValue, count_results: i32) -> *mut CallInfo {
     unsafe {
         loop {
-            const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-            const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-            const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-            match (*function).get_tag_variant() {
-                TAG_VARIANT_CLOSURE_C => {
+            match (*function).get_tag_variant2() {
+                TagVariant::ClosureC => {
                     precallc(interpreter, function, count_results, (*((*function).value.value_object as *mut Closure)).payload.c_cfunction);
                     return null_mut();
                 },
-                TAG_VARIANT_CLOSURE_CFUNCTION => {
+                TagVariant::ClosureCFunction => {
                     precallc(interpreter, function, count_results, (*function).value.value_function);
                     return null_mut();
                 },
-                TAG_VARIANT_CLOSURE_L => {
+                TagVariant::ClosureL => {
                     let callinfo;
                     let p: *mut Prototype = (*((*function).value.value_object as *mut Closure)).payload.l_prototype;
                     let mut narg: i32 = ((*interpreter).top.stkidrel_pointer).offset_from(function) as i32 - 1;
@@ -1287,24 +1281,22 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> 
 pub unsafe fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
-        const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        match (*o).get_tag_variant() {
-            TAG_VARIANT_CLOSURE_CFUNCTION => return true,
-            TAG_VARIANT_CLOSURE_C => return true,
+        match (*o).get_tag_variant2() {
+            TagVariant::ClosureCFunction => return true,
+            TagVariant::ClosureC => return true,
             _ => return false,
         }
     }
 }
 pub unsafe fn lua_isinteger(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        return (*(*interpreter).index_to_value(index)).get_tag_variant() == TagVariant::NumericInteger as u8;
+        return (*(*interpreter).index_to_value(index)).get_tag_variant2() == TagVariant::NumericInteger;
     }
 }
 pub unsafe fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
-        return if (*o).get_tag_variant() == TagVariant::NumericNumber as u8 {
+        return if (*o).get_tag_variant2() == TagVariant::NumericNumber {
             true
         } else {
             let mut n: f64 = 0.0;
@@ -1368,7 +1360,7 @@ pub unsafe fn lua_tonumberx(interpreter: *mut Interpreter, index: i32, is_number
     unsafe {
         let mut n: f64 = 0.0;
         let o: *const TValue = (*interpreter).index_to_value(index);
-        let is_number_: bool = if (*o).get_tag_variant() == TagVariant::NumericNumber as u8 {
+        let is_number_: bool = if (*o).get_tag_variant2() == TagVariant::NumericNumber {
             n = (*o).value.value_number;
             true
         } else {
@@ -1384,7 +1376,7 @@ pub unsafe fn lua_tointegerx(interpreter: *mut Interpreter, index: i32, is_numbe
     unsafe {
         let mut res: i64 = 0;
         let o: *const TValue = (*interpreter).index_to_value(index);
-        let is_number_: bool = if (*o).get_tag_variant() == TagVariant::NumericInteger as u8 {
+        let is_number_: bool = if (*o).get_tag_variant2() == TagVariant::NumericInteger {
             res = (*o).value.value_integer;
             true
         } else {
@@ -1399,7 +1391,7 @@ pub unsafe fn lua_tointegerx(interpreter: *mut Interpreter, index: i32, is_numbe
 pub unsafe fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
-        return !((*o).get_tag_variant() == TagVariant::BooleanFalse as u8 || (*o).is_tagtype_nil());
+        return !((*o).get_tag_variant2() == TagVariant::BooleanFalse || (*o).is_tagtype_nil());
     }
 }
 pub unsafe fn lua_tolstring(interpreter: *mut Interpreter, index: i32, length: *mut usize) -> *const i8 {
@@ -1427,16 +1419,12 @@ pub unsafe fn lua_tolstring(interpreter: *mut Interpreter, index: i32, length: *
 pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-        match (*tvalue).get_tag_variant() {
-            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+        match (*tvalue).get_tag_variant2() {
+            TagVariant::StringShort | TagVariant::StringLong => {
                 return (*((*tvalue).value.value_object as *mut TString)).get_length() as usize;
             },
-            TAG_VARIANT_USER => return (*((*tvalue).value.value_object as *mut User)).count_bytes,
-            TAG_VARIANT_TABLE => {
+            TagVariant::User => return (*((*tvalue).value.value_object as *mut User)).count_bytes,
+            TagVariant::Table => {
                 return luah_getn(&mut (*((*tvalue).value.value_object as *mut Table))) as usize;
             },
             _ => return 0,
@@ -1446,7 +1434,7 @@ pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize
 pub unsafe fn lua_tothread(interpreter: *mut Interpreter, index: i32) -> *mut Interpreter {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
-        return if !((*o).get_tag_variant() == TagVariant::State as u8) { null_mut() } else { &mut (*((*o).value.value_object as *mut Interpreter)) };
+        return if !((*o).get_tag_variant2() == TagVariant::State) { null_mut() } else { &mut (*((*o).value.value_object as *mut Interpreter)) };
     }
 }
 pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, length: usize) -> *const i8 {
@@ -1547,7 +1535,7 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
     unsafe {
         let slot: *const TValue;
         let str: *mut TString = luas_new(interpreter, k);
-        if if !((*t).get_tag_variant() == TagVariant::Table as u8) {
+        if if !((*t).get_tag_variant2() == TagVariant::Table) {
             slot = null();
             0
         } else {
@@ -1586,7 +1574,7 @@ pub unsafe fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
     unsafe {
         let slot;
         let t: *mut TValue = (*interpreter).index_to_value(index);
-        if if (*t).get_tag_variant() != TagVariant::Table as u8 {
+        if if (*t).get_tag_variant2() != TagVariant::Table {
             slot = null();
             0
         } else {
@@ -1636,7 +1624,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
         let t: *mut TValue;
         let slot: *const TValue;
         t = (*interpreter).index_to_value(index);
-        if if (*t).get_tag_variant() != TagVariant::Table as u8 {
+        if if (*t).get_tag_variant2() != TagVariant::Table {
             slot = null();
             0
         } else {
@@ -1699,7 +1687,7 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
     unsafe {
         let slot: *const TValue;
         let str: *mut TString = luas_new(interpreter, k);
-        if if !((*t).get_tag_variant() == TagVariant::Table as u8) {
+        if if !((*t).get_tag_variant2() == TagVariant::Table) {
             slot = null();
             0
         } else {
@@ -1751,7 +1739,7 @@ pub unsafe fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
         let t: *mut TValue;
         let slot: *const TValue;
         t = (*interpreter).index_to_value(index);
-        if if !((*t).get_tag_variant() == TagVariant::Table as u8) {
+        if if !((*t).get_tag_variant2() == TagVariant::Table) {
             slot = null();
             0
         } else {
@@ -1909,7 +1897,7 @@ pub unsafe fn lua_dump(interpreter: *mut Interpreter, writer_0: WriteFunction, d
     unsafe {
         let status: i32;
         let o: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
-        if (*o).get_tag_variant() == TagVariant::ClosureL as u8 {
+        if (*o).get_tag_variant2() == TagVariant::ClosureL {
             status = save_prototype(interpreter, (*((*o).value.value_object as *mut Closure)).payload.l_prototype, writer_0, data, is_strip);
         } else {
             status = 1;
@@ -1920,7 +1908,7 @@ pub unsafe fn lua_dump(interpreter: *mut Interpreter, writer_0: WriteFunction, d
 pub unsafe fn lua_error(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let errobj: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
-        if (*errobj).get_tag_variant() == TagVariant::StringShort as u8 && &mut (*((*errobj).value.value_object as *mut TString)) as *mut TString == (*(*interpreter).global).memory_error_message {
+        if (*errobj).get_tag_variant2() == TagVariant::StringShort && &mut (*((*errobj).value.value_object as *mut TString)) as *mut TString == (*(*interpreter).global).memory_error_message {
             luad_throw(interpreter, Status::MemoryError);
         } else {
             luag_errormsg(interpreter);
@@ -2037,20 +2025,17 @@ pub unsafe fn getupvalref(interpreter: *mut Interpreter, fidx: i32, n: i32, pf: 
 pub unsafe fn lua_upvalueid(interpreter: *mut Interpreter, fidx: i32, n: i32) -> *mut libc::c_void {
     unsafe {
         let fi: *mut TValue = (*interpreter).index_to_value(fidx);
-        const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-        match (*fi).get_tag_variant() {
-            TAG_VARIANT_CLOSURE_L => {
+        match (*fi).get_tag_variant2() {
+            TagVariant::ClosureL => {
                 return *getupvalref(interpreter, fidx, n, null_mut()) as *mut libc::c_void;
             },
-            TAG_VARIANT_CLOSURE_C => {
+            TagVariant::ClosureC => {
                 let closure: *mut Closure = &mut (*((*fi).value.value_object as *mut Closure));
                 if 1 <= n && n <= (*closure).count_upvalues as i32 {
                     return &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue as *mut libc::c_void;
                 }
             },
-            TAG_VARIANT_CLOSURE_CFUNCTION => {},
+            TagVariant::ClosureCFunction => {},
             _ => return null_mut(),
         }
         return null_mut();
@@ -2687,13 +2672,13 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
             7 | 8 | 9 | 10 | 11 | 13 => {
                 let mut i1: i64 = 0;
                 let mut i2: i64 = 0;
-                if (if (((*p1).get_tag_variant() == TagVariant::NumericInteger as u8) as i32 != 0) as i64 != 0 {
+                if (if (((*p1).get_tag_variant2() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                     i1 = (*p1).value.value_integer;
                     1
                 } else {
                     luav_tointegerns(p1, &mut i1, F2I::Equal)
                 }) != 0
-                    && (if (((*p2).get_tag_variant() == TagVariant::NumericInteger as u8) as i32 != 0) as i32 as i64 != 0 {
+                    && (if (((*p2).get_tag_variant2() == TagVariant::NumericInteger) as i32 != 0) as i32 as i64 != 0 {
                         i2 = (*p2).value.value_integer;
                         1
                     } else {
@@ -2710,22 +2695,22 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
             5 | 4 => {
                 let mut n1: f64 = 0.0;
                 let mut n2: f64 = 0.0;
-                if (if (*p1).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                if (if (*p1).get_tag_variant2() == TagVariant::NumericNumber {
                     n1 = (*p1).value.value_number;
                     1
                 } else {
-                    if (*p1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                    if (*p1).get_tag_variant2() == TagVariant::NumericInteger {
                         n1 = (*p1).value.value_integer as f64;
                         1
                     } else {
                         0
                     }
                 }) != 0
-                    && (if (*p2).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                    && (if (*p2).get_tag_variant2() == TagVariant::NumericNumber {
                         n2 = (*p2).value.value_number;
                         1
                     } else {
-                        if (*p2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                        if (*p2).get_tag_variant2() == TagVariant::NumericInteger {
                             n2 = (*p2).value.value_integer as f64;
                             1
                         } else {
@@ -2743,27 +2728,27 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
             _ => {
                 let mut n1_0: f64 = 0.0;
                 let mut n2_0: f64 = 0.0;
-                if (*p1).get_tag_variant() == TagVariant::NumericInteger as u8 && (*p2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                if (*p1).get_tag_variant2() == TagVariant::NumericInteger && (*p2).get_tag_variant2() == TagVariant::NumericInteger {
                     let io_1: *mut TValue = res;
                     (*io_1).value.value_integer = intarith(interpreter, op, (*p1).value.value_integer, (*p2).value.value_integer);
                     (*io_1).set_tag_variant(TagVariant::NumericInteger);
                     return 1;
-                } else if (if (*p1).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                } else if (if (*p1).get_tag_variant2() == TagVariant::NumericNumber {
                     n1_0 = (*p1).value.value_number;
                     1
                 } else {
-                    if (*p1).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                    if (*p1).get_tag_variant2() == TagVariant::NumericInteger {
                         n1_0 = (*p1).value.value_integer as f64;
                         1
                     } else {
                         0
                     }
                 }) != 0
-                    && (if (*p2).get_tag_variant() == TagVariant::NumericNumber as u8 {
+                    && (if (*p2).get_tag_variant2() == TagVariant::NumericNumber {
                         n2_0 = (*p2).value.value_number;
                         1
                     } else {
-                        if (*p2).get_tag_variant() == TagVariant::NumericInteger as u8 {
+                        if (*p2).get_tag_variant2() == TagVariant::NumericInteger {
                             n2_0 = (*p2).value.value_integer as f64;
                             1
                         } else {
@@ -2916,10 +2901,10 @@ pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, e
 pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
     unsafe {
         let mut metatable: *mut Table;
-        if (*o).get_tag_variant() == TagVariant::Table as u8 && {
+        if (*o).get_tag_variant2() == TagVariant::Table && {
             metatable = (*((*o).value.value_object as *mut Table)).get_metatable();
             !metatable.is_null()
-        } || (*o).get_tag_variant() == TagVariant::User as u8 && {
+        } || (*o).get_tag_variant2() == TagVariant::User && {
             metatable = (*((*o).value.value_object as *mut User)).get_metatable();
             !metatable.is_null()
         } {

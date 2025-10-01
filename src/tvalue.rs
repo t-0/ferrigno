@@ -270,30 +270,19 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                 return luav_tointegerns(t1, &mut i1, F2I::Equal) != 0 && luav_tointegerns(t2, &mut i2, F2I::Equal) != 0 && i1 == i2;
             }
         }
-        const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
-        const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
-        const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
-        const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
-        const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-        const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-        const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-        match (*t1).get_tag_variant() {
-            TAG_VARIANT_NIL_NIL | TAG_VARIANT_BOOLEAN_FALSE | TAG_VARIANT_BOOLEAN_TRUE => return true,
-            TAG_VARIANT_NUMERIC_INTEGER => return (*t1).value.value_integer == (*t2).value.value_integer,
-            TAG_VARIANT_NUMERIC_NUMBER => return (*t1).value.value_number == (*t2).value.value_number,
-            TAG_VARIANT_POINTER => return (*t1).value.value_pointer == (*t2).value.value_pointer,
-            TAG_VARIANT_CLOSURE_CFUNCTION => return (*t1).value.value_function == (*t2).value.value_function,
-            TAG_VARIANT_STRING_SHORT => {
+        match (*t1).get_tag_variant2() {
+            TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => return true,
+            TagVariant::NumericInteger => return (*t1).value.value_integer == (*t2).value.value_integer,
+            TagVariant::NumericNumber => return (*t1).value.value_number == (*t2).value.value_number,
+            TagVariant::Pointer => return (*t1).value.value_pointer == (*t2).value.value_pointer,
+            TagVariant::ClosureCFunction => return (*t1).value.value_function == (*t2).value.value_function,
+            TagVariant::StringShort => {
                 return &mut (*((*t1).value.value_object as *mut TString)) as *mut TString == &mut (*((*t2).value.value_object as *mut TString)) as *mut TString;
             },
-            TAG_VARIANT_STRING_LONG => {
+            TagVariant::StringLong => {
                 return luas_eqlngstr(&mut (*((*t1).value.value_object as *mut TString)), &mut (*((*t2).value.value_object as *mut TString)));
             },
-            TAG_VARIANT_USER => {
+            TagVariant::User => {
                 if &mut (*((*t1).value.value_object as *mut User)) as *mut User == &mut (*((*t2).value.value_object as *mut User)) as *mut User {
                     return true;
                 } else if interpreter.is_null() {
@@ -316,7 +305,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
                     };
                 }
             },
-            TAG_VARIANT_TABLE => {
+            TagVariant::Table => {
                 if &mut (*((*t1).value.value_object as *mut Table)) as *mut Table == &mut (*((*t2).value.value_object as *mut Table)) as *mut Table {
                     return true;
                 } else if interpreter.is_null() {
@@ -351,46 +340,37 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
 }
 pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *const TValue) {
     unsafe {
-        let tm: *const TValue;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        match (*rb).get_tag_variant() {
-            TAG_VARIANT_TABLE => {
-                let h: *mut Table = &mut (*((*rb).value.value_object as *mut Table));
-                tm = if ((*h).get_metatable()).is_null() {
+        let tvalue: *const TValue;
+        match (*rb).get_tag_variant2() {
+            TagVariant::Table => {
+                let table: *mut Table = &mut (*((*rb).value.value_object as *mut Table));
+                tvalue = if ((*table).get_metatable()).is_null() {
                     null()
-                } else if (*(*h).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
+                } else if (*(*table).get_metatable()).flags as u32 & (1 as u32) << TM_LEN as i32 != 0 {
                     null()
                 } else {
-                    luat_gettm((*h).get_metatable(), TM_LEN, (*(*interpreter).global).tm_name[TM_LEN as usize])
+                    luat_gettm((*table).get_metatable(), TM_LEN, (*(*interpreter).global).tm_name[TM_LEN as usize])
                 };
-                if tm.is_null() {
+                if tvalue.is_null() {
                     let io: *mut TValue = &mut (*ra);
-                    (*io).value.value_integer = luah_getn(h) as i64;
+                    (*io).value.value_integer = luah_getn(table) as i64;
                     (*io).set_tag_variant(TagVariant::NumericInteger);
                     return;
                 }
             },
-            TAG_VARIANT_STRING_SHORT => {
-                let io_0: *mut TValue = &mut (*ra);
-                (*io_0).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_0).set_tag_variant(TagVariant::NumericInteger);
-                return;
-            },
-            TAG_VARIANT_STRING_LONG => {
-                let io_1: *mut TValue = &mut (*ra);
-                (*io_1).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
-                (*io_1).set_tag_variant(TagVariant::NumericInteger);
+            TagVariant::StringShort | TagVariant::StringLong => {
+                let io: *mut TValue = &mut (*ra);
+                (*io).value.value_integer = (*((*rb).value.value_object as *mut TString)).get_length() as i64;
+                (*io).set_tag_variant(TagVariant::NumericInteger);
                 return;
             },
             _ => {
-                tm = luat_gettmbyobj(interpreter, rb, TM_LEN);
-                if ((*tm).get_tag_type()) == TagType::Nil {
+                tvalue = luat_gettmbyobj(interpreter, rb, TM_LEN);
+                if ((*tvalue).get_tag_type()) == TagType::Nil {
                     luag_typeerror(interpreter, rb, c"get length of".as_ptr());
                 }
             },
         }
-        luat_calltmres(interpreter, tm, rb, rb, ra);
+        luat_calltmres(interpreter, tvalue, rb, rb, ra);
     }
 }

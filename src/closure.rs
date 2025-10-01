@@ -50,11 +50,9 @@ impl TObject for Closure {
 impl Closure {
     pub unsafe fn free_closure(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-            const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-            let size = match self.get_tag_variant() {
-                TAG_VARIANT_CLOSURE_C => size_cclosure(self.count_upvalues as usize),
-                TAG_VARIANT_CLOSURE_L => size_lclosure(self.count_upvalues as usize),
+            let size = match self.get_tag_variant2() {
+                TagVariant::ClosureC => size_cclosure(self.count_upvalues as usize),
+                TagVariant::ClosureL => size_lclosure(self.count_upvalues as usize),
                 _ => 0,
             };
             (*interpreter).free_memory(self as *mut Closure as *mut c_void, size);
@@ -91,7 +89,7 @@ impl Closure {
 }
 pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL as u8) {
+        if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
             (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
@@ -132,7 +130,7 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, deb
                 },
                 Character::LowerU => {
                     (*debuginfo).debuginfo_nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
-                    if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL as u8) {
+                    if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
                         (*debuginfo).debuginfo_isvariablearguments = true;
                         (*debuginfo).debuginfo_nparams = 0;
                     } else {

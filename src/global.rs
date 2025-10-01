@@ -544,19 +544,13 @@ impl Global {
             let object: *mut Object = self.gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
             self.gray = *(*object).getgclist();
-            const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-            const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
-            const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
-            const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-            const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-            const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-            match (*object).get_tag_variant() {
-                TAG_VARIANT_TABLE => return traversetable(self, &mut (*(object as *mut Table))),
-                TAG_VARIANT_USER => return (*(object as *mut User)).traverseudata(self) as usize,
-                TAG_VARIANT_CLOSURE_L => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
-                TAG_VARIANT_CLOSURE_C => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
-                TAG_VARIANT_PROTOTYPE => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
-                TAG_VARIANT_STATE => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
+            match (*object).get_tag_variant2() {
+                TagVariant::Table => return traversetable(self, &mut (*(object as *mut Table))),
+                TagVariant::User => return (*(object as *mut User)).traverseudata(self) as usize,
+                TagVariant::ClosureL => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
+                TagVariant::ClosureC => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
+                TagVariant::Prototype => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
+                TagVariant::State => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
                 _ => return 0,
             };
         }

@@ -199,21 +199,12 @@ pub unsafe fn fix_object_global(global: *mut Global, object: *mut Object) {
 pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: usize;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
-        const TAG_VARIANT_UPVALUE: u8 = TagVariant::UpValue as u8;
-        const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
-        const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-        match (*object).get_tag_variant() {
-            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+        match (*object).get_tag_variant2() {
+            TagVariant::StringShort | TagVariant::StringLong => {
                 (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
                 current_block_18 = 18317007320854588510;
             },
-            TAG_VARIANT_UPVALUE => {
+            TagVariant::UpValue => {
                 let uv: *mut UpValue = &mut (*(object as *mut UpValue));
                 if (*uv).v.p != &mut (*uv).u.value as *mut TValue {
                     (*uv).set_marked((*uv).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
@@ -225,7 +216,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
                 }
                 current_block_18 = 18317007320854588510;
             },
-            TAG_VARIANT_USER => {
+            TagVariant::User => {
                 let u: *mut User = &mut (*(object as *mut User));
                 if (*u).count_upvalues as i32 == 0 {
                     if !((*u).get_metatable()).is_null() {
@@ -239,7 +230,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
                     current_block_18 = 15904375183555213903;
                 }
             },
-            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C | TAG_VARIANT_TABLE | TAG_VARIANT_STATE | TAG_VARIANT_PROTOTYPE => {
+            TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::Table | TagVariant::State | TagVariant::Prototype => {
                 current_block_18 = 15904375183555213903;
             },
             _ => {
@@ -265,41 +256,32 @@ pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
 }
 pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_TABLE: u8 = TagVariant::Table as u8;
-        const TAG_VARIANT_PROTOTYPE: u8 = TagVariant::Prototype as u8;
-        const TAG_VARIANT_UPVALUE: u8 = TagVariant::UpValue as u8;
-        const TAG_VARIANT_STATE: u8 = TagVariant::State as u8;
-        const TAG_VARIANT_USER: u8 = TagVariant::User as u8;
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-        match (*object).get_tag_variant() {
-            TAG_VARIANT_PROTOTYPE => {
+        match (*object).get_tag_variant2() {
+            TagVariant::Prototype => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
                 (*prototype).prototype_free(interpreter);
             },
-            TAG_VARIANT_UPVALUE => {
+            TagVariant::UpValue => {
                 let upvalue: *mut UpValue = &mut (*(object as *mut UpValue));
                 (*upvalue).free_upvalue(interpreter);
             },
-            TAG_VARIANT_CLOSURE_L | TAG_VARIANT_CLOSURE_C => {
+            TagVariant::ClosureL | TagVariant::ClosureC => {
                 let closure: *mut Closure = &mut (*(object as *mut Closure));
                 (*closure).free_closure(interpreter);
             },
-            TAG_VARIANT_TABLE => {
+            TagVariant::Table => {
                 let table: *mut Table = &mut (*(object as *mut Table));
                 (*table).free_table(interpreter);
             },
-            TAG_VARIANT_STATE => {
+            TagVariant::State => {
                 let other: *mut Interpreter = &mut (*(object as *mut Interpreter));
                 (*other).free_interpreter(interpreter);
             },
-            TAG_VARIANT_USER => {
+            TagVariant::User => {
                 let user: *mut User = &mut (*(object as *mut User));
                 (*user).free_user(interpreter);
             },
-            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+            TagVariant::StringLong | TagVariant::StringShort => {
                 let tstring: *mut TString = &mut (*(object as *mut TString));
                 (*tstring).free_tstring(interpreter);
             },

@@ -114,15 +114,11 @@ pub const fn get_tag_variant(tag: u8) -> u8 {
 pub const fn get_tag_variant2(tag: u8) -> TagVariant {
     TagVariant::from(TAG_VARIANT_MASK_ & tag)
 }
-pub const TAG_COLLECTABLE: u8 = 0x40;
 pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
     match tag {
         None | Some(TagType::Nil) => true,
         _ => false,
     }
-}
-pub const fn set_collectable(tag: u8) -> u8 {
-    tag | TAG_COLLECTABLE
 }
 pub const STRING_LOCAL: *const i8 = c"local".as_ptr();
 pub const STRING_UPVALUE: *const i8 = c"upvalue".as_ptr();

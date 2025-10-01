@@ -133,20 +133,16 @@ impl Prototype {
             dump_state.dump_int(n as i32);
             for i in 0..n {
                 let tvalue: *const TValue = &mut *(self.prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
-                let tag = (*tvalue).get_tag_variant();
-                dump_state.dump_byte(tag);
-                const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-                const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-                const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-                const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
+                let tag = (*tvalue).get_tag_variant2();
+                dump_state.dump_byte(tag as u8);
                 match tag {
-                    TAG_VARIANT_NUMERIC_NUMBER => {
+                    TagVariant::NumericNumber => {
                         dump_state.dump_number((*tvalue).value.value_number);
                     },
-                    TAG_VARIANT_NUMERIC_INTEGER => {
+                    TagVariant::NumericInteger => {
                         dump_state.dump_integer((*tvalue).value.value_integer);
                     },
-                    TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+                    TagVariant::StringShort | TagVariant::StringLong => {
                         TString::dump_string(dump_state, &mut (*((*tvalue).value.value_object as *mut TString)));
                     },
                     _ => {},

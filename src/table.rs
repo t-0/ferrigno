@@ -272,42 +272,34 @@ pub unsafe fn hashint(t: *const Table, i: i64) -> *mut Node {
 }
 pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
     unsafe {
-        const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
-        const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
-        const TAG_VARIANT_POINTER: u8 = TagVariant::Pointer as u8;
-        const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-        const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        const TAG_VARIANT_CLOSURE_CFUNCTION: u8 = TagVariant::ClosureCFunction as u8;
-        match (*key).get_tag_variant() {
-            TAG_VARIANT_NUMERIC_INTEGER => {
+        match (*key).get_tag_variant2() {
+            TagVariant::NumericInteger => {
                 let i: i64 = (*key).value.value_integer;
                 return hashint(t, i);
             },
-            TAG_VARIANT_NUMERIC_NUMBER => {
+            TagVariant::NumericNumber => {
                 let n: f64 = (*key).value.value_number;
                 return &mut *((*t).node).offset(((l_hashfloat as unsafe fn(f64) -> i32)(n) % ((1 << (*t).log_size_node as i32) - 1 | 1)) as isize) as *mut Node;
             },
-            TAG_VARIANT_STRING_SHORT => {
+            TagVariant::StringShort => {
                 let tstring: *mut TString = &mut (*((*key).value.value_object as *mut TString));
                 return &mut *((*t).node).offset(((*tstring).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
             },
-            TAG_VARIANT_STRING_LONG => {
+            TagVariant::StringLong => {
                 let ts_0: *mut TString = &mut (*((*key).value.value_object as *mut TString));
                 return &mut *((*t).node).offset(((hash_string_long as unsafe fn(*mut TString) -> u32)(ts_0) & ((1 << (*t).log_size_node as i32) - 1) as u32) as i32 as isize) as *mut Node;
             },
-            TAG_VARIANT_BOOLEAN_FALSE => {
+            TagVariant::BooleanFalse => {
                 return &mut *((*t).node).offset((0 & (1 << (*t).log_size_node as i32) - 1) as isize) as *mut Node;
             },
-            TAG_VARIANT_BOOLEAN_TRUE => {
+            TagVariant::BooleanTrue => {
                 return &mut *((*t).node).offset((1 & (1 << (*t).log_size_node as i32) - 1) as isize) as *mut Node;
             },
-            TAG_VARIANT_POINTER => {
+            TagVariant::Pointer => {
                 let p: *mut libc::c_void = (*key).value.value_pointer;
                 return &mut *((*t).node).offset(((p as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize) as *mut Node;
             },
-            TAG_VARIANT_CLOSURE_CFUNCTION => {
+            TagVariant::ClosureCFunction => {
                 let cfunction: CFunction = (*key).value.value_function;
                 return &mut *((*t).node)
                     .offset(((::core::mem::transmute::<CFunction, usize>(cfunction) & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize)
@@ -513,13 +505,9 @@ pub unsafe fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u32) -> i32 
                 break;
             }
             let node: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
-            const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
-            const TAG_VARIANT_NIL_EMPTY: u8 = TagVariant::NilEmpty as u8;
-            const TAG_VARIANT_NIL_ABSENTKEY: u8 = TagVariant::NilAbsentKey as u8;
-            const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-            match (*node).value.get_tag_variant() {
-                TAG_VARIANT_NIL_NIL | TAG_VARIANT_NIL_ABSENTKEY | TAG_VARIANT_NIL_EMPTY => {},
-                TAG_VARIANT_NUMERIC_INTEGER => {
+            match (*node).value.get_tag_variant2() {
+                TagVariant::NilNil | TagVariant::NilAbsentKey | TagVariant::NilEmpty => {},
+                TagVariant::NumericInteger => {
                     ause += countint((*node).key.value.value_integer, nums);
                     totaluse += 1;
                 },
@@ -776,17 +764,13 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
 }
 pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
     unsafe {
-        const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
-        const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-        const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        match (*key).get_tag_variant() {
-            TAG_VARIANT_STRING_SHORT => {
+        match (*key).get_tag_variant2() {
+            TagVariant::StringShort => {
                 return luah_getshortstr(table, &mut (*((*key).value.value_object as *mut TString)));
             },
-            TAG_VARIANT_NUMERIC_INTEGER => return luah_getint(table, (*key).value.value_integer),
-            TAG_VARIANT_NIL_NIL => return &ABSENT_KEY,
-            TAG_VARIANT_NUMERIC_NUMBER => {
+            TagVariant::NumericInteger => return luah_getint(table, (*key).value.value_integer),
+            TagVariant::NilNil => return &ABSENT_KEY,
+            TagVariant::NumericNumber => {
                 let mut k: i64 = 0;
                 if luav_flttointeger((*key).value.value_number, &mut k, F2I::Equal) {
                     return luah_getint(table, k);

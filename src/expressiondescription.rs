@@ -112,32 +112,25 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
 }
 pub unsafe fn const2exp(v: *mut TValue, expression_description: *mut ExpressionDescription) {
     unsafe {
-        const TAG_VARIANT_NIL_NIL: u8 = TagVariant::NilNil as u8;
-        const TAG_VARIANT_BOOLEAN_FALSE: u8 = TagVariant::BooleanFalse as u8;
-        const TAG_VARIANT_BOOLEAN_TRUE: u8 = TagVariant::BooleanTrue as u8;
-        const TAG_VARIANT_NUMERIC_INTEGER: u8 = TagVariant::NumericInteger as u8;
-        const TAG_VARIANT_NUMERIC_NUMBER: u8 = TagVariant::NumericNumber as u8;
-        const TAG_VARIANT_STRING_SHORT: u8 = TagVariant::StringShort as u8;
-        const TAG_VARIANT_STRING_LONG: u8 = TagVariant::StringLong as u8;
-        match (*v).get_tag_variant() {
-            TAG_VARIANT_NUMERIC_INTEGER => {
+        match (*v).get_tag_variant2() {
+            TagVariant::NumericInteger => {
                 (*expression_description).expression_kind = ExpressionKind::ConstantInteger;
                 (*expression_description).value.value_integer = (*v).value.value_integer;
             },
-            TAG_VARIANT_NUMERIC_NUMBER => {
+            TagVariant::NumericNumber => {
                 (*expression_description).expression_kind = ExpressionKind::ConstantNumber;
                 (*expression_description).value.value_number = (*v).value.value_number;
             },
-            TAG_VARIANT_BOOLEAN_FALSE => {
+            TagVariant::BooleanFalse => {
                 (*expression_description).expression_kind = ExpressionKind::False;
             },
-            TAG_VARIANT_BOOLEAN_TRUE => {
+            TagVariant::BooleanTrue => {
                 (*expression_description).expression_kind = ExpressionKind::True;
             },
-            TAG_VARIANT_NIL_NIL => {
+            TagVariant::NilNil => {
                 (*expression_description).expression_kind = ExpressionKind::Nil;
             },
-            TAG_VARIANT_STRING_SHORT | TAG_VARIANT_STRING_LONG => {
+            TagVariant::StringShort | TagVariant::StringLong => {
                 (*expression_description).expression_kind = ExpressionKind::ConstantString;
                 (*expression_description).value.value_tstring = &mut (*((*v).value.value_object as *mut TString));
             },

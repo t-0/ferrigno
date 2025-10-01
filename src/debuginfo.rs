@@ -94,7 +94,7 @@ impl DebugInfo {
 pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         return if debuginfo.is_null() {
-            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::ClosureL as u8 {
+            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant2() == TagVariant::ClosureL {
                 luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object as *mut Closure)).payload.l_prototype, n, 0)
             } else {
                 null()
@@ -125,7 +125,7 @@ pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
 }
 pub unsafe fn funcinfo(debuginfo: *mut DebugInfo, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL as u8) {
+        if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
             (*debuginfo).debuginfo_source = c"=[C]".as_ptr();
             (*debuginfo).debuginfo_sourcelength = (size_of::<[i8; 5]>() as usize) - 1;
             (*debuginfo).debuginfo_linedefined = -1;
@@ -161,10 +161,8 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
             callinfo = (*debuginfo).debuginfo_callinfo;
             function = &mut (*(*callinfo).call_info_function.stkidrel_pointer);
         }
-        const TAG_VARIANT_CLOSURE_C: u8 = TagVariant::ClosureC as u8;
-        const TAG_VARIANT_CLOSURE_L: u8 = TagVariant::ClosureL as u8;
-        match (*function).get_tag_variant() {
-            TAG_VARIANT_CLOSURE_L => {
+        match (*function).get_tag_variant2() {
+            TagVariant::ClosureL => {
                 let closure: *mut Closure = &mut (*((*function).value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
                 if !(strchr(what, Character::LowerF as i32)).is_null() {
@@ -178,7 +176,7 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
                 }
                 return status;
             },
-            TAG_VARIANT_CLOSURE_C => {
+            TagVariant::ClosureC => {
                 let closure: *mut Closure = &mut (*((*function).value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
                 if !(strchr(what, Character::LowerF as i32)).is_null() {

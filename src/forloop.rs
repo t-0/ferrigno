@@ -7,7 +7,7 @@ pub unsafe fn forlimit(interpreter: *mut Interpreter, initial: i64, lim: *const 
     unsafe {
         if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
             let mut flim: f64 = 0.0;
-            if if (*lim).get_tag_variant() == TagVariant::NumericNumber as u8 {
+            if if (*lim).get_tag_variant2() == TagVariant::NumericNumber {
                 flim = (*lim).value.value_number;
                 1
             } else {
@@ -36,7 +36,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
         let pinit = &mut (*ra);
         let plimit = &mut (*ra.offset(1 as isize));
         let pstep = &mut (*ra.offset(2 as isize));
-        if (*pinit).get_tag_variant() == TagVariant::NumericInteger as u8 && (*pstep).get_tag_variant() == TagVariant::NumericInteger as u8 {
+        if (*pinit).get_tag_variant2() == TagVariant::NumericInteger && (*pstep).get_tag_variant2() == TagVariant::NumericInteger {
             let initial: i64 = (*pinit).value.value_integer;
             let step: i64 = (*pstep).value.value_integer;
             let mut limit: i64 = 0;
@@ -66,7 +66,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             let mut init_0: f64 = 0.0;
             let mut limit_0: f64 = 0.0;
             let mut step_0: f64 = 0.0;
-            if (((if (*plimit).get_tag_variant() == TagVariant::NumericNumber as u8 {
+            if (((if (*plimit).get_tag_variant2() == TagVariant::NumericNumber {
                 limit_0 = (*plimit).value.value_number;
                 1
             } else {
@@ -77,7 +77,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             {
                 luag_forerror(interpreter, plimit, c"limit".as_ptr());
             }
-            if (((if (*pstep).get_tag_variant() == TagVariant::NumericNumber as u8 {
+            if (((if (*pstep).get_tag_variant2() == TagVariant::NumericNumber {
                 step_0 = (*pstep).value.value_number;
                 1
             } else {
@@ -88,7 +88,7 @@ pub unsafe fn forprep(interpreter: *mut Interpreter, ra: *mut TValue) -> i32 {
             {
                 luag_forerror(interpreter, pstep, c"step".as_ptr());
             }
-            if (((if (*pinit).get_tag_variant() == TagVariant::NumericNumber as u8 {
+            if (((if (*pinit).get_tag_variant2() == TagVariant::NumericNumber {
                 init_0 = (*pinit).value.value_number;
                 1
             } else {
