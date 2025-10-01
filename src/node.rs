@@ -19,10 +19,10 @@ impl Node {
 }
 pub unsafe fn equal_key(k1: *const TValue, node: *const Node, deadok: i32) -> bool {
     unsafe {
-        return if (*k1).get_tag_variant2() != (*node).key.get_tag_variant2() && !(deadok != 0 && (*node).key.get_tag_variant() == TagVariant::DeadKey as u8 && ((*k1).is_collectable())) {
+        return if (*k1).get_tag_variant() != (*node).key.get_tag_variant() && !(deadok != 0 && (*node).key.get_tag_variant() == TagVariant::DeadKey && ((*k1).is_collectable())) {
             false
         } else {
-            match (*node).key.get_tag_variant2() {
+            match (*node).key.get_tag_variant() {
                 TagVariant::NilNil | TagVariant::BooleanFalse | TagVariant::BooleanTrue => true,
                 TagVariant::NumericInteger => return (*k1).value.value_integer == (*node).key.value.value_integer,
                 TagVariant::NumericNumber => return (*k1).value.value_number == (*node).key.value.value_number,

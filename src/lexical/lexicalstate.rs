@@ -1470,7 +1470,7 @@ pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut 
             let io: *mut TValue = stv;
             let tstring: *mut TString = tstring;
             (*io).value.value_object = &mut (*(tstring as *mut Object));
-            (*io).set_tag_variant((*tstring).get_tag_variant2());
+            (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);
             if (*(*interpreter).global).gc_debt > 0 {
@@ -1560,7 +1560,7 @@ pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut Le
         if luao_str2num((*(*lexical_state).buffer).loads.loads_pointer, &mut obj) == 0 {
             lexerror(interpreter, lexical_state, c"malformed number".as_ptr(), Token::Float as i32);
         }
-        if obj.get_tag_variant() == TagVariant::NumericInteger as u8 {
+        if obj.get_tag_variant() == TagVariant::NumericInteger {
             (*semantic_info).value_integer = obj.value.value_integer;
             return Token::Integer as i32;
         } else {
@@ -1955,7 +1955,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                         }
                         let tstring: *mut TString = luax_newstring(interpreter, lexical_state, (*(*lexical_state).buffer).loads.loads_pointer, (*(*lexical_state).buffer).loads.get_length() as usize);
                         (*semantic_info).value_tstring = tstring;
-                        if (*tstring).get_tag_variant() == TagVariant::StringShort as u8 && (*tstring).extra as i32 > 0 {
+                        if (*tstring).get_tag_variant() == TagVariant::StringShort && (*tstring).extra as i32 > 0 {
                             return (*tstring).extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
                         } else {
                             return Token::Name as i32;

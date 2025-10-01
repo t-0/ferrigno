@@ -87,7 +87,7 @@ impl Table {
                 while self.last_free > self.node {
                     self.last_free = self.last_free.offset(-1);
                     self.last_free;
-                    if (*self.last_free).key.get_tag_variant() == TagVariant::NilNil as u8 {
+                    if (*self.last_free).key.get_tag_variant() == TagVariant::NilNil {
                         return self.last_free;
                     }
                 }
@@ -218,7 +218,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
                 really_mark_object(global, &mut (*((*h).get_metatable() as *mut Object)));
             }
         }
-        if !mode.is_null() && (*mode).get_tag_variant() == TagVariant::StringShort as u8 && {
+        if !mode.is_null() && (*mode).get_tag_variant() == TagVariant::StringShort && {
             smode = &mut (*((*mode).value.value_object as *mut TString)) as *mut TString;
             weakkey = strchr((*smode).get_contents_mut(), Character::LowerK as i32);
             weakvalue = strchr((*smode).get_contents_mut(), Character::LowerV as i32);
@@ -272,7 +272,7 @@ pub unsafe fn hashint(t: *const Table, i: i64) -> *mut Node {
 }
 pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
     unsafe {
-        match (*key).get_tag_variant2() {
+        match (*key).get_tag_variant() {
             TagVariant::NumericInteger => {
                 let i: i64 = (*key).value.value_integer;
                 return hashint(t, i);
@@ -371,12 +371,12 @@ pub unsafe fn findindex(interpreter: *mut Interpreter, table: *mut Table, key: *
         if (*key).is_tagtype_nil() {
             return 0u32;
         }
-        i = if (*key).get_tag_variant() == TagVariant::NumericInteger as u8 { arrayindex((*key).value.value_integer) } else { 0u32 };
+        i = if (*key).get_tag_variant() == TagVariant::NumericInteger { arrayindex((*key).value.value_integer) } else { 0u32 };
         if i.wrapping_sub(1 as u32) < asize {
             return i;
         } else {
             let n_value: *const TValue = getgeneric(table, key, 1);
-            if (*n_value).get_tag_variant() == TagVariant::NilAbsentKey as u8 {
+            if (*n_value).get_tag_variant() == TagVariant::NilAbsentKey {
                 luag_runerror(interpreter, c"invalid key to 'next'".as_ptr());
             }
             i = (n_value as *mut Node).offset_from(&mut *((*table).node).offset(0 as isize) as *mut Node) as u32;
@@ -505,7 +505,7 @@ pub unsafe fn numusehash(t: *const Table, nums: *mut u32, pna: *mut u32) -> i32 
                 break;
             }
             let node: *mut Node = &mut *((*t).node).offset(i as isize) as *mut Node;
-            match (*node).value.get_tag_variant2() {
+            match (*node).value.get_tag_variant() {
                 TagVariant::NilNil | TagVariant::NilAbsentKey | TagVariant::NilEmpty => {},
                 TagVariant::NumericInteger => {
                     ause += countint((*node).key.value.value_integer, nums);
@@ -622,7 +622,7 @@ pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *cons
         let mut count_array: u32 = numusearray(table, nums.as_mut_ptr());
         let mut totaluse = count_array as i32;
         totaluse += numusehash(table, nums.as_mut_ptr(), &mut count_array);
-        if (*ek).get_tag_variant() == TagVariant::NumericInteger as u8 {
+        if (*ek).get_tag_variant() == TagVariant::NumericInteger {
             count_array = count_array.wrapping_add(countint((*ek).value.value_integer, nums.as_mut_ptr()) as u32);
         }
         totaluse += 1;
@@ -648,7 +648,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         let mut aux: TValue = TValue::new(TagVariant::NilNil as u8);
         if (*key).is_tagtype_nil() {
             luag_runerror(interpreter, c"table index is nil".as_ptr());
-        } else if (*key).get_tag_variant() == TagVariant::NumericNumber as u8 {
+        } else if (*key).get_tag_variant() == TagVariant::NumericNumber {
             let number = (*key).value.value_number;
             let mut k: i64 = 0;
             if luav_flttointeger(number, &mut k, F2I::Equal) {
@@ -717,7 +717,7 @@ pub unsafe fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
         } else {
             let mut node: *mut Node = hashint(table, key);
             loop {
-                if (*node).key.get_tag_variant() == TagVariant::NumericInteger as u8 && (*node).key.value.value_integer == key {
+                if (*node).key.get_tag_variant() == TagVariant::NumericInteger && (*node).key.value.value_integer == key {
                     return &mut (*node).value;
                 } else {
                     let nx: i32 = (*node).next;
@@ -735,7 +735,7 @@ pub unsafe fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const T
     unsafe {
         let mut node: *mut Node = &mut *((*table).node).offset(((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
         loop {
-            if get_tag_variant((*node).key.get_tag_variant()) == TagVariant::StringShort as u8 && &mut (*((*node).key.value.value_object as *mut TString)) as *mut TString == key {
+            if (*node).key.get_tag_variant() == TagVariant::StringShort && &mut (*((*node).key.value.value_object as *mut TString)) as *mut TString == key {
                 return &mut (*node).value;
             } else {
                 let nx: i32 = (*node).next;
@@ -749,14 +749,14 @@ pub unsafe fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const T
 }
 pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue {
     unsafe {
-        if (*key).get_tag_variant() == TagVariant::StringShort as u8 {
+        if (*key).get_tag_variant() == TagVariant::StringShort {
             return luah_getshortstr(table, key);
         } else {
             let mut ko: TValue = TValue::new(TagVariant::NilNil as u8);
             let io: *mut TValue = &mut ko;
             let tstring: *mut TString = key;
             (*io).value.value_object = &mut (*(tstring as *mut Object));
-            (*io).set_tag_variant((*tstring).get_tag_variant2());
+            (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             return getgeneric(table, &mut ko, 0);
         };
@@ -764,7 +764,7 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
 }
 pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
     unsafe {
-        match (*key).get_tag_variant2() {
+        match (*key).get_tag_variant() {
             TagVariant::StringShort => {
                 return luah_getshortstr(table, &mut (*((*key).value.value_object as *mut TString)));
             },
@@ -783,7 +783,7 @@ pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
 }
 pub unsafe fn luah_finishset(interpreter: *mut Interpreter, table: *mut Table, key: *const TValue, slot: *const TValue, value: *mut TValue) {
     unsafe {
-        if (*slot).get_tag_variant() == TagVariant::NilAbsentKey as u8 {
+        if (*slot).get_tag_variant() == TagVariant::NilAbsentKey {
             luah_newkey(interpreter, table, key, value);
         } else {
             let io1: *mut TValue = slot as *mut TValue;
@@ -801,7 +801,7 @@ pub unsafe fn luah_set(interpreter: *mut Interpreter, table: *mut Table, key: *c
 pub unsafe fn luah_setint(interpreter: *mut Interpreter, table: *mut Table, key: i64, value: *mut TValue) {
     unsafe {
         let p: *const TValue = luah_getint(table, key);
-        if (*p).get_tag_variant() == TagVariant::NilAbsentKey as u8 {
+        if (*p).get_tag_variant() == TagVariant::NilAbsentKey {
             let mut k: TValue = TValue::new(TagVariant::NilNil as u8);
             let io: *mut TValue = &mut k;
             (*io).value.value_integer = key;
@@ -911,7 +911,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
                 return;
             }
             t = tm;
-            if if !((*t).get_tag_variant() == TagVariant::Table as u8) {
+            if if !((*t).get_tag_variant() == TagVariant::Table) {
                 slot = null();
                 0
             } else {
@@ -973,7 +973,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                 return;
             }
             t = tm;
-            if if !((*t).get_tag_variant() == TagVariant::Table as u8) {
+            if if (*t).get_tag_variant() != TagVariant::Table {
                 slot = null();
                 0
             } else {

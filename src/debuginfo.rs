@@ -94,7 +94,7 @@ impl DebugInfo {
 pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         return if debuginfo.is_null() {
-            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant2() == TagVariant::ClosureL {
+            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::ClosureL {
                 luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object as *mut Closure)).payload.l_prototype, n, 0)
             } else {
                 null()
@@ -125,7 +125,7 @@ pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
 }
 pub unsafe fn funcinfo(debuginfo: *mut DebugInfo, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
+        if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL) {
             (*debuginfo).debuginfo_source = c"=[C]".as_ptr();
             (*debuginfo).debuginfo_sourcelength = (size_of::<[i8; 5]>() as usize) - 1;
             (*debuginfo).debuginfo_linedefined = -1;
@@ -161,7 +161,7 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
             callinfo = (*debuginfo).debuginfo_callinfo;
             function = &mut (*(*callinfo).call_info_function.stkidrel_pointer);
         }
-        match (*function).get_tag_variant2() {
+        match (*function).get_tag_variant() {
             TagVariant::ClosureL => {
                 let closure: *mut Closure = &mut (*((*function).value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);

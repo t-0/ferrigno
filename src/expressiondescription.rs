@@ -97,7 +97,7 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
             ExpressionKind::ConstantString => {
                 let tstring: *mut TString = (*expression_description).value.value_tstring;
                 (*v).value.value_object = &mut (*(tstring as *mut Object));
-                (*v).set_tag_variant((*tstring).get_tag_variant2());
+                (*v).set_tag_variant((*tstring).get_tag_variant());
                 (*v).set_collectable(true);
                 return true;
             },
@@ -112,7 +112,7 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
 }
 pub unsafe fn const2exp(v: *mut TValue, expression_description: *mut ExpressionDescription) {
     unsafe {
-        match (*v).get_tag_variant2() {
+        match (*v).get_tag_variant() {
             TagVariant::NumericInteger => {
                 (*expression_description).expression_kind = ExpressionKind::ConstantInteger;
                 (*expression_description).value.value_integer = (*v).value.value_integer;

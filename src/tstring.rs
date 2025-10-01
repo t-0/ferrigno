@@ -34,7 +34,7 @@ impl TObject for TString {
 impl TString {
     pub unsafe fn free_tstring(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            if self.get_tag_variant() == TagVariant::StringShort as u8 {
+            if self.get_tag_variant() == TagVariant::StringShort {
                 self.remove_from_state(interpreter);
                 (*interpreter).free_memory(self as *mut TString as *mut libc::c_void, core::mem::size_of::<TString>() + 1 + self.get_length() as usize);
             } else {
@@ -252,13 +252,13 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     })
             {
                 luat_tryconcattm(interpreter);
-            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TagVariant::StringShort as u8 && (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(1 as isize))).get_tag_variant() == TagVariant::StringShort && (*((*top.offset(-(1 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 (((*top.offset(-(2 as isize))).is_tagtype_string())
                     || (*top.offset(-(2 as isize))).is_tagtype_numeric() && {
                         (*top.offset(-(2 as isize))).from_interpreter_to_string(interpreter);
                         1 != 0
                     }) as i32;
-            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TagVariant::StringShort as u8 && (*((*top.offset(-(2 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
+            } else if (*top.offset(-(2 as isize))).get_tag_variant() == TagVariant::StringShort && (*((*top.offset(-(2 as isize))).value.value_object as *mut TString)).get_length() as i32 == 0 {
                 let io1: *mut TValue = &mut (*top.offset(-(2 as isize)));
                 let io2: *const TValue = &mut (*top.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
@@ -291,7 +291,7 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize)));
                 (*io).value.value_object = &mut (*(tstring as *mut Object));
-                (*io).set_tag_variant((*tstring).get_tag_variant2());
+                (*io).set_tag_variant((*tstring).get_tag_variant());
                 (*io).set_collectable(true);
             }
             total -= n - 1;

@@ -108,7 +108,7 @@ impl LoadState {
                     tstring = TString::create_long(interpreter, size as usize);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     (*io).value.value_object = &mut (*(tstring as *mut Object));
-                    (*io).set_tag_variant((*tstring).get_tag_variant2());
+                    (*io).set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
                     self.load_block(((*tstring).get_contents_mut()) as *mut libc::c_void, size.wrapping_mul(1 as usize));
@@ -178,7 +178,7 @@ impl LoadState {
                         let io_1: *mut TValue = tvalue;
                         let tstring: *mut TString = self.load_string(prototype);
                         (*io_1).value.value_object = &mut (*(tstring as *mut Object));
-                        (*io_1).set_tag_variant((*tstring).get_tag_variant2());
+                        (*io_1).set_tag_variant((*tstring).get_tag_variant());
                         (*io_1).set_collectable(true);
                     },
                     _ => {},

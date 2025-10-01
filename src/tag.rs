@@ -89,29 +89,31 @@ impl TagVariant {
         }
     }
 }
-const TAG_TYPE_MASK_: u8 = 0x0F;
 const TAG_VARIANT_MASK_: u8 = 0x3F;
-pub const fn get_tag_type(tag: u8) -> TagType {
-    match TAG_TYPE_MASK_ & tag {
-        0 => TagType::Nil,
-        1 => TagType::Boolean,
-        2 => TagType::Pointer,
-        3 => TagType::Numeric,
-        4 => TagType::String,
-        5 => TagType::Table,
-        6 => TagType::Closure,
-        7 => TagType::User,
-        8 => TagType::State,
-        9 => TagType::UpValue,
-        10 => TagType::Prototype,
-        11 => TagType::DeadKey,
-        _ => TagType::Nil,
+pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
+    match tagvariant {
+        TagVariant::NilNil => TagType::Nil,
+        TagVariant::NilEmpty => TagType::Nil,
+        TagVariant::NilAbsentKey => TagType::Nil,
+        TagVariant::BooleanFalse => TagType::Boolean,
+        TagVariant::BooleanTrue => TagType::Boolean,
+        TagVariant::Pointer => TagType::Pointer,
+        TagVariant::NumericInteger => TagType::Numeric,
+        TagVariant::NumericNumber => TagType::Numeric,
+        TagVariant::StringShort => TagType::String,
+        TagVariant::StringLong => TagType::String,
+        TagVariant::Table => TagType::Table,
+        TagVariant::ClosureL => TagType::Closure,
+        TagVariant::ClosureCFunction => TagType::Closure,
+        TagVariant::ClosureC => TagType::Closure,
+        TagVariant::User => TagType::User,
+        TagVariant::State => TagType::State,
+        TagVariant::UpValue => TagType::UpValue,
+        TagVariant::Prototype => TagType::Prototype,
+        TagVariant::DeadKey => TagType::DeadKey,
     }
 }
-pub const fn get_tag_variant(tag: u8) -> u8 {
-    TAG_VARIANT_MASK_ & tag
-}
-pub const fn get_tag_variant2(tag: u8) -> TagVariant {
+pub const fn get_tag_variant(tag: u8) -> TagVariant {
     TagVariant::from(TAG_VARIANT_MASK_ & tag)
 }
 pub fn is_none_or_nil(tag: Option<TagType>) -> bool {

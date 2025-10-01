@@ -53,13 +53,10 @@ pub trait TObject {
         self.as_object_mut().set_collectable(value);
     }
     fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.get_tag())
+        get_tag_type(self.get_tag_variant())
     }
-    fn get_tag_variant(&self) -> u8 {
+    fn get_tag_variant(&self) -> TagVariant {
         get_tag_variant(self.get_tag())
-    }
-    fn get_tag_variant2(&self) -> TagVariant {
-        get_tag_variant2(self.get_tag())
     }
     fn is_tagtype_nil(&self) -> bool {
         self.get_tag_type() == TagType::Nil
@@ -101,7 +98,7 @@ impl TObject for Object {
         return self.tag;
     }
     fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.get_tag())
+        get_tag_type(self.get_tag_variant())
     }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.tag = tagvariant as u8;
@@ -111,7 +108,7 @@ impl TObject for Object {
     }
     fn getgclist(& mut self) -> *mut *mut Object {
         unsafe {
-            match TagVariant::from(self.get_tag_variant()) {
+            match self.get_tag_variant() {
                 TagVariant::Table => return (*(self as *mut Object as *mut Table)).getgclist(),
                 TagVariant::ClosureL | TagVariant::ClosureC => return (*(self as *mut Object as *mut Closure)).getgclist(),
                 TagVariant::State => return (*(self as *mut Object as *mut Interpreter)).getgclist(),
@@ -199,7 +196,7 @@ pub unsafe fn fix_object_global(global: *mut Global, object: *mut Object) {
 pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: usize;
-        match (*object).get_tag_variant2() {
+        match (*object).get_tag_variant() {
             TagVariant::StringShort | TagVariant::StringLong => {
                 (*object).set_marked((*object).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
                 current_block_18 = 18317007320854588510;
@@ -256,7 +253,7 @@ pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
 }
 pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
-        match (*object).get_tag_variant2() {
+        match (*object).get_tag_variant() {
             TagVariant::Prototype => {
                 let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
                 (*prototype).prototype_free(interpreter);
@@ -318,7 +315,7 @@ pub unsafe fn correct_gray_list(mut objects: *mut *mut Object) -> *mut *mut Obje
                     (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);
                     (*curr).set_marked(((*curr).get_marked() ^ (5 ^ 6)) as u8);
                     current_block = 11248371660297272285;
-                } else if (*curr).get_tag_variant() == TagVariant::State as u8 {
+                } else if (*curr).get_tag_variant() == TagVariant::State {
                     current_block = 11248371660297272285;
                 } else {
                     if (*curr).get_marked() & 7 == 6 {

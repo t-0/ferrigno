@@ -544,7 +544,7 @@ impl Global {
             let object: *mut Object = self.gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
             self.gray = *(*object).getgclist();
-            match (*object).get_tag_variant2() {
+            match (*object).get_tag_variant() {
                 TagVariant::Table => return traversetable(self, &mut (*(object as *mut Table))),
                 TagVariant::User => return (*(object as *mut User)).traverseudata(self) as usize,
                 TagVariant::ClosureL => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),

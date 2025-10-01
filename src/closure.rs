@@ -50,7 +50,7 @@ impl TObject for Closure {
 impl Closure {
     pub unsafe fn free_closure(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            let size = match self.get_tag_variant2() {
+            let size = match self.get_tag_variant() {
                 TagVariant::ClosureC => size_cclosure(self.count_upvalues as usize),
                 TagVariant::ClosureL => size_lclosure(self.count_upvalues as usize),
                 _ => 0,
@@ -89,7 +89,7 @@ impl Closure {
 }
 pub unsafe fn collectvalidlines(interpreter: *mut Interpreter, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
+        if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL) {
             (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
@@ -130,7 +130,7 @@ pub unsafe fn auxgetinfo(interpreter: *mut Interpreter, mut what: *const i8, deb
                 },
                 Character::LowerU => {
                     (*debuginfo).debuginfo_nups = (if closure.is_null() { 0 } else { (*closure).count_upvalues as i32 }) as u8;
-                    if !(!closure.is_null() && (*closure).get_tag_variant2() == TagVariant::ClosureL) {
+                    if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL) {
                         (*debuginfo).debuginfo_isvariablearguments = true;
                         (*debuginfo).debuginfo_nparams = 0;
                     } else {
