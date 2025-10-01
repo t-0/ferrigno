@@ -4,7 +4,6 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::io::rn::*;
 use crate::io::stream::*;
-use crate::new::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::user::*;

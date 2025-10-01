@@ -10,7 +10,6 @@ use crate::lexical::lexicalstate::*;
 use crate::lexical::operatorbinary::*;
 use crate::lexical::operatorunary::*;
 use crate::localvariable::*;
-use crate::new::*;
 use crate::object::*;
 use crate::operator_::*;
 use crate::prototype::*;
@@ -49,8 +48,8 @@ pub struct FunctionState {
     pub iwthabs: u8,
     pub needs_close: bool,
 }
-impl New for FunctionState {
-    fn new() -> Self {
+impl FunctionState {
+    pub fn new() -> Self {
         return FunctionState {
             prototype: null_mut(),
             function_state_previous: null_mut(),
@@ -71,8 +70,6 @@ impl New for FunctionState {
             needs_close: false,
         };
     }
-}
-impl FunctionState {
     pub fn code_get_label(&mut self) -> i32 {
         self.last_target = self.program_counter;
         return self.program_counter;
@@ -328,7 +325,7 @@ pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         }
         (*upvalue_description).upvaluedescription_name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*(name as *mut Object)));
+            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut ObjectBase)), &mut (*(name as *mut ObjectBase)));
         } else {
         };
         return (*function_state).count_upvalues as i32 - 1;
@@ -776,7 +773,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         (*function_state).count_constants;
         if (*v).is_collectable() {
             if (*prototype).get_marked() & 1 << 5 != 0 && (*(*v).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(prototype as *mut Object)), &mut (*((*v).value.value_object as *mut Object)));
+                luac_barrier_(interpreter, &mut (*(prototype as *mut ObjectBase)), &mut (*((*v).value.value_object as *mut ObjectBase)));
             } else {
             };
         } else {
@@ -788,7 +785,7 @@ pub unsafe fn string_constant(interpreter: *mut Interpreter, lexical_state: *mut
     unsafe {
         let mut o: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut o;
-        (*io).value.value_object = &mut (*(s as *mut Object));
+        (*io).value.value_object = &mut (*(s as *mut ObjectBase));
         (*io).set_tag_variant((*s).get_tag_variant());
         (*io).set_collectable(true);
         return addk(interpreter, lexical_state, function_state, &mut o, &mut o);
@@ -837,7 +834,7 @@ pub unsafe fn nil_k(interpreter: *mut Interpreter, lexical_state: *mut LexicalSt
         let mut key: TValue = TValue::new(TagVariant::Table);
         let mut value: TValue = TValue::new(TagVariant::NilNil);
         let table: *mut Table = (*lexical_state).table;
-        key.value.value_object = &mut (*(table as *mut Object));
+        key.value.value_object = &mut (*(table as *mut ObjectBase));
         key.set_collectable(true);
         return addk(interpreter, lexical_state, function_state, &mut key, &mut value);
     }

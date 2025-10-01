@@ -13,7 +13,6 @@ use crate::lexical::operatorbinary::*;
 use crate::lexical::operatorunary::*;
 use crate::lexical::priority::*;
 use crate::localvariable::*;
-use crate::new::*;
 use crate::node::*;
 use crate::object::*;
 use crate::prototype::*;
@@ -47,8 +46,8 @@ pub struct LexicalState {
     pub source: *mut TString,
     pub environment: *mut TString,
 }
-impl New for LexicalState {
-    fn new() -> Self {
+impl LexicalState {
+    pub fn new() -> Self {
         return LexicalState {
             current: 0,
             line_number: 0,
@@ -64,8 +63,6 @@ impl New for LexicalState {
             environment: null_mut(),
         };
     }
-}
-impl LexicalState {
     pub unsafe fn create_label(&mut self, interpreter: *mut Interpreter, function_state: *mut FunctionState, name: *mut TString, line: i32, is_last: bool) -> bool {
         unsafe {
             let labeldescriptions: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;
@@ -126,7 +123,7 @@ impl LexicalState {
             let ref mut target = *((*prototype).prototype_prototypes.vectort_pointer).offset(np as isize);
             *target = clp;
             if (*prototype).get_marked() & 1 << 5 != 0 && (*clp).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(prototype as *mut Object)), &mut (*(clp as *mut Object)));
+                luac_barrier_(interpreter, &mut (*(prototype as *mut ObjectBase)), &mut (*(clp as *mut ObjectBase)));
             } else {
             };
             return clp;
@@ -234,7 +231,7 @@ pub unsafe fn open_function(interpreter: *mut Interpreter, lexical_state: *mut L
         (*function_state).block_control = null_mut();
         (*prototype).prototype_source = (*lexical_state).source;
         if (*prototype).get_marked() & 1 << 5 != 0 && (*(*prototype).prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(prototype as *mut Object)), &mut (*((*prototype).prototype_source as *mut Object)));
+            luac_barrier_(interpreter, &mut (*(prototype as *mut ObjectBase)), &mut (*((*prototype).prototype_source as *mut ObjectBase)));
         } else {
         };
         (*prototype).prototype_maximum_stack_size = 2 as u8;
@@ -705,7 +702,7 @@ pub unsafe fn registerlocalvar(interpreter: *mut Interpreter, _lexical_state: *m
         *fresh35 = variable_name;
         (*((*prototype).prototype_local_variables.vectort_pointer).offset((*function_state).count_debug_variables as isize)).start_program_counter = (*function_state).program_counter;
         if (*prototype).get_marked() & 1 << 5 != 0 && (*variable_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(prototype as *mut Object)), &mut (*(variable_name as *mut Object)));
+            luac_barrier_(interpreter, &mut (*(prototype as *mut ObjectBase)), &mut (*(variable_name as *mut ObjectBase)));
         } else {
         };
         let fresh36 = (*function_state).count_debug_variables;
@@ -1388,7 +1385,7 @@ pub unsafe fn handle_main_function(interpreter: *mut Interpreter, lexical_state:
         (*env).upvaluedescription_kind = 0;
         (*env).upvaluedescription_name = (*lexical_state).environment;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*(*env).upvaluedescription_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*((*env).upvaluedescription_name as *mut Object)));
+            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut ObjectBase)), &mut (*((*env).upvaluedescription_name as *mut ObjectBase)));
         } else {
         };
         luax_next(interpreter, lexical_state);
@@ -1469,7 +1466,7 @@ pub unsafe fn luax_newstring(interpreter: *mut Interpreter, lexical_state: *mut 
             let stv: *mut TValue = &mut (*fresh50);
             let io: *mut TValue = stv;
             let tstring: *mut TString = tstring;
-            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
             (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).table, stv, o, stv);

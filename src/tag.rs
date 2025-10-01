@@ -9,7 +9,7 @@ pub enum TagType {
     Table = 0x05,
     Closure = 0x06,
     User = 0x07,
-    State = 0x08,
+    Interpreter = 0x08,
     UpValue = 0x09,
     Prototype = 0x0A,
     DeadKey = 0x0B,
@@ -39,7 +39,7 @@ pub enum TagVariant {
     ClosureCFunction = TagType::Closure as u8 | TagVariantRaw::Beta as u8,
     ClosureC = TagType::Closure as u8 | TagVariantRaw::Gamma as u8,
     User = TagType::User as u8 | TagVariantRaw::Alpha as u8,
-    State = TagType::State as u8 | TagVariantRaw::Alpha as u8,
+    Interpreter = TagType::Interpreter as u8 | TagVariantRaw::Alpha as u8,
     UpValue = TagType::UpValue as u8 | TagVariantRaw::Alpha as u8,
     Prototype = TagType::Prototype as u8 | TagVariantRaw::Alpha as u8,
     DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
@@ -76,8 +76,8 @@ impl TagVariant {
             return TagVariant::ClosureC;
         } else if value == TagType::User as u8 | TagVariantRaw::Alpha as u8 {
             return TagVariant::User;
-        } else if value == TagType::State as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::State;
+        } else if value == TagType::Interpreter as u8 | TagVariantRaw::Alpha as u8 {
+            return TagVariant::Interpreter;
         } else if value == TagType::UpValue as u8 | TagVariantRaw::Alpha as u8 {
             return TagVariant::UpValue;
         } else if value == TagType::Prototype as u8 | TagVariantRaw::Alpha as u8 {
@@ -106,7 +106,7 @@ pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
         TagVariant::ClosureCFunction => TagType::Closure,
         TagVariant::ClosureC => TagType::Closure,
         TagVariant::User => TagType::User,
-        TagVariant::State => TagType::State,
+        TagVariant::Interpreter => TagType::Interpreter,
         TagVariant::UpValue => TagType::UpValue,
         TagVariant::Prototype => TagType::Prototype,
         TagVariant::DeadKey => TagType::DeadKey,

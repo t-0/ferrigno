@@ -2,6 +2,7 @@
 use std::ptr::*;
 use libc::time;
 use crate::buffer::*;
+use crate::closeprotected::*;
 use crate::bufffs::*;
 use crate::callinfo::*;
 use crate::calls::*;
@@ -21,7 +22,6 @@ use crate::lexical::lexicalstate::*;
 use crate::loadf::*;
 use crate::loadstate::*;
 use crate::longjump::*;
-use crate::new::*;
 use crate::object::*;
 use crate::prototype::*;
 use crate::registeredfunction::*;
@@ -47,7 +47,7 @@ use crate::status::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
-    pub gclist: ObjectWithGCList,
+    pub object: ObjectWithGCList,
     pub status: Status,
     pub allow_hook: u8,
     pub count_call_info: u16,
@@ -70,17 +70,17 @@ pub struct Interpreter {
     pub hook_mask: i32,
 }
 impl TObject for Interpreter {
-    fn as_object(&self) -> &Object {
-        self.gclist.as_object()
+    fn as_object(&self) -> &ObjectBase {
+        self.object.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut Object {
-        self.gclist.as_object_mut()
+    fn as_object_mut(&mut self) -> &mut ObjectBase {
+        self.object.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "interpreter".to_string()
     }
-    fn getgclist(&mut self) -> *mut *mut Object {
-        self.gclist.getgclist()
+    fn getgclist(&mut self) -> *mut *mut ObjectBase {
+        self.object.getgclist()
     }
 }
 impl Interpreter {
@@ -105,7 +105,7 @@ impl Interpreter {
         }
     }
     pub fn init(&mut self, global: &Global) {
-        self.set_tag_variant(TagVariant::State);
+        self.set_tag_variant(TagVariant::Interpreter);
         self.set_marked(global.global_currentwhite & (1 << 3 | 1 << 4));
     }
     pub unsafe fn lua_callk(& mut self, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
@@ -164,7 +164,7 @@ impl Interpreter {
                 Status::MemoryError => {
                     let io: *mut TValue = &mut (*old_top);
                     let tstring: *mut TString = (*(self.global)).global_memoryerrormessage;
-                    (*io).value.value_object = &mut (*(tstring as *mut Object));
+                    (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
                     (*io).set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
                 },
@@ -254,14 +254,14 @@ impl Interpreter {
             };
         }
     }
-    pub unsafe fn sweep_list(&mut self, mut p: *mut *mut Object, countin: i32, countout: *mut i32) -> *mut *mut Object {
+    pub unsafe fn sweep_list(&mut self, mut p: *mut *mut ObjectBase, countin: i32, countout: *mut i32) -> *mut *mut ObjectBase {
         unsafe {
             let other_white = (*(self.global)).global_currentwhite ^ (1 << 3 | 1 << 4);
             let mut i: i32;
             let white = (*(self.global)).global_currentwhite & ((1 << 3) | (1 << 4));
             i = 0;
             while !(*p).is_null() && i < countin {
-                let curr: *mut Object = *p;
+                let curr: *mut ObjectBase = *p;
                 let marked = (*curr).get_marked();
                 if marked & other_white != 0 {
                     *p = (*curr).next;
@@ -292,11 +292,11 @@ impl Interpreter {
     pub unsafe fn push_state(&mut self) -> bool {
         unsafe {
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(self as *mut Interpreter as *mut Object));
-            (*io).set_tag_variant(TagVariant::State);
+            (*io).value.value_object = &mut (*(self as *mut Interpreter as *mut ObjectBase));
+            (*io).set_tag_variant(TagVariant::Interpreter);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
-            return (*self.global).global_mainstate == self;
+            return (*self.global).global_maininterpreter == self;
         }
     }
     pub unsafe fn relstack(&mut self) {
@@ -320,7 +320,7 @@ impl Interpreter {
         unsafe {
             let message: *mut TString = luas_newlstr(self, c"error in error handling".as_ptr(), 23);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(message as *mut Object));
+            (*io).value.value_object = &mut (*(message as *mut ObjectBase));
             (*io).set_tag_variant((*message).get_tag_variant());
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
@@ -385,7 +385,7 @@ impl Interpreter {
         unsafe {
             let table: *mut Table = luah_new(self);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(table as *mut Object));
+            (*io).value.value_object = &mut (*(table as *mut ObjectBase));
             (*io).set_tag_variant(TagVariant::Table);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
@@ -406,7 +406,7 @@ impl Interpreter {
                 false
             } else {
                 let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-                (*io).value.value_object = &mut (*(metatable as *mut Object));
+                (*io).value.value_object = &mut (*(metatable as *mut ObjectBase));
                 (*io).set_tag_variant(TagVariant::Table);
                 (*io).set_collectable(true);
                 self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
@@ -496,13 +496,13 @@ pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut status: Status) -> !
             let global: *mut Global = (*interpreter).global;
             let outerstatus = luae_resetthread(interpreter, status);
             (*interpreter).status = outerstatus;
-            if !((*(*global).global_mainstate).long_jump).is_null() {
-                let fresh0 = (*(*global).global_mainstate).top.stkidrel_pointer;
-                (*(*global).global_mainstate).top.stkidrel_pointer = ((*(*global).global_mainstate).top.stkidrel_pointer).offset(1);
+            if !((*(*global).global_maininterpreter).long_jump).is_null() {
+                let fresh0 = (*(*global).global_maininterpreter).top.stkidrel_pointer;
+                (*(*global).global_maininterpreter).top.stkidrel_pointer = ((*(*global).global_maininterpreter).top.stkidrel_pointer).offset(1);
                 let io1: *mut TValue = &mut (*fresh0);
                 let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
-                luad_throw((*global).global_mainstate, outerstatus);
+                luad_throw((*global).global_maininterpreter, outerstatus);
             } else {
                 if ((*global).global_panic).is_some() {
                     ((*global).global_panic).expect("non-null function pointer")(interpreter);
@@ -953,7 +953,7 @@ pub unsafe fn resume_error(interpreter: *mut Interpreter, message: *const i8, na
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-(narg as isize));
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let tstring: *mut TString = luas_new(interpreter, message);
-        (*io).value.value_object = &mut (*(tstring as *mut Object));
+        (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
         (*io).set_tag_variant((*tstring).get_tag_variant());
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1036,7 +1036,7 @@ pub unsafe fn lua_yieldk(interpreter: *mut Interpreter, count_results: i32, ctx:
         let callinfo;
         callinfo = (*interpreter).callinfo;
         if (*interpreter).count_c_calls & 0xffff0000 as u32 != 0 {
-            if interpreter != (*(*interpreter).global).global_mainstate {
+            if interpreter != (*(*interpreter).global).global_maininterpreter {
                 luag_runerror(interpreter, c"attempt to yield across a C-call boundary".as_ptr());
             } else {
                 luag_runerror(interpreter, c"attempt to yield from outside a coroutine".as_ptr());
@@ -1257,7 +1257,7 @@ pub unsafe fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, toidx: i32) 
                     luac_barrier_(
                         interpreter,
                         &mut (*(&mut (*((*(*(*interpreter).callinfo).call_info_function.stkidrel_pointer).value.value_object)))),
-                        &mut (*((*fr).value.value_object as *mut Object)),
+                        &mut (*((*fr).value.value_object as *mut ObjectBase)),
                     );
                 } else {
                 };
@@ -1295,7 +1295,7 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> 
         Some(TagType::Table) => c"table".as_ptr(),
         Some(TagType::Closure) => c"function".as_ptr(),
         Some(TagType::User) => c"userdata".as_ptr(),
-        Some(TagType::State) => c"thread".as_ptr(),
+        Some(TagType::Interpreter) => c"thread".as_ptr(),
         Some(TagType::UpValue) => c"upvalue".as_ptr(),
         Some(TagType::Prototype) => c"proto".as_ptr(),
         _ => c"unknown".as_ptr(),
@@ -1457,14 +1457,14 @@ pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize
 pub unsafe fn lua_tothread(interpreter: *mut Interpreter, index: i32) -> *mut Interpreter {
     unsafe {
         let o: *const TValue = (*interpreter).index_to_value(index);
-        return if !((*o).get_tag_variant() == TagVariant::State) { null_mut() } else { &mut (*((*o).value.value_object as *mut Interpreter)) };
+        return if !((*o).get_tag_variant() == TagVariant::Interpreter) { null_mut() } else { &mut (*((*o).value.value_object as *mut Interpreter)) };
     }
 }
 pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, length: usize) -> *const i8 {
     unsafe {
         let tstring: *mut TString = if length == 0 { luas_new(interpreter, c"".as_ptr()) } else { luas_newlstr(interpreter, s, length as usize) };
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).value.value_object = &mut (*(tstring as *mut Object));
+        (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
         (*io).set_tag_variant((*tstring).get_tag_variant());
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1481,7 +1481,7 @@ pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) ->
         } else {
             let tstring: *mut TString = luas_new(interpreter, s);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
             (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             s = (*tstring).get_contents_mut();
@@ -1536,7 +1536,7 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
             }
             let io_0: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             let x_: *mut Closure = closure;
-            (*io_0).value.value_object = &mut (*(x_ as *mut Object));
+            (*io_0).value.value_object = &mut (*(x_ as *mut ObjectBase));
             (*io_0).set_tag_variant(TagVariant::ClosureC);
             (*io_0).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1572,7 +1572,7 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(str as *mut Object));
+            (*io).value.value_object = &mut (*(str as *mut ObjectBase));
             (*io).set_tag_variant((*str).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1731,7 +1731,7 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(str as *mut Object));
+            (*io).value.value_object = &mut (*(str as *mut ObjectBase));
             (*io).set_tag_variant((*str).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1798,8 +1798,8 @@ pub unsafe fn aux_rawset(interpreter: *mut Interpreter, index: i32, key: *mut TV
         luah_set(interpreter, table, key, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))));
         (*table).flags = ((*table).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
-            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut Object)));
+            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
             } else {
             };
         } else {
@@ -1817,8 +1817,8 @@ pub unsafe fn lua_rawseti(interpreter: *mut Interpreter, index: i32, n: i64) {
         let table: *mut Table = gettable(interpreter, index);
         luah_setint(interpreter, table, n, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))));
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
-            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut Object)));
+            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
             } else {
             };
         } else {
@@ -1837,20 +1837,20 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
         }
         match (*object).get_tag_type() {
             TagType::Table => {
-                (*((*object).value.value_object as *mut Table)).metatable = metatable;
+                (*((*object).value.value_object as *mut Table)).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*(*object).value.value_object).get_marked() & 1 << 5 != 0 && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*((*object).value.value_object as *mut Object)), &mut (*(metatable as *mut Object)));
+                        luac_barrier_(interpreter, &mut (*((*object).value.value_object as *mut ObjectBase)), &mut (*(metatable as *mut ObjectBase)));
                     } else {
                     };
                     luac_checkfinalizer(interpreter, (*object).value.value_object, metatable);
                 }
             },
             TagType::User => {
-                (*((*object).value.value_object as *mut User)).metatable = metatable;
+                (*((*object).value.value_object as *mut User)).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*((*object).value.value_object as *mut User)).get_marked() & 1 << 5 != 0 && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*(&mut (*((*object).value.value_object as *mut User)) as *mut User as *mut Object)), &mut (*(metatable as *mut Object)));
+                        luac_barrier_(interpreter, &mut (*(&mut (*((*object).value.value_object as *mut User)) as *mut User as *mut ObjectBase)), &mut (*(metatable as *mut ObjectBase)));
                     } else {
                     };
                     luac_checkfinalizer(interpreter, (*object).value.value_object, metatable);
@@ -1904,8 +1904,8 @@ pub unsafe fn lua_load(interpreter: *mut Interpreter, reader: Reader, data: *mut
                     if (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).get_marked() & 1 << 5 != 0 && (*(*gt).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         luac_barrier_(
                             interpreter,
-                            &mut (*(*((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize) as *mut Object)),
-                            &mut (*((*gt).value.value_object as *mut Object)),
+                            &mut (*(*((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize) as *mut ObjectBase)),
+                            &mut (*((*gt).value.value_object as *mut ObjectBase)),
                         );
                     } else {
                     }
@@ -1967,7 +1967,7 @@ pub unsafe fn lua_concat(interpreter: *mut Interpreter, n: i32) {
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             let tstring: *mut TString = luas_newlstr(interpreter, c"".as_ptr(), 0);
-            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
             (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -2011,7 +2011,7 @@ pub unsafe fn lua_getupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i
 pub unsafe fn lua_setupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i32) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
-        let mut owner: *mut Object = null_mut();
+        let mut owner: *mut ObjectBase = null_mut();
         let fi: *mut TValue = (*interpreter).index_to_value(funcindex);
         let name: *const i8 = aux_upvalue(fi, n, &mut value, &mut owner);
         if !name.is_null() {
@@ -2021,7 +2021,7 @@ pub unsafe fn lua_setupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i
             (*io1).copy_from(&*io2);
             if (*value).is_collectable() {
                 if (*owner).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    luac_barrier_(interpreter, &mut (*(owner as *mut Object)), &mut (*((*value).value.value_object as *mut Object)));
+                    luac_barrier_(interpreter, &mut (*(owner as *mut ObjectBase)), &mut (*((*value).value.value_object as *mut ObjectBase)));
                 } else {
                 };
             } else {
@@ -2071,7 +2071,7 @@ pub unsafe fn lua_upvaluejoin(interpreter: *mut Interpreter, fidx1: i32, n1: i32
         let up2: *mut *mut UpValue = getupvalref(interpreter, fidx2, n2, null_mut());
         *up1 = *up2;
         if (*f1).get_marked() & 1 << 5 != 0 && (**up1).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(f1 as *mut Object)), &mut (*(*up1 as *mut Object)));
+            luac_barrier_(interpreter, &mut (*(f1 as *mut ObjectBase)), &mut (*(*up1 as *mut ObjectBase)));
         } else {
         };
     }
@@ -2186,18 +2186,18 @@ pub unsafe fn init_registry(interpreter: *mut Interpreter, global: *mut Global) 
         let registry: *mut Table = luah_new(interpreter);
         let io: *mut TValue = &mut (*global).global_lregistry;
         let x_: *mut Table = registry;
-        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
         (*io).set_tag_variant(TagVariant::Table);
         (*io).set_collectable(true);
         luah_resize(interpreter, registry, 2, 0);
         let io_0: *mut TValue = &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
         let x0: *mut Interpreter = interpreter;
-        (*io_0).value.value_object = &mut (*(x0 as *mut Object));
-        (*io_0).set_tag_variant(TagVariant::State);
+        (*io_0).value.value_object = &mut (*(x0 as *mut ObjectBase));
+        (*io_0).set_tag_variant(TagVariant::Interpreter);
         (*io_0).set_collectable(true);
         let io_1: *mut TValue = &mut *((*registry).array).offset((2 - 1) as isize) as *mut TValue;
         let x1: *mut Table = luah_new(interpreter);
-        (*io_1).value.value_object = &mut (*(x1 as *mut Object));
+        (*io_1).value.value_object = &mut (*(x1 as *mut ObjectBase));
         (*io_1).set_tag_variant(TagVariant::Table);
         (*io_1).set_collectable(true);
     }
@@ -2241,10 +2241,10 @@ pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
         if (*(*interpreter).global).global_gcdebt > 0 {
             (*interpreter).luac_step();
         }
-        let ret = luac_newobj(interpreter, TagVariant::State, size_of::<Interpreter>()) as *mut Interpreter;
+        let ret = luac_newobj(interpreter, TagVariant::Interpreter, size_of::<Interpreter>()) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).set_tag_variant(TagVariant::State);
-        (*io).value.value_object = &mut (*(ret as *mut Object));
+        (*io).set_tag_variant(TagVariant::Interpreter);
+        (*io).value.value_object = &mut (*(ret as *mut ObjectBase));
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         (*ret).preinit_thread(global);
@@ -2288,7 +2288,7 @@ pub unsafe fn lua_closethread(interpreter: *mut Interpreter, from: *mut Interpre
 }
 pub unsafe fn lua_close(mut interpreter: *mut Interpreter) {
     unsafe {
-        interpreter = (*(*interpreter).global).global_mainstate;
+        interpreter = (*(*interpreter).global).global_maininterpreter;
         close_state(interpreter);
     }
 }
@@ -2876,7 +2876,7 @@ pub unsafe fn luat_init(interpreter: *mut Interpreter) {
         ];
         for i in 0..TM_N {
             (*(*interpreter).global).global_tmname[i as usize] = luas_new(interpreter, EVENT_NAMES[i as usize]);
-            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).global_tmname).as_mut_ptr().offset(i as isize) as *mut Object)));
+            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).global_tmname).as_mut_ptr().offset(i as isize) as *mut ObjectBase)));
         }
     }
 }
@@ -2885,10 +2885,10 @@ pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, e
         let metatable: *mut Table;
         match (*o).get_tag_type() {
             TagType::Table => {
-                metatable = (*((*o).value.value_object as *mut Table)).metatable;
+                metatable = (*((*o).value.value_object as *mut Table)).get_metatable();
             },
             TagType::User => {
-                metatable = (*((*o).value.value_object as *mut User)).metatable;
+                metatable = (*((*o).value.value_object as *mut User)).get_metatable();
             },
             _ => {
                 metatable = (*(*interpreter).global).global_metatables[(*o).get_tag_type() as usize];
@@ -3104,10 +3104,10 @@ pub unsafe fn luat_getvarargs(interpreter: *mut Interpreter, callinfo: *mut Call
         }
     }
 }
-pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant, size: usize) -> *mut Object {
+pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant, size: usize) -> *mut ObjectBase {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        let ret = luam_malloc_(interpreter, size as usize) as *mut Object;
+        let ret = luam_malloc_(interpreter, size as usize) as *mut ObjectBase;
         (*ret).set_tag_variant(tagvariant);
         (*ret).set_marked((*global).global_currentwhite & (1 << 3 | 1 << 4));
         (*ret).next = (*global).global_allgc;
@@ -3119,7 +3119,7 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
     unsafe {
         let mut o: *mut TValue = (*interpreter).stack.stkidrel_pointer;
         if (*interpreter).get_marked() & 7 > 1 || (*global).global_gcstate as i32 == 0 {
-            linkgclist_(&mut (*(interpreter as *mut Object)), (*interpreter).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(interpreter as *mut ObjectBase)), (*interpreter).getgclist(), &mut (*global).global_grayagain);
         }
         if o.is_null() {
             return 1;
@@ -3133,7 +3133,7 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
         let mut uv: *mut UpValue = (*interpreter).open_upvalue;
         while !uv.is_null() {
             if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(uv as *mut Object)));
+                really_mark_object(global, &mut (*(uv as *mut ObjectBase)));
             }
             uv = (*uv).u.open.next;
         }
@@ -3154,9 +3154,9 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
         return 1 + ((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).stack.stkidrel_pointer) as i32;
     }
 }
-pub unsafe fn sweeptolive(interpreter: *mut Interpreter, mut p: *mut *mut Object) -> *mut *mut Object {
+pub unsafe fn sweeptolive(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
     unsafe {
-        let old: *mut *mut Object = p;
+        let old: *mut *mut ObjectBase = p;
         loop {
             p = (*interpreter).sweep_list(p, 1, null_mut());
             if !(p == old) {
@@ -3177,7 +3177,7 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
         let tm: *const TValue;
         let mut v: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut v;
-        let i_g: *mut Object = (*global).udata2finalize();
+        let i_g: *mut ObjectBase = (*global).udata2finalize();
         (*io).value.value_object = i_g;
         (*io).set_tag_variant((*i_g).get_tag_variant());
         (*io).set_collectable(true);
@@ -3227,7 +3227,7 @@ pub unsafe fn runafewfinalizers(interpreter: *mut Interpreter, n: i32) -> i32 {
         return i;
     }
 }
-pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut Object, metatable: *mut Table) {
+pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut ObjectBase, metatable: *mut Table) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*o).get_marked() & 1 << 6 != 0
@@ -3247,13 +3247,13 @@ pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut Object,
         } else {
             if 3 <= (*global).global_gcstate as i32 && (*global).global_gcstate as i32 <= 6 {
                 (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).global_currentwhite & (1 << 3 | 1 << 4)));
-                if (*global).global_sweepgc == &mut (*o).next as *mut *mut Object {
+                if (*global).global_sweepgc == &mut (*o).next as *mut *mut ObjectBase {
                     (*global).global_sweepgc = sweeptolive(interpreter, (*global).global_sweepgc);
                 }
             } else {
                 (*global).correct_pointers(o);
             }
-            let mut p: *mut *mut Object = &mut (*global).global_allgc;
+            let mut p: *mut *mut ObjectBase = &mut (*global).global_allgc;
             while *p != o {
                 p = &mut (**p).next;
             }
@@ -3264,11 +3264,11 @@ pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut Object,
         };
     }
 }
-pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) {
+pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBase) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         loop {
-            let curr: *mut Object = *p;
+            let curr: *mut ObjectBase = *p;
             if curr.is_null() {
                 break;
             }
@@ -3277,9 +3277,9 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
                 free_object(interpreter, curr);
             } else {
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
-                if (*curr).get_tag_variant() == TagVariant::State {
+                if (*curr).get_tag_variant() == TagVariant::Interpreter {
                     let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
-                    linkgclist_(&mut (*(other_state as *mut Object)),  (*other_state).getgclist(), &mut (*global).global_grayagain);
+                    linkgclist_(&mut (*(other_state as *mut ObjectBase)),  (*other_state).getgclist(), &mut (*global).global_grayagain);
                 } else if (*curr).get_tag_variant() == TagVariant::UpValue && (*(curr as *mut UpValue)).v.p != &mut (*(curr as *mut UpValue)).u.value as *mut TValue {
                     (*curr).set_marked((*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
@@ -3290,12 +3290,12 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
         }
     }
 }
-pub unsafe fn sweepgen(interpreter: *mut Interpreter, global: *mut Global, mut p: *mut *mut Object, limit: *mut Object, pfirstold1: *mut *mut Object) -> *mut *mut Object {
+pub unsafe fn sweepgen(interpreter: *mut Interpreter, global: *mut Global, mut p: *mut *mut ObjectBase, limit: *mut ObjectBase, pfirstold1: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
     unsafe {
         static mut NEXT_AGE: [u8; 7] = [1, 3 as u8, 3 as u8, 4 as u8, 4 as u8, 5 as u8, 6 as u8];
         let white = (*global).global_currentwhite & (1 << 3 | 1 << 4);
         loop {
-            let curr: *mut Object = *p;
+            let curr: *mut ObjectBase = *p;
             if !(curr != limit) {
                 break;
             }
@@ -3400,7 +3400,7 @@ pub unsafe fn luaf_closeupval(interpreter: *mut Interpreter, level: *mut TValue)
                 (*uv).set_marked((*uv).get_marked() | 1 << 5);
                 if (*slot).is_collectable() {
                     if (*uv).get_marked() & 1 << 5 != 0 && (*(*slot).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*(uv as *mut Object)), &mut (*((*slot).value.value_object as *mut Object)));
+                        luac_barrier_(interpreter, &mut (*(uv as *mut ObjectBase)), &mut (*((*slot).value.value_object as *mut ObjectBase)));
                     } else {
                     };
                 } else {
@@ -3439,26 +3439,26 @@ pub unsafe fn luay_parser(interpreter: *mut Interpreter, zio: *mut ZIO, buffer: 
         let closure: *mut Closure = luaf_newlclosure(interpreter, 1);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let x_: *mut Closure = closure;
-        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
         (*io).set_tag_variant(TagVariant::ClosureL);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         lexstate.table = luah_new(interpreter);
         let io_0: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let x0: *mut Table = lexstate.table;
-        (*io_0).value.value_object = &mut (*(x0 as *mut Object));
+        (*io_0).value.value_object = &mut (*(x0 as *mut ObjectBase));
         (*io_0).set_tag_variant(TagVariant::Table);
         (*io_0).set_collectable(true);
         (*interpreter).luad_inctop();
         (*closure).payload.l_prototype = luaf_newproto(interpreter);
         funcstate.prototype = (*closure).payload.l_prototype;
         if (*closure).get_marked() & 1 << 5 != 0 && (*(*closure).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(closure as *mut Object)), &mut (*((*closure).payload.l_prototype as *mut Object)));
+            luac_barrier_(interpreter, &mut (*(closure as *mut ObjectBase)), &mut (*((*closure).payload.l_prototype as *mut ObjectBase)));
         } else {
         };
         (*funcstate.prototype).prototype_source = luas_new(interpreter, name);
         if (*funcstate.prototype).get_marked() & 1 << 5 != 0 && (*(*funcstate.prototype).prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(funcstate.prototype as *mut Object)), &mut (*((*funcstate.prototype).prototype_source as *mut Object)));
+            luac_barrier_(interpreter, &mut (*(funcstate.prototype as *mut ObjectBase)), &mut (*((*funcstate.prototype).prototype_source as *mut ObjectBase)));
         } else {
         };
         lexstate.buffer = buffer;
@@ -3475,11 +3475,11 @@ pub unsafe fn luay_parser(interpreter: *mut Interpreter, zio: *mut ZIO, buffer: 
 pub unsafe fn luax_init(interpreter: *mut Interpreter) {
     unsafe {
         let env_string: *mut TString = luas_newlstr(interpreter, c"_ENV".as_ptr(), "_ENV".len());
-        fix_object_state(interpreter, &mut (*(env_string as *mut Object)));
+        fix_object_state(interpreter, &mut (*(env_string as *mut ObjectBase)));
         let mut i: i32 = 0;
         while i < Token::While as i32 - 255 {
             let tstring: *mut TString = luas_new(interpreter, TOKENS[i as usize]);
-            fix_object_state(interpreter, &mut (*(tstring as *mut Object)));
+            fix_object_state(interpreter, &mut (*(tstring as *mut ObjectBase)));
             (*tstring).extra = (i + 1) as u8;
             i += 1;
         }
@@ -3493,7 +3493,7 @@ pub unsafe fn pushclosure(interpreter: *mut Interpreter, p: *mut Prototype, encu
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra);
         let x_: *mut Closure = ncl;
-        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
         (*io).set_tag_variant(TagVariant::ClosureL);
         (*io).set_collectable(true);
         for i in 0..count_upvalues {
@@ -3505,7 +3505,7 @@ pub unsafe fn pushclosure(interpreter: *mut Interpreter, p: *mut Prototype, encu
                 *fresh137 = *encup.offset((*uv.offset(i as isize)).upvaluedescription_index as isize);
             }
             if (*ncl).get_marked() & 1 << 5 != 0 && (**((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(ncl as *mut Object)), &mut (*(*((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize) as *mut Object)));
+                luac_barrier_(interpreter, &mut (*(ncl as *mut ObjectBase)), &mut (*(*((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize) as *mut ObjectBase)));
             } else {
             };
         }
@@ -3681,7 +3681,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             (*io1_3).copy_from(&(*io2_3));
                             if (*ra_9).is_collectable() {
                                 if (*uv).get_marked() & 1 << 5 != 0 && (*(*ra_9).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                    luac_barrier_(interpreter, &mut (*(uv as *mut Object)), &mut (*((*ra_9).value.value_object as *mut Object)));
+                                    luac_barrier_(interpreter, &mut (*(uv as *mut ObjectBase)), &mut (*((*ra_9).value.value_object as *mut ObjectBase)));
                                 } else {
                                 };
                             } else {
@@ -3988,7 +3988,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             table = luah_new(interpreter);
                             let io_3: *mut TValue = &mut (*ra_17);
                             let x_: *mut Table = table;
-                            (*io_3).value.value_object = &mut (*(x_ as *mut Object));
+                            (*io_3).value.value_object = &mut (*(x_ as *mut ObjectBase));
                             (*io_3).set_tag_variant(TagVariant::Table);
                             (*io_3).set_collectable(true);
                             if new_table_size != 0 || new_array_size != 0 {
@@ -5448,8 +5448,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_17).copy_from(&(*io2_17));
                                 last = last.wrapping_sub(1);
                                 if (*value).is_collectable() {
-                                    if (*(h as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, &mut (*(h as *mut Object)));
+                                    if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                                        luac_barrierback_(interpreter, &mut (*(h as *mut ObjectBase)));
                                     } else {
                                     };
                                 } else {
@@ -6282,36 +6282,36 @@ pub unsafe fn warnfon(arbitrary_data: *mut libc::c_void, message: *const i8, toc
         warnfcont(arbitrary_data, message, tocont);
     }
 }
-pub unsafe fn lual_newstate() -> *mut Interpreter {
+pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
     unsafe {
-        let mut interpreter: *mut Interpreter = raw_allocate(null_mut(), 0, size_of::<Interpreter>()) as *mut Interpreter;
-        if interpreter.is_null() {
-            return null_mut();
-        }
         let global: *mut Global = raw_allocate(null_mut(), 0, size_of::<Global>()) as *mut Global;
-        if global.is_null() {
-            raw_allocate(interpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
-            return null_mut();
+        if !global.is_null() {
+            let mut interpreter: *mut Interpreter = raw_allocate(null_mut(), 0, size_of::<Interpreter>()) as *mut Interpreter;
+            if interpreter.is_null() {
+                raw_allocate(global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
+            } else {
+                (*global).init();
+                (*interpreter).init(&*global);
+                (*global).global_totalbytes += size_of::<Interpreter>() as i64;
+                (*global).global_totalbytes += size_of::<Global>() as i64;
+                (*interpreter).preinit_thread(global);
+                (*global).global_allgc = &mut (*(interpreter as *mut ObjectBase));
+                (*interpreter).as_object_mut().next = null_mut();
+                (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
+                (*global).global_maininterpreter = interpreter;
+                (*global).global_seed = luai_makeseed(interpreter);
+                if luad_rawrunprotected(interpreter, Some(f_luaopen as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()), null_mut()) != Status::OK {
+                    close_state(interpreter);
+                    interpreter = null_mut();
+                }
+                if !interpreter.is_null() {
+                    lua_atpanic(interpreter, Some(panic as unsafe fn(*mut Interpreter) -> i32));
+                    lua_setwarnf(interpreter, Some(warnfoff as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()), interpreter as *mut libc::c_void);
+                }
+                return (global, interpreter);
+            }
         }
-        (*global).init();
-        (*interpreter).init(&*global);
-        (*global).global_totalbytes += size_of::<Interpreter>() as i64;
-        (*global).global_totalbytes += size_of::<Global>() as i64;
-        (*interpreter).preinit_thread(global);
-        (*global).global_allgc = &mut (*(interpreter as *mut Object));
-        (*interpreter).as_object_mut().next = null_mut();
-        (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
-        (*global).global_mainstate = interpreter;
-        (*global).global_seed = luai_makeseed(interpreter);
-        if luad_rawrunprotected(interpreter, Some(f_luaopen as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()), null_mut()) != Status::OK {
-            close_state(interpreter);
-            interpreter = null_mut();
-        }
-        if !interpreter.is_null() {
-            lua_atpanic(interpreter, Some(panic as unsafe fn(*mut Interpreter) -> i32));
-            lua_setwarnf(interpreter, Some(warnfoff as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()), interpreter as *mut libc::c_void);
-        }
-        return interpreter;
+        return (null_mut(), null_mut());
     }
 }
 pub unsafe fn lual_checkversion_(interpreter: *mut Interpreter, version: f64, size: usize) {
@@ -6777,7 +6777,7 @@ pub unsafe fn checkstack(interpreter: *mut Interpreter, other_state: *mut Interp
 }
 pub unsafe fn getthread(interpreter: *mut Interpreter, arg: *mut i32) -> *mut Interpreter {
     unsafe {
-        if lua_type(interpreter, 1) == Some(TagType::State) {
+        if lua_type(interpreter, 1) == Some(TagType::Interpreter) {
             *arg = 1;
             return lua_tothread(interpreter, 1);
         } else {

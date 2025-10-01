@@ -37,7 +37,6 @@ mod longjump;
 mod macros;
 mod matchstate;
 mod nativeendian;
-mod new;
 mod node;
 mod object;
 mod operator_;

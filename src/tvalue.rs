@@ -108,13 +108,13 @@ impl TValue {
             let mut buffer: [i8; 44] = [0; 44];
             let length = tostringbuff(self, buffer.as_mut_ptr());
             let tstring: *mut TString = luas_newlstr(interpreter, buffer.as_mut_ptr(), length as usize);
-            self.value.value_object = &mut (*(tstring as *mut Object));
+            self.value.value_object = &mut (*(tstring as *mut ObjectBase));
             self.set_tag_variant((*tstring).get_tag_variant());
             self.set_collectable(true);
         }
     }
 }
-pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owner: *mut *mut Object) -> *const i8 {
+pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owner: *mut *mut ObjectBase) -> *const i8 {
     unsafe {
         match (*fi).get_tag_variant() {
             TagVariant::ClosureC => {
@@ -124,7 +124,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                 }
                 *value = &mut *((*closure).upvalues).c_tvalues.as_mut_ptr().offset((n - 1) as isize) as *mut TValue;
                 if !owner.is_null() {
-                    *owner = &mut (*(closure as *mut Object));
+                    *owner = &mut (*(closure as *mut ObjectBase));
                 }
                 return c"".as_ptr();
             },
@@ -136,7 +136,7 @@ pub unsafe fn aux_upvalue(fi: *mut TValue, n: i32, value: *mut *mut TValue, owne
                 }
                 *value = (**((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize)).v.p;
                 if !owner.is_null() {
-                    *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize) as *mut Object));
+                    *owner = &mut (*(*((*f_0).upvalues).l_upvalues.as_mut_ptr().offset((n - 1) as isize) as *mut ObjectBase));
                 }
                 let name: *mut TString = (*((*p).prototype_upvalues.vectort_pointer).offset((n - 1) as isize)).upvaluedescription_name;
                 return if name.is_null() { c"(no name)".as_ptr() } else { ((*name).get_contents_mut()) as *const i8 };

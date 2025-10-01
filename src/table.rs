@@ -4,7 +4,6 @@ use crate::f2i::*;
 use crate::functions::*;
 use crate::global::*;
 use crate::interpreter::*;
-use crate::new::*;
 use crate::node::*;
 use crate::object::*;
 use crate::tag::*;
@@ -17,48 +16,49 @@ use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub gclist: ObjectWithGCList,
+    pub object: ObjectWithGCList,
+    pub table_metatable: *mut Table,
     pub flags: u8,
     pub log_size_node: u8,
     pub array_limit: u32,
     pub array: *mut TValue,
     pub node: *mut Node,
     pub last_free: *mut Node,
-    pub metatable: *mut Table,
 }
 impl TObject for Table {
-    fn as_object(&self) -> &Object {
-        self.gclist.as_object()
+    fn as_object(&self) -> &ObjectBase {
+        self.object.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut Object {
-        self.gclist.as_object_mut()
+    fn as_object_mut(&mut self) -> &mut ObjectBase {
+        self.object.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "table".to_string()
     }
-    fn get_metatable(&mut self) -> *mut Table {
-        self.metatable
+    fn getgclist(& mut self) -> *mut *mut ObjectBase {
+        self.object.getgclist()
     }
-    fn getgclist(& mut self) -> *mut *mut Object {
-        self.gclist.getgclist()
+    fn get_metatable(&self) -> *mut Table {
+        self.table_metatable
+    }
+    fn set_metatable(&mut self, metatable: * mut Table) {
+        self.table_metatable = metatable;
     }
 }
-impl New for Table {
-    fn new() -> Self {
+impl Table {
+    pub fn new() -> Self {
         Table {
-            gclist: ObjectWithGCList::new(TagVariant::Table),
+            object: ObjectWithGCList::new(TagVariant::Table),
             flags: 0,
             log_size_node: 0,
             array_limit: 0,
             array: null_mut(),
             node: null_mut(),
             last_free: null_mut(),
-            metatable: null_mut(),
+            table_metatable: null_mut(),
             ..
         }
     }
-}
-impl Table {
     pub unsafe fn free_table(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             freehash(interpreter, self);
@@ -124,9 +124,9 @@ pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
             node = node.offset(1);
         }
         if (*global).global_gcstate as i32 == 2 && hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_weak);
+            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_weak);
         } else {
-            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_grayagain);
         };
     }
 }
@@ -162,13 +162,13 @@ pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: 
             }
         }
         if (*global).global_gcstate as i32 == 0 {
-            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_grayagain);
         } else if hasww != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_ephemeron);
+            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_ephemeron);
         } else if hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_allweak);
+            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_allweak);
         } else {
-            generate_link(global, &mut (*(h as *mut Object)));
+            generate_link(global, &mut (*(h as *mut ObjectBase)));
         }
         return marked;
     }
@@ -196,7 +196,7 @@ pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
             }
             node = node.offset(1);
         }
-        generate_link(global, &mut (*(h as *mut Object)));
+        generate_link(global, &mut (*(h as *mut ObjectBase)));
     }
 }
 pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
@@ -213,7 +213,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
         let smode: *mut TString;
         if !((*h).get_metatable()).is_null() {
             if (*(*h).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*((*h).get_metatable() as *mut Object)));
+                really_mark_object(global, &mut (*((*h).get_metatable() as *mut ObjectBase)));
             }
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TagVariant::StringShort && {
@@ -227,7 +227,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
             } else if weakvalue.is_null() {
                 traverseephemeron(global, h, false);
             } else {
-                linkgclist_(&mut (*(h as *mut Object)), (*h).getgclist(), &mut (*global).global_allweak);
+                linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_allweak);
             }
         } else {
             traversestrongtable(global, h);
@@ -304,7 +304,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
                     as *mut Node;
             },
             _ => {
-                let o: *mut Object = (*key).value.value_object;
+                let o: *mut ObjectBase = (*key).value.value_object;
                 return &mut *((*t).node).offset(((o as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize) as *mut Node;
             },
         };
@@ -630,9 +630,9 @@ pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *cons
 }
 pub unsafe fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TagVariant::Table, size_of::<Table>());
+        let object: *mut ObjectBase = luac_newobj(interpreter, TagVariant::Table, size_of::<Table>());
         let new_table: *mut Table = &mut (*(object as *mut Table));
-        (*new_table).metatable = null_mut();
+        (*new_table).table_metatable = null_mut();
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
         (*new_table).array = null_mut();
         (*new_table).array_limit = 0u32;
@@ -693,8 +693,8 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         let io_: *const TValue = key;
         (*node).key.copy_from(&*io_);
         if (*key).is_collectable() {
-            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*key).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut Object)));
+            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*key).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
             } else {
             };
         } else {
@@ -753,7 +753,7 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
             let mut ko: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut ko;
             let tstring: *mut TString = key;
-            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
             (*io).set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             return getgeneric(table, &mut ko, 0);
@@ -944,7 +944,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let x_: *mut Table = h;
-                    (*io).value.value_object = &mut (*(x_ as *mut Object));
+                    (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
                     (*io).set_tag_variant(TagVariant::Table);
                     (*io).set_collectable(true);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -952,8 +952,8 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
-                        if (*(h as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            luac_barrierback_(interpreter, &mut (*(h as *mut Object)));
+                        if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                            luac_barrierback_(interpreter, &mut (*(h as *mut ObjectBase)));
                         } else {
                         };
                     } else {

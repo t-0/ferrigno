@@ -6,7 +6,6 @@ use crate::interpreter::*;
 use crate::k::*;
 use crate::matchstate::*;
 use crate::nativeendian::*;
-use crate::new::*;
 use crate::registeredfunction::*;
 use crate::streamwriter::*;
 use crate::tag::*;

@@ -21,7 +21,7 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Prototype {
-    pub gclist: ObjectWithGCList,
+    pub object: ObjectWithGCList,
     pub prototype_is_variable_arguments: bool,
     pub prototype_count_parameters: u8,
     pub prototype_maximum_stack_size: u8,
@@ -37,17 +37,17 @@ pub struct Prototype {
     pub prototype_absolute_line_info: VectorT<AbsoluteLineInfo>,
 }
 impl TObject for Prototype {
-    fn as_object(&self) -> &Object {
-        self.gclist.as_object()
+    fn as_object(&self) -> &ObjectBase {
+        self.object.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut Object {
-        self.gclist.as_object_mut()
+    fn as_object_mut(&mut self) -> &mut ObjectBase {
+        self.object.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()
     }
-    fn getgclist(& mut self) -> *mut *mut Object {
-        self.gclist.getgclist()
+    fn getgclist(& mut self) -> *mut *mut ObjectBase {
+        self.object.getgclist()
     }
 }
 impl Prototype {
@@ -153,7 +153,7 @@ impl Prototype {
         unsafe {
             if !self.prototype_source.is_null() {
                 if (*self.prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, &mut (*(self.prototype_source as *mut Object)));
+                    really_mark_object(global, &mut (*(self.prototype_source as *mut ObjectBase)));
                 }
             }
             for i in 0..self.prototype_constants.get_size() {
@@ -164,21 +164,21 @@ impl Prototype {
             for i in 0..self.prototype_upvalues.get_size() {
                 if !((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).is_null() {
                     if (*(*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name as *mut Object)));
+                        really_mark_object(global, &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name as *mut ObjectBase)));
                     }
                 }
             }
             for i in 0..self.prototype_prototypes.get_size() {
                 if !(*(self.prototype_prototypes.vectort_pointer).offset(i as isize)).is_null() {
                     if (**(self.prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*(*(self.prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)));
+                        really_mark_object(global, &mut (*(*(self.prototype_prototypes.vectort_pointer).offset(i as isize) as *mut ObjectBase)));
                     }
                 }
             }
             for i in 0..self.prototype_local_variables.get_size() {
                 if !((*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name).is_null() {
                     if (*(*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*((*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name as *mut Object)));
+                        really_mark_object(global, &mut (*((*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name as *mut ObjectBase)));
                     }
                 }
             }
@@ -514,7 +514,7 @@ pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: 
 }
 pub unsafe fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
     unsafe {
-        let object: *mut Object = luac_newobj(interpreter, TagVariant::Prototype, size_of::<Prototype>());
+        let object: *mut ObjectBase = luac_newobj(interpreter, TagVariant::Prototype, size_of::<Prototype>());
         let prototype: *mut Prototype = &mut (*(object as *mut Prototype));
         (*prototype).prototype_constants.initialize();
         (*prototype).prototype_prototypes.initialize();

@@ -5,7 +5,7 @@ use libc::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union Value {
-    pub value_object: *mut Object,
+    pub value_object: *mut ObjectBase,
     pub value_pointer: *mut c_void,
     pub value_function: CFunction,
     pub value_integer: i64,
@@ -16,7 +16,7 @@ pub union Value {
     pub value_variable: ValueRegister,
 }
 impl Value {
-    pub const fn new_object(object: *mut Object) -> Self {
+    pub const fn new_object(object: *mut ObjectBase) -> Self {
         Value { value_object: object }
     }
     pub const fn new_integer(integer: i64) -> Self {

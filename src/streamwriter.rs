@@ -1,6 +1,5 @@
 use crate::buffer::*;
 use crate::interpreter::*;
-use crate::new::*;
 use crate::tag::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

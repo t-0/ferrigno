@@ -1,4 +1,3 @@
-use crate::new::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct BlockControl {
@@ -10,8 +9,8 @@ pub struct BlockControl {
     pub is_loop: bool,
     pub is_inside_tbc: bool,
 }
-impl New for BlockControl {
-    fn new() -> Self {
+impl BlockControl {
+    pub fn new() -> Self {
         return BlockControl {
             previous: null_mut(),
             first_label: 0,
@@ -23,8 +22,6 @@ impl New for BlockControl {
             ..
         };
     }
-}
-impl BlockControl {
     pub unsafe fn mark_upvalue_delegated(&mut self, level: i32) {
         unsafe {
             let mut block_control: *mut BlockControl = self;

@@ -53,8 +53,8 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
-        let interpreter: *mut Interpreter = lual_newstate();
-        if interpreter.is_null() {
+        let (global, interpreter) = lual_newstate();
+        if global.is_null() {
             l_message(*argv.offset(0), c"cannot create interpreter: not enough memory".as_ptr());
             return 1;
         } else {
@@ -65,7 +65,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             let status = CallS::api_call(interpreter, 2, 1, 0, 0, None);
             let result = lua_toboolean(interpreter, -1);
             report(interpreter, status);
-            lua_close(interpreter);
+            (*global).close();
             return if result && status == Status::OK { 0 } else { 1 };
         }
     }

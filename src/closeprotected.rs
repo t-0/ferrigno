@@ -1,6 +1,5 @@
 use crate::interpreter::*;
 use crate::status::*;
-use crate::new::*;
 use crate::tvalue::*;
 use libc::*;
 use std::ptr::*;
@@ -9,12 +8,10 @@ struct CloseProtected {
     closeprotected_level: *mut TValue,
     closeprotected_status: Status,
 }
-impl New for CloseProtected {
-    fn new() -> Self {
+impl CloseProtected {
+    pub fn new() -> Self {
         return CloseProtected { closeprotected_level: null_mut(), closeprotected_status: Status::OK };
     }
-}
-impl CloseProtected {
     unsafe fn auxiliary(interpreter: *mut Interpreter, arbitrary_data: *mut c_void) {
         unsafe {
             let close_protected: *mut CloseProtected = arbitrary_data as *mut CloseProtected;

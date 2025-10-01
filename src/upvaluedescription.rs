@@ -10,7 +10,7 @@ pub struct UpValueDescription {
     pub upvaluedescription_index: u8,
     pub upvaluedescription_kind: u8,
 }
-impl Loadable for UpValueDescription {
+impl TLoadable for UpValueDescription {
     unsafe fn dump(&self, dump_state: &mut DumpState) {
         unsafe {
             dump_state.dump_byte(self.upvaluedescription_isinstack as u8);

@@ -1,6 +1,5 @@
 #![allow(unused,dead_code)]
 use crate::character::*;
-use crate::new::*;
 use crate::value::*;
 use rlua::*;
 use std::ptr::*;
@@ -155,8 +154,8 @@ pub struct TokenInfo {
     pub token: i32,
     pub semantic_info: Value,
 }
-impl New for TokenInfo {
-    fn new() -> Self {
+impl TokenInfo {
+    pub fn new() -> Self {
         return TokenInfo { token: 0, semantic_info: Value::new_object(null_mut()) };
     }
 }

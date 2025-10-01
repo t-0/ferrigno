@@ -2,7 +2,6 @@ use libc::time;
 use crate::buffer::*;
 use crate::character::*;
 use crate::interpreter::*;
-use crate::new::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::utility::c::*;
