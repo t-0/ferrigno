@@ -112,8 +112,8 @@ pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
         TagVariant::DeadKey => TagType::DeadKey,
     }
 }
-pub fn is_none_or_nil(tag: Option<TagType>) -> bool {
-    match tag {
+pub fn is_none_or_nil(tagtype: Option<TagType>) -> bool {
+    match tagtype {
         None | Some(TagType::Nil) => true,
         _ => false,
     }

@@ -117,8 +117,8 @@ impl TObject for Object {
     }
 }
 impl Object {
-    pub fn new(tag: TagVariant) -> Object {
-        Object { next: null_mut(), tagvariant: tag, marked: 0, .. }
+    pub fn new(tagvariant: TagVariant) -> Object {
+        Object { next: null_mut(), tagvariant: tagvariant, marked: 0, .. }
     }
 }
 pub unsafe fn linkgclist_(object: *mut Object, pnext: *mut *mut Object, list: *mut *mut Object) {
