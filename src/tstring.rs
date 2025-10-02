@@ -1,6 +1,7 @@
 use crate::character::*;
 use crate::dumpstate::*;
 use crate::global::*;
+use crate::tobject::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::stringtable::*;

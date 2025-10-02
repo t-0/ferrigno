@@ -43,6 +43,7 @@ use crate::vectort::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
 use crate::objectwithgclist::*;
+use crate::tobject::*;
 use crate::zio::*;
 use crate::status::*;
 #[derive(Copy, Clone)]

@@ -7,6 +7,7 @@ use crate::global::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::objectwithgclist::*;
+use crate::tobject::*;
 use crate::prototype::*;
 use crate::table::*;
 use crate::tag::*;

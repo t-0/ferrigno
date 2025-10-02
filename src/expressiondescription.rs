@@ -1,6 +1,7 @@
 use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::functionstate::*;
+use crate::tobject::*;
 use crate::interpreter::*;
 use crate::lexical::lexicalstate::LexicalState;
 use crate::object::*;

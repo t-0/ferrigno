@@ -1,4 +1,5 @@
 use crate::interpreter::*;
+use crate::tobject::*;
 use crate::object::*;
 use libc::*;
 use crate::tstring::*;

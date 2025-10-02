@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons, unused)]
+use crate::tobject::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::f2i::*;

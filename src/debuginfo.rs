@@ -1,9 +1,9 @@
 #![allow(unpredictable_function_pointer_comparisons)]
 use crate::callinfo::*;
+use crate::tobject::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::interpreter::*;
-use crate::object::*;
 use crate::prototype::*;
 use crate::tag::*;
 use crate::tvalue::*;

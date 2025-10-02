@@ -39,6 +39,7 @@ mod matchstate;
 mod nativeendian;
 mod node;
 mod object;
+mod tobject;
 mod objectwithgclist;
 mod operator_;
 mod prototype;

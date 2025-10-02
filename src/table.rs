@@ -11,6 +11,7 @@ use crate::tm::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
+use crate::tobject::*;
 use crate::objectwithgclist::*;
 use libc::*;
 use std::ptr::*;

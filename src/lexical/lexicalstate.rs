@@ -3,6 +3,7 @@ use crate::buffer::*;
 use crate::character::*;
 use crate::dynamicdata::*;
 use crate::expressiondescription::*;
+use crate::tobject::*;
 use crate::expressionkind::*;
 use crate::functionstate::*;
 use crate::interpreter::*;

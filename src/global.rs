@@ -9,6 +9,7 @@ use crate::prototype::*;
 use crate::stringtable::*;
 use crate::status::*;
 use crate::table::*;
+use crate::tobject::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;

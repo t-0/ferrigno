@@ -1,5 +1,6 @@
 use crate::debugger::absolutelineinfo::*;
 use crate::expressiondescription::*;
+use crate::tobject::*;
 use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::interpreter::*;
