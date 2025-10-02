@@ -1,5 +1,5 @@
 use crate::functions::*;
-use crate::object::*;
+use crate::objectbase::*;
 use crate::tstring::*;
 use libc::*;
 #[derive(Copy, Clone)]

@@ -1,6 +1,6 @@
 use crate::tag::*;
 use crate::tobject::*;
-use crate::object::*;
+use crate::objectbase::*;
 use std::ptr::*;
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]

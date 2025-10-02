@@ -1,4 +1,5 @@
 use crate::closure::*;
+use crate::objectbase::*;
 use crate::functions::*;
 use libc::*;
 use crate::interpreter::*;

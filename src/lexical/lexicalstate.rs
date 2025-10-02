@@ -1,4 +1,5 @@
 use crate::status::*;
+use crate::objectbase::*;
 use crate::buffer::*;
 use crate::character::*;
 use crate::dynamicdata::*;

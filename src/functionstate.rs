@@ -7,6 +7,7 @@ use crate::interpreter::*;
 use crate::labeldescription::*;
 use crate::lexical::blockcontrol::*;
 use crate::lexical::constructorcontrol::*;
+use crate::objectbase::*;
 use crate::lexical::lexicalstate::*;
 use crate::lexical::operatorbinary::*;
 use crate::lexical::operatorunary::*;

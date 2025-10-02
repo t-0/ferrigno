@@ -1,5 +1,5 @@
 use crate::objectwithgclist::*;
-use crate::object::*;
+use crate::objectbase::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tobject::*;

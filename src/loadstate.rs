@@ -1,4 +1,5 @@
 use libc::memcmp;
+use crate::objectbase::*;
 use crate::tobject::*;
 use crate::status::*;
 use crate::character::*;

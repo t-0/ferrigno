@@ -4,6 +4,7 @@ use crate::character::*;
 use crate::debuginfo::*;
 use crate::functions::*;
 use crate::global::*;
+use crate::objectbase::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::objectwithgclist::*;

@@ -1,6 +1,6 @@
 use crate::interpreter::*;
 use crate::tobject::*;
-use crate::object::*;
+use crate::objectbase::*;
 use libc::*;
 use crate::tstring::*;
 use crate::tvalue::*;

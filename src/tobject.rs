@@ -1,4 +1,5 @@
 #![allow(unused,dead_code)]
+use crate::objectbase::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::object::*;
@@ -30,25 +31,22 @@ pub trait TObject {
     fn set_collectable(&mut self, value: bool) {
         self.as_object_mut().set_collectable(value);
     }
-    fn get_tag_type(&self) -> TagType {
-        get_tag_type(self.get_tag_variant())
-    }
     fn get_tag_variant(&self) -> TagVariant {
         self.as_object().get_tag_variant()
     }
     fn is_tagtype_nil(&self) -> bool {
-        self.get_tag_type() == TagType::Nil
+        get_tag_type(self.get_tag_variant()) == TagType::Nil
     }
     fn is_tagtype_boolean(&self) -> bool {
-        self.get_tag_type() == TagType::Boolean
+        get_tag_type(self.get_tag_variant()) == TagType::Boolean
     }
     fn is_tagtype_string(&self) -> bool {
-        self.get_tag_type() == TagType::String
+        get_tag_type(self.get_tag_variant()) == TagType::String
     }
     fn is_tagtype_numeric(&self) -> bool {
-        self.get_tag_type() == TagType::Numeric
+        get_tag_type(self.get_tag_variant()) == TagType::Numeric
     }
     fn is_tagtype_closure(&self) -> bool {
-        self.get_tag_type() == TagType::Closure
+        get_tag_type(self.get_tag_variant()) == TagType::Closure
     }
 }

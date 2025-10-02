@@ -1,5 +1,6 @@
 use crate::character::*;
 use crate::debugger::absolutelineinfo::*;
+use crate::objectbase::*;
 use crate::dumpstate::*;
 use crate::functionstate::*;
 use crate::global::*;

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::global::*;
+use crate::objectbase::*;
 use crate::tobject::*;
 use crate::interpreter::*;
 use crate::object::*;

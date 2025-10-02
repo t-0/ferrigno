@@ -1,5 +1,5 @@
 use crate::interpreter::*;
-use crate::object::*;
+use crate::objectbase::*;
 use crate::tobject::*;
 use crate::tag::*;
 use crate::tvalue::*;
