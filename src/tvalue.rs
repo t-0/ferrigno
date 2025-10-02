@@ -70,19 +70,19 @@ impl TValue {
         TValue { value: Value::new_object(null_mut()), tagvariant, collectable: false, delta: 0 }
     }
     pub fn is_tagtype_nil(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Nil
+        self.get_tag_variant().to_tag_type() == TagType::Nil
     }
     pub fn is_tagtype_string(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::String
+        self.get_tag_variant().to_tag_type() == TagType::String
     }
     pub fn is_tagtype_numeric(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Numeric
+        self.get_tag_variant().to_tag_type() == TagType::Numeric
     }
     pub fn is_tagtype_boolean(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Boolean
+        self.get_tag_variant().to_tag_type() == TagType::Boolean
     }
     pub fn is_tagtype_closure(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Closure
+        self.get_tag_variant().to_tag_type() == TagType::Closure
     }
     pub fn copy_from(&mut self, other: &Self) {
         self.value = other.value;
@@ -201,7 +201,7 @@ pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
     unsafe {
         while j.wrapping_sub(i) > 1 {
             let m = i.wrapping_add(j) / 2;
-            if get_tag_type((*array.offset((m - 1) as isize)).get_tag_variant()) == TagType::Nil {
+            if (*array.offset((m - 1) as isize)).get_tag_variant().to_tag_type() == TagType::Nil {
                 j = m;
             } else {
                 i = m;
@@ -250,7 +250,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
     unsafe {
         let mut tm: *const TValue;
         if (*t1).get_tag_variant() != (*t2).get_tag_variant() {
-            if get_tag_type((*t1).get_tag_variant()) != get_tag_type((*t2).get_tag_variant()) || !(*t1).is_tagtype_numeric() {
+            if (*t1).get_tag_variant().to_tag_type() != (*t2).get_tag_variant().to_tag_type() || !(*t1).is_tagtype_numeric() {
                 return false;
             } else {
                 let mut i1: i64 = 0;
@@ -354,7 +354,7 @@ pub unsafe fn luav_objlen(interpreter: *mut Interpreter, ra: *mut TValue, rb: *c
             },
             _ => {
                 tvalue = luat_gettmbyobj(interpreter, rb, TM_LEN);
-                if get_tag_type((*tvalue).get_tag_variant()) == TagType::Nil {
+                if (*tvalue).get_tag_variant().to_tag_type() == TagType::Nil {
                     luag_typeerror(interpreter, rb, c"get length of".as_ptr());
                 }
             },

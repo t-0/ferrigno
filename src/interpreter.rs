@@ -400,10 +400,10 @@ impl Interpreter {
     pub unsafe fn lua_getmetatable(&mut self, object_index: i32) -> bool {
         unsafe {
             let object: *const TValue = self.index_to_value(object_index);
-            let metatable: *mut Table = match get_tag_type((*object).get_tag_variant()) {
+            let metatable: *mut Table = match (*object).get_tag_variant().to_tag_type() {
                 TagType::Table => (*((*object).value.value_object as *mut Table)).get_metatable(),
                 TagType::User => (*((*object).value.value_object as *mut User)).get_metatable(),
-                _ => (*self.global).global_metatables[get_tag_type((*object).get_tag_variant()) as usize],
+                _ => (*self.global).global_metatables[(*object).get_tag_variant().to_tag_type() as usize],
             };
             if metatable.is_null() {
                 false
@@ -428,7 +428,7 @@ impl Interpreter {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer);
                 let io2: *const TValue = &mut (*((*((*tvalue).value.value_object as *mut User)).upvalues).as_mut_ptr().offset((n - 1) as isize));
                 (*io1).copy_from(&*io2);
-                t = Some(get_tag_type((*self.top.stkidrel_pointer).get_tag_variant()));
+                t = Some((*self.top.stkidrel_pointer).get_tag_variant().to_tag_type());
             }
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             return t;
@@ -1281,7 +1281,7 @@ pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagT
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
         return if !(*tvalue).is_tagtype_nil() || tvalue != &mut (*(*interpreter).global).global_nonevalue as *mut TValue as *const TValue {
-            return Some(get_tag_type((*tvalue).get_tag_variant()));
+            return Some((*tvalue).get_tag_variant().to_tag_type());
         } else {
             None
         };
@@ -1333,7 +1333,7 @@ pub unsafe fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
 pub unsafe fn lua_isstring(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        match get_tag_type((*tvalue).get_tag_variant()) {
+        match (*tvalue).get_tag_variant().to_tag_type() {
             TagType::Numeric => true,
             TagType::String => true,
             _ => false,
@@ -1587,7 +1587,7 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
                 slot,
             );
         }
-        return get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant());
+        return (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant().to_tag_type();
     }
 }
 pub unsafe fn lua_getglobal(interpreter: *mut Interpreter, name: *const i8) -> TagType {
@@ -1620,7 +1620,7 @@ pub unsafe fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
                 slot,
             );
         }
-        return get_tag_type(((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant())) as i32;
+        return ((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant()).to_tag_type() as i32;
     }
 }
 pub unsafe fn handle_luainit(interpreter: *mut Interpreter) -> Status {
@@ -1673,7 +1673,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
             luav_finishget(interpreter, t, &mut aux, (*interpreter).top.stkidrel_pointer, slot);
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        return get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant());
+        return (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant().to_tag_type();
     }
 }
 pub unsafe fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> TagType {
@@ -1686,7 +1686,7 @@ pub unsafe fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) 
             (*io1).copy_from(&*io2);
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-        return get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant());
+        return (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant().to_tag_type();
     }
 }
 pub unsafe fn gettable(interpreter: *mut Interpreter, index: i32) -> *mut Table {
@@ -1838,7 +1838,7 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
         } else {
             metatable = &mut (*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object as *mut Table))
         }
-        match get_tag_type((*object).get_tag_variant()) {
+        match (*object).get_tag_variant().to_tag_type() {
             TagType::Table => {
                 (*((*object).value.value_object as *mut Table)).set_metatable(metatable);
                 if !metatable.is_null() {
@@ -1860,7 +1860,7 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
                 }
             },
             _ => {
-                (*(*interpreter).global).global_metatables[get_tag_type((*object).get_tag_variant()) as usize] = metatable;
+                (*(*interpreter).global).global_metatables[(*object).get_tag_variant().to_tag_type() as usize] = metatable;
             },
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
@@ -2422,7 +2422,7 @@ pub unsafe fn luag_forerror(interpreter: *mut Interpreter, o: *const TValue, wha
 }
 pub unsafe fn luag_concaterror(interpreter: *mut Interpreter, mut p1: *const TValue, p2: *const TValue) -> ! {
     unsafe {
-        match get_tag_type((*p1).get_tag_variant()) {
+        match (*p1).get_tag_variant().to_tag_type() {
             TagType::String | TagType::Numeric => {
                 p1 = p2;
             },
@@ -2886,7 +2886,7 @@ pub unsafe fn luat_init(interpreter: *mut Interpreter) {
 pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, event: u32) -> *const TValue {
     unsafe {
         let metatable: *mut Table;
-        match get_tag_type((*o).get_tag_variant()) {
+        match (*o).get_tag_variant().to_tag_type() {
             TagType::Table => {
                 metatable = (*((*o).value.value_object as *mut Table)).get_metatable();
             },
@@ -2894,7 +2894,7 @@ pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, e
                 metatable = (*((*o).value.value_object as *mut User)).get_metatable();
             },
             _ => {
-                metatable = (*(*interpreter).global).global_metatables[get_tag_type((*o).get_tag_variant()) as usize];
+                metatable = (*(*interpreter).global).global_metatables[(*o).get_tag_variant().to_tag_type() as usize];
             },
         }
         return if metatable.is_null() {
@@ -2919,7 +2919,7 @@ pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, o: *const TValue) 
                 return (*((*name).value.value_object as *mut TString)).get_contents_mut();
             }
         }
-        return TYPE_NAMES[(get_tag_type((*o).get_tag_variant()) as usize + 1) as usize];
+        return TYPE_NAMES[((*o).get_tag_variant().to_tag_type() as usize + 1) as usize];
     }
 }
 pub unsafe fn luat_calltm(interpreter: *mut Interpreter, f: *const TValue, p1: *const TValue, p2: *const TValue, p3: *const TValue) {
@@ -3534,7 +3534,7 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
                 (*io1_0).copy_from(&*io2_0);
             },
             58 | 59 | 62 | 63 | 64 | 65 | 57 => {
-                let res: i32 = !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::BooleanFalse || get_tag_type((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant()) == TagType::Nil) as i32;
+                let res: i32 = !((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::BooleanFalse || (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant().to_tag_type() == TagType::Nil) as i32;
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                 if res != (inst >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
                     (*callinfo).call_info_u.l.saved_program_counter = ((*callinfo).call_info_u.l.saved_program_counter).offset(1);

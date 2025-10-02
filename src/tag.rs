@@ -88,28 +88,28 @@ impl TagVariant {
             return TagVariant::DeadKey;
         }
     }
-}
-pub const fn get_tag_type(tagvariant: TagVariant) -> TagType {
-    match tagvariant {
-        TagVariant::NilNil => TagType::Nil,
-        TagVariant::NilEmpty => TagType::Nil,
-        TagVariant::NilAbsentKey => TagType::Nil,
-        TagVariant::BooleanFalse => TagType::Boolean,
-        TagVariant::BooleanTrue => TagType::Boolean,
-        TagVariant::Pointer => TagType::Pointer,
-        TagVariant::NumericInteger => TagType::Numeric,
-        TagVariant::NumericNumber => TagType::Numeric,
-        TagVariant::StringShort => TagType::String,
-        TagVariant::StringLong => TagType::String,
-        TagVariant::Table => TagType::Table,
-        TagVariant::ClosureL => TagType::Closure,
-        TagVariant::ClosureCFunction => TagType::Closure,
-        TagVariant::ClosureC => TagType::Closure,
-        TagVariant::User => TagType::User,
-        TagVariant::Interpreter => TagType::Interpreter,
-        TagVariant::UpValue => TagType::UpValue,
-        TagVariant::Prototype => TagType::Prototype,
-        TagVariant::DeadKey => TagType::DeadKey,
+    pub const fn to_tag_type(& self) -> TagType {
+        match self {
+            TagVariant::NilNil => TagType::Nil,
+            TagVariant::NilEmpty => TagType::Nil,
+            TagVariant::NilAbsentKey => TagType::Nil,
+            TagVariant::BooleanFalse => TagType::Boolean,
+            TagVariant::BooleanTrue => TagType::Boolean,
+            TagVariant::Pointer => TagType::Pointer,
+            TagVariant::NumericInteger => TagType::Numeric,
+            TagVariant::NumericNumber => TagType::Numeric,
+            TagVariant::StringShort => TagType::String,
+            TagVariant::StringLong => TagType::String,
+            TagVariant::Table => TagType::Table,
+            TagVariant::ClosureL => TagType::Closure,
+            TagVariant::ClosureCFunction => TagType::Closure,
+            TagVariant::ClosureC => TagType::Closure,
+            TagVariant::User => TagType::User,
+            TagVariant::Interpreter => TagType::Interpreter,
+            TagVariant::UpValue => TagType::UpValue,
+            TagVariant::Prototype => TagType::Prototype,
+            TagVariant::DeadKey => TagType::DeadKey,
+        }
     }
 }
 pub fn is_none_or_nil(tagtype: Option<TagType>) -> bool {

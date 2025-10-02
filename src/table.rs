@@ -480,7 +480,7 @@ pub unsafe fn numusearray(t: *const Table, nums: *mut u32) -> u32 {
                 }
             }
             while i <= lim {
-                if get_tag_type((*((*t).array).offset(i.wrapping_sub(1 as u32) as isize)).get_tag_variant()) != TagType::Nil {
+                if(*((*t).array).offset(i.wrapping_sub(1 as u32) as isize)).get_tag_variant().to_tag_type()!= TagType::Nil {
                     lc = lc.wrapping_add(1);
                 }
                 i = i.wrapping_add(1);
@@ -850,8 +850,8 @@ pub unsafe fn hash_search(table: *mut Table, mut j: usize) -> usize {
 pub unsafe fn luah_getn(table: *mut Table) -> usize {
     unsafe {
         let mut limit: u32 = (*table).array_limit;
-        if limit > 0u32 && get_tag_type((*((*table).array).offset(limit.wrapping_sub(1) as isize)).get_tag_variant()) == TagType::Nil {
-            if limit >= 2 as u32 && get_tag_type((*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag_variant()) != TagType::Nil {
+        if limit > 0u32 && (*((*table).array).offset(limit.wrapping_sub(1) as isize)).get_tag_variant().to_tag_type() == TagType::Nil {
+            if limit >= 2 as u32 && (*((*table).array).offset(limit.wrapping_sub(2 as u32) as isize)).get_tag_variant().to_tag_type() != TagType::Nil {
                 if ispow2realasize(table) != 0 && !(limit.wrapping_sub(1 as u32) & limit.wrapping_sub(1 as u32).wrapping_sub(1 as u32) == 0) {
                     (*table).array_limit = limit.wrapping_sub(1 as u32);
                     (*table).flags = ((*table).flags as i32 | 1 << 7) as u8;
@@ -877,7 +877,7 @@ pub unsafe fn luah_getn(table: *mut Table) -> usize {
                 return boundary_0 as usize;
             }
         }
-        if (*table).last_free.is_null() || get_tag_type((*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag_variant()) == TagType::Nil {
+        if (*table).last_free.is_null() || (*luah_getint(table, limit.wrapping_add(1 as u32) as i64)).get_tag_variant().to_tag_type() == TagType::Nil {
             return limit as usize;
         } else {
             return hash_search(table, limit as usize);

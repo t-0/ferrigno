@@ -35,18 +35,18 @@ pub trait TObject {
         self.as_object().get_tag_variant()
     }
     fn is_tagtype_nil(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Nil
+        self.get_tag_variant().to_tag_type() == TagType::Nil
     }
     fn is_tagtype_boolean(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Boolean
+        self.get_tag_variant().to_tag_type() == TagType::Boolean
     }
     fn is_tagtype_string(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::String
+        self.get_tag_variant().to_tag_type() == TagType::String
     }
     fn is_tagtype_numeric(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Numeric
+        self.get_tag_variant().to_tag_type() == TagType::Numeric
     }
     fn is_tagtype_closure(&self) -> bool {
-        get_tag_type(self.get_tag_variant()) == TagType::Closure
+        self.get_tag_variant().to_tag_type() == TagType::Closure
     }
 }
