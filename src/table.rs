@@ -16,10 +16,11 @@ use crate::tobject::*;
 use crate::objectwithgclist::*;
 use libc::*;
 use std::ptr::*;
+type TableSuper = ObjectWithGCList;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
-    pub object: ObjectWithGCList,
+    pub object: TableSuper,
     pub table_metatable: *mut Table,
     pub flags: u8,
     pub log_size_node: u8,
@@ -51,7 +52,7 @@ impl TObject for Table {
 impl Table {
     pub fn new() -> Self {
         Table {
-            object: ObjectWithGCList::new(TagVariant::Table),
+            object: TableSuper::new(TagVariant::Table),
             flags: 0,
             log_size_node: 0,
             array_limit: 0,

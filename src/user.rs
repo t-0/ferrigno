@@ -10,11 +10,11 @@ use crate::tvalue::*;
 use crate::utility::*;
 use crate::objectwithmetatable::*;
 use std::ptr::*;
+type UserSuper = ObjectWithMetatable;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
-    pub object: ObjectWithMetatable,
-    pub user_metatable: *mut Table,
+    pub object: UserSuper,
     pub count_bytes: usize,
     pub count_upvalues: i32,
     pub upvalues: [TValue; 0],
@@ -30,12 +30,10 @@ impl TObject for User {
         "user".to_string()
     }
     fn get_metatable(& self) -> *mut Table {
-        self.object.get_metatable();
-        return self.user_metatable;
+        return self.object.metatable;
     }
     fn set_metatable(&mut self, metatable: *mut Table) {
-        self.object.set_metatable(metatable);
-        self.user_metatable = metatable;
+        self.object.metatable = metatable;
     }
     fn getgclist(& mut self) -> *mut *mut ObjectBase {
         self.object.getgclist()
@@ -70,7 +68,7 @@ impl User {
             let ret: *mut User = &mut (*(object as *mut User));
             (*ret).count_bytes = count_bytes;
             (*ret).count_upvalues = count_upvalues as i32;
-            (*ret).user_metatable = null_mut();
+            (*ret).set_metatable(null_mut());
             for i in 0..count_upvalues {
                 (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil);
             }
