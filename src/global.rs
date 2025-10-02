@@ -816,7 +816,7 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
 }
 pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
     unsafe {
-        let mut p: *mut Object = from;
+        let mut p = from;
         while p != to {
             if (*p).get_marked() & 7 == 3 {
                 (*p).set_marked((*p).get_marked() ^ (3 ^ 4));

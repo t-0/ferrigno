@@ -803,8 +803,7 @@ pub unsafe fn luah_finishset(interpreter: *mut Interpreter, table: *mut Table, k
 }
 pub unsafe fn luah_set(interpreter: *mut Interpreter, table: *mut Table, key: *const TValue, value: *mut TValue) {
     unsafe {
-        let slot: *const TValue = luah_get(table, key);
-        luah_finishset(interpreter, table, key, slot, value);
+        luah_finishset(interpreter, table, key, luah_get(table, key), value);
     }
 }
 pub unsafe fn luah_setint(interpreter: *mut Interpreter, table: *mut Table, key: i64, value: *mut TValue) {

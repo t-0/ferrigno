@@ -2934,14 +2934,11 @@ pub unsafe fn luat_calltm(interpreter: *mut Interpreter, f: *const TValue, p1: *
         let io1: *mut TValue = &mut (*function);
         (*io1).copy_from(&*f);
         let io1_0: *mut TValue = &mut (*function.offset(1 as isize));
-        let io2_0: *const TValue = p1;
-        (*io1_0).copy_from(&*io2_0);
+        (*io1_0).copy_from(&*p1);
         let io1_1: *mut TValue = &mut (*function.offset(2 as isize));
-        let io2_1: *const TValue = p2;
-        (*io1_1).copy_from(&*io2_1);
+        (*io1_1).copy_from(&*p2);
         let io1_2: *mut TValue = &mut (*function.offset(3 as isize));
-        let io2_2: *const TValue = p3;
-        (*io1_2).copy_from(&*io2_2);
+        (*io1_2).copy_from(&*p3);
         (*interpreter).top.stkidrel_pointer = function.offset(4 as isize);
         if (*(*interpreter).callinfo).call_info_call_status as i32 & (1 << 1 | 1 << 3) == 0 {
             ccall(interpreter, function, 0, 1);
@@ -2955,8 +2952,7 @@ pub unsafe fn luat_calltmres(interpreter: *mut Interpreter, f: *const TValue, p1
         let result: i64 = (res as *mut i8).offset_from((*interpreter).stack.stkidrel_pointer as *mut i8) as i64;
         let function: *mut TValue = (*interpreter).top.stkidrel_pointer;
         let io1: *mut TValue = &mut (*function);
-        let io2: *const TValue = f;
-        (*io1).copy_from(&*io2);
+        (*io1).copy_from(&*f);
         let io1_0: *mut TValue = &mut (*function.offset(1 as isize));
         let io2_0: *const TValue = p1;
         (*io1_0).copy_from(&(*io2_0));
@@ -2983,10 +2979,11 @@ pub unsafe fn callbintm(interpreter: *mut Interpreter, p1: *const TValue, p2: *c
             tm = luat_gettmbyobj(interpreter, p2, event);
         }
         if (*tm).is_tagtype_nil() {
-            return 0;
+            0
+        } else {
+            luat_calltmres(interpreter, tm, p1, p2, res);
+            1
         }
-        luat_calltmres(interpreter, tm, p1, p2, res);
-        return 1;
     }
 }
 pub unsafe fn luat_trybintm(interpreter: *mut Interpreter, p1: *const TValue, p2: *const TValue, res: *mut TValue, event: u32) {

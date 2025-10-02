@@ -92,45 +92,45 @@ pub enum TagVariant {
 impl TagVariant {
     pub const fn from (value: u8) -> Self {
         if value == TagType::Nil as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::NilNil;
+            TagVariant::NilNil
         } else if value == TagType::Nil as u8 | TagVariantRaw::Beta as u8 {
-            return TagVariant::NilEmpty;
+            TagVariant::NilEmpty
         } else if value == TagType::Nil as u8 | TagVariantRaw::Gamma as u8 {
-            return TagVariant::NilAbsentKey;
+            TagVariant::NilAbsentKey
         } else if value == TagType::Boolean as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::BooleanFalse;
+            TagVariant::BooleanFalse
         } else if value == TagType::Boolean as u8 | TagVariantRaw::Beta as u8 {
-            return TagVariant::BooleanTrue;
+            TagVariant::BooleanTrue
         } else if value == TagType::Pointer as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::Pointer;
+            TagVariant::Pointer
         } else if value == TagType::Numeric as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::NumericInteger;
+            TagVariant::NumericInteger
         } else if value == TagType::Numeric as u8 | TagVariantRaw::Beta as u8 {
-            return TagVariant::NumericNumber;
+            TagVariant::NumericNumber
         } else if value == TagType::String as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::StringShort;
+            TagVariant::StringShort
         } else if value == TagType::String as u8 | TagVariantRaw::Beta as u8 {
-            return TagVariant::StringLong;
+            TagVariant::StringLong
         } else if value == TagType::Table as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::Table;
+            TagVariant::Table
         } else if value == TagType::Closure as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::ClosureL;
+            TagVariant::ClosureL
         } else if value == TagType::Closure as u8 | TagVariantRaw::Beta as u8 {
-            return TagVariant::ClosureCFunction;
+            TagVariant::ClosureCFunction
         } else if value == TagType::Closure as u8 | TagVariantRaw::Gamma as u8 {
-            return TagVariant::ClosureC;
+            TagVariant::ClosureC
         } else if value == TagType::User as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::User;
+            TagVariant::User
         } else if value == TagType::Interpreter as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::Interpreter;
+            TagVariant::Interpreter
         } else if value == TagType::UpValue as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::UpValue;
+            TagVariant::UpValue
         } else if value == TagType::Prototype as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::Prototype;
+            TagVariant::Prototype
         } else if value == TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8 {
-            return TagVariant::DeadKey;
+            TagVariant::DeadKey
         } else {
-            return TagVariant::DeadKey;
+            TagVariant::DeadKey
         }
     }
     pub const fn to_tag_type(& self) -> TagType {

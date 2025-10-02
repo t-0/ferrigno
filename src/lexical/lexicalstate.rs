@@ -1515,10 +1515,10 @@ pub unsafe fn check_next1(lexical_state: *mut LexicalState, ch: i32) -> bool {
     unsafe {
         if (*lexical_state).current == ch {
             (*lexical_state).current = (*(*lexical_state).zio).get_char();
-            return true;
+            true
         } else {
-            return false;
-        };
+            false
+        }
     }
 }
 pub unsafe fn check_next2(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, set: *const i8) -> bool {
@@ -1526,10 +1526,10 @@ pub unsafe fn check_next2(interpreter: *mut Interpreter, lexical_state: *mut Lex
         if (*lexical_state).current == *set.offset(0 as isize) as i32 || (*lexical_state).current == *set.offset(1 as isize) as i32 {
             save(interpreter, lexical_state, (*lexical_state).current);
             (*lexical_state).current = (*(*lexical_state).zio).get_char();
-            return true;
+            true
         } else {
-            return false;
-        };
+            false
+        }
     }
 }
 pub unsafe fn read_numeral(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, semantic_info: *mut Value) -> i32 {
