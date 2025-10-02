@@ -25,7 +25,6 @@ type TableSuper = ObjectWithMetatable;
 #[repr(C)]
 pub struct Table {
     pub object: TableSuper,
-    pub table_metatable: *mut Table,
     pub flags: u8,
     pub log_size_node: u8,
     pub array_limit: u32,
@@ -51,10 +50,10 @@ impl TObjectWithGCList for Table {
 }
 impl TObjectWithMetatable for Table {
     fn get_metatable(&self) -> *mut Table {
-        self.table_metatable
+        self.object.get_metatable()
     }
     fn set_metatable(&mut self, metatable: * mut Table) {
-        self.table_metatable = metatable;
+        self.object.set_metatable(metatable);
     }
 }
 impl TDefaultNew for Table {
@@ -67,7 +66,6 @@ impl TDefaultNew for Table {
             array: null_mut(),
             node: null_mut(),
             last_free: null_mut(),
-            table_metatable: null_mut(),
             ..
         }
     }
