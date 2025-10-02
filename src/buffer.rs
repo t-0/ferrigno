@@ -3,6 +3,7 @@ use libc::*;
 use crate::buffer::userbox::*;
 use crate::interpreter::*;
 use crate::loads::*;
+use crate::tdefaultnew::*;
 use std::ptr::*;
 pub type BufferElement = i8;
 impl Buffer {
@@ -15,10 +16,12 @@ pub struct Buffer {
     pub buffer_interpreter: *mut Interpreter,
     pub initial_data: [BufferElement; Buffer::INITIAL_SIZE],
 }
-impl Buffer {
-    pub fn new() -> Self {
+impl TDefaultNew for Buffer {
+    fn new() -> Self {
         Buffer { loads: LoadS::<BufferElement>::new(), buffer_interpreter: null_mut(), initial_data: [0; Buffer::INITIAL_SIZE] }
     }
+}
+impl Buffer {
     pub unsafe fn initialize_with_size(&mut self, interpreter: *mut Interpreter, size: usize) -> *mut BufferElement {
         unsafe {
             self.initialize(interpreter);

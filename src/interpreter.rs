@@ -11,6 +11,7 @@ use crate::character::*;
 use crate::closeprotected::*;
 use crate::closure::*;
 use crate::debuginfo::*;
+use crate::tdefaultnew::*;
 use crate::dumpstate::*;
 use crate::dynamicdata::*;
 use crate::f2i::*;

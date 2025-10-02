@@ -1,4 +1,5 @@
 use crate::buffer::*;
+use crate::tdefaultnew::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use std::ptr::*;

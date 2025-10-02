@@ -1,4 +1,5 @@
 use crate::buffer::*;
+use crate::tdefaultnew::*;
 use crate::status::*;
 use crate::character::*;
 use crate::functions::*;

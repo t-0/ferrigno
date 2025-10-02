@@ -1,5 +1,6 @@
 use crate::buffer::*;
 use crate::character::*;
+use crate::tdefaultnew::*;
 use crate::gmatchstate::*;
 use crate::header::*;
 use crate::interpreter::*;

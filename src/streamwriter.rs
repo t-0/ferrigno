@@ -1,3 +1,4 @@
+use crate::tdefaultnew::*;
 use crate::buffer::*;
 use crate::interpreter::*;
 use crate::tag::*;

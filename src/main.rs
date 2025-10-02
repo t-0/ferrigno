@@ -40,6 +40,7 @@ mod nativeendian;
 mod node;
 mod object;
 mod tobject;
+mod tdefaultnew;
 mod objectwithgclist;
 mod tobjectwithgclist;
 mod objectbase;

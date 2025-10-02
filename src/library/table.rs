@@ -1,4 +1,5 @@
 use crate::buffer::*;
+use crate::tdefaultnew::*;
 use libc::{time, c_void};
 use crate::interpreter::*;
 use crate::registeredfunction::*;

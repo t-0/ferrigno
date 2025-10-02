@@ -3,6 +3,7 @@ use crate::character::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::io::rn::*;
+use crate::tdefaultnew::*;
 use crate::io::stream::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
