@@ -15,6 +15,7 @@
 use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
+use crate::objectwithgclist::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use crate::table::*;
@@ -126,33 +127,6 @@ impl TObject for ObjectBase {
 impl ObjectBase {
     pub fn new(tagvariant: TagVariant) -> Self {
         Self { next: null_mut(), tagvariant: tagvariant, marked: 0, .. }
-    }
-}
-#[derive(Copy, Clone, Debug)]
-#[repr(C)]
-pub struct ObjectWithGCList {
-    pub object: ObjectBase,
-    pub gclist: *mut ObjectBase,
-}
-impl ObjectWithGCList {
-    pub fn new(tagvariant: TagVariant) -> Self {
-        Self { object: ObjectBase::new(tagvariant), gclist: null_mut(), .. }
-    }
-}
-impl TObject for ObjectWithGCList {
-    fn as_object(&self) -> &ObjectBase {
-        &self.object
-    }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
-        &mut self.object
-    }
-    fn get_class_name(&mut self) -> String {
-        "gclist".to_string()
-    }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
-        unsafe {
-            &mut self.gclist
-        }
     }
 }
 #[derive(Copy, Clone, Debug)]

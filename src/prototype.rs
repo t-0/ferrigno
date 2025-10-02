@@ -17,6 +17,7 @@ use crate::vectort::*;
 use crate::vm::instruction::*;
 use crate::vm::opcode::*;
 use crate::vm::opmode::*;
+use crate::objectwithgclist::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

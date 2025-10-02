@@ -11,6 +11,7 @@ use crate::tm::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
+use crate::objectwithgclist::*;
 use libc::*;
 use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
@@ -632,7 +633,7 @@ pub unsafe fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
         let object: *mut ObjectBase = luac_newobj(interpreter, TagVariant::Table, size_of::<Table>());
         let new_table: *mut Table = &mut (*(object as *mut Table));
-        (*new_table).table_metatable = null_mut();
+        (*new_table).set_metatable(null_mut());
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
         (*new_table).array = null_mut();
         (*new_table).array_limit = 0u32;
