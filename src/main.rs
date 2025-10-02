@@ -41,6 +41,7 @@ mod node;
 mod object;
 mod tobject;
 mod objectwithgclist;
+mod tobjectwithgclist;
 mod objectbase;
 mod objectwithmetatable;
 mod operator_;

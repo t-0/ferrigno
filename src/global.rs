@@ -1,11 +1,13 @@
 use crate::closure::*;
 use crate::objectbase::*;
 use crate::functions::*;
+use crate::objectwithgclist::ObjectWithGCList;
 use libc::*;
 use crate::interpreter::*;
 use crate::closeprotected::*;
 use crate::node::*;
 use crate::object::*;
+use crate::tobjectwithgclist::*;
 use crate::prototype::*;
 use crate::stringtable::*;
 use crate::status::*;
@@ -42,11 +44,11 @@ pub struct Global {
     pub global_allgc: *mut ObjectBase,
     pub global_sweepgc: *mut *mut ObjectBase,
     pub global_finalizedobjects: *mut ObjectBase,
-    pub global_gray: *mut ObjectBase,
-    pub global_grayagain: *mut ObjectBase,
-    pub global_weak: *mut ObjectBase,
-    pub global_ephemeron: *mut ObjectBase,
-    pub global_allweak: *mut ObjectBase,
+    pub global_gray: *mut ObjectWithGCList,
+    pub global_grayagain: *mut ObjectWithGCList,
+    pub global_weak: *mut ObjectWithGCList,
+    pub global_ephemeron: *mut ObjectWithGCList,
+    pub global_allweak: *mut ObjectWithGCList,
     pub global_tobefinalized: *mut ObjectBase,
     pub global_fixedgc: *mut ObjectBase,
     pub global_survival: *mut ObjectBase,
@@ -244,7 +246,7 @@ impl Global {
     pub unsafe fn atomic(&mut self, interpreter: *mut Interpreter) -> usize {
         unsafe {
             let mut work: usize = 0;
-            let grayagain: *mut ObjectBase = self.global_grayagain;
+            let grayagain = self.global_grayagain;
             self.global_grayagain = null_mut();
             self.global_gcstate = 2 as u8;
             if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
@@ -262,8 +264,8 @@ impl Global {
             self.convergeephemerons();
             clearbyvalues(self, self.global_weak, null_mut());
             clearbyvalues(self, self.global_allweak, null_mut());
-            let origweak: *mut ObjectBase = self.global_weak;
-            let origall: *mut ObjectBase = self.global_allweak;
+            let origweak = self.global_weak;
+            let origall = self.global_allweak;
             self.separatetobefnz(false);
             work = (work as usize).wrapping_add(self.markbeingfnz()) as usize;
             work = (work as usize).wrapping_add(self.propagateall()) as usize;
@@ -546,7 +548,7 @@ impl Global {
     }
     pub unsafe fn correctgraylists(&mut self) {
         unsafe {
-            let mut list: *mut *mut ObjectBase = correct_gray_list(&mut (*self).global_grayagain);
+            let mut list = correct_gray_list(&mut (*self).global_grayagain);
             *list = (*self).global_weak;
             (*self).global_weak = null_mut();
             list = correct_gray_list(list);
@@ -614,7 +616,7 @@ impl Global {
     }
     pub unsafe fn propagatemark(&mut self) -> usize {
         unsafe {
-            let object: *mut ObjectBase = self.global_gray;
+            let object = self.global_gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
             self.global_gray = *(*object).getgclist();
             match (*object).get_tag_variant() {
@@ -727,11 +729,11 @@ impl Global {
         unsafe {
             let mut is_reverse = false;
             loop {
-                let mut next: *mut ObjectBase = (*self).global_ephemeron;
+                let mut next = (*self).global_ephemeron;
                 (*self).global_ephemeron = null_mut();
                 let mut changed = false;
                 loop {
-                    let w: *mut ObjectBase = next;
+                    let w = next;
                     if w.is_null() {
                         break;
                     } else {
@@ -768,7 +770,7 @@ impl Global {
         }
     }
 }
-pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectBase) {
+pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectWithGCList) {
     unsafe {
         while !l.is_null() {
             let table: *mut Table = &mut (*(l as *mut Table));
@@ -787,7 +789,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectBase) {
         }
     }
 }
-pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectBase, f: *mut ObjectBase) {
+pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f: *mut ObjectWithGCList) {
     unsafe {
         while l != f {
             let table: *mut Table = &mut (*(l as *mut Table));

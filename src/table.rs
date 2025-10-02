@@ -9,6 +9,7 @@ use crate::node::*;
 use crate::object::*;
 use crate::tag::*;
 use crate::tm::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
@@ -39,14 +40,16 @@ impl TObject for Table {
     fn get_class_name(&mut self) -> String {
         "table".to_string()
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
-        self.object.getgclist()
-    }
     fn get_metatable(&self) -> *mut Table {
         self.table_metatable
     }
     fn set_metatable(&mut self, metatable: * mut Table) {
         self.table_metatable = metatable;
+    }
+}
+impl TObjectWithGCList for Table {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
+        self.object.getgclist()
     }
 }
 impl Table {
@@ -128,9 +131,9 @@ pub unsafe fn traverseweakvalue(global: *mut Global, h: *mut Table) {
             node = node.offset(1);
         }
         if (*global).global_gcstate as i32 == 2 && hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_weak);
+            linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_weak);
         } else {
-            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_grayagain);
         };
     }
 }
@@ -166,11 +169,11 @@ pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: 
             }
         }
         if (*global).global_gcstate as i32 == 0 {
-            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_grayagain);
         } else if hasww != 0 {
-            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_ephemeron);
+            linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_ephemeron);
         } else if hasclears != 0 {
-            linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_allweak);
+            linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_allweak);
         } else {
             generate_link(global, &mut (*(h as *mut ObjectBase)));
         }
@@ -231,7 +234,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
             } else if weakvalue.is_null() {
                 traverseephemeron(global, h, false);
             } else {
-                linkgclist_(&mut (*(h as *mut ObjectBase)), (*h).getgclist(), &mut (*global).global_allweak);
+                linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_allweak);
             }
         } else {
             traversestrongtable(global, h);
@@ -698,7 +701,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         (*node).key.copy_from(&*io_);
         if (*key).is_collectable() {
             if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*key).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
         } else {
@@ -957,7 +960,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
                         if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            luac_barrierback_(interpreter, &mut (*(h as *mut ObjectBase)));
+                            luac_barrierback_(interpreter, &mut (*(h as *mut ObjectWithGCList)));
                         } else {
                         };
                     } else {
@@ -988,7 +991,7 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                 (*io1).copy_from(&*io2);
                 if (*value).is_collectable() {
                     if (*(*t).value.value_object).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrierback_(interpreter, (*t).value.value_object);
+                        luac_barrierback_(interpreter, (*t).value.value_object as * mut ObjectWithGCList);
                     } else {
                     };
                 } else {

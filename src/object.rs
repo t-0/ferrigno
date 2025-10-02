@@ -16,6 +16,7 @@ use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
 use crate::objectwithgclist::*;
+use crate::tobjectwithgclist::*;
 use crate::objectbase::*;
 use crate::interpreter::*;
 use crate::prototype::*;
@@ -27,7 +28,7 @@ use crate::upvalue::*;
 use crate::tobject::*;
 use crate::user::*;
 use std::ptr::*;
-pub unsafe fn linkgclist_(object: *mut ObjectBase, pnext: *mut *mut ObjectBase, list: *mut *mut ObjectBase) {
+pub unsafe fn linkgclist_(object: *mut ObjectWithGCList, pnext: *mut *mut ObjectWithGCList, list: *mut *mut ObjectWithGCList) {
     unsafe {
         *pnext = *list;
         *list = object;
@@ -61,13 +62,13 @@ pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut ObjectBa
         }
     }
 }
-pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut ObjectBase) {
+pub unsafe fn luac_barrierback_(interpreter: *mut Interpreter, object: *mut ObjectWithGCList) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*object).get_marked() & 7 == 6 {
             (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         } else {
-            linkgclist_(&mut (*(object as *mut ObjectBase)), (*object).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(object as *mut ObjectWithGCList)), (*object).getgclist(), &mut (*global).global_grayagain);
         }
         if (*object).get_marked() & 7 > 1 {
             (*object).set_marked((*object).get_marked() & !7 | 5);
@@ -139,7 +140,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut ObjectBase) {
         }
         match current_block_18 {
             15904375183555213903 => {
-                linkgclist_(&mut (*(object as *mut ObjectBase)), (*object).getgclist(), &mut (*global).global_gray);
+                linkgclist_(&mut (*(object as *mut ObjectWithGCList)), (*(object as *mut ObjectWithGCList)).getgclist(), &mut (*global).global_gray);
             },
             _ => {},
         };
@@ -148,7 +149,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut ObjectBase) {
 pub unsafe fn generate_link(global: *mut Global, object: *mut ObjectBase) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
-            linkgclist_(&mut (*(object as *mut ObjectBase)), (*object).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(object as *mut ObjectWithGCList)), (*(object as *mut ObjectWithGCList)).getgclist(), &mut (*global).global_grayagain);
         } else if (*object).get_marked() & 7 == 6 {
             (*object).set_marked(((*object).get_marked() ^ (6 ^ 4)) as u8);
         }
@@ -204,15 +205,15 @@ pub unsafe fn check_pointer(objects: *mut *mut ObjectBase, object: *mut ObjectBa
         }
     }
 }
-pub unsafe fn correct_gray_list(mut objects: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
+pub unsafe fn correct_gray_list(mut objects: *mut *mut ObjectWithGCList) -> *mut *mut ObjectWithGCList {
     unsafe {
         let mut current_block: usize;
         loop {
-            let curr: *mut ObjectBase = *objects;
+            let curr: *mut ObjectWithGCList = *objects;
             if curr.is_null() {
                 break;
             }
-            let next: *mut *mut ObjectBase = (*curr).getgclist();
+            let next: *mut *mut ObjectWithGCList = (*curr).getgclist();
             if !((*curr).get_marked() & (1 << 3 | 1 << 4) != 0) {
                 if (*curr).get_marked() & 7 == 5 {
                     (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);

@@ -31,6 +31,7 @@ use crate::stkidrel::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tm::*;
+use crate::tobjectwithgclist::*;
 use crate::token::*;
 use crate::tstring::*;
 use crate::tvalue::*;
@@ -82,7 +83,9 @@ impl TObject for Interpreter {
     fn get_class_name(&mut self) -> String {
         "interpreter".to_string()
     }
-    fn getgclist(&mut self) -> *mut *mut ObjectBase {
+}
+impl TObjectWithGCList for Interpreter {
+    fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {
         self.object.getgclist()
     }
 }
@@ -1726,7 +1729,7 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             (*io1).copy_from(&*io2);
             if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
                 if (*(*t).value.value_object).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    luac_barrierback_(interpreter, (*t).value.value_object);
+                    luac_barrierback_(interpreter, (*t).value.value_object as *mut ObjectWithGCList);
                 } else {
                 };
             } else {
@@ -1782,7 +1785,7 @@ pub unsafe fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
             (*io1).copy_from(&*io2);
             if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
                 if (*(*t).value.value_object).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    luac_barrierback_(interpreter, (*t).value.value_object);
+                    luac_barrierback_(interpreter, (*t).value.value_object as *mut ObjectWithGCList);
                 } else {
                 };
             } else {
@@ -1802,7 +1805,7 @@ pub unsafe fn aux_rawset(interpreter: *mut Interpreter, index: i32, key: *mut TV
         (*table).flags = ((*table).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
             if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
         } else {
@@ -1821,7 +1824,7 @@ pub unsafe fn lua_rawseti(interpreter: *mut Interpreter, index: i32, n: i64) {
         luah_setint(interpreter, table, n, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))));
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
             if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectBase)));
+                luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
         } else {
@@ -1879,7 +1882,7 @@ pub unsafe fn lua_setiuservalue(interpreter: *mut Interpreter, index: i32, n: i3
             (*io1).copy_from(&*io2);
             if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
                 if (*(*o).value.value_object).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    luac_barrierback_(interpreter, (*o).value.value_object);
+                    luac_barrierback_(interpreter, (*o).value.value_object as *mut ObjectWithGCList);
                 } else {
                 };
             } else {
@@ -3122,7 +3125,7 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
     unsafe {
         let mut o: *mut TValue = (*interpreter).stack.stkidrel_pointer;
         if (*interpreter).get_marked() & 7 > 1 || (*global).global_gcstate as i32 == 0 {
-            linkgclist_(&mut (*(interpreter as *mut ObjectBase)), (*interpreter).getgclist(), &mut (*global).global_grayagain);
+            linkgclist_(&mut (*(interpreter as *mut ObjectWithGCList)), (*interpreter).getgclist(), &mut (*global).global_grayagain);
         }
         if o.is_null() {
             return 1;
@@ -3282,7 +3285,7 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBa
                 (*curr).set_marked((*curr).get_marked() & !(7) | 4);
                 if (*curr).get_tag_variant() == TagVariant::Interpreter {
                     let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
-                    linkgclist_(&mut (*(other_state as *mut ObjectBase)),  (*other_state).getgclist(), &mut (*global).global_grayagain);
+                    linkgclist_(&mut (*(other_state as *mut ObjectWithGCList)),  (*other_state).getgclist(), &mut (*global).global_grayagain);
                 } else if (*curr).get_tag_variant() == TagVariant::UpValue && (*(curr as *mut UpValue)).v.p != &mut (*(curr as *mut UpValue)).u.value as *mut TValue {
                     (*curr).set_marked((*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
@@ -3834,7 +3837,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_8).copy_from(&(*io2_8));
                                 if (*rc_2).is_collectable() {
                                     if (*(*upval_0).value.value_object).get_marked() & 1 << 5 != 0 && (*(*rc_2).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, (*upval_0).value.value_object);
+                                        luac_barrierback_(interpreter, (*upval_0).value.value_object as *mut ObjectWithGCList);
                                     } else {
                                     };
                                 } else {
@@ -3883,7 +3886,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_9).copy_from(&(*io2_9));
                                 if (*rc_3).is_collectable() {
                                     if (*(*ra_14).value.value_object).get_marked() & 1 << 5 != 0 && (*(*rc_3).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, (*ra_14).value.value_object);
+                                        luac_barrierback_(interpreter, (*ra_14).value.value_object as *mut ObjectWithGCList);
                                     } else {
                                     };
                                 } else {
@@ -3922,7 +3925,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_10).copy_from(&(*io2_10));
                                 if (*rc_4).is_collectable() {
                                     if (*(*ra_15).value.value_object).get_marked() & 1 << 5 != 0 && (*(*rc_4).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, (*ra_15).value.value_object);
+                                        luac_barrierback_(interpreter, (*ra_15).value.value_object as *mut ObjectWithGCList);
                                     } else {
                                     };
                                 } else {
@@ -3962,7 +3965,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_11).copy_from(&(*io2_11));
                                 if (*rc_5).is_collectable() {
                                     if (*(*ra_16).value.value_object).get_marked() & 1 << 5 != 0 && (*(*rc_5).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, (*ra_16).value.value_object);
+                                        luac_barrierback_(interpreter, (*ra_16).value.value_object as *mut ObjectWithGCList);
                                     } else {
                                     };
                                 } else {
@@ -5452,7 +5455,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 last = last.wrapping_sub(1);
                                 if (*value).is_collectable() {
                                     if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                        luac_barrierback_(interpreter, &mut (*(h as *mut ObjectBase)));
+                                        luac_barrierback_(interpreter, &mut (*(h as *mut ObjectWithGCList)));
                                     } else {
                                     };
                                 } else {

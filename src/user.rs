@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 use crate::global::*;
 use crate::objectbase::*;
+use crate::objectwithgclist::ObjectWithGCList;
 use crate::tobject::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use crate::tvalue::*;
 use crate::utility::*;
 use crate::objectwithmetatable::*;
@@ -35,7 +37,9 @@ impl TObject for User {
     fn set_metatable(&mut self, metatable: *mut Table) {
         self.object.set_metatable(metatable);
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
+}
+impl TObjectWithGCList for User {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
         self.object.getgclist()
     }
 }

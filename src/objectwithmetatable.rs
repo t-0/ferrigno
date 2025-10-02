@@ -3,6 +3,7 @@ use crate::objectbase::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tobject::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use std::ptr::*;
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
@@ -30,5 +31,10 @@ impl TObject for ObjectWithMetatable {
 impl ObjectWithMetatable {
     pub fn new(tagvariant: TagVariant) -> Self {
         Self { object: ObjectWithGCList::new (tagvariant), metatable: null_mut(), }
+    }
+}
+impl TObjectWithGCList for ObjectWithMetatable {
+    fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {
+        self.object.getgclist()
     }
 }

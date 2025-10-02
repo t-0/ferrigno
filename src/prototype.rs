@@ -10,6 +10,7 @@ use crate::localvariable::*;
 use crate::object::*;
 use crate::tag::*;
 use crate::tm::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvaluedescription::*;
@@ -49,7 +50,9 @@ impl TObject for Prototype {
     fn get_class_name(&mut self) -> String {
         "prototype".to_string()
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
+}
+impl TObjectWithGCList for Prototype {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
         self.object.getgclist()
     }
 }

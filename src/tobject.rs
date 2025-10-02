@@ -13,9 +13,6 @@ pub trait TObject {
     fn get_metatable(&self) -> *mut Table {
         null_mut()
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
-        null_mut()
-    }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.as_object_mut().set_tag_variant(tagvariant);
     }

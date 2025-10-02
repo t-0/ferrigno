@@ -1,4 +1,5 @@
 use crate::callinfo::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use libc::*;
 use crate::character::*;
 use crate::debuginfo::*;
@@ -45,7 +46,9 @@ impl TObject for Closure {
     fn get_class_name(&mut self) -> String {
         "closure".to_string()
     }
-    fn getgclist(&mut self) -> *mut *mut ObjectBase {
+}
+impl TObjectWithGCList for Closure {
+    fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {
         self.object.getgclist()
     }
 }

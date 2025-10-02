@@ -66,14 +66,6 @@ impl TObject for ObjectBase {
             };
         }
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
-        unsafe {
-            match self.get_tag_variant() {
-                TagVariant::Table | TagVariant::ClosureL | TagVariant::ClosureC | TagVariant::Interpreter | TagVariant::Prototype | TagVariant::User => return (*(self as *mut ObjectBase as *mut ObjectWithGCList)).getgclist(),
-                _ => return null_mut(),
-            };
-        }
-    }
 }
 impl ObjectBase {
     pub fn new(tagvariant: TagVariant) -> Self {

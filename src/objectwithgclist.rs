@@ -1,12 +1,13 @@
 use crate::tag::*;
 use crate::tobject::*;
 use crate::objectbase::*;
+use crate::tobjectwithgclist::TObjectWithGCList;
 use std::ptr::*;
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct ObjectWithGCList {
     pub object: ObjectBase,
-    pub gclist: *mut ObjectBase,
+    pub gclist: *mut ObjectWithGCList,
 }
 impl ObjectWithGCList {
     pub fn new(tagvariant: TagVariant) -> Self {
@@ -23,7 +24,9 @@ impl TObject for ObjectWithGCList {
     fn get_class_name(&mut self) -> String {
         "gclist".to_string()
     }
-    fn getgclist(& mut self) -> *mut *mut ObjectBase {
+}
+impl TObjectWithGCList for ObjectWithGCList {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
         &mut self.gclist
     }
 }
