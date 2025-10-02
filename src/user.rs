@@ -30,10 +30,10 @@ impl TObject for User {
         "user".to_string()
     }
     fn get_metatable(& self) -> *mut Table {
-        return self.object.metatable;
+        return self.object.get_metatable();
     }
     fn set_metatable(&mut self, metatable: *mut Table) {
-        self.object.metatable = metatable;
+        self.object.set_metatable(metatable);
     }
     fn getgclist(& mut self) -> *mut *mut ObjectBase {
         self.object.getgclist()
