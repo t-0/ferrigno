@@ -1,12 +1,12 @@
 #![allow(unused,dead_code)]
-use crate::objectbase::*;
+use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::object::*;
 use std::ptr::*;
 pub trait TObject {
-    fn as_object(&self) -> &ObjectBase;
-    fn as_object_mut(&mut self) -> &mut ObjectBase;
+    fn as_object(&self) -> &Object;
+    fn as_object_mut(&mut self) -> &mut Object;
     fn get_class_name(&mut self) -> String;
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.as_object_mut().set_tag_variant(tagvariant);
@@ -27,7 +27,7 @@ pub trait TObject {
         self.as_object().get_tag_variant()
     }
     fn is_tagtype_nil(&self) -> bool {
-        self.get_tag_variant().to_tag_type() == TagType::Nil
+        self.get_tag_variant().to_tag_type().is_nil()
     }
     fn is_tagtype_boolean(&self) -> bool {
         self.get_tag_variant().to_tag_type() == TagType::Boolean

@@ -1,13 +1,12 @@
 use crate::character::*;
 use crate::tdefaultnew::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::status::*;
 use crate::f2i::*;
 use crate::functions::*;
 use crate::global::*;
 use crate::interpreter::*;
 use crate::node::*;
-use crate::object::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tobjectwithgclist::TObjectWithGCList;
@@ -33,10 +32,10 @@ pub struct Table {
     pub last_free: *mut Node,
 }
 impl TObject for Table {
-    fn as_object(&self) -> &ObjectBase {
+    fn as_object(&self) -> &Object {
         self.object.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
+    fn as_object_mut(&mut self) -> &mut Object {
         self.object.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
@@ -180,7 +179,7 @@ pub unsafe fn traverseephemeron(global: *mut Global, h: *mut Table, is_reverse: 
         } else if hasclears != 0 {
             linkgclist_(&mut (*(h as *mut ObjectWithGCList)), (*h).getgclist(), &mut (*global).global_allweak);
         } else {
-            generate_link(global, &mut (*(h as *mut ObjectBase)));
+            generate_link(global, &mut (*(h as *mut Object)));
         }
         return marked;
     }
@@ -208,7 +207,7 @@ pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
             }
             node = node.offset(1);
         }
-        generate_link(global, &mut (*(h as *mut ObjectBase)));
+        generate_link(global, &mut (*(h as *mut Object)));
     }
 }
 pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
@@ -225,7 +224,7 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
         let smode: *mut TString;
         if !((*h).get_metatable()).is_null() {
             if (*(*h).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*((*h).get_metatable() as *mut ObjectBase)));
+                really_mark_object(global, &mut (*((*h).get_metatable() as *mut Object)));
             }
         }
         if !mode.is_null() && (*mode).get_tag_variant() == TagVariant::StringShort && {
@@ -260,9 +259,9 @@ pub unsafe fn tablerehash(vect: *mut *mut TString, old_size: usize, new_size: us
             let ref mut fresh21 = *vect.offset(i as isize);
             *fresh21 = null_mut();
             while !p.is_null() {
-                let hash_next: *mut TString = (*p).hash_next;
-                let h: u32 = ((*p).hash & (new_size - 1) as u32) as u32;
-                (*p).hash_next = *vect.offset(h as isize);
+                let hash_next: *mut TString = (*p).tstring_hashnext;
+                let h: u32 = ((*p).tstring_hash & (new_size - 1) as u32) as u32;
+                (*p).tstring_hashnext = *vect.offset(h as isize);
                 let ref mut fresh22 = *vect.offset(h as isize);
                 *fresh22 = p;
                 p = hash_next;
@@ -293,7 +292,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
             },
             TagVariant::StringShort => {
                 let tstring: *mut TString = &mut (*((*key).value.value_object as *mut TString));
-                return &mut *((*t).node).offset(((*tstring).hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
+                return &mut *((*t).node).offset(((*tstring).tstring_hash & ((1 << (*t).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
             },
             TagVariant::StringLong => {
                 let ts_0: *mut TString = &mut (*((*key).value.value_object as *mut TString));
@@ -316,7 +315,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
                     as *mut Node;
             },
             _ => {
-                let o: *mut ObjectBase = (*key).value.value_object;
+                let o: *mut Object = (*key).value.value_object;
                 return &mut *((*t).node).offset(((o as usize & (0x7FFFFFFF as u32).wrapping_mul(2 as u32).wrapping_add(1 as u32) as usize) as u32).wrapping_rem(((1 << (*t).log_size_node as i32) - 1 | 1) as u32) as isize) as *mut Node;
             },
         };
@@ -402,7 +401,7 @@ pub unsafe fn luah_next(interpreter: *mut Interpreter, table: *mut Table, key: *
             if !(*((*table).array).offset(i as isize)).is_tagtype_nil() {
                 let io: *mut TValue = &mut (*key);
                 (*io).value.value_integer = i.wrapping_add(1 as u32) as i64;
-                (*io).set_tag_variant(TagVariant::NumericInteger);
+                (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
                 let io1: *mut TValue = &mut (*key.offset(1 as isize));
                 let io2: *const TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 (*io1).copy_from(&*io2);
@@ -551,8 +550,8 @@ pub unsafe fn setnodevector(interpreter: *mut Interpreter, table: *mut Table, mu
             for i in 0..size {
                 let node: *mut Node = &mut *((*table).node).offset(i as isize) as *mut Node;
                 (*node).next = 0;
-                (*node).key.set_tag_variant(TagVariant::NilNil);
-                (*node).value.set_tag_variant(TagVariant::NilEmpty);
+                (*node).key.tvalue_set_tag_variant(TagVariant::NilNil);
+                (*node).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
             }
             (*table).log_size_node = lsize as u8;
             (*table).last_free = &mut *((*table).node).offset(size as isize) as *mut Node;
@@ -608,7 +607,7 @@ pub unsafe fn luah_resize(interpreter: *mut Interpreter, table: *mut Table, new_
         (*table).array = new_array;
         (*table).array_limit = new_array_size as u32;
         for i in old_array_size..new_array_size {
-            (*((*table).array).offset(i as isize)).set_tag_variant(TagVariant::NilEmpty);
+            (*((*table).array).offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilEmpty);
         }
         reinsert(interpreter, &mut new_table, table);
         freehash(interpreter, &mut new_table);
@@ -642,7 +641,7 @@ pub unsafe fn rehash(interpreter: *mut Interpreter, table: *mut Table, ek: *cons
 }
 pub unsafe fn luah_new(interpreter: *mut Interpreter) -> *mut Table {
     unsafe {
-        let object: *mut ObjectBase = luac_newobj(interpreter, TagVariant::Table, size_of::<Table>());
+        let object: *mut Object = luac_newobj(interpreter, TagVariant::Table, size_of::<Table>());
         let new_table: *mut Table = &mut (*(object as *mut Table));
         (*new_table).set_metatable(null_mut());
         (*new_table).flags = !(!0 << TM_EQ as i32 + 1) as u8;
@@ -663,7 +662,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
             let mut k: i64 = 0;
             if luav_flttointeger(number, &mut k, F2I::Equal) {
                 aux.value.value_integer = k;
-                aux.set_tag_variant(TagVariant::NumericInteger);
+                aux.tvalue_set_tag_variant(TagVariant::NumericInteger);
                 key = &mut aux;
             } else if number != number {
                 luag_runerror(interpreter, c"table index is NaN".as_ptr());
@@ -692,7 +691,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
                     (*f_0).next += mp.offset_from(f_0) as i32;
                     (*mp).next = 0;
                 }
-                (*mp).value.set_tag_variant(TagVariant::NilEmpty);
+                (*mp).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
             } else {
                 if (*mp).next != 0 {
                     (*f_0).next = mp.offset((*mp).next as isize).offset_from(f_0) as i32;
@@ -705,7 +704,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         let io_: *const TValue = key;
         (*node).key.copy_from(&*io_);
         if (*key).is_collectable() {
-            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*key).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*key).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
@@ -743,7 +742,7 @@ pub unsafe fn luah_getint(table: *mut Table, key: i64) -> *const TValue {
 }
 pub unsafe fn luah_getshortstr(table: *mut Table, key: *mut TString) -> *const TValue {
     unsafe {
-        let mut node: *mut Node = &mut *((*table).node).offset(((*key).hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
+        let mut node: *mut Node = &mut *((*table).node).offset(((*key).tstring_hash & ((1 << (*table).log_size_node as i32) - 1) as u32) as isize) as *mut Node;
         loop {
             if (*node).key.get_tag_variant() == TagVariant::StringShort && &mut (*((*node).key.value.value_object as *mut TString)) as *mut TString == key {
                 return &mut (*node).value;
@@ -765,8 +764,8 @@ pub unsafe fn luah_getstr(table: *mut Table, key: *mut TString) -> *const TValue
             let mut ko: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut ko;
             let tstring: *mut TString = key;
-            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-            (*io).set_tag_variant((*tstring).get_tag_variant());
+            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             return getgeneric(table, &mut ko, 0);
         };
@@ -815,7 +814,7 @@ pub unsafe fn luah_setint(interpreter: *mut Interpreter, table: *mut Table, key:
             let mut k: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut k;
             (*io).value.value_integer = key;
-            (*io).set_tag_variant(TagVariant::NumericInteger);
+            (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
             luah_newkey(interpreter, table, &mut k, value);
         } else {
             let io1: *mut TValue = p as *mut TValue;
@@ -912,7 +911,7 @@ pub unsafe fn luav_finishget(interpreter: *mut Interpreter, mut t: *const TValue
                     luat_gettm((*((*t).value.value_object as *mut Table)).get_metatable(), TM_INDEX, (*(*interpreter).global).global_tmname[TM_INDEX as usize])
                 };
                 if tm.is_null() {
-                    (*value).set_tag_variant(TagVariant::NilNil);
+                    (*value).tvalue_set_tag_variant(TagVariant::NilNil);
                     return;
                 }
             }
@@ -956,15 +955,15 @@ pub unsafe fn luav_finishset(interpreter: *mut Interpreter, mut t: *const TValue
                 if tm.is_null() {
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
                     let x_: *mut Table = h;
-                    (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
-                    (*io).set_tag_variant(TagVariant::Table);
+                    (*io).value.value_object = &mut (*(x_ as *mut Object));
+                    (*io).tvalue_set_tag_variant(TagVariant::Table);
                     (*io).set_collectable(true);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
                     luah_finishset(interpreter, h, key, slot, value);
                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
                     (*h).flags = ((*h).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
                     if (*value).is_collectable() {
-                        if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                        if (*(h as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                             luac_barrierback_(interpreter, &mut (*(h as *mut ObjectWithGCList)));
                         } else {
                         };

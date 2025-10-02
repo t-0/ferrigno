@@ -16,11 +16,11 @@ pub struct StringTable {
 impl StringTable {
     pub unsafe fn remove(&mut self, tstring: *mut TString) {
         unsafe {
-            let mut it: *mut *mut TString = &mut *(self.stringtable_hash).offset(((*tstring).hash & (self.stringtable_size - 1) as u32) as isize) as *mut *mut TString;
+            let mut it: *mut *mut TString = &mut *(self.stringtable_hash).offset(((*tstring).tstring_hash & (self.stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             while *it != tstring {
-                it = &mut (**it).hash_next;
+                it = &mut (**it).tstring_hashnext;
             }
-            *it = (**it).hash_next;
+            *it = (**it).tstring_hashnext;
             self.stringtable_length -= 1;
         }
     }

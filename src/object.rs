@@ -1,11 +1,11 @@
 #![allow(dead_code, unused)]
 // #[macro_export]
-// macro_rules! ObjectBase {
+// macro_rules! Object {
 //     (#[derive($($derive:meta),*)] $pub:vis struct $name:ident { $($fpub:vis $field:ident : $type:ty,)* }) => {
 //         #[derive($($derive),*)]
 //         #[repr(C)]
 //         $pub struct $name {
-//             pub next: *mut ObjectBase,
+//             pub next: *mut Object,
 //             pub tag: u8,
 //             pub marked: u8,
 //             $($fpub $field : $type,)*
@@ -15,11 +15,13 @@
 use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
+use crate::closure::*;
+use crate::closure::*;
+use crate::global::*;
 use crate::objectwithgclist::*;
 use crate::tobjectwithgclist::*;
 use crate::tobjectwithmetatable::*;
 use crate::objectwithmetatable::*;
-use crate::objectbase::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use crate::table::*;
@@ -30,6 +32,55 @@ use crate::upvalue::*;
 use crate::tobject::*;
 use crate::user::*;
 use std::ptr::*;
+use crate::objectwithgclist::*;
+use crate::objectwithmetatable::*;
+use crate::interpreter::*;
+use crate::objectwithmetatable::ObjectWithMetatable;
+use crate::prototype::*;
+use crate::table::*;
+use crate::tag::*;
+use crate::tobject::*;
+use crate::tstring::*;
+use crate::tvalue::*;
+use crate::upvalue::*;
+use crate::tobject::*;
+use crate::user::*;
+use std::ptr::*;
+#[derive(Copy, Clone, Debug)]
+#[repr(C)]
+pub struct Object {
+    pub next: *mut Object = null_mut(),
+    pub tagvariant: TagVariant = TagVariant::NilNil,
+    pub marked: u8 = 0,
+}
+impl TObject for Object {
+    fn as_object(&self) -> &Object {
+        self
+    }
+    fn as_object_mut(&mut self) -> &mut Object {
+        self
+    }
+    fn get_marked(&self) -> u8 {
+        self.marked
+    }
+    fn set_marked(&mut self, marked: u8) {
+        self.marked = marked;
+    }
+    fn get_tag_variant(&self) -> TagVariant {
+        self.tagvariant
+    }
+    fn set_tag_variant(&mut self, tagvariant: TagVariant) {
+        self.tagvariant = tagvariant;
+    }
+    fn get_class_name(&mut self) -> String {
+        "object".to_string()
+    }
+}
+impl Object {
+    pub fn new(tagvariant: TagVariant) -> Self {
+        Self { next: null_mut(), tagvariant: tagvariant, marked: 0, .. }
+    }
+}
 pub unsafe fn linkgclist_(object: *mut ObjectWithGCList, pnext: *mut *mut ObjectWithGCList, list: *mut *mut ObjectWithGCList) {
     unsafe {
         *pnext = *list;
@@ -37,13 +88,13 @@ pub unsafe fn linkgclist_(object: *mut ObjectWithGCList, pnext: *mut *mut Object
         (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
     }
 }
-pub unsafe fn iscleared(global: *mut Global, object: *const ObjectBase) -> i32 {
+pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
     unsafe {
         if object.is_null() {
             return 0;
         } else if (*object).is_tagtype_string() {
             if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(object as *mut ObjectBase)));
+                really_mark_object(global, &mut (*(object as *mut Object)));
             }
             return 0;
         } else {
@@ -51,7 +102,7 @@ pub unsafe fn iscleared(global: *mut Global, object: *const ObjectBase) -> i32 {
         };
     }
 }
-pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut ObjectBase, v: *mut ObjectBase) {
+pub unsafe fn luac_barrier_(interpreter: *mut Interpreter, object: *mut Object, v: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*global).global_gcstate as i32 <= 2 {
@@ -84,13 +135,13 @@ pub unsafe fn fix_memory_error_message_state(interpreter: *mut Interpreter) {
         (*global).fix_memory_error_message_global();
     }
 }
-pub unsafe fn fix_object_state(interpreter: *mut Interpreter, object: *mut ObjectBase) {
+pub unsafe fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         fix_object_global(global, object);
     }
 }
-pub unsafe fn fix_object_global(global: *mut Global, object: *mut ObjectBase) {
+pub unsafe fn fix_object_global(global: *mut Global, object: *mut Object) {
     unsafe {
         (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
         (*object).set_marked((*object).get_marked() & !(7) | 4);
@@ -99,7 +150,7 @@ pub unsafe fn fix_object_global(global: *mut Global, object: *mut ObjectBase) {
         (*global).global_fixedgc = object;
     }
 }
-pub unsafe fn really_mark_object(global: *mut Global, object: *mut ObjectBase) {
+pub unsafe fn really_mark_object(global: *mut Global, object: *mut Object) {
     unsafe {
         let current_block_18: usize;
         match (*object).get_tag_variant() {
@@ -124,7 +175,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut ObjectBase) {
                 if (*user).count_upvalues as i32 == 0 {
                     if !((*user).get_metatable()).is_null() {
                         if (*(*user).get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                            really_mark_object(global, &mut (*((*user).get_metatable() as *mut ObjectBase)));
+                            really_mark_object(global, &mut (*((*user).get_metatable() as *mut Object)));
                         }
                     }
                     (*user).set_marked((*user).get_marked() & !(1 << 3 | 1 << 4) | 1 << 5);
@@ -148,7 +199,7 @@ pub unsafe fn really_mark_object(global: *mut Global, object: *mut ObjectBase) {
         };
     }
 }
-pub unsafe fn generate_link(global: *mut Global, object: *mut ObjectBase) {
+pub unsafe fn generate_link(global: *mut Global, object: *mut Object) {
     unsafe {
         if (*object).get_marked() & 7 == 5 {
             linkgclist_(&mut (*(object as *mut ObjectWithGCList)), (*(object as *mut ObjectWithGCList)).getgclist(), &mut (*global).global_grayagain);
@@ -157,7 +208,7 @@ pub unsafe fn generate_link(global: *mut Global, object: *mut ObjectBase) {
         }
     }
 }
-pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut ObjectBase) {
+pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         match (*object).get_tag_variant() {
             TagVariant::Prototype => {
@@ -192,7 +243,7 @@ pub unsafe fn free_object(interpreter: *mut Interpreter, object: *mut ObjectBase
         };
     }
 }
-pub unsafe fn find_last(mut objects: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
+pub unsafe fn find_last(mut objects: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         while !(*objects).is_null() {
             objects = &mut (**objects).next;
@@ -200,7 +251,7 @@ pub unsafe fn find_last(mut objects: *mut *mut ObjectBase) -> *mut *mut ObjectBa
         return objects;
     }
 }
-pub unsafe fn check_pointer(objects: *mut *mut ObjectBase, object: *mut ObjectBase) {
+pub unsafe fn check_pointer(objects: *mut *mut Object, object: *mut Object) {
     unsafe {
         if object == *objects {
             *objects = (*object).next;
@@ -243,10 +294,10 @@ pub unsafe fn correct_gray_list(mut objects: *mut *mut ObjectWithGCList) -> *mut
         return objects;
     }
 }
-pub unsafe fn delete_list(interpreter: *mut Interpreter, mut object: *mut ObjectBase, limit: *mut ObjectBase) {
+pub unsafe fn delete_list(interpreter: *mut Interpreter, mut object: *mut Object, limit: *mut Object) {
     unsafe {
         while object != limit {
-            let next: *mut ObjectBase = (*object).next;
+            let next: *mut Object = (*object).next;
             free_object(interpreter, object);
             object = next;
         }

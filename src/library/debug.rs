@@ -284,7 +284,7 @@ pub unsafe fn db_traceback(interpreter: *mut Interpreter) -> i32 {
         let mut arg: i32 = 0;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let message: *const i8 = lua_tolstring(interpreter, arg + 1, null_mut());
-        if message.is_null() && !(is_none_or_nil(lua_type(interpreter, arg + 1))) {
+        if message.is_null() && !(TagType::is_none_or_nil(lua_type(interpreter, arg + 1))) {
             lua_pushvalue(interpreter, arg + 1);
         } else {
             let level: i32 = lual_optinteger(interpreter, arg + 2, (if interpreter == other_state { 1 } else { 0 }) as i64) as i32;

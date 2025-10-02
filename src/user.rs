@@ -1,11 +1,10 @@
 #![allow(dead_code)]
 use crate::global::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::objectwithgclist::*;
 use crate::objectwithmetatable::*;
 use crate::tobject::*;
 use crate::interpreter::*;
-use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
 use crate::tobjectwithgclist::*;
@@ -23,10 +22,10 @@ pub struct User {
     pub upvalues: [TValue; 0],
 }
 impl TObject for User {
-    fn as_object(&self) -> &ObjectBase {
+    fn as_object(&self) -> &Object {
         self.object.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
+    fn as_object_mut(&mut self) -> &mut Object {
         self.object.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
@@ -71,13 +70,13 @@ impl User {
             if count_bytes > MAXIMUM_SIZE - User::user_get_size(0, count_upvalues) {
                 (*interpreter).too_big();
             }
-            let object: *mut ObjectBase = luac_newobj(interpreter, TagVariant::User, User::user_get_size(count_bytes, count_upvalues));
+            let object: *mut Object = luac_newobj(interpreter, TagVariant::User, User::user_get_size(count_bytes, count_upvalues));
             let ret: *mut User = &mut (*(object as *mut User));
             (*ret).count_bytes = count_bytes;
             (*ret).count_upvalues = count_upvalues as i32;
             (*ret).set_metatable(null_mut());
             for i in 0..count_upvalues {
-                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+                (*((*ret).upvalues).as_mut_ptr().offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
             }
             return ret;
         }
@@ -86,8 +85,8 @@ impl User {
         unsafe {
             let new_user: *mut User = User::luas_newudata(interpreter, size, count_upvalues);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(new_user as *mut ObjectBase));
-            (*io).set_tag_variant(TagVariant::User);
+            (*io).value.value_object = &mut (*(new_user as *mut Object));
+            (*io).tvalue_set_tag_variant(TagVariant::User);
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).global_gcdebt > 0 {
@@ -105,7 +104,7 @@ impl User {
         unsafe {
             if !self.get_metatable().is_null() {
                 if (*self.get_metatable()).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, &mut (*(self.get_metatable() as *mut ObjectBase)));
+                    really_mark_object(global, &mut (*(self.get_metatable() as *mut Object)));
                 }
             }
             for i in 0..self.count_upvalues {
@@ -113,7 +112,7 @@ impl User {
                     really_mark_object(global, (*(self.upvalues).as_mut_ptr().offset(i as isize)).value.value_object);
                 }
             }
-            generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut ObjectBase)));
+            generate_link(global, &mut (*(self as *mut User as *mut libc::c_void as *mut Object)));
             return 1 + self.count_upvalues;
         }
     }

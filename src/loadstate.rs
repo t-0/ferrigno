@@ -1,5 +1,5 @@
 use libc::memcmp;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::tobject::*;
 use crate::status::*;
 use crate::character::*;
@@ -9,7 +9,6 @@ use crate::dumpstate::*;
 use crate::interpreter::*;
 use crate::loadable::*;
 use crate::localvariable::*;
-use crate::object::*;
 use crate::prototype::*;
 use crate::tag::*;
 use crate::tstring::*;
@@ -109,8 +108,8 @@ impl LoadState {
                 } else {
                     tstring = TString::create_long(interpreter, size as usize);
                     let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                    (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                    (*io).set_tag_variant((*tstring).get_tag_variant());
+                    (*io).value.value_object = &mut (*(tstring as *mut Object));
+                    (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
                     (*interpreter).luad_inctop();
                     self.load_block(((*tstring).get_contents_mut()) as *mut libc::c_void, size.wrapping_mul(1 as usize));
@@ -118,7 +117,7 @@ impl LoadState {
                 }
             }
             if (*p).get_marked() & 1 << 5 != 0 && (*tstring).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(p as *mut ObjectBase)), &mut (*(tstring as *mut ObjectBase)));
+                luac_barrier_(interpreter, &mut (*(p as *mut Object)), &mut (*(tstring as *mut Object)));
             } else {
             };
             return tstring;
@@ -151,36 +150,36 @@ impl LoadState {
             }
             (*prototype).prototype_constants.initialize_size(self.interpreter, n as usize);
             for i in 0..n {
-                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+                (*((*prototype).prototype_constants.vectort_pointer).offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
             }
             for i in 0..n {
                 let tvalue: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
                 let tagvariant = TagVariant::from(self.load_byte());
                 match tagvariant {
                     TagVariant::NilNil => {
-                        (*tvalue).set_tag_variant(TagVariant::NilNil);
+                        (*tvalue).tvalue_set_tag_variant(TagVariant::NilNil);
                     },
                     TagVariant::BooleanFalse => {
-                        (*tvalue).set_tag_variant(TagVariant::BooleanFalse);
+                        (*tvalue).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                     },
                     TagVariant::BooleanTrue => {
-                        (*tvalue).set_tag_variant(TagVariant::BooleanTrue);
+                        (*tvalue).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                     },
                     TagVariant::NumericNumber => {
                         let io: *mut TValue = tvalue;
                         (*io).value.value_number = self.load_number();
-                        (*io).set_tag_variant(TagVariant::NumericNumber);
+                        (*io).tvalue_set_tag_variant(TagVariant::NumericNumber);
                     },
                     TagVariant::NumericInteger => {
                         let io_0: *mut TValue = tvalue;
                         (*io_0).value.value_integer = self.load_integer();
-                        (*io_0).set_tag_variant(TagVariant::NumericInteger);
+                        (*io_0).tvalue_set_tag_variant(TagVariant::NumericInteger);
                     },
                     TagVariant::StringLong | TagVariant::StringShort => {
                         let io_1: *mut TValue = tvalue;
                         let tstring: *mut TString = self.load_string(prototype);
-                        (*io_1).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                        (*io_1).set_tag_variant((*tstring).get_tag_variant());
+                        (*io_1).value.value_object = &mut (*(tstring as *mut Object));
+                        (*io_1).tvalue_set_tag_variant((*tstring).get_tag_variant());
                         (*io_1).set_collectable(true);
                     },
                     _ => {},
@@ -203,8 +202,8 @@ impl LoadState {
                 if (*prototype).get_marked() & 1 << 5 != 0 && (**((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     luac_barrier_(
                         self.interpreter,
-                        &mut (*(prototype as *mut ObjectBase)),
-                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) as *mut ObjectBase)),
+                        &mut (*(prototype as *mut Object)),
+                        &mut (*(*((*prototype).prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)),
                     );
                 } else {
                 }
@@ -335,13 +334,13 @@ pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *
         load_state.check_header();
         let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).value.value_object = &mut (*(ret as *mut ObjectBase));
-        (*io).set_tag_variant(TagVariant::ClosureL);
+        (*io).value.value_object = &mut (*(ret as *mut Object));
+        (*io).tvalue_set_tag_variant(TagVariant::ClosureL);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         (*ret).payload.l_prototype = luaf_newproto(interpreter);
         if (*ret).get_marked() & 1 << 5 != 0 && (*(*ret).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(ret as *mut ObjectBase)), &mut (*((*ret).payload.l_prototype as *mut ObjectBase)));
+            luac_barrier_(interpreter, &mut (*(ret as *mut Object)), &mut (*((*ret).payload.l_prototype as *mut Object)));
         } else {
         };
         load_state.load_function((*ret).payload.l_prototype, null_mut());

@@ -4,7 +4,7 @@ use crate::functionstate::*;
 use crate::tobject::*;
 use crate::interpreter::*;
 use crate::lexical::lexicalstate::LexicalState;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
@@ -57,14 +57,14 @@ pub unsafe fn tonumeral(expression_description: *const ExpressionDescription, v:
                 ExpressionKind::ConstantInteger => {
                     if !v.is_null() {
                         (*v).value.value_integer = (*expression_description).value.value_integer;
-                        (*v).set_tag_variant(TagVariant::NumericInteger);
+                        (*v).tvalue_set_tag_variant(TagVariant::NumericInteger);
                     }
                     return true;
                 },
                 ExpressionKind::ConstantNumber => {
                     if !v.is_null() {
                         (*v).value.value_number = (*expression_description).value.value_number;
-                        (*v).set_tag_variant(TagVariant::NumericNumber);
+                        (*v).tvalue_set_tag_variant(TagVariant::NumericNumber);
                     }
                     return true;
                 },
@@ -87,21 +87,21 @@ pub unsafe fn luak_exp2const(lexical_state: *mut LexicalState, function_state: *
         }
         match (*expression_description).expression_kind {
             ExpressionKind::False => {
-                (*v).set_tag_variant(TagVariant::BooleanFalse);
+                (*v).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                 return true;
             },
             ExpressionKind::True => {
-                (*v).set_tag_variant(TagVariant::BooleanTrue);
+                (*v).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                 return true;
             },
             ExpressionKind::Nil => {
-                (*v).set_tag_variant(TagVariant::NilNil);
+                (*v).tvalue_set_tag_variant(TagVariant::NilNil);
                 return true;
             },
             ExpressionKind::ConstantString => {
                 let tstring: *mut TString = (*expression_description).value.value_tstring;
-                (*v).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                (*v).set_tag_variant((*tstring).get_tag_variant());
+                (*v).value.value_object = &mut (*(tstring as *mut Object));
+                (*v).tvalue_set_tag_variant((*tstring).get_tag_variant());
                 (*v).set_collectable(true);
                 return true;
             },

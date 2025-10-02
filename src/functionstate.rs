@@ -8,12 +8,11 @@ use crate::labeldescription::*;
 use crate::tdefaultnew::*;
 use crate::lexical::blockcontrol::*;
 use crate::lexical::constructorcontrol::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::lexical::lexicalstate::*;
 use crate::lexical::operatorbinary::*;
 use crate::lexical::operatorunary::*;
 use crate::localvariable::*;
-use crate::object::*;
 use crate::operator_::*;
 use crate::prototype::*;
 use crate::table::*;
@@ -330,7 +329,7 @@ pub unsafe fn newupvalue(interpreter: *mut Interpreter, lexical_state: *mut Lexi
         }
         (*upvalue_description).upvaluedescription_name = name;
         if (*(*function_state).prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut ObjectBase)), &mut (*(name as *mut ObjectBase)));
+            luac_barrier_(interpreter, &mut (*((*function_state).prototype as *mut Object)), &mut (*(name as *mut Object)));
         } else {
         };
         return (*function_state).count_upvalues as i32 - 1;
@@ -754,7 +753,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         count_constants = (*function_state).count_constants;
         let io: *mut TValue = &mut value;
         (*io).value.value_integer = count_constants as i64;
-        (*io).set_tag_variant(TagVariant::NumericInteger);
+        (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
         luah_finishset(interpreter, (*lexical_state).table, key, index, &mut value);
         (*prototype).prototype_constants.grow(
             interpreter,
@@ -769,7 +768,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         while old_size < (*prototype).prototype_constants.get_size() {
             let fresh135 = old_size;
             old_size = old_size + 1;
-            (*((*prototype).prototype_constants.vectort_pointer).offset(fresh135 as isize)).set_tag_variant(TagVariant::NilNil);
+            (*((*prototype).prototype_constants.vectort_pointer).offset(fresh135 as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         let io1: *mut TValue = &mut *((*prototype).prototype_constants.vectort_pointer).offset(count_constants as isize) as *mut TValue;
         let io2: *const TValue = v;
@@ -778,7 +777,7 @@ pub unsafe fn addk(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         (*function_state).count_constants;
         if (*v).is_collectable() {
             if (*prototype).get_marked() & 1 << 5 != 0 && (*(*v).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(prototype as *mut ObjectBase)), &mut (*((*v).value.value_object as *mut ObjectBase)));
+                luac_barrier_(interpreter, &mut (*(prototype as *mut Object)), &mut (*((*v).value.value_object as *mut Object)));
             } else {
             };
         } else {
@@ -790,8 +789,8 @@ pub unsafe fn string_constant(interpreter: *mut Interpreter, lexical_state: *mut
     unsafe {
         let mut o: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut o;
-        (*io).value.value_object = &mut (*(s as *mut ObjectBase));
-        (*io).set_tag_variant((*s).get_tag_variant());
+        (*io).value.value_object = &mut (*(s as *mut Object));
+        (*io).tvalue_set_tag_variant((*s).get_tag_variant());
         (*io).set_collectable(true);
         return addk(interpreter, lexical_state, function_state, &mut o, &mut o);
     }
@@ -800,7 +799,7 @@ pub unsafe fn luak_int_k(interpreter: *mut Interpreter, lexical_state: *mut Lexi
     unsafe {
         let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
         tvalue.value.value_integer = integer;
-        tvalue.set_tag_variant(TagVariant::NumericInteger);
+        tvalue.tvalue_set_tag_variant(TagVariant::NumericInteger);
         return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
     }
 }
@@ -809,7 +808,7 @@ pub unsafe fn luak_number_k(interpreter: *mut Interpreter, lexical_state: *mut L
         let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
         let mut ik: i64 = 0;
         tvalue.value.value_number = number;
-        tvalue.set_tag_variant(TagVariant::NumericNumber);
+        tvalue.tvalue_set_tag_variant(TagVariant::NumericNumber);
         if !luav_flttointeger(number, &mut ik, F2I::Equal) {
             return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
         } else {
@@ -839,7 +838,7 @@ pub unsafe fn nil_k(interpreter: *mut Interpreter, lexical_state: *mut LexicalSt
         let mut key: TValue = TValue::new(TagVariant::Table);
         let mut value: TValue = TValue::new(TagVariant::NilNil);
         let table: *mut Table = (*lexical_state).table;
-        key.value.value_object = &mut (*(table as *mut ObjectBase));
+        key.value.value_object = &mut (*(table as *mut Object));
         key.set_collectable(true);
         return addk(interpreter, lexical_state, function_state, &mut key, &mut value);
     }

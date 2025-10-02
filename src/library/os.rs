@@ -151,7 +151,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
         let mut stringpointer: *const i8 = lual_optlstring(interpreter, 1, c"%c".as_ptr(), &mut slen);
-        let mut t: i64 = if is_none_or_nil(lua_type(interpreter, 2)) { time(null_mut()) } else { l_checktime(interpreter, 2) };
+        let mut t: i64 = if TagType::is_none_or_nil(lua_type(interpreter, 2)) { time(null_mut()) } else { l_checktime(interpreter, 2) };
         let stringend: *const i8 = stringpointer.offset(slen as isize);
         let mut tmr: TM = TM {
             tm_sec: 0,

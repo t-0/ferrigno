@@ -1,12 +1,11 @@
 use crate::closure::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::functions::*;
-use crate::objectwithgclist::ObjectWithGCList;
+use crate::objectwithgclist::*;
 use libc::*;
 use crate::interpreter::*;
 use crate::closeprotected::*;
 use crate::node::*;
-use crate::object::*;
 use crate::tobjectwithgclist::*;
 use crate::prototype::*;
 use crate::stringtable::*;
@@ -41,23 +40,23 @@ pub struct Global {
     pub global_gcpause: u8,
     pub global_gcstepmultiplier: u8,
     pub global_gcstepsize: u8,
-    pub global_allgc: *mut ObjectBase,
-    pub global_sweepgc: *mut *mut ObjectBase,
-    pub global_finalizedobjects: *mut ObjectBase,
+    pub global_allgc: *mut Object,
+    pub global_sweepgc: *mut *mut Object,
+    pub global_finalizedobjects: *mut Object,
     pub global_gray: *mut ObjectWithGCList,
     pub global_grayagain: *mut ObjectWithGCList,
     pub global_weak: *mut ObjectWithGCList,
     pub global_ephemeron: *mut ObjectWithGCList,
     pub global_allweak: *mut ObjectWithGCList,
-    pub global_tobefinalized: *mut ObjectBase,
-    pub global_fixedgc: *mut ObjectBase,
-    pub global_survival: *mut ObjectBase,
-    pub global_old1: *mut ObjectBase,
-    pub global_reallyold: *mut ObjectBase,
-    pub global_firstold1: *mut ObjectBase,
-    pub global_finobjsur: *mut ObjectBase,
-    pub global_finobjold1: *mut ObjectBase,
-    pub global_finobjrold: *mut ObjectBase,
+    pub global_tobefinalized: *mut Object,
+    pub global_fixedgc: *mut Object,
+    pub global_survival: *mut Object,
+    pub global_old1: *mut Object,
+    pub global_reallyold: *mut Object,
+    pub global_firstold1: *mut Object,
+    pub global_finobjsur: *mut Object,
+    pub global_finobjold1: *mut Object,
+    pub global_finobjrold: *mut Object,
     pub global_twups: *mut Interpreter,
     pub global_panic: CFunction,
     pub global_maininterpreter: *mut Interpreter,
@@ -98,7 +97,7 @@ impl Global {
         self.global_stringtable.stringtable_length = 0;
         self.global_stringtable.stringtable_size = 0;
         self.global_stringtable.stringtable_hash = null_mut();
-        self.global_lregistry.set_tag_variant(TagVariant::NilNil);
+        self.global_lregistry.tvalue_set_tag_variant(TagVariant::NilNil);
         self.global_panic = None;
         self.global_gcstate = 8;
         self.global_gckind = 0;
@@ -135,7 +134,7 @@ impl Global {
         let io: *mut TValue = &mut self.global_nonevalue;
         unsafe {
             (*io).value.value_integer = 0;
-            (*io).set_tag_variant(TagVariant::NumericInteger);
+            (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
         }
     }
     pub unsafe fn luac_runtilstate(&mut self, interpreter: *mut Interpreter, statesmask: i32) {
@@ -250,7 +249,7 @@ impl Global {
             self.global_grayagain = null_mut();
             self.global_gcstate = 2 as u8;
             if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, &mut (*(interpreter as *mut ObjectBase)));
+                really_mark_object(self, &mut (*(interpreter as *mut Object)));
             }
             if (self.global_lregistry.is_collectable()) && (*self.global_lregistry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, self.global_lregistry.value.value_object);
@@ -455,12 +454,12 @@ impl Global {
             markold(self, self.global_tobefinalized, null_mut());
             self.atomic(interpreter);
             self.global_gcstate = 3 as u8;
-            let mut psurvival: *mut *mut ObjectBase = sweepgen(interpreter, self, &mut self.global_allgc, self.global_survival, &mut self.global_firstold1);
+            let mut psurvival: *mut *mut Object = sweepgen(interpreter, self, &mut self.global_allgc, self.global_survival, &mut self.global_firstold1);
             sweepgen(interpreter, self, psurvival, self.global_old1, &mut self.global_firstold1);
             self.global_reallyold = self.global_old1;
             self.global_old1 = *psurvival;
             self.global_survival = self.global_allgc;
-            let mut dummy: *mut ObjectBase = null_mut();
+            let mut dummy: *mut Object = null_mut();
             psurvival = sweepgen(interpreter, self, &mut self.global_finalizedobjects, self.global_finobjsur, &mut dummy);
             sweepgen(interpreter, self, psurvival, self.global_finobjold1, &mut dummy);
             self.global_finobjrold = self.global_finobjold1;
@@ -476,7 +475,7 @@ impl Global {
             self.luac_changemode(interpreter, 0);
             self.separatetobefnz(true);
             self.callallpendingfinalizers(interpreter);
-            delete_list(interpreter, self.global_allgc, &mut (*(self.global_maininterpreter as *mut ObjectBase)));
+            delete_list(interpreter, self.global_allgc, &mut (*(self.global_maininterpreter as *mut Object)));
             delete_list(interpreter, self.global_fixedgc, null_mut());
         }
     }
@@ -495,7 +494,7 @@ impl Global {
             let stringtable: *mut StringTable = &mut self.global_stringtable;
             (*stringtable).initialize(interpreter);
             self.global_memoryerrormessage = luas_newlstr(interpreter, c"not enough memory".as_ptr(), "not enough memory".len());
-            fix_object_global(self, self.global_memoryerrormessage as *mut ObjectBase);
+            fix_object_global(self, self.global_memoryerrormessage as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
                     self.global_stringcache[i][j] = self.global_memoryerrormessage;
@@ -503,7 +502,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn correct_pointers(&mut self, object: *mut ObjectBase) {
+    pub unsafe fn correct_pointers(&mut self, object: *mut Object) {
         unsafe {
             check_pointer(&mut self.global_survival, object);
             check_pointer(&mut self.global_old1, object);
@@ -513,10 +512,10 @@ impl Global {
     }
     pub unsafe fn separatetobefnz(&mut self, is_all: bool) {
         unsafe {
-            let mut p: *mut *mut ObjectBase = &mut (*self).global_finalizedobjects;
-            let mut last_next: *mut *mut ObjectBase = find_last(&mut (*self).global_tobefinalized);
+            let mut p: *mut *mut Object = &mut (*self).global_finalizedobjects;
+            let mut last_next: *mut *mut Object = find_last(&mut (*self).global_tobefinalized);
             loop {
-                let current: *mut ObjectBase = *p;
+                let current: *mut Object = *p;
                 if current == (*self).global_finobjold1 {
                     break;
                 }
@@ -573,10 +572,10 @@ impl Global {
     }
     pub unsafe fn fix_memory_error_message_global(&mut self) {
         unsafe {
-            fix_object_global(self, self.global_memoryerrormessage as *mut ObjectBase);
+            fix_object_global(self, self.global_memoryerrormessage as *mut Object);
         }
     }
-    pub unsafe fn white_list(&mut self, mut p: *mut ObjectBase) {
+    pub unsafe fn white_list(&mut self, mut p: *mut Object) {
         unsafe {
             let white = self.global_currentwhite & ((1 << 3) | (1 << 4));
             while !p.is_null() {
@@ -646,7 +645,7 @@ impl Global {
             for i in TAGTYPE_SIMPLE {
                 if !(self.global_metatables[i as usize]).is_null() {
                     if (*self.global_metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(self, &mut (*(*(self.global_metatables).as_mut_ptr().offset(i as isize) as *mut ObjectBase)));
+                        really_mark_object(self, &mut (*(*(self.global_metatables).as_mut_ptr().offset(i as isize) as *mut Object)));
                     }
                 }
             }
@@ -655,11 +654,11 @@ impl Global {
     pub unsafe fn markbeingfnz(&mut self) -> usize {
         unsafe {
             let mut count: usize = 0;
-            let mut object: *mut ObjectBase = self.global_tobefinalized;
+            let mut object: *mut Object = self.global_tobefinalized;
             while !object.is_null() {
                 count = count.wrapping_add(1);
                 if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(self, &mut (*(object as *mut ObjectBase)));
+                    really_mark_object(self, &mut (*(object as *mut Object)));
                 }
                 object = (*object).next;
             }
@@ -670,7 +669,7 @@ impl Global {
         unsafe {
             self.cleargraylists();
             if (*self.global_maininterpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, &mut (*(self.global_maininterpreter as *mut ObjectBase)));
+                really_mark_object(self, &mut (*(self.global_maininterpreter as *mut Object)));
             }
             if (self.global_lregistry.is_collectable()) && (*self.global_lregistry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 really_mark_object(self, self.global_lregistry.value.value_object);
@@ -754,9 +753,9 @@ impl Global {
             }
         }
     }
-    pub unsafe fn udata2finalize(&mut self) -> *mut ObjectBase {
+    pub unsafe fn udata2finalize(&mut self) -> *mut Object {
         unsafe {
-            let object: *mut ObjectBase = (*self).global_tobefinalized;
+            let object: *mut Object = (*self).global_tobefinalized;
             (*self).global_tobefinalized = (*object).next;
             (*object).next = (*self).global_allgc;
             (*self).global_allgc = object;
@@ -778,7 +777,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectWithGCList) {
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant(TagVariant::NilEmpty);
+                    (*node).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();
@@ -798,13 +797,13 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
             for i in 0..asize {
                 let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
                 if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.value_object } else { null_mut() }) != 0 {
-                    (*tvalue).set_tag_variant(TagVariant::NilEmpty);
+                    (*tvalue).tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
             }
             let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
             while node < limit {
                 if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.set_tag_variant(TagVariant::NilEmpty);
+                    (*node).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
                 if (*node).value.is_tagtype_nil() {
                     (*node).clearkey();
@@ -815,9 +814,9 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
         }
     }
 }
-pub unsafe fn markold(global: *mut Global, from: *mut ObjectBase, to: *mut ObjectBase) {
+pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
     unsafe {
-        let mut p: *mut ObjectBase = from;
+        let mut p: *mut Object = from;
         while p != to {
             if (*p).get_marked() & 7 == 3 {
                 (*p).set_marked((*p).get_marked() ^ (3 ^ 4));

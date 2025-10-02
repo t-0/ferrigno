@@ -1,21 +1,22 @@
 use crate::interpreter::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::tobject::*;
 use crate::tag::*;
 use crate::tvalue::*;
+pub type UpValueSuper = Object;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct UpValue {
-    pub object: ObjectBase,
+    pub super_: UpValueSuper,
     pub v: UpValueA,
     pub u: UpValueB,
 }
 impl TObject for UpValue {
-    fn as_object(&self) -> &ObjectBase {
-        &self.object
+    fn as_object(&self) -> &Object {
+        &self.super_
     }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
-        &mut self.object
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.super_
     }
     fn get_class_name(&mut self) -> String {
         "upvalue".to_string()
@@ -51,7 +52,7 @@ pub struct UpValueBA {
 }
 pub unsafe fn newupval(interpreter: *mut Interpreter, level: *mut TValue, previous: *mut *mut UpValue) -> *mut UpValue {
     unsafe {
-        let o: *mut ObjectBase = luac_newobj(interpreter, TagVariant::UpValue, size_of::<UpValue>());
+        let o: *mut Object = luac_newobj(interpreter, TagVariant::UpValue, size_of::<UpValue>());
         let uv: *mut UpValue = &mut (*(o as *mut UpValue));
         let next: *mut UpValue = *previous;
         (*uv).v.p = &mut (*level);

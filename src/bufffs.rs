@@ -1,6 +1,6 @@
 use crate::interpreter::*;
 use crate::tobject::*;
-use crate::objectbase::*;
+use crate::object::*;
 use libc::*;
 use crate::tstring::*;
 use crate::tvalue::*;
@@ -20,8 +20,8 @@ impl BuffFS {
         unsafe {
             let tvalue: *mut TValue = &mut (*(*self.interpreter).top.stkidrel_pointer);
             let tstring: *mut TString = luas_newlstr(self.interpreter, self.block.as_mut_ptr(), self.size);
-            (*tvalue).value.value_object = &mut (*(tstring as *mut ObjectBase));
-            (*tvalue).set_tag_variant((*tstring).get_tag_variant());
+            (*tvalue).value.value_object = &mut (*(tstring as *mut Object));
+            (*tvalue).tvalue_set_tag_variant((*tstring).get_tag_variant());
             (*tvalue).set_collectable(true);
             (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
             if self.is_pushed {
@@ -50,8 +50,8 @@ impl BuffFS {
                 self.clear();
                 let io = &mut (*(*self.interpreter).top.stkidrel_pointer);
                 let tstring = luas_newlstr(self.interpreter, pointer, length as usize);
-                (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                (*io).set_tag_variant((*tstring).get_tag_variant());
+                (*io).value.value_object = &mut (*(tstring as *mut Object));
+                (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
                 (*io).set_collectable(true);
                 (*self.interpreter).top.stkidrel_pointer = (*self.interpreter).top.stkidrel_pointer.offset(1);
                 if self.is_pushed {

@@ -1,7 +1,7 @@
 #![allow(unused)]
 use std::ptr::*;
 use libc::time;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::buffer::*;
 use crate::closeprotected::*;
 use crate::bufffs::*;
@@ -50,10 +50,11 @@ use crate::objectwithgclist::*;
 use crate::tobject::*;
 use crate::zio::*;
 use crate::status::*;
+pub type InterpreterSuper = ObjectWithGCList;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Interpreter {
-    pub object: ObjectWithGCList,
+    pub super_: InterpreterSuper,
     pub status: Status,
     pub allow_hook: u8,
     pub count_call_info: u16,
@@ -76,11 +77,11 @@ pub struct Interpreter {
     pub hook_mask: i32,
 }
 impl TObject for Interpreter {
-    fn as_object(&self) -> &ObjectBase {
-        self.object.as_object()
+    fn as_object(&self) -> &Object {
+        self.super_.as_object()
     }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
-        self.object.as_object_mut()
+    fn as_object_mut(&mut self) -> &mut Object {
+        self.super_.as_object_mut()
     }
     fn get_class_name(&mut self) -> String {
         "interpreter".to_string()
@@ -88,7 +89,7 @@ impl TObject for Interpreter {
 }
 impl TObjectWithGCList for Interpreter {
     fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {
-        self.object.getgclist()
+        self.super_.getgclist()
     }
 }
 impl Interpreter {
@@ -172,12 +173,12 @@ impl Interpreter {
                 Status::MemoryError => {
                     let io: *mut TValue = &mut (*old_top);
                     let tstring: *mut TString = (*(self.global)).global_memoryerrormessage;
-                    (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                    (*io).set_tag_variant((*tstring).get_tag_variant());
+                    (*io).value.value_object = &mut (*(tstring as *mut Object));
+                    (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
                     (*io).set_collectable(true);
                 },
                 Status::OK => {
-                    (*old_top).set_tag_variant(TagVariant::NilNil);
+                    (*old_top).tvalue_set_tag_variant(TagVariant::NilNil);
                 },
                 _ => {
                     let io1: *mut TValue = &mut (*old_top);
@@ -214,9 +215,9 @@ impl Interpreter {
     pub unsafe fn push_boolean(&mut self, x: bool) {
         unsafe {
             if x {
-                (*self.top.stkidrel_pointer).set_tag_variant(TagVariant::BooleanTrue);
+                (*self.top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::BooleanTrue);
             } else {
-                (*self.top.stkidrel_pointer).set_tag_variant(TagVariant::BooleanFalse);
+                (*self.top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::BooleanFalse);
             }
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
@@ -225,13 +226,13 @@ impl Interpreter {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer);
             (*t_value).value.value_integer = x;
-            (*t_value).set_tag_variant(TagVariant::NumericInteger);
+            (*t_value).tvalue_set_tag_variant(TagVariant::NumericInteger);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
     pub unsafe fn push_nil(&mut self) {
         unsafe {
-            (*self.top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+            (*self.top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
@@ -239,7 +240,7 @@ impl Interpreter {
         unsafe {
             let t_value: *mut TValue = &mut (*self.top.stkidrel_pointer);
             (*t_value).value.value_number = x;
-            (*t_value).set_tag_variant(TagVariant::NumericNumber);
+            (*t_value).tvalue_set_tag_variant(TagVariant::NumericNumber);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
         }
     }
@@ -262,14 +263,14 @@ impl Interpreter {
             };
         }
     }
-    pub unsafe fn sweep_list(&mut self, mut p: *mut *mut ObjectBase, countin: i32, countout: *mut i32) -> *mut *mut ObjectBase {
+    pub unsafe fn sweep_list(&mut self, mut p: *mut *mut Object, countin: i32, countout: *mut i32) -> *mut *mut Object {
         unsafe {
             let other_white = (*(self.global)).global_currentwhite ^ (1 << 3 | 1 << 4);
             let mut i: i32;
             let white = (*(self.global)).global_currentwhite & ((1 << 3) | (1 << 4));
             i = 0;
             while !(*p).is_null() && i < countin {
-                let curr: *mut ObjectBase = *p;
+                let curr: *mut Object = *p;
                 let marked = (*curr).get_marked();
                 if marked & other_white != 0 {
                     *p = (*curr).next;
@@ -300,8 +301,8 @@ impl Interpreter {
     pub unsafe fn push_state(&mut self) -> bool {
         unsafe {
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(self as *mut Interpreter as *mut ObjectBase));
-            (*io).set_tag_variant(TagVariant::Interpreter);
+            (*io).value.value_object = &mut (*(self as *mut Interpreter as *mut Object));
+            (*io).tvalue_set_tag_variant(TagVariant::Interpreter);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             return (*self.global).global_maininterpreter == self;
@@ -328,8 +329,8 @@ impl Interpreter {
         unsafe {
             let message: *mut TString = luas_newlstr(self, c"error in error handling".as_ptr(), 23);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(message as *mut ObjectBase));
-            (*io).set_tag_variant((*message).get_tag_variant());
+            (*io).value.value_object = &mut (*(message as *mut Object));
+            (*io).tvalue_set_tag_variant((*message).get_tag_variant());
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             luad_throw(self, Status::GenericError);
@@ -393,8 +394,8 @@ impl Interpreter {
         unsafe {
             let table: *mut Table = luah_new(self);
             let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(table as *mut ObjectBase));
-            (*io).set_tag_variant(TagVariant::Table);
+            (*io).value.value_object = &mut (*(table as *mut Object));
+            (*io).tvalue_set_tag_variant(TagVariant::Table);
             (*io).set_collectable(true);
             self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
             if (*self.global).global_gcdebt > 0 {
@@ -414,8 +415,8 @@ impl Interpreter {
                 false
             } else {
                 let io: *mut TValue = &mut (*self.top.stkidrel_pointer);
-                (*io).value.value_object = &mut (*(metatable as *mut ObjectBase));
-                (*io).set_tag_variant(TagVariant::Table);
+                (*io).value.value_object = &mut (*(metatable as *mut Object));
+                (*io).tvalue_set_tag_variant(TagVariant::Table);
                 (*io).set_collectable(true);
                 self.top.stkidrel_pointer = self.top.stkidrel_pointer.offset(1);
                 true
@@ -427,7 +428,7 @@ impl Interpreter {
             let t: Option<TagType>;
             let tvalue: *mut TValue = self.index_to_value(index);
             if n <= 0 || n > (*((*tvalue).value.value_object as *mut User)).count_upvalues as i32 {
-                (*self.top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+                (*self.top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
                 t = None;
             } else {
                 let io1: *mut TValue = &mut (*self.top.stkidrel_pointer);
@@ -560,7 +561,7 @@ pub unsafe fn luad_reallocstack(interpreter: *mut Interpreter, new_size: i32, sh
         (*interpreter).correct_stack();
         (*interpreter).stack_last.stkidrel_pointer = ((*interpreter).stack.stkidrel_pointer).offset(new_size as isize);
         for i in (old_size + 5)..(new_size + 5) {
-            (*newstack.offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+            (*newstack.offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         return 1;
     }
@@ -700,7 +701,7 @@ pub unsafe fn moveresults(interpreter: *mut Interpreter, mut res: *mut TValue, m
             },
             1 => {
                 if nres == 0 {
-                    (*res).set_tag_variant(TagVariant::NilNil);
+                    (*res).tvalue_set_tag_variant(TagVariant::NilNil);
                 } else {
                     let io1: *mut TValue = &mut (*res);
                     let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(nres as isize)));
@@ -740,7 +741,7 @@ pub unsafe fn moveresults(interpreter: *mut Interpreter, mut res: *mut TValue, m
             (*io1_0).copy_from(&*io2_0);
         }
         for i in nres..wanted {
-            (*res.offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+            (*res.offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         (*interpreter).top.stkidrel_pointer = res.offset(wanted as isize);
     }
@@ -817,7 +818,7 @@ pub unsafe fn luad_pretailcall(interpreter: *mut Interpreter, callinfo: *mut Cal
                     }
                     function = (*callinfo).call_info_function.stkidrel_pointer;
                     while narg1 <= nfixparams {
-                        (*function.offset(narg1 as isize)).set_tag_variant(TagVariant::NilNil);
+                        (*function.offset(narg1 as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
                         narg1 += 1;
                     }
                     (*callinfo).call_info_top.stkidrel_pointer = function.offset(1 as isize).offset(fsize as isize);
@@ -866,7 +867,7 @@ pub unsafe fn luad_precall(interpreter: *mut Interpreter, mut function: *mut TVa
                     while narg < nfixparams {
                         let fresh1 = (*interpreter).top.stkidrel_pointer;
                         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                        (*fresh1).set_tag_variant(TagVariant::NilNil);
+                        (*fresh1).tvalue_set_tag_variant(TagVariant::NilNil);
                         narg += 1;
                     }
                     return callinfo;
@@ -961,8 +962,8 @@ pub unsafe fn resume_error(interpreter: *mut Interpreter, message: *const i8, na
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-(narg as isize));
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let tstring: *mut TString = luas_new(interpreter, message);
-        (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-        (*io).set_tag_variant((*tstring).get_tag_variant());
+        (*io).value.value_object = &mut (*(tstring as *mut Object));
+        (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         return Status::RuntimeError;
@@ -1204,7 +1205,7 @@ pub unsafe fn lua_settop(interpreter: *mut Interpreter, index: i32) {
             while diff > 0 {
                 let fresh4 = (*interpreter).top.stkidrel_pointer;
                 (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                (*fresh4).set_tag_variant(TagVariant::NilNil);
+                (*fresh4).tvalue_set_tag_variant(TagVariant::NilNil);
                 diff -= 1;
             }
         } else {
@@ -1221,7 +1222,7 @@ pub unsafe fn lua_closeslot(interpreter: *mut Interpreter, index: i32) {
     unsafe {
         let mut level = index2stack(interpreter, index);
         level = luaf_close(interpreter, level, Status::Closing, 0);
-        (*level).set_tag_variant(TagVariant::NilNil);
+        (*level).tvalue_set_tag_variant(TagVariant::NilNil);
     }
 }
 pub unsafe fn reverse(mut _state: *mut Interpreter, mut from: *mut TValue, mut to: *mut TValue) {
@@ -1265,7 +1266,7 @@ pub unsafe fn lua_copy(interpreter: *mut Interpreter, fromidx: i32, toidx: i32) 
                     luac_barrier_(
                         interpreter,
                         &mut (*(&mut (*((*(*(*interpreter).callinfo).call_info_function.stkidrel_pointer).value.value_object)))),
-                        &mut (*((*fr).value.value_object as *mut ObjectBase)),
+                        &mut (*((*fr).value.value_object as *mut Object)),
                     );
                 } else {
                 };
@@ -1292,12 +1293,12 @@ pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagT
         };
     }
 }
-pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> *const i8 {
-    match t {
+pub unsafe fn lua_typename(mut _state: *mut Interpreter, tagtype: Option<TagType>) -> *const i8 {
+    match tagtype {
         None => c"no value".as_ptr(),
         Some(TagType::Nil) => c"nil".as_ptr(),
         Some(TagType::Boolean) => c"boolean".as_ptr(),
-        Some(TagType::Pointer) => c"userdata".as_ptr(),
+        Some(TagType::Pointer) => c"pointer".as_ptr(),
         Some(TagType::Numeric) => c"number".as_ptr(),
         Some(TagType::String) => c"string".as_ptr(),
         Some(TagType::Table) => c"table".as_ptr(),
@@ -1306,15 +1307,15 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, t: Option<TagType>) -> 
         Some(TagType::Interpreter) => c"thread".as_ptr(),
         Some(TagType::UpValue) => c"upvalue".as_ptr(),
         Some(TagType::Prototype) => c"proto".as_ptr(),
+        Some(TagType::DeadKey) => c"deadkey".as_ptr(),
         _ => c"unknown".as_ptr(),
     }
 }
 pub unsafe fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        match (*o).get_tag_variant() {
-            TagVariant::ClosureCFunction => return true,
-            TagVariant::ClosureC => return true,
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        match (*tvalue).get_tag_variant() {
+            TagVariant::ClosureCFunction | TagVariant::ClosureC => return true,
             _ => return false,
         }
     }
@@ -1326,12 +1327,12 @@ pub unsafe fn lua_isinteger(interpreter: *mut Interpreter, index: i32) -> bool {
 }
 pub unsafe fn lua_isnumber(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        return if (*o).get_tag_variant() == TagVariant::NumericNumber {
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        return if (*tvalue).get_tag_variant() == TagVariant::NumericNumber {
             true
         } else {
             let mut n: f64 = 0.0;
-            (*o).to_number(&mut n)
+            (*tvalue).to_number(&mut n)
         };
     }
 }
@@ -1390,12 +1391,12 @@ pub unsafe fn lua_stringtonumber(interpreter: *mut Interpreter, s: *const i8) ->
 pub unsafe fn lua_tonumberx(interpreter: *mut Interpreter, index: i32, is_number: *mut bool) -> f64 {
     unsafe {
         let mut n: f64 = 0.0;
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        let is_number_: bool = if (*o).get_tag_variant() == TagVariant::NumericNumber {
-            n = (*o).value.value_number;
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        let is_number_: bool = if (*tvalue).get_tag_variant() == TagVariant::NumericNumber {
+            n = (*tvalue).value.value_number;
             true
         } else {
-            (*o).to_number(&mut n)
+            (*tvalue).to_number(&mut n)
         };
         if !is_number.is_null() {
             *is_number = is_number_;
@@ -1406,12 +1407,12 @@ pub unsafe fn lua_tonumberx(interpreter: *mut Interpreter, index: i32, is_number
 pub unsafe fn lua_tointegerx(interpreter: *mut Interpreter, index: i32, is_number: *mut bool) -> i64 {
     unsafe {
         let mut res: i64 = 0;
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        let is_number_: bool = if (*o).get_tag_variant() == TagVariant::NumericInteger {
-            res = (*o).value.value_integer;
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        let is_number_: bool = if (*tvalue).get_tag_variant() == TagVariant::NumericInteger {
+            res = (*tvalue).value.value_integer;
             true
         } else {
-            luav_tointeger(o, &mut res, F2I::Equal) != 0
+            luav_tointeger(tvalue, &mut res, F2I::Equal) != 0
         };
         if !is_number.is_null() {
             *is_number = is_number_;
@@ -1421,8 +1422,8 @@ pub unsafe fn lua_tointegerx(interpreter: *mut Interpreter, index: i32, is_numbe
 }
 pub unsafe fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        return !((*o).get_tag_variant() == TagVariant::BooleanFalse || (*o).is_tagtype_nil());
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        return !((*tvalue).get_tag_variant() == TagVariant::BooleanFalse || (*tvalue).is_tagtype_nil());
     }
 }
 pub unsafe fn lua_tolstring(interpreter: *mut Interpreter, index: i32, length: *mut usize) -> *const i8 {
@@ -1464,16 +1465,16 @@ pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize
 }
 pub unsafe fn lua_tothread(interpreter: *mut Interpreter, index: i32) -> *mut Interpreter {
     unsafe {
-        let o: *const TValue = (*interpreter).index_to_value(index);
-        return if !((*o).get_tag_variant() == TagVariant::Interpreter) { null_mut() } else { &mut (*((*o).value.value_object as *mut Interpreter)) };
+        let tvalue: *const TValue = (*interpreter).index_to_value(index);
+        return if !((*tvalue).get_tag_variant() == TagVariant::Interpreter) { null_mut() } else { &mut (*((*tvalue).value.value_object as *mut Interpreter)) };
     }
 }
 pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, length: usize) -> *const i8 {
     unsafe {
         let tstring: *mut TString = if length == 0 { luas_new(interpreter, c"".as_ptr()) } else { luas_newlstr(interpreter, s, length as usize) };
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-        (*io).set_tag_variant((*tstring).get_tag_variant());
+        (*io).value.value_object = &mut (*(tstring as *mut Object));
+        (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         if (*(*interpreter).global).global_gcdebt > 0 {
@@ -1485,12 +1486,12 @@ pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, lengt
 pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) -> *const i8 {
     unsafe {
         if s.is_null() {
-            (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+            (*(*interpreter).top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
         } else {
             let tstring: *mut TString = luas_new(interpreter, s);
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-            (*io).set_tag_variant((*tstring).get_tag_variant());
+            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             s = (*tstring).get_contents_mut();
         }
@@ -1526,7 +1527,7 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
         if n == 0 {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             (*io).value.value_function = fn_0;
-            (*io).set_tag_variant(TagVariant::ClosureCFunction);
+            (*io).tvalue_set_tag_variant(TagVariant::ClosureCFunction);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let closure: *mut Closure = luaf_newcclosure(interpreter, n);
@@ -1544,8 +1545,8 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
             }
             let io_0: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             let x_: *mut Closure = closure;
-            (*io_0).value.value_object = &mut (*(x_ as *mut ObjectBase));
-            (*io_0).set_tag_variant(TagVariant::ClosureC);
+            (*io_0).value.value_object = &mut (*(x_ as *mut Object));
+            (*io_0).tvalue_set_tag_variant(TagVariant::ClosureC);
             (*io_0).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             if (*(*interpreter).global).global_gcdebt > 0 {
@@ -1558,7 +1559,7 @@ pub unsafe fn lua_pushlightuserdata(interpreter: *mut Interpreter, p: *mut libc:
     unsafe {
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         (*io).value.value_pointer = p;
-        (*io).set_tag_variant(TagVariant::Pointer);
+        (*io).tvalue_set_tag_variant(TagVariant::Pointer);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
     }
 }
@@ -1580,8 +1581,8 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(str as *mut ObjectBase));
-            (*io).set_tag_variant((*str).get_tag_variant());
+            (*io).value.value_object = &mut (*(str as *mut Object));
+            (*io).tvalue_set_tag_variant((*str).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             luav_finishget(
@@ -1674,7 +1675,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
             let mut aux: TValue = TValue::new(TagVariant::NilNil);
             let io: *mut TValue = &mut aux;
             (*io).value.value_integer = n;
-            (*io).set_tag_variant(TagVariant::NumericInteger);
+            (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
             luav_finishget(interpreter, t, &mut aux, (*interpreter).top.stkidrel_pointer, slot);
         }
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
@@ -1684,7 +1685,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
 pub unsafe fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> TagType {
     unsafe {
         if (*value).is_tagtype_nil() {
-            (*(*interpreter).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+            (*(*interpreter).top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
         } else {
             let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             let io2: *const TValue = value;
@@ -1739,8 +1740,8 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-            (*io).value.value_object = &mut (*(str as *mut ObjectBase));
-            (*io).set_tag_variant((*str).get_tag_variant());
+            (*io).value.value_object = &mut (*(str as *mut Object));
+            (*io).tvalue_set_tag_variant((*str).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
             luav_finishset(
@@ -1806,7 +1807,7 @@ pub unsafe fn aux_rawset(interpreter: *mut Interpreter, index: i32, key: *mut TV
         luah_set(interpreter, table, key, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))));
         (*table).flags = ((*table).flags as u32 & !!(!0 << TM_EQ as i32 + 1)) as u8;
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
-            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
@@ -1825,7 +1826,7 @@ pub unsafe fn lua_rawseti(interpreter: *mut Interpreter, index: i32, n: i64) {
         let table: *mut Table = gettable(interpreter, index);
         luah_setint(interpreter, table, n, &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))));
         if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).is_collectable() {
-            if (*(table as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if (*(table as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                 luac_barrierback_(interpreter, &mut (*(table as *mut ObjectWithGCList)));
             } else {
             };
@@ -1848,7 +1849,7 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
                 (*((*object).value.value_object as *mut Table)).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*(*object).value.value_object).get_marked() & 1 << 5 != 0 && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*((*object).value.value_object as *mut ObjectBase)), &mut (*(metatable as *mut ObjectBase)));
+                        luac_barrier_(interpreter, &mut (*((*object).value.value_object as *mut Object)), &mut (*(metatable as *mut Object)));
                     } else {
                     };
                     luac_checkfinalizer(interpreter, (*object).value.value_object, metatable);
@@ -1858,7 +1859,7 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
                 (*((*object).value.value_object as *mut User)).set_metatable(metatable);
                 if !metatable.is_null() {
                     if (*((*object).value.value_object as *mut User)).get_marked() & 1 << 5 != 0 && (*metatable).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*(&mut (*((*object).value.value_object as *mut User)) as *mut User as *mut ObjectBase)), &mut (*(metatable as *mut ObjectBase)));
+                        luac_barrier_(interpreter, &mut (*(&mut (*((*object).value.value_object as *mut User)) as *mut User as *mut Object)), &mut (*(metatable as *mut Object)));
                     } else {
                     };
                     luac_checkfinalizer(interpreter, (*object).value.value_object, metatable);
@@ -1912,8 +1913,8 @@ pub unsafe fn lua_load(interpreter: *mut Interpreter, reader: Reader, data: *mut
                     if (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize)).get_marked() & 1 << 5 != 0 && (*(*gt).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                         luac_barrier_(
                             interpreter,
-                            &mut (*(*((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize) as *mut ObjectBase)),
-                            &mut (*((*gt).value.value_object as *mut ObjectBase)),
+                            &mut (*(*((*closure).upvalues).l_upvalues.as_mut_ptr().offset(0 as isize) as *mut Object)),
+                            &mut (*((*gt).value.value_object as *mut Object)),
                         );
                     } else {
                     }
@@ -1975,8 +1976,8 @@ pub unsafe fn lua_concat(interpreter: *mut Interpreter, n: i32) {
         } else {
             let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
             let tstring: *mut TString = luas_newlstr(interpreter, c"".as_ptr(), 0);
-            (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-            (*io).set_tag_variant((*tstring).get_tag_variant());
+            (*io).value.value_object = &mut (*(tstring as *mut Object));
+            (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
             (*io).set_collectable(true);
             (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         }
@@ -2019,7 +2020,7 @@ pub unsafe fn lua_getupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i
 pub unsafe fn lua_setupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i32) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
-        let mut owner: *mut ObjectBase = null_mut();
+        let mut owner: *mut Object = null_mut();
         let fi: *mut TValue = (*interpreter).index_to_value(funcindex);
         let name: *const i8 = aux_upvalue(fi, n, &mut value, &mut owner);
         if !name.is_null() {
@@ -2029,7 +2030,7 @@ pub unsafe fn lua_setupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i
             (*io1).copy_from(&*io2);
             if (*value).is_collectable() {
                 if (*owner).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    luac_barrier_(interpreter, &mut (*(owner as *mut ObjectBase)), &mut (*((*value).value.value_object as *mut ObjectBase)));
+                    luac_barrier_(interpreter, &mut (*(owner as *mut Object)), &mut (*((*value).value.value_object as *mut Object)));
                 } else {
                 };
             } else {
@@ -2079,7 +2080,7 @@ pub unsafe fn lua_upvaluejoin(interpreter: *mut Interpreter, fidx1: i32, n1: i32
         let up2: *mut *mut UpValue = getupvalref(interpreter, fidx2, n2, null_mut());
         *up1 = *up2;
         if (*f1).get_marked() & 1 << 5 != 0 && (**up1).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(f1 as *mut ObjectBase)), &mut (*(*up1 as *mut ObjectBase)));
+            luac_barrier_(interpreter, &mut (*(f1 as *mut Object)), &mut (*(*up1 as *mut Object)));
         } else {
         };
     }
@@ -2158,7 +2159,7 @@ pub unsafe fn stack_init(other_state: *mut Interpreter, interpreter: *mut Interp
         (*other_state).stack.stkidrel_pointer = luam_malloc_(interpreter, ((2 * 20 as i32 + 5) as usize).wrapping_mul(size_of::<TValue>())) as *mut TValue;
         (*other_state).tbc_list.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         for i in 0..2 * 20 as i32 + 5 {
-            (*((*other_state).stack.stkidrel_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+            (*((*other_state).stack.stkidrel_pointer).offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         (*other_state).top.stkidrel_pointer = (*other_state).stack.stkidrel_pointer;
         (*other_state).stack_last.stkidrel_pointer = ((*other_state).stack.stkidrel_pointer).offset((2 * 20 as i32) as isize);
@@ -2169,7 +2170,7 @@ pub unsafe fn stack_init(other_state: *mut Interpreter, interpreter: *mut Interp
         (*callinfo).call_info_function.stkidrel_pointer = (*other_state).top.stkidrel_pointer;
         (*callinfo).call_info_u.c.context_function = None;
         (*callinfo).call_info_count_results = 0;
-        (*(*other_state).top.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+        (*(*other_state).top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
         (*other_state).top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(1);
         (*other_state).top.stkidrel_pointer;
         (*callinfo).call_info_top.stkidrel_pointer = ((*other_state).top.stkidrel_pointer).offset(20 as isize);
@@ -2194,19 +2195,19 @@ pub unsafe fn init_registry(interpreter: *mut Interpreter, global: *mut Global) 
         let registry: *mut Table = luah_new(interpreter);
         let io: *mut TValue = &mut (*global).global_lregistry;
         let x_: *mut Table = registry;
-        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
-        (*io).set_tag_variant(TagVariant::Table);
+        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).tvalue_set_tag_variant(TagVariant::Table);
         (*io).set_collectable(true);
         luah_resize(interpreter, registry, 2, 0);
         let io_0: *mut TValue = &mut *((*registry).array).offset((1 - 1) as isize) as *mut TValue;
         let x0: *mut Interpreter = interpreter;
-        (*io_0).value.value_object = &mut (*(x0 as *mut ObjectBase));
-        (*io_0).set_tag_variant(TagVariant::Interpreter);
+        (*io_0).value.value_object = &mut (*(x0 as *mut Object));
+        (*io_0).tvalue_set_tag_variant(TagVariant::Interpreter);
         (*io_0).set_collectable(true);
         let io_1: *mut TValue = &mut *((*registry).array).offset((2 - 1) as isize) as *mut TValue;
         let x1: *mut Table = luah_new(interpreter);
-        (*io_1).value.value_object = &mut (*(x1 as *mut ObjectBase));
-        (*io_1).set_tag_variant(TagVariant::Table);
+        (*io_1).value.value_object = &mut (*(x1 as *mut Object));
+        (*io_1).tvalue_set_tag_variant(TagVariant::Table);
         (*io_1).set_collectable(true);
     }
 }
@@ -2219,7 +2220,7 @@ pub unsafe fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut libc::c_voi
         luat_init(interpreter);
         luax_init(interpreter);
         (*global).global_gcstep = 0;
-        (*global).global_nonevalue.set_tag_variant(TagVariant::NilNil);
+        (*global).global_nonevalue.tvalue_set_tag_variant(TagVariant::NilNil);
     }
 }
 pub unsafe fn close_state(interpreter: *mut Interpreter) {
@@ -2251,8 +2252,8 @@ pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
         }
         let ret = luac_newobj(interpreter, TagVariant::Interpreter, size_of::<Interpreter>()) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-        (*io).set_tag_variant(TagVariant::Interpreter);
-        (*io).value.value_object = &mut (*(ret as *mut ObjectBase));
+        (*io).tvalue_set_tag_variant(TagVariant::Interpreter);
+        (*io).value.value_object = &mut (*(ret as *mut Object));
         (*io).set_collectable(true);
         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
         (*ret).preinit_thread(global);
@@ -2268,7 +2269,7 @@ pub unsafe fn luae_resetthread(interpreter: *mut Interpreter, mut status: Status
     unsafe {
         (*interpreter).callinfo = &mut (*interpreter).base_callinfo;
         let callinfo = (*interpreter).callinfo;
-        (*(*interpreter).stack.stkidrel_pointer).set_tag_variant(TagVariant::NilNil);
+        (*(*interpreter).stack.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
         (*callinfo).call_info_function.stkidrel_pointer = (*interpreter).stack.stkidrel_pointer;
         (*callinfo).call_info_call_status = (1 << 1) as u16;
         if status == Status::Yield {
@@ -2383,15 +2384,15 @@ pub unsafe fn formatvarinfo(interpreter: *mut Interpreter, kind: *const i8, name
         };
     }
 }
-pub unsafe fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
+pub unsafe fn varinfo(interpreter: *mut Interpreter, tvalue: *const TValue) -> *const i8 {
     unsafe {
         let callinfo = (*interpreter).callinfo;
         let mut name: *const i8 = null();
         let mut kind: *const i8 = null();
         if (*callinfo).call_info_call_status as i32 & 1 << 1 == 0 {
-            kind = getupvalname(callinfo, o, &mut name);
+            kind = getupvalname(callinfo, tvalue, &mut name);
             if kind.is_null() {
-                let reg: i32 = in_stack(callinfo, o);
+                let reg: i32 = in_stack(callinfo, tvalue);
                 if reg >= 0 {
                     kind = getobjname((*((*(*callinfo).call_info_function.stkidrel_pointer).value.value_object as *mut Closure)).payload.l_prototype, currentpc(callinfo), reg, &mut name);
                 }
@@ -2400,29 +2401,29 @@ pub unsafe fn varinfo(interpreter: *mut Interpreter, o: *const TValue) -> *const
         return formatvarinfo(interpreter, kind, name);
     }
 }
-pub unsafe fn typeerror(interpreter: *mut Interpreter, o: *const TValue, op: *const i8, extra: *const i8) -> ! {
+pub unsafe fn typeerror(interpreter: *mut Interpreter, tvalue: *const TValue, op: *const i8, extra: *const i8) -> ! {
     unsafe {
-        let t: *const i8 = luat_objtypename(interpreter, o);
+        let t: *const i8 = luat_objtypename(interpreter, tvalue);
         luag_runerror(interpreter, c"attempt to %s a %s value%s".as_ptr(), op, t, extra);
     }
 }
-pub unsafe fn luag_typeerror(interpreter: *mut Interpreter, o: *const TValue, op: *const i8) -> ! {
+pub unsafe fn luag_typeerror(interpreter: *mut Interpreter, tvalue: *const TValue, op: *const i8) -> ! {
     unsafe {
-        typeerror(interpreter, o, op, varinfo(interpreter, o));
+        typeerror(interpreter, tvalue, op, varinfo(interpreter, tvalue));
     }
 }
-pub unsafe fn luag_callerror(interpreter: *mut Interpreter, o: *const TValue) -> ! {
+pub unsafe fn luag_callerror(interpreter: *mut Interpreter, tvalue: *const TValue) -> ! {
     unsafe {
         let callinfo = (*interpreter).callinfo;
         let mut name: *const i8 = null();
         let kind: *const i8 = funcnamefromcall(interpreter, callinfo, &mut name);
-        let extra: *const i8 = if !kind.is_null() { formatvarinfo(interpreter, kind, name) } else { varinfo(interpreter, o) };
-        typeerror(interpreter, o, c"call".as_ptr(), extra);
+        let extra: *const i8 = if !kind.is_null() { formatvarinfo(interpreter, kind, name) } else { varinfo(interpreter, tvalue) };
+        typeerror(interpreter, tvalue, c"call".as_ptr(), extra);
     }
 }
-pub unsafe fn luag_forerror(interpreter: *mut Interpreter, o: *const TValue, what: *const i8) -> ! {
+pub unsafe fn luag_forerror(interpreter: *mut Interpreter, tvalue: *const TValue, what: *const i8) -> ! {
     unsafe {
-        luag_runerror(interpreter, c"bad 'for' %s (number expected, got %s)".as_ptr(), what, luat_objtypename(interpreter, o));
+        luag_runerror(interpreter, c"bad 'for' %s (number expected, got %s)".as_ptr(), what, luat_objtypename(interpreter, tvalue));
     }
 }
 pub unsafe fn luag_concaterror(interpreter: *mut Interpreter, mut p1: *const TValue, p2: *const TValue) -> ! {
@@ -2697,7 +2698,7 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
                     }) != 0
                 {
                     (*res).value.value_integer = intarith(interpreter, op, i1, i2);
-                    (*res).set_tag_variant(TagVariant::NumericInteger);
+                    (*res).tvalue_set_tag_variant(TagVariant::NumericInteger);
                     return 1;
                 } else {
                     return 0;
@@ -2730,7 +2731,7 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
                     }) != 0
                 {
                     (*res).value.value_number = numarith(interpreter, op, n1, n2);
-                    (*res).set_tag_variant(TagVariant::NumericNumber);
+                    (*res).tvalue_set_tag_variant(TagVariant::NumericNumber);
                     return 1;
                 } else {
                     return 0;
@@ -2742,7 +2743,7 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
                 if (*p1).get_tag_variant() == TagVariant::NumericInteger && (*p2).get_tag_variant() == TagVariant::NumericInteger {
                     let io_1: *mut TValue = res;
                     (*io_1).value.value_integer = intarith(interpreter, op, (*p1).value.value_integer, (*p2).value.value_integer);
-                    (*io_1).set_tag_variant(TagVariant::NumericInteger);
+                    (*io_1).tvalue_set_tag_variant(TagVariant::NumericInteger);
                     return 1;
                 } else if (if (*p1).get_tag_variant() == TagVariant::NumericNumber {
                     n1_0 = (*p1).value.value_number;
@@ -2769,7 +2770,7 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
                 {
                     let io_2: *mut TValue = res;
                     (*io_2).value.value_number = numarith(interpreter, op, n1_0, n2_0);
-                    (*io_2).set_tag_variant(TagVariant::NumericNumber);
+                    (*io_2).tvalue_set_tag_variant(TagVariant::NumericNumber);
                     return 1;
                 } else {
                     return 0;
@@ -2803,19 +2804,19 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                 Character::LowerD => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_integer = argp.arg::<i32>() as i64;
-                    tvalue.set_tag_variant(TagVariant::NumericInteger);
+                    tvalue.tvalue_set_tag_variant(TagVariant::NumericInteger);
                     buff_fs.add_number(&mut tvalue);
                 },
                 Character::UpperI => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_integer = argp.arg::<i64>();
-                    tvalue.set_tag_variant(TagVariant::NumericInteger);
+                    tvalue.tvalue_set_tag_variant(TagVariant::NumericInteger);
                     buff_fs.add_number(&mut tvalue);
                 },
                 Character::LowerF => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
                     tvalue.value.value_number = argp.arg::<f64>();
-                    tvalue.set_tag_variant(TagVariant::NumericNumber);
+                    tvalue.tvalue_set_tag_variant(TagVariant::NumericNumber);
                     buff_fs.add_number(&mut tvalue);
                 },
                 Character::LowerP => {
@@ -2884,22 +2885,22 @@ pub unsafe fn luat_init(interpreter: *mut Interpreter) {
         ];
         for i in 0..TM_N {
             (*(*interpreter).global).global_tmname[i as usize] = luas_new(interpreter, EVENT_NAMES[i as usize]);
-            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).global_tmname).as_mut_ptr().offset(i as isize) as *mut ObjectBase)));
+            fix_object_state(interpreter, &mut (*(*((*(*interpreter).global).global_tmname).as_mut_ptr().offset(i as isize) as *mut Object)));
         }
     }
 }
-pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, event: u32) -> *const TValue {
+pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, tvalue: *const TValue, event: u32) -> *const TValue {
     unsafe {
         let metatable: *mut Table;
-        match (*o).get_tag_variant().to_tag_type() {
+        match (*tvalue).get_tag_variant().to_tag_type() {
             TagType::Table => {
-                metatable = (*((*o).value.value_object as *mut Table)).get_metatable();
+                metatable = (*((*tvalue).value.value_object as *mut Table)).get_metatable();
             },
             TagType::User => {
-                metatable = (*((*o).value.value_object as *mut User)).get_metatable();
+                metatable = (*((*tvalue).value.value_object as *mut User)).get_metatable();
             },
             _ => {
-                metatable = (*(*interpreter).global).global_metatables[(*o).get_tag_variant().to_tag_type() as usize];
+                metatable = (*(*interpreter).global).global_metatables[(*tvalue).get_tag_variant().to_tag_type() as usize];
             },
         }
         return if metatable.is_null() {
@@ -2909,14 +2910,14 @@ pub unsafe fn luat_gettmbyobj(interpreter: *mut Interpreter, o: *const TValue, e
         };
     }
 }
-pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, o: *const TValue) -> *const i8 {
+pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, tvalue: *const TValue) -> *const i8 {
     unsafe {
         let mut metatable: *mut Table;
-        if (*o).get_tag_variant() == TagVariant::Table && {
-            metatable = (*((*o).value.value_object as *mut Table)).get_metatable();
+        if (*tvalue).get_tag_variant() == TagVariant::Table && {
+            metatable = (*((*tvalue).value.value_object as *mut Table)).get_metatable();
             !metatable.is_null()
-        } || (*o).get_tag_variant() == TagVariant::User && {
-            metatable = (*((*o).value.value_object as *mut User)).get_metatable();
+        } || (*tvalue).get_tag_variant() == TagVariant::User && {
+            metatable = (*((*tvalue).value.value_object as *mut User)).get_metatable();
             !metatable.is_null()
         } {
             let name: *const TValue = luah_getshortstr(metatable, luas_new(interpreter, c"__name".as_ptr()));
@@ -2924,7 +2925,7 @@ pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, o: *const TValue) 
                 return (*((*name).value.value_object as *mut TString)).get_contents_mut();
             }
         }
-        return TYPE_NAMES[((*o).get_tag_variant().to_tag_type() as usize + 1) as usize];
+        return TYPE_NAMES[((*tvalue).get_tag_variant().to_tag_type() as usize + 1) as usize];
     }
 }
 pub unsafe fn luat_calltm(interpreter: *mut Interpreter, f: *const TValue, p1: *const TValue, p2: *const TValue, p3: *const TValue) {
@@ -3028,7 +3029,7 @@ pub unsafe fn luat_trybinitm(interpreter: *mut Interpreter, p1: *const TValue, i
         let mut aux: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut aux;
         (*io).value.value_integer = i2;
-        (*io).set_tag_variant(TagVariant::NumericInteger);
+        (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
         luat_trybinassoctm(interpreter, p1, &mut aux, flip, res, event);
     }
 }
@@ -3047,11 +3048,11 @@ pub unsafe fn luat_callorderitm(interpreter: *mut Interpreter, mut p1: *const TV
         if is_float {
             let io: *mut TValue = &mut aux;
             (*io).value.value_number = v2 as f64;
-            (*io).set_tag_variant(TagVariant::NumericNumber);
+            (*io).tvalue_set_tag_variant(TagVariant::NumericNumber);
         } else {
             let io_0: *mut TValue = &mut aux;
             (*io_0).value.value_integer = v2 as i64;
-            (*io_0).set_tag_variant(TagVariant::NumericInteger);
+            (*io_0).tvalue_set_tag_variant(TagVariant::NumericInteger);
         }
         if flip != 0 {
             p2 = p1;
@@ -3081,7 +3082,7 @@ pub unsafe fn luat_adjustvarargs(interpreter: *mut Interpreter, nfixparams: i32,
             let io1_0: *mut TValue = &mut (*fresh13);
             let io2_0: *const TValue = &mut (*((*callinfo).call_info_function.stkidrel_pointer).offset(i as isize));
             (*io1_0).copy_from(&*io2_0);
-            (*((*callinfo).call_info_function.stkidrel_pointer).offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+            (*((*callinfo).call_info_function.stkidrel_pointer).offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         (*callinfo).call_info_function.stkidrel_pointer = ((*callinfo).call_info_function.stkidrel_pointer).offset((actual + 1) as isize);
         (*callinfo).call_info_top.stkidrel_pointer = ((*callinfo).call_info_top.stkidrel_pointer).offset((actual + 1) as isize);
@@ -3108,14 +3109,14 @@ pub unsafe fn luat_getvarargs(interpreter: *mut Interpreter, callinfo: *mut Call
             (*io1).copy_from(&*io2);
         }
         for i in wanted.min(nextra)..wanted {
-            (*where_0.offset(i as isize)).set_tag_variant(TagVariant::NilNil);
+            (*where_0.offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
     }
 }
-pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant, size: usize) -> *mut ObjectBase {
+pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant, size: usize) -> *mut Object {
     unsafe {
         let global: *mut Global = (*interpreter).global;
-        let ret = luam_malloc_(interpreter, size as usize) as *mut ObjectBase;
+        let ret = luam_malloc_(interpreter, size as usize) as *mut Object;
         (*ret).set_tag_variant(tagvariant);
         (*ret).set_marked((*global).global_currentwhite & (1 << 3 | 1 << 4));
         (*ret).next = (*global).global_allgc;
@@ -3141,7 +3142,7 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
         let mut uv: *mut UpValue = (*interpreter).open_upvalue;
         while !uv.is_null() {
             if (*uv).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(global, &mut (*(uv as *mut ObjectBase)));
+                really_mark_object(global, &mut (*(uv as *mut Object)));
             }
             uv = (*uv).u.open.next;
         }
@@ -3151,7 +3152,7 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
             }
             o = (*interpreter).top.stkidrel_pointer;
             while o < ((*interpreter).stack_last.stkidrel_pointer).offset(5 as isize) {
-                (*o).set_tag_variant(TagVariant::NilNil);
+                (*o).tvalue_set_tag_variant(TagVariant::NilNil);
                 o = o.offset(1);
             }
             if !((*interpreter).twups != interpreter) && !((*interpreter).open_upvalue).is_null() {
@@ -3162,9 +3163,9 @@ pub unsafe fn traverse_state(global: *mut Global, interpreter: *mut Interpreter)
         return 1 + ((*interpreter).stack_last.stkidrel_pointer).offset_from((*interpreter).stack.stkidrel_pointer) as i32;
     }
 }
-pub unsafe fn sweeptolive(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
+pub unsafe fn sweeptolive(interpreter: *mut Interpreter, mut p: *mut *mut Object) -> *mut *mut Object {
     unsafe {
-        let old: *mut *mut ObjectBase = p;
+        let old: *mut *mut Object = p;
         loop {
             p = (*interpreter).sweep_list(p, 1, null_mut());
             if !(p == old) {
@@ -3185,9 +3186,9 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
         let tm: *const TValue;
         let mut v: TValue = TValue::new(TagVariant::NilNil);
         let io: *mut TValue = &mut v;
-        let i_g: *mut ObjectBase = (*global).udata2finalize();
+        let i_g: *mut Object = (*global).udata2finalize();
         (*io).value.value_object = i_g;
-        (*io).set_tag_variant((*i_g).get_tag_variant());
+        (*io).tvalue_set_tag_variant((*i_g).get_tag_variant());
         (*io).set_collectable(true);
         tm = luat_gettmbyobj(interpreter, &mut v, TM_GC);
         if !(*tm).is_tagtype_nil() {
@@ -3235,7 +3236,7 @@ pub unsafe fn runafewfinalizers(interpreter: *mut Interpreter, n: i32) -> i32 {
         return i;
     }
 }
-pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut ObjectBase, metatable: *mut Table) {
+pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut Object, metatable: *mut Table) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         if (*o).get_marked() & 1 << 6 != 0
@@ -3255,13 +3256,13 @@ pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut ObjectB
         } else {
             if 3 <= (*global).global_gcstate as i32 && (*global).global_gcstate as i32 <= 6 {
                 (*o).set_marked((*o).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*global).global_currentwhite & (1 << 3 | 1 << 4)));
-                if (*global).global_sweepgc == &mut (*o).next as *mut *mut ObjectBase {
+                if (*global).global_sweepgc == &mut (*o).next as *mut *mut Object {
                     (*global).global_sweepgc = sweeptolive(interpreter, (*global).global_sweepgc);
                 }
             } else {
                 (*global).correct_pointers(o);
             }
-            let mut p: *mut *mut ObjectBase = &mut (*global).global_allgc;
+            let mut p: *mut *mut Object = &mut (*global).global_allgc;
             while *p != o {
                 p = &mut (**p).next;
             }
@@ -3272,11 +3273,11 @@ pub unsafe fn luac_checkfinalizer(interpreter: *mut Interpreter, o: *mut ObjectB
         };
     }
 }
-pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBase) {
+pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).global;
         loop {
-            let curr: *mut ObjectBase = *p;
+            let curr: *mut Object = *p;
             if curr.is_null() {
                 break;
             }
@@ -3298,12 +3299,12 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut ObjectBa
         }
     }
 }
-pub unsafe fn sweepgen(interpreter: *mut Interpreter, global: *mut Global, mut p: *mut *mut ObjectBase, limit: *mut ObjectBase, pfirstold1: *mut *mut ObjectBase) -> *mut *mut ObjectBase {
+pub unsafe fn sweepgen(interpreter: *mut Interpreter, global: *mut Global, mut p: *mut *mut Object, limit: *mut Object, pfirstold1: *mut *mut Object) -> *mut *mut Object {
     unsafe {
         static mut NEXT_AGE: [u8; 7] = [1, 3 as u8, 3 as u8, 4 as u8, 4 as u8, 5 as u8, 6 as u8];
         let white = (*global).global_currentwhite & (1 << 3 | 1 << 4);
         loop {
-            let curr: *mut ObjectBase = *p;
+            let curr: *mut Object = *p;
             if !(curr != limit) {
                 break;
             }
@@ -3408,7 +3409,7 @@ pub unsafe fn luaf_closeupval(interpreter: *mut Interpreter, level: *mut TValue)
                 (*uv).set_marked((*uv).get_marked() | 1 << 5);
                 if (*slot).is_collectable() {
                     if (*uv).get_marked() & 1 << 5 != 0 && (*(*slot).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        luac_barrier_(interpreter, &mut (*(uv as *mut ObjectBase)), &mut (*((*slot).value.value_object as *mut ObjectBase)));
+                        luac_barrier_(interpreter, &mut (*(uv as *mut Object)), &mut (*((*slot).value.value_object as *mut Object)));
                     } else {
                     };
                 } else {
@@ -3447,26 +3448,26 @@ pub unsafe fn luay_parser(interpreter: *mut Interpreter, zio: *mut ZIO, buffer: 
         let closure: *mut Closure = luaf_newlclosure(interpreter, 1);
         let io: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let x_: *mut Closure = closure;
-        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
-        (*io).set_tag_variant(TagVariant::ClosureL);
+        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).tvalue_set_tag_variant(TagVariant::ClosureL);
         (*io).set_collectable(true);
         (*interpreter).luad_inctop();
         lexstate.table = luah_new(interpreter);
         let io_0: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
         let x0: *mut Table = lexstate.table;
-        (*io_0).value.value_object = &mut (*(x0 as *mut ObjectBase));
-        (*io_0).set_tag_variant(TagVariant::Table);
+        (*io_0).value.value_object = &mut (*(x0 as *mut Object));
+        (*io_0).tvalue_set_tag_variant(TagVariant::Table);
         (*io_0).set_collectable(true);
         (*interpreter).luad_inctop();
         (*closure).payload.l_prototype = luaf_newproto(interpreter);
         funcstate.prototype = (*closure).payload.l_prototype;
         if (*closure).get_marked() & 1 << 5 != 0 && (*(*closure).payload.l_prototype).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(closure as *mut ObjectBase)), &mut (*((*closure).payload.l_prototype as *mut ObjectBase)));
+            luac_barrier_(interpreter, &mut (*(closure as *mut Object)), &mut (*((*closure).payload.l_prototype as *mut Object)));
         } else {
         };
         (*funcstate.prototype).prototype_source = luas_new(interpreter, name);
         if (*funcstate.prototype).get_marked() & 1 << 5 != 0 && (*(*funcstate.prototype).prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-            luac_barrier_(interpreter, &mut (*(funcstate.prototype as *mut ObjectBase)), &mut (*((*funcstate.prototype).prototype_source as *mut ObjectBase)));
+            luac_barrier_(interpreter, &mut (*(funcstate.prototype as *mut Object)), &mut (*((*funcstate.prototype).prototype_source as *mut Object)));
         } else {
         };
         lexstate.buffer = buffer;
@@ -3483,12 +3484,12 @@ pub unsafe fn luay_parser(interpreter: *mut Interpreter, zio: *mut ZIO, buffer: 
 pub unsafe fn luax_init(interpreter: *mut Interpreter) {
     unsafe {
         let env_string: *mut TString = luas_newlstr(interpreter, c"_ENV".as_ptr(), "_ENV".len());
-        fix_object_state(interpreter, &mut (*(env_string as *mut ObjectBase)));
+        fix_object_state(interpreter, &mut (*(env_string as *mut Object)));
         let mut i: i32 = 0;
         while i < Token::While as i32 - 255 {
             let tstring: *mut TString = luas_new(interpreter, TOKENS[i as usize]);
-            fix_object_state(interpreter, &mut (*(tstring as *mut ObjectBase)));
-            (*tstring).extra = (i + 1) as u8;
+            fix_object_state(interpreter, &mut (*(tstring as *mut Object)));
+            (*tstring).tstring_extra = (i + 1) as u8;
             i += 1;
         }
     }
@@ -3501,8 +3502,8 @@ pub unsafe fn pushclosure(interpreter: *mut Interpreter, p: *mut Prototype, encu
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra);
         let x_: *mut Closure = ncl;
-        (*io).value.value_object = &mut (*(x_ as *mut ObjectBase));
-        (*io).set_tag_variant(TagVariant::ClosureL);
+        (*io).value.value_object = &mut (*(x_ as *mut Object));
+        (*io).tvalue_set_tag_variant(TagVariant::ClosureL);
         (*io).set_collectable(true);
         for i in 0..count_upvalues {
             if (*uv.offset(i as isize)).upvaluedescription_isinstack {
@@ -3513,7 +3514,7 @@ pub unsafe fn pushclosure(interpreter: *mut Interpreter, p: *mut Prototype, encu
                 *fresh137 = *encup.offset((*uv.offset(i as isize)).upvaluedescription_index as isize);
             }
             if (*ncl).get_marked() & 1 << 5 != 0 && (**((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                luac_barrier_(interpreter, &mut (*(ncl as *mut ObjectBase)), &mut (*(*((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize) as *mut ObjectBase)));
+                luac_barrier_(interpreter, &mut (*(ncl as *mut Object)), &mut (*(*((*ncl).upvalues).l_upvalues.as_mut_ptr().offset(i as isize) as *mut Object)));
             } else {
             };
         }
@@ -3614,7 +3615,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let b: i64 = ((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
                             let io: *mut TValue = &mut (*ra_0);
                             (*io).value.value_integer = b;
-                            (*io).set_tag_variant(TagVariant::NumericInteger);
+                            (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             continue;
                         },
                         2 => {
@@ -3622,7 +3623,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let b_0: i32 = (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1);
                             let io_0: *mut TValue = &mut (*ra_1);
                             (*io_0).value.value_number = b_0 as f64;
-                            (*io_0).set_tag_variant(TagVariant::NumericNumber);
+                            (*io_0).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             continue;
                         },
                         3 => {
@@ -3644,18 +3645,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         },
                         5 => {
                             let ra_4: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            (*ra_4).set_tag_variant(TagVariant::BooleanFalse);
+                            (*ra_4).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             continue;
                         },
                         6 => {
                             let ra_5: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            (*ra_5).set_tag_variant(TagVariant::BooleanFalse);
+                            (*ra_5).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             program_counter = program_counter.offset(1);
                             continue;
                         },
                         7 => {
                             let ra_6: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            (*ra_6).set_tag_variant(TagVariant::BooleanTrue);
+                            (*ra_6).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                             continue;
                         },
                         8 => {
@@ -3664,7 +3665,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             loop {
                                 let fresh139 = ra_7;
                                 ra_7 = ra_7.offset(1);
-                                (*fresh139).set_tag_variant(TagVariant::NilNil);
+                                (*fresh139).tvalue_set_tag_variant(TagVariant::NilNil);
                                 let fresh140 = b_1;
                                 b_1 = b_1 - 1;
                                 if !(fresh140 != 0) {
@@ -3689,7 +3690,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             (*io1_3).copy_from(&(*io2_3));
                             if (*ra_9).is_collectable() {
                                 if (*uv).get_marked() & 1 << 5 != 0 && (*(*ra_9).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                    luac_barrier_(interpreter, &mut (*(uv as *mut ObjectBase)), &mut (*((*ra_9).value.value_object as *mut ObjectBase)));
+                                    luac_barrier_(interpreter, &mut (*(uv as *mut Object)), &mut (*((*ra_9).value.value_object as *mut Object)));
                                 } else {
                                 };
                             } else {
@@ -3783,7 +3784,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let mut key_0: TValue = TValue::new(TagVariant::NilNil);
                                 let io_1: *mut TValue = &mut key_0;
                                 (*io_1).value.value_integer = c as i64;
-                                (*io_1).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_1).tvalue_set_tag_variant(TagVariant::NumericInteger);
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
                                 luav_finishget(interpreter, rb_2, &mut key_0, ra_12, slot_1);
@@ -3936,7 +3937,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let mut key_3: TValue = TValue::new(TagVariant::NilNil);
                                 let io_2: *mut TValue = &mut key_3;
                                 (*io_2).value.value_integer = c_0 as i64;
-                                (*io_2).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_2).tvalue_set_tag_variant(TagVariant::NumericInteger);
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
                                 luav_finishset(interpreter, &mut (*ra_15), &mut key_3, rc_4, slot_5);
@@ -3996,8 +3997,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             table = luah_new(interpreter);
                             let io_3: *mut TValue = &mut (*ra_17);
                             let x_: *mut Table = table;
-                            (*io_3).value.value_object = &mut (*(x_ as *mut ObjectBase));
-                            (*io_3).set_tag_variant(TagVariant::Table);
+                            (*io_3).value.value_object = &mut (*(x_ as *mut Object));
+                            (*io_3).tvalue_set_tag_variant(TagVariant::Table);
                             (*io_3).set_collectable(true);
                             if new_table_size != 0 || new_array_size != 0 {
                                 luah_resize(interpreter, table, new_array_size, new_table_size);
@@ -4051,14 +4052,14 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_4: *mut TValue = &mut (*ra_19);
                                 (*io_4).value.value_integer = (iv1 as usize).wrapping_add(imm as usize) as i64;
-                                (*io_4).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_4).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else if (*v1).get_tag_variant() == TagVariant::NumericNumber {
                                 let nb: f64 = (*v1).value.value_number;
                                 let fimm: f64 = imm as f64;
                                 program_counter = program_counter.offset(1);
                                 let io_5: *mut TValue = &mut (*ra_19);
                                 (*io_5).value.value_number = nb + fimm;
-                                (*io_5).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_5).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             }
                             continue;
                         },
@@ -4072,7 +4073,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_6: *mut TValue = &mut (*ra_20);
                                 (*io_6).value.value_integer = (i1 as usize).wrapping_add(i2 as usize) as i64;
-                                (*io_6).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_6).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1: f64 = 0.0;
                                 let mut n2: f64 = 0.0;
@@ -4102,7 +4103,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_7: *mut TValue = &mut (*ra_20);
                                     (*io_7).value.value_number = n1 + n2;
-                                    (*io_7).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_7).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4117,7 +4118,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_8: *mut TValue = &mut (*ra_21);
                                 (*io_8).value.value_integer = (i1_0 as usize).wrapping_sub(i2_0 as usize) as i64;
-                                (*io_8).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_8).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_0: f64 = 0.0;
                                 let mut n2_0: f64 = 0.0;
@@ -4147,7 +4148,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_9: *mut TValue = &mut (*ra_21);
                                     (*io_9).value.value_number = n1_0 - n2_0;
-                                    (*io_9).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_9).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4162,7 +4163,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_10: *mut TValue = &mut (*ra_22);
                                 (*io_10).value.value_integer = (i1_1 as usize).wrapping_mul(i2_1 as usize) as i64;
-                                (*io_10).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_10).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_1: f64 = 0.0;
                                 let mut n2_1: f64 = 0.0;
@@ -4192,7 +4193,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_11: *mut TValue = &mut (*ra_22);
                                     (*io_11).value.value_number = n1_1 * n2_1;
-                                    (*io_11).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_11).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4209,7 +4210,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_12: *mut TValue = &mut (*ra_23);
                                 (*io_12).value.value_integer = luav_mod(interpreter, i1_2, i2_2);
-                                (*io_12).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_12).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_2: f64 = 0.0;
                                 let mut n2_2: f64 = 0.0;
@@ -4239,7 +4240,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_13: *mut TValue = &mut (*ra_23);
                                     (*io_13).value.value_number = luav_modf(interpreter, n1_2, n2_2);
-                                    (*io_13).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_13).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4276,7 +4277,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_14: *mut TValue = &mut (*ra_24);
                                 (*io_14).value.value_number = if n2_3 == 2.0 { n1_3 * n1_3 } else { n1_3.powf(n2_3) };
-                                (*io_14).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_14).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             }
                             continue;
                         },
@@ -4312,7 +4313,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_15: *mut TValue = &mut (*ra_25);
                                 (*io_15).value.value_number = n1_4 / n2_4;
-                                (*io_15).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_15).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             }
                             continue;
                         },
@@ -4328,7 +4329,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_16: *mut TValue = &mut (*ra_26);
                                 (*io_16).value.value_integer = luav_idiv(interpreter, i1_3, i2_3);
-                                (*io_16).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_16).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_5: f64 = 0.0;
                                 let mut n2_5: f64 = 0.0;
@@ -4358,7 +4359,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_17: *mut TValue = &mut (*ra_26);
                                     (*io_17).value.value_number = (n1_5 / n2_5).floor();
-                                    (*io_17).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_17).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4379,7 +4380,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_18: *mut TValue = &mut (*ra_27);
                                 (*io_18).value.value_integer = (i1_4 as usize & i2_4 as usize) as i64;
-                                (*io_18).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_18).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4399,7 +4400,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_19: *mut TValue = &mut (*ra_28);
                                 (*io_19).value.value_integer = (i1_5 as usize | i2_5 as usize) as i64;
-                                (*io_19).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_19).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4419,7 +4420,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_20: *mut TValue = &mut (*ra_29);
                                 (*io_20).value.value_integer = (i1_6 as usize ^ i2_6 as usize) as i64;
-                                (*io_20).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_20).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4438,7 +4439,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_21: *mut TValue = &mut (*ra_30);
                                 (*io_21).value.value_integer = luav_shiftl(ib, -ic as i64);
-                                (*io_21).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_21).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4457,7 +4458,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_22: *mut TValue = &mut (*ra_31);
                                 (*io_22).value.value_integer = luav_shiftl(ic_0 as i64, ib_0);
-                                (*io_22).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_22).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4471,7 +4472,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_23: *mut TValue = &mut (*ra_32);
                                 (*io_23).value.value_integer = (i1_7 as usize).wrapping_add(i2_7 as usize) as i64;
-                                (*io_23).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_23).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_6: f64 = 0.0;
                                 let mut n2_6: f64 = 0.0;
@@ -4501,7 +4502,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_24: *mut TValue = &mut (*ra_32);
                                     (*io_24).value.value_number = n1_6 + n2_6;
-                                    (*io_24).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_24).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4516,7 +4517,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_25: *mut TValue = &mut (*ra_33);
                                 (*io_25).value.value_integer = (i1_8 as usize).wrapping_sub(i2_8 as usize) as i64;
-                                (*io_25).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_25).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_7: f64 = 0.0;
                                 let mut n2_7: f64 = 0.0;
@@ -4546,7 +4547,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_26: *mut TValue = &mut (*ra_33);
                                     (*io_26).value.value_number = n1_7 - n2_7;
-                                    (*io_26).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_26).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4561,7 +4562,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_27: *mut TValue = &mut (*ra_34);
                                 (*io_27).value.value_integer = (i1_9 as usize).wrapping_mul(i2_9 as usize) as i64;
-                                (*io_27).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_27).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_8: f64 = 0.0;
                                 let mut n2_8: f64 = 0.0;
@@ -4591,7 +4592,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_28: *mut TValue = &mut (*ra_34);
                                     (*io_28).value.value_number = n1_8 * n2_8;
-                                    (*io_28).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_28).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4608,7 +4609,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_29: *mut TValue = &mut (*ra_35);
                                 (*io_29).value.value_integer = luav_mod(interpreter, i1_10, i2_10);
-                                (*io_29).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_29).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_9: f64 = 0.0;
                                 let mut n2_9: f64 = 0.0;
@@ -4638,7 +4639,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_30: *mut TValue = &mut (*ra_35);
                                     (*io_30).value.value_number = luav_modf(interpreter, n1_9, n2_9);
-                                    (*io_30).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_30).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4675,7 +4676,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_31: *mut TValue = &mut (*ra_36);
                                 (*io_31).value.value_number = if n2_10 == 2.0 { n1_10 * n1_10 } else { n1_10.powf(n2_10) };
-                                (*io_31).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_31).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             }
                             continue;
                         },
@@ -4711,7 +4712,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_32: *mut TValue = &mut (*ra_37);
                                 (*io_32).value.value_number = n1_11 / n2_11;
-                                (*io_32).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_32).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             }
                             continue;
                         },
@@ -4727,7 +4728,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_33: *mut TValue = &mut (*ra_38);
                                 (*io_33).value.value_integer = luav_idiv(interpreter, i1_11, i2_11);
-                                (*io_33).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_33).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 let mut n1_12: f64 = 0.0;
                                 let mut n2_12: f64 = 0.0;
@@ -4757,7 +4758,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     program_counter = program_counter.offset(1);
                                     let io_34: *mut TValue = &mut (*ra_38);
                                     (*io_34).value.value_number = (n1_12 / n2_12).floor();
-                                    (*io_34).set_tag_variant(TagVariant::NumericNumber);
+                                    (*io_34).tvalue_set_tag_variant(TagVariant::NumericNumber);
                                 }
                             }
                             continue;
@@ -4784,7 +4785,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_35: *mut TValue = &mut (*ra_39);
                                 (*io_35).value.value_integer = (i1_12 as usize & i2_12 as usize) as i64;
-                                (*io_35).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_35).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4810,7 +4811,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_36: *mut TValue = &mut (*ra_40);
                                 (*io_36).value.value_integer = (i1_13 as usize | i2_13 as usize) as i64;
-                                (*io_36).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_36).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4836,7 +4837,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_37: *mut TValue = &mut (*ra_41);
                                 (*io_37).value.value_integer = (i1_14 as usize ^ i2_14 as usize) as i64;
-                                (*io_37).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_37).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4862,7 +4863,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_38: *mut TValue = &mut (*ra_42);
                                 (*io_38).value.value_integer = luav_shiftl(i1_15, (0usize).wrapping_sub(i2_15 as usize) as i64);
-                                (*io_38).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_38).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4888,7 +4889,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 program_counter = program_counter.offset(1);
                                 let io_39: *mut TValue = &mut (*ra_43);
                                 (*io_39).value.value_integer = luav_shiftl(i1_16, i2_16);
-                                (*io_39).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_39).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             }
                             continue;
                         },
@@ -4938,7 +4939,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let ib_1: i64 = (*rb_11).value.value_integer;
                                 let io_40: *mut TValue = &mut (*ra_47);
                                 (*io_40).value.value_integer = (0usize).wrapping_sub(ib_1 as usize) as i64;
-                                (*io_40).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_40).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else if if (*rb_11).get_tag_variant() == TagVariant::NumericNumber {
                                 nb_0 = (*rb_11).value.value_number;
                                 1
@@ -4951,7 +4952,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             {
                                 let io_41: *mut TValue = &mut (*ra_47);
                                 (*io_41).value.value_number = -nb_0;
-                                (*io_41).set_tag_variant(TagVariant::NumericNumber);
+                                (*io_41).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             } else {
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
@@ -4973,7 +4974,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             {
                                 let io_42: *mut TValue = &mut (*ra_48);
                                 (*io_42).value.value_integer = (!(0usize) ^ ib_2 as usize) as i64;
-                                (*io_42).set_tag_variant(TagVariant::NumericInteger);
+                                (*io_42).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             } else {
                                 (*callinfo).call_info_u.l.saved_program_counter = program_counter;
                                 (*interpreter).top.stkidrel_pointer = (*callinfo).call_info_top.stkidrel_pointer;
@@ -4986,9 +4987,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let ra_49: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
                             let rb_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
                             if (*rb_13).get_tag_variant() == TagVariant::BooleanFalse || (*rb_13).is_tagtype_nil() {
-                                (*ra_49).set_tag_variant(TagVariant::BooleanTrue);
+                                (*ra_49).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                             } else {
-                                (*ra_49).set_tag_variant(TagVariant::BooleanFalse);
+                                (*ra_49).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             }
                             continue;
                         },
@@ -5348,7 +5349,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 while ((nres > 0) as i32 != 0) as i64 != 0 {
                                     let fresh141 = (*interpreter).top.stkidrel_pointer;
                                     (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                                    (*fresh141).set_tag_variant(TagVariant::NilNil);
+                                    (*fresh141).tvalue_set_tag_variant(TagVariant::NilNil);
                                     nres -= 1;
                                 }
                             }
@@ -5375,7 +5376,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     while ((nres_0 > 1) as i32 != 0) as i64 != 0 {
                                         let fresh142 = (*interpreter).top.stkidrel_pointer;
                                         (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
-                                        (*fresh142).set_tag_variant(TagVariant::NilNil);
+                                        (*fresh142).tvalue_set_tag_variant(TagVariant::NilNil);
                                         nres_0 -= 1;
                                     }
                                 }
@@ -5396,7 +5397,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     (*io_44).value.value_integer = index;
                                     let io_45: *mut TValue = &mut (*ra_71.offset(3 as isize));
                                     (*io_45).value.value_integer = index;
-                                    (*io_45).set_tag_variant(TagVariant::NumericInteger);
+                                    (*io_45).tvalue_set_tag_variant(TagVariant::NumericInteger);
                                     program_counter = program_counter.offset(-((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 as isize));
                                 }
                             } else if floatforloop(ra_71) != 0 {
@@ -5456,7 +5457,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_17).copy_from(&(*io2_17));
                                 last = last.wrapping_sub(1);
                                 if (*value).is_collectable() {
-                                    if (*(h as *mut ObjectBase)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                                    if (*(h as *mut Object)).get_marked() & 1 << 5 != 0 && (*(*value).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                                         luac_barrierback_(interpreter, &mut (*(h as *mut ObjectWithGCList)));
                                     } else {
                                     };
@@ -6303,7 +6304,7 @@ pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
                 (*global).global_totalbytes += size_of::<Interpreter>() as i64;
                 (*global).global_totalbytes += size_of::<Global>() as i64;
                 (*interpreter).preinit_thread(global);
-                (*global).global_allgc = &mut (*(interpreter as *mut ObjectBase));
+                (*global).global_allgc = &mut (*(interpreter as *mut Object));
                 (*interpreter).as_object_mut().next = null_mut();
                 (*interpreter).count_c_calls = ((*interpreter).count_c_calls as u32).wrapping_add(0x10000 as u32) as u32;
                 (*global).global_maininterpreter = interpreter;

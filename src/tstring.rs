@@ -1,5 +1,5 @@
 use crate::character::*;
-use crate::objectbase::*;
+use crate::object::*;
 use crate::dumpstate::*;
 use crate::global::*;
 use crate::tobject::*;
@@ -11,22 +11,23 @@ use crate::utility::c::*;
 use crate::utility::*;
 use libc::memcmp;
 pub const STRING_SHORT_MAX: usize = 40;
+pub type TStringSuper = Object;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
-    pub object: ObjectBase,
-    pub long_length: usize,
-    pub hash_next: *mut TString,
-    pub hash: u32,
-    pub extra: u8,
-    pub contents: [i8; 0],
+    pub super_: TStringSuper,
+    pub tstring_longlength: usize,
+    pub tstring_hashnext: *mut TString,
+    pub tstring_hash: u32,
+    pub tstring_extra: u8,
+    pub tstring_contents: [i8; 0],
 }
 impl TObject for TString {
-    fn as_object(&self) -> &ObjectBase {
-        &self.object
+    fn as_object(&self) -> &Object {
+        &self.super_
     }
-    fn as_object_mut(&mut self) -> &mut ObjectBase {
-        &mut self.object
+    fn as_object_mut(&mut self) -> &mut Object {
+        &mut self.super_
     }
     fn get_class_name(&mut self) -> String {
         "string".to_string()
@@ -56,18 +57,18 @@ impl TString {
         }
     }
     pub fn get_contents_mut(&self) -> *const i8 {
-        return &self.contents as *const i8;
+        return &self.tstring_contents as *const i8;
     }
     pub fn get_contents(&mut self) -> *mut i8 {
-        return &mut self.contents as *mut i8;
+        return &mut self.tstring_contents as *mut i8;
     }
     pub fn get_length(&self) -> usize {
-        return self.long_length;
+        return self.tstring_longlength;
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
             let ret: *mut TString = createstrobj(interpreter, length as usize, TagVariant::StringLong, (*(*interpreter).global).global_seed);
-            (*ret).long_length = length;
+            (*ret).tstring_longlength = length;
             return ret;
         }
     }
@@ -85,16 +86,16 @@ impl TString {
                     }
                     return tstring;
                 }
-                tstring = (*tstring).hash_next;
+                tstring = (*tstring).tstring_hashnext;
             }
             if (*tb).stringtable_length >= (*tb).stringtable_size {
                 growstrtab(interpreter, tb);
                 list = &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             }
             tstring = createstrobj(interpreter, length as usize, TagVariant::StringShort, h);
-            (*tstring).long_length = length;
+            (*tstring).tstring_longlength = length;
             memcpy((*tstring).get_contents() as *mut libc::c_void, str as *const libc::c_void, length);
-            (*tstring).hash_next = *list;
+            (*tstring).tstring_hashnext = *list;
             *list = tstring;
             (*tb).stringtable_length += 1;
             return tstring;
@@ -139,21 +140,21 @@ pub unsafe fn luas_hash(pointer: *const i8, mut length: usize, seed: u32) -> u32
 }
 pub unsafe fn hash_string_long(tstring: *mut TString) -> u32 {
     unsafe {
-        if (*tstring).extra == 0 {
+        if (*tstring).tstring_extra == 0 {
             let length = (*tstring).get_length();
-            (*tstring).hash = luas_hash((*tstring).get_contents_mut(), length, (*tstring).hash);
-            (*tstring).extra = 1;
+            (*tstring).tstring_hash = luas_hash((*tstring).get_contents_mut(), length, (*tstring).tstring_hash);
+            (*tstring).tstring_extra = 1;
         }
-        return (*tstring).hash;
+        return (*tstring).tstring_hash;
     }
 }
 pub unsafe fn createstrobj(interpreter: *mut Interpreter, l: usize, tagvariant: TagVariant, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
-        let object: *mut ObjectBase = luac_newobj(interpreter, tagvariant, total_size);
+        let object: *mut Object = luac_newobj(interpreter, tagvariant, total_size);
         let ret: *mut TString = &mut (*(object as *mut TString));
-        (*ret).hash = h;
-        (*ret).extra = 0;
+        (*ret).tstring_hash = h;
+        (*ret).tstring_extra = 0;
         *((*ret).get_contents()).offset(l as isize) = Character::Null as i8;
         return ret;
     }
@@ -291,8 +292,8 @@ pub unsafe fn concatenate(interpreter: *mut Interpreter, mut total: i32) {
                     copy2buff(top, n, (*tstring).get_contents());
                 }
                 let io: *mut TValue = &mut (*top.offset(-(n as isize)));
-                (*io).value.value_object = &mut (*(tstring as *mut ObjectBase));
-                (*io).set_tag_variant((*tstring).get_tag_variant());
+                (*io).value.value_object = &mut (*(tstring as *mut Object));
+                (*io).tvalue_set_tag_variant((*tstring).get_tag_variant());
                 (*io).set_collectable(true);
             }
             total -= n - 1;

@@ -181,7 +181,7 @@ pub unsafe fn getiofile(interpreter: *mut Interpreter, findex: *const i8) -> *mu
 }
 pub unsafe fn g_iofile(interpreter: *mut Interpreter, f: *const i8, mode: *const i8) -> i32 {
     unsafe {
-        if !(is_none_or_nil(lua_type(interpreter, 1))) {
+        if !(TagType::is_none_or_nil(lua_type(interpreter, 1))) {
             let filename: *const i8 = lua_tolstring(interpreter, 1, null_mut());
             if !filename.is_null() {
                 opencheck(interpreter, filename, mode);

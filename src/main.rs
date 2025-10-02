@@ -43,7 +43,6 @@ mod tobject;
 mod tdefaultnew;
 mod objectwithgclist;
 mod tobjectwithgclist;
-mod objectbase;
 mod objectwithmetatable;
 mod tobjectwithmetatable;
 mod operator_;
