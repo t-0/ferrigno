@@ -16,7 +16,9 @@ use crate::closure::*;
 use crate::closure::*;
 use crate::global::*;
 use crate::objectwithgclist::*;
+use crate::objectwithmetatable::*;
 use crate::interpreter::*;
+use crate::objectwithmetatable::ObjectWithMetatable;
 use crate::prototype::*;
 use crate::table::*;
 use crate::tag::*;
@@ -59,7 +61,7 @@ impl TObject for ObjectBase {
         unsafe {
             match self.get_tag_variant() {
                 TagVariant::Table => return (*(self as *const ObjectBase as *const Table)).get_metatable(),
-                TagVariant::User  => return (*(self as *const ObjectBase as *const User)).get_metatable(),
+                TagVariant::User  => return (*(self as *const ObjectBase as *const ObjectWithMetatable as *const User)).get_metatable(),
                 _ => return null_mut(),
             };
         }
