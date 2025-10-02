@@ -20,6 +20,12 @@ impl TObject for ObjectWithMetatable {
     fn get_class_name(&mut self) -> String {
         "objectwithmetatable".to_string()
     }
+    fn get_metatable(&self) -> *mut Table {
+        self.metatable
+    }
+    fn set_metatable(&mut self, metatable:* mut Table) {
+        self.metatable = metatable;
+    }
 }
 impl ObjectWithMetatable {
     pub fn new(tagvariant: TagVariant) -> Self {
