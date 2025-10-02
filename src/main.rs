@@ -41,6 +41,7 @@ mod node;
 mod object;
 mod tobject;
 mod objectwithgclist;
+mod objectwithmetatable;
 mod operator_;
 mod prototype;
 mod randomstate;

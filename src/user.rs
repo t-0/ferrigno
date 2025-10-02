@@ -7,6 +7,7 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tvalue::*;
 use crate::utility::*;
+use crate::objectwithmetatable::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
