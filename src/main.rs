@@ -44,6 +44,7 @@ mod objectwithgclist;
 mod tobjectwithgclist;
 mod objectbase;
 mod objectwithmetatable;
+mod tobjectwithmetatable;
 mod operator_;
 mod prototype;
 mod randomstate;

@@ -8,11 +8,6 @@ pub trait TObject {
     fn as_object(&self) -> &ObjectBase;
     fn as_object_mut(&mut self) -> &mut ObjectBase;
     fn get_class_name(&mut self) -> String;
-    fn set_metatable (&mut self, _metatable: *mut Table) {
-    }
-    fn get_metatable(&self) -> *mut Table {
-        null_mut()
-    }
     fn set_tag_variant(&mut self, tagvariant: TagVariant) {
         self.as_object_mut().set_tag_variant(tagvariant);
     }

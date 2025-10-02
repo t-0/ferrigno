@@ -17,6 +17,8 @@ use crate::closure::*;
 use crate::global::*;
 use crate::objectwithgclist::*;
 use crate::tobjectwithgclist::*;
+use crate::tobjectwithmetatable::*;
+use crate::objectwithmetatable::*;
 use crate::objectbase::*;
 use crate::interpreter::*;
 use crate::prototype::*;

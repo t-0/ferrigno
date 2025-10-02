@@ -10,6 +10,7 @@ use crate::object::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tobjectwithgclist::TObjectWithGCList;
+use crate::tobjectwithmetatable::TObjectWithMetatable;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
@@ -40,16 +41,18 @@ impl TObject for Table {
     fn get_class_name(&mut self) -> String {
         "table".to_string()
     }
+}
+impl TObjectWithGCList for Table {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
+        self.object.getgclist()
+    }
+}
+impl TObjectWithMetatable for Table {
     fn get_metatable(&self) -> *mut Table {
         self.table_metatable
     }
     fn set_metatable(&mut self, metatable: * mut Table) {
         self.table_metatable = metatable;
-    }
-}
-impl TObjectWithGCList for Table {
-    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
-        self.object.getgclist()
     }
 }
 impl Table {

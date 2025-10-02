@@ -32,6 +32,7 @@ use crate::table::*;
 use crate::tag::*;
 use crate::tm::*;
 use crate::tobjectwithgclist::*;
+use crate::tobjectwithmetatable::*;
 use crate::token::*;
 use crate::tstring::*;
 use crate::tvalue::*;

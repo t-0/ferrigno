@@ -1,16 +1,17 @@
 #![allow(dead_code)]
 use crate::global::*;
 use crate::objectbase::*;
-use crate::objectwithgclist::ObjectWithGCList;
+use crate::objectwithgclist::*;
+use crate::objectwithmetatable::*;
 use crate::tobject::*;
 use crate::interpreter::*;
 use crate::object::*;
 use crate::table::*;
 use crate::tag::*;
-use crate::tobjectwithgclist::TObjectWithGCList;
+use crate::tobjectwithgclist::*;
+use crate::tobjectwithmetatable::*;
 use crate::tvalue::*;
 use crate::utility::*;
-use crate::objectwithmetatable::*;
 use std::ptr::*;
 type UserSuper = ObjectWithMetatable;
 #[derive(Copy, Clone)]
@@ -31,16 +32,18 @@ impl TObject for User {
     fn get_class_name(&mut self) -> String {
         "user".to_string()
     }
+}
+impl TObjectWithGCList for User {
+    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
+        self.object.getgclist()
+    }
+}
+impl TObjectWithMetatable for User {
     fn get_metatable(& self) -> *mut Table {
         return self.object.get_metatable();
     }
     fn set_metatable(&mut self, metatable: *mut Table) {
         self.object.set_metatable(metatable);
-    }
-}
-impl TObjectWithGCList for User {
-    fn getgclist(& mut self) -> *mut *mut ObjectWithGCList {
-        self.object.getgclist()
     }
 }
 impl User {

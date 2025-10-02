@@ -57,15 +57,6 @@ impl TObject for ObjectBase {
     fn get_class_name(&mut self) -> String {
         "object".to_string()
     }
-    fn get_metatable(& self) -> *mut Table {
-        unsafe {
-            match self.get_tag_variant() {
-                TagVariant::Table => return (*(self as *const ObjectBase as *const Table)).get_metatable(),
-                TagVariant::User  => return (*(self as *const ObjectBase as *const ObjectWithMetatable as *const User)).get_metatable(),
-                _ => return null_mut(),
-            };
-        }
-    }
 }
 impl ObjectBase {
     pub fn new(tagvariant: TagVariant) -> Self {
