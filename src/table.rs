@@ -17,9 +17,10 @@ use crate::tvalue::*;
 use crate::utility::*;
 use crate::tobject::*;
 use crate::objectwithgclist::*;
+use crate::objectwithmetatable::*;
 use libc::*;
 use std::ptr::*;
-type TableSuper = ObjectWithGCList;
+type TableSuper = ObjectWithMetatable;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
 pub struct Table {
