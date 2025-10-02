@@ -1,4 +1,5 @@
 use crate::expressiondescription::*;
+use crate::tdefaultnew::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct ConstructorControl {
@@ -8,8 +9,8 @@ pub struct ConstructorControl {
     pub count_array: i32,
     pub count_to_store: i32,
 }
-impl ConstructorControl {
-    pub fn new() -> Self {
+impl TDefaultNew for ConstructorControl {
+    fn new() -> Self {
         ConstructorControl {
             expression_description: ExpressionDescription::new(),
             constructor_control_table: null_mut(),
@@ -18,4 +19,6 @@ impl ConstructorControl {
             count_to_store: 0,
         }
     }
+}
+impl ConstructorControl {
 }

@@ -9,6 +9,7 @@ use crate::tag::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
+use crate::tdefaultnew::*;
 use crate::value::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
@@ -20,10 +21,12 @@ pub struct ExpressionDescription {
     pub f: i32,
     pub previous: *mut ExpressionDescription,
 }
-impl ExpressionDescription {
-    pub fn new() -> Self {
+impl TDefaultNew for ExpressionDescription {
+    fn new() -> Self {
         ExpressionDescription { expression_kind: ExpressionKind::Void, value: Value::new_integer(0), t: 0, f: 0, previous: null_mut() }
     }
+}
+impl ExpressionDescription {
     pub const fn new_from_integer(integer: i64) -> Self {
         ExpressionDescription { expression_kind: ExpressionKind::ConstantInteger, value: Value::new_integer(integer), t: -1, f: -1, previous: null_mut() }
     }

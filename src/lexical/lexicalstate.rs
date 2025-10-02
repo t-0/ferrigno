@@ -1,4 +1,5 @@
 use crate::status::*;
+use crate::tdefaultnew::*;
 use crate::objectbase::*;
 use crate::buffer::*;
 use crate::character::*;
@@ -48,8 +49,8 @@ pub struct LexicalState {
     pub source: *mut TString,
     pub environment: *mut TString,
 }
-impl LexicalState {
-    pub fn new() -> Self {
+impl TDefaultNew for LexicalState {
+    fn new() -> Self {
         return LexicalState {
             current: 0,
             line_number: 0,
@@ -65,6 +66,8 @@ impl LexicalState {
             environment: null_mut(),
         };
     }
+}
+impl LexicalState {
     pub unsafe fn create_label(&mut self, interpreter: *mut Interpreter, function_state: *mut FunctionState, name: *mut TString, line: i32, is_last: bool) -> bool {
         unsafe {
             let labeldescriptions: *mut VectorT<LabelDescription> = &mut (*self.dynamic_data).labels;

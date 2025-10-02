@@ -1,7 +1,8 @@
 #![allow(unused,dead_code)]
 use crate::character::*;
 use crate::value::*;
-use rlua::*;
+use crate::tdefaultnew::*;
+
 use std::ptr::*;
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(i32)]
@@ -154,10 +155,12 @@ pub struct TokenInfo {
     pub token: i32,
     pub semantic_info: Value,
 }
-impl TokenInfo {
-    pub fn new() -> Self {
+impl TDefaultNew for TokenInfo {
+    fn new() -> Self {
         return TokenInfo { token: 0, semantic_info: Value::new_object(null_mut()) };
     }
+}
+impl TokenInfo {
 }
 pub const TOKENS: [*const i8; 37] = [
     c"and".as_ptr(),

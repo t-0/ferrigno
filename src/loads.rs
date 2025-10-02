@@ -1,4 +1,5 @@
 #![allow(unused)]
+use crate::tdefaultnew::*;
 use libc::*;
 use crate::interpreter::*;
 use rlua::*;
@@ -9,6 +10,11 @@ pub struct LoadS<T> {
     pub loads_pointer: *mut T,
     loads_length: i32,
     pub loads_size: i32,
+}
+impl<T> TDefaultNew for LoadS<T> {
+    fn new() -> LoadS<T> {
+        LoadS::<T> { loads_pointer: null_mut(), loads_length: 0, loads_size: 0 }
+    }
 }
 impl<T> LoadS<T> {
     pub fn capitulate(&mut self) -> (*mut T, usize) {
@@ -22,9 +28,6 @@ impl<T> LoadS<T> {
         self.loads_pointer = pointer;
         self.loads_size = size as i32;
         self.loads_length = 0;
-    }
-    pub fn new() -> LoadS<T> {
-        LoadS::<T> { loads_pointer: null_mut(), loads_length: 0, loads_size: 0 }
     }
     pub fn add_length(&mut self, length: usize) {
         self.loads_length += length as i32;

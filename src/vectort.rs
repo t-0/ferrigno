@@ -1,4 +1,5 @@
 #![allow(unused)]
+use crate::tdefaultnew::*;
 use crate::interpreter::*;
 use rlua::*;
 use std::{mem::*, ptr::*};
@@ -8,6 +9,11 @@ pub struct VectorT<T> {
     pub vectort_pointer: *mut T,
     vectort_length: usize,
     vectort_size: usize,
+}
+impl<T> TDefaultNew for VectorT<T> {
+    fn new() -> VectorT<T> {
+        VectorT::<T> { vectort_pointer: null_mut(), vectort_length: 0, vectort_size: 0 }
+    }
 }
 impl<T> VectorT<T> {
     pub fn capitulate(&mut self) -> (*mut T, usize) {
@@ -21,9 +27,6 @@ impl<T> VectorT<T> {
         self.vectort_pointer = pointer;
         self.vectort_size = size;
         self.vectort_length = 0;
-    }
-    pub fn new() -> VectorT<T> {
-        VectorT::<T> { vectort_pointer: null_mut(), vectort_length: 0, vectort_size: 0 }
     }
     pub fn add_length(&mut self, length: usize) {
         self.vectort_length += length;

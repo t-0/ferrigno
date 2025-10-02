@@ -1,4 +1,5 @@
 use crate::character::*;
+use crate::tdefaultnew::*;
 use crate::objectbase::*;
 use crate::status::*;
 use crate::f2i::*;
@@ -55,8 +56,8 @@ impl TObjectWithMetatable for Table {
         self.table_metatable = metatable;
     }
 }
-impl Table {
-    pub fn new() -> Self {
+impl TDefaultNew for Table {
+    fn new() -> Self {
         Table {
             object: TableSuper::new(TagVariant::Table),
             flags: 0,
@@ -69,6 +70,8 @@ impl Table {
             ..
         }
     }
+}
+impl Table {
     pub unsafe fn free_table(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             freehash(interpreter, self);

@@ -5,6 +5,7 @@ use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::interpreter::*;
 use crate::labeldescription::*;
+use crate::tdefaultnew::*;
 use crate::lexical::blockcontrol::*;
 use crate::lexical::constructorcontrol::*;
 use crate::objectbase::*;
@@ -50,8 +51,8 @@ pub struct FunctionState {
     pub iwthabs: u8,
     pub needs_close: bool,
 }
-impl FunctionState {
-    pub fn new() -> Self {
+impl TDefaultNew for FunctionState {
+    fn new() -> Self {
         return FunctionState {
             prototype: null_mut(),
             function_state_previous: null_mut(),
@@ -72,6 +73,8 @@ impl FunctionState {
             needs_close: false,
         };
     }
+}
+impl FunctionState {
     pub fn code_get_label(&mut self) -> i32 {
         self.last_target = self.program_counter;
         return self.program_counter;
