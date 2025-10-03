@@ -1,17 +1,20 @@
-use crate::tdefaultnew::*;
-use crate::utility::c::*;
-use std::ptr::*;
+use crate::c::*;
 use crate::status::*;
+use crate::tdefaultnew::*;
+use std::ptr::*;
 #[repr(C)]
 pub struct LongJump {
-    pub previous: *mut LongJump,
-    pub jbt: [JumpBufferTag; 1],
-    pub status: Status,
+    pub longjump_previous: *mut LongJump,
+    pub longjump_jbt: [JumpBufferTag; 1],
+    pub longjump_status: Status,
 }
 impl TDefaultNew for LongJump {
     fn new() -> Self {
-        return LongJump { previous: null_mut(), jbt: [JumpBufferTag { __mask_was_saved: 0, __saved_mask: SIgnalSet { __val: [0; 16] } }; 1], status: Status::OK };
+        return LongJump {
+            longjump_previous: null_mut(),
+            longjump_jbt: [JumpBufferTag { __mask_was_saved: 0, __saved_mask: SIgnalSet { __val: [0; 16] } }; 1],
+            longjump_status: Status::OK,
+        };
     }
 }
-impl LongJump {
-}
+impl LongJump {}

@@ -1,6 +1,6 @@
 #![allow(unused)]
-use crate::tdefaultnew::*;
 use crate::interpreter::*;
+use crate::tdefaultnew::*;
 use rlua::*;
 use std::{mem::*, ptr::*};
 #[derive(Debug, Copy, Clone)]
@@ -49,7 +49,8 @@ impl<T> VectorT<T> {
         unsafe {
             let old_total = self.vectort_size as usize * size_of::<T>();
             let new_total = new_size * size_of::<T>();
-            self.vectort_pointer = luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
+            self.vectort_pointer =
+                luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
             self.vectort_length = 0;
             self.vectort_size = new_size;
         }
@@ -78,7 +79,12 @@ impl<T> VectorT<T> {
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, (self.vectort_size as usize), 0);
+            luam_saferealloc_(
+                interpreter,
+                self.vectort_pointer as *mut libc::c_void,
+                (self.vectort_size as usize),
+                0,
+            );
             self.vectort_pointer = null_mut();
             self.vectort_size = 0;
         }

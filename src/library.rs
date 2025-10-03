@@ -22,22 +22,72 @@ use crate::library::utf8::*;
 use crate::registeredfunction::*;
 pub const LOADED_FUNCTIONS: [RegisteredFunction; 10] = {
     [
-        { RegisteredFunction { name: c"_G".as_ptr(), function: Some(luaopen_base as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"package".as_ptr(), function: Some(luaopen_package as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"coroutine".as_ptr(), function: Some(luaopen_coroutine as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"table".as_ptr(), function: Some(luaopen_table as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"io".as_ptr(), function: Some(luaopen_io as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"os".as_ptr(), function: Some(luaopen_os as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"string".as_ptr(), function: Some(luaopen_string as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"math".as_ptr(), function: Some(luaopen_math as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"utf8".as_ptr(), function: Some(luaopen_utf8 as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"debug".as_ptr(), function: Some(luaopen_debug as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"_G".as_ptr(),
+                registeredfunction_function: Some(luaopen_base as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"package".as_ptr(),
+                registeredfunction_function: Some(luaopen_package as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"coroutine".as_ptr(),
+                registeredfunction_function: Some(luaopen_coroutine as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"table".as_ptr(),
+                registeredfunction_function: Some(luaopen_table as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"io".as_ptr(),
+                registeredfunction_function: Some(luaopen_io as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"os".as_ptr(),
+                registeredfunction_function: Some(luaopen_os as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"string".as_ptr(),
+                registeredfunction_function: Some(luaopen_string as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"math".as_ptr(),
+                registeredfunction_function: Some(luaopen_math as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"utf8".as_ptr(),
+                registeredfunction_function: Some(luaopen_utf8 as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"debug".as_ptr(),
+                registeredfunction_function: Some(luaopen_debug as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn lual_openlibs(interpreter: *mut Interpreter) {
     unsafe {
         for it in LOADED_FUNCTIONS {
-            lual_requiref(interpreter, it.name, it.function, 1);
+            lual_requiref(interpreter, it.registeredfunction_name, it.registeredfunction_function, 1);
             lua_settop(interpreter, -2);
         }
     }

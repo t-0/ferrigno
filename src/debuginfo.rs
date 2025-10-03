@@ -1,13 +1,13 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use crate::c::*;
 use crate::callinfo::*;
-use crate::tobject::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use crate::tag::*;
+use crate::tobject::*;
 use crate::tvalue::*;
-use crate::utility::c::*;
 use crate::utility::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
@@ -32,7 +32,7 @@ pub struct DebugInfo {
     pub debuginfo_callinfo: *mut CallInfo,
 }
 impl DebugInfo {
-    pub fn new () -> Self {
+    pub fn new() -> Self {
         DebugInfo {
             debuginfo_event: 0,
             debuginfo_name: null(),
@@ -53,7 +53,7 @@ impl DebugInfo {
             debuginfo_callinfo: null_mut(),
         }
     }
-    pub fn new2 (event: i32, currentline: i32, callinfo: *mut CallInfo) -> Self {
+    pub fn new2(event: i32, currentline: i32, callinfo: *mut CallInfo) -> Self {
         DebugInfo {
             debuginfo_event: event,
             debuginfo_name: null(),
@@ -76,7 +76,13 @@ impl DebugInfo {
     }
     pub unsafe fn hookf(interpreter: *mut Interpreter, debuginfo: *mut DebugInfo) {
         unsafe {
-            pub const HOOK_NAMES: [*const i8; 5] = [c"call".as_ptr(), c"return".as_ptr(), c"line".as_ptr(), c"count".as_ptr(), c"tail call".as_ptr()];
+            pub const HOOK_NAMES: [*const i8; 5] = [
+                c"call".as_ptr(),
+                c"return".as_ptr(),
+                c"line".as_ptr(),
+                c"count".as_ptr(),
+                c"tail call".as_ptr(),
+            ];
             lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);
             (*interpreter).push_state();
             if lua_rawget(interpreter, -2) == TagType::Closure {
@@ -94,8 +100,16 @@ impl DebugInfo {
 pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         return if debuginfo.is_null() {
-            if (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).get_tag_variant() == TagVariant::ClosureL {
-                luaf_getlocalname((*((*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize))).value.value_object as *mut Closure)).payload.l_prototype, n, 0)
+            if (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize))).get_tagvariant() == TagVariant::ClosureL {
+                luaf_getlocalname(
+                    (*((*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
+                        .tvalue_value
+                        .value_object as *mut Closure))
+                        .payload
+                        .l_prototype,
+                    n,
+                    0,
+                )
             } else {
                 null()
             }
@@ -103,11 +117,11 @@ pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
             let mut position: *mut TValue = null_mut();
             let ret = luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
             if !ret.is_null() {
-                (*(*interpreter).top.stkidrel_pointer).copy_from(&*position);
-                (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                (*(*interpreter).interpreter_top.stkidrel_pointer).copy_from(&*position);
+                (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
             }
             ret
-        }
+        };
     }
 }
 pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, debuginfo: *const DebugInfo, n: i32) -> *const i8 {
@@ -116,16 +130,16 @@ pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
         let ret: *const i8 = luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
         if !ret.is_null() {
             let io1: *mut TValue = &mut (*position);
-            let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
+            let io2: *const TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
             (*io1).copy_from(&*io2);
-            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
+            (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
         }
         return ret;
     }
 }
 pub unsafe fn funcinfo(debuginfo: *mut DebugInfo, closure: *mut Closure) {
     unsafe {
-        if !(!closure.is_null() && (*closure).get_tag_variant() == TagVariant::ClosureL) {
+        if !(!closure.is_null() && (*closure).get_tagvariant() == TagVariant::ClosureL) {
             (*debuginfo).debuginfo_source = c"=[C]".as_ptr();
             (*debuginfo).debuginfo_sourcelength = (size_of::<[i8; 5]>() as usize) - 1;
             (*debuginfo).debuginfo_linedefined = -1;
@@ -140,11 +154,19 @@ pub unsafe fn funcinfo(debuginfo: *mut DebugInfo, closure: *mut Closure) {
                 (*debuginfo).debuginfo_source = c"=?".as_ptr();
                 (*debuginfo).debuginfo_sourcelength = (size_of::<[i8; 3]>() as usize) - 1;
             }
-            (*debuginfo).debuginfo_linedefined = (*p).prototype_line_defined;
-            (*debuginfo).debuginfo_lastlinedefined = (*p).prototype_last_line_defined;
-            (*debuginfo).debuginfo_what = if (*debuginfo).debuginfo_linedefined == 0 { c"main".as_ptr() } else { c"Lua".as_ptr() };
+            (*debuginfo).debuginfo_linedefined = (*p).prototype_linedefined;
+            (*debuginfo).debuginfo_lastlinedefined = (*p).prototype_lastlinedefined;
+            (*debuginfo).debuginfo_what = if (*debuginfo).debuginfo_linedefined == 0 {
+                c"main".as_ptr()
+            } else {
+                c"Lua".as_ptr()
+            };
         }
-        luao_chunkid(((*debuginfo).debuginfo_shortsrc).as_mut_ptr(), (*debuginfo).debuginfo_source, (*debuginfo).debuginfo_sourcelength);
+        luao_chunkid(
+            ((*debuginfo).debuginfo_shortsrc).as_mut_ptr(),
+            (*debuginfo).debuginfo_source,
+            (*debuginfo).debuginfo_sourcelength,
+        );
     }
 }
 pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, debuginfo: *mut DebugInfo) -> i32 {
@@ -154,50 +176,50 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
         let callinfo;
         if *what as i32 == Character::AngleRight as i32 {
             callinfo = null_mut();
-            function = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
+            function = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
             what = what.offset(1);
-            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
+            (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
         } else {
             callinfo = (*debuginfo).debuginfo_callinfo;
-            function = &mut (*(*callinfo).call_info_function.stkidrel_pointer);
+            function = &mut (*(*callinfo).callinfo_function.stkidrel_pointer);
         }
-        match (*function).get_tag_variant() {
-            TagVariant::ClosureL => {
-                let closure: *mut Closure = &mut (*((*function).value.value_object as *mut Closure));
+        match (*function).get_tagvariant() {
+            | TagVariant::ClosureL => {
+                let closure: *mut Closure = &mut (*((*function).tvalue_value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
                 if !(strchr(what, Character::LowerF as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
+                    let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);
                 }
                 return status;
             },
-            TagVariant::ClosureC => {
-                let closure: *mut Closure = &mut (*((*function).value.value_object as *mut Closure));
+            | TagVariant::ClosureC => {
+                let closure: *mut Closure = &mut (*((*function).tvalue_value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
                 if !(strchr(what, Character::LowerF as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
+                    let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);
                 }
                 return status;
             },
-            _ => {
+            | _ => {
                 let closure: *mut Closure = null_mut();
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
                 if !(strchr(what, Character::LowerF as i32)).is_null() {
-                    let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
+                    let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
-                    (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                    (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
                 if !(strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);

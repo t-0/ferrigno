@@ -1,22 +1,22 @@
-use crate::closure::*;
-use crate::object::*;
-use crate::functions::*;
-use crate::objectwithgclist::*;
-use libc::*;
-use crate::interpreter::*;
 use crate::closeprotected::*;
+use crate::closure::*;
+use crate::functions::*;
+use crate::interpreter::*;
 use crate::node::*;
-use crate::tobjectwithgclist::*;
+use crate::object::*;
+use crate::objectwithgclist::*;
 use crate::prototype::*;
-use crate::stringtable::*;
 use crate::status::*;
+use crate::stringtable::*;
 use crate::table::*;
-use crate::tobject::*;
 use crate::tag::*;
+use crate::tobject::*;
+use crate::tobjectwithgclist::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvalue::*;
 use crate::user::*;
+use libc::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -72,24 +72,25 @@ impl Global {
         unsafe {
             let maininterpreter = self.global_maininterpreter;
             if self.global_nonevalue.is_tagtype_nil() {
-                (*maininterpreter).callinfo = &mut (*maininterpreter).base_callinfo;
-                (*maininterpreter).error_function = 0;
+                (*maininterpreter).interpreter_callinfo = &mut (*maininterpreter).interpreter_basecallinfo;
+                (*maininterpreter).interpreter_errorfunction = 0;
                 do_close_protected(maininterpreter, 1 as i64, Status::OK);
-                (*maininterpreter).top.stkidrel_pointer = ((*maininterpreter).stack.stkidrel_pointer).offset(1 as isize);
+                (*maininterpreter).interpreter_top.stkidrel_pointer =
+                    ((*maininterpreter).interpreter_stack.stkidrel_pointer).offset(1 as isize);
                 self.luac_freeallobjects(maininterpreter);
             } else {
                 self.luac_freeallobjects(maininterpreter);
             }
             (*maininterpreter).free_memory(
-                (*(*maininterpreter).global).global_stringtable.stringtable_hash as *mut libc::c_void,
-                (*(*maininterpreter).global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
+                (*(*maininterpreter).interpreter_global).global_stringtable.stringtable_hash as *mut libc::c_void,
+                (*(*maininterpreter).interpreter_global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
             );
             freestack(maininterpreter);
             raw_allocate(maininterpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
             raw_allocate(self as *mut Global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
         }
     }
-    pub fn init (&mut self) {
+    pub fn init(&mut self) {
         self.global_currentwhite = (1 << 3) as u8;
         self.global_warnfunction = None;
         self.global_warnuserdata = null_mut();
@@ -133,7 +134,7 @@ impl Global {
         }
         let io: *mut TValue = &mut self.global_nonevalue;
         unsafe {
-            (*io).value.value_integer = 0;
+            (*io).tvalue_value.value_integer = 0;
             (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
         }
     }
@@ -149,12 +150,12 @@ impl Global {
             let work: usize;
             self.global_gcstopem = 1;
             match self.global_gcstate as i32 {
-                8 => {
+                | 8 => {
                     self.restartcollection();
                     self.global_gcstate = 0;
                     work = 1 as usize;
                 },
-                0 => {
+                | 0 => {
                     if (self.global_gray).is_null() {
                         self.global_gcstate = 1;
                         work = 0;
@@ -162,26 +163,26 @@ impl Global {
                         work = self.propagatemark();
                     }
                 },
-                1 => {
+                | 1 => {
                     work = self.atomic(interpreter);
                     self.entersweep(interpreter);
                     self.global_gcestimate = (self.global_totalbytes + self.global_gcdebt) as usize;
                 },
-                3 => {
+                | 3 => {
                     work = self.sweepstep_finalized(interpreter, 4) as usize;
                 },
-                4 => {
+                | 4 => {
                     work = self.sweepstep_to_be_finalized(interpreter, 5) as usize;
                 },
-                5 => {
+                | 5 => {
                     work = self.sweepstep(interpreter, 6) as usize;
                 },
-                6 => {
+                | 6 => {
                     self.check_sizes(interpreter);
                     self.global_gcstate = 7;
                     work = 0;
                 },
-                7 => {
+                | 7 => {
                     if !(self.global_tobefinalized).is_null() && !self.global_isemergency {
                         self.global_gcstopem = 0;
                         work = (runafewfinalizers(interpreter, 10 as i32) * 50) as usize;
@@ -190,7 +191,7 @@ impl Global {
                         work = 0;
                     }
                 },
-                _ => return 0,
+                | _ => return 0,
             }
             self.global_gcstopem = 0;
             return work;
@@ -202,7 +203,8 @@ impl Global {
                 if self.global_stringtable.stringtable_length < self.global_stringtable.stringtable_size / 4 {
                     let olddebt: i64 = self.global_gcdebt;
                     luas_resize(interpreter, self.global_stringtable.stringtable_size / 2);
-                    self.global_gcestimate = (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize;
+                    self.global_gcestimate =
+                        (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize;
                 }
             }
         }
@@ -249,10 +251,12 @@ impl Global {
             self.global_grayagain = null_mut();
             self.global_gcstate = 2 as u8;
             if (*interpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, &mut (*(interpreter as *mut Object)));
+                Object::really_mark_object(self, &mut (*(interpreter as *mut Object)));
             }
-            if (self.global_lregistry.is_collectable()) && (*self.global_lregistry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, self.global_lregistry.value.value_object);
+            if (self.global_lregistry.is_collectable())
+                && (*self.global_lregistry.tvalue_value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0
+            {
+                Object::really_mark_object(self, self.global_lregistry.tvalue_value.value_object);
             }
             self.markmt();
             work = (work as usize).wrapping_add(self.propagateall()) as usize;
@@ -284,7 +288,8 @@ impl Global {
                 let olddebt: i64 = self.global_gcdebt;
                 let mut count: i32 = 0;
                 self.global_sweepgc = (*interpreter).sweep_list(self.global_sweepgc, 100 as i32, &mut count);
-                self.global_gcestimate = (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
+                self.global_gcestimate =
+                    (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.global_gcstate = nextstate as u8;
@@ -299,7 +304,8 @@ impl Global {
                 let olddebt: i64 = self.global_gcdebt;
                 let mut count: i32 = 0;
                 self.global_sweepgc = (*interpreter).sweep_list(self.global_sweepgc, 100 as i32, &mut count);
-                self.global_gcestimate = (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
+                self.global_gcestimate =
+                    (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.global_gcstate = nextstate as u8;
@@ -314,7 +320,8 @@ impl Global {
                 let olddebt: i64 = self.global_gcdebt;
                 let mut count: i32 = 0;
                 self.global_sweepgc = (*interpreter).sweep_list(self.global_sweepgc, 100 as i32, &mut count);
-                self.global_gcestimate = (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
+                self.global_gcestimate =
+                    (self.global_gcestimate as usize).wrapping_add((self.global_gcdebt - olddebt) as usize) as usize as usize;
                 return count;
             } else {
                 self.global_gcstate = nextstate as u8;
@@ -330,7 +337,9 @@ impl Global {
             } else {
                 let majorbase: usize = self.global_gcestimate;
                 let majorinc: usize = (majorbase / 100) * (self.global_generationalmajormultiplier * 4);
-                if self.global_gcdebt > 0 && (self.global_totalbytes + self.global_gcdebt) as usize > majorbase.wrapping_add(majorinc) {
+                if self.global_gcdebt > 0
+                    && (self.global_totalbytes + self.global_gcdebt) as usize > majorbase.wrapping_add(majorinc)
+                {
                     let numobjs: usize = self.fullgen(interpreter);
                     if !(((self.global_totalbytes + self.global_gcdebt) as usize) < majorbase + (majorinc / 2)) {
                         self.global_lastatomic = numobjs;
@@ -454,13 +463,17 @@ impl Global {
             markold(self, self.global_tobefinalized, null_mut());
             self.atomic(interpreter);
             self.global_gcstate = 3 as u8;
-            let mut psurvival: *mut *mut Object = sweepgen(interpreter, self, &mut self.global_allgc, self.global_survival, &mut self.global_firstold1);
+            let mut psurvival: *mut *mut Object = sweepgen(
+                interpreter, self, &mut self.global_allgc, self.global_survival, &mut self.global_firstold1,
+            );
             sweepgen(interpreter, self, psurvival, self.global_old1, &mut self.global_firstold1);
             self.global_reallyold = self.global_old1;
             self.global_old1 = *psurvival;
             self.global_survival = self.global_allgc;
             let mut dummy: *mut Object = null_mut();
-            psurvival = sweepgen(interpreter, self, &mut self.global_finalizedobjects, self.global_finobjsur, &mut dummy);
+            psurvival = sweepgen(
+                interpreter, self, &mut self.global_finalizedobjects, self.global_finobjsur, &mut dummy,
+            );
             sweepgen(interpreter, self, psurvival, self.global_finobjold1, &mut dummy);
             self.global_finobjrold = self.global_finobjold1;
             self.global_finobjold1 = *psurvival;
@@ -475,8 +488,12 @@ impl Global {
             self.luac_changemode(interpreter, 0);
             self.separatetobefnz(true);
             self.callallpendingfinalizers(interpreter);
-            delete_list(interpreter, self.global_allgc, &mut (*(self.global_maininterpreter as *mut Object)));
-            delete_list(interpreter, self.global_fixedgc, null_mut());
+            Object::delete_list(
+                interpreter,
+                self.global_allgc,
+                &mut (*(self.global_maininterpreter as *mut Object)),
+            );
+            Object::delete_list(interpreter, self.global_fixedgc, null_mut());
         }
     }
     pub unsafe fn finishgencycle(&mut self, interpreter: *mut Interpreter) {
@@ -494,7 +511,7 @@ impl Global {
             let stringtable: *mut StringTable = &mut self.global_stringtable;
             (*stringtable).initialize(interpreter);
             self.global_memoryerrormessage = luas_newlstr(interpreter, c"not enough memory".as_ptr(), "not enough memory".len());
-            fix_object_global(self, self.global_memoryerrormessage as *mut Object);
+            Object::fix_object_global(self, self.global_memoryerrormessage as *mut Object);
             for i in 0..GLOBAL_STRINGCACHE_N {
                 for j in 0..GLOBAL_STRINGCACHE_M {
                     self.global_stringcache[i][j] = self.global_memoryerrormessage;
@@ -504,31 +521,31 @@ impl Global {
     }
     pub unsafe fn correct_pointers(&mut self, object: *mut Object) {
         unsafe {
-            check_pointer(&mut self.global_survival, object);
-            check_pointer(&mut self.global_old1, object);
-            check_pointer(&mut self.global_reallyold, object);
-            check_pointer(&mut self.global_firstold1, object);
+            Object::check_pointer(&mut self.global_survival, object);
+            Object::check_pointer(&mut self.global_old1, object);
+            Object::check_pointer(&mut self.global_reallyold, object);
+            Object::check_pointer(&mut self.global_firstold1, object);
         }
     }
     pub unsafe fn separatetobefnz(&mut self, is_all: bool) {
         unsafe {
             let mut p: *mut *mut Object = &mut (*self).global_finalizedobjects;
-            let mut last_next: *mut *mut Object = find_last(&mut (*self).global_tobefinalized);
+            let mut last_next: *mut *mut Object = Object::find_last(&mut (*self).global_tobefinalized);
             loop {
                 let current: *mut Object = *p;
                 if current == (*self).global_finobjold1 {
                     break;
                 }
                 if !((*current).get_marked() & (1 << 3 | 1 << 4) != 0 || is_all) {
-                    p = &mut (*current).next;
+                    p = &mut (*current).object_next;
                 } else {
                     if current == (*self).global_finobjsur {
-                        (*self).global_finobjsur = (*current).next;
+                        (*self).global_finobjsur = (*current).object_next;
                     }
-                    *p = (*current).next;
-                    (*current).next = *last_next;
+                    *p = (*current).object_next;
+                    (*current).object_next = *last_next;
                     *last_next = current;
-                    last_next = &mut (*current).next;
+                    last_next = &mut (*current).object_next;
                 }
             }
         }
@@ -537,7 +554,11 @@ impl Global {
         unsafe {
             let pause: i32 = (*self).global_gcpause as i32 * 4;
             let estimate: i64 = ((*self).global_gcestimate / 100) as i64;
-            let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate { estimate * pause as i64 } else { (!(0usize) >> 1) as i64 };
+            let threshold: i64 = if (pause as i64) < (!(0usize) >> 1) as i64 / estimate {
+                estimate * pause as i64
+            } else {
+                (!(0usize) >> 1) as i64
+            };
             let mut debt: i64 = (*self).global_totalbytes + (*self).global_gcdebt - threshold;
             if debt > 0 {
                 debt = 0;
@@ -547,16 +568,16 @@ impl Global {
     }
     pub unsafe fn correctgraylists(&mut self) {
         unsafe {
-            let mut list = correct_gray_list(&mut (*self).global_grayagain);
+            let mut list = ObjectWithGCList::correct_gray_list(&mut (*self).global_grayagain);
             *list = (*self).global_weak;
             (*self).global_weak = null_mut();
-            list = correct_gray_list(list);
+            list = ObjectWithGCList::correct_gray_list(list);
             *list = (*self).global_allweak;
             (*self).global_allweak = null_mut();
-            list = correct_gray_list(list);
+            list = ObjectWithGCList::correct_gray_list(list);
             *list = (*self).global_ephemeron;
             (*self).global_ephemeron = null_mut();
-            correct_gray_list(list);
+            ObjectWithGCList::correct_gray_list(list);
         }
     }
     pub unsafe fn stringcache_clear(&mut self) {
@@ -572,7 +593,7 @@ impl Global {
     }
     pub unsafe fn fix_memory_error_message_global(&mut self) {
         unsafe {
-            fix_object_global(self, self.global_memoryerrormessage as *mut Object);
+            Object::fix_object_global(self, self.global_memoryerrormessage as *mut Object);
         }
     }
     pub unsafe fn white_list(&mut self, mut p: *mut Object) {
@@ -580,7 +601,7 @@ impl Global {
             let white = self.global_currentwhite & ((1 << 3) | (1 << 4));
             while !p.is_null() {
                 (*p).set_marked((*p).get_marked() & !((1 << 5) | ((1 << 3) | (1 << 4)) | 7) | white);
-                p = (*p).next;
+                p = (*p).object_next;
             }
         }
     }
@@ -610,7 +631,9 @@ impl Global {
     }
     pub unsafe fn set_minor_debt(&mut self) {
         unsafe {
-            self.set_debt(-(((self.global_totalbytes + self.global_gcdebt) / 100) * self.global_generationalminormultiplier as i64));
+            self.set_debt(
+                -(((self.global_totalbytes + self.global_gcdebt) / 100) * self.global_generationalminormultiplier as i64),
+            );
         }
     }
     pub unsafe fn propagatemark(&mut self) -> usize {
@@ -618,14 +641,14 @@ impl Global {
             let object = self.global_gray;
             (*object).set_marked((*object).get_marked() | 1 << 5);
             self.global_gray = *(*object).getgclist();
-            match (*object).get_tag_variant() {
-                TagVariant::Table => return traversetable(self, &mut (*(object as *mut Table))),
-                TagVariant::User => return (*(object as *mut User)).traverseudata(self) as usize,
-                TagVariant::ClosureL => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
-                TagVariant::ClosureC => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
-                TagVariant::Prototype => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
-                TagVariant::Interpreter => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
-                _ => return 0,
+            match (*object).get_tagvariant() {
+                | TagVariant::Table => return traversetable(self, &mut (*(object as *mut Table))),
+                | TagVariant::User => return (*(object as *mut User)).traverseudata(self) as usize,
+                | TagVariant::ClosureL => return Closure::traverselclosure(self, &mut (*(object as *mut Closure))),
+                | TagVariant::ClosureC => return Closure::traversecclosure(self, &mut (*(object as *mut Closure))),
+                | TagVariant::Prototype => return (&mut (*(object as *mut Prototype))).prototype_traverse(self),
+                | TagVariant::Interpreter => return traverse_state(self, &mut (*(object as *mut Interpreter))) as usize,
+                | _ => return 0,
             };
         }
     }
@@ -645,7 +668,10 @@ impl Global {
             for i in TAGTYPE_SIMPLE {
                 if !(self.global_metatables[i as usize]).is_null() {
                     if (*self.global_metatables[i as usize]).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(self, &mut (*(*(self.global_metatables).as_mut_ptr().offset(i as isize) as *mut Object)));
+                        Object::really_mark_object(
+                            self,
+                            &mut (*(*(self.global_metatables).as_mut_ptr().offset(i as isize) as *mut Object)),
+                        );
                     }
                 }
             }
@@ -658,9 +684,9 @@ impl Global {
             while !object.is_null() {
                 count = count.wrapping_add(1);
                 if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(self, &mut (*(object as *mut Object)));
+                    Object::really_mark_object(self, &mut (*(object as *mut Object)));
                 }
-                object = (*object).next;
+                object = (*object).object_next;
             }
             return count;
         }
@@ -669,10 +695,12 @@ impl Global {
         unsafe {
             self.cleargraylists();
             if (*self.global_maininterpreter).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, &mut (*(self.global_maininterpreter as *mut Object)));
+                Object::really_mark_object(self, &mut (*(self.global_maininterpreter as *mut Object)));
             }
-            if (self.global_lregistry.is_collectable()) && (*self.global_lregistry.value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                really_mark_object(self, self.global_lregistry.value.value_object);
+            if (self.global_lregistry.is_collectable())
+                && (*self.global_lregistry.tvalue_value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0
+            {
+                Object::really_mark_object(self, self.global_lregistry.tvalue_value.value_object);
             }
             self.markmt();
             self.markbeingfnz();
@@ -688,20 +716,22 @@ impl Global {
                     break;
                 }
                 work += 1;
-                if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0 && !((*thread).open_upvalue).is_null() {
-                    p = &mut (*thread).twups;
+                if (*thread).get_marked() & (1 << 3 | 1 << 4) == 0 && !((*thread).interpreter_openupvalue).is_null() {
+                    p = &mut (*thread).interpreter_twups;
                 } else {
-                    *p = (*thread).twups;
-                    (*thread).twups = thread;
-                    let mut uv: *mut UpValue = (*thread).open_upvalue;
+                    *p = (*thread).interpreter_twups;
+                    (*thread).interpreter_twups = thread;
+                    let mut uv: *mut UpValue = (*thread).interpreter_openupvalue;
                     while !uv.is_null() {
                         work += 1;
                         if (*uv).get_marked() & (1 << 3 | 1 << 4) == 0 {
-                            if ((*(*uv).v.p).is_collectable()) && (*(*(*uv).v.p).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                                really_mark_object(self, (*(*uv).v.p).value.value_object);
+                            if ((*(*uv).upvalue_v.upvaluea_p).is_collectable())
+                                && (*(*(*uv).upvalue_v.upvaluea_p).tvalue_value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0
+                            {
+                                Object::really_mark_object(self, (*(*uv).upvalue_v.upvaluea_p).tvalue_value.value_object);
                             }
                         }
-                        uv = (*uv).u.open.next;
+                        uv = (*uv).upvalue_u.upvalueb_open.upvalueba_next;
                     }
                 }
             }
@@ -756,12 +786,14 @@ impl Global {
     pub unsafe fn udata2finalize(&mut self) -> *mut Object {
         unsafe {
             let object: *mut Object = (*self).global_tobefinalized;
-            (*self).global_tobefinalized = (*object).next;
-            (*object).next = (*self).global_allgc;
+            (*self).global_tobefinalized = (*object).object_next;
+            (*object).object_next = (*self).global_allgc;
             (*self).global_allgc = object;
             (*object).set_marked((*object).get_marked() & !(1 << 6));
             if 3 <= (*self).global_gcstate as i32 && (*self).global_gcstate as i32 <= 6 {
-                (*object).set_marked((*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*self).global_currentwhite & (1 << 3 | 1 << 4)));
+                (*object).set_marked(
+                    (*object).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)) | ((*self).global_currentwhite & (1 << 3 | 1 << 4)),
+                );
             } else if (*object).get_marked() & 7 == 3 {
                 (*self).global_firstold1 = object;
             }
@@ -773,13 +805,22 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectWithGCList) {
     unsafe {
         while !l.is_null() {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
-            let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
+            let limit: *mut Node =
+                &mut *((*table).table_node).offset((1 << (*table).table_logsizenode as i32) as isize) as *mut Node;
+            let mut node: *mut Node = &mut *((*table).table_node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(global, if (*node).key.is_collectable() { (*node).key.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
+                if Object::iscleared(
+                    global,
+                    if (*node).node_key.is_collectable() {
+                        (*node).node_key.tvalue_value.value_object
+                    } else {
+                        null_mut()
+                    },
+                ) != 0
+                {
+                    (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
-                if (*node).value.is_tagtype_nil() {
+                if (*node).node_value.is_tagtype_nil() {
                     (*node).clearkey();
                 }
                 node = node.offset(1);
@@ -792,20 +833,37 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
     unsafe {
         while l != f {
             let table: *mut Table = &mut (*(l as *mut Table));
-            let limit: *mut Node = &mut *((*table).node).offset((1 << (*table).log_size_node as i32) as isize) as *mut Node;
+            let limit: *mut Node =
+                &mut *((*table).table_node).offset((1 << (*table).table_logsizenode as i32) as isize) as *mut Node;
             let asize: u32 = luah_realasize(table);
             for i in 0..asize {
-                let tvalue: *mut TValue = &mut *((*table).array).offset(i as isize) as *mut TValue;
-                if iscleared(global, if (*tvalue).is_collectable() { (*tvalue).value.value_object } else { null_mut() }) != 0 {
+                let tvalue: *mut TValue = &mut *((*table).table_array).offset(i as isize) as *mut TValue;
+                if Object::iscleared(
+                    global,
+                    if (*tvalue).is_collectable() {
+                        (*tvalue).tvalue_value.value_object
+                    } else {
+                        null_mut()
+                    },
+                ) != 0
+                {
                     (*tvalue).tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
             }
-            let mut node: *mut Node = &mut *((*table).node).offset(0 as isize) as *mut Node;
+            let mut node: *mut Node = &mut *((*table).table_node).offset(0 as isize) as *mut Node;
             while node < limit {
-                if iscleared(global, if (*node).value.is_collectable() { (*node).value.value.value_object } else { null_mut() }) != 0 {
-                    (*node).value.tvalue_set_tag_variant(TagVariant::NilEmpty);
+                if Object::iscleared(
+                    global,
+                    if (*node).node_value.is_collectable() {
+                        (*node).node_value.tvalue_value.value_object
+                    } else {
+                        null_mut()
+                    },
+                ) != 0
+                {
+                    (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
-                if (*node).value.is_tagtype_nil() {
+                if (*node).node_value.is_tagtype_nil() {
                     (*node).clearkey();
                 }
                 node = node.offset(1);
@@ -821,10 +879,10 @@ pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
             if (*p).get_marked() & 7 == 3 {
                 (*p).set_marked((*p).get_marked() ^ (3 ^ 4));
                 if (*p).get_marked() & 1 << 5 != 0 {
-                    really_mark_object(global, p);
+                    Object::really_mark_object(global, p);
                 }
             }
-            p = (*p).next;
+            p = (*p).object_next;
         }
     }
 }
@@ -832,29 +890,29 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
     unsafe {
         let mut argp: ::core::ffi::VaListImpl;
         let mut res: i32 = 0;
-        let global: *mut Global = (*interpreter).global;
+        let global: *mut Global = (*interpreter).interpreter_global;
         if (*global).global_gcstep as i32 & 2 != 0 {
             return -1;
         }
         argp = args.clone();
         match what {
-            0 => {
+            | 0 => {
                 (*global).global_gcstep = 1;
             },
-            1 => {
+            | 1 => {
                 (*global).set_debt(0);
                 (*global).global_gcstep = 0;
             },
-            2 => {
+            | 2 => {
                 (*global).luac_fullgc(interpreter, false);
             },
-            3 => {
+            | 3 => {
                 res = (((*global).global_totalbytes + (*global).global_gcdebt) as usize >> 10 as i32) as i32;
             },
-            4 => {
+            | 4 => {
                 res = (((*global).global_totalbytes + (*global).global_gcdebt) as usize & 0x3ff as usize) as i32;
             },
-            5 => {
+            | 5 => {
                 let data: i32 = argp.arg::<i32>();
                 let mut debt: i64 = 1;
                 let oldstp: u8 = (*global).global_gcstep;
@@ -865,7 +923,7 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 } else {
                     debt = data as i64 * 1024 as i64 + (*global).global_gcdebt;
                     (*global).set_debt(debt);
-                    if (*(*interpreter).global).global_gcdebt > 0 {
+                    if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
                         (*interpreter).luac_step();
                     }
                 }
@@ -874,23 +932,27 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                     res = 1;
                 }
             },
-            6 => {
+            | 6 => {
                 let data_0: i32 = argp.arg::<i32>();
                 res = (*global).global_gcpause as i32 * 4;
                 (*global).global_gcpause = (data_0 / 4) as u8;
             },
-            7 => {
+            | 7 => {
                 let data_1: i32 = argp.arg::<i32>();
                 res = (*global).global_gcstepmultiplier as i32 * 4;
                 (*global).global_gcstepmultiplier = (data_1 / 4) as u8;
             },
-            9 => {
+            | 9 => {
                 res = ((*global).global_gcstep as i32 == 0) as i32;
             },
-            10 => {
+            | 10 => {
                 let minormul: i32 = argp.arg::<i32>();
                 let majormul: i32 = argp.arg::<i32>();
-                res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 { 10 as i32 } else { 11 as i32 };
+                res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 {
+                    10 as i32
+                } else {
+                    11 as i32
+                };
                 if minormul != 0 {
                     (*global).global_generationalminormultiplier = minormul as usize;
                 }
@@ -899,11 +961,15 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 }
                 (*global).luac_changemode(interpreter, 1);
             },
-            11 => {
+            | 11 => {
                 let pause: i32 = argp.arg::<i32>();
                 let stepmul: i32 = argp.arg::<i32>();
                 let stepsize: i32 = argp.arg::<i32>();
-                res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 { 10 as i32 } else { 11 as i32 };
+                res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 {
+                    10 as i32
+                } else {
+                    11 as i32
+                };
                 if pause != 0 {
                     (*global).global_gcpause = (pause / 4) as u8;
                 }
@@ -915,7 +981,7 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 }
                 (*global).luac_changemode(interpreter, 0);
             },
-            _ => {
+            | _ => {
                 res = -1;
             },
         }

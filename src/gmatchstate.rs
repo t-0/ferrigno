@@ -6,10 +6,10 @@ use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct GMatchState {
-    pub source: *const i8,
-    pub pointer: *const i8,
-    pub last_match: *const i8,
-    pub match_state: MatchState,
+    pub gmatchstate_source: *const i8,
+    pub gmatchstate_pointer: *const i8,
+    pub gmatchstate_lastmatch: *const i8,
+    pub gmatchstate_matchstate: MatchState,
 }
 impl GMatchState {
     pub unsafe fn gmatch_aux(interpreter: *mut Interpreter) -> i32 {
@@ -20,15 +20,15 @@ impl GMatchState {
     }
     pub unsafe fn auxiliary(&mut self, interpreter: *mut Interpreter) -> i32 {
         unsafe {
-            self.match_state.matchstate_interpreter = interpreter;
-            let mut src = self.source;
-            while src <= self.match_state.src_end {
-                self.match_state.reprepstate();
-                let e = self.match_state.match_0(src, self.pointer);
-                if !e.is_null() && e != self.last_match {
-                    self.last_match = e;
-                    self.source = self.last_match;
-                    return self.match_state.push_captures(src, e);
+            self.gmatchstate_matchstate.matchstate_interpreter = interpreter;
+            let mut src = self.gmatchstate_source;
+            while src <= self.gmatchstate_matchstate.src_end {
+                self.gmatchstate_matchstate.reprepstate();
+                let e = self.gmatchstate_matchstate.match_0(src, self.gmatchstate_pointer);
+                if !e.is_null() && e != self.gmatchstate_lastmatch {
+                    self.gmatchstate_lastmatch = e;
+                    self.gmatchstate_source = self.gmatchstate_lastmatch;
+                    return self.gmatchstate_matchstate.push_captures(src, e);
                 }
                 src = src.offset(1);
             }
@@ -47,11 +47,15 @@ impl GMatchState {
                 initial = lexical_state.wrapping_add(1 as usize);
             }
             let gm: *mut GMatchState = User::lua_newuserdatauv(interpreter, size_of::<GMatchState>(), 0) as *mut GMatchState;
-            (*gm).match_state.prepstate(interpreter, s, lexical_state, p, lp);
-            (*gm).source = s.offset(initial as isize);
-            (*gm).pointer = p;
-            (*gm).last_match = null();
-            lua_pushcclosure(interpreter, Some(GMatchState::gmatch_aux as unsafe fn(*mut Interpreter) -> i32), 3);
+            (*gm).gmatchstate_matchstate.prepstate(interpreter, s, lexical_state, p, lp);
+            (*gm).gmatchstate_source = s.offset(initial as isize);
+            (*gm).gmatchstate_pointer = p;
+            (*gm).gmatchstate_lastmatch = null();
+            lua_pushcclosure(
+                interpreter,
+                Some(GMatchState::gmatch_aux as unsafe fn(*mut Interpreter) -> i32),
+                3,
+            );
             return 1;
         }
     }

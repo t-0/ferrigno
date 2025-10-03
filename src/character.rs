@@ -139,7 +139,16 @@ pub enum Character {
 impl Character {
     pub fn is_digit(&self) -> bool {
         match self {
-            | Character::Digit0 | Character::Digit1 | Character::Digit2 | Character::Digit3 | Character::Digit4 | Character::Digit5 | Character::Digit6 | Character::Digit7 | Character::Digit8 | Character::Digit9 => true,
+            | Character::Digit0
+            | Character::Digit1
+            | Character::Digit2
+            | Character::Digit3
+            | Character::Digit4
+            | Character::Digit5
+            | Character::Digit6
+            | Character::Digit7
+            | Character::Digit8
+            | Character::Digit9 => true,
             | _ => false,
         }
     }
@@ -333,7 +342,11 @@ impl Character {
             | Character::RecordSeparator
             | Character::UnitSeparator
             | Character::Delete => CHARACTER_TYPE_NONE,
-            | Character::HorizontalTab | Character::LineFeed | Character::VerticalTab | Character::FormFeed | Character::CarriageReturn => CHARACTER_TYPE_WHITESPACE,
+            | Character::HorizontalTab
+            | Character::LineFeed
+            | Character::VerticalTab
+            | Character::FormFeed
+            | Character::CarriageReturn => CHARACTER_TYPE_WHITESPACE,
             | Character::Space => CHARACTER_TYPE_WHITESPACE | CHARACTER_TYPE_PRINTABLE,
             | Character::Exclamation
             | Character::DoubleQuote
@@ -366,12 +379,28 @@ impl Character {
             | Character::Bar
             | Character::BraceRight
             | Character::Tilde => CHARACTER_TYPE_PRINTABLE,
-            | Character::Digit0 | Character::Digit1 | Character::Digit2 | Character::Digit3 | Character::Digit4 | Character::Digit5 | Character::Digit6 | Character::Digit7 | Character::Digit8 | Character::Digit9 => {
-                CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_DIGIT_DECIMAL
-            },
-            | Character::UpperA | Character::UpperB | Character::UpperC | Character::UpperD | Character::UpperE | Character::UpperF | Character::LowerA | Character::LowerB | Character::LowerC | Character::LowerD | Character::LowerE | Character::LowerF => {
-                CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER
-            },
+            | Character::Digit0
+            | Character::Digit1
+            | Character::Digit2
+            | Character::Digit3
+            | Character::Digit4
+            | Character::Digit5
+            | Character::Digit6
+            | Character::Digit7
+            | Character::Digit8
+            | Character::Digit9 => CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_DIGIT_DECIMAL,
+            | Character::UpperA
+            | Character::UpperB
+            | Character::UpperC
+            | Character::UpperD
+            | Character::UpperE
+            | Character::UpperF
+            | Character::LowerA
+            | Character::LowerB
+            | Character::LowerC
+            | Character::LowerD
+            | Character::LowerE
+            | Character::LowerF => CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
             | Character::UpperG
             | Character::UpperH
             | Character::UpperI
@@ -415,22 +444,22 @@ impl Character {
             | Character::Underscore => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
         }
     }
-    pub fn is_whitespace(& self) -> bool {
+    pub fn is_whitespace(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_WHITESPACE != 0;
     }
-    pub fn is_alphanumeric(& self) -> bool {
+    pub fn is_alphanumeric(&self) -> bool {
         return self.get_character_type() & (CHARACTER_TYPE_IDENTIFIER | CHARACTER_TYPE_DIGIT_DECIMAL) != 0;
     }
-    pub fn is_printable(& self) -> bool {
+    pub fn is_printable(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_PRINTABLE != 0;
     }
-    pub fn is_identifier(& self) -> bool {
+    pub fn is_identifier(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_IDENTIFIER != 0;
     }
-    pub fn is_digit_hexadecimal(& self) -> bool {
+    pub fn is_digit_hexadecimal(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_DIGIT_HEXADECIMAL != 0;
     }
-    pub fn is_digit_decimal(& self) -> bool {
+    pub fn is_digit_decimal(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_DIGIT_DECIMAL != 0;
     }
 }

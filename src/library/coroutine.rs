@@ -1,8 +1,8 @@
 #![allow(unused)]
-use crate::status::*;
 use crate::coroutine::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
+use crate::status::*;
 use crate::tag::*;
 use rlua::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
@@ -46,58 +46,105 @@ unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let coroutine: *mut Interpreter = get_coroutine(interpreter);
         match auxiliary_status(interpreter, coroutine) {
-            CoroutineStatus::Dead | CoroutineStatus::Yield => {
-                match lua_closethread(coroutine, interpreter) {
-                    Status::OK => {
-                        (*interpreter).push_boolean(true);
-                        1
-                    },
-                    _ => {
-                        (*interpreter).push_boolean(false);
-                        lua_xmove(coroutine, interpreter, 1);
-                        2
-                    },
-                }
+            | CoroutineStatus::Dead | CoroutineStatus::Yield => match lua_closethread(coroutine, interpreter) {
+                | Status::OK => {
+                    (*interpreter).push_boolean(true);
+                    1
+                },
+                | _ => {
+                    (*interpreter).push_boolean(false);
+                    lua_xmove(coroutine, interpreter, 1);
+                    2
+                },
             },
-            x => {
-                lual_error(interpreter, c"cannot close a %s coroutine".as_ptr(), x.get_name())
-            },
+            | x => lual_error(interpreter, c"cannot close a %s coroutine".as_ptr(), x.get_name()),
         }
     }
 }
 unsafe fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lua_pushstring(interpreter, auxiliary_status(interpreter, get_coroutine(interpreter)).get_name());
+        lua_pushstring(
+            interpreter,
+            auxiliary_status(interpreter, get_coroutine(interpreter)).get_name(),
+        );
     }
     1
 }
 unsafe fn luab_yieldable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let coroutine: *mut Interpreter = if lua_type(interpreter, 1) == None { interpreter } else { get_coroutine(interpreter) };
+        let coroutine: *mut Interpreter = if lua_type(interpreter, 1) == None {
+            interpreter
+        } else {
+            get_coroutine(interpreter)
+        };
         (*interpreter).push_boolean((*coroutine).is_yieldable());
     }
     1
 }
 unsafe fn luab_yield(interpreter: *mut Interpreter) -> i32 {
-    unsafe {
-        lua_yieldk(interpreter, (*interpreter).get_top(), 0, None)
-    }
+    unsafe { lua_yieldk(interpreter, (*interpreter).get_top(), 0, None) }
 }
 const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
     [
-        { RegisteredFunction { name: c"create".as_ptr(), function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"resume".as_ptr(), function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"running".as_ptr(), function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"status".as_ptr(), function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"wrap".as_ptr(), function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"yield".as_ptr(), function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"isyieldable".as_ptr(), function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"close".as_ptr(), function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"create".as_ptr(),
+                registeredfunction_function: Some(luab_cocreate as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"resume".as_ptr(),
+                registeredfunction_function: Some(luab_coresume as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"running".as_ptr(),
+                registeredfunction_function: Some(luab_corunning as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"status".as_ptr(),
+                registeredfunction_function: Some(luab_costatus as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"wrap".as_ptr(),
+                registeredfunction_function: Some(luab_cowrap as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"yield".as_ptr(),
+                registeredfunction_function: Some(luab_yield as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"isyieldable".as_ptr(),
+                registeredfunction_function: Some(luab_yieldable as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"close".as_ptr(),
+                registeredfunction_function: Some(luab_close as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);
     }

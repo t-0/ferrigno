@@ -5,20 +5,20 @@ use crate::user::*;
 use std::ptr::*;
 #[repr(C)]
 pub struct UserBox {
-    pub pointer: *mut libc::c_void,
-    pub size: usize,
+    pub userbox_pointer: *mut libc::c_void,
+    pub userbox_size: usize,
 }
 impl UserBox {
     pub unsafe fn resize_userbox(interpreter: *mut Interpreter, index: i32, new_size: usize) -> *mut libc::c_void {
         unsafe {
             let user_box: *mut UserBox = (*interpreter).to_pointer(index) as *mut UserBox;
-            let temp: *mut libc::c_void = raw_allocate((*user_box).pointer, (*user_box).size as usize, new_size);
+            let temp: *mut libc::c_void = raw_allocate((*user_box).userbox_pointer, (*user_box).userbox_size as usize, new_size);
             if temp.is_null() && new_size > 0 {
                 lua_pushstring(interpreter, c"not enough memory".as_ptr());
                 lua_error(interpreter);
             }
-            (*user_box).pointer = temp;
-            (*user_box).size = new_size;
+            (*user_box).userbox_pointer = temp;
+            (*user_box).userbox_size = new_size;
             return temp;
         }
     }
@@ -29,17 +29,33 @@ impl UserBox {
         }
     }
     pub const USERBOX_METATABLE: [RegisteredFunction; 2] = {
-        [{ RegisteredFunction { name: c"__gc".as_ptr(), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) } }, {
-            RegisteredFunction { name: c"__close".as_ptr(), function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32) }
-        }]
+        [
+            {
+                RegisteredFunction {
+                    registeredfunction_name: c"__gc".as_ptr(),
+                    registeredfunction_function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
+                }
+            },
+            {
+                RegisteredFunction {
+                    registeredfunction_name: c"__close".as_ptr(),
+                    registeredfunction_function: Some(UserBox::userbox_gc as unsafe fn(*mut Interpreter) -> i32),
+                }
+            },
+        ]
     };
     pub unsafe fn new_userbox(interpreter: *mut Interpreter) {
         unsafe {
             let box_0: *mut UserBox = User::lua_newuserdatauv(interpreter, size_of::<UserBox>(), 0) as *mut UserBox;
-            (*box_0).pointer = null_mut();
-            (*box_0).size = 0;
+            (*box_0).userbox_pointer = null_mut();
+            (*box_0).userbox_size = 0;
             if lual_newmetatable(interpreter, c"_UBOX*".as_ptr()) != 0 {
-                lual_setfuncs(interpreter, UserBox::USERBOX_METATABLE.as_ptr(), UserBox::USERBOX_METATABLE.len(), 0);
+                lual_setfuncs(
+                    interpreter,
+                    UserBox::USERBOX_METATABLE.as_ptr(),
+                    UserBox::USERBOX_METATABLE.len(),
+                    0,
+                );
             }
             lua_setmetatable(interpreter, -2);
         }

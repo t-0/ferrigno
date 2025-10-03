@@ -1,7 +1,7 @@
-use crate::utility::c::*;
+use crate::c::*;
 #[repr(C)]
 pub struct LoadF {
-    pub n: i32,
-    pub file: *mut FILE,
-    pub buffer: [i8; 8192],
+    pub loadf_n: i32,
+    pub loadf_file: *mut FILE,
+    pub loadf_buffer: [i8; 8192],
 }

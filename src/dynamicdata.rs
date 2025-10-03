@@ -1,22 +1,21 @@
 use crate::labeldescription::*;
+use crate::tdefaultnew::*;
 use crate::variabledescription::*;
 use crate::vectort::*;
-use crate::tdefaultnew::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct DynamicData {
-    pub active_variables: VectorT<VariableDescription>,
-    pub goto_: VectorT<LabelDescription>,
-    pub labels: VectorT<LabelDescription>,
+    pub dynamicdata_activevariables: VectorT<VariableDescription>,
+    pub dynamicdata_goto: VectorT<LabelDescription>,
+    pub dynamicdata_labels: VectorT<LabelDescription>,
 }
-impl DynamicData {
-}
+impl DynamicData {}
 impl TDefaultNew for DynamicData {
     fn new() -> Self {
         DynamicData {
-            active_variables: VectorT::<VariableDescription>::new(),
-            goto_: VectorT::<LabelDescription>::new(),
-            labels: VectorT::<LabelDescription>::new(),
+            dynamicdata_activevariables: VectorT::<VariableDescription>::new(),
+            dynamicdata_goto: VectorT::<LabelDescription>::new(),
+            dynamicdata_labels: VectorT::<LabelDescription>::new(),
         }
     }
 }

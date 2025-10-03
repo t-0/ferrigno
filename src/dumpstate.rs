@@ -7,19 +7,28 @@ pub const LUA_SIGNATURE: *const i8 = c"\x1BLua".as_ptr();
 #[repr(C)]
 pub struct DumpState {
     pub dumpstate_interpreter: *mut Interpreter,
-    pub write_function: WriteFunction,
-    pub pointer: *mut c_void,
-    pub is_strip: bool,
-    pub status: i32,
+    pub dumpstate_writefunction: WriteFunction,
+    pub dumpstate_pointer: *mut c_void,
+    pub dumpstate_isstrip: bool,
+    pub dumpstate_status: i32,
 }
 impl DumpState {
     pub fn new(interpreter: *mut Interpreter, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool) -> Self {
-        return DumpState { dumpstate_interpreter: interpreter, write_function, pointer, is_strip: is_strip, status: 0 };
+        return DumpState {
+            dumpstate_interpreter: interpreter,
+            dumpstate_writefunction: write_function,
+            dumpstate_pointer: pointer,
+            dumpstate_isstrip: is_strip,
+            dumpstate_status: 0,
+        };
     }
     pub unsafe fn dump_block(&mut self, pointer: *const c_void, size: usize) {
         unsafe {
-            if self.status == 0 && size > 0 {
-                self.status = (Some((self.write_function).expect("non-null function pointer"))).expect("non-null function pointer")(self.dumpstate_interpreter, pointer, size as usize, self.pointer);
+            if self.dumpstate_status == 0 && size > 0 {
+                self.dumpstate_status = (Some((self.dumpstate_writefunction).expect("non-null function pointer")))
+                    .expect("non-null function pointer")(
+                    self.dumpstate_interpreter, pointer, size as usize, self.dumpstate_pointer,
+                );
             }
         }
     }
@@ -41,7 +50,8 @@ impl DumpState {
                     break;
                 }
             }
-            buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] = (buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] as i32 | 0x80 as i32) as u8;
+            buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] =
+                (buffer[(size_of::<usize>() * 8 + 6) / 7 - 1] as i32 | 0x80 as i32) as u8;
             self.dump_block(
                 buffer
                     .as_mut_ptr()
@@ -77,12 +87,14 @@ impl DumpState {
         }
     }
 }
-pub unsafe fn save_prototype(interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool) -> i32 {
+pub unsafe fn save_prototype(
+    interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool,
+) -> i32 {
     unsafe {
         let mut dump_state = DumpState::new(interpreter, write_function, pointer, is_strip);
         dump_state.dump_header();
         dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
         (*prototype).dump_function(&mut dump_state, null_mut());
-        dump_state.status
+        dump_state.dumpstate_status
     }
 }

@@ -1,4 +1,4 @@
 pub union NativeEndian {
-    pub dummy: i32,
-    pub little: i8,
+    pub nativeendian_dummy: i32,
+    pub nativeendian_little: i8,
 }

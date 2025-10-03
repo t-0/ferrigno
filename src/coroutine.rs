@@ -1,6 +1,6 @@
-use crate::status::*;
 use crate::debuginfo::*;
 use crate::interpreter::*;
+use crate::status::*;
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(i32)]
 pub enum CoroutineStatus {
@@ -10,12 +10,12 @@ pub enum CoroutineStatus {
     Normal = 3,
 }
 impl CoroutineStatus {
-    pub fn get_name (& self) -> *const i8 {
+    pub fn get_name(&self) -> *const i8 {
         match *self {
-            CoroutineStatus::Dead => c"dead".as_ptr(),
-            CoroutineStatus::Yield => c"suspended".as_ptr(),
-            CoroutineStatus::Running => c"running".as_ptr(),
-            CoroutineStatus::Normal => c"normal".as_ptr(),
+            | CoroutineStatus::Dead => c"dead".as_ptr(),
+            | CoroutineStatus::Yield => c"suspended".as_ptr(),
+            | CoroutineStatus::Running => c"running".as_ptr(),
+            | CoroutineStatus::Normal => c"normal".as_ptr(),
         }
     }
 }
@@ -25,10 +25,10 @@ pub unsafe fn auxiliary_status(interpreter: *mut Interpreter, coroutine: *mut In
             return CoroutineStatus::Running;
         } else {
             match (*coroutine).get_status() {
-                Status::Yield => {
+                | Status::Yield => {
                     return CoroutineStatus::Yield;
                 },
-                Status::OK => {
+                | Status::OK => {
                     let mut debuginfo = DebugInfo::new();
                     if lua_getstack(coroutine, 0, &mut debuginfo) != 0 {
                         return CoroutineStatus::Normal;
@@ -38,7 +38,7 @@ pub unsafe fn auxiliary_status(interpreter: *mut Interpreter, coroutine: *mut In
                         return CoroutineStatus::Yield;
                     }
                 },
-                _ => {
+                | _ => {
                     return CoroutineStatus::Dead;
                 },
             }

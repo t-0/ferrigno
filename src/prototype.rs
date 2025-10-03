@@ -1,80 +1,83 @@
+use crate::absolutelineinfo::*;
+use crate::c::*;
 use crate::character::*;
-use crate::debugger::absolutelineinfo::*;
-use crate::object::*;
 use crate::dumpstate::*;
 use crate::functionstate::*;
 use crate::global::*;
+use crate::instruction::*;
 use crate::interpreter::*;
 use crate::loadable::*;
 use crate::localvariable::*;
+use crate::object::*;
+use crate::objectwithgclist::*;
+use crate::opcode::*;
+use crate::opmode::*;
 use crate::tag::*;
 use crate::tm::*;
+use crate::tobject::*;
 use crate::tobjectwithgclist::TObjectWithGCList;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::upvaluedescription::*;
-use crate::utility::c::*;
 use crate::vectort::*;
-use crate::vm::instruction::*;
-use crate::vm::opcode::*;
-use crate::vm::opmode::*;
-use crate::objectwithgclist::*;
-use crate::tobject::*;
 use std::ptr::*;
 pub type PrototypeSuper = ObjectWithGCList;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct Prototype {
-    pub super_: PrototypeSuper,
-    pub prototype_is_variable_arguments: bool,
-    pub prototype_count_parameters: u8,
-    pub prototype_maximum_stack_size: u8,
+    pub prototype_super: PrototypeSuper,
+    pub prototype_isvariablearguments: bool,
+    pub prototype_countparameters: u8,
+    pub prototype_maximumstacksize: u8,
     pub prototype_source: *mut TString,
     pub prototype_constants: VectorT<TValue>,
     pub prototype_code: VectorT<u32>,
     pub prototype_prototypes: VectorT<*mut Prototype>,
     pub prototype_upvalues: VectorT<UpValueDescription>,
-    pub prototype_local_variables: VectorT<LocalVariable>,
-    pub prototype_line_defined: i32,
-    pub prototype_last_line_defined: i32,
-    pub prototype_line_info: VectorT<i8>,
-    pub prototype_absolute_line_info: VectorT<AbsoluteLineInfo>,
+    pub prototype_localvariables: VectorT<LocalVariable>,
+    pub prototype_linedefined: i32,
+    pub prototype_lastlinedefined: i32,
+    pub prototype_lineinfo: VectorT<i8>,
+    pub prototype_absolutelineinfo: VectorT<AbsoluteLineInfo>,
 }
 impl TObject for Prototype {
     fn as_object(&self) -> &Object {
-        self.super_.as_object()
+        self.prototype_super.as_object()
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        self.super_.as_object_mut()
+        self.prototype_super.as_object_mut()
     }
-    fn get_class_name(&mut self) -> String {
+    fn get_classname(&mut self) -> String {
         "prototype".to_string()
     }
 }
 impl TObjectWithGCList for Prototype {
-    fn getgclist(& mut self) -> *mut *mut PrototypeSuper {
-        self.super_.getgclist()
+    fn getgclist(&mut self) -> *mut *mut PrototypeSuper {
+        self.prototype_super.getgclist()
     }
 }
 impl Prototype {
     pub unsafe fn dump_code(&self, dump_state: &mut DumpState) {
         unsafe {
             dump_state.dump_int(self.prototype_code.get_size() as i32);
-            dump_state.dump_block(self.prototype_code.vectort_pointer as *const libc::c_void, (self.prototype_code.get_size() as usize).wrapping_mul(size_of::<u32>()));
+            dump_state.dump_block(
+                self.prototype_code.vectort_pointer as *const libc::c_void,
+                (self.prototype_code.get_size() as usize).wrapping_mul(size_of::<u32>()),
+            );
         }
     }
     pub unsafe fn dump_function(&self, dump_state: &mut DumpState, source: *mut TString) {
         unsafe {
-            if dump_state.is_strip || self.prototype_source == source {
+            if dump_state.dumpstate_isstrip || self.prototype_source == source {
                 TString::dump_string(dump_state, null());
             } else {
                 TString::dump_string(dump_state, self.prototype_source);
             }
-            dump_state.dump_int(self.prototype_line_defined);
-            dump_state.dump_int(self.prototype_last_line_defined);
-            dump_state.dump_byte(self.prototype_count_parameters);
-            dump_state.dump_byte(if self.prototype_is_variable_arguments { 1 } else { 0 });
-            dump_state.dump_byte(self.prototype_maximum_stack_size);
+            dump_state.dump_int(self.prototype_linedefined);
+            dump_state.dump_int(self.prototype_lastlinedefined);
+            dump_state.dump_byte(self.prototype_countparameters);
+            dump_state.dump_byte(if self.prototype_isvariablearguments { 1 } else { 0 });
+            dump_state.dump_byte(self.prototype_maximumstacksize);
             self.dump_code(dump_state);
             self.dump_constants(dump_state);
             self.dump_upvalues(dump_state);
@@ -84,29 +87,50 @@ impl Prototype {
     }
     pub unsafe fn dump_debug(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n = if dump_state.is_strip { 0 } else { self.prototype_line_info.get_size() as usize };
+            let n = if dump_state.dumpstate_isstrip {
+                0
+            } else {
+                self.prototype_lineinfo.get_size() as usize
+            };
             dump_state.dump_int(n as i32);
-            dump_state.dump_block(self.prototype_line_info.vectort_pointer as *const libc::c_void, n);
+            dump_state.dump_block(self.prototype_lineinfo.vectort_pointer as *const libc::c_void, n);
         }
         unsafe {
-            let n = if dump_state.is_strip { 0 } else { self.prototype_absolute_line_info.get_size() as usize };
+            let n = if dump_state.dumpstate_isstrip {
+                0
+            } else {
+                self.prototype_absolutelineinfo.get_size() as usize
+            };
             dump_state.dump_int(n as i32);
             for i in 0..n {
-                dump_state.dump_int((*(self.prototype_absolute_line_info.vectort_pointer).offset(i as isize)).program_counter);
-                dump_state.dump_int((*(self.prototype_absolute_line_info.vectort_pointer).offset(i as isize)).line);
+                dump_state.dump_int(
+                    (*(self.prototype_absolutelineinfo.vectort_pointer).offset(i as isize)).absolutelineinfo_programcounter,
+                );
+                dump_state.dump_int((*(self.prototype_absolutelineinfo.vectort_pointer).offset(i as isize)).absolutelineinfo_line);
             }
         }
         unsafe {
-            let n = if dump_state.is_strip { 0 } else { self.prototype_local_variables.get_size() as usize };
+            let n = if dump_state.dumpstate_isstrip {
+                0
+            } else {
+                self.prototype_localvariables.get_size() as usize
+            };
             dump_state.dump_int(n as i32);
             for i in 0..n {
-                TString::dump_string(dump_state, (*(self.prototype_local_variables.at(i as isize))).variable_name);
-                dump_state.dump_int((*(self.prototype_local_variables.at(i as isize))).start_program_counter);
-                dump_state.dump_int((*(self.prototype_local_variables.at(i as isize))).end_program_counter);
+                TString::dump_string(
+                    dump_state,
+                    (*(self.prototype_localvariables.at(i as isize))).localvariable_variablename,
+                );
+                dump_state.dump_int((*(self.prototype_localvariables.at(i as isize))).localvariable_startprogramcounter);
+                dump_state.dump_int((*(self.prototype_localvariables.at(i as isize))).localvariable_endprogramcounter);
             }
         }
         unsafe {
-            let n = if dump_state.is_strip { 0 } else { self.prototype_upvalues.get_size() as usize };
+            let n = if dump_state.dumpstate_isstrip {
+                0
+            } else {
+                self.prototype_upvalues.get_size() as usize
+            };
             dump_state.dump_int(n as i32);
             for i in 0..n {
                 TString::dump_string(dump_state, (*(self.prototype_upvalues.at(i as isize))).upvaluedescription_name);
@@ -138,19 +162,19 @@ impl Prototype {
             dump_state.dump_int(n as i32);
             for i in 0..n {
                 let tvalue: *const TValue = &mut *(self.prototype_constants.vectort_pointer).offset(i as isize) as *mut TValue;
-                let tagvariant = (*tvalue).get_tag_variant();
+                let tagvariant = (*tvalue).get_tagvariant();
                 dump_state.dump_byte(tagvariant as u8);
                 match tagvariant {
-                    TagVariant::NumericNumber => {
-                        dump_state.dump_number((*tvalue).value.value_number);
+                    | TagVariant::NumericNumber => {
+                        dump_state.dump_number((*tvalue).tvalue_value.value_number);
                     },
-                    TagVariant::NumericInteger => {
-                        dump_state.dump_integer((*tvalue).value.value_integer);
+                    | TagVariant::NumericInteger => {
+                        dump_state.dump_integer((*tvalue).tvalue_value.value_integer);
                     },
-                    TagVariant::StringShort | TagVariant::StringLong => {
-                        TString::dump_string(dump_state, &mut (*((*tvalue).value.value_object as *mut TString)));
+                    | TagVariant::StringShort | TagVariant::StringLong => {
+                        TString::dump_string(dump_state, &mut (*((*tvalue).tvalue_value.value_object as *mut TString)));
                     },
-                    _ => {},
+                    | _ => {},
                 }
             }
         }
@@ -159,36 +183,70 @@ impl Prototype {
         unsafe {
             if !self.prototype_source.is_null() {
                 if (*self.prototype_source).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, &mut (*(self.prototype_source as *mut Object)));
+                    Object::really_mark_object(global, &mut (*(self.prototype_source as *mut Object)));
                 }
             }
             for i in 0..self.prototype_constants.get_size() {
-                if ((*(self.prototype_constants.vectort_pointer).offset(i as isize)).is_collectable()) && (*(*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                    really_mark_object(global, (*(self.prototype_constants.vectort_pointer).offset(i as isize)).value.value_object);
+                if ((*(self.prototype_constants.vectort_pointer).offset(i as isize)).is_collectable())
+                    && (*(*(self.prototype_constants.vectort_pointer).offset(i as isize))
+                        .tvalue_value
+                        .value_object)
+                        .get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                {
+                    Object::really_mark_object(
+                        global,
+                        (*(self.prototype_constants.vectort_pointer).offset(i as isize))
+                            .tvalue_value
+                            .value_object,
+                    );
                 }
             }
             for i in 0..self.prototype_upvalues.get_size() {
                 if !((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).is_null() {
-                    if (*(*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name as *mut Object)));
+                    if (*(*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name).get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                    {
+                        Object::really_mark_object(
+                            global,
+                            &mut (*((*(self.prototype_upvalues.vectort_pointer).offset(i as isize)).upvaluedescription_name
+                                as *mut Object)),
+                        );
                     }
                 }
             }
             for i in 0..self.prototype_prototypes.get_size() {
                 if !(*(self.prototype_prototypes.vectort_pointer).offset(i as isize)).is_null() {
                     if (**(self.prototype_prototypes.vectort_pointer).offset(i as isize)).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*(*(self.prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)));
+                        Object::really_mark_object(
+                            global,
+                            &mut (*(*(self.prototype_prototypes.vectort_pointer).offset(i as isize) as *mut Object)),
+                        );
                     }
                 }
             }
-            for i in 0..self.prototype_local_variables.get_size() {
-                if !((*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name).is_null() {
-                    if (*(*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                        really_mark_object(global, &mut (*((*(self.prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name as *mut Object)));
+            for i in 0..self.prototype_localvariables.get_size() {
+                if !((*(self.prototype_localvariables.vectort_pointer).offset(i as isize)).localvariable_variablename).is_null() {
+                    if (*(*(self.prototype_localvariables.vectort_pointer).offset(i as isize)).localvariable_variablename)
+                        .get_marked()
+                        & (1 << 3 | 1 << 4)
+                        != 0
+                    {
+                        Object::really_mark_object(
+                            global,
+                            &mut (*((*(self.prototype_localvariables.vectort_pointer).offset(i as isize)).localvariable_variablename
+                                as *mut Object)),
+                        );
                     }
                 }
             }
-            return (1 + self.prototype_constants.get_size() + self.prototype_upvalues.get_size() + self.prototype_prototypes.get_size() + self.prototype_local_variables.get_size()) as usize;
+            return (1
+                + self.prototype_constants.get_size()
+                + self.prototype_upvalues.get_size()
+                + self.prototype_prototypes.get_size()
+                + self.prototype_localvariables.get_size()) as usize;
         }
     }
     pub unsafe fn prototype_free(&mut self, interpreter: *mut Interpreter) {
@@ -206,16 +264,16 @@ impl Prototype {
                 (self.prototype_constants.get_size() as usize).wrapping_mul(size_of::<TValue>() as usize) as usize,
             );
             (*interpreter).free_memory(
-                self.prototype_line_info.vectort_pointer as *mut libc::c_void,
-                (self.prototype_line_info.get_size() as usize).wrapping_mul(1 as usize) as usize,
+                self.prototype_lineinfo.vectort_pointer as *mut libc::c_void,
+                (self.prototype_lineinfo.get_size() as usize).wrapping_mul(1 as usize) as usize,
             );
             (*interpreter).free_memory(
-                self.prototype_absolute_line_info.vectort_pointer as *mut libc::c_void,
-                (self.prototype_absolute_line_info.get_size() as usize).wrapping_mul(size_of::<AbsoluteLineInfo>() as usize) as usize,
+                self.prototype_absolutelineinfo.vectort_pointer as *mut libc::c_void,
+                (self.prototype_absolutelineinfo.get_size() as usize).wrapping_mul(size_of::<AbsoluteLineInfo>() as usize) as usize,
             );
             (*interpreter).free_memory(
-                self.prototype_local_variables.vectort_pointer as *mut libc::c_void,
-                (self.prototype_local_variables.get_size() as usize).wrapping_mul(size_of::<LocalVariable>() as usize) as usize,
+                self.prototype_localvariables.vectort_pointer as *mut libc::c_void,
+                (self.prototype_localvariables.get_size() as usize).wrapping_mul(size_of::<LocalVariable>() as usize) as usize,
             );
             (*interpreter).free_memory(
                 self.prototype_upvalues.vectort_pointer as *mut libc::c_void,
@@ -227,22 +285,30 @@ impl Prototype {
 }
 pub unsafe fn getbaseline(prototype: *const Prototype, program_counter: i32, basepc: *mut i32) -> i32 {
     unsafe {
-        if (*prototype).prototype_absolute_line_info.get_size() == 0 || program_counter < (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(0 as isize)).program_counter {
+        if (*prototype).prototype_absolutelineinfo.get_size() == 0
+            || program_counter
+                < (*((*prototype).prototype_absolutelineinfo.vectort_pointer).offset(0 as isize)).absolutelineinfo_programcounter
+        {
             *basepc = -1;
-            return (*prototype).prototype_line_defined;
+            return (*prototype).prototype_linedefined;
         } else {
             let mut i = program_counter / 128 - 1;
-            while (i + 1) < (*prototype).prototype_absolute_line_info.get_size() as i32 && program_counter >= (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset((i + 1) as isize)).program_counter {
+            while (i + 1) < (*prototype).prototype_absolutelineinfo.get_size() as i32
+                && program_counter
+                    >= (*((*prototype).prototype_absolutelineinfo.vectort_pointer).offset((i + 1) as isize))
+                        .absolutelineinfo_programcounter
+            {
                 i += 1;
             }
-            *basepc = (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).program_counter;
-            return (*((*prototype).prototype_absolute_line_info.vectort_pointer).offset(i as isize)).line;
+            *basepc =
+                (*((*prototype).prototype_absolutelineinfo.vectort_pointer).offset(i as isize)).absolutelineinfo_programcounter;
+            return (*((*prototype).prototype_absolutelineinfo.vectort_pointer).offset(i as isize)).absolutelineinfo_line;
         };
     }
 }
 pub unsafe fn luag_getfuncline(prototype: *const Prototype, program_counter: i32) -> i32 {
     unsafe {
-        if ((*prototype).prototype_line_info.vectort_pointer).is_null() {
+        if ((*prototype).prototype_lineinfo.vectort_pointer).is_null() {
             return -1;
         } else {
             let mut basepc: i32 = 0;
@@ -253,7 +319,7 @@ pub unsafe fn luag_getfuncline(prototype: *const Prototype, program_counter: i32
                 if !(fresh8 < program_counter) {
                     break;
                 }
-                baseline += *((*prototype).prototype_line_info.vectort_pointer).offset(basepc as isize) as i32;
+                baseline += *((*prototype).prototype_lineinfo.vectort_pointer).offset(basepc as isize) as i32;
             }
             return baseline;
         };
@@ -271,8 +337,8 @@ pub unsafe fn upvalname(p: *const Prototype, uv: i32) -> *const i8 {
 }
 pub unsafe fn nextline(p: *const Prototype, currentline: i32, program_counter: i32) -> i32 {
     unsafe {
-        if *((*p).prototype_line_info.vectort_pointer).offset(program_counter as isize) as i32 != -(0x80 as i32) {
-            return currentline + *((*p).prototype_line_info.vectort_pointer).offset(program_counter as isize) as i32;
+        if *((*p).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+            return currentline + *((*p).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32;
         } else {
             return luag_getfuncline(p, program_counter);
         };
@@ -282,7 +348,10 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
     unsafe {
         let mut setreg: i32 = -1;
         let mut jmptarget: i32 = 0;
-        if OPMODES[(*((*p).prototype_code.vectort_pointer).offset(lastpc as isize) >> 0 & !(!(0) << 7) << 0) as usize] as i32 & 1 << 7 != 0 {
+        if OPMODES[(*((*p).prototype_code.vectort_pointer).offset(lastpc as isize) >> 0 & !(!(0) << 7) << 0) as usize] as i32
+            & 1 << 7
+            != 0
+        {
             lastpc -= 1;
         }
         let mut program_counter: i32 = 0;
@@ -292,17 +361,17 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
             let a: i32 = (i >> POSITION_A & !(!(0) << 8) << 0) as i32;
             let change: i32;
             match op as u32 {
-                8 => {
+                | 8 => {
                     let b: i32 = (i >> POSITION_B & !(!(0) << 8) << 0) as i32;
                     change = (a <= reg && reg <= a + b) as i32;
                 },
-                76 => {
+                | 76 => {
                     change = (reg >= a + 2) as i32;
                 },
-                68 | 69 => {
+                | 68 | 69 => {
                     change = (reg >= a) as i32;
                 },
-                56 => {
+                | 56 => {
                     let b_0: i32 = (i >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
                     let dest: i32 = program_counter + 1 + b_0;
                     if dest <= lastpc && dest > jmptarget {
@@ -310,7 +379,7 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
                     }
                     change = 0;
                 },
-                _ => {
+                | _ => {
                     change = (OPMODES[op as usize] as i32 & 1 << 3 != 0 && reg == a) as i32;
                 },
             }
@@ -326,7 +395,7 @@ pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *c
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
         if (*kvalue).is_tagtype_string() {
-            *name = (*((*kvalue).value.value_object as *mut TString)).get_contents_mut();
+            *name = (*((*kvalue).tvalue_value.value_object as *mut TString)).get_contents_mut();
             return c"code_constant".as_ptr();
         } else {
             *name = c"?".as_ptr();
@@ -347,27 +416,28 @@ pub unsafe fn basicgetobjname(p: *const Prototype, ppc: *mut i32, reg: i32, name
             let i: u32 = *((*p).prototype_code.vectort_pointer).offset(program_counter as isize);
             let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
             match op as u32 {
-                0 => {
+                | 0 => {
                     let b: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
                     if b < (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32 {
                         return basicgetobjname(p, ppc, b, name);
                     }
                 },
-                9 => {
+                | 9 => {
                     *name = upvalname(p, (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32);
                     return STRING_UPVALUE;
                 },
-                3 => {
+                | 3 => {
                     return kname(p, (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32, name);
                 },
-                4 => {
+                | 4 => {
                     return kname(
                         p,
-                        (*((*p).prototype_code.vectort_pointer).offset((program_counter + 1) as isize) >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32,
+                        (*((*p).prototype_code.vectort_pointer).offset((program_counter + 1) as isize) >> POSITION_A
+                            & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32,
                         name,
                     );
                 },
-                _ => {},
+                | _ => {},
             }
         }
         return null();
@@ -403,7 +473,11 @@ pub unsafe fn is_environment(p: *const Prototype, mut program_counter: i32, i: u
                 name = null();
             }
         }
-        return if !name.is_null() && strcmp(name, c"_ENV".as_ptr()) == 0 { c"global".as_ptr() } else { c"field".as_ptr() };
+        return if !name.is_null() && strcmp(name, c"_ENV".as_ptr()) == 0 {
+            c"global".as_ptr()
+        } else {
+            c"field".as_ptr()
+        };
     }
 }
 pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *mut *const i8) -> *const i8 {
@@ -415,89 +489,91 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
             let i: u32 = *((*p).prototype_code.vectort_pointer).offset(lastpc as isize);
             let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
             match op as u32 {
-                11 => {
+                | 11 => {
                     let k: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     kname(p, k, name);
                     return is_environment(p, lastpc, i, 1);
                 },
-                12 => {
+                | 12 => {
                     let k_0: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     rname(p, lastpc, k_0, name);
                     return is_environment(p, lastpc, i, 0);
                 },
-                13 => {
+                | 13 => {
                     *name = c"integer index".as_ptr();
                     return c"field".as_ptr();
                 },
-                14 => {
+                | 14 => {
                     let k_1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
                     kname(p, k_1, name);
                     return is_environment(p, lastpc, i, 0);
                 },
-                20 => {
+                | 20 => {
                     rkname(p, lastpc, i, name);
                     return c"method".as_ptr();
                 },
-                _ => {},
+                | _ => {},
             }
         }
         return null();
     }
 }
-pub unsafe fn funcnamefromcode(interpreter: *mut Interpreter, p: *const Prototype, program_counter: i32, name: *mut *const i8) -> *const i8 {
+pub unsafe fn funcnamefromcode(
+    interpreter: *mut Interpreter, p: *const Prototype, program_counter: i32, name: *mut *const i8,
+) -> *const i8 {
     unsafe {
         let tm: u32;
         let i: u32 = *((*p).prototype_code.vectort_pointer).offset(program_counter as isize);
         match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
-            OPCODE_CALL | OPCODE_TAILCALL => {
+            | OPCODE_CALL | OPCODE_TAILCALL => {
                 return getobjname(p, program_counter, (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32, name);
             },
-            OPCODE_TFORCALL => {
+            | OPCODE_TFORCALL => {
                 *name = c"for iterator".as_ptr();
                 return c"for iterator".as_ptr();
             },
-            OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
+            | OPCODE_SELF | OPCODE_GET_TABLE_UPVALUE | OPCODE_GET_TABLE | OPCODE_INDEX_INTEGER | OPCODE_GET_FIELD => {
                 tm = TM_INDEX;
             },
-            OPCODE_SETTABUP | OPCODE_SETTABLE | OPCODE_SETI | OPCODE_SETFIELD => {
+            | OPCODE_SETTABUP | OPCODE_SETTABLE | OPCODE_SETI | OPCODE_SETFIELD => {
                 tm = TM_NEWINDEX;
             },
-            OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
+            | OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
                 tm = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
             },
-            OPCODE_UNM => {
+            | OPCODE_UNM => {
                 tm = TM_UNM;
             },
-            OPCODE_BNOT => {
+            | OPCODE_BNOT => {
                 tm = TM_BNOT;
             },
-            OPCODE_LEN => {
+            | OPCODE_LEN => {
                 tm = TM_LEN;
             },
-            OPCODE_CONCAT => {
+            | OPCODE_CONCAT => {
                 tm = TM_CONCAT;
             },
-            OPCODE_EQ => {
+            | OPCODE_EQ => {
                 tm = TM_EQ;
             },
-            OPCODE_LT | OPCODE_LTI | OPCODE_GTI => {
+            | OPCODE_LT | OPCODE_LTI | OPCODE_GTI => {
                 tm = TM_LT;
             },
-            OPCODE_LE | OPCODE_LEI | OPCODE_GEI => {
+            | OPCODE_LE | OPCODE_LEI | OPCODE_GEI => {
                 tm = TM_LE;
             },
-            OPCODE_CLOSE | OPCODE_RETURN => {
+            | OPCODE_CLOSE | OPCODE_RETURN => {
                 tm = TM_CLOSE;
             },
-            _ => return null(),
+            | _ => return null(),
         }
-        *name = ((*(*(*interpreter).global).global_tmname[tm as usize]).get_contents()).offset(2 as isize);
+        *name = ((*(*(*interpreter).interpreter_global).global_tmname[tm as usize]).get_contents()).offset(2 as isize);
         return c"metamethod".as_ptr();
     }
 }
 pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: i32) -> i32 {
     unsafe {
-        if ((*p).prototype_line_info.vectort_pointer).is_null() {
+        if ((*p).prototype_lineinfo.vectort_pointer).is_null() {
             return 0;
         }
         if newpc - old_program_counter < 128 as i32 / 2 {
@@ -505,7 +581,7 @@ pub unsafe fn changedline(p: *const Prototype, old_program_counter: i32, newpc: 
             let mut program_counter: i32 = old_program_counter;
             loop {
                 program_counter += 1;
-                let line_info: i32 = *((*p).prototype_line_info.vectort_pointer).offset(program_counter as isize) as i32;
+                let line_info: i32 = *((*p).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32;
                 if line_info == -(0x80 as i32) {
                     break;
                 }
@@ -525,28 +601,34 @@ pub unsafe fn luaf_newproto(interpreter: *mut Interpreter) -> *mut Prototype {
         (*prototype).prototype_constants.initialize();
         (*prototype).prototype_prototypes.initialize();
         (*prototype).prototype_code.initialize();
-        (*prototype).prototype_line_info.initialize();
-        (*prototype).prototype_absolute_line_info.initialize();
+        (*prototype).prototype_lineinfo.initialize();
+        (*prototype).prototype_absolutelineinfo.initialize();
         (*prototype).prototype_upvalues.initialize();
-        (*prototype).prototype_count_parameters = 0;
-        (*prototype).prototype_is_variable_arguments = false;
-        (*prototype).prototype_maximum_stack_size = 0;
-        (*prototype).prototype_local_variables.initialize();
-        (*prototype).prototype_line_defined = 0;
-        (*prototype).prototype_last_line_defined = 0;
+        (*prototype).prototype_countparameters = 0;
+        (*prototype).prototype_isvariablearguments = false;
+        (*prototype).prototype_maximumstacksize = 0;
+        (*prototype).prototype_localvariables.initialize();
+        (*prototype).prototype_linedefined = 0;
+        (*prototype).prototype_lastlinedefined = 0;
         (*prototype).prototype_source = null_mut();
         return prototype;
     }
 }
 pub unsafe fn luaf_getlocalname(prototype: *const Prototype, mut local_number: i32, program_counter: i32) -> *const i8 {
     unsafe {
-        for i in 0..(*prototype).prototype_local_variables.get_size() {
-            if (*((*prototype).prototype_local_variables.vectort_pointer).offset(i as isize)).start_program_counter > program_counter {
+        for i in 0..(*prototype).prototype_localvariables.get_size() {
+            if (*((*prototype).prototype_localvariables.vectort_pointer).offset(i as isize)).localvariable_startprogramcounter
+                > program_counter
+            {
                 return null();
-            } else if program_counter < (*((*prototype).prototype_local_variables.vectort_pointer).offset(i as isize)).end_program_counter {
+            } else if program_counter
+                < (*((*prototype).prototype_localvariables.vectort_pointer).offset(i as isize)).localvariable_endprogramcounter
+            {
                 local_number -= 1;
                 if local_number == 0 {
-                    return (*(*((*prototype).prototype_local_variables.vectort_pointer).offset(i as isize)).variable_name).get_contents_mut();
+                    return (*(*((*prototype).prototype_localvariables.vectort_pointer).offset(i as isize))
+                        .localvariable_variablename)
+                        .get_contents_mut();
                 }
             }
         }

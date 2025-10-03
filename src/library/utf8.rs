@@ -1,7 +1,7 @@
 use crate::buffer::*;
-use crate::tdefaultnew::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
+use crate::tdefaultnew::*;
 use std::ptr::*;
 pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
     if position >= 0 {
@@ -14,7 +14,14 @@ pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
 }
 pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: bool) -> *const i8 {
     unsafe {
-        pub const LIMITS: [u32; 6] = [!(0u32), 0x80 as u32, 0x800 as u32, 0x10000 as u32, 0x200000 as u32, 0x4000000 as u32];
+        pub const LIMITS: [u32; 6] = [
+            !(0u32),
+            0x80 as u32,
+            0x800 as u32,
+            0x10000 as u32,
+            0x200000 as u32,
+            0x4000000 as u32,
+        ];
         let mut c: u32 = *s.offset(0 as isize) as u8 as u32;
         let mut res: u32 = 0u32;
         if c < 0x80 as u32 {
@@ -63,7 +70,8 @@ pub unsafe fn utflen(interpreter: *mut Interpreter) -> i32 {
             != 0
             || lual_argerror(interpreter, 2, c"initial position out of bounds".as_ptr()) != 0) as i32;
         posj -= 1;
-        (((posj < length as i64) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"final position out of bounds".as_ptr()) != 0) as i32;
+        (((posj < length as i64) as i32 != 0) as i64 != 0
+            || lual_argerror(interpreter, 3, c"final position out of bounds".as_ptr()) != 0) as i32;
         while posi <= posj {
             let s1: *const i8 = utf8_decode(s.offset(posi as isize), null_mut(), !lax);
             if s1.is_null() {
@@ -114,7 +122,8 @@ pub unsafe fn codepoint(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn pushutfchar(interpreter: *mut Interpreter, arg: i32) {
     unsafe {
         let code: usize = lual_checkinteger(interpreter, arg) as usize;
-        (((code <= 0x7fffffff as usize) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"value out of range".as_ptr()) != 0) as i32;
+        (((code <= 0x7fffffff as usize) as i32 != 0) as i64 != 0
+            || lual_argerror(interpreter, arg, c"value out of range".as_ptr()) != 0) as i32;
         lua_pushfstring(interpreter, c"%U".as_ptr(), code as i64);
     }
 }
@@ -226,7 +235,8 @@ pub unsafe fn iter_codes(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let lax = lua_toboolean(interpreter, 2);
         let s: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"invalid UTF-8 code".as_ptr()) != 0) as i32;
+        ((!(*s as i32 & 0xc0 as i32 == 0x80 as i32) as i32 != 0) as i64 != 0
+            || lual_argerror(interpreter, 1, c"invalid UTF-8 code".as_ptr()) != 0) as i32;
         lua_pushcclosure(
             interpreter,
             if lax {
@@ -243,19 +253,54 @@ pub unsafe fn iter_codes(interpreter: *mut Interpreter) -> i32 {
 }
 pub const UTF8_FUNCTIONS: [RegisteredFunction; 5] = {
     [
-        { RegisteredFunction { name: c"offset".as_ptr(), function: Some(byteoffset as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"codepoint".as_ptr(), function: Some(codepoint as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"char".as_ptr(), function: Some(utfchar as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"len".as_ptr(), function: Some(utflen as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"codes".as_ptr(), function: Some(iter_codes as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"offset".as_ptr(),
+                registeredfunction_function: Some(byteoffset as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"codepoint".as_ptr(),
+                registeredfunction_function: Some(codepoint as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"char".as_ptr(),
+                registeredfunction_function: Some(utfchar as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"len".as_ptr(),
+                registeredfunction_function: Some(utflen as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"codes".as_ptr(),
+                registeredfunction_function: Some(iter_codes as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), UTF8_FUNCTIONS.len(), 0);
-        lua_pushlstring(interpreter, b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*".as_ptr() as *const i8, (size_of::<[i8; 15]>() as usize).wrapping_sub(1 as usize));
+        lua_pushlstring(
+            interpreter,
+            b"[\0-\x7F\xC2-\xFD][\x80-\xBF]*".as_ptr() as *const i8,
+            (size_of::<[i8; 15]>() as usize).wrapping_sub(1 as usize),
+        );
         lua_setfield(interpreter, -2, c"charpattern".as_ptr());
         return 1;
     }

@@ -1,6 +1,6 @@
 use crate::buffer::*;
+use crate::c::*;
 use crate::character::*;
-use crate::tdefaultnew::*;
 use crate::gmatchstate::*;
 use crate::header::*;
 use crate::interpreter::*;
@@ -10,12 +10,12 @@ use crate::nativeendian::*;
 use crate::registeredfunction::*;
 use crate::streamwriter::*;
 use crate::tag::*;
-use crate::tstring::*;
-use crate::utility::c::*;
-use crate::tvalue::*;
+use crate::tdefaultnew::*;
 use crate::tm::*;
+use crate::tstring::*;
+use crate::tvalue::*;
 use crate::utility::*;
-use libc::{memcpy, tolower, toupper, memchr, memcmp};
+use libc::{memchr, memcmp, memcpy, tolower, toupper};
 use std::ptr::*;
 pub unsafe fn str_len(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -32,7 +32,11 @@ pub unsafe fn str_sub(interpreter: *mut Interpreter) -> i32 {
         let start: usize = get_position_relative(lual_checkinteger(interpreter, 2), l);
         let end: usize = get_position_end(interpreter, 3, -1 as i64, l);
         if start <= end {
-            lua_pushlstring(interpreter, s.offset(start as isize).offset(-(1 as isize)), end.wrapping_sub(start).wrapping_add(1 as usize));
+            lua_pushlstring(
+                interpreter,
+                s.offset(start as isize).offset(-(1 as isize)),
+                end.wrapping_sub(start).wrapping_add(1 as usize),
+            );
         } else {
             lua_pushstring(interpreter, c"".as_ptr());
         }
@@ -87,7 +91,15 @@ pub unsafe fn str_rep(interpreter: *mut Interpreter) -> i32 {
         let sep: *const i8 = lual_optlstring(interpreter, 3, c"".as_ptr(), &mut lsep);
         if n <= 0 {
             lua_pushstring(interpreter, c"".as_ptr());
-        } else if l.wrapping_add(lsep) < l || l.wrapping_add(lsep) as usize > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as usize) / n as usize {
+        } else if l.wrapping_add(lsep) < l
+            || l.wrapping_add(lsep) as usize
+                > ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                    !(0usize)
+                } else {
+                    0x7FFFFFFF as usize
+                }) as usize)
+                    / n as usize
+        {
             return lual_error(interpreter, c"resulting string too large".as_ptr());
         } else {
             let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize) * lsep);
@@ -141,7 +153,8 @@ pub unsafe fn str_char(interpreter: *mut Interpreter) -> i32 {
         let p: *mut i8 = buffer.initialize_with_size(interpreter, n as usize);
         for i in 1..(1 + n) {
             let c: usize = lual_checkinteger(interpreter, i) as usize;
-            (((c <= (127 as i32 * 2 + 1) as usize) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, i, c"value out of range".as_ptr()) != 0) as i32;
+            (((c <= (127 as i32 * 2 + 1) as usize) as i32 != 0) as i64 != 0
+                || lual_argerror(interpreter, i, c"value out of range".as_ptr()) != 0) as i32;
             *p.offset((i - 1) as isize) = c as u8 as i8;
         }
         buffer.push_result_with_size(n as usize);
@@ -180,18 +193,18 @@ pub unsafe fn arith(interpreter: *mut Interpreter, op: i32, mtname: *const i8) -
     unsafe {
         if tonum(interpreter, 1) != 0 && tonum(interpreter, 2) != 0 {
             if !(op != 12 as i32 && op != 13 as i32) {
-                let io1: *mut TValue = &mut (*(*interpreter).top.stkidrel_pointer);
-                let io2: *const TValue = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
+                let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
+                let io2: *const TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
                 (*io1).copy_from(&*io2);
-                (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(1);
+                (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
             }
-            let p1 = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(2 as isize)));
-            let p2 = &mut (*(*interpreter).top.stkidrel_pointer.offset(-(1 as isize)));
-            let res = (*interpreter).top.stkidrel_pointer.offset(-(2 as isize));
+            let p1 = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(2 as isize)));
+            let p2 = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
+            let res = (*interpreter).interpreter_top.stkidrel_pointer.offset(-(2 as isize));
             if luao_rawarith(interpreter, op, p1, p2, &mut (*res)) == 0 {
                 luat_trybintm(interpreter, p1, p2, res, (op - 0 + TM_ADD as i32) as u32);
             }
-            (*interpreter).top.stkidrel_pointer = (*interpreter).top.stkidrel_pointer.offset(-1);
+            (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
         } else {
             trymt(interpreter, mtname);
         }
@@ -240,14 +253,54 @@ pub unsafe fn arith_unm(interpreter: *mut Interpreter) -> i32 {
 }
 pub const STRING_METAMETHODS: [RegisteredFunction; 8] = {
     [
-        { RegisteredFunction { name: c"__add".as_ptr(), function: Some(arith_add as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__sub".as_ptr(), function: Some(arith_sub as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__mul".as_ptr(), function: Some(arith_mul as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__mod".as_ptr(), function: Some(arith_mod as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__pow".as_ptr(), function: Some(arith_pow as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__div".as_ptr(), function: Some(arith_div as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__idiv".as_ptr(), function: Some(arith_idiv as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"__unm".as_ptr(), function: Some(arith_unm as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__add".as_ptr(),
+                registeredfunction_function: Some(arith_add as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__sub".as_ptr(),
+                registeredfunction_function: Some(arith_sub as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__mul".as_ptr(),
+                registeredfunction_function: Some(arith_mul as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__mod".as_ptr(),
+                registeredfunction_function: Some(arith_mod as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__pow".as_ptr(),
+                registeredfunction_function: Some(arith_pow as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__div".as_ptr(),
+                registeredfunction_function: Some(arith_div as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__idiv".as_ptr(),
+                registeredfunction_function: Some(arith_idiv as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"__unm".as_ptr(),
+                registeredfunction_function: Some(arith_unm as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn lmemfind(mut s1: *const i8, mut l1: usize, s2: *const i8, mut l2: usize) -> *const i8 {
@@ -265,7 +318,12 @@ pub unsafe fn lmemfind(mut s1: *const i8, mut l1: usize, s2: *const i8, mut l2: 
                 !initial.is_null()
             } {
                 initial = initial.offset(1);
-                if memcmp(initial as *const libc::c_void, s2.offset(1 as isize) as *const libc::c_void, l2 as usize) == 0 {
+                if memcmp(
+                    initial as *const libc::c_void,
+                    s2.offset(1 as isize) as *const libc::c_void,
+                    l2 as usize,
+                ) == 0
+                {
                     return initial.offset(-(1 as isize));
                 } else {
                     l1 = (l1 as usize).wrapping_sub(initial.offset_from(s1) as usize) as usize;
@@ -297,7 +355,8 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
         let mut lp: usize = 0;
         let s: *const i8 = lual_checklstring(interpreter, 1, &mut lexical_state);
         let mut p: *const i8 = lual_checklstring(interpreter, 2, &mut lp);
-        let initial: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
+        let initial: usize =
+            (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), lexical_state)).wrapping_sub(1 as usize);
         if initial > lexical_state {
             (*interpreter).push_nil();
             return 1;
@@ -317,7 +376,7 @@ pub unsafe fn str_find_aux(interpreter: *mut Interpreter, find: i32) -> i32 {
                 matchstate_interpreter: null_mut(),
                 matchdepth: 0,
                 level: 0,
-                capture: [MatchStateCapture { initial: null(), length: 0 }; 32],
+                capture: [MatchStateCapture { matchstatecapture_initial: null(), matchstatecapture_length: 0 }; 32],
             };
             let mut s1: *const i8 = s.offset(initial as isize);
             let anchor: i32 = (*p as i32 == Character::Caret as i32) as i32;
@@ -379,10 +438,16 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
             matchstate_interpreter: null_mut(),
             matchdepth: 0,
             level: 0,
-            capture: [MatchStateCapture { initial: null(), length: 0 }; 32],
+            capture: [MatchStateCapture { matchstatecapture_initial: null(), matchstatecapture_length: 0 }; 32],
         };
         let mut b = Buffer::new();
-        (((tr == Some(TagType::Numeric) || tr == Some(TagType::String) || tr == Some(TagType::Closure) || tr == Some(TagType::Table)) as i32 != 0) as i64 != 0 || lual_typeerror(interpreter, 3, c"string/function/table".as_ptr()) != 0) as i32;
+        (((tr == Some(TagType::Numeric)
+            || tr == Some(TagType::String)
+            || tr == Some(TagType::Closure)
+            || tr == Some(TagType::Table)) as i32
+            != 0) as i64
+            != 0
+            || lual_typeerror(interpreter, 3, c"string/function/table".as_ptr()) != 0) as i32;
         b.initialize(interpreter);
         if anchor != 0 {
             p = p.offset(1);
@@ -402,12 +467,13 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
                 if !(src < match_state.src_end) {
                     break;
                 }
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh165 = src;
                 src = src.offset(1);
-                let fresh166 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                *(b.loads.loads_pointer).offset(fresh166 as isize) = *fresh165;
+                let fresh166 = b.buffer_loads.get_length();
+                b.buffer_loads
+                    .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *(b.buffer_loads.loads_pointer).offset(fresh166 as isize) = *fresh165;
             }
             if anchor != 0 {
                 break;
@@ -425,10 +491,11 @@ pub unsafe fn str_gsub(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
     unsafe {
-        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh167 = (*b).loads.get_length();
-        (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-        *((*b).loads.loads_pointer).offset(fresh167 as isize) = '"' as i8;
+        ((*b).buffer_loads.get_length() < (*b).buffer_loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh167 = (*b).buffer_loads.get_length();
+        (*b).buffer_loads
+            .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
+        *((*b).buffer_loads.loads_pointer).offset(fresh167 as isize) = '"' as i8;
         loop {
             let fresh168 = length;
             length = length.wrapping_sub(1);
@@ -436,14 +503,16 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                 break;
             }
             if *s as i32 == '"' as i32 || *s as i32 == Character::Backslash as i32 || *s as i32 == Character::LineFeed as i32 {
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh169 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-                *((*b).loads.loads_pointer).offset(fresh169 as isize) = Character::Backslash as i8;
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh170 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-                *((*b).loads.loads_pointer).offset(fresh170 as isize) = *s;
+                ((*b).buffer_loads.get_length() < (*b).buffer_loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh169 = (*b).buffer_loads.get_length();
+                (*b).buffer_loads
+                    .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *((*b).buffer_loads.loads_pointer).offset(fresh169 as isize) = Character::Backslash as i8;
+                ((*b).buffer_loads.get_length() < (*b).buffer_loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh170 = (*b).buffer_loads.get_length();
+                (*b).buffer_loads
+                    .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *((*b).buffer_loads.loads_pointer).offset(fresh170 as isize) = *s;
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0 {
                 let mut buffer: [i8; 10] = [0; 10];
                 if *(*__ctype_b_loc()).offset(*s.offset(1 as isize) as u8 as isize) as i32 & _ISDIGIT as i32 == 0 {
@@ -453,17 +522,19 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
-                ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
-                let fresh171 = (*b).loads.get_length();
-                (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-                *((*b).loads.loads_pointer).offset(fresh171 as isize) = *s;
+                ((*b).buffer_loads.get_length() < (*b).buffer_loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+                let fresh171 = (*b).buffer_loads.get_length();
+                (*b).buffer_loads
+                    .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *((*b).buffer_loads.loads_pointer).offset(fresh171 as isize) = *s;
             }
             s = s.offset(1);
         }
-        ((*b).loads.get_length() < (*b).loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
-        let fresh172 = (*b).loads.get_length();
-        (*b).loads.set_length((((*b).loads.get_length()).wrapping_add(1)) as usize);
-        *((*b).loads.loads_pointer).offset(fresh172 as isize) = '"' as i8;
+        ((*b).buffer_loads.get_length() < (*b).buffer_loads.get_size() || !((*b).prepare_with_size(1)).is_null()) as i32;
+        let fresh172 = (*b).buffer_loads.get_length();
+        (*b).buffer_loads
+            .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
+        *((*b).buffer_loads.loads_pointer).offset(fresh172 as isize) = '"' as i8;
     }
 }
 pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) -> i32 {
@@ -492,28 +563,33 @@ pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) 
 pub unsafe fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
     unsafe {
         match lua_type(interpreter, arg) {
-            Some(TagType::String) => {
+            | Some(TagType::String) => {
                 let mut length: usize = 0;
                 let s: *const i8 = lua_tolstring(interpreter, arg, &mut length);
                 addquoted(b, s, length);
             },
-            Some(TagType::Numeric) => {
+            | Some(TagType::Numeric) => {
                 let buffer: *mut i8 = (*b).prepare_with_size(120);
                 let nb: i32;
                 if lua_isinteger(interpreter, arg) {
                     let n: i64 = lua_tointegerx(interpreter, arg, null_mut());
-                    let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 { c"0x%llx".as_ptr() } else { c"%lld".as_ptr() };
+                    let format: *const i8 = if n == -(MAXIMUM_SIZE as i64) - 1 as i64 {
+                        c"0x%llx".as_ptr()
+                    } else {
+                        c"%lld".as_ptr()
+                    };
                     nb = snprintf(buffer, 120, format, n);
                 } else {
                     nb = quotefloat(interpreter, buffer, lua_tonumberx(interpreter, arg, null_mut()));
                 }
-                (*b).loads.set_length((((*b).loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
+                (*b).buffer_loads
+                    .set_length((((*b).buffer_loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
             },
-            Some(TagType::Nil) | Some(TagType::Boolean) => {
+            | Some(TagType::Nil) | Some(TagType::Boolean) => {
                 lual_tolstring(interpreter, arg, null_mut());
                 (*b).add_value();
             },
-            _ => {
+            | _ => {
                 lual_argerror(interpreter, arg, c"value has no literal form".as_ptr());
             },
         };
@@ -584,21 +660,23 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
         b.initialize(interpreter);
         while strfrmt < strfrmt_end {
             if *strfrmt as i32 != Character::Percent as i32 {
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                 let fresh174 = strfrmt;
                 strfrmt = strfrmt.offset(1);
-                let fresh175 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                *(b.loads.loads_pointer).offset(fresh175 as isize) = *fresh174;
+                let fresh175 = b.buffer_loads.get_length();
+                b.buffer_loads
+                    .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *(b.buffer_loads.loads_pointer).offset(fresh175 as isize) = *fresh174;
             } else {
                 strfrmt = strfrmt.offset(1);
                 if *strfrmt as i32 == Character::Percent as i32 {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh176 = strfrmt;
                     strfrmt = strfrmt.offset(1);
-                    let fresh177 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh177 as isize) = *fresh176;
+                    let fresh177 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh177 as isize) = *fresh176;
                 } else {
                     let mut form: [i8; 32] = [0; 32];
                     let mut maxitem: i32 = 120 as i32;
@@ -612,38 +690,43 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                     let fresh178 = strfrmt;
                     strfrmt = strfrmt.offset(1);
                     match Character::from(*fresh178 as i32) {
-                        Character::LowerC => {
+                        | Character::LowerC => {
                             checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 0);
-                            nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checkinteger(interpreter, arg) as i32);
+                            nb = snprintf(
+                                buffer,
+                                maxitem as usize,
+                                form.as_mut_ptr(),
+                                lual_checkinteger(interpreter, arg) as i32,
+                            );
                             current_block = 11793792312832361944;
                         },
-                        Character::LowerD | Character::LowerI => {
+                        | Character::LowerD | Character::LowerI => {
                             flags = c"-+0 ".as_ptr();
                             current_block = 5689001924483802034;
                         },
-                        Character::LowerU => {
+                        | Character::LowerU => {
                             flags = c"-0".as_ptr();
                             current_block = 5689001924483802034;
                         },
-                        Character::LowerO | Character::LowerX | Character::UpperX => {
+                        | Character::LowerO | Character::LowerX | Character::UpperX => {
                             flags = c"-#0".as_ptr();
                             current_block = 5689001924483802034;
                         },
-                        Character::LowerA | Character::UpperA => {
+                        | Character::LowerA | Character::UpperA => {
                             checkformat(interpreter, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
                             addlenmod(form.as_mut_ptr(), c"".as_ptr());
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checknumber(interpreter, arg));
                             current_block = 11793792312832361944;
                         },
-                        Character::LowerF => {
+                        | Character::LowerF => {
                             maxitem = 110 as i32 + 308 as i32;
                             buffer = b.prepare_with_size(maxitem as usize);
                             current_block = 6669252993407410313;
                         },
-                        Character::LowerE | Character::UpperE | Character::LowerG | Character::UpperG => {
+                        | Character::LowerE | Character::UpperE | Character::LowerG | Character::UpperG => {
                             current_block = 6669252993407410313;
                         },
-                        Character::LowerP => {
+                        | Character::LowerP => {
                             let mut p: *const libc::c_void = (*interpreter).to_pointer(arg);
                             checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 0);
                             if p.is_null() {
@@ -653,20 +736,22 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
                         },
-                        Character::LowerQ => {
+                        | Character::LowerQ => {
                             if form[2 as usize] as i32 != Character::Null as i32 {
                                 return lual_error(interpreter, c"specifier '%%q' cannot have modifiers".as_ptr());
                             }
                             addliteral(interpreter, &mut b, arg);
                             current_block = 11793792312832361944;
                         },
-                        Character::LowerS => {
+                        | Character::LowerS => {
                             let mut l: usize = 0;
                             let s: *const i8 = lual_tolstring(interpreter, arg, &mut l);
                             if form[2 as usize] as i32 == Character::Null as i32 {
                                 b.add_value();
                             } else {
-                                (((l == strlen(s) as usize) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0) as i32;
+                                (((l == strlen(s) as usize) as i32 != 0) as i64 != 0
+                                    || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0)
+                                    as i32;
                                 checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 1);
                                 if (strchr(form.as_mut_ptr(), Character::Period as i32)).is_null() && l >= 100 as usize {
                                     b.add_value();
@@ -677,26 +762,27 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             }
                             current_block = 11793792312832361944;
                         },
-                        _ => {
+                        | _ => {
                             return lual_error(interpreter, c"invalid conversion '%s' to 'format'".as_ptr(), form.as_mut_ptr());
                         },
                     }
                     match current_block {
-                        5689001924483802034 => {
+                        | 5689001924483802034 => {
                             let n: i64 = lual_checkinteger(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), flags, 1);
                             addlenmod(form.as_mut_ptr(), c"ll".as_ptr());
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n);
                         },
-                        6669252993407410313 => {
+                        | 6669252993407410313 => {
                             let n_0: f64 = lual_checknumber(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
                             addlenmod(form.as_mut_ptr(), c"".as_ptr());
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n_0);
                         },
-                        _ => {},
+                        | _ => {},
                     }
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(nb as usize) as i32) as usize);
                 }
             }
         }
@@ -704,7 +790,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { dummy: 1 };
+pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { nativeendian_dummy: 1 };
 pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
         if Character::from(**fmt as i32).is_digit() {
@@ -713,7 +799,15 @@ pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
                 let fresh179 = *fmt;
                 *fmt = (*fmt).offset(1);
                 a = a * 10 as i32 + (*fresh179 as i32 - Character::Digit0 as i32);
-                if !(Character::from(**fmt as i32).is_digit() && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }) as i32 - 9 as i32) / 10 as i32) {
+                if !(Character::from(**fmt as i32).is_digit()
+                    && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                        !(0usize)
+                    } else {
+                        0x7FFFFFFF as usize
+                    }) as i32
+                        - 9 as i32)
+                        / 10 as i32)
+                {
                     break;
                 }
             }
@@ -727,7 +821,12 @@ pub unsafe fn getnumlimit(header: *mut Header, fmt: *mut *const i8, df: i32) -> 
     unsafe {
         let size: i32 = getnum(fmt, df);
         if size > 16 as i32 || size <= 0 {
-            return lual_error((*header).header_interpreter, c"integral size (%d) out of limits [1,%d]".as_ptr(), size, 16 as i32);
+            return lual_error(
+                (*header).header_interpreter,
+                c"integral size (%d) out of limits [1,%d]".as_ptr(),
+                size,
+                16 as i32,
+            );
         }
         return size;
     }
@@ -735,8 +834,8 @@ pub unsafe fn getnumlimit(header: *mut Header, fmt: *mut *const i8, df: i32) -> 
 pub unsafe fn initheader(interpreter: *mut Interpreter, header: *mut Header) {
     unsafe {
         (*header).header_interpreter = interpreter;
-        (*header).is_little_endian = NATIVE_ENDIAN.little as i32;
-        (*header).maxmimum_alignment = 1;
+        (*header).header_islittleendian = NATIVE_ENDIAN.nativeendian_little as i32;
+        (*header).header_maxmimumalignment = 1;
     }
 }
 pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
@@ -746,117 +845,129 @@ pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32
         let opt: i32 = *fresh180 as i32;
         *size = 0;
         match Character::from(opt) {
-            Character::LowerB => {
+            | Character::LowerB => {
                 *size = 1 as i32;
                 return K::Integer;
             },
-            Character::UpperB => {
+            | Character::UpperB => {
                 *size = 1 as i32;
                 return K::Unsigned;
             },
-            Character::LowerH => {
+            | Character::LowerH => {
                 *size = size_of::<i16>() as i32;
                 return K::Integer;
             },
-            Character::UpperH => {
+            | Character::UpperH => {
                 *size = size_of::<i16>() as i32;
                 return K::Unsigned;
             },
-            Character::LowerL => {
+            | Character::LowerL => {
                 *size = size_of::<i64>() as i32;
                 return K::Integer;
             },
-            Character::UpperL => {
+            | Character::UpperL => {
                 *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             },
-            Character::LowerJ => {
+            | Character::LowerJ => {
                 *size = size_of::<i64>() as i32;
                 return K::Integer;
             },
-            Character::UpperJ => {
+            | Character::UpperJ => {
                 *size = size_of::<i64>() as i32;
                 return K::Unsigned;
             },
-            Character::UpperT => {
+            | Character::UpperT => {
                 *size = size_of::<usize>() as i32;
                 return K::Unsigned;
             },
-            Character::LowerF => {
+            | Character::LowerF => {
                 *size = size_of::<libc::c_float>() as i32;
                 return K::Float;
             },
-            Character::LowerN => {
+            | Character::LowerN => {
                 *size = size_of::<f64>() as i32;
                 return K::Number;
             },
-            Character::LowerD => {
+            | Character::LowerD => {
                 *size = size_of::<f64>() as i32;
                 return K::Double;
             },
-            Character::LowerI => {
+            | Character::LowerI => {
                 *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Integer;
             },
-            Character::UpperI => {
+            | Character::UpperI => {
                 *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
                 return K::Unsigned;
             },
-            Character::LowerS => {
+            | Character::LowerS => {
                 *size = getnumlimit(header, fmt, size_of::<usize>() as i32);
                 return K::String;
             },
-            Character::LowerC => {
+            | Character::LowerC => {
                 *size = getnum(fmt, -1);
                 if *size == -1 {
-                    lual_error((*header).header_interpreter, c"missing size for format option Character::LowerC".as_ptr());
+                    lual_error(
+                        (*header).header_interpreter,
+                        c"missing size for format option Character::LowerC".as_ptr(),
+                    );
                 }
                 return K::Character;
             },
-            Character::LowerZ => return K::ZString,
-            Character::LowerX => {
+            | Character::LowerZ => return K::ZString,
+            | Character::LowerX => {
                 *size = 1;
                 return K::Padding;
             },
-            Character::UpperX => return K::PaddingAlignment,
-            Character::Space => {},
-            Character::AngleLeft => {
-                (*header).is_little_endian = 1;
+            | Character::UpperX => return K::PaddingAlignment,
+            | Character::Space => {},
+            | Character::AngleLeft => {
+                (*header).header_islittleendian = 1;
             },
-            Character::AngleRight => {
-                (*header).is_little_endian = 0;
+            | Character::AngleRight => {
+                (*header).header_islittleendian = 0;
             },
-            Character::Equal => {
-                (*header).is_little_endian = NATIVE_ENDIAN.little as i32;
+            | Character::Equal => {
+                (*header).header_islittleendian = NATIVE_ENDIAN.nativeendian_little as i32;
             },
-            Character::Exclamation => {
+            | Character::Exclamation => {
                 let maxalign: i32 = 8;
-                (*header).maxmimum_alignment = getnumlimit(header, fmt, maxalign);
+                (*header).header_maxmimumalignment = getnumlimit(header, fmt, maxalign);
             },
-            _ => {
+            | _ => {
                 lual_error((*header).header_interpreter, c"invalid format option '%c'".as_ptr(), opt);
             },
         }
         return K::NoOperator;
     }
 }
-pub unsafe fn getdetails(header: *mut Header, totalsize: usize, fmt: *mut *const i8, total_size: *mut i32, ntoalign: *mut i32) -> K {
+pub unsafe fn getdetails(
+    header: *mut Header, totalsize: usize, fmt: *mut *const i8, total_size: *mut i32, ntoalign: *mut i32,
+) -> K {
     unsafe {
         let opt: K = getoption(header, fmt, total_size);
         let mut align: i32 = *total_size;
         if opt as u32 == K::PaddingAlignment as u32 {
-            if **fmt as i32 == Character::Null as i32 || getoption(header, fmt, &mut align) as u32 == K::Character as u32 || align == 0 {
+            if **fmt as i32 == Character::Null as i32
+                || getoption(header, fmt, &mut align) as u32 == K::Character as u32
+                || align == 0
+            {
                 lual_argerror((*header).header_interpreter, 1, c"invalid next option for option X".as_ptr());
             }
         }
         if align <= 1 || opt as u32 == K::Character as u32 {
             *ntoalign = 0;
         } else {
-            if align > (*header).maxmimum_alignment {
-                align = (*header).maxmimum_alignment;
+            if align > (*header).header_maxmimumalignment {
+                align = (*header).header_maxmimumalignment;
             }
             if align & align - 1 != 0 {
-                lual_argerror((*header).header_interpreter, 1, c"format asks for alignment not power of 2".as_ptr());
+                lual_argerror(
+                    (*header).header_interpreter,
+                    1,
+                    c"format asks for alignment not power of 2".as_ptr(),
+                );
             }
             *ntoalign = align - (totalsize & (align - 1) as usize) as i32 & align - 1;
         }
@@ -876,12 +987,13 @@ pub unsafe fn packint(b: *mut Buffer, mut n: usize, islittle: i32, size: i32, is
                 *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) = ((1 << 8) - 1) as i8;
             }
         }
-        (*b).loads.set_length((((*b).loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+        (*b).buffer_loads
+            .set_length((((*b).buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
     }
 }
 pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i32, islittle: i32) {
     unsafe {
-        if islittle == NATIVE_ENDIAN.little as i32 {
+        if islittle == NATIVE_ENDIAN.nativeendian_little as i32 {
             memcpy(dest as *mut libc::c_void, src as *const libc::c_void, size as usize);
         } else {
             dest = dest.offset((size - 1) as isize);
@@ -903,7 +1015,11 @@ pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i3
 pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
-        let mut h: Header = Header { header_interpreter: null_mut(), is_little_endian: 0, maxmimum_alignment: 0 };
+        let mut h: Header = Header {
+            header_interpreter: null_mut(),
+            header_islittleendian: 0,
+            header_maxmimumalignment: 0,
+        };
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut arg: i32 = 1;
         let mut totalsize: usize = 0;
@@ -921,56 +1037,79 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 if !(fresh184 > 0) {
                     break;
                 }
-                (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                let fresh185 = b.loads.get_length();
-                b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                *(b.loads.loads_pointer).offset(fresh185 as isize) = 0 as i8;
+                (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                let fresh185 = b.buffer_loads.get_length();
+                b.buffer_loads
+                    .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                *(b.buffer_loads.loads_pointer).offset(fresh185 as isize) = 0 as i8;
             }
             arg += 1;
             let current_block_33: usize;
             match opt as u32 {
-                0 => {
+                | 0 => {
                     let n: i64 = lual_checkinteger(interpreter, arg);
                     if size < size_of::<i64>() as i32 {
                         let lim: i64 = 1 << size * 8 - 1;
-                        (((-lim <= n && n < lim) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"integer overflow".as_ptr()) != 0) as i32;
+                        (((-lim <= n && n < lim) as i32 != 0) as i64 != 0
+                            || lual_argerror(interpreter, arg, c"integer overflow".as_ptr()) != 0) as i32;
                     }
-                    packint(&mut b, n as usize, h.is_little_endian, size, (n < 0) as i32);
+                    packint(&mut b, n as usize, h.header_islittleendian, size, (n < 0) as i32);
                     current_block_33 = 3222590281903869779;
                 },
-                1 => {
+                | 1 => {
                     let n_0: i64 = lual_checkinteger(interpreter, arg);
                     if size < size_of::<i64>() as i32 {
-                        ((((n_0 as usize) < (1 as usize) << size * 8) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"unsigned overflow".as_ptr()) != 0) as i32;
+                        ((((n_0 as usize) < (1 as usize) << size * 8) as i32 != 0) as i64 != 0
+                            || lual_argerror(interpreter, arg, c"unsigned overflow".as_ptr()) != 0) as i32;
                     }
-                    packint(&mut b, n_0 as usize, h.is_little_endian, size, 0);
+                    packint(&mut b, n_0 as usize, h.header_islittleendian, size, 0);
                     current_block_33 = 3222590281903869779;
                 },
-                2 => {
+                | 2 => {
                     let mut f: libc::c_float = lual_checknumber(interpreter, arg) as libc::c_float;
                     let buffer: *mut i8 = b.prepare_with_size(size_of::<libc::c_float>());
-                    copywithendian(buffer, &mut f as *mut libc::c_float as *mut i8, size_of::<libc::c_float>() as i32, h.is_little_endian);
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    copywithendian(
+                        buffer,
+                        &mut f as *mut libc::c_float as *mut i8,
+                        size_of::<libc::c_float>() as i32,
+                        h.header_islittleendian,
+                    );
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
                     current_block_33 = 3222590281903869779;
                 },
-                3 => {
+                | 3 => {
                     let mut f_0: f64 = lual_checknumber(interpreter, arg);
                     let buff_0: *mut i8 = b.prepare_with_size(size_of::<f64>());
-                    copywithendian(buff_0, &mut f_0 as *mut f64 as *mut i8, size_of::<f64>() as i32, h.is_little_endian);
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    copywithendian(
+                        buff_0,
+                        &mut f_0 as *mut f64 as *mut i8,
+                        size_of::<f64>() as i32,
+                        h.header_islittleendian,
+                    );
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
                     current_block_33 = 3222590281903869779;
                 },
-                4 => {
+                | 4 => {
                     let mut f_1: f64 = lual_checknumber(interpreter, arg);
                     let buff_1: *mut i8 = b.prepare_with_size(size_of::<f64>());
-                    copywithendian(buff_1, &mut f_1 as *mut f64 as *mut i8, size_of::<f64>() as i32, h.is_little_endian);
-                    b.loads.set_length(((b.loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
+                    copywithendian(
+                        buff_1,
+                        &mut f_1 as *mut f64 as *mut i8,
+                        size_of::<f64>() as i32,
+                        h.header_islittleendian,
+                    );
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
                     current_block_33 = 3222590281903869779;
                 },
-                5 => {
+                | 5 => {
                     let mut length: usize = 0;
                     let s: *const i8 = lual_checklstring(interpreter, arg, &mut length);
-                    (((length <= size as usize) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"string longer than given size".as_ptr()) != 0) as i32;
+                    (((length <= size as usize) as i32 != 0) as i64 != 0
+                        || lual_argerror(interpreter, arg, c"string longer than given size".as_ptr()) != 0)
+                        as i32;
                     b.add_string_with_length(s, length as usize);
                     loop {
                         let fresh186 = length;
@@ -978,53 +1117,59 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         if !(fresh186 < size as usize) {
                             break;
                         }
-                        (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                        let fresh187 = b.loads.get_length();
-                        b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                        *(b.loads.loads_pointer).offset(fresh187 as isize) = 0 as i8;
+                        (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                        let fresh187 = b.buffer_loads.get_length();
+                        b.buffer_loads
+                            .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                        *(b.buffer_loads.loads_pointer).offset(fresh187 as isize) = 0 as i8;
                     }
                     current_block_33 = 3222590281903869779;
                 },
-                6 => {
+                | 6 => {
                     let mut length: usize = 0;
                     let s_0: *const i8 = lual_checklstring(interpreter, arg, &mut length);
-                    (((size >= size_of::<usize>() as i32 || length < (1 as usize) << size * 8) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"string length does not fit in given size".as_ptr()) != 0) as i32;
-                    packint(&mut b, length as usize, h.is_little_endian, size, 0);
+                    (((size >= size_of::<usize>() as i32 || length < (1 as usize) << size * 8) as i32 != 0) as i64 != 0
+                        || lual_argerror(interpreter, arg, c"string length does not fit in given size".as_ptr()) != 0)
+                        as i32;
+                    packint(&mut b, length as usize, h.header_islittleendian, size, 0);
                     b.add_string_with_length(s_0, length as usize);
                     totalsize = (totalsize as usize).wrapping_add(length) as usize;
                     current_block_33 = 3222590281903869779;
                 },
-                7 => {
+                | 7 => {
                     let mut length: usize = 0;
                     let s_1: *const i8 = lual_checklstring(interpreter, arg, &mut length);
-                    (((strlen(s_1) as usize == length) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0) as i32;
+                    (((strlen(s_1) as usize == length) as i32 != 0) as i64 != 0
+                        || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0) as i32;
                     b.add_string_with_length(s_1, length as usize);
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh188 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh188 as isize) = Character::Null as i8;
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh188 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh188 as isize) = Character::Null as i8;
                     totalsize = (totalsize as usize).wrapping_add(length.wrapping_add(1 as usize)) as usize;
                     current_block_33 = 3222590281903869779;
                 },
-                8 => {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh189 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh189 as isize) = 0 as i8;
+                | 8 => {
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh189 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh189 as isize) = 0 as i8;
                     current_block_33 = 7383952003695197780;
                 },
-                9 | 10 => {
+                | 9 | 10 => {
                     current_block_33 = 7383952003695197780;
                 },
-                _ => {
+                | _ => {
                     current_block_33 = 3222590281903869779;
                 },
             }
             match current_block_33 {
-                7383952003695197780 => {
+                | 7383952003695197780 => {
                     arg -= 1;
                 },
-                _ => {},
+                | _ => {},
             }
         }
         b.push_result();
@@ -1033,7 +1178,11 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut h: Header = Header { header_interpreter: null_mut(), is_little_endian: 0, maxmimum_alignment: 0 };
+        let mut h: Header = Header {
+            header_interpreter: null_mut(),
+            header_islittleendian: 0,
+            header_maxmimumalignment: 0,
+        };
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut totalsize: usize = 0;
         initheader(interpreter, &mut h);
@@ -1041,9 +1190,18 @@ pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
             let opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
-            (((opt as u32 != K::String as u32 && opt as u32 != K::ZString as u32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 1, c"variable-length format".as_ptr()) != 0) as i32;
+            (((opt as u32 != K::String as u32 && opt as u32 != K::ZString as u32) as i32 != 0) as i64 != 0
+                || lual_argerror(interpreter, 1, c"variable-length format".as_ptr()) != 0) as i32;
             size += ntoalign;
-            (((totalsize <= (if (size_of::<usize>() as usize) < size_of::<i32>() as usize { !(0usize) } else { 0x7FFFFFFF as usize }).wrapping_sub(size as usize)) as i32 != 0) as i64 != 0
+            (((totalsize
+                <= (if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                    !(0usize)
+                } else {
+                    0x7FFFFFFF as usize
+                })
+                .wrapping_sub(size as usize)) as i32
+                != 0) as i64
+                != 0
                 || lual_argerror(interpreter, 1, c"format result too large".as_ptr()) != 0) as i32;
             totalsize = (totalsize as usize).wrapping_add(size as usize) as usize;
         }
@@ -1070,7 +1228,10 @@ pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle:
         } else if size > size_of::<i64>() as i32 {
             let mask_0: i32 = if issigned == 0 || res as i64 >= 0 { 0 } else { (1 << 8) - 1 };
             for i in limit..size {
-                if ((*str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as i32 != mask_0) as i32 != 0) as i64 != 0 {
+                if ((*str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as i32 != mask_0) as i32 != 0)
+                    as i64
+                    != 0
+                {
                     lual_error(interpreter, c"%d-byte integer does not fit into Lua Integer".as_ptr(), size);
                 }
             }
@@ -1080,61 +1241,92 @@ pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle:
 }
 pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut h: Header = Header { header_interpreter: null_mut(), is_little_endian: 0, maxmimum_alignment: 0 };
+        let mut h: Header = Header {
+            header_interpreter: null_mut(),
+            header_islittleendian: 0,
+            header_maxmimumalignment: 0,
+        };
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut ld: usize = 0;
         let data: *const i8 = lual_checklstring(interpreter, 2, &mut ld);
         let mut position: usize = (get_position_relative(lual_optinteger(interpreter, 3, 1 as i64), ld)).wrapping_sub(1 as usize);
         let mut n: i32 = 0;
-        (((position <= ld) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"initial position out of string".as_ptr()) != 0) as i32;
+        (((position <= ld) as i32 != 0) as i64 != 0
+            || lual_argerror(interpreter, 3, c"initial position out of string".as_ptr()) != 0) as i32;
         initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
             let opt: K = getdetails(&mut h, position, &mut fmt, &mut size, &mut ntoalign);
-            ((((ntoalign as usize).wrapping_add(size as usize) <= ld.wrapping_sub(position)) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
+            ((((ntoalign as usize).wrapping_add(size as usize) <= ld.wrapping_sub(position)) as i32 != 0) as i64 != 0
+                || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
             position = (position as usize).wrapping_add(ntoalign as usize) as usize;
             lual_checkstack(interpreter, 2, c"too many results".as_ptr());
             n += 1;
             match opt as u32 {
-                0 | 1 => {
-                    let res: i64 = unpackint(interpreter, data.offset(position as isize), h.is_little_endian, size, (opt as u32 == K::Integer as u32) as i32);
+                | 0 | 1 => {
+                    let res: i64 = unpackint(
+                        interpreter,
+                        data.offset(position as isize),
+                        h.header_islittleendian,
+                        size,
+                        (opt as u32 == K::Integer as u32) as i32,
+                    );
                     (*interpreter).push_integer(res);
                 },
-                2 => {
+                | 2 => {
                     let mut f: libc::c_float = 0.0;
-                    copywithendian(&mut f as *mut libc::c_float as *mut i8, data.offset(position as isize), size_of::<libc::c_float>() as i32, h.is_little_endian);
+                    copywithendian(
+                        &mut f as *mut libc::c_float as *mut i8,
+                        data.offset(position as isize),
+                        size_of::<libc::c_float>() as i32,
+                        h.header_islittleendian,
+                    );
                     (*interpreter).push_number(f as f64);
                 },
-                3 => {
+                | 3 => {
                     let mut f_0: f64 = 0.0;
-                    copywithendian(&mut f_0 as *mut f64 as *mut i8, data.offset(position as isize), size_of::<f64>() as i32, h.is_little_endian);
+                    copywithendian(
+                        &mut f_0 as *mut f64 as *mut i8,
+                        data.offset(position as isize),
+                        size_of::<f64>() as i32,
+                        h.header_islittleendian,
+                    );
                     (*interpreter).push_number(f_0);
                 },
-                4 => {
+                | 4 => {
                     let mut f_1: f64 = 0.0;
-                    copywithendian(&mut f_1 as *mut f64 as *mut i8, data.offset(position as isize), size_of::<f64>() as i32, h.is_little_endian);
+                    copywithendian(
+                        &mut f_1 as *mut f64 as *mut i8,
+                        data.offset(position as isize),
+                        size_of::<f64>() as i32,
+                        h.header_islittleendian,
+                    );
                     (*interpreter).push_number(f_1);
                 },
-                5 => {
+                | 5 => {
                     lua_pushlstring(interpreter, data.offset(position as isize), size as usize);
                 },
-                6 => {
-                    let length: usize = unpackint(interpreter, data.offset(position as isize), h.is_little_endian, size, 0) as usize;
-                    (((length <= ld.wrapping_sub(position).wrapping_sub(size as usize)) as i32 != 0) as i32 as i64 != 0 || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
+                | 6 => {
+                    let length: usize =
+                        unpackint(interpreter, data.offset(position as isize), h.header_islittleendian, size, 0) as usize;
+                    (((length <= ld.wrapping_sub(position).wrapping_sub(size as usize)) as i32 != 0) as i32 as i64 != 0
+                        || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
                     lua_pushlstring(interpreter, data.offset(position as isize).offset(size as isize), length);
                     position = (position as usize).wrapping_add(length) as usize;
                 },
-                7 => {
+                | 7 => {
                     let length_0: usize = strlen(data.offset(position as isize)) as usize;
-                    (((position.wrapping_add(length_0) < ld) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 2, c"unfinished string for format 'zio'".as_ptr()) != 0) as i32;
+                    (((position.wrapping_add(length_0) < ld) as i32 != 0) as i64 != 0
+                        || lual_argerror(interpreter, 2, c"unfinished string for format 'zio'".as_ptr()) != 0)
+                        as i32;
                     lua_pushlstring(interpreter, data.offset(position as isize), length_0);
                     position = (position as usize).wrapping_add(length_0.wrapping_add(1 as usize)) as usize;
                 },
-                9 | 8 | 10 => {
+                | 9 | 8 | 10 => {
                     n -= 1;
                 },
-                _ => {},
+                | _ => {},
             }
             position = (position as usize).wrapping_add(size as usize) as usize;
         }
@@ -1144,23 +1336,108 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
 }
 pub const STRING_FUNCTIONS: [RegisteredFunction; 17] = {
     [
-        { RegisteredFunction { name: c"byte".as_ptr(), function: Some(str_byte as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"char".as_ptr(), function: Some(str_char as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"dump".as_ptr(), function: Some(StreamWriter::str_dump as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"find".as_ptr(), function: Some(str_find as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"format".as_ptr(), function: Some(str_format as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"gmatch".as_ptr(), function: Some(GMatchState::gmatch as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"gsub".as_ptr(), function: Some(str_gsub as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"len".as_ptr(), function: Some(str_len as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"lower".as_ptr(), function: Some(str_lower as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"match".as_ptr(), function: Some(str_match as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"rep".as_ptr(), function: Some(str_rep as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"reverse".as_ptr(), function: Some(str_reverse as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"sub".as_ptr(), function: Some(str_sub as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"upper".as_ptr(), function: Some(str_upper as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"pack".as_ptr(), function: Some(str_pack as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"packsize".as_ptr(), function: Some(str_packsize as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"unpack".as_ptr(), function: Some(str_unpack as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"byte".as_ptr(),
+                registeredfunction_function: Some(str_byte as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"char".as_ptr(),
+                registeredfunction_function: Some(str_char as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"dump".as_ptr(),
+                registeredfunction_function: Some(StreamWriter::str_dump as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"find".as_ptr(),
+                registeredfunction_function: Some(str_find as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"format".as_ptr(),
+                registeredfunction_function: Some(str_format as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"gmatch".as_ptr(),
+                registeredfunction_function: Some(GMatchState::gmatch as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"gsub".as_ptr(),
+                registeredfunction_function: Some(str_gsub as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"len".as_ptr(),
+                registeredfunction_function: Some(str_len as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"lower".as_ptr(),
+                registeredfunction_function: Some(str_lower as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"match".as_ptr(),
+                registeredfunction_function: Some(str_match as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"rep".as_ptr(),
+                registeredfunction_function: Some(str_rep as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"reverse".as_ptr(),
+                registeredfunction_function: Some(str_reverse as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"sub".as_ptr(),
+                registeredfunction_function: Some(str_sub as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"upper".as_ptr(),
+                registeredfunction_function: Some(str_upper as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"pack".as_ptr(),
+                registeredfunction_function: Some(str_pack as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"packsize".as_ptr(),
+                registeredfunction_function: Some(str_packsize as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"unpack".as_ptr(),
+                registeredfunction_function: Some(str_unpack as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
@@ -1178,7 +1455,13 @@ pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
 }
 pub unsafe fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_FUNCTIONS.as_ptr(), STRING_FUNCTIONS.len(), 0);
         createmetatable(interpreter);

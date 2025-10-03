@@ -2,7 +2,6 @@ use crate::character::*;
 use libc::*;
 use rlua::*;
 use std::ptr::*;
-pub mod c;
 pub const MAXIMUM_SIZE: usize = 0x7FFFFFFFFFFFFFFF;
 pub fn ceiling_log2(input: usize) -> usize {
     if input == 0 {
@@ -27,7 +26,11 @@ pub unsafe fn is_negative(s: *mut *const i8) -> bool {
 pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8 {
     unsafe {
         let mut endptr: *mut i8 = null_mut();
-        *result = if mode == Character::LowerX as i32 { strtod(s, &mut endptr) } else { strtod(s, &mut endptr) };
+        *result = if mode == Character::LowerX as i32 {
+            strtod(s, &mut endptr)
+        } else {
+            strtod(s, &mut endptr)
+        };
         if endptr == s as *mut i8 {
             return null();
         }
@@ -40,7 +43,11 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8
 pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
         let pmode: *const i8 = strpbrk(s, c".xXnN".as_ptr());
-        let mode: i32 = if !pmode.is_null() { *pmode as u8 as i32 | Character::UpperA as i32 ^ Character::LowerA as i32 } else { 0 };
+        let mode: i32 = if !pmode.is_null() {
+            *pmode as u8 as i32 | Character::UpperA as i32 ^ Character::LowerA as i32
+        } else {
+            0
+        };
         if mode == Character::LowerN as i32 {
             return null();
         }
@@ -69,17 +76,25 @@ pub unsafe fn l_str2int(mut s: *const i8, result: *mut i64) -> *const i8 {
             s = s.offset(1);
         }
         let is_negative_: bool = is_negative(&mut s);
-        if *s.offset(0 as isize) as i32 == Character::Digit0 as i32 && (*s.offset(1 as isize) as i32 == Character::LowerX as i32 || *s.offset(1 as isize) as i32 == Character::UpperX as i32) {
+        if *s.offset(0 as isize) as i32 == Character::Digit0 as i32
+            && (*s.offset(1 as isize) as i32 == Character::LowerX as i32
+                || *s.offset(1 as isize) as i32 == Character::UpperX as i32)
+        {
             s = s.offset(2 as isize);
             while Character::from(*s as i32).is_digit_hexadecimal() {
-                a = a.wrapping_mul(16 as usize).wrapping_add(Character::from(*s as i32).get_hexadecimal_digit_value() as usize);
+                a = a
+                    .wrapping_mul(16 as usize)
+                    .wrapping_add(Character::from(*s as i32).get_hexadecimal_digit_value() as usize);
                 empty = 0;
                 s = s.offset(1);
             }
         } else {
             while Character::from(*s as i32).is_digit_decimal() {
                 let d: i32 = *s as i32 - Character::Digit0 as i32;
-                if a >= (MAXIMUM_SIZE as i64 / 10 as i64) as usize && (a > (MAXIMUM_SIZE as i64 / 10 as i64) as usize || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32 + if is_negative_ { 1 } else { 0 }) {
+                if a >= (MAXIMUM_SIZE as i64 / 10 as i64) as usize
+                    && (a > (MAXIMUM_SIZE as i64 / 10 as i64) as usize
+                        || d > (MAXIMUM_SIZE as i64 % 10 as i64) as i32 + if is_negative_ { 1 } else { 0 })
+                {
                     return null();
                 }
                 a = a.wrapping_mul(10 as usize).wrapping_add(d as usize);
@@ -103,7 +118,11 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
         let mut bufflen: usize = 60 as usize;
         if *source as i32 == Character::Equal as i32 {
             if source_length <= bufflen {
-                memcpy(out as *mut libc::c_void, source.offset(1 as isize) as *const libc::c_void, source_length);
+                memcpy(
+                    out as *mut libc::c_void,
+                    source.offset(1 as isize) as *const libc::c_void,
+                    source_length,
+                );
             } else {
                 memcpy(
                     out as *mut libc::c_void,
@@ -126,7 +145,10 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 bufflen = (bufflen as usize).wrapping_sub((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize)) as usize;
                 memcpy(
                     out as *mut libc::c_void,
-                    source.offset(1 as isize).offset(source_length as isize).offset(-(bufflen as isize)) as *const libc::c_void,
+                    source
+                        .offset(1 as isize)
+                        .offset(source_length as isize)
+                        .offset(-(bufflen as isize)) as *const libc::c_void,
                     bufflen,
                 );
             }
@@ -138,7 +160,11 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 (size_of::<[i8; 10]>()).wrapping_sub(1),
             );
             out = out.offset((size_of::<[i8; 10]>() as usize).wrapping_sub(1 as usize) as isize);
-            bufflen = (bufflen as usize).wrapping_sub((size_of::<[i8; 15]>() as usize).wrapping_sub(1 as usize).wrapping_add(1 as usize)) as usize;
+            bufflen = (bufflen as usize).wrapping_sub(
+                (size_of::<[i8; 15]>() as usize)
+                    .wrapping_sub(1 as usize)
+                    .wrapping_add(1 as usize),
+            ) as usize;
             if source_length < bufflen && nl.is_null() {
                 memcpy(out as *mut libc::c_void, source as *const libc::c_void, source_length);
                 out = out.offset(source_length as isize);

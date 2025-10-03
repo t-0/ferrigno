@@ -47,29 +47,30 @@ impl OperatorBinary {
         const TK_LESSEQUAL: i32 = Token::LessEqual as i32;
         const TK_GREATEREQUAL: i32 = Token::GreaterEqual as i32;
         const TK_AND: i32 = Token::And as i32;
-        const TK_OR: i32 = Token::Or as i32;        match token {
-            TK_CHARACTER_PLUS => return OperatorBinary::Add,
-            TK_CHARACTER_HYPHEN => return OperatorBinary::Subtract,
-            TK_CHARACTER_ASTERISK => return OperatorBinary::Multiply,
-            TK_CHARACTER_PERCENT => return OperatorBinary::Modulus,
-            TK_CHARACTER_CARET => return OperatorBinary::Power,
-            TK_CHARACTER_SOLIDUS => return OperatorBinary::Divide,
-            TK_CHARACTER_ANGLE_LEFT => return OperatorBinary::Less,
-            TK_CHARACTER_ANGLE_RIGHT => return OperatorBinary::Greater,
-            TK_CHARACTER_AMPERSAND => return OperatorBinary::BitwiseAnd,
-            TK_CHARACTER_BAR => return OperatorBinary::BitwiseOr,
-            TK_CHARACTER_TILDE => return OperatorBinary::BitwiseExclusiveOr,
-            TK_INTEGRALDIVIDE => return OperatorBinary::IntegralDivide,
-            TK_SHIFTLEFT => return OperatorBinary::ShiftLeft,
-            TK_SHIFTRIGHT => return OperatorBinary::ShiftRight,
-            TK_CONCATENATE => return OperatorBinary::Concatenate,
-            TK_INEQUAL => return OperatorBinary::Inequal,
-            TK_EQUAL => return OperatorBinary::Equal,
-            TK_LESSEQUAL => return OperatorBinary::LessEqual,
-            TK_GREATEREQUAL => return OperatorBinary::GreaterEqual,
-            TK_AND => return OperatorBinary::And,
-            TK_OR => return OperatorBinary::Or,
-            _ => return OperatorBinary::NoBinaryOperation,
+        const TK_OR: i32 = Token::Or as i32;
+        match token {
+            | TK_CHARACTER_PLUS => return OperatorBinary::Add,
+            | TK_CHARACTER_HYPHEN => return OperatorBinary::Subtract,
+            | TK_CHARACTER_ASTERISK => return OperatorBinary::Multiply,
+            | TK_CHARACTER_PERCENT => return OperatorBinary::Modulus,
+            | TK_CHARACTER_CARET => return OperatorBinary::Power,
+            | TK_CHARACTER_SOLIDUS => return OperatorBinary::Divide,
+            | TK_CHARACTER_ANGLE_LEFT => return OperatorBinary::Less,
+            | TK_CHARACTER_ANGLE_RIGHT => return OperatorBinary::Greater,
+            | TK_CHARACTER_AMPERSAND => return OperatorBinary::BitwiseAnd,
+            | TK_CHARACTER_BAR => return OperatorBinary::BitwiseOr,
+            | TK_CHARACTER_TILDE => return OperatorBinary::BitwiseExclusiveOr,
+            | TK_INTEGRALDIVIDE => return OperatorBinary::IntegralDivide,
+            | TK_SHIFTLEFT => return OperatorBinary::ShiftLeft,
+            | TK_SHIFTRIGHT => return OperatorBinary::ShiftRight,
+            | TK_CONCATENATE => return OperatorBinary::Concatenate,
+            | TK_INEQUAL => return OperatorBinary::Inequal,
+            | TK_EQUAL => return OperatorBinary::Equal,
+            | TK_LESSEQUAL => return OperatorBinary::LessEqual,
+            | TK_GREATEREQUAL => return OperatorBinary::GreaterEqual,
+            | TK_AND => return OperatorBinary::And,
+            | TK_OR => return OperatorBinary::Or,
+            | _ => return OperatorBinary::NoBinaryOperation,
         };
     }
 }

@@ -1,11 +1,11 @@
 use crate::buffer::*;
-use crate::tdefaultnew::*;
-use libc::{time, c_void};
+use crate::c::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
-use crate::utility::c::*;
+use crate::tdefaultnew::*;
 use crate::utility::*;
+use libc::{c_void, time};
 use std::ptr::*;
 pub unsafe fn checkfield(interpreter: *mut Interpreter, key: *const i8, n: i32) -> bool {
     unsafe {
@@ -45,13 +45,14 @@ pub unsafe fn table_insert(interpreter: *mut Interpreter) -> i32 {
         let mut e: i64 = lual_len(interpreter, 1);
         e = (e as usize).wrapping_add(1 as usize) as i64;
         match (*interpreter).get_top() {
-            2 => {
+            | 2 => {
                 position = e;
             },
-            3 => {
+            | 3 => {
                 let mut i: i64;
                 position = lual_checkinteger(interpreter, 2);
-                ((((position as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64 != 0 || lual_argerror(interpreter, 2, c"position out of bounds".as_ptr()) != 0) as i32;
+                ((((position as usize).wrapping_sub(1 as usize) < e as usize) as i32 != 0) as i32 as i64 != 0
+                    || lual_argerror(interpreter, 2, c"position out of bounds".as_ptr()) != 0) as i32;
                 i = e;
                 while i > position {
                     lua_geti(interpreter, 1, i - 1);
@@ -59,7 +60,7 @@ pub unsafe fn table_insert(interpreter: *mut Interpreter) -> i32 {
                     i -= 1;
                 }
             },
-            _ => {
+            | _ => {
                 return lual_error(interpreter, c"wrong number of arguments to 'insert'".as_ptr());
             },
         }
@@ -73,7 +74,8 @@ pub unsafe fn table_remove(interpreter: *mut Interpreter) -> i32 {
         let size: i64 = lual_len(interpreter, 1);
         let mut position: i64 = lual_optinteger(interpreter, 2, size);
         if position != size {
-            ((((position as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64 != 0 || lual_argerror(interpreter, 2, c"position out of bounds".as_ptr()) != 0) as i32;
+            ((((position as usize).wrapping_sub(1 as usize) <= size as usize) as i32 != 0) as i32 as i64 != 0
+                || lual_argerror(interpreter, 2, c"position out of bounds".as_ptr()) != 0) as i32;
         }
         lua_geti(interpreter, 1, position);
         while position < size {
@@ -92,17 +94,19 @@ pub unsafe fn table_move(interpreter: *mut Interpreter) -> i32 {
         let e: i64 = lual_checkinteger(interpreter, 3);
         let t: i64 = lual_checkinteger(interpreter, 4);
         let tag: i32 = match lua_type(interpreter, 5) {
-            None | Some(TagType::Nil) => 1,
-            _ => 5,
+            | None | Some(TagType::Nil) => 1,
+            | _ => 5,
         };
         checktab(interpreter, 1, 1);
         checktab(interpreter, tag, 2);
         if e >= f {
             let n: i64;
             let mut i: i64;
-            (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 3, c"too many elements to move".as_ptr()) != 0) as i32;
+            (((f > 0 || e < MAXIMUM_SIZE as i64 + f) as i32 != 0) as i64 != 0
+                || lual_argerror(interpreter, 3, c"too many elements to move".as_ptr()) != 0) as i32;
             n = e - f + 1;
-            (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, 4, c"destination wrap around".as_ptr()) != 0) as i32;
+            (((t <= MAXIMUM_SIZE as i64 - n + 1) as i32 != 0) as i64 != 0
+                || lual_argerror(interpreter, 4, c"destination wrap around".as_ptr()) != 0) as i32;
             if t > e || t <= f || tag != 1 && !lua_compare(interpreter, 1, tag, 0) {
                 for i in 0..n {
                     lua_geti(interpreter, 1, f + i);
@@ -178,8 +182,8 @@ pub unsafe fn table_unpack(interpreter: *mut Interpreter) -> i32 {
         let mut n: usize;
         let mut i: i64 = lual_optinteger(interpreter, 2, 1);
         let e = match lua_type(interpreter, 3) {
-            None | Some(TagType::Nil) => lual_len(interpreter, 1),
-            _ => lual_checkinteger(interpreter, 3),
+            | None | Some(TagType::Nil) => lual_len(interpreter, 1),
+            | _ => lual_checkinteger(interpreter, 3),
         };
         if i > e {
             return 0;
@@ -354,8 +358,8 @@ pub unsafe fn table_sort(interpreter: *mut Interpreter) -> i32 {
                 lual_argerror(interpreter, 1, c"array too big".as_ptr());
             }
             match lua_type(interpreter, 2) {
-                None | Some(TagType::Nil) => {},
-                _ => {
+                | None | Some(TagType::Nil) => {},
+                | _ => {
                     (*interpreter).lual_checktype(2, TagType::Closure);
                 },
             }
@@ -367,18 +371,59 @@ pub unsafe fn table_sort(interpreter: *mut Interpreter) -> i32 {
 }
 pub const TABLE_FUNCTIONS: [RegisteredFunction; 7] = {
     [
-        { RegisteredFunction { name: c"concat".as_ptr(), function: Some(table_concat as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"insert".as_ptr(), function: Some(table_insert as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"pack".as_ptr(), function: Some(table_pack as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"unpack".as_ptr(), function: Some(table_unpack as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"remove".as_ptr(), function: Some(table_remove as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"move".as_ptr(), function: Some(table_move as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"sort".as_ptr(), function: Some(table_sort as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"concat".as_ptr(),
+                registeredfunction_function: Some(table_concat as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"insert".as_ptr(),
+                registeredfunction_function: Some(table_insert as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"pack".as_ptr(),
+                registeredfunction_function: Some(table_pack as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"unpack".as_ptr(),
+                registeredfunction_function: Some(table_unpack as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"remove".as_ptr(),
+                registeredfunction_function: Some(table_remove as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"move".as_ptr(),
+                registeredfunction_function: Some(table_move as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"sort".as_ptr(),
+                registeredfunction_function: Some(table_sort as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
         return 1;

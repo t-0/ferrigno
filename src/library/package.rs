@@ -1,12 +1,12 @@
 use crate::buffer::*;
-use crate::tdefaultnew::*;
-use crate::status::*;
+use crate::c::*;
 use crate::character::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
+use crate::status::*;
 use crate::tag::*;
-use crate::utility::c::*;
+use crate::tdefaultnew::*;
 use libc::{dlclose, dlerror, dlopen, dlsym};
 use std::ptr::*;
 pub const CLIBS: *const i8 = c"_CLIBS".as_ptr();
@@ -61,18 +61,23 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
                 b.initialize(interpreter);
                 if path < dftmark {
                     b.add_string_with_length(path, dftmark.offset_from(path) as usize);
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh193 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh193 as isize) = *(c";".as_ptr());
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh193 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh193 as isize) = *(c";".as_ptr());
                 }
                 b.add_string(dft);
                 if dftmark < path.offset(length as isize).offset(-(2 as isize)) {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
-                    let fresh194 = b.loads.get_length();
-                    b.loads.set_length(((b.loads.get_length()).wrapping_add(1)) as usize);
-                    *(b.loads.loads_pointer).offset(fresh194 as isize) = *(c";".as_ptr());
-                    b.add_string_with_length(dftmark.offset(2 as isize), path.offset(length as isize).offset(-(2 as isize)).offset_from(dftmark) as usize);
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    let fresh194 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length(((b.buffer_loads.get_length()).wrapping_add(1)) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh194 as isize) = *(c";".as_ptr());
+                    b.add_string_with_length(
+                        dftmark.offset(2 as isize),
+                        path.offset(length as isize).offset(-(2 as isize)).offset_from(dftmark) as usize,
+                    );
                 }
                 b.push_result();
             }
@@ -189,7 +194,9 @@ pub unsafe fn pusherrornotfound(interpreter: *mut Interpreter, path: *const i8) 
         buffer.push_result();
     }
 }
-pub unsafe fn searchpath(interpreter: *mut Interpreter, mut name: *const i8, path: *const i8, sep: *const i8, dirsep: *const i8) -> *const i8 {
+pub unsafe fn searchpath(
+    interpreter: *mut Interpreter, mut name: *const i8, path: *const i8, sep: *const i8, dirsep: *const i8,
+) -> *const i8 {
     unsafe {
         let mut pathname;
         let endpathname;
@@ -200,12 +207,14 @@ pub unsafe fn searchpath(interpreter: *mut Interpreter, mut name: *const i8, pat
         let mut buffer = Buffer::new();
         buffer.initialize(interpreter);
         lual_addgsub(&mut buffer, path, c"?".as_ptr(), name);
-        (buffer.loads.get_length() < buffer.loads.get_size() || !(buffer.prepare_with_size(1)).is_null()) as i32;
-        let fresh195 = buffer.loads.get_length();
-        buffer.loads.set_length(((buffer.loads.get_length()).wrapping_add(1)) as usize);
-        *(buffer.loads.loads_pointer).offset(fresh195 as isize) = Character::Null as i8;
-        pathname = buffer.loads.loads_pointer;
-        endpathname = pathname.offset(buffer.loads.get_length() as isize).offset(-(1 as isize));
+        (buffer.buffer_loads.get_length() < buffer.buffer_loads.get_size() || !(buffer.prepare_with_size(1)).is_null()) as i32;
+        let fresh195 = buffer.buffer_loads.get_length();
+        buffer
+            .buffer_loads
+            .set_length(((buffer.buffer_loads.get_length()).wrapping_add(1)) as usize);
+        *(buffer.buffer_loads.loads_pointer).offset(fresh195 as isize) = Character::Null as i8;
+        pathname = buffer.buffer_loads.loads_pointer;
+        endpathname = pathname.offset(buffer.buffer_loads.get_length() as isize).offset(-(1 as isize));
         loop {
             filename = getnextfilename(&mut pathname, endpathname);
             if filename.is_null() {
@@ -271,7 +280,11 @@ pub unsafe fn searcher_lua(interpreter: *mut Interpreter) -> i32 {
         if filename.is_null() {
             return 1;
         }
-        return checkload(interpreter, (lual_loadfilex(interpreter, filename, null()) == Status::OK) as i32, filename);
+        return checkload(
+            interpreter,
+            (lual_loadfilex(interpreter, filename, null()) == Status::OK) as i32,
+            filename,
+        );
     }
 }
 pub unsafe fn loadfunc(interpreter: *mut Interpreter, filename: *const i8, mut modname: *const i8) -> i32 {
@@ -310,7 +323,12 @@ pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
             return 0;
         }
         lua_pushlstring(interpreter, name, p.offset_from(name) as usize);
-        let filename: *const i8 = findfile(interpreter, lua_tolstring(interpreter, -1, null_mut()), c"cpath".as_ptr(), c"/".as_ptr());
+        let filename: *const i8 = findfile(
+            interpreter,
+            lua_tolstring(interpreter, -1, null_mut()),
+            c"cpath".as_ptr(),
+            c"/".as_ptr(),
+        );
         if filename.is_null() {
             return 1;
         }
@@ -344,7 +362,10 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
     unsafe {
         let mut i: i32;
         let mut message = Buffer::new();
-        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, c"searchers".as_ptr()) != TagType::Table) as i32 != 0) as i64 != 0 {
+        if ((lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32 - 1, c"searchers".as_ptr()) != TagType::Table) as i32 != 0)
+            as i64
+            != 0
+        {
             lual_error(interpreter, c"'package.searchers' must be a table".as_ptr());
         }
         message.initialize(interpreter);
@@ -353,9 +374,16 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
             message.add_string(c"\n\t".as_ptr());
             if lua_rawgeti(interpreter, 3, i as i64) == TagType::Nil {
                 lua_settop(interpreter, -2);
-                message.loads.set_length((message.loads.get_length().wrapping_sub(2)) as usize);
+                message
+                    .buffer_loads
+                    .set_length((message.buffer_loads.get_length().wrapping_sub(2)) as usize);
                 message.push_result();
-                lual_error(interpreter, c"module '%s' not found:%s".as_ptr(), name, lua_tolstring(interpreter, -1, null_mut()));
+                lual_error(
+                    interpreter,
+                    c"module '%s' not found:%s".as_ptr(),
+                    name,
+                    lua_tolstring(interpreter, -1, null_mut()),
+                );
             }
             lua_pushstring(interpreter, name);
             (*interpreter).lua_callk(1, 2, 0, None);
@@ -366,7 +394,9 @@ pub unsafe fn findloader(interpreter: *mut Interpreter, name: *const i8) {
                 message.add_value();
             } else {
                 lua_settop(interpreter, -2 - 1);
-                message.loads.set_length((message.loads.get_length().wrapping_sub(2)) as usize);
+                message
+                    .buffer_loads
+                    .set_length((message.buffer_loads.get_length().wrapping_sub(2)) as usize);
             }
             i += 1;
         }
@@ -402,11 +432,27 @@ pub unsafe fn ll_require(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const PACKAGE_FUNCTIONS: [RegisteredFunction; 2] = {
-    [{ RegisteredFunction { name: c"loadlib".as_ptr(), function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32) } }, {
-        RegisteredFunction { name: c"searchpath".as_ptr(), function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32) }
-    }]
+    [
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"loadlib".as_ptr(),
+                registeredfunction_function: Some(ll_loadlib as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"searchpath".as_ptr(),
+                registeredfunction_function: Some(ll_searchpath as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+    ]
 };
-pub const LL_FUNCTIONS: [RegisteredFunction; 1] = [{ RegisteredFunction { name: c"require".as_ptr(), function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32) } }];
+pub const LL_FUNCTIONS: [RegisteredFunction; 1] = [{
+    RegisteredFunction {
+        registeredfunction_name: c"require".as_ptr(),
+        registeredfunction_function: Some(ll_require as unsafe fn(*mut Interpreter) -> i32),
+    }
+}];
 pub unsafe fn createsearcherstable(interpreter: *mut Interpreter) {
     unsafe {
         pub const SEARCHERS: [CFunction; 5] = {
@@ -442,7 +488,13 @@ pub unsafe fn createclibstable(interpreter: *mut Interpreter) {
 pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         createclibstable(interpreter);
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
         createsearcherstable(interpreter);

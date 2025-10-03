@@ -1,12 +1,12 @@
-use libc::time;
 use crate::buffer::*;
+use crate::c::*;
 use crate::character::*;
-use crate::tdefaultnew::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
-use crate::utility::c::*;
-use libc::{remove, rename, setlocale, system,memcmp};
+use crate::tdefaultnew::*;
+use libc::time;
+use libc::{memcmp, remove, rename, setlocale, system};
 use std::ptr::*;
 pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -93,7 +93,11 @@ pub unsafe fn setallfields(interpreter: *mut Interpreter, stm: *mut TM) {
 }
 pub unsafe fn getboolfield(interpreter: *mut Interpreter, key: *const i8) -> i32 {
     unsafe {
-        let res = if lua_getfield(interpreter, -1, key) == TagType::Nil { -1 } else { lua_toboolean(interpreter, -1) as i32 };
+        let res = if lua_getfield(interpreter, -1, key) == TagType::Nil {
+            -1
+        } else {
+            lua_toboolean(interpreter, -1) as i32
+        };
         lua_settop(interpreter, -2);
         return res;
     }
@@ -111,7 +115,12 @@ pub unsafe fn getfield(interpreter: *mut Interpreter, key: *const i8, d: i32, de
             }
             res = d as i64;
         } else {
-            if if res >= 0 { (res - delta as i64 <= 0x7FFFFFFF as i64) as i32 } else { ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32 } == 0 {
+            if if res >= 0 {
+                (res - delta as i64 <= 0x7FFFFFFF as i64) as i32
+            } else {
+                ((-(0x7FFFFFFF as i32) - 1 + delta) as i64 <= res) as i32
+            } == 0
+            {
                 return lual_error(interpreter, c"field '%s' is out-of-bound".as_ptr(), key);
             }
             res -= delta as i64;
@@ -134,7 +143,11 @@ pub unsafe fn checkoption(interpreter: *mut Interpreter, conv: *const i8, convle
             }
             option = option.offset(oplen as isize);
         }
-        lual_argerror(interpreter, 1, lua_pushfstring(interpreter, c"invalid conversion specifier '%%%s'".as_ptr(), conv));
+        lual_argerror(
+            interpreter,
+            1,
+            lua_pushfstring(interpreter, c"invalid conversion specifier '%%%s'".as_ptr(), conv),
+        );
         return conv;
     }
 }
@@ -151,7 +164,11 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut slen: usize = 0;
         let mut stringpointer: *const i8 = lual_optlstring(interpreter, 1, c"%c".as_ptr(), &mut slen);
-        let mut t: i64 = if TagType::is_none_or_nil(lua_type(interpreter, 2)) { time(null_mut()) } else { l_checktime(interpreter, 2) };
+        let mut t: i64 = if TagType::is_none_or_nil(lua_type(interpreter, 2)) {
+            time(null_mut())
+        } else {
+            l_checktime(interpreter, 2)
+        };
         let stringend: *const i8 = stringpointer.offset(slen as isize);
         let mut tmr: TM = TM {
             tm_sec: 0,
@@ -186,19 +203,26 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             b.initialize(interpreter);
             while stringpointer < stringend {
                 if *stringpointer as i32 != Character::Percent as i32 {
-                    (b.loads.get_length() < b.loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
+                    (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
                     let fresh157 = stringpointer;
                     stringpointer = stringpointer.offset(1);
-                    let fresh158 = b.loads.get_length();
-                    b.loads.set_length((b.loads.get_length()).wrapping_add(1) as usize);
-                    *(b.loads.loads_pointer).offset(fresh158 as isize) = *fresh157;
+                    let fresh158 = b.buffer_loads.get_length();
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length()).wrapping_add(1) as usize);
+                    *(b.buffer_loads.loads_pointer).offset(fresh158 as isize) = *fresh157;
                 } else {
                     let reslen: usize;
                     let buffer: *mut i8 = b.prepare_with_size(250);
                     stringpointer = stringpointer.offset(1);
-                    stringpointer = checkoption(interpreter, stringpointer, stringend.offset_from(stringpointer) as i64, cc.as_mut_ptr().offset(1 as isize));
+                    stringpointer = checkoption(
+                        interpreter,
+                        stringpointer,
+                        stringend.offset_from(stringpointer) as i64,
+                        cc.as_mut_ptr().offset(1 as isize),
+                    );
                     reslen = strftime(buffer, 250, cc.as_mut_ptr(), stm);
-                    b.loads.set_length((b.loads.get_length() as usize).wrapping_add(reslen as usize));
+                    b.buffer_loads
+                        .set_length((b.buffer_loads.get_length() as usize).wrapping_add(reslen as usize));
                 }
             }
             b.push_result();
@@ -210,10 +234,10 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let sometime: i64;
         match lua_type(interpreter, 1) {
-            None | Some(TagType::Nil) => {
+            | None | Some(TagType::Nil) => {
                 sometime = time(null_mut());
             },
-            _ => {
+            | _ => {
                 let mut timestruct: TM = TM {
                     tm_sec: 0,
                     tm_min: 0,
@@ -291,21 +315,60 @@ pub unsafe fn os_exit(interpreter: *mut Interpreter) -> i32 {
     }
 }
 pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [
-    RegisteredFunction { name: c"clock".as_ptr(), function: Some(os_clock as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"date".as_ptr(), function: Some(os_date as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"difftime".as_ptr(), function: Some(os_difftime as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"execute".as_ptr(), function: Some(os_execute as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"exit".as_ptr(), function: Some(os_exit as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"getenv".as_ptr(), function: Some(os_getenv as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"remove".as_ptr(), function: Some(os_remove as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"rename".as_ptr(), function: Some(os_rename as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"setlocale".as_ptr(), function: Some(os_setlocale as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"time".as_ptr(), function: Some(os_time as unsafe fn(*mut Interpreter) -> i32) },
-    RegisteredFunction { name: c"tmpname".as_ptr(), function: Some(os_tmpname as unsafe fn(*mut Interpreter) -> i32) },
+    RegisteredFunction {
+        registeredfunction_name: c"clock".as_ptr(),
+        registeredfunction_function: Some(os_clock as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"date".as_ptr(),
+        registeredfunction_function: Some(os_date as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"difftime".as_ptr(),
+        registeredfunction_function: Some(os_difftime as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"execute".as_ptr(),
+        registeredfunction_function: Some(os_execute as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"exit".as_ptr(),
+        registeredfunction_function: Some(os_exit as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"getenv".as_ptr(),
+        registeredfunction_function: Some(os_getenv as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"remove".as_ptr(),
+        registeredfunction_function: Some(os_remove as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"rename".as_ptr(),
+        registeredfunction_function: Some(os_rename as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"setlocale".as_ptr(),
+        registeredfunction_function: Some(os_setlocale as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"time".as_ptr(),
+        registeredfunction_function: Some(os_time as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"tmpname".as_ptr(),
+        registeredfunction_function: Some(os_tmpname as unsafe fn(*mut Interpreter) -> i32),
+    },
 ];
 pub unsafe fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, SYSTEM_FUNCTIONS.as_ptr(), SYSTEM_FUNCTIONS.len(), 0);
         return 1;

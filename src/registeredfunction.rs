@@ -2,6 +2,6 @@ use crate::functions::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct RegisteredFunction {
-    pub name: *const i8,
-    pub function: CFunction,
+    pub registeredfunction_name: *const i8,
+    pub registeredfunction_function: CFunction,
 }

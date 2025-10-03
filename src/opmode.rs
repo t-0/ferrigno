@@ -1,4 +1,4 @@
-use crate::vm::instruction::*;
+use crate::instruction::*;
 pub const OPMODES: [u8; 83] = [
     (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IABC as i32) as u8,
     (0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 1 << 3 | IASBX as i32) as u8,

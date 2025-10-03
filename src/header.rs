@@ -3,6 +3,6 @@ use crate::interpreter::*;
 #[repr(C)]
 pub struct Header {
     pub header_interpreter: *mut Interpreter,
-    pub is_little_endian: i32,
-    pub maxmimum_alignment: i32,
+    pub header_islittleendian: i32,
+    pub header_maxmimumalignment: i32,
 }

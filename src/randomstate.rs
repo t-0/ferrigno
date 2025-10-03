@@ -1,5 +1,5 @@
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct RandomState {
-    pub data: [usize; 4],
+    pub randomstate_data: [usize; 4],
 }

@@ -1,13 +1,13 @@
 #![allow(unpredictable_function_pointer_comparisons)]
-use crate::status::*;
+use crate::c::*;
 use crate::calls::*;
 use crate::character::*;
 use crate::debuginfo::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
+use crate::status::*;
 use crate::tag::*;
-use crate::utility::c::*;
 use std::ptr::*;
 pub unsafe fn db_getregistry(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -27,7 +27,8 @@ pub unsafe fn db_getmetatable(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn db_setmetatable(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let t = lua_type(interpreter, 2);
-        (((t == Some(TagType::Nil) || t == Some(TagType::Table)) as i32 != 0) as i64 != 0 || lual_typeerror(interpreter, 2, c"nil or table".as_ptr()) != 0) as i32;
+        (((t == Some(TagType::Nil) || t == Some(TagType::Table)) as i32 != 0) as i64 != 0
+            || lual_typeerror(interpreter, 2, c"nil or table".as_ptr()) != 0) as i32;
         lua_settop(interpreter, 2);
         lua_setmetatable(interpreter, 1);
         return 1;
@@ -75,7 +76,8 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         let mut options: *const i8 = lual_optlstring(interpreter, arg + 2, c"flnSrtu".as_ptr(), null_mut());
         checkstack(interpreter, other_state, 3);
-        (((*options.offset(0 as isize) as i32 != Character::AngleRight as i32) as i32 != 0) as i64 != 0 || lual_argerror(interpreter, arg + 2, c"invalid option Character::AngleRight".as_ptr()) != 0) as i32;
+        (((*options.offset(0 as isize) as i32 != Character::AngleRight as i32) as i32 != 0) as i64 != 0
+            || lual_argerror(interpreter, arg + 2, c"invalid option Character::AngleRight".as_ptr()) != 0) as i32;
         if lua_type(interpreter, arg + 1) == Some(TagType::Closure) {
             options = lua_pushfstring(interpreter, c">%s".as_ptr(), options);
             lua_pushvalue(interpreter, arg + 1);
@@ -102,7 +104,11 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
         if !(strchr(options, Character::LowerU as i32)).is_null() {
             settabsi(interpreter, c"nups".as_ptr(), debuginfo.debuginfo_nups as i32);
             settabsi(interpreter, c"nparams".as_ptr(), debuginfo.debuginfo_nparams as i32);
-            settabsb(interpreter, c"isvararg".as_ptr(), debuginfo.debuginfo_isvariablearguments as i32);
+            settabsb(
+                interpreter,
+                c"isvararg".as_ptr(),
+                debuginfo.debuginfo_isvariablearguments as i32,
+            );
         }
         if !(strchr(options, Character::LowerN as i32)).is_null() {
             settabss(interpreter, c"name".as_ptr(), debuginfo.debuginfo_name);
@@ -113,7 +119,11 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             settabsi(interpreter, c"ntransfer".as_ptr(), debuginfo.debuginfo_ntransfer as i32);
         }
         if !(strchr(options, Character::LowerT as i32)).is_null() {
-            settabsb(interpreter, c"istailcall".as_ptr(), if debuginfo.debuginfo_istailcall { 1 } else { 0 });
+            settabsb(
+                interpreter,
+                c"istailcall".as_ptr(),
+                if debuginfo.debuginfo_istailcall { 1 } else { 0 },
+            );
         }
         if !(strchr(options, Character::UpperL as i32)).is_null() {
             treatstackoption(interpreter, other_state, c"activelines".as_ptr());
@@ -207,13 +217,13 @@ pub unsafe fn db_sethook(interpreter: *mut Interpreter) -> i32 {
         let function: HookFunction;
         let other_state: *mut Interpreter = getthread(interpreter, &mut arg);
         match lua_type(interpreter, arg + 1) {
-            None | Some(TagType::Nil) => {
+            | None | Some(TagType::Nil) => {
                 lua_settop(interpreter, arg + 1);
                 function = None;
                 mask = 0;
                 count = 0;
             },
-            _ => {
+            | _ => {
                 let smask: *const i8 = lual_checklstring(interpreter, arg + 2, null_mut());
                 (*interpreter).lual_checktype(arg + 1, TagType::Closure);
                 count = lual_optinteger(interpreter, arg + 3, 0) as i32;
@@ -268,10 +278,20 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
             let mut buffer: [i8; 250] = [0; 250];
             fprintf(stderr, c"%s".as_ptr(), c"lua_debug> ".as_ptr());
             fflush(stderr);
-            if (fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null() || strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0 {
+            if (fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null()
+                || strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0
+            {
                 return 0;
             }
-            if lual_loadbufferx(interpreter, buffer.as_mut_ptr(), strlen(buffer.as_mut_ptr()) as usize, c"=(debug command)".as_ptr(), null()) != Status::OK || CallS::api_call(interpreter, 0, 0, 0, 0, None) != Status::OK {
+            if lual_loadbufferx(
+                interpreter,
+                buffer.as_mut_ptr(),
+                strlen(buffer.as_mut_ptr()) as usize,
+                c"=(debug command)".as_ptr(),
+                null(),
+            ) != Status::OK
+                || CallS::api_call(interpreter, 0, 0, 0, 0, None) != Status::OK
+            {
                 fprintf(stderr, c"%s\n".as_ptr(), lual_tolstring(interpreter, -1, null_mut()));
                 fflush(stderr);
             }
@@ -295,27 +315,113 @@ pub unsafe fn db_traceback(interpreter: *mut Interpreter) -> i32 {
 }
 pub const DEBUG_FUNCTIONS: [RegisteredFunction; 16] = {
     [
-        { RegisteredFunction { name: c"debug".as_ptr(), function: Some(db_debug as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getuservalue".as_ptr(), function: Some(db_getuservalue as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"gethook".as_ptr(), function: Some(db_gethook as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getinfo".as_ptr(), function: Some(db_getinfo as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getlocal".as_ptr(), function: Some(db_getlocal as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getregistry".as_ptr(), function: Some(db_getregistry as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getmetatable".as_ptr(), function: Some(db_getmetatable as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"getupvalue".as_ptr(), function: Some(db_getupvalue as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"upvaluejoin".as_ptr(), function: Some(db_upvaluejoin as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"upvalueid".as_ptr(), function: Some(db_upvalueid as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"setuservalue".as_ptr(), function: Some(db_setuservalue as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"sethook".as_ptr(), function: Some(db_sethook as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"setlocal".as_ptr(), function: Some(db_setlocal as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"setmetatable".as_ptr(), function: Some(db_setmetatable as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"setupvalue".as_ptr(), function: Some(db_setupvalue as unsafe fn(*mut Interpreter) -> i32) } },
-        { RegisteredFunction { name: c"traceback".as_ptr(), function: Some(db_traceback as unsafe fn(*mut Interpreter) -> i32) } },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"debug".as_ptr(),
+                registeredfunction_function: Some(db_debug as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getuservalue".as_ptr(),
+                registeredfunction_function: Some(db_getuservalue as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"gethook".as_ptr(),
+                registeredfunction_function: Some(db_gethook as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getinfo".as_ptr(),
+                registeredfunction_function: Some(db_getinfo as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getlocal".as_ptr(),
+                registeredfunction_function: Some(db_getlocal as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getregistry".as_ptr(),
+                registeredfunction_function: Some(db_getregistry as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getmetatable".as_ptr(),
+                registeredfunction_function: Some(db_getmetatable as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"getupvalue".as_ptr(),
+                registeredfunction_function: Some(db_getupvalue as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"upvaluejoin".as_ptr(),
+                registeredfunction_function: Some(db_upvaluejoin as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"upvalueid".as_ptr(),
+                registeredfunction_function: Some(db_upvalueid as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"setuservalue".as_ptr(),
+                registeredfunction_function: Some(db_setuservalue as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"sethook".as_ptr(),
+                registeredfunction_function: Some(db_sethook as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"setlocal".as_ptr(),
+                registeredfunction_function: Some(db_setlocal as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"setmetatable".as_ptr(),
+                registeredfunction_function: Some(db_setmetatable as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"setupvalue".as_ptr(),
+                registeredfunction_function: Some(db_setupvalue as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"traceback".as_ptr(),
+                registeredfunction_function: Some(db_traceback as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
     ]
 };
 pub unsafe fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(interpreter, 504.0, (size_of::<i64>() as usize).wrapping_mul(16 as usize).wrapping_add(size_of::<f64>() as usize));
+        lual_checkversion_(
+            interpreter,
+            504.0,
+            (size_of::<i64>() as usize)
+                .wrapping_mul(16 as usize)
+                .wrapping_add(size_of::<f64>() as usize),
+        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, DEBUG_FUNCTIONS.as_ptr(), DEBUG_FUNCTIONS.len(), 0);
         return 1;

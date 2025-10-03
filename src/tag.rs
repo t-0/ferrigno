@@ -18,44 +18,44 @@ pub enum TagType {
 impl TagType {
     pub fn is_none_or_nil(tagtype: Option<TagType>) -> bool {
         match tagtype {
-            None | Some(TagType::Nil) => true,
-            _ => false,
+            | None | Some(TagType::Nil) => true,
+            | _ => false,
         }
     }
-    pub fn is_nil(& self) -> bool {
+    pub fn is_nil(&self) -> bool {
         *self == TagType::Nil
     }
-    pub fn is_string(& self) -> bool {
+    pub fn is_string(&self) -> bool {
         *self == TagType::String
     }
-    pub fn is_numeric(& self) -> bool {
+    pub fn is_numeric(&self) -> bool {
         *self == TagType::Numeric
     }
-    pub fn is_boolean(& self) -> bool {
+    pub fn is_boolean(&self) -> bool {
         *self == TagType::Boolean
     }
-    pub fn is_closure(& self) -> bool {
+    pub fn is_closure(&self) -> bool {
         *self == TagType::Closure
     }
-    pub fn is_user(& self) -> bool {
+    pub fn is_user(&self) -> bool {
         *self == TagType::User
     }
-    pub fn is_table(& self) -> bool {
+    pub fn is_table(&self) -> bool {
         *self == TagType::Table
     }
-    pub fn is_pointer(& self) -> bool {
+    pub fn is_pointer(&self) -> bool {
         *self == TagType::Pointer
     }
-    pub fn is_interpreter(& self) -> bool {
+    pub fn is_interpreter(&self) -> bool {
         *self == TagType::Interpreter
     }
-    pub fn is_upvalue(& self) -> bool {
+    pub fn is_upvalue(&self) -> bool {
         *self == TagType::UpValue
     }
-    pub fn is_prototype(& self) -> bool {
+    pub fn is_prototype(&self) -> bool {
         *self == TagType::Prototype
     }
-    pub fn is_deadkey(& self) -> bool {
+    pub fn is_deadkey(&self) -> bool {
         *self == TagType::DeadKey
     }
 }
@@ -90,7 +90,7 @@ pub enum TagVariant {
     DeadKey = TagType::DeadKey as u8 | TagVariantRaw::Alpha as u8,
 }
 impl TagVariant {
-    pub const fn from (value: u8) -> Self {
+    pub const fn from(value: u8) -> Self {
         if value == TagType::Nil as u8 | TagVariantRaw::Alpha as u8 {
             TagVariant::NilNil
         } else if value == TagType::Nil as u8 | TagVariantRaw::Beta as u8 {
@@ -133,27 +133,27 @@ impl TagVariant {
             TagVariant::DeadKey
         }
     }
-    pub const fn to_tag_type(& self) -> TagType {
+    pub const fn to_tag_type(&self) -> TagType {
         match self {
-            TagVariant::NilNil => TagType::Nil,
-            TagVariant::NilEmpty => TagType::Nil,
-            TagVariant::NilAbsentKey => TagType::Nil,
-            TagVariant::BooleanFalse => TagType::Boolean,
-            TagVariant::BooleanTrue => TagType::Boolean,
-            TagVariant::Pointer => TagType::Pointer,
-            TagVariant::NumericInteger => TagType::Numeric,
-            TagVariant::NumericNumber => TagType::Numeric,
-            TagVariant::StringShort => TagType::String,
-            TagVariant::StringLong => TagType::String,
-            TagVariant::Table => TagType::Table,
-            TagVariant::ClosureL => TagType::Closure,
-            TagVariant::ClosureCFunction => TagType::Closure,
-            TagVariant::ClosureC => TagType::Closure,
-            TagVariant::User => TagType::User,
-            TagVariant::Interpreter => TagType::Interpreter,
-            TagVariant::UpValue => TagType::UpValue,
-            TagVariant::Prototype => TagType::Prototype,
-            TagVariant::DeadKey => TagType::DeadKey,
+            | TagVariant::NilNil => TagType::Nil,
+            | TagVariant::NilEmpty => TagType::Nil,
+            | TagVariant::NilAbsentKey => TagType::Nil,
+            | TagVariant::BooleanFalse => TagType::Boolean,
+            | TagVariant::BooleanTrue => TagType::Boolean,
+            | TagVariant::Pointer => TagType::Pointer,
+            | TagVariant::NumericInteger => TagType::Numeric,
+            | TagVariant::NumericNumber => TagType::Numeric,
+            | TagVariant::StringShort => TagType::String,
+            | TagVariant::StringLong => TagType::String,
+            | TagVariant::Table => TagType::Table,
+            | TagVariant::ClosureL => TagType::Closure,
+            | TagVariant::ClosureCFunction => TagType::Closure,
+            | TagVariant::ClosureC => TagType::Closure,
+            | TagVariant::User => TagType::User,
+            | TagVariant::Interpreter => TagType::Interpreter,
+            | TagVariant::UpValue => TagType::UpValue,
+            | TagVariant::Prototype => TagType::Prototype,
+            | TagVariant::DeadKey => TagType::DeadKey,
         }
     }
 }

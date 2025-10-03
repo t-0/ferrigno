@@ -16,7 +16,9 @@ pub struct StringTable {
 impl StringTable {
     pub unsafe fn remove(&mut self, tstring: *mut TString) {
         unsafe {
-            let mut it: *mut *mut TString = &mut *(self.stringtable_hash).offset(((*tstring).tstring_hash & (self.stringtable_size - 1) as u32) as isize) as *mut *mut TString;
+            let mut it: *mut *mut TString = &mut *(self.stringtable_hash)
+                .offset(((*tstring).tstring_hash & (self.stringtable_size - 1) as u32) as isize)
+                as *mut *mut TString;
             while *it != tstring {
                 it = &mut (**it).tstring_hashnext;
             }
@@ -51,7 +53,8 @@ impl StringTable {
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            self.stringtable_hash = luam_malloc_(interpreter, STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>())) as *mut *mut TString;
+            self.stringtable_hash =
+                luam_malloc_(interpreter, STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>())) as *mut *mut TString;
             tablerehash(self.stringtable_hash, 0, STRINGTABLE_INITIAL_SIZE);
             self.stringtable_size = STRINGTABLE_INITIAL_SIZE;
         }
@@ -59,7 +62,7 @@ impl StringTable {
 }
 pub unsafe fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
     unsafe {
-        let stringtable: *mut StringTable = &mut (*(*interpreter).global).global_stringtable;
+        let stringtable: *mut StringTable = &mut (*(*interpreter).interpreter_global).global_stringtable;
         (*stringtable).resize(interpreter, new_size);
     }
 }
