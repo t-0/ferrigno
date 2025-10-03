@@ -45,9 +45,9 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
     unsafe {
         let dftmark: *const i8;
         let nver: *const i8 = lua_pushfstring(interpreter, c"%s%s".as_ptr(), envname, c"_5_4".as_ptr());
-        let mut path: *const i8 = getenv(nver);
+        let mut path: *const i8 = libc::getenv(nver);
         if path.is_null() {
-            path = getenv(envname);
+            path = libc::getenv(envname);
         }
         if path.is_null() || noenv(interpreter) {
             lua_pushstring(interpreter, dft);
@@ -158,11 +158,11 @@ pub unsafe fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn readable(filename: *const i8) -> i32 {
     unsafe {
-        let file: *mut FILE = fopen(filename, c"r".as_ptr());
+        let file: *mut libc::FILE = libc::fopen(filename, c"r".as_ptr()) as *mut libc::FILE;
         if file.is_null() {
             return 0;
         }
-        fclose(file);
+        libc::fclose(file);
         return 1;
     }
 }

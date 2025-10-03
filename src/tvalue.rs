@@ -17,7 +17,6 @@ use crate::tstring::*;
 use crate::user::*;
 use crate::utility::*;
 use crate::value::*;
-use libc::snprintf;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -173,9 +172,9 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
     unsafe {
         let mut length: usize;
         if (*obj).get_tagvariant() == TagVariant::NumericInteger {
-            length = snprintf(buffer, 44, c"%lld".as_ptr(), (*obj).tvalue_value.value_integer) as usize;
+            length = libc::snprintf(buffer, 44, c"%lld".as_ptr(), (*obj).tvalue_value.value_integer) as usize;
         } else {
-            length = snprintf(buffer, 44, c"%.14g".as_ptr(), (*obj).tvalue_value.value_number) as usize;
+            length = libc::snprintf(buffer, 44, c"%.14g".as_ptr(), (*obj).tvalue_value.value_number) as usize;
             if *buffer.offset(libc::strspn(buffer, c"-0123456789".as_ptr()) as isize) as i32 == Character::Null as i32 {
                 let fresh = length;
                 length = length + 1;

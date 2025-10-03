@@ -550,8 +550,8 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
             }
         }
         lua_settop(interpreter, 0);
-        fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
-        fflush(stdout);
+        libc::fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
+        libc::fflush(stdout);
         PROGRAM_NAME = oldprogname;
     }
 }
@@ -576,7 +576,7 @@ pub unsafe fn luad_throw(interpreter: *mut Interpreter, status: Status) -> ! {
                 if ((*global).global_panic).is_some() {
                     ((*global).global_panic).expect("non-null function pointer")(interpreter);
                 }
-                abort();
+                libc::abort();
             }
         };
     }
@@ -1866,10 +1866,10 @@ pub unsafe fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
 pub unsafe fn handle_luainit(interpreter: *mut Interpreter) -> Status {
     unsafe {
         let mut name: *const i8 = c"=LUA_INIT_5_4".as_ptr();
-        let mut initial: *const i8 = getenv(name.offset(1 as isize));
+        let mut initial: *const i8 = libc::getenv(name.offset(1 as isize));
         if initial.is_null() {
             name = c"=LUA_INIT".as_ptr();
-            initial = getenv(name.offset(1 as isize));
+            initial = libc::getenv(name.offset(1 as isize));
         }
         if initial.is_null() {
             return Status::OK;
@@ -3208,7 +3208,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                     let size = (3 as usize).wrapping_mul(size_of::<*mut libc::c_void>()).wrapping_add(8);
                     let bf: *mut i8 = buff_fs.get_raw(size);
                     let p: *mut libc::c_void = argp.arg::<*mut libc::c_void>();
-                    let length = snprintf(bf, size, c"%p".as_ptr(), p);
+                    let length = libc::snprintf(bf, size, c"%p".as_ptr(), p);
                     buff_fs.add_length(length as usize);
                 },
                 | Character::UpperU => {
@@ -6674,10 +6674,10 @@ pub unsafe fn get_f(mut _state: *mut Interpreter, arbitrary_data: *mut libc::c_v
             *size = (*lf).loadf_n as usize;
             (*lf).loadf_n = 0;
         } else {
-            if feof((*lf).loadf_file) != 0 {
+            if libc::feof((*lf).loadf_file) != 0 {
                 return null();
             }
-            *size = fread(
+            *size = libc::fread(
                 ((*lf).loadf_buffer).as_mut_ptr() as *mut libc::c_void,
                 1,
                 size_of::<[i8; 8192]>(),
@@ -6701,7 +6701,7 @@ pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex
         return Status::FileError;
     }
 }
-pub unsafe fn skip_bom(file: *mut FILE) -> i32 {
+pub unsafe fn skip_bom(file: *mut libc::FILE) -> i32 {
     unsafe {
         let c: i32 = getc(file);
         if c == 0xef as i32 && getc(file) == 0xbb as i32 && getc(file) == 0xbf as i32 {
@@ -6711,7 +6711,7 @@ pub unsafe fn skip_bom(file: *mut FILE) -> i32 {
         };
     }
 }
-pub unsafe fn skipcomment(file: *mut FILE, pointer: *mut i32) -> i32 {
+pub unsafe fn skipcomment(file: *mut libc::FILE, pointer: *mut i32) -> i32 {
     unsafe {
         *pointer = skip_bom(file);
         let mut c: i32 = *pointer;
@@ -6741,7 +6741,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
         } else {
             lua_pushfstring(interpreter, c"@%s".as_ptr(), filename);
             *__errno_location() = 0;
-            lf.loadf_file = fopen(filename, c"r".as_ptr());
+            lf.loadf_file = libc::fopen(filename, c"r".as_ptr()) as *mut libc::FILE;
             if (lf.loadf_file).is_null() {
                 return errfile(interpreter, c"open".as_ptr(), fnameindex);
             }
@@ -6779,9 +6779,9 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
             lua_tolstring(interpreter, -1, null_mut()),
             mode,
         );
-        readstatus = ferror(lf.loadf_file);
+        readstatus = libc::ferror(lf.loadf_file);
         if !filename.is_null() {
-            fclose(lf.loadf_file);
+            libc::fclose(lf.loadf_file);
         }
         if readstatus != 0 {
             lua_settop(interpreter, fnameindex);
@@ -7017,7 +7017,7 @@ pub unsafe fn panic(interpreter: *mut Interpreter) -> i32 {
             c"error object is not a string".as_ptr()
         };
         fprintf(stderr, c"PANIC: unprotected error in call to Lua API (%s)\n".as_ptr(), message);
-        fflush(stderr);
+        libc::fflush(stderr);
         return 0;
     }
 }
@@ -7056,7 +7056,7 @@ pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, t
     unsafe {
         let interpreter: *mut Interpreter = arbitrary_data as *mut Interpreter;
         fprintf(stderr, c"%s".as_ptr(), message);
-        fflush(stderr);
+        libc::fflush(stderr);
         if tocont != 0 {
             lua_setwarnf(
                 interpreter,
@@ -7065,7 +7065,7 @@ pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, t
             );
         } else {
             fprintf(stderr, c"%s".as_ptr(), c"\n".as_ptr());
-            fflush(stderr);
+            libc::fflush(stderr);
             lua_setwarnf(
                 interpreter,
                 Some(warnfon as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
@@ -7080,7 +7080,7 @@ pub unsafe fn warnfon(arbitrary_data: *mut libc::c_void, message: *const i8, toc
             return;
         }
         fprintf(stderr, c"%s".as_ptr(), c"Lua warning: ".as_ptr());
-        fflush(stderr);
+        libc::fflush(stderr);
         warnfcont(arbitrary_data, message, tocont);
     }
 }
@@ -7133,13 +7133,13 @@ pub unsafe fn luab_print(interpreter: *mut Interpreter) -> i32 {
             let mut l: usize = 0;
             let s: *const i8 = lual_tolstring(interpreter, i, &mut l);
             if i > 1 {
-                fwrite(c"\t".as_ptr() as *const libc::c_void, 1, 1, stdout);
+                libc::fwrite(c"\t".as_ptr() as *const libc::c_void, 1, 1, stdout);
             }
-            fwrite(s as *const libc::c_void, 1, l as usize, stdout);
+            libc::fwrite(s as *const libc::c_void, 1, l as usize, stdout);
             lua_settop(interpreter, -2);
         }
-        fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
-        fflush(stdout);
+        libc::fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
+        libc::fflush(stdout);
         return 0;
     }
 }
@@ -7214,32 +7214,32 @@ pub unsafe fn laction(i: i32) {
 pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
         fprintf(stderr, c"%s: ".as_ptr(), PROGRAM_NAME);
-        fflush(stderr);
+        libc::fflush(stderr);
         if *badoption.offset(1 as isize) as i32 == Character::LowerE as i32
             || *badoption.offset(1 as isize) as i32 == Character::LowerL as i32
         {
             fprintf(stderr, c"'%s' needs argument\n".as_ptr(), badoption);
-            fflush(stderr);
+            libc::fflush(stderr);
         } else {
             fprintf(stderr, c"unrecognized option '%s'\n".as_ptr(), badoption);
-            fflush(stderr);
+            libc::fflush(stderr);
         }
         fprintf(
             stderr,
             c"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global Character::LowerG\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n".as_ptr(),
             PROGRAM_NAME,
         );
-        fflush(stderr);
+        libc::fflush(stderr);
     }
 }
 pub unsafe fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
             fprintf(stderr, c"%s: ".as_ptr(), pname);
-            fflush(stderr);
+            libc::fflush(stderr);
         }
         fprintf(stderr, c"%s\n".as_ptr(), message);
-        fflush(stderr);
+        libc::fflush(stderr);
     }
 }
 pub unsafe fn report(interpreter: *mut Interpreter, status: Status) -> Status {
@@ -7519,7 +7519,7 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
         let b: *mut i8 = buffer.as_mut_ptr();
         let prmt: *const i8 = get_prompt(interpreter, firstline);
         fputs(prmt, stdout);
-        fflush(stdout);
+        libc::fflush(stdout);
         let readstatus = !fgets(b, 512 as i32, stdin).is_null();
         lua_settop(interpreter, 0);
         if !readstatus {

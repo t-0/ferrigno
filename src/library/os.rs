@@ -44,7 +44,7 @@ pub unsafe fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
         libc::strcpy(buffer.as_mut_ptr(), c"/tmp/lua_XXXXXX".as_ptr());
         err = mkstemp(buffer.as_mut_ptr());
         if err != -1 {
-            close(err);
+            libc::close(err);
         }
         err = (err == -1) as i32;
         if (err != 0) as i64 != 0 {
@@ -56,7 +56,7 @@ pub unsafe fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn os_getenv(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lua_pushstring(interpreter, getenv(lual_checklstring(interpreter, 1, null_mut())));
+        lua_pushstring(interpreter, libc::getenv(lual_checklstring(interpreter, 1, null_mut())));
         return 1;
     }
 }

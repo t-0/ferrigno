@@ -516,9 +516,9 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0 {
                 let mut buffer: [i8; 10] = [0; 10];
                 if *(*__ctype_b_loc()).offset(*s.offset(1 as isize) as u8 as isize) as i32 & _ISDIGIT as i32 == 0 {
-                    snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%d".as_ptr(), *s as u8 as i32);
+                    libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%d".as_ptr(), *s as u8 as i32);
                 } else {
-                    snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%03d".as_ptr(), *s as u8 as i32);
+                    libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%03d".as_ptr(), *s as u8 as i32);
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
@@ -547,7 +547,7 @@ pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) 
         } else if n != n {
             s = c"(0/0)".as_ptr();
         } else {
-            let nb: i32 = snprintf(buffer, 120, c"%a".as_ptr(), n);
+            let nb: i32 = libc::snprintf(buffer, 120, c"%a".as_ptr(), n);
             if (memchr(buffer as *const libc::c_void, Character::Period as i32, nb as usize)).is_null() {
                 let point: i8 = Character::Period as i8;
                 let ppoint: *mut i8 = memchr(buffer as *const libc::c_void, point as i32, nb as usize) as *mut i8;
@@ -557,7 +557,7 @@ pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) 
             }
             return nb;
         }
-        return snprintf(buffer, 120, c"%s".as_ptr(), s);
+        return libc::snprintf(buffer, 120, c"%s".as_ptr(), s);
     }
 }
 pub unsafe fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32) {
@@ -578,7 +578,7 @@ pub unsafe fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32
                     } else {
                         c"%lld".as_ptr()
                     };
-                    nb = snprintf(buffer, 120, format, n);
+                    nb = libc::snprintf(buffer, 120, format, n);
                 } else {
                     nb = quotefloat(interpreter, buffer, lua_tonumberx(interpreter, arg, null_mut()));
                 }
@@ -692,7 +692,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                     match Character::from(*fresh178 as i32) {
                         | Character::LowerC => {
                             checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 0);
-                            nb = snprintf(
+                            nb = libc::snprintf(
                                 buffer,
                                 maxitem as usize,
                                 form.as_mut_ptr(),
@@ -715,7 +715,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                         | Character::LowerA | Character::UpperA => {
                             checkformat(interpreter, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
                             addlenmod(form.as_mut_ptr(), c"".as_ptr());
-                            nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checknumber(interpreter, arg));
+                            nb = libc::snprintf(buffer, maxitem as usize, form.as_mut_ptr(), lual_checknumber(interpreter, arg));
                             current_block = 11793792312832361944;
                         },
                         | Character::LowerF => {
@@ -733,7 +733,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                                 p = c"(null)".as_ptr() as *const libc::c_void;
                                 form[(libc::strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] = Character::LowerS as i8;
                             }
-                            nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
+                            nb = libc::snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
                         },
                         | Character::LowerQ => {
@@ -756,7 +756,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                                 if (libc::strchr(form.as_mut_ptr(), Character::Period as i32)).is_null() && l >= 100 as usize {
                                     b.add_value();
                                 } else {
-                                    nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), s);
+                                    nb = libc::snprintf(buffer, maxitem as usize, form.as_mut_ptr(), s);
                                     lua_settop(interpreter, -2);
                                 }
                             }
@@ -771,13 +771,13 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             let n: i64 = lual_checkinteger(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), flags, 1);
                             addlenmod(form.as_mut_ptr(), c"ll".as_ptr());
-                            nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n);
+                            nb = libc::snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n);
                         },
                         | 6669252993407410313 => {
                             let n_0: f64 = lual_checknumber(interpreter, arg);
                             checkformat(interpreter, form.as_mut_ptr(), c"-+#0 ".as_ptr(), 1);
                             addlenmod(form.as_mut_ptr(), c"".as_ptr());
-                            nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n_0);
+                            nb = libc::snprintf(buffer, maxitem as usize, form.as_mut_ptr(), n_0);
                         },
                         | _ => {},
                     }

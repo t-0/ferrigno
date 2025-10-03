@@ -9,42 +9,26 @@ unsafe extern "C" {
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
     pub unsafe fn sigemptyset(__set: *mut SIgnalSet) -> i32;
     pub unsafe fn sigaction(__sig: i32, __act: *const SignalAction, __oact: *mut SignalAction) -> i32;
-    pub static mut stdin: *mut FILE;
-    pub static mut stdout: *mut FILE;
-    pub static mut stderr: *mut FILE;
-    pub fn fclose(__stream: *mut FILE) -> i32;
-    pub fn tmpfile() -> *mut FILE;
-    pub fn fflush(__stream: *mut FILE) -> i32;
-    pub fn fopen(_: *const i8, _: *const i8) -> *mut FILE;
-    pub fn freopen(__filename: *const i8, __modes: *const i8, __stream: *mut FILE) -> *mut FILE;
-    pub fn setvbuf(__stream: *mut FILE, __buf: *mut i8, __modes: i32, __n: usize) -> i32;
-    pub fn fprintf(_: *mut FILE, _: *const i8, _: ...) -> i32;
-    pub fn snprintf(_: *mut i8, _: usize, _: *const i8, _: ...) -> i32;
-    pub fn getc(__stream: *mut FILE) -> i32;
-    pub fn getc_unlocked(__stream: *mut FILE) -> i32;
-    pub fn fgets(s: *mut i8, __n: i32, __stream: *mut FILE) -> *mut i8;
-    pub fn fputs(s: *const i8, __stream: *mut FILE) -> i32;
-    pub fn ungetc(__c: i32, __stream: *mut FILE) -> i32;
-    pub fn fread(_: *mut libc::c_void, _: usize, _: usize, _: *mut FILE) -> usize;
-    pub fn fwrite(_: *const libc::c_void, _: usize, _: usize, _: *mut FILE) -> usize;
-    pub fn fseeko(__stream: *mut FILE, __off: i64, __whence: i32) -> i32;
-    pub fn ftello(__stream: *mut FILE) -> i64;
-    pub fn clearerr(__stream: *mut FILE);
-    pub fn feof(__stream: *mut FILE) -> i32;
-    pub fn ferror(__stream: *mut FILE) -> i32;
-    pub fn pclose(__stream: *mut FILE) -> i32;
-    pub fn popen(__command: *const i8, __modes: *const i8) -> *mut FILE;
-    pub fn flockfile(__stream: *mut FILE);
-    pub fn funlockfile(__stream: *mut FILE);
-    pub fn abort() -> !;
-    pub fn getenv(__name: *const i8) -> *mut i8;
+    pub static mut stdin: *mut libc::FILE;
+    pub static mut stdout: *mut libc::FILE;
+    pub static mut stderr: *mut libc::FILE;
+    pub fn tmpfile() -> *mut libc::FILE;
+    pub fn freopen(__filename: *const i8, __modes: *const i8, __stream: *mut libc::FILE) -> *mut libc::FILE;
+    pub fn setvbuf(__stream: *mut libc::FILE, __buf: *mut i8, __modes: i32, __n: usize) -> i32;
+    pub fn fprintf(_: *mut libc::FILE, _: *const i8, _: ...) -> i32;
+    pub fn getc(__stream: *mut libc::FILE) -> i32;
+    pub fn getc_unlocked(__stream: *mut libc::FILE) -> i32;
+    pub fn fgets(s: *mut i8, __n: i32, __stream: *mut libc::FILE) -> *mut i8;
+    pub fn fputs(s: *const i8, __stream: *mut libc::FILE) -> i32;
+    pub fn ungetc(__c: i32, __stream: *mut libc::FILE) -> i32;
     pub fn mkstemp(__template: *mut i8) -> i32;
     pub fn clock() -> i64;
     pub fn mktime(tp: *mut TM) -> i64;
     pub fn strftime(s: *mut i8, __maxsize: usize, __format: *const i8, tp: *const TM) -> usize;
     pub fn gmtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
     pub fn localtime_r(timer: *const i64, tp: *mut TM) -> *mut TM;
-    pub fn close(fd: i32) -> i32;
+    pub fn flockfile(__stream: *mut libc::FILE);
+    pub fn funlockfile(__stream: *mut libc::FILE);
 }
 pub const _ISALPHANUMERIC: u32 = 8;
 pub const _ISPUNCTUATION: u32 = 4;
@@ -170,39 +154,6 @@ pub struct SignalAction {
 pub union SigActionA {
     pub sa_handler: SignalHandler,
     pub sa_sigaction: Option<unsafe fn(i32, *mut SignalInfo, *mut libc::c_void) -> ()>,
-}
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub struct FILE {
-    pub _flags: i32,
-    pub _io_read_pointer: *mut i8,
-    pub _io_read_end: *mut i8,
-    pub _io_read_base: *mut i8,
-    pub _io_write_base: *mut i8,
-    pub _io_write_pointer: *mut i8,
-    pub _io_write_end: *mut i8,
-    pub _io_buf_base: *mut i8,
-    pub _io_buf_end: *mut i8,
-    pub _io_save_base: *mut i8,
-    pub _io_backup_base: *mut i8,
-    pub _io_save_end: *mut i8,
-    pub _markers: *mut _IOMarker,
-    pub _chain: *mut FILE,
-    pub _fileno: i32,
-    pub _flags2: i32,
-    pub _old_offset: i64,
-    pub _cur_column: u16,
-    pub _vtable_offset: i8,
-    pub _shortbuf: [i8; 1],
-    pub _lock: *mut libc::c_void,
-    pub _offset: i64,
-    pub _codecvt: *mut _IOCodeConvert,
-    pub _wide_data: *mut _IOWideData,
-    pub _freeres_list: *mut FILE,
-    pub _freeres_buf: *mut libc::c_void,
-    pub __pad5: usize,
-    pub _mode: i32,
-    pub _unused2: [i8; 20],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

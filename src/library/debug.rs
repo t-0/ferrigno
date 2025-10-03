@@ -277,7 +277,7 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
         loop {
             let mut buffer: [i8; 250] = [0; 250];
             fprintf(stderr, c"%s".as_ptr(), c"lua_debug> ".as_ptr());
-            fflush(stderr);
+            libc::fflush(stderr);
             if (fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null()
                 || libc::strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0
             {
@@ -293,7 +293,7 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
                 || CallS::api_call(interpreter, 0, 0, 0, 0, None) != Status::OK
             {
                 fprintf(stderr, c"%s\n".as_ptr(), lual_tolstring(interpreter, -1, null_mut()));
-                fflush(stderr);
+                libc::fflush(stderr);
             }
             lua_settop(interpreter, 0);
         }
