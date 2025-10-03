@@ -16,13 +16,13 @@ pub unsafe fn l_checkmode(mut mode: *const i8) -> i32 {
             && {
                 let fresh151 = mode;
                 mode = mode.offset(1);
-                !(strchr(c"rwa".as_ptr(), *fresh151 as i32)).is_null()
+                !(libc::strchr(c"rwa".as_ptr(), *fresh151 as i32)).is_null()
             }
             && (*mode as i32 != Character::Plus as i32 || {
                 mode = mode.offset(1);
                 1 != 0
             })
-            && strspn(mode, c"b".as_ptr()) == strlen(mode)) as i32;
+            && libc::strspn(mode, c"b".as_ptr()) == libc::strlen(mode)) as i32;
     }
 }
 pub unsafe fn io_type(interpreter: *mut Interpreter) -> i32 {
@@ -123,7 +123,7 @@ pub unsafe fn opencheck(interpreter: *mut Interpreter, fname: *const i8, mode: *
                 interpreter,
                 c"cannot open file '%s' (%s)".as_ptr(),
                 fname,
-                strerror(*__errno_location()),
+                libc::strerror(*__errno_location()),
             );
         }
     }
@@ -822,13 +822,6 @@ pub unsafe fn createstdfile(interpreter: *mut Interpreter, file: *mut FILE, k: *
 }
 pub unsafe fn luaopen_io(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, IO_FUNCTIONS.as_ptr(), IO_FUNCTIONS.len(), 0);
         createmeta(interpreter);

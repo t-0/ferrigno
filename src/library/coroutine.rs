@@ -1,10 +1,8 @@
-#![allow(unused)]
 use crate::coroutine::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
 use crate::tag::*;
-use rlua::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         (*interpreter).lual_checktype(1, TagType::Closure);
@@ -138,13 +136,6 @@ const COROUTINE_FUNCTIONS: [RegisteredFunction; 8] = {
 };
 pub unsafe fn luaopen_coroutine(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, COROUTINE_FUNCTIONS.as_ptr(), COROUTINE_FUNCTIONS.len(), 0);
     }

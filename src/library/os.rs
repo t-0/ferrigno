@@ -6,7 +6,7 @@ use crate::registeredfunction::*;
 use crate::tag::*;
 use crate::tdefaultnew::*;
 use libc::time;
-use libc::{memcmp, remove, rename, setlocale, system};
+use libc::{remove, rename, setlocale, system};
 use std::ptr::*;
 pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -41,7 +41,7 @@ pub unsafe fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut buffer: [i8; 32] = [0; 32];
         let mut err: i32;
-        strcpy(buffer.as_mut_ptr(), c"/tmp/lua_XXXXXX".as_ptr());
+        libc::strcpy(buffer.as_mut_ptr(), c"/tmp/lua_XXXXXX".as_ptr());
         err = mkstemp(buffer.as_mut_ptr());
         if err != -1 {
             close(err);
@@ -136,8 +136,8 @@ pub unsafe fn checkoption(interpreter: *mut Interpreter, conv: *const i8, convle
         while *option as i32 != Character::Null as i32 && oplen as i64 <= convlen {
             if *option as i32 == '|' as i32 {
                 oplen += 1;
-            } else if memcmp(conv as *const libc::c_void, option as *const libc::c_void, oplen as usize) == 0 {
-                memcpy(buffer as *mut libc::c_void, conv as *const libc::c_void, oplen as usize);
+            } else if libc::memcmp(conv as *const libc::c_void, option as *const libc::c_void, oplen as usize) == 0 {
+                libc::memcpy(buffer as *mut libc::c_void, conv as *const libc::c_void, oplen as usize);
                 *buffer.offset(oplen as isize) = Character::Null as i8;
                 return conv.offset(oplen as isize);
             }
@@ -193,7 +193,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
         if stm.is_null() {
             return lual_error(interpreter, c"date result cannot be represented in this installation".as_ptr());
         }
-        if strcmp(stringpointer, c"*t".as_ptr()) == 0 {
+        if libc::strcmp(stringpointer, c"*t".as_ptr()) == 0 {
             (*interpreter).lua_createtable();
             setallfields(interpreter, stm);
         } else {
@@ -275,7 +275,7 @@ pub unsafe fn os_difftime(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let sometime1: i64 = l_checktime(interpreter, 1);
         let sometime2: i64 = l_checktime(interpreter, 2);
-        (*interpreter).push_number(difftime(sometime1, sometime2));
+        (*interpreter).push_number(libc::difftime(sometime1, sometime2));
         return 1;
     }
 }
@@ -310,7 +310,7 @@ pub unsafe fn os_exit(interpreter: *mut Interpreter) -> i32 {
         if interpreter.is_null() {
             return 0;
         } else {
-            exit(status);
+            std::process::exit(status);
         }
     }
 }
@@ -362,13 +362,6 @@ pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [
 ];
 pub unsafe fn luaopen_os(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, SYSTEM_FUNCTIONS.as_ptr(), SYSTEM_FUNCTIONS.len(), 0);
         return 1;

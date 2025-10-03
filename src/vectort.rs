@@ -1,7 +1,6 @@
 #![allow(unused)]
 use crate::interpreter::*;
 use crate::tdefaultnew::*;
-use rlua::*;
 use std::{mem::*, ptr::*};
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -45,14 +44,14 @@ impl<T> VectorT<T> {
         self.vectort_length = 0;
         self.vectort_size = 0;
     }
-    pub unsafe fn shrink(&mut self, interpreter: &mut Interpreter, new_size: usize) {
+    pub unsafe fn shrink(&mut self, interpreter: &mut Interpreter, newsize: usize) {
         unsafe {
             let old_total = self.vectort_size as usize * size_of::<T>();
-            let new_total = new_size * size_of::<T>();
+            let new_total = newsize * size_of::<T>();
             self.vectort_pointer =
-                luam_saferealloc_(interpreter, self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
+                (*interpreter).safereallocate(self.vectort_pointer as *mut libc::c_void, old_total, new_total) as *mut T;
             self.vectort_length = 0;
-            self.vectort_size = new_size;
+            self.vectort_size = newsize;
         }
     }
     pub unsafe fn at(&self, index: isize) -> *const T {
@@ -73,14 +72,13 @@ impl<T> VectorT<T> {
     }
     pub unsafe fn initialize_size(&mut self, interpreter: *mut Interpreter, size: usize) {
         unsafe {
-            self.vectort_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
+            self.vectort_pointer = (*interpreter).allocate((size as usize) * size_of::<T>()) as *mut T;
             self.vectort_size = size;
         }
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(
-                interpreter,
+            (*interpreter).safereallocate(
                 self.vectort_pointer as *mut libc::c_void,
                 (self.vectort_size as usize),
                 0,
@@ -91,39 +89,37 @@ impl<T> VectorT<T> {
     }
     pub unsafe fn grow(&mut self, interpreter: *mut Interpreter, new_length: usize, limit: usize, what: *const i8) {
         unsafe {
-            let mut new_size = self.vectort_size;
-            if new_length + 1 <= new_size {
+            let mut newsize = self.vectort_size;
+            if new_length + 1 <= newsize {
                 return;
             }
-            if new_size >= limit / 2 {
-                if new_size >= limit {
+            if newsize >= limit / 2 {
+                if newsize >= limit {
                     luag_runerror(interpreter, c"too many %s (limit is %d)".as_ptr(), what, limit);
                 }
-                new_size = limit;
+                newsize = limit;
             } else {
-                new_size *= 2;
-                if new_size < 4 {
-                    new_size = 4;
+                newsize *= 2;
+                if newsize < 4 {
+                    newsize = 4;
                 }
             }
-            self.vectort_pointer = luam_saferealloc_(
-                interpreter,
+            self.vectort_pointer = (*interpreter).safereallocate(
                 self.vectort_pointer as *mut libc::c_void,
                 (self.vectort_size as usize).wrapping_mul(size_of::<T>()),
-                (new_size as usize).wrapping_mul(size_of::<T>()),
+                (newsize as usize).wrapping_mul(size_of::<T>()),
             ) as *mut T;
-            self.vectort_size = new_size;
+            self.vectort_size = newsize;
         }
     }
-    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
+    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, newsize: usize) {
         unsafe {
-            self.vectort_pointer = luam_saferealloc_(
-                interpreter,
+            self.vectort_pointer = (*interpreter).safereallocate(
                 self.vectort_pointer as *mut libc::c_void,
                 (self.vectort_size as usize).wrapping_mul(size_of::<T>()),
-                new_size.wrapping_mul(size_of::<T>()),
+                newsize.wrapping_mul(size_of::<T>()),
             ) as *mut T;
-            self.vectort_size = new_size;
+            self.vectort_size = newsize;
         }
     }
 }

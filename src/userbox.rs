@@ -9,16 +9,16 @@ pub struct UserBox {
     pub userbox_size: usize,
 }
 impl UserBox {
-    pub unsafe fn resize_userbox(interpreter: *mut Interpreter, index: i32, new_size: usize) -> *mut libc::c_void {
+    pub unsafe fn resize_userbox(interpreter: *mut Interpreter, index: i32, newsize: usize) -> *mut libc::c_void {
         unsafe {
             let user_box: *mut UserBox = (*interpreter).to_pointer(index) as *mut UserBox;
-            let temp: *mut libc::c_void = raw_allocate((*user_box).userbox_pointer, (*user_box).userbox_size as usize, new_size);
-            if temp.is_null() && new_size > 0 {
+            let temp: *mut libc::c_void = raw_allocate((*user_box).userbox_pointer, (*user_box).userbox_size as usize, newsize);
+            if temp.is_null() && newsize > 0 {
                 lua_pushstring(interpreter, c"not enough memory".as_ptr());
                 lua_error(interpreter);
             }
             (*user_box).userbox_pointer = temp;
-            (*user_box).userbox_size = new_size;
+            (*user_box).userbox_size = newsize;
             return temp;
         }
     }

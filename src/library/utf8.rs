@@ -15,16 +15,16 @@ pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
 pub unsafe fn utf8_decode(mut s: *const i8, value: *mut u32, strict: bool) -> *const i8 {
     unsafe {
         pub const LIMITS: [u32; 6] = [
-            !(0u32),
-            0x80 as u32,
-            0x800 as u32,
-            0x10000 as u32,
-            0x200000 as u32,
-            0x4000000 as u32,
+            0xFFFFFFFFu32,
+            0x80u32,
+            0x800u32,
+            0x10000u32,
+            0x200000u32,
+            0x4000000u32,
         ];
-        let mut c: u32 = *s.offset(0 as isize) as u8 as u32;
-        let mut res: u32 = 0u32;
-        if c < 0x80 as u32 {
+        let mut c: u32 = *s.offset(0) as u8 as u32;
+        let mut res: u32 = 0;
+        if c < 0x80 {
             res = c;
         } else {
             let mut count: i32 = 0;
@@ -287,13 +287,6 @@ pub const UTF8_FUNCTIONS: [RegisteredFunction; 5] = {
 };
 pub unsafe fn luaopen_utf8(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, UTF8_FUNCTIONS.as_ptr(), UTF8_FUNCTIONS.len(), 0);
         lua_pushlstring(

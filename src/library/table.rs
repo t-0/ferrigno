@@ -212,18 +212,18 @@ pub unsafe fn l_randomizepivot() -> u32 {
         let mut t: i64 = time(null_mut());
         let mut buffer: [u32; 4] = [0; 4];
         let mut i: u32;
-        let mut rnd: u32 = 0u32;
-        memcpy(
+        let mut rnd: u32 = 0;
+        libc::memcpy(
             buffer.as_mut_ptr() as *mut c_void,
             &mut c as *mut i64 as *const c_void,
             size_of::<i64>(),
         );
-        memcpy(
+        libc::memcpy(
             buffer.as_mut_ptr().offset((size_of::<i64>() / size_of::<u32>()) as isize) as *mut c_void,
             &mut t as *mut i64 as *const c_void,
             size_of::<i64>(),
         );
-        i = 0u32;
+        i = 0;
         while (i as usize) < 4 {
             rnd = rnd.wrapping_add(buffer[i as usize]);
             i = i.wrapping_add(1);
@@ -417,13 +417,6 @@ pub const TABLE_FUNCTIONS: [RegisteredFunction; 7] = {
 };
 pub unsafe fn luaopen_table(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, TABLE_FUNCTIONS.as_ptr(), TABLE_FUNCTIONS.len(), 0);
         return 1;

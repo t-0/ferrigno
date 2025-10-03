@@ -42,7 +42,7 @@ pub unsafe fn l_str2dloc(s: *const i8, result: *mut f64, mode: i32) -> *const i8
 }
 pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
     unsafe {
-        let pmode: *const i8 = strpbrk(s, c".xXnN".as_ptr());
+        let pmode: *const i8 = libc::strpbrk(s, c".xXnN".as_ptr());
         let mode: i32 = if !pmode.is_null() {
             *pmode as u8 as i32 | Character::UpperA as i32 ^ Character::LowerA as i32
         } else {
@@ -54,11 +54,11 @@ pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
         let mut endptr: *const i8 = l_str2dloc(s, result, mode);
         if endptr.is_null() {
             let mut buffer: [i8; 201] = [0; 201];
-            let pdot: *const i8 = strchr(s, Character::Period as i32);
-            if pdot.is_null() || strlen(s) > 200 {
+            let pdot: *const i8 = libc::strchr(s, Character::Period as i32);
+            if pdot.is_null() || libc::strlen(s) > 200 {
                 return null();
             }
-            strcpy(buffer.as_mut_ptr(), s);
+            libc::strcpy(buffer.as_mut_ptr(), s);
             buffer[pdot.offset_from(s) as usize] = Character::Period as i8;
             endptr = l_str2dloc(buffer.as_mut_ptr(), result, mode);
             if !endptr.is_null() {
@@ -118,13 +118,13 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
         let mut bufflen: usize = 60 as usize;
         if *source as i32 == Character::Equal as i32 {
             if source_length <= bufflen {
-                memcpy(
+                libc::memcpy(
                     out as *mut libc::c_void,
                     source.offset(1 as isize) as *const libc::c_void,
                     source_length,
                 );
             } else {
-                memcpy(
+                libc::memcpy(
                     out as *mut libc::c_void,
                     source.offset(1 as isize) as *const libc::c_void,
                     (bufflen as usize).wrapping_sub(1),
@@ -134,16 +134,16 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
             }
         } else if *source as i32 == Character::At as i32 {
             if source_length <= bufflen {
-                memcpy(out as *mut libc::c_void, source.offset(1) as *const libc::c_void, source_length);
+                libc::memcpy(out as *mut libc::c_void, source.offset(1) as *const libc::c_void, source_length);
             } else {
-                memcpy(
+                libc::memcpy(
                     out as *mut libc::c_void,
                     c"...".as_ptr() as *const libc::c_void,
                     (size_of::<[i8; 4]>()).wrapping_sub(1),
                 );
                 out = out.offset((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize) as isize);
                 bufflen = (bufflen as usize).wrapping_sub((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize)) as usize;
-                memcpy(
+                libc::memcpy(
                     out as *mut libc::c_void,
                     source
                         .offset(1 as isize)
@@ -153,8 +153,8 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 );
             }
         } else {
-            let nl = strchr(source, Character::LineFeed as i32);
-            memcpy(
+            let nl = libc::strchr(source, Character::LineFeed as i32);
+            libc::memcpy(
                 out as *mut libc::c_void,
                 b"[string \"".as_ptr() as *const libc::c_void,
                 (size_of::<[i8; 10]>()).wrapping_sub(1),
@@ -166,7 +166,7 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                     .wrapping_add(1 as usize),
             ) as usize;
             if source_length < bufflen && nl.is_null() {
-                memcpy(out as *mut libc::c_void, source as *const libc::c_void, source_length);
+                libc::memcpy(out as *mut libc::c_void, source as *const libc::c_void, source_length);
                 out = out.offset(source_length as isize);
             } else {
                 if !nl.is_null() {
@@ -175,16 +175,16 @@ pub unsafe fn luao_chunkid(mut out: *mut i8, source: *const i8, mut source_lengt
                 if source_length > bufflen {
                     source_length = bufflen;
                 }
-                memcpy(out as *mut libc::c_void, source as *const libc::c_void, source_length);
+                libc::memcpy(out as *mut libc::c_void, source as *const libc::c_void, source_length);
                 out = out.offset(source_length as isize);
-                memcpy(
+                libc::memcpy(
                     out as *mut libc::c_void,
                     c"...".as_ptr() as *const libc::c_void,
                     (size_of::<[i8; 4]>()).wrapping_sub(1),
                 );
                 out = out.offset((size_of::<[i8; 4]>() as usize).wrapping_sub(1 as usize) as isize);
             }
-            memcpy(
+            libc::memcpy(
                 out as *mut libc::c_void,
                 make_cstring!("\"]") as *const libc::c_void,
                 (size_of::<[i8; 3]>()).wrapping_sub(1).wrapping_add(1),

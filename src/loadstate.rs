@@ -1,10 +1,9 @@
 use crate::absolutelineinfo::*;
-use crate::c::*;
 use crate::character::*;
 use crate::closure::*;
 use crate::dumpstate::*;
 use crate::interpreter::*;
-use crate::loadable::*;
+use crate::tloadable::*;
 use crate::localvariable::*;
 use crate::object::*;
 use crate::prototype::*;
@@ -16,7 +15,6 @@ use crate::tvalue::*;
 use crate::upvaluedescription::*;
 use crate::zio::*;
 use core::mem::*;
-use libc::memcmp;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -340,9 +338,9 @@ impl LoadState {
     pub unsafe fn check_literal(&mut self, s: *const i8, message: *const i8) {
         unsafe {
             let mut buffer: [i8; 12] = [0; 12];
-            let length: usize = strlen(s) as usize;
+            let length: usize = libc::strlen(s) as usize;
             self.load_block(buffer.as_mut_ptr() as *mut libc::c_void, length.wrapping_mul(1 as usize));
-            if memcmp(
+            if libc::memcmp(
                 s as *const libc::c_void,
                 buffer.as_mut_ptr() as *const libc::c_void,
                 length as usize,

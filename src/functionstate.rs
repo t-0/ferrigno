@@ -396,13 +396,13 @@ pub unsafe fn removevars(lexical_state: *mut LexicalState, function_state: *mut 
         while (*function_state).functionstate_countactivevariables as i32 > tolevel {
             (*function_state).functionstate_countactivevariables =
                 ((*function_state).functionstate_countactivevariables).wrapping_sub(1);
-            let var: *mut LocalVariable = localdebuginfo(
+            let localvariable: *mut LocalVariable = localdebuginfo(
                 lexical_state,
                 function_state,
                 (*function_state).functionstate_countactivevariables as i32,
             );
-            if !var.is_null() {
-                (*var).localvariable_endprogramcounter = (*function_state).functionstate_programcounter;
+            if !localvariable.is_null() {
+                (*localvariable).localvariable_endprogramcounter = (*function_state).functionstate_programcounter;
             }
         }
     }
@@ -423,7 +423,7 @@ pub unsafe fn allocate_upvalue_description(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, prototype: *mut Prototype,
 ) -> *mut UpValueDescription {
     unsafe {
-        let mut old_size = (*prototype).prototype_upvalues.get_size();
+        let mut oldsize = (*prototype).prototype_upvalues.get_size();
         checklimit(
             interpreter,
             lexical_state,
@@ -442,9 +442,9 @@ pub unsafe fn allocate_upvalue_description(
             },
             c"upvalues".as_ptr(),
         );
-        while old_size < (*prototype).prototype_upvalues.get_size() {
-            let fresh41 = old_size;
-            old_size = old_size + 1;
+        while oldsize < (*prototype).prototype_upvalues.get_size() {
+            let fresh41 = oldsize;
+            oldsize = oldsize + 1;
             let ref mut fresh42 =
                 (*((*prototype).prototype_upvalues.vectort_pointer).offset(fresh41 as isize)).upvaluedescription_name;
             *fresh42 = null_mut();
@@ -579,7 +579,7 @@ pub unsafe fn fixforjump(
             luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
         *jmp =
-            *jmp & !(!(!(0u32) << 8 + 8 + 1) << POSITION_K) | (offset as u32) << POSITION_K & !(!(0u32) << 8 + 8 + 1) << POSITION_K;
+            *jmp & !(!(0xFFFFFFFFu32 << 8 + 8 + 1) << POSITION_K) | (offset as u32) << POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << POSITION_K;
     }
 }
 pub unsafe fn checktoclose(
@@ -603,7 +603,7 @@ pub unsafe fn checktoclose(
 }
 pub unsafe fn previousinstruction(function_state: *mut FunctionState) -> *mut u32 {
     unsafe {
-        pub const INVALID_INSTRUCTION: u32 = !(0u32);
+        pub const INVALID_INSTRUCTION: u32 = 0xFFFFFFFFu32;
         if (*function_state).functionstate_programcounter > (*function_state).functionstate_lasttarget {
             return &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                 .offset(((*function_state).functionstate_programcounter - 1) as isize) as *mut u32;
@@ -618,9 +618,9 @@ pub unsafe fn code_constant_nil(
     unsafe {
         let mut length: i32 = from + n - 1;
         let previous: *mut u32 = previousinstruction(function_state);
-        if (*previous >> 0 & !(!(0u32) << 7) << 0) as u32 == OPCODE_LOADNIL as u32 {
-            let pfrom: i32 = (*previous >> POSITION_A & !(!(0u32) << 8) << 0) as i32;
-            let pl: i32 = pfrom + (*previous >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+        if (*previous >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 == OPCODE_LOADNIL as u32 {
+            let pfrom: i32 = (*previous >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as i32;
+            let pl: i32 = pfrom + (*previous >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
             if pfrom <= from && from <= pl + 1 || from <= pfrom && pfrom <= length + 1 {
                 if pfrom < from {
                     from = pfrom;
@@ -629,9 +629,9 @@ pub unsafe fn code_constant_nil(
                     length = pl;
                 }
                 *previous =
-                    *previous & !(!(!(0u32) << 8) << POSITION_A) | (from as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
-                *previous = *previous & !(!(!(0u32) << 8) << POSITION_B)
-                    | ((length - from) as u32) << POSITION_B & !(!(0u32) << 8) << POSITION_B;
+                    *previous & !(!(0xFFFFFFFFu32 << 8) << POSITION_A) | (from as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
+                *previous = *previous & !(!(0xFFFFFFFFu32 << 8) << POSITION_B)
+                    | ((length - from) as u32) << POSITION_B & !(0xFFFFFFFFu32 << 8) << POSITION_B;
                 return;
             }
         }
@@ -643,7 +643,7 @@ pub unsafe fn code_get_jump(function_state: *mut FunctionState, program_counter:
         let offset: i32 = (*((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
             .offset(program_counter as isize)
             >> POSITION_A
-            & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+            & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
             - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
         if offset == -1 {
             return -1;
@@ -663,8 +663,8 @@ pub unsafe fn fixjump(
         if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) {
             luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
-        *jmp = *jmp & !(!(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A)
-            | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << POSITION_A;
+        *jmp = *jmp & !(!(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << POSITION_A)
+            | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << POSITION_A;
     }
 }
 pub unsafe fn luak_concat(
@@ -728,7 +728,7 @@ pub unsafe fn code_get_jump_control(function_state: *mut FunctionState, program_
     unsafe {
         let pi: *mut u32 = &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
             .offset(program_counter as isize) as *mut u32;
-        if program_counter >= 1 && OPMODES[(*pi.offset(-(1 as isize)) >> 0 & !(!(0u32) << 7) << 0) as usize] as i32 & 1 << 4 != 0 {
+        if program_counter >= 1 && OPMODES[(*pi.offset(-(1 as isize)) >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as usize] as i32 & 1 << 4 != 0 {
             return pi.offset(-(1 as isize));
         } else {
             return pi;
@@ -738,17 +738,17 @@ pub unsafe fn code_get_jump_control(function_state: *mut FunctionState, program_
 pub unsafe fn patchtestreg(function_state: *mut FunctionState, node: i32, reg: i32) -> i32 {
     unsafe {
         let i: *mut u32 = code_get_jump_control(function_state, node);
-        if (*i >> 0 & !(!(0u32) << 7) << 0) as u32 != OPCODE_TESTSET as u32 {
+        if (*i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) != OPCODE_TESTSET {
             return 0;
         }
-        if reg != (1 << 8) - 1 && reg != (*i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 {
-            *i = *i & !(!(!(0u32) << 8) << POSITION_A) | (reg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
+        if reg != (1 << 8) - 1 && reg != (*i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 {
+            *i = *i & !(!(0xFFFFFFFFu32 << 8) << POSITION_A) | (reg as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
         } else {
-            *i = (OPCODE_TEST as u32) << 0
-                | ((*i >> POSITION_B & !(!(0u32) << 8) << 0) as u32) << POSITION_A
-                | (0u32) << POSITION_B
-                | (0u32) << POSITION_C
-                | ((*i >> POSITION_K & !(!(0u32) << 1) << 0) as u32) << POSITION_K;
+            *i = OPCODE_TEST << 0
+                | ((*i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0)) << POSITION_A
+                | 0 << POSITION_B
+                | 0 << POSITION_C
+                | ((*i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0)) << POSITION_K;
         }
         return 1;
     }
@@ -930,12 +930,12 @@ pub unsafe fn codesj(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, o: u32, sj: i32, k: i32,
 ) -> i32 {
     unsafe {
-        let j: u32 = (sj + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32;
+        let j = (sj + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32;
         return luak_code(
             interpreter,
             lexical_state,
             function_state,
-            (o as u32) << 0 | j << POSITION_A | (k as u32) << POSITION_K,
+            o << 0 | j << POSITION_A | (k as u32) << POSITION_K,
         );
     }
 }
@@ -947,7 +947,7 @@ pub unsafe fn codeextraarg(
             interpreter,
             lexical_state,
             function_state,
-            (OPCODE_EXTRAARG as u32) << 0 | (a as u32) << POSITION_A,
+            OPCODE_EXTRAARG << 0 | (a as u32) << POSITION_A,
         );
     }
 }
@@ -958,7 +958,7 @@ pub unsafe fn code_constant(
         if k <= (1 << 8 + 8 + 1) - 1 {
             return luak_codeabx(interpreter, lexical_state, function_state, OPCODE_LOADK, reg, k as u32);
         } else {
-            let p: i32 = luak_codeabx(interpreter, lexical_state, function_state, OPCODE_LOADKX, reg, 0u32);
+            let p = luak_codeabx(interpreter, lexical_state, function_state, OPCODE_LOADKX, reg, 0);
             codeextraarg(interpreter, lexical_state, function_state, k);
             return p;
         };
@@ -968,7 +968,7 @@ pub unsafe fn luak_checkstack(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, n: i32,
 ) {
     unsafe {
-        let new_stack: i32 = (*function_state).functionstate_freereg as i32 + n;
+        let new_stack = (*function_state).functionstate_freereg as i32 + n;
         if new_stack > (*(*function_state).functionstate_prototype).prototype_maximumstacksize as i32 {
             if new_stack >= 255 as i32 {
                 luax_syntaxerror(
@@ -1062,7 +1062,7 @@ pub unsafe fn addk(
                 return count_constants;
             }
         }
-        let mut old_size = (*prototype).prototype_constants.get_size();
+        let mut oldsize = (*prototype).prototype_constants.get_size();
         count_constants = (*function_state).functionstate_countconstants;
         let io: *mut TValue = &mut value;
         (*io).tvalue_value.value_integer = count_constants as i64;
@@ -1078,9 +1078,9 @@ pub unsafe fn addk(
             },
             c"constants".as_ptr(),
         );
-        while old_size < (*prototype).prototype_constants.get_size() {
-            let fresh135 = old_size;
-            old_size = old_size + 1;
+        while oldsize < (*prototype).prototype_constants.get_size() {
+            let fresh135 = oldsize;
+            oldsize = oldsize + 1;
             (*((*prototype).prototype_constants.vectort_pointer).offset(fresh135 as isize))
                 .tvalue_set_tag_variant(TagVariant::NilNil);
         }
@@ -1216,13 +1216,13 @@ pub unsafe fn luak_setreturns(
             .offset((*expression_description).expressiondescription_value.value_info as isize)
             as *mut u32;
         if (*expression_description).expressiondescription_expressionkind == ExpressionKind::Call {
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
-                | ((count_results + 1) as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
+            *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_C)
+                | ((count_results + 1) as u32) << POSITION_C & !(0xFFFFFFFFu32 << 8) << POSITION_C;
         } else {
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
-                | ((count_results + 1) as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
-            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_A)
-                | ((*function_state).functionstate_freereg as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
+            *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_C)
+                | ((count_results + 1) as u32) << POSITION_C & !(0xFFFFFFFFu32 << 8) << POSITION_C;
+            *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_A)
+                | ((*function_state).functionstate_freereg as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
             luak_reserveregs(interpreter, lexical_state, function_state, 1);
         };
     }
@@ -1249,14 +1249,14 @@ pub unsafe fn luak_setoneret(function_state: *mut FunctionState, expression_desc
                 (*((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                     .offset((*expression_description).expressiondescription_value.value_info as isize)
                     >> POSITION_A
-                    & !(!(0u32) << 8) << 0) as i32;
+                    & !(0xFFFFFFFFu32 << 8) << 0) as i32;
         } else if (*expression_description).expressiondescription_expressionkind == ExpressionKind::VariableArguments {
             *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                 .offset((*expression_description).expressiondescription_value.value_info as isize) =
                 *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                     .offset((*expression_description).expressiondescription_value.value_info as isize)
-                    & !(!(!(0u32) << 8) << POSITION_C)
-                    | (2 as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
+                    & !(!(0xFFFFFFFFu32 << 8) << POSITION_C)
+                    | (2 as u32) << POSITION_C & !(0xFFFFFFFFu32 << 8) << POSITION_C;
             (*expression_description).expressiondescription_expressionkind = ExpressionKind::Relocatable;
         }
     }
@@ -1464,8 +1464,8 @@ pub unsafe fn discharge2reg(
             | ExpressionKind::Relocatable => {
                 let program_counter = &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                     .offset((*expression_description).expressiondescription_value.value_info as isize);
-                *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_A)
-                    | (register as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
+                *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_A)
+                    | (register as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
             },
             | ExpressionKind::Nonrelocatable => {
                 if register != (*expression_description).expressiondescription_value.value_info {
@@ -1516,7 +1516,7 @@ pub unsafe fn need_value(function_state: *mut FunctionState, mut list: i32) -> i
     unsafe {
         while list != -1 {
             let i: u32 = *code_get_jump_control(function_state, list);
-            if (i >> 0 & !(!(0u32) << 7) << 0) as u32 != OPCODE_TESTSET as u32 {
+            if (i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 != OPCODE_TESTSET as u32 {
                 return 1;
             }
             list = code_get_jump(function_state, list);
@@ -1887,9 +1887,9 @@ pub unsafe fn negatecondition(function_state: *mut FunctionState, expression_des
     unsafe {
         let program_counter: *mut u32 =
             code_get_jump_control(function_state, (*expression_description).expressiondescription_value.value_info);
-        *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
-            | (((*program_counter >> POSITION_K & !(!(0u32) << 1) << 0) as i32 ^ 1) as u32) << POSITION_K
-                & !(!(0u32) << 1) << POSITION_K;
+        *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 1) << POSITION_K)
+            | (((*program_counter >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 ^ 1) as u32) << POSITION_K
+                & !(0xFFFFFFFFu32 << 1) << POSITION_K;
     }
 }
 pub unsafe fn jumponcond(
@@ -1900,14 +1900,14 @@ pub unsafe fn jumponcond(
         if (*expression_description).expressiondescription_expressionkind == ExpressionKind::Relocatable {
             let ie: u32 = *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                 .offset((*expression_description).expressiondescription_value.value_info as isize);
-            if (ie >> 0 & !(!(0u32) << 7) << 0) as u32 == OPCODE_NOT as u32 {
+            if (ie >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 == OPCODE_NOT as u32 {
                 removelastinstruction(function_state);
                 return condjump(
                     interpreter,
                     lexical_state,
                     function_state,
                     OPCODE_TEST,
-                    (ie >> POSITION_B & !(!(0u32) << 8) << 0) as i32,
+                    (ie >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32,
                     0,
                     0,
                     (cond_0 == 0) as i32,
@@ -2187,8 +2187,8 @@ pub unsafe fn finishbinexpneg(
                     .offset(((*function_state).functionstate_programcounter - 1) as isize) =
                     *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                         .offset(((*function_state).functionstate_programcounter - 1) as isize)
-                        & !(!(!(0u32) << 8) << POSITION_B)
-                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << POSITION_B & !(!(0u32) << 8) << POSITION_B;
+                        & !(!(0xFFFFFFFFu32 << 8) << POSITION_B)
+                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << POSITION_B & !(0xFFFFFFFFu32 << 8) << POSITION_B;
                 return 1;
             }
         };
@@ -2241,10 +2241,10 @@ pub unsafe fn codeorder(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription,
 ) {
     unsafe {
-        let r1: i64;
-        let r2: i64;
         let mut im: i64 = 0;
         let mut is_float = false;
+        let r1: i64;
+        let r2: i64;
         let op: u32;
         if is_sc_number(e2, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(interpreter, lexical_state, function_state, e1) as i64;
@@ -2271,10 +2271,10 @@ pub unsafe fn codeeq(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription,
 ) {
     unsafe {
-        let r1: i64;
-        let r2: i64;
         let mut im: i64 = 0;
         let mut is_float = false;
+        let r1: i64;
+        let r2: i64;
         let op: u32;
         if (*e1).expressiondescription_expressionkind != ExpressionKind::Nonrelocatable {
             swapexps(e1, e2);
@@ -2422,13 +2422,13 @@ pub unsafe fn codeconcat(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription, line: i32,
 ) {
     unsafe {
-        let ie2: *mut u32 = previousinstruction(function_state);
-        if (*ie2 >> 0 & !(!(0u32) << 7) << 0) as u32 == OPCODE_CONCAT as u32 {
-            let n: i32 = (*ie2 >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+        let ie2 = previousinstruction(function_state);
+        if (*ie2 >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 == OPCODE_CONCAT as u32 {
+            let n: i32 = (*ie2 >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
             freeexp(lexical_state, function_state, e2);
-            *ie2 = *ie2 & !(!(!(0u32) << 8) << POSITION_A)
-                | ((*e1).expressiondescription_value.value_info as u32) << POSITION_A & !(!(0u32) << 8) << POSITION_A;
-            *ie2 = *ie2 & !(!(!(0u32) << 8) << POSITION_B) | ((n + 1) as u32) << POSITION_B & !(!(0u32) << 8) << POSITION_B;
+            *ie2 = *ie2 & !(!(0xFFFFFFFFu32 << 8) << POSITION_A)
+                | ((*e1).expressiondescription_value.value_info as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
+            *ie2 = *ie2 & !(!(0xFFFFFFFFu32 << 8) << POSITION_B) | ((n + 1) as u32) << POSITION_B & !(0xFFFFFFFFu32 << 8) << POSITION_B;
         } else {
             code_abck(
                 interpreter,
@@ -2696,31 +2696,31 @@ pub unsafe fn luak_finish(
     unsafe {
         for i in 0..(*function_state).functionstate_programcounter {
             let program_counter: *mut u32 = &mut *((*prototype).prototype_code.vectort_pointer).offset(i as isize) as *mut u32;
-            match (*program_counter >> 0 & !(!(0u32) << 7) << 0) as u32 {
+            match (*program_counter >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 {
                 | OPCODE_RETURN0 | OPCODE_RETURN1 => {
                     if (*function_state).functionstate_needsclose || (*prototype).prototype_isvariablearguments {
                         *program_counter =
-                            *program_counter & !(!(!(0u32) << 7) << 0) | (OPCODE_RETURN as u32) << 0 & !(!(0u32) << 7) << 0;
+                            *program_counter & !(!(0xFFFFFFFFu32 << 7) << 0) | (OPCODE_RETURN as u32) << 0 & !(0xFFFFFFFFu32 << 7) << 0;
                         if (*function_state).functionstate_needsclose {
-                            *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
-                                | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
+                            *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 1) << POSITION_K)
+                                | (1 as u32) << POSITION_K & !(0xFFFFFFFFu32 << 1) << POSITION_K;
                         }
                         if (*prototype).prototype_isvariablearguments {
-                            *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
+                            *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_C)
                                 | (((*prototype).prototype_countparameters as i32 + 1) as u32) << POSITION_C
-                                    & !(!(0u32) << 8) << POSITION_C;
+                                    & !(0xFFFFFFFFu32 << 8) << POSITION_C;
                         }
                     }
                 },
                 | OPCODE_RETURN | OPCODE_TAILCALL => {
                     if (*function_state).functionstate_needsclose {
-                        *program_counter = *program_counter & !(!(!(0u32) << 1) << POSITION_K)
-                            | (1 as u32) << POSITION_K & !(!(0u32) << 1) << POSITION_K;
+                        *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 1) << POSITION_K)
+                            | (1 as u32) << POSITION_K & !(0xFFFFFFFFu32 << 1) << POSITION_K;
                     }
                     if (*prototype).prototype_isvariablearguments {
-                        *program_counter = *program_counter & !(!(!(0u32) << 8) << POSITION_C)
+                        *program_counter = *program_counter & !(!(0xFFFFFFFFu32 << 8) << POSITION_C)
                             | (((*prototype).prototype_countparameters as i32 + 1) as u32) << POSITION_C
-                                & !(!(0u32) << 8) << POSITION_C;
+                                & !(0xFFFFFFFFu32 << 8) << POSITION_C;
                     }
                 },
                 | OPCODE_JMP => {

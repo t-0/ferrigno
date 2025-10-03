@@ -3,7 +3,6 @@ use crate::c::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::tag::*;
-use libc::memcmp;
 use libc::*;
 use std::ptr::*;
 pub const MAX_CAPTURES: usize = 32;
@@ -278,7 +277,7 @@ impl MatchState {
             l = self.check_capture(l);
             length = self.capture[l as usize].matchstatecapture_length as usize;
             if (self.src_end).offset_from(s) as usize >= length
-                && memcmp(
+                && libc::memcmp(
                     self.capture[l as usize].matchstatecapture_initial as *const c_void, s as *const c_void, length as usize,
                 ) == 0
             {

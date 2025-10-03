@@ -39,12 +39,12 @@ impl Buffer {
     }
     pub unsafe fn new_with_size(&mut self, size: usize) -> usize {
         unsafe {
-            let mut new_size = 2 * self.buffer_loads.get_size();
+            let mut newsize = 2 * self.buffer_loads.get_size();
             if (!0usize) - size < self.buffer_loads.get_length() as usize {
                 lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize
             } else {
-                new_size = new_size.max(self.buffer_loads.get_length() + size as i32);
-                new_size as usize
+                newsize = newsize.max(self.buffer_loads.get_length() + size as i32);
+                newsize as usize
             }
         }
     }
@@ -55,24 +55,24 @@ impl Buffer {
             } else {
                 let interpreter = self.buffer_interpreter;
                 let new_pointer: *mut BufferElement;
-                let new_size = self.new_with_size(size);
+                let newsize = self.new_with_size(size);
                 if self.buffer_loads.loads_pointer != (self.buffer_initial_data).as_mut_ptr() {
-                    new_pointer = UserBox::resize_userbox(interpreter, boxidx, new_size) as *mut BufferElement;
+                    new_pointer = UserBox::resize_userbox(interpreter, boxidx, newsize) as *mut BufferElement;
                 } else {
                     lua_rotate(interpreter, boxidx, -1);
                     lua_settop(interpreter, -2);
                     UserBox::new_userbox(interpreter);
                     lua_rotate(interpreter, boxidx, 1);
                     lua_toclose(interpreter, boxidx);
-                    new_pointer = UserBox::resize_userbox(interpreter, boxidx, new_size) as *mut BufferElement;
-                    memcpy(
+                    new_pointer = UserBox::resize_userbox(interpreter, boxidx, newsize) as *mut BufferElement;
+                    libc::memcpy(
                         new_pointer as *mut c_void,
                         self.buffer_loads.loads_pointer as *const c_void,
                         (self.buffer_loads.get_length() as usize) * (size_of::<BufferElement>()),
                     );
                 }
                 self.buffer_loads.loads_pointer = new_pointer;
-                self.buffer_loads.loads_size = new_size as i32;
+                self.buffer_loads.loads_size = newsize as i32;
                 return new_pointer.offset(self.buffer_loads.get_length() as isize);
             };
         }
@@ -84,14 +84,14 @@ impl Buffer {
         unsafe {
             if length > 0 {
                 let raw: *mut BufferElement = self.prepare_with_size_and_index(length, -1);
-                memcpy(raw as *mut c_void, s as *const c_void, length * size_of::<BufferElement>());
+                libc::memcpy(raw as *mut c_void, s as *const c_void, length * size_of::<BufferElement>());
                 self.buffer_loads.add_length(length);
             }
         }
     }
     pub unsafe fn add_string(&mut self, s: *const BufferElement) {
         unsafe {
-            self.add_string_with_length(s, strlen(s) as usize);
+            self.add_string_with_length(s, libc::strlen(s) as usize);
         }
     }
     pub unsafe fn push_result(&mut self) {
@@ -115,7 +115,7 @@ impl Buffer {
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
-            memcpy(
+            libc::memcpy(
                 b as *mut c_void,
                 s as *const c_void,
                 (length as usize) * (size_of::<BufferElement>()),

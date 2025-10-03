@@ -1,8 +1,7 @@
-#![allow(unused)]
+#![allow(unused, dead_code)]
 use crate::interpreter::*;
 use crate::tdefaultnew::*;
 use libc::*;
-use rlua::*;
 use std::ptr::*;
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -46,13 +45,13 @@ impl<T> LoadS<T> {
         self.loads_length = 0;
         self.loads_size = 0;
     }
-    pub unsafe fn shrink(&mut self, interpreter: &mut Interpreter, new_size: usize) {
+    pub unsafe fn shrink(&mut self, interpreter: &mut Interpreter, newsize: usize) {
         unsafe {
             let old_total = self.loads_size as usize * size_of::<T>();
-            let new_total = new_size * size_of::<T>();
-            self.loads_pointer = luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, old_total, new_total) as *mut T;
+            let new_total = newsize * size_of::<T>();
+            self.loads_pointer = (*interpreter).safereallocate(self.loads_pointer as *mut c_void, old_total, new_total) as *mut T;
             self.loads_length = 0;
-            self.loads_size = new_size as i32;
+            self.loads_size = newsize as i32;
         }
     }
     pub unsafe fn at(&self, index: isize) -> *const T {
@@ -73,52 +72,50 @@ impl<T> LoadS<T> {
     }
     pub unsafe fn initialize_size(&mut self, interpreter: *mut Interpreter, size: usize) {
         unsafe {
-            self.loads_pointer = luam_malloc_(interpreter, (size as usize) * size_of::<T>()) as *mut T;
+            self.loads_pointer = (*interpreter).allocate((size as usize) * size_of::<T>()) as *mut T;
             self.loads_size = size as i32;
         }
     }
     pub unsafe fn destroy(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            luam_saferealloc_(interpreter, self.loads_pointer as *mut c_void, (self.loads_size as usize), 0);
+            (*interpreter).safereallocate(self.loads_pointer as *mut c_void, (self.loads_size as usize), 0);
             self.loads_pointer = null_mut();
             self.loads_size = 0;
         }
     }
     pub unsafe fn grow(&mut self, interpreter: *mut Interpreter, new_length: usize, limit: i32, what: *const i8) {
         unsafe {
-            let mut new_size: i32 = self.loads_size;
-            if new_length + 1 <= new_size as usize {
+            let mut newsize: i32 = self.loads_size;
+            if new_length + 1 <= newsize as usize {
                 return;
             }
-            if new_size >= limit / 2 {
-                if new_size >= limit {
+            if newsize >= limit / 2 {
+                if newsize >= limit {
                     luag_runerror(interpreter, c"too many %s (limit is %d)".as_ptr(), what, limit);
                 }
-                new_size = limit;
+                newsize = limit;
             } else {
-                new_size *= 2;
-                if new_size < 4 {
-                    new_size = 4;
+                newsize *= 2;
+                if newsize < 4 {
+                    newsize = 4;
                 }
             }
-            self.loads_pointer = luam_saferealloc_(
-                interpreter,
+            self.loads_pointer = (*interpreter).safereallocate(
                 self.loads_pointer as *mut c_void,
                 (self.loads_size as usize) * size_of::<T>(),
-                (new_size as usize) * size_of::<T>(),
+                (newsize as usize) * size_of::<T>(),
             ) as *mut T;
-            self.loads_size = new_size;
+            self.loads_size = newsize;
         }
     }
-    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
+    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, newsize: usize) {
         unsafe {
-            self.loads_pointer = luam_saferealloc_(
-                interpreter,
+            self.loads_pointer = (*interpreter).safereallocate(
                 self.loads_pointer as *mut c_void,
                 (self.loads_size as usize) * size_of::<T>(),
-                new_size * size_of::<T>(),
+                newsize * size_of::<T>(),
             ) as *mut T;
-            self.loads_size = new_size as i32;
+            self.loads_size = newsize as i32;
         }
     }
 }

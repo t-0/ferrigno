@@ -30,7 +30,7 @@ pub struct TValue {
 impl TValue {
     pub unsafe fn from_string_to_number(&mut self, obj: *const TValue) -> bool {
         unsafe {
-            if (*obj).is_tagtype_string() {
+            if (*obj).get_tagvariant().to_tag_type().is_string() {
                 let tstring: *mut TString = &mut (*((*obj).tvalue_value.value_object as *mut TString));
                 return luao_str2num((*tstring).get_contents_mut(), self) == (*tstring).get_length().wrapping_add(1) as usize;
             } else {
@@ -81,21 +81,6 @@ impl TValue {
             tvalue_collectable: false,
             tvalue_delta: 0,
         }
-    }
-    pub fn is_tagtype_nil(&self) -> bool {
-        self.get_tagvariant().to_tag_type().is_nil()
-    }
-    pub fn is_tagtype_string(&self) -> bool {
-        self.get_tagvariant().to_tag_type().is_string()
-    }
-    pub fn is_tagtype_numeric(&self) -> bool {
-        self.get_tagvariant().to_tag_type().is_numeric()
-    }
-    pub fn is_tagtype_boolean(&self) -> bool {
-        self.get_tagvariant().to_tag_type().is_boolean()
-    }
-    pub fn is_tagtype_closure(&self) -> bool {
-        self.get_tagvariant().to_tag_type().is_closure()
     }
     pub fn copy_from(&mut self, other: &Self) {
         self.tvalue_value = other.tvalue_value;
@@ -191,7 +176,7 @@ pub unsafe fn tostringbuff(obj: *mut TValue, buffer: *mut i8) -> usize {
             length = snprintf(buffer, 44, c"%lld".as_ptr(), (*obj).tvalue_value.value_integer) as usize;
         } else {
             length = snprintf(buffer, 44, c"%.14g".as_ptr(), (*obj).tvalue_value.value_number) as usize;
-            if *buffer.offset(strspn(buffer, c"-0123456789".as_ptr()) as isize) as i32 == Character::Null as i32 {
+            if *buffer.offset(libc::strspn(buffer, c"-0123456789".as_ptr()) as isize) as i32 == Character::Null as i32 {
                 let fresh = length;
                 length = length + 1;
                 *buffer.offset(fresh as isize) = Character::Period as i8;
@@ -216,7 +201,7 @@ pub unsafe fn arrayindex(k: i64) -> u32 {
     {
         return k as u32;
     } else {
-        return 0u32;
+        return 0;
     };
 }
 pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
@@ -234,7 +219,7 @@ pub unsafe fn binsearch(array: *const TValue, mut i: u32, mut j: u32) -> u32 {
 }
 pub unsafe fn lessthanothers(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> i32 {
     unsafe {
-        if (*l).is_tagtype_string() && (*r).is_tagtype_string() {
+        if (*l).get_tagvariant().to_tag_type().is_string() && (*r).get_tagvariant().to_tag_type().is_string() {
             return (l_strcmp(
                 &mut (*((*l).tvalue_value.value_object as *mut TString)),
                 &mut (*((*r).tvalue_value.value_object as *mut TString)),
@@ -246,7 +231,7 @@ pub unsafe fn lessthanothers(interpreter: *mut Interpreter, l: *const TValue, r:
 }
 pub unsafe fn luav_lessthan(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
-        if (*l).is_tagtype_numeric() && (*r).is_tagtype_numeric() {
+        if (*l).get_tagvariant().to_tag_type().is_numeric() && (*r).get_tagvariant().to_tag_type().is_numeric() {
             return ltnum(l, r);
         } else {
             return 0 != lessthanothers(interpreter, l, r);
@@ -255,7 +240,7 @@ pub unsafe fn luav_lessthan(interpreter: *mut Interpreter, l: *const TValue, r: 
 }
 pub unsafe fn lessequalothers(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
-        if (*l).is_tagtype_string() && (*r).is_tagtype_string() {
+        if (*l).get_tagvariant().to_tag_type().is_string() && (*r).get_tagvariant().to_tag_type().is_string() {
             return l_strcmp(
                 &mut (*((*l).tvalue_value.value_object as *mut TString)),
                 &mut (*((*r).tvalue_value.value_object as *mut TString)),
@@ -267,7 +252,7 @@ pub unsafe fn lessequalothers(interpreter: *mut Interpreter, l: *const TValue, r
 }
 pub unsafe fn luav_lessequal(interpreter: *mut Interpreter, l: *const TValue, r: *const TValue) -> bool {
     unsafe {
-        if (*l).is_tagtype_numeric() && (*r).is_tagtype_numeric() {
+        if (*l).get_tagvariant().to_tag_type().is_numeric() && (*r).get_tagvariant().to_tag_type().is_numeric() {
             return lenum(l, r);
         } else {
             return lessequalothers(interpreter, l, r);
@@ -278,7 +263,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
     unsafe {
         let mut tm: *const TValue;
         if (*t1).get_tagvariant() != (*t2).get_tagvariant() {
-            if (*t1).get_tagvariant().to_tag_type() != (*t2).get_tagvariant().to_tag_type() || !(*t1).is_tagtype_numeric() {
+            if (*t1).get_tagvariant().to_tag_type() != (*t2).get_tagvariant().to_tag_type() || !(*t1).get_tagvariant().to_tag_type().is_numeric() {
                 return false;
             } else {
                 let mut i1: i64 = 0;
@@ -389,7 +374,7 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
         } else {
             luat_calltmres(interpreter, tm, t1, t2, (*interpreter).interpreter_top.stkidrel_pointer);
             return !((*(*interpreter).interpreter_top.stkidrel_pointer).get_tagvariant() == TagVariant::BooleanFalse
-                || (*(*interpreter).interpreter_top.stkidrel_pointer).is_tagtype_nil());
+                || (*(*interpreter).interpreter_top.stkidrel_pointer).get_tagvariant().to_tag_type().is_nil());
         };
     }
 }

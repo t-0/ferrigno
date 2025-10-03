@@ -30,7 +30,7 @@ mod k;
 mod labeldescription;
 mod lexicalstate;
 mod library;
-mod loadable;
+mod tloadable;
 mod loadf;
 mod loads;
 mod loadstate;

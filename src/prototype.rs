@@ -1,12 +1,11 @@
 use crate::absolutelineinfo::*;
-use crate::c::*;
 use crate::character::*;
 use crate::dumpstate::*;
 use crate::functionstate::*;
 use crate::global::*;
 use crate::instruction::*;
 use crate::interpreter::*;
-use crate::loadable::*;
+use crate::tloadable::*;
 use crate::localvariable::*;
 use crate::object::*;
 use crate::objectwithgclist::*;
@@ -46,9 +45,6 @@ impl TObject for Prototype {
     }
     fn as_object_mut(&mut self) -> &mut Object {
         self.prototype_super.as_object_mut()
-    }
-    fn get_classname(&mut self) -> String {
-        "prototype".to_string()
     }
 }
 impl TObjectWithGCList for Prototype {
@@ -372,7 +368,7 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
                     change = (reg >= a) as i32;
                 },
                 | 56 => {
-                    let b_0: i32 = (i >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
+                    let b_0: i32 = (i >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
                     let dest: i32 = program_counter + 1 + b_0;
                     if dest <= lastpc && dest > jmptarget {
                         jmptarget = dest;
@@ -394,7 +390,7 @@ pub unsafe fn findsetreg(p: *const Prototype, mut lastpc: i32, reg: i32) -> i32 
 pub unsafe fn kname(p: *const Prototype, index: i32, name: *mut *const i8) -> *const i8 {
     unsafe {
         let kvalue: *mut TValue = &mut *((*p).prototype_constants.vectort_pointer).offset(index as isize) as *mut TValue;
-        if (*kvalue).is_tagtype_string() {
+        if (*kvalue).get_tagvariant().to_tag_type().is_string() {
             *name = (*((*kvalue).tvalue_value.value_object as *mut TString)).get_contents_mut();
             return c"code_constant".as_ptr();
         } else {
@@ -414,26 +410,26 @@ pub unsafe fn basicgetobjname(p: *const Prototype, ppc: *mut i32, reg: i32, name
         *ppc = program_counter;
         if program_counter != -1 {
             let i: u32 = *((*p).prototype_code.vectort_pointer).offset(program_counter as isize);
-            let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
+            let op: u32 = (i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32;
             match op as u32 {
                 | 0 => {
-                    let b: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-                    if b < (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32 {
+                    let b: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
+                    if b < (i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as i32 {
                         return basicgetobjname(p, ppc, b, name);
                     }
                 },
                 | 9 => {
-                    *name = upvalname(p, (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32);
+                    *name = upvalname(p, (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32);
                     return STRING_UPVALUE;
                 },
                 | 3 => {
-                    return kname(p, (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32, name);
+                    return kname(p, (i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32, name);
                 },
                 | 4 => {
                     return kname(
                         p,
                         (*((*p).prototype_code.vectort_pointer).offset((program_counter + 1) as isize) >> POSITION_A
-                            & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32,
+                            & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32,
                         name,
                     );
                 },
@@ -453,8 +449,8 @@ pub unsafe fn rname(p: *const Prototype, mut program_counter: i32, c: i32, name:
 }
 pub unsafe fn rkname(p: *const Prototype, program_counter: i32, i: u32, name: *mut *const i8) {
     unsafe {
-        let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
-        if (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 != 0 {
+        let c: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
+        if (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 != 0 {
             kname(p, c, name);
         } else {
             rname(p, program_counter, c, name);
@@ -463,7 +459,7 @@ pub unsafe fn rkname(p: *const Prototype, program_counter: i32, i: u32, name: *m
 }
 pub unsafe fn is_environment(p: *const Prototype, mut program_counter: i32, i: u32, isup: i32) -> *const i8 {
     unsafe {
-        let t: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+        let t: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
         let mut name: *const i8 = null();
         if isup != 0 {
             name = upvalname(p, t);
@@ -473,7 +469,7 @@ pub unsafe fn is_environment(p: *const Prototype, mut program_counter: i32, i: u
                 name = null();
             }
         }
-        return if !name.is_null() && strcmp(name, c"_ENV".as_ptr()) == 0 {
+        return if !name.is_null() && libc::strcmp(name, c"_ENV".as_ptr()) == 0 {
             c"global".as_ptr()
         } else {
             c"field".as_ptr()
@@ -487,15 +483,15 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
             return kind;
         } else if lastpc != -1 {
             let i: u32 = *((*p).prototype_code.vectort_pointer).offset(lastpc as isize);
-            let op: u32 = (i >> 0 & !(!(0u32) << 7) << 0) as u32;
+            let op: u32 = (i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32;
             match op as u32 {
                 | 11 => {
-                    let k: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                    let k: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                     kname(p, k, name);
                     return is_environment(p, lastpc, i, 1);
                 },
                 | 12 => {
-                    let k_0: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                    let k_0: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                     rname(p, lastpc, k_0, name);
                     return is_environment(p, lastpc, i, 0);
                 },
@@ -504,7 +500,7 @@ pub unsafe fn getobjname(p: *const Prototype, mut lastpc: i32, reg: i32, name: *
                     return c"field".as_ptr();
                 },
                 | 14 => {
-                    let k_1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                    let k_1: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                     kname(p, k_1, name);
                     return is_environment(p, lastpc, i, 0);
                 },
@@ -524,9 +520,9 @@ pub unsafe fn funcnamefromcode(
     unsafe {
         let tm: u32;
         let i: u32 = *((*p).prototype_code.vectort_pointer).offset(program_counter as isize);
-        match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
+        match (i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 {
             | OPCODE_CALL | OPCODE_TAILCALL => {
-                return getobjname(p, program_counter, (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32, name);
+                return getobjname(p, program_counter, (i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as i32, name);
             },
             | OPCODE_TFORCALL => {
                 *name = c"for iterator".as_ptr();
@@ -539,7 +535,7 @@ pub unsafe fn funcnamefromcode(
                 tm = TM_NEWINDEX;
             },
             | OPCODE_MMBIN | OPCODE_MMBINI | OPCODE_MMBINK => {
-                tm = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
+                tm = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as u32;
             },
             | OPCODE_UNM => {
                 tm = TM_UNM;

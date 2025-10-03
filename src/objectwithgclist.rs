@@ -24,23 +24,23 @@ impl ObjectWithGCList {
         unsafe {
             let mut current_block: usize;
             loop {
-                let curr: *mut ObjectWithGCList = *objects;
-                if curr.is_null() {
+                let head: *mut ObjectWithGCList = *objects;
+                if head.is_null() {
                     break;
                 }
-                let next: *mut *mut ObjectWithGCList = (*curr).getgclist();
-                if !((*curr).get_marked() & (1 << 3 | 1 << 4) != 0) {
-                    if (*curr).get_marked() & 7 == 5 {
-                        (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);
-                        (*curr).set_marked(((*curr).get_marked() ^ (5 ^ 6)) as u8);
+                let next: *mut *mut ObjectWithGCList = (*head).getgclist();
+                if !((*head).get_marked() & (1 << 3 | 1 << 4) != 0) {
+                    if (*head).get_marked() & 7 == 5 {
+                        (*head).set_marked(((*head).get_marked() | 1 << 5) as u8);
+                        (*head).set_marked(((*head).get_marked() ^ (5 ^ 6)) as u8);
                         current_block = 11248371660297272285;
-                    } else if (*curr).get_tagvariant() == TagVariant::Interpreter {
+                    } else if (*head).get_tagvariant() == TagVariant::Interpreter {
                         current_block = 11248371660297272285;
                     } else {
-                        if (*curr).get_marked() & 7 == 6 {
-                            (*curr).set_marked(((*curr).get_marked() ^ (6 ^ 4)) as u8);
+                        if (*head).get_marked() & 7 == 6 {
+                            (*head).set_marked(((*head).get_marked() ^ (6 ^ 4)) as u8);
                         }
-                        (*curr).set_marked(((*curr).get_marked() | 1 << 5) as u8);
+                        (*head).set_marked(((*head).get_marked() | 1 << 5) as u8);
                         current_block = 6316553219439668466;
                     }
                     match current_block {
@@ -87,9 +87,6 @@ impl TObject for ObjectWithGCList {
     }
     fn as_object_mut(&mut self) -> &mut Object {
         &mut self.objectwithgclist_super
-    }
-    fn get_classname(&mut self) -> String {
-        "gclist".to_string()
     }
 }
 impl TObjectWithGCList for ObjectWithGCList {

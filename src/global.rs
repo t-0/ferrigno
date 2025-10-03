@@ -68,10 +68,61 @@ pub struct Global {
     pub global_warnuserdata: *mut c_void,
 }
 impl Global {
+    pub unsafe fn allocate(&mut self, interpreter: *mut Interpreter, newsize: usize) -> *mut libc::c_void {
+        unsafe {
+            if newsize == 0 {
+                return null_mut();
+            } else {
+                let mut newblock: *mut libc::c_void = raw_allocate(null_mut(), 0, newsize);
+                if newblock.is_null() {
+                    if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() && self.global_gcstopem == 0 {
+                        self.luac_fullgc(interpreter, true);
+                        newblock = raw_allocate(null_mut(), 0, newsize);
+                    } else {
+                        newblock = null_mut();
+                    };
+                    if newblock.is_null() {
+                        luad_throw(interpreter, Status::MemoryError);
+                    }
+                }
+                self.global_gcdebt += newsize as i64;
+                return newblock;
+            };
+        }
+    }
+    pub unsafe fn reallocate(&mut self, interpreter: *mut Interpreter, oldblock: *mut libc::c_void, oldsize: usize, newsize: usize,
+    ) -> *mut libc::c_void {
+        unsafe {
+            let mut newblock = raw_allocate(oldblock, oldsize, newsize);
+            if newblock.is_null() && newsize > 0 {
+                if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() && self.global_gcstopem == 0 {
+                    self.luac_fullgc(interpreter, true);
+                    newblock = raw_allocate(oldblock, oldsize, newsize);
+                } else {
+                    newblock = null_mut();
+                };
+                if newblock.is_null() {
+                    return null_mut();
+                }
+            }
+            self.global_gcdebt += newsize as i64;
+            self.global_gcdebt -= oldsize as i64;
+            return newblock;
+        }
+    }
+    pub fn should_step(& self) -> bool {
+        self.global_gcdebt > 0
+    }
+    pub unsafe fn free_memory(&mut self, block: *mut libc::c_void, oldsize: usize) {
+        unsafe {
+            raw_allocate(block, oldsize, 0);
+            self.global_gcdebt -= oldsize as i64;
+        }
+    }
     pub unsafe fn close(&mut self) {
         unsafe {
             let maininterpreter = self.global_maininterpreter;
-            if self.global_nonevalue.is_tagtype_nil() {
+            if self.global_nonevalue.get_tagvariant().to_tag_type().is_nil() {
                 (*maininterpreter).interpreter_callinfo = &mut (*maininterpreter).interpreter_basecallinfo;
                 (*maininterpreter).interpreter_errorfunction = 0;
                 do_close_protected(maininterpreter, 1 as i64, Status::OK);
@@ -90,7 +141,7 @@ impl Global {
             raw_allocate(self as *mut Global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
         }
     }
-    pub fn init(&mut self) {
+    pub fn initialize(&mut self) {
         self.global_currentwhite = (1 << 3) as u8;
         self.global_warnfunction = None;
         self.global_warnuserdata = null_mut();
@@ -209,7 +260,7 @@ impl Global {
             }
         }
     }
-    pub unsafe fn luac_step(&mut self, interpreter: *mut Interpreter) {
+    pub unsafe fn do_gc_step(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.global_gcstep as i32 != 0 {
                 self.set_debt(-2000);
@@ -532,20 +583,20 @@ impl Global {
             let mut p: *mut *mut Object = &mut (*self).global_finalizedobjects;
             let mut last_next: *mut *mut Object = Object::find_last(&mut (*self).global_tobefinalized);
             loop {
-                let current: *mut Object = *p;
-                if current == (*self).global_finobjold1 {
+                let head: *mut Object = *p;
+                if head == (*self).global_finobjold1 {
                     break;
                 }
-                if !((*current).get_marked() & (1 << 3 | 1 << 4) != 0 || is_all) {
-                    p = &mut (*current).object_next;
+                if !((*head).get_marked() & (1 << 3 | 1 << 4) != 0 || is_all) {
+                    p = &mut (*head).object_next;
                 } else {
-                    if current == (*self).global_finobjsur {
-                        (*self).global_finobjsur = (*current).object_next;
+                    if head == (*self).global_finobjsur {
+                        (*self).global_finobjsur = (*head).object_next;
                     }
-                    *p = (*current).object_next;
-                    (*current).object_next = *last_next;
-                    *last_next = current;
-                    last_next = &mut (*current).object_next;
+                    *p = (*head).object_next;
+                    (*head).object_next = *last_next;
+                    *last_next = head;
+                    last_next = &mut (*head).object_next;
                 }
             }
         }
@@ -589,11 +640,6 @@ impl Global {
                     }
                 }
             }
-        }
-    }
-    pub unsafe fn fix_memory_error_message_global(&mut self) {
-        unsafe {
-            Object::fix_object_global(self, self.global_memoryerrormessage as *mut Object);
         }
     }
     pub unsafe fn white_list(&mut self, mut p: *mut Object) {
@@ -820,7 +866,7 @@ pub unsafe fn clearbykeys(global: *mut Global, mut l: *mut ObjectWithGCList) {
                 {
                     (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
-                if (*node).node_value.is_tagtype_nil() {
+                if (*node).node_value.get_tagvariant().to_tag_type().is_nil() {
                     (*node).clearkey();
                 }
                 node = node.offset(1);
@@ -863,7 +909,7 @@ pub unsafe fn clearbyvalues(global: *mut Global, mut l: *mut ObjectWithGCList, f
                 {
                     (*node).node_value.tvalue_set_tag_variant(TagVariant::NilEmpty);
                 }
-                if (*node).node_value.is_tagtype_nil() {
+                if (*node).node_value.get_tagvariant().to_tag_type().is_nil() {
                     (*node).clearkey();
                 }
                 node = node.offset(1);
@@ -919,12 +965,12 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 (*global).global_gcstep = 0;
                 if data == 0 {
                     (*global).set_debt(0);
-                    (*interpreter).luac_step();
+                    (*interpreter).do_gc_step();
                 } else {
                     debt = data as i64 * 1024 as i64 + (*global).global_gcdebt;
                     (*global).set_debt(debt);
                     if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                        (*interpreter).luac_step();
+                        (*interpreter).do_gc_step();
                     }
                 }
                 (*global).global_gcstep = oldstp;

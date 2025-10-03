@@ -16,7 +16,7 @@ type UserSuper = ObjectWithMetatable;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct User {
-    pub user_super: UserSuper,
+    user_super: UserSuper,
     pub user_countbytes: usize,
     pub user_countupvalues: i32,
     pub user_upvalues: [TValue; 0],
@@ -27,9 +27,6 @@ impl TObject for User {
     }
     fn as_object_mut(&mut self) -> &mut Object {
         self.user_super.as_object_mut()
-    }
-    fn get_classname(&mut self) -> String {
-        "user".to_string()
     }
 }
 impl TObjectWithGCList for User {
@@ -46,6 +43,9 @@ impl TObjectWithMetatable for User {
     }
 }
 impl User {
+    pub fn get_length_raw(& self) -> usize {
+        self.user_countupvalues as usize
+    }
     pub fn user_get_size(count_bytes: usize, count_upvalues: usize) -> usize {
         core::mem::size_of::<User>() + size_of::<TValue>() * count_upvalues + count_bytes
     }
@@ -91,9 +91,7 @@ impl User {
             (*io).tvalue_set_tag_variant(TagVariant::User);
             (*io).set_collectable(true);
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
             return (*new_user).get_raw_memory_mut();
         }
     }

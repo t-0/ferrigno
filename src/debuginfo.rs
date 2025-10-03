@@ -1,5 +1,4 @@
 #![allow(unpredictable_function_pointer_comparisons)]
-use crate::c::*;
 use crate::callinfo::*;
 use crate::character::*;
 use crate::closure::*;
@@ -146,16 +145,16 @@ pub unsafe fn funcinfo(debuginfo: *mut DebugInfo, closure: *mut Closure) {
             (*debuginfo).debuginfo_lastlinedefined = -1;
             (*debuginfo).debuginfo_what = c"C".as_ptr();
         } else {
-            let p: *const Prototype = (*closure).payload.l_prototype;
-            if !((*p).prototype_source).is_null() {
-                (*debuginfo).debuginfo_source = (*(*p).prototype_source).get_contents_mut();
-                (*debuginfo).debuginfo_sourcelength = (*(*p).prototype_source).get_length() as usize;
+            let prototype: *const Prototype = (*closure).payload.l_prototype;
+            if !((*prototype).prototype_source).is_null() {
+                (*debuginfo).debuginfo_source = (*(*prototype).prototype_source).get_contents_mut();
+                (*debuginfo).debuginfo_sourcelength = (*(*prototype).prototype_source).get_length() as usize;
             } else {
                 (*debuginfo).debuginfo_source = c"=?".as_ptr();
                 (*debuginfo).debuginfo_sourcelength = (size_of::<[i8; 3]>() as usize) - 1;
             }
-            (*debuginfo).debuginfo_linedefined = (*p).prototype_linedefined;
-            (*debuginfo).debuginfo_lastlinedefined = (*p).prototype_lastlinedefined;
+            (*debuginfo).debuginfo_linedefined = (*prototype).prototype_linedefined;
+            (*debuginfo).debuginfo_lastlinedefined = (*prototype).prototype_lastlinedefined;
             (*debuginfo).debuginfo_what = if (*debuginfo).debuginfo_linedefined == 0 {
                 c"main".as_ptr()
             } else {
@@ -187,13 +186,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
             | TagVariant::ClosureL => {
                 let closure: *mut Closure = &mut (*((*function).tvalue_value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
-                if !(strchr(what, Character::LowerF as i32)).is_null() {
+                if !(libc::strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, Character::UpperL as i32)).is_null() {
+                if !(libc::strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);
                 }
                 return status;
@@ -201,13 +200,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
             | TagVariant::ClosureC => {
                 let closure: *mut Closure = &mut (*((*function).tvalue_value.value_object as *mut Closure));
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
-                if !(strchr(what, Character::LowerF as i32)).is_null() {
+                if !(libc::strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, Character::UpperL as i32)).is_null() {
+                if !(libc::strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);
                 }
                 return status;
@@ -215,13 +214,13 @@ pub unsafe fn lua_getinfo(interpreter: *mut Interpreter, mut what: *const i8, de
             | _ => {
                 let closure: *mut Closure = null_mut();
                 status = auxgetinfo(interpreter, what, debuginfo, closure, callinfo);
-                if !(strchr(what, Character::LowerF as i32)).is_null() {
+                if !(libc::strchr(what, Character::LowerF as i32)).is_null() {
                     let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                     let io2: *const TValue = function;
                     (*io1).copy_from(&*io2);
                     (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
                 }
-                if !(strchr(what, Character::UpperL as i32)).is_null() {
+                if !(libc::strchr(what, Character::UpperL as i32)).is_null() {
                     collectvalidlines(interpreter, closure);
                 }
                 return status;

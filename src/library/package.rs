@@ -52,11 +52,11 @@ pub unsafe fn setpath(interpreter: *mut Interpreter, fieldname: *const i8, envna
         if path.is_null() || noenv(interpreter) {
             lua_pushstring(interpreter, dft);
         } else {
-            dftmark = strstr(path, c";;".as_ptr());
+            dftmark = libc::strstr(path, c";;".as_ptr());
             if dftmark.is_null() {
                 lua_pushstring(interpreter, path);
             } else {
-                let length: usize = strlen(path) as usize;
+                let length: usize = libc::strlen(path) as usize;
                 let mut b = Buffer::new();
                 b.initialize(interpreter);
                 if path < dftmark {
@@ -175,7 +175,7 @@ pub unsafe fn getnextfilename(path: *mut *mut i8, end: *mut i8) -> *const i8 {
             *name = *(c";".as_ptr());
             name = name.offset(1);
         }
-        let mut sep: *mut i8 = strchr(name, *(c";".as_ptr()) as i32);
+        let mut sep: *mut i8 = libc::strchr(name, *(c";".as_ptr()) as i32);
         if sep.is_null() {
             sep = end;
         }
@@ -201,7 +201,7 @@ pub unsafe fn searchpath(
         let mut pathname;
         let endpathname;
         let mut filename;
-        if *sep as i32 != Character::Null as i32 && !(strchr(name, *sep as i32)).is_null() {
+        if *sep as i32 != Character::Null as i32 && !(libc::strchr(name, *sep as i32)).is_null() {
             name = lual_gsub(interpreter, name, sep, dirsep);
         }
         let mut buffer = Buffer::new();
@@ -291,7 +291,7 @@ pub unsafe fn loadfunc(interpreter: *mut Interpreter, filename: *const i8, mut m
     unsafe {
         modname = lual_gsub(interpreter, modname, c".".as_ptr(), c"_".as_ptr());
         let mut openfunc: *const i8;
-        let mark: *const i8 = strchr(modname, *(c"-".as_ptr()) as i32);
+        let mark: *const i8 = libc::strchr(modname, *(c"-".as_ptr()) as i32);
         if !mark.is_null() {
             openfunc = lua_pushlstring(interpreter, modname, mark.offset_from(modname) as usize);
             openfunc = lua_pushfstring(interpreter, c"luaopen_%s".as_ptr(), openfunc);
@@ -318,7 +318,7 @@ pub unsafe fn searcher_c(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn searcher_croot(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let name: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        let p: *const i8 = strchr(name, Character::Period as i32);
+        let p: *const i8 = libc::strchr(name, Character::Period as i32);
         if p.is_null() {
             return 0;
         }
@@ -488,13 +488,6 @@ pub unsafe fn createclibstable(interpreter: *mut Interpreter) {
 pub unsafe fn luaopen_package(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         createclibstable(interpreter);
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, PACKAGE_FUNCTIONS.as_ptr(), PACKAGE_FUNCTIONS.len(), 0);
         createsearcherstable(interpreter);

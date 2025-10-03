@@ -26,27 +26,26 @@ impl StringTable {
             self.stringtable_length -= 1;
         }
     }
-    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, new_size: usize) {
+    pub unsafe fn resize(&mut self, interpreter: *mut Interpreter, newsize: usize) {
         unsafe {
-            let old_size = self.stringtable_size;
-            if new_size < old_size {
-                tablerehash(self.stringtable_hash, old_size, new_size);
+            let oldsize = self.stringtable_size;
+            if newsize < oldsize {
+                tablerehash(self.stringtable_hash, oldsize, newsize);
             }
-            let new_vector: *mut *mut TString = luam_realloc_(
-                interpreter,
+            let new_vector: *mut *mut TString = (*interpreter).reallocate(
                 self.stringtable_hash as *mut libc::c_void,
-                old_size.wrapping_mul(size_of::<*mut TString>()),
-                new_size.wrapping_mul(size_of::<*mut TString>()),
+                oldsize.wrapping_mul(size_of::<*mut TString>()),
+                newsize.wrapping_mul(size_of::<*mut TString>()),
             ) as *mut *mut TString;
             if new_vector.is_null() {
-                if new_size < old_size {
-                    tablerehash(self.stringtable_hash, new_size, old_size);
+                if newsize < oldsize {
+                    tablerehash(self.stringtable_hash, newsize, oldsize);
                 }
             } else {
                 self.stringtable_hash = new_vector;
-                self.stringtable_size = new_size;
-                if new_size > old_size {
-                    tablerehash(new_vector, old_size, new_size);
+                self.stringtable_size = newsize;
+                if newsize > oldsize {
+                    tablerehash(new_vector, oldsize, newsize);
                 }
             };
         }
@@ -54,16 +53,16 @@ impl StringTable {
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             self.stringtable_hash =
-                luam_malloc_(interpreter, STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>())) as *mut *mut TString;
+                (*interpreter).allocate(STRINGTABLE_INITIAL_SIZE.wrapping_mul(size_of::<*mut TString>())) as *mut *mut TString;
             tablerehash(self.stringtable_hash, 0, STRINGTABLE_INITIAL_SIZE);
             self.stringtable_size = STRINGTABLE_INITIAL_SIZE;
         }
     }
 }
-pub unsafe fn luas_resize(interpreter: *mut Interpreter, new_size: usize) {
+pub unsafe fn luas_resize(interpreter: *mut Interpreter, newsize: usize) {
     unsafe {
         let stringtable: *mut StringTable = &mut (*(*interpreter).interpreter_global).global_stringtable;
-        (*stringtable).resize(interpreter, new_size);
+        (*stringtable).resize(interpreter, newsize);
     }
 }
 pub unsafe fn growstrtab(interpreter: *mut Interpreter, tb: *mut StringTable) {

@@ -1,5 +1,5 @@
 use crate::dumpstate::*;
-use crate::loadable::*;
+use crate::tloadable::*;
 use crate::loadstate::*;
 use crate::tstring::*;
 #[derive(Copy, Clone)]

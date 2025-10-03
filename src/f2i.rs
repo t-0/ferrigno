@@ -13,10 +13,10 @@ pub enum F2I {
     Floor,
     Ceiling,
 }
-pub unsafe fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
+pub unsafe fn luav_flttointeger(input: f64, result: *mut i64, mode: F2I) -> bool {
     unsafe {
-        let mut number: f64 = n.floor();
-        if n != number {
+        let mut number: f64 = input.floor();
+        if input != number {
             if mode == F2I::Equal {
                 return false;
             } else if mode == F2I::Ceiling {
@@ -24,30 +24,30 @@ pub unsafe fn luav_flttointeger(n: f64, p: *mut i64, mode: F2I) -> bool {
             }
         }
         return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64 && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64) && {
-            *p = number as i64;
+            *result = number as i64;
             true
         };
     }
 }
-pub unsafe fn luav_tointegerns(obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
+pub unsafe fn luav_tointegerns(obj: *const TValue, result: *mut i64, mode: F2I) -> i32 {
     unsafe {
         if (*obj).get_tagvariant() == TagVariant::NumericNumber {
-            return if luav_flttointeger((*obj).tvalue_value.value_number, p, mode) { 1 } else { 0 };
+            return if luav_flttointeger((*obj).tvalue_value.value_number, result, mode) { 1 } else { 0 };
         } else if (*obj).get_tagvariant() == TagVariant::NumericInteger {
-            *p = (*obj).tvalue_value.value_integer;
+            *result = (*obj).tvalue_value.value_integer;
             return 1;
         } else {
             return 0;
         };
     }
 }
-pub unsafe fn luav_tointeger(mut obj: *const TValue, p: *mut i64, mode: F2I) -> i32 {
+pub unsafe fn luav_tointeger(mut obj: *const TValue, result: *mut i64, mode: F2I) -> i32 {
     unsafe {
         let mut tvalue = TValue::new(TagVariant::NilNil);
         if tvalue.from_string_to_number(obj) {
             obj = &mut tvalue;
         }
-        luav_tointegerns(obj, p, mode)
+        luav_tointegerns(obj, result, mode)
     }
 }
 pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
@@ -202,7 +202,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
     unsafe {
         let mut n: usize = 0;
         let mut is_negative_: i32 = 0;
-        s = s.offset(strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
+        s = s.offset(libc::strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
         if *s as i32 == Character::Hyphen as i32 {
             s = s.offset(1);
             is_negative_ = 1;
@@ -227,7 +227,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
                 break;
             }
         }
-        s = s.offset(strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
+        s = s.offset(libc::strspn(s, c" \x0C\n\r\t\x0B".as_ptr()) as isize);
         *pn = (if is_negative_ != 0 { (0usize).wrapping_sub(n) } else { n }) as i64;
         return s;
     }

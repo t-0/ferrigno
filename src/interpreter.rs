@@ -1,11 +1,9 @@
-#![allow(unused)]
 use crate::buffer::*;
 use crate::bufffs::*;
 use crate::c::*;
 use crate::callinfo::*;
 use crate::calls::*;
 use crate::character::*;
-use crate::closeprotected::*;
 use crate::closeprotected::*;
 use crate::closure::*;
 use crate::debuginfo::*;
@@ -21,7 +19,6 @@ use crate::lexicalstate::*;
 use crate::loadf::*;
 use crate::loadstate::*;
 use crate::longjump::*;
-use crate::object::*;
 use crate::object::*;
 use crate::objectwithgclist::*;
 use crate::opcode::*;
@@ -83,9 +80,6 @@ impl TObject for Interpreter {
     fn as_object_mut(&mut self) -> &mut Object {
         self.interpreter_super.as_object_mut()
     }
-    fn get_classname(&mut self) -> String {
-        "interpreter".to_string()
-    }
 }
 impl TObjectWithGCList for Interpreter {
     fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {
@@ -93,6 +87,40 @@ impl TObjectWithGCList for Interpreter {
     }
 }
 impl Interpreter {
+    pub unsafe fn safereallocate(
+        &mut self, oldblock: *mut libc::c_void, oldsize: usize, newsize: usize,
+    ) -> *mut libc::c_void {
+        unsafe {
+            let newblock = self.reallocate(oldblock, oldsize, newsize);
+            if newblock.is_null() && newsize > 0 {
+                luad_throw(self, Status::MemoryError);
+            }
+            return newblock;
+        }
+    }
+    pub unsafe fn allocate(&mut self, newsize: usize) -> *mut libc::c_void {
+        unsafe {
+            (*self.interpreter_global).allocate(self, newsize)
+        }
+    }
+    pub unsafe fn reallocate(&mut self, oldblock: *mut libc::c_void, oldsize: usize, newsize: usize,
+    ) -> *mut libc::c_void {
+        unsafe {
+            (*self.interpreter_global).reallocate(self, oldblock, oldsize, newsize)
+        }
+    }
+    pub fn should_step (& self) -> bool {
+        unsafe {
+            (*self.interpreter_global).should_step()
+        }
+    }
+    pub fn do_gc_step_if_should_step (& mut self) {
+        if self.should_step() {
+            unsafe {
+                self.do_gc_step();
+            }
+        }
+    }
     pub unsafe fn preinit_thread(&mut self, global: *mut Global) {
         unsafe {
             self.interpreter_global = global;
@@ -113,7 +141,7 @@ impl Interpreter {
             self.interpreter_oldprogramcounter = 0;
         }
     }
-    pub fn init(&mut self, global: &Global) {
+    pub fn initialize(&mut self, global: &Global) {
         self.set_tagvariant(TagVariant::Interpreter);
         self.set_marked(global.global_currentwhite & (1 << 3 | 1 << 4));
     }
@@ -141,9 +169,9 @@ impl Interpreter {
             }
         }
     }
-    pub unsafe fn luac_step(&mut self) {
+    pub unsafe fn do_gc_step(&mut self) {
         unsafe {
-            (*self.interpreter_global).luac_step(self);
+            (*self.interpreter_global).do_gc_step(self);
         }
     }
     pub unsafe fn luac_fullgc(&mut self, is_emergency: bool) {
@@ -286,14 +314,14 @@ impl Interpreter {
             let white = (*(self.interpreter_global)).global_currentwhite & ((1 << 3) | (1 << 4));
             i = 0;
             while !(*p).is_null() && i < countin {
-                let curr: *mut Object = *p;
-                let marked = (*curr).get_marked();
+                let head: *mut Object = *p;
+                let marked = (*head).get_marked();
                 if marked & other_white != 0 {
-                    *p = (*curr).object_next;
-                    Object::object_free(self, curr);
+                    *p = (*head).object_next;
+                    Object::object_free(self, head);
                 } else {
-                    (*curr).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7) | white);
-                    p = &mut (*curr).object_next;
+                    (*head).set_marked(marked & !(1 << 5 | (1 << 3 | 1 << 4) | 7) | white);
+                    p = &mut (*head).object_next;
                 }
                 i += 1;
             }
@@ -303,10 +331,9 @@ impl Interpreter {
             return if (*p).is_null() { null_mut() } else { p };
         }
     }
-    pub unsafe fn free_memory(&mut self, block: *mut libc::c_void, old_size: usize) {
+    pub unsafe fn free_memory(&mut self, block: *mut libc::c_void, oldsize: usize) {
         unsafe {
-            raw_allocate(block, old_size, 0);
-            (*self.interpreter_global).global_gcdebt -= old_size as i64;
+            (*self.interpreter_global).free_memory(block, oldsize);
         }
     }
     pub unsafe fn too_big(&mut self) -> ! {
@@ -404,8 +431,8 @@ impl Interpreter {
             if inuse <= 1000000
                 && (self.interpreter_stacklast.stkidrel_pointer).offset_from(self.interpreter_stack.stkidrel_pointer) as i32 > max
             {
-                let new_size: i32 = if inuse > 1000000 / 2 { 1000000 } else { inuse * 2 };
-                luad_reallocstack(self, new_size, false);
+                let newsize: i32 = if inuse > 1000000 / 2 { 1000000 } else { inuse * 2 };
+                luad_reallocstack(self, newsize, false);
             }
             luae_shrinkci(self);
         }
@@ -430,9 +457,7 @@ impl Interpreter {
             (*io).tvalue_set_tag_variant(TagVariant::Table);
             (*io).set_collectable(true);
             self.interpreter_top.stkidrel_pointer = self.interpreter_top.stkidrel_pointer.offset(1);
-            if (*self.interpreter_global).global_gcdebt > 0 {
-                (*self.interpreter_global).luac_step(self);
-            }
+            self.do_gc_step_if_should_step();
         }
     }
     pub unsafe fn lua_getmetatable(&mut self, object_index: i32) -> bool {
@@ -530,7 +555,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
         PROGRAM_NAME = oldprogname;
     }
 }
-pub unsafe fn luad_throw(interpreter: *mut Interpreter, mut status: Status) -> ! {
+pub unsafe fn luad_throw(interpreter: *mut Interpreter, status: Status) -> ! {
     unsafe {
         if !((*interpreter).interpreter_longjump).is_null() {
             (*(*interpreter).interpreter_longjump).longjump_status = status;
@@ -573,18 +598,17 @@ pub unsafe fn luad_rawrunprotected(
         return long_jump.longjump_status;
     }
 }
-pub unsafe fn luad_reallocstack(interpreter: *mut Interpreter, new_size: i32, should_raise_error: bool) -> i32 {
+pub unsafe fn luad_reallocstack(interpreter: *mut Interpreter, newsize: i32, should_raise_error: bool) -> i32 {
     unsafe {
-        let old_size: i32 = ((*interpreter).interpreter_stacklast.stkidrel_pointer)
+        let oldsize: i32 = ((*interpreter).interpreter_stacklast.stkidrel_pointer)
             .offset_from((*interpreter).interpreter_stack.stkidrel_pointer) as i32;
         let oldgcstop: i32 = (*(*interpreter).interpreter_global).global_gcstopem as i32;
         (*interpreter).relstack();
         (*(*interpreter).interpreter_global).global_gcstopem = 1;
-        let newstack: *mut TValue = luam_realloc_(
-            interpreter,
+        let newstack: *mut TValue = (*interpreter).reallocate(
             (*interpreter).interpreter_stack.stkidrel_pointer as *mut libc::c_void,
-            ((old_size + 5) as usize) * size_of::<TValue>(),
-            ((new_size + 5) as usize) * size_of::<TValue>(),
+            ((oldsize + 5) as usize) * size_of::<TValue>(),
+            ((newsize + 5) as usize) * size_of::<TValue>(),
         ) as *mut TValue;
         (*(*interpreter).interpreter_global).global_gcstopem = oldgcstop as u8;
         if newstack.is_null() {
@@ -598,8 +622,8 @@ pub unsafe fn luad_reallocstack(interpreter: *mut Interpreter, new_size: i32, sh
         (*interpreter).interpreter_stack.stkidrel_pointer = newstack;
         (*interpreter).correct_stack();
         (*interpreter).interpreter_stacklast.stkidrel_pointer =
-            ((*interpreter).interpreter_stack.stkidrel_pointer).offset(new_size as isize);
-        for i in (old_size + 5)..(new_size + 5) {
+            ((*interpreter).interpreter_stack.stkidrel_pointer).offset(newsize as isize);
+        for i in (oldsize + 5)..(newsize + 5) {
             (*newstack.offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
         }
         return 1;
@@ -615,18 +639,18 @@ pub unsafe fn luad_growstack(interpreter: *mut Interpreter, n: i32, should_raise
             }
             return 0;
         } else if n < 1000000 {
-            let mut new_size: i32 = 2 * size;
+            let mut newsize: i32 = 2 * size;
             let needed: i32 = ((*interpreter).interpreter_top.stkidrel_pointer)
                 .offset_from((*interpreter).interpreter_stack.stkidrel_pointer) as i32
                 + n;
-            if new_size > 1000000 {
-                new_size = 1000000;
+            if newsize > 1000000 {
+                newsize = 1000000;
             }
-            if new_size < needed {
-                new_size = needed;
+            if newsize < needed {
+                newsize = needed;
             }
-            if new_size <= 1000000 {
-                return luad_reallocstack(interpreter, new_size, should_raise_error);
+            if newsize <= 1000000 {
+                return luad_reallocstack(interpreter, newsize, should_raise_error);
             }
         }
         luad_reallocstack(interpreter, 1000000 + 200, should_raise_error);
@@ -741,14 +765,12 @@ pub unsafe fn tryfunctm(interpreter: *mut Interpreter, mut function: *mut TValue
             != 0
         {
             let t__: i64 = (function as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
             luad_growstack(interpreter, 1, true);
             function = ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as *mut TValue;
         }
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*function), TM_CALL);
-        if (*tm).is_tagtype_nil() {
+        if (*tm).get_tagvariant().to_tag_type().is_nil() {
             luag_callerror(interpreter, &mut (*function));
         }
         p = (*interpreter).interpreter_top.stkidrel_pointer;
@@ -859,9 +881,7 @@ pub unsafe fn precallc(interpreter: *mut Interpreter, mut function: *mut TValue,
             != 0
         {
             let t__: i64 = (function as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
             luad_growstack(interpreter, 20 as i32, true);
             function = ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as *mut TValue;
         }
@@ -911,9 +931,7 @@ pub unsafe fn luad_pretailcall(
                     {
                         let t__: i64 =
                             (function as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
-                        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                            (*interpreter).luac_step();
-                        }
+                        (*interpreter).do_gc_step_if_should_step();
                         luad_growstack(interpreter, fsize - delta, true);
                         function =
                             ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as *mut TValue;
@@ -975,9 +993,7 @@ pub unsafe fn luad_precall(interpreter: *mut Interpreter, mut function: *mut TVa
                     {
                         let t__: i64 =
                             (function as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
-                        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                            (*interpreter).luac_step();
-                        }
+                        (*interpreter).do_gc_step_if_should_step();
                         luad_growstack(interpreter, fsize, true);
                         function =
                             ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as *mut TValue;
@@ -1251,7 +1267,7 @@ pub unsafe fn luad_pcall(
 }
 pub unsafe fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *const i8) {
     unsafe {
-        if !mode.is_null() && (strchr(mode, *x.offset(0) as i32)).is_null() {
+        if !mode.is_null() && (libc::strchr(mode, *x.offset(0) as i32)).is_null() {
             luao_pushfstring(interpreter, c"attempt to load a %s chunk (mode is '%s')".as_ptr(), x, mode);
             luad_throw(interpreter, Status::SyntaxError);
         }
@@ -1489,7 +1505,7 @@ pub unsafe fn lua_pushvalue(interpreter: *mut Interpreter, index: i32) {
 pub unsafe fn lua_type(interpreter: *mut Interpreter, index: i32) -> Option<TagType> {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        return if !(*tvalue).is_tagtype_nil()
+        return if !(*tvalue).get_tagvariant().to_tag_type().is_nil()
             || tvalue != &mut (*(*interpreter).interpreter_global).global_nonevalue as *mut TValue as *const TValue
         {
             return Some((*tvalue).get_tagvariant().to_tag_type());
@@ -1513,7 +1529,6 @@ pub unsafe fn lua_typename(mut _state: *mut Interpreter, tagtype: Option<TagType
         | Some(TagType::UpValue) => c"upvalue".as_ptr(),
         | Some(TagType::Prototype) => c"proto".as_ptr(),
         | Some(TagType::DeadKey) => c"deadkey".as_ptr(),
-        | _ => c"unknown".as_ptr(),
     }
 }
 pub unsafe fn lua_iscfunction(interpreter: *mut Interpreter, index: i32) -> bool {
@@ -1555,9 +1570,9 @@ pub unsafe fn lua_rawequal(interpreter: *mut Interpreter, index1: i32, index2: i
     unsafe {
         let o1: *const TValue = (*interpreter).index_to_value(index1);
         let o2: *const TValue = (*interpreter).index_to_value(index2);
-        return if (!((*o1).is_tagtype_nil())
+        return if (!((*o1).get_tagvariant().to_tag_type().is_nil())
             || o1 != &mut (*(*interpreter).interpreter_global).global_nonevalue as *mut TValue as *const TValue)
-            && (!((*o2).is_tagtype_nil())
+            && (!((*o2).get_tagvariant().to_tag_type().is_nil())
                 || o2 != &mut (*(*interpreter).interpreter_global).global_nonevalue as *mut TValue as *const TValue)
         {
             luav_equalobj(null_mut(), o1, o2)
@@ -1571,9 +1586,9 @@ pub unsafe fn lua_compare(interpreter: *mut Interpreter, index1: i32, index2: i3
         let o1: *const TValue = (*interpreter).index_to_value(index1);
         let o2: *const TValue = (*interpreter).index_to_value(index2);
         let mut ret: bool = false;
-        if (!((*o1).is_tagtype_nil())
+        if (!((*o1).get_tagvariant().to_tag_type().is_nil())
             || o1 != &mut (*(*interpreter).interpreter_global).global_nonevalue as *mut TValue as *const TValue)
-            && (!((*o2).is_tagtype_nil())
+            && (!((*o2).get_tagvariant().to_tag_type().is_nil())
                 || o2 != &mut (*(*interpreter).interpreter_global).global_nonevalue as *mut TValue as *const TValue)
         {
             match op {
@@ -1636,23 +1651,21 @@ pub unsafe fn lua_tointegerx(interpreter: *mut Interpreter, index: i32, is_numbe
 pub unsafe fn lua_toboolean(interpreter: *mut Interpreter, index: i32) -> bool {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        return !((*tvalue).get_tagvariant() == TagVariant::BooleanFalse || (*tvalue).is_tagtype_nil());
+        return !((*tvalue).get_tagvariant() == TagVariant::BooleanFalse || (*tvalue).get_tagvariant().to_tag_type().is_nil());
     }
 }
 pub unsafe fn lua_tolstring(interpreter: *mut Interpreter, index: i32, length: *mut usize) -> *const i8 {
     unsafe {
         let mut o: *mut TValue = (*interpreter).index_to_value(index);
-        if !((*o).is_tagtype_string()) {
-            if !((*o).is_tagtype_numeric()) {
+        if !((*o).get_tagvariant().to_tag_type().is_string()) {
+            if !((*o).get_tagvariant().to_tag_type().is_numeric()) {
                 if !length.is_null() {
                     *length = 0;
                 }
                 return null();
             }
             (*o).from_interpreter_to_string(interpreter);
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
             o = (*interpreter).index_to_value(index);
         }
         if !length.is_null() {
@@ -1666,23 +1679,27 @@ pub unsafe fn get_length_raw(interpreter: *mut Interpreter, index: i32) -> usize
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
         match (*tvalue).get_tagvariant() {
             | TagVariant::StringShort | TagVariant::StringLong => {
-                return (*((*tvalue).tvalue_value.value_object as *mut TString)).get_length() as usize;
+                (*((*tvalue).tvalue_value.value_object as *mut TString)).get_length_raw()
             },
-            | TagVariant::User => return (*((*tvalue).tvalue_value.value_object as *mut User)).user_countbytes,
+            | TagVariant::User => {
+                (*((*tvalue).tvalue_value.value_object as *mut User)).get_length_raw()
+            },
             | TagVariant::Table => {
-                return luah_getn(&mut (*((*tvalue).tvalue_value.value_object as *mut Table))) as usize;
+                (*((*tvalue).tvalue_value.value_object as *mut Table)).get_length_raw()
             },
-            | _ => return 0,
-        };
+            | _ => {
+                0
+            }
+        }
     }
 }
 pub unsafe fn lua_tothread(interpreter: *mut Interpreter, index: i32) -> *mut Interpreter {
     unsafe {
         let tvalue: *const TValue = (*interpreter).index_to_value(index);
-        return if !((*tvalue).get_tagvariant() == TagVariant::Interpreter) {
-            null_mut()
-        } else {
+        return if (*tvalue).get_tagvariant() == TagVariant::Interpreter {
             &mut (*((*tvalue).tvalue_value.value_object as *mut Interpreter))
+        } else {
+            null_mut()
         };
     }
 }
@@ -1698,9 +1715,7 @@ pub unsafe fn lua_pushlstring(interpreter: *mut Interpreter, s: *const i8, lengt
         (*io).tvalue_set_tag_variant((*tstring).get_tagvariant());
         (*io).set_collectable(true);
         (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
         return (*tstring).get_contents_mut();
     }
 }
@@ -1717,29 +1732,22 @@ pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) ->
             s = (*tstring).get_contents_mut();
         }
         (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
         return s;
     }
 }
 pub unsafe fn lua_pushvfstring(interpreter: *mut Interpreter, fmt: *const i8, mut argp: ::core::ffi::VaList) -> *const i8 {
     unsafe {
-        let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        let ret = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        (*interpreter).do_gc_step_if_should_step();
         return ret;
     }
 }
 pub unsafe extern "C" fn lua_pushfstring(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> *const i8 {
     unsafe {
-        let mut argp: ::core::ffi::VaListImpl;
-        argp = args.clone();
+        let mut argp = args.clone();
         let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
         return ret;
     }
 }
@@ -1770,17 +1778,15 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
             (*io_0).tvalue_set_tag_variant(TagVariant::ClosureC);
             (*io_0).set_collectable(true);
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
         };
     }
 }
-pub unsafe fn lua_pushlightuserdata(interpreter: *mut Interpreter, p: *mut libc::c_void) {
+pub unsafe fn lua_pushlightuserdata(interpreter: *mut Interpreter, pointer: *mut libc::c_void) {
     unsafe {
-        let io: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
-        (*io).tvalue_value.value_pointer = p;
-        (*io).tvalue_set_tag_variant(TagVariant::Pointer);
+        let tvalue: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
+        (*tvalue).tvalue_value.value_pointer = pointer;
+        (*tvalue).tvalue_set_tag_variant(TagVariant::Pointer);
         (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
     }
 }
@@ -1793,7 +1799,7 @@ pub unsafe fn auxgetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             0
         } else {
             slot = luah_getstr(&mut (*((*t).tvalue_value.value_object as *mut Table)), str);
-            !(*slot).is_tagtype_nil() as i32
+            !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
@@ -1839,7 +1845,7 @@ pub unsafe fn lua_gettable(interpreter: *mut Interpreter, index: i32) -> i32 {
                 &mut (*((*t).tvalue_value.value_object as *mut Table)),
                 &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize))),
             );
-            !(*slot).is_tagtype_nil() as i32
+            !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
@@ -1896,7 +1902,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
             } else {
                 luah_getint(&mut (*((*t).tvalue_value.value_object as *mut Table)), n)
             };
-            !(*slot).is_tagtype_nil() as i32
+            !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
         } != 0
         {
             let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
@@ -1917,7 +1923,7 @@ pub unsafe fn lua_geti(interpreter: *mut Interpreter, index: i32, n: i64) -> Tag
 }
 pub unsafe fn finishrawget(interpreter: *mut Interpreter, value: *const TValue) -> TagType {
     unsafe {
-        if (*value).is_tagtype_nil() {
+        if (*value).get_tagvariant().to_tag_type().is_nil() {
             (*(*interpreter).interpreter_top.stkidrel_pointer).tvalue_set_tag_variant(TagVariant::NilNil);
         } else {
             let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
@@ -1962,7 +1968,7 @@ pub unsafe fn auxsetstr(interpreter: *mut Interpreter, t: *const TValue, k: *con
             0
         } else {
             slot = luah_getstr(&mut (*((*t).tvalue_value.value_object as *mut Table)), str);
-            !(*slot).is_tagtype_nil() as i32
+            !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
@@ -2030,7 +2036,7 @@ pub unsafe fn lua_seti(interpreter: *mut Interpreter, index: i32, n: i64) {
             } else {
                 luah_getint(&mut (*((*t).tvalue_value.value_object as *mut Table)), n)
             };
-            !(*slot).is_tagtype_nil() as i32
+            !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
         } != 0
         {
             let io1: *mut TValue = slot as *mut TValue;
@@ -2131,7 +2137,11 @@ pub unsafe fn lua_setmetatable(interpreter: *mut Interpreter, index: i32) -> i32
     unsafe {
         let metatable: *mut Table;
         let object: *mut TValue = (*interpreter).index_to_value(index);
-        if (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize))).is_tagtype_nil() {
+        if (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
+            .get_tagvariant()
+            .to_tag_type()
+            .is_nil()
+        {
             metatable = null_mut();
         } else {
             metatable = &mut (*((*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
@@ -2321,9 +2331,7 @@ pub unsafe fn lua_concat(interpreter: *mut Interpreter, n: i32) {
             (*io).set_collectable(true);
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
         }
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
     }
 }
 pub unsafe fn lua_len(interpreter: *mut Interpreter, index: i32) {
@@ -2438,14 +2446,14 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         let mut h: u32 = time(null_mut()) as u32;
         let mut p: i32 = 0;
         let mut t: usize = interpreter as usize;
-        memcpy(
+        libc::memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t as *mut usize as *const libc::c_void,
             size_of::<usize>(),
         );
         p = (p as usize).wrapping_add(size_of::<usize>() as usize) as i32;
         let mut t_0: usize = &mut h as *mut u32 as usize;
-        memcpy(
+        libc::memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_0 as *mut usize as *const libc::c_void,
             size_of::<usize>(),
@@ -2454,7 +2462,7 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
         let mut t_1: usize = ::core::mem::transmute::<Option<unsafe fn(interpreter: *mut Interpreter) -> u32>, usize>(Some(
             luai_makeseed as unsafe fn(interpreter: *mut Interpreter) -> u32,
         ));
-        memcpy(
+        libc::memcpy(
             buffer.as_mut_ptr().offset(p as isize) as *mut libc::c_void,
             &mut t_1 as *mut usize as *const libc::c_void,
             size_of::<usize>(),
@@ -2465,7 +2473,7 @@ pub unsafe fn luai_makeseed(interpreter: *mut Interpreter) -> u32 {
 }
 pub unsafe fn luae_extendci(interpreter: *mut Interpreter) -> *mut CallInfo {
     unsafe {
-        let ret = luam_malloc_(interpreter, size_of::<CallInfo>()) as *mut CallInfo;
+        let ret = (*interpreter).allocate(size_of::<CallInfo>()) as *mut CallInfo;
         (*(*interpreter).interpreter_callinfo).callinfo_next = ret;
         (*ret).callinfo_previous = (*interpreter).interpreter_callinfo;
         (*ret).callinfo_next = null_mut();
@@ -2518,7 +2526,7 @@ pub unsafe fn luae_shrinkci(interpreter: *mut Interpreter) {
 pub unsafe fn stack_init(other_state: *mut Interpreter, interpreter: *mut Interpreter) {
     unsafe {
         (*other_state).interpreter_stack.stkidrel_pointer =
-            luam_malloc_(interpreter, ((2 * 20 as i32 + 5) as usize).wrapping_mul(size_of::<TValue>())) as *mut TValue;
+            (*interpreter).allocate(((2 * 20 as i32 + 5) as usize).wrapping_mul(size_of::<TValue>())) as *mut TValue;
         (*other_state).interpreter_tbclist.stkidrel_pointer = (*other_state).interpreter_stack.stkidrel_pointer;
         for i in 0..2 * 20 as i32 + 5 {
             (*((*other_state).interpreter_stack.stkidrel_pointer).offset(i as isize)).tvalue_set_tag_variant(TagVariant::NilNil);
@@ -2592,7 +2600,7 @@ pub unsafe fn f_luaopen(interpreter: *mut Interpreter, mut _ud: *mut libc::c_voi
 pub unsafe fn close_state(interpreter: *mut Interpreter) {
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;
-        if (*global).global_nonevalue.is_tagtype_nil() {
+        if (*global).global_nonevalue.get_tagvariant().to_tag_type().is_nil() {
             (*interpreter).interpreter_callinfo = &mut (*interpreter).interpreter_basecallinfo;
             (*interpreter).interpreter_errorfunction = 0;
             do_close_protected(interpreter, 1 as i64, Status::OK);
@@ -2614,9 +2622,7 @@ pub unsafe fn close_state(interpreter: *mut Interpreter) {
 pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
         let ret = luac_newobj(interpreter, TagVariant::Interpreter, size_of::<Interpreter>()) as *mut Interpreter;
         let io: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
         (*io).tvalue_set_tag_variant(TagVariant::Interpreter);
@@ -2698,7 +2704,7 @@ pub unsafe fn luae_warning(interpreter: *mut Interpreter, message: *const i8, to
 pub unsafe fn luae_warnerror(interpreter: *mut Interpreter, where_0: *const i8) {
     unsafe {
         let errobj: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
-        let message: *const i8 = if (*errobj).is_tagtype_string() {
+        let message: *const i8 = if (*errobj).get_tagvariant().to_tag_type().is_string() {
             ((*((*errobj).tvalue_value.value_object as *mut TString)).get_contents_mut()) as *const i8
         } else {
             c"error object is not a string".as_ptr()
@@ -2841,7 +2847,7 @@ pub unsafe fn luag_concaterror(interpreter: *mut Interpreter, mut p1: *const TVa
 }
 pub unsafe fn luag_opinterror(interpreter: *mut Interpreter, p1: *const TValue, mut p2: *const TValue, message: *const i8) -> ! {
     unsafe {
-        if !(*p1).is_tagtype_numeric() {
+        if !(*p1).get_tagvariant().to_tag_type().is_numeric() {
             p2 = p1;
         }
         luag_typeerror(interpreter, p2, message);
@@ -2864,7 +2870,7 @@ pub unsafe fn luag_ordererror(interpreter: *mut Interpreter, p1: *const TValue, 
     unsafe {
         let t1: *const i8 = luat_objtypename(interpreter, p1);
         let t2: *const i8 = luat_objtypename(interpreter, p2);
-        if strcmp(t1, t2) == 0 {
+        if libc::strcmp(t1, t2) == 0 {
             luag_runerror(interpreter, c"attempt to compare two %s values".as_ptr(), t1);
         } else {
             luag_runerror(interpreter, c"attempt to compare %s with %s".as_ptr(), t1, t2);
@@ -2910,9 +2916,7 @@ pub unsafe extern "C" fn luag_runerror(interpreter: *mut Interpreter, fmt: *cons
         let callinfo = (*interpreter).interpreter_callinfo;
         let message: *const i8;
         let mut argp: ::core::ffi::VaListImpl;
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
         argp = args.clone();
         message = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
         if (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0 {
@@ -2976,11 +2980,11 @@ pub unsafe fn luag_traceexec(interpreter: *mut Interpreter, mut program_counter:
             (*callinfo).callinfo_callstatus = ((*callinfo).callinfo_callstatus as i32 & !(1 << 6)) as u16;
             return 1;
         }
-        if !(OPMODES[(*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(1 as isize)) >> 0 & !(!(0u32) << 7) << 0) as usize]
+        if !(OPMODES[(*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(1 as isize)) >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as usize]
             as i32
             & 1 << 5
             != 0
-            && (*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(1 as isize)) >> POSITION_B & !(!(0u32) << 8) << 0)
+            && (*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(1 as isize)) >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0)
                 as i32
                 == 0)
         {
@@ -3010,64 +3014,6 @@ pub unsafe fn luag_traceexec(interpreter: *mut Interpreter, mut program_counter:
             luad_throw(interpreter, Status::Yield);
         }
         return 1;
-    }
-}
-pub unsafe fn tryagain(
-    interpreter: *mut Interpreter, block: *mut libc::c_void, old_size: usize, new_size: usize,
-) -> *mut libc::c_void {
-    unsafe {
-        let global: *mut Global = (*interpreter).interpreter_global;
-        if (*global).global_nonevalue.is_tagtype_nil() && (*global).global_gcstopem == 0 {
-            (*global).luac_fullgc(interpreter, true);
-            return raw_allocate(block, old_size, new_size);
-        } else {
-            return null_mut();
-        };
-    }
-}
-pub unsafe fn luam_realloc_(
-    interpreter: *mut Interpreter, block: *mut libc::c_void, old_size: usize, new_size: usize,
-) -> *mut libc::c_void {
-    unsafe {
-        let global: *mut Global = (*interpreter).interpreter_global;
-        let mut new_block: *mut libc::c_void = raw_allocate(block, old_size, new_size);
-        if new_block.is_null() && new_size > 0 {
-            new_block = tryagain(interpreter, block, old_size, new_size);
-            if new_block.is_null() {
-                return null_mut();
-            }
-        }
-        (*global).global_gcdebt = ((*global).global_gcdebt as usize).wrapping_add(new_size).wrapping_sub(old_size) as i64;
-        return new_block;
-    }
-}
-pub unsafe fn luam_saferealloc_(
-    interpreter: *mut Interpreter, block: *mut libc::c_void, old_size: usize, new_size: usize,
-) -> *mut libc::c_void {
-    unsafe {
-        let new_block: *mut libc::c_void = luam_realloc_(interpreter, block, old_size, new_size);
-        if new_block.is_null() && new_size > 0 {
-            luad_throw(interpreter, Status::MemoryError);
-        }
-        return new_block;
-    }
-}
-pub unsafe fn luam_malloc_(interpreter: *mut Interpreter, new_size: usize) -> *mut libc::c_void {
-    unsafe {
-        if new_size == 0 {
-            return null_mut();
-        } else {
-            let global: *mut Global = (*interpreter).interpreter_global;
-            let mut new_block: *mut libc::c_void = raw_allocate(null_mut(), 0, new_size);
-            if new_block.is_null() {
-                new_block = tryagain(interpreter, null_mut(), 0, new_size);
-                if new_block.is_null() {
-                    luad_throw(interpreter, Status::MemoryError);
-                }
-            }
-            (*global).global_gcdebt = ((*global).global_gcdebt as usize).wrapping_add(new_size) as i64;
-            return new_block;
-        };
     }
 }
 pub unsafe fn intarith(interpreter: *mut Interpreter, op: i32, v1: i64, v2: i64) -> i64 {
@@ -3223,7 +3169,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
         let mut buff_fs = BuffFS::new(interpreter);
         let mut e: *const i8;
         loop {
-            e = strchr(fmt, Character::Percent as i32);
+            e = libc::strchr(fmt, Character::Percent as i32);
             if e.is_null() {
                 break;
             }
@@ -3234,7 +3180,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
                     if s.is_null() {
                         s = c"(null)".as_ptr();
                     }
-                    buff_fs.add_string(s, strlen(s) as usize);
+                    buff_fs.add_string(s, libc::strlen(s) as usize);
                 },
                 | Character::LowerC => {
                     let mut c: i8 = argp.arg::<i32>() as u8 as i8;
@@ -3286,7 +3232,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
             }
             fmt = e.offset(2 as isize);
         }
-        buff_fs.add_string(fmt, strlen(fmt) as usize);
+        buff_fs.add_string(fmt, libc::strlen(fmt) as usize);
         buff_fs.clear();
         return (*((*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
             .tvalue_value
@@ -3376,7 +3322,7 @@ pub unsafe fn luat_objtypename(interpreter: *mut Interpreter, tvalue: *const TVa
             !metatable.is_null()
         } {
             let name: *const TValue = luah_getshortstr(metatable, luas_new(interpreter, c"__name".as_ptr()));
-            if (*name).is_tagtype_string() {
+            if (*name).get_tagvariant().to_tag_type().is_string() {
                 return (*((*name).tvalue_value.value_object as *mut TString)).get_contents_mut();
             }
         }
@@ -3434,10 +3380,10 @@ pub unsafe fn luat_calltmres(
 pub unsafe fn callbintm(interpreter: *mut Interpreter, p1: *const TValue, p2: *const TValue, res: *mut TValue, event: u32) -> i32 {
     unsafe {
         let mut tm: *const TValue = luat_gettmbyobj(interpreter, p1, event);
-        if (*tm).is_tagtype_nil() {
+        if (*tm).get_tagvariant().to_tag_type().is_nil() {
             tm = luat_gettmbyobj(interpreter, p2, event);
         }
-        if (*tm).is_tagtype_nil() {
+        if (*tm).get_tagvariant().to_tag_type().is_nil() {
             0
         } else {
             luat_calltmres(interpreter, tm, p1, p2, res);
@@ -3450,7 +3396,7 @@ pub unsafe fn luat_trybintm(interpreter: *mut Interpreter, p1: *const TValue, p2
         if callbintm(interpreter, p1, p2, res, event) == 0 {
             match event as u32 {
                 | TM_BAND | TM_BOR | TM_BXOR | TM_SHL | TM_SHR | TM_BNOT => {
-                    if (*p1).is_tagtype_numeric() && (*p2).is_tagtype_numeric() {
+                    if (*p1).get_tagvariant().to_tag_type().is_numeric() && (*p2).get_tagvariant().to_tag_type().is_numeric() {
                         luag_tointerror(interpreter, p1, p2);
                     } else {
                         luag_opinterror(interpreter, p1, p2, c"perform bitwise operation on".as_ptr());
@@ -3508,7 +3454,10 @@ pub unsafe fn luat_callordertm(interpreter: *mut Interpreter, p1: *const TValue,
     unsafe {
         if callbintm(interpreter, p1, p2, (*interpreter).interpreter_top.stkidrel_pointer, event) != 0 {
             return !((*(*interpreter).interpreter_top.stkidrel_pointer).get_tagvariant() == TagVariant::BooleanFalse
-                || (*(*interpreter).interpreter_top.stkidrel_pointer).is_tagtype_nil()) as i32;
+                || (*(*interpreter).interpreter_top.stkidrel_pointer)
+                    .get_tagvariant()
+                    .to_tag_type()
+                    .is_nil()) as i32;
         }
         luag_ordererror(interpreter, p1, p2);
     }
@@ -3583,9 +3532,7 @@ pub unsafe fn luat_getvarargs(interpreter: *mut Interpreter, callinfo: *mut Call
             {
                 let t__: i64 =
                     (where_0 as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
-                if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                    (*interpreter).luac_step();
-                }
+                (*interpreter).do_gc_step_if_should_step();
                 luad_growstack(interpreter, nextra, true);
                 where_0 = ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8).offset(t__ as isize) as *mut TValue;
             }
@@ -3606,7 +3553,7 @@ pub unsafe fn luat_getvarargs(interpreter: *mut Interpreter, callinfo: *mut Call
 pub unsafe fn luac_newobj(interpreter: *mut Interpreter, tagvariant: TagVariant, size: usize) -> *mut Object {
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;
-        let ret = luam_malloc_(interpreter, size as usize) as *mut Object;
+        let ret = (*interpreter).allocate(size as usize) as *mut Object;
         (*ret).set_tagvariant(tagvariant);
         (*ret).set_marked((*global).global_currentwhite & (1 << 3 | 1 << 4));
         (*ret).object_next = (*global).global_allgc;
@@ -3691,7 +3638,7 @@ pub unsafe fn gctm_function(interpreter: *mut Interpreter) {
         (*io).tvalue_set_tag_variant((*i_g).get_tagvariant());
         (*io).set_collectable(true);
         tm = luat_gettmbyobj(interpreter, &mut v, TM_GC);
-        if !(*tm).is_tagtype_nil() {
+        if !(*tm).get_tagvariant().to_tag_type().is_nil() {
             let oldah: u8 = (*interpreter).interpreter_allowhook;
             let oldgcstp: i32 = (*global).global_gcstep as i32;
             (*global).global_gcstep = ((*global).global_gcstep as i32 | 2) as u8;
@@ -3782,31 +3729,31 @@ pub unsafe fn sweep2old(interpreter: *mut Interpreter, mut p: *mut *mut Object) 
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;
         loop {
-            let curr: *mut Object = *p;
-            if curr.is_null() {
+            let head: *mut Object = *p;
+            if head.is_null() {
                 break;
             }
-            if (*curr).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                *p = (*curr).object_next;
-                Object::object_free(interpreter, curr);
+            if (*head).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                *p = (*head).object_next;
+                Object::object_free(interpreter, head);
             } else {
-                (*curr).set_marked((*curr).get_marked() & !(7) | 4);
-                if (*curr).get_tagvariant() == TagVariant::Interpreter {
-                    let other_state: *mut Interpreter = &mut (*(curr as *mut Interpreter));
+                (*head).set_marked((*head).get_marked() & !(7) | 4);
+                if (*head).get_tagvariant() == TagVariant::Interpreter {
+                    let other_state: *mut Interpreter = &mut (*(head as *mut Interpreter));
                     ObjectWithGCList::linkgclist_(
                         &mut (*(other_state as *mut ObjectWithGCList)),
                         (*other_state).getgclist(),
                         &mut (*global).global_grayagain,
                     );
-                } else if (*curr).get_tagvariant() == TagVariant::UpValue
-                    && (*(curr as *mut UpValue)).upvalue_v.upvaluea_p
-                        != &mut (*(curr as *mut UpValue)).upvalue_u.upvalueb_value as *mut TValue
+                } else if (*head).get_tagvariant() == TagVariant::UpValue
+                    && (*(head as *mut UpValue)).upvalue_v.upvaluea_p
+                        != &mut (*(head as *mut UpValue)).upvalue_u.upvalueb_value as *mut TValue
                 {
-                    (*curr).set_marked((*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
+                    (*head).set_marked((*head).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4)));
                 } else {
-                    (*curr).set_marked((*curr).get_marked() | 1 << 5);
+                    (*head).set_marked((*head).get_marked() | 1 << 5);
                 }
-                p = &mut (*curr).object_next;
+                p = &mut (*head).object_next;
             }
         }
     }
@@ -3818,24 +3765,24 @@ pub unsafe fn sweepgen(
         static mut NEXT_AGE: [u8; 7] = [1, 3 as u8, 3 as u8, 4 as u8, 4 as u8, 5 as u8, 6 as u8];
         let white = (*global).global_currentwhite & (1 << 3 | 1 << 4);
         loop {
-            let curr: *mut Object = *p;
-            if !(curr != limit) {
+            let head: *mut Object = *p;
+            if !(head != limit) {
                 break;
             }
-            if (*curr).get_marked() & (1 << 3 | 1 << 4) != 0 {
-                *p = (*curr).object_next;
-                Object::object_free(interpreter, curr);
+            if (*head).get_marked() & (1 << 3 | 1 << 4) != 0 {
+                *p = (*head).object_next;
+                Object::object_free(interpreter, head);
             } else {
-                if (*curr).get_marked() & 7 == 0 {
-                    let marked = (*curr).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4) | 7);
-                    (*curr).set_marked(marked | 1 | white);
+                if (*head).get_marked() & 7 == 0 {
+                    let marked = (*head).get_marked() & !(1 << 5 | (1 << 3 | 1 << 4) | 7);
+                    (*head).set_marked(marked | 1 | white);
                 } else {
-                    (*curr).set_marked((*curr).get_marked() & !(7) | NEXT_AGE[((*curr).get_marked() & 7) as usize]);
-                    if (*curr).get_marked() & 7 == 3 && (*pfirstold1).is_null() {
-                        *pfirstold1 = curr;
+                    (*head).set_marked((*head).get_marked() & !(7) | NEXT_AGE[((*head).get_marked() & 7) as usize]);
+                    if (*head).get_marked() & 7 == 3 && (*pfirstold1).is_null() {
+                        *pfirstold1 = head;
                     }
                 }
-                p = &mut (*curr).object_next;
+                p = &mut (*head).object_next;
             }
         }
         return p;
@@ -3865,7 +3812,7 @@ pub unsafe fn callclosemethod(interpreter: *mut Interpreter, obj: *mut TValue, e
 pub unsafe fn checkclosemth(interpreter: *mut Interpreter, level: *mut TValue) {
     unsafe {
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*level), TM_CLOSE);
-        if (*tm).is_tagtype_nil() {
+        if (*tm).get_tagvariant().to_tag_type().is_nil() {
             let index: i32 = level.offset_from((*(*interpreter).interpreter_callinfo).callinfo_function.stkidrel_pointer) as i32;
             let mut vname: *const i8 = luag_findlocal(interpreter, (*interpreter).interpreter_callinfo, index, null_mut());
             if vname.is_null() {
@@ -3890,7 +3837,7 @@ pub unsafe fn prepcallclosemth(interpreter: *mut Interpreter, level: *mut TValue
 }
 pub unsafe fn luaf_newtbcupval(interpreter: *mut Interpreter, level: *mut TValue) {
     unsafe {
-        if (*level).get_tagvariant() == TagVariant::BooleanFalse || (*level).is_tagtype_nil() {
+        if (*level).get_tagvariant() == TagVariant::BooleanFalse || (*level).get_tagvariant().to_tag_type().is_nil() {
             return;
         }
         checkclosemth(interpreter, level);
@@ -4088,11 +4035,11 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
         let callinfo = (*interpreter).interpreter_callinfo;
         let base: *mut TValue = ((*callinfo).callinfo_function.stkidrel_pointer).offset(1 as isize);
         let inst: u32 = *((*callinfo).callinfo_u.l.saved_program_counter).offset(-(1 as isize));
-        let op: u32 = (inst >> 0 & !(!(0u32) << 7) << 0) as u32;
+        let op: u32 = (inst >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32;
         match op as u32 {
             | 46 | 47 | 48 => {
                 let io1: *mut TValue = &mut (*base.offset(
-                    (*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(2 as isize)) >> POSITION_A & !(!(0u32) << 8) << 0)
+                    (*((*callinfo).callinfo_u.l.saved_program_counter).offset(-(2 as isize)) >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0)
                         as isize,
                 ));
                 (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
@@ -4100,7 +4047,7 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
                 (*io1).copy_from(&*io2);
             },
             | 49 | 50 | 52 | 11 | 12 | 13 | 14 | 20 => {
-                let io1_0: *mut TValue = &mut (*base.offset((inst >> POSITION_A & !(!(0u32) << 8) << 0) as isize));
+                let io1_0: *mut TValue = &mut (*base.offset((inst >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                 (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
                 let io2_0: *const TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
                 (*io1_0).copy_from(&*io2_0);
@@ -4113,14 +4060,14 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
                         .to_tag_type()
                         == TagType::Nil) as i32;
                 (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
-                if res != (inst >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                if res != (inst >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                     (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).offset(1);
                     (*callinfo).callinfo_u.l.saved_program_counter;
                 }
             },
             | 53 => {
                 let top: *mut TValue = (*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize));
-                let a: i32 = (inst >> POSITION_A & !(!(0u32) << 8) << 0) as i32;
+                let a: i32 = (inst >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                 let total: i32 = top.offset(-(1 as isize)).offset_from(base.offset(a as isize)) as i32;
                 let io1_1: *mut TValue = &mut (*top.offset(-(2 as isize)));
                 let io2_1: *const TValue = &mut (*top);
@@ -4133,7 +4080,7 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
                 (*callinfo).callinfo_u.l.saved_program_counter;
             },
             | 70 => {
-                let ra: *mut TValue = base.offset((inst >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                let ra: *mut TValue = base.offset((inst >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                 (*interpreter).interpreter_top.stkidrel_pointer = ra.offset((*callinfo).callinfo_u2.nres as isize);
                 (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).offset(-1);
                 (*callinfo).callinfo_u.l.saved_program_counter;
@@ -4173,43 +4120,43 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                     let fresh138 = program_counter;
                     program_counter = program_counter.offset(1);
                     i = *fresh138;
-                    match (i >> 0 & !(!(0u32) << 7) << 0) as u32 {
+                    match (i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) as u32 {
                         | 0 => {
-                            let ra: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let io1: *mut TValue = &mut (*ra);
-                            let io2: *const TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let io2: *const TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             (*io1).copy_from(&*io2);
                             continue;
                         },
                         | 1 => {
-                            let ra_0: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_0: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let b: i64 =
-                                ((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
+                                ((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
                             let io: *mut TValue = &mut (*ra_0);
                             (*io).tvalue_value.value_integer = b;
                             (*io).tvalue_set_tag_variant(TagVariant::NumericInteger);
                             continue;
                         },
                         | 2 => {
-                            let ra_1: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let b_0: i32 = (i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1);
+                            let ra_1: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let b_0: i32 = (i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32 - ((1 << 8 + 8 + 1) - 1 >> 1);
                             let io_0: *mut TValue = &mut (*ra_1);
                             (*io_0).tvalue_value.value_number = b_0 as f64;
                             (*io_0).tvalue_set_tag_variant(TagVariant::NumericNumber);
                             continue;
                         },
                         | 3 => {
-                            let ra_2: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb: *mut TValue = k.offset((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize);
+                            let ra_2: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb: *mut TValue = k.offset((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as isize);
                             let io1_0: *mut TValue = &mut (*ra_2);
                             let io2_0: *const TValue = rb;
                             (*io1_0).copy_from(&(*io2_0));
                             continue;
                         },
                         | 4 => {
-                            let ra_3: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_3: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let rb_0: *mut TValue =
-                                k.offset((*program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as isize);
+                                k.offset((*program_counter >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as isize);
                             program_counter = program_counter.offset(1);
                             let io1_1: *mut TValue = &mut (*ra_3);
                             let io2_1: *const TValue = rb_0;
@@ -4217,24 +4164,24 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 5 => {
-                            let ra_4: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_4: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*ra_4).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             continue;
                         },
                         | 6 => {
-                            let ra_5: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_5: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*ra_5).tvalue_set_tag_variant(TagVariant::BooleanFalse);
                             program_counter = program_counter.offset(1);
                             continue;
                         },
                         | 7 => {
-                            let ra_6: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_6: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*ra_6).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                             continue;
                         },
                         | 8 => {
-                            let mut ra_7: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut b_1: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                            let mut ra_7: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let mut b_1: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             loop {
                                 let fresh139 = ra_7;
                                 ra_7 = ra_7.offset(1);
@@ -4248,8 +4195,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 9 => {
-                            let ra_8: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let b_2: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                            let ra_8: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let b_2: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             let io1_2: *mut TValue = &mut (*ra_8);
                             let io2_2: *const TValue = (**((*closure).upvalues).l_upvalues.as_mut_ptr().offset(b_2 as isize))
                                 .upvalue_v
@@ -4258,11 +4205,11 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 10 => {
-                            let ra_9: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_9: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let uv: *mut UpValue = *((*closure).upvalues)
                                 .l_upvalues
                                 .as_mut_ptr()
-                                .offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize);
+                                .offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let io1_3: *mut TValue = (*uv).upvalue_v.upvaluea_p;
                             let io2_3: *const TValue = &mut (*ra_9);
                             (*io1_3).copy_from(&(*io2_3));
@@ -4282,22 +4229,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 11 => {
-                            let ra_10: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_10: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot: *const TValue;
                             let count_upvalues: *mut TValue = (**((*closure).upvalues)
                                 .l_upvalues
                                 .as_mut_ptr()
-                                .offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize))
+                                .offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             .upvalue_v
                             .upvaluea_p;
-                            let rc: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let rc: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let key: *mut TString = &mut (*((*rc).tvalue_value.value_object as *mut TString));
                             if if !((*count_upvalues).get_tagvariant() == TagVariant::Table) {
                                 slot = null();
                                 0
                             } else {
                                 slot = luah_getshortstr(&mut (*((*count_upvalues).tvalue_value.value_object as *mut Table)), key);
-                                !(*slot).is_tagtype_nil() as i32
+                                !(*slot).get_tagvariant().to_tag_type().is_nil() as i32
                             } != 0
                             {
                                 let io1_4: *mut TValue = &mut (*ra_10);
@@ -4312,10 +4259,10 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 12 => {
-                            let ra_11: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_11: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_0: *const TValue;
-                            let rb_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let rc_0: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let rb_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let rc_0: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let n: usize;
                             if if (*rc_0).get_tagvariant() == TagVariant::NumericInteger {
                                 n = (*rc_0).tvalue_value.value_integer as usize;
@@ -4332,14 +4279,14 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     } else {
                                         luah_getint(&mut (*((*rb_1).tvalue_value.value_object as *mut Table)), n as i64)
                                     };
-                                    !(*slot_0).is_tagtype_nil() as i32
+                                    !(*slot_0).get_tagvariant().to_tag_type().is_nil() as i32
                                 }
                             } else if !((*rb_1).get_tagvariant() == TagVariant::Table) {
                                 slot_0 = null();
                                 0
                             } else {
                                 slot_0 = luah_get(&mut (*((*rb_1).tvalue_value.value_object as *mut Table)), rc_0);
-                                !(*slot_0).is_tagtype_nil() as i32
+                                !(*slot_0).get_tagvariant().to_tag_type().is_nil() as i32
                             } != 0
                             {
                                 let io1_5: *mut TValue = &mut (*ra_11);
@@ -4354,10 +4301,10 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 13 => {
-                            let ra_12: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_12: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_1: *const TValue;
-                            let rb_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let c: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                            let rb_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let c: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             if if !((*rb_2).get_tagvariant() == TagVariant::Table) {
                                 slot_1 = null();
                                 0
@@ -4371,7 +4318,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 } else {
                                     luah_getint(&mut (*((*rb_2).tvalue_value.value_object as *mut Table)), c as i64)
                                 };
-                                !(*slot_1).is_tagtype_nil() as i32
+                                !(*slot_1).get_tagvariant().to_tag_type().is_nil() as i32
                             } != 0
                             {
                                 let io1_6: *mut TValue = &mut (*ra_12);
@@ -4390,17 +4337,17 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 14 => {
-                            let ra_13: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_13: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_2: *const TValue;
-                            let rb_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let rc_1: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let rb_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let rc_1: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let key_1: *mut TString = &mut (*((*rc_1).tvalue_value.value_object as *mut TString));
                             if if !((*rb_3).get_tagvariant() == TagVariant::Table) {
                                 slot_2 = null();
                                 0
                             } else {
                                 slot_2 = luah_getshortstr(&mut (*((*rb_3).tvalue_value.value_object as *mut Table)), key_1);
-                                !(*slot_2).is_tagtype_nil() as i32
+                                !(*slot_2).get_tagvariant().to_tag_type().is_nil() as i32
                             } != 0
                             {
                                 let io1_7: *mut TValue = &mut (*ra_13);
@@ -4419,14 +4366,14 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             let upval_0: *mut TValue = (**((*closure).upvalues)
                                 .l_upvalues
                                 .as_mut_ptr()
-                                .offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize))
+                                .offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             .upvalue_v
                             .upvaluea_p;
-                            let rb_4: *mut TValue = k.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize);
+                            let rb_4: *mut TValue = k.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let rc_2: *mut TValue = if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize)
+                                k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize)
                             } else {
-                                &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
+                                &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             };
                             let key_2: *mut TString = &mut (*((*rb_4).tvalue_value.value_object as *mut TString));
                             if if !((*upval_0).get_tagvariant() == TagVariant::Table) {
@@ -4434,7 +4381,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 0
                             } else {
                                 slot_3 = luah_getshortstr(&mut (*((*upval_0).tvalue_value.value_object as *mut Table)), key_2);
-                                !((*slot_3).is_tagtype_nil()) as i32
+                                !((*slot_3).get_tagvariant().to_tag_type().is_nil()) as i32
                             } != 0
                             {
                                 let io1_8: *mut TValue = slot_3 as *mut TValue;
@@ -4461,13 +4408,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 16 => {
-                            let ra_14: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_14: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_4: *const TValue;
-                            let rb_5: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let rb_5: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let rc_3: *mut TValue = if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize)
+                                k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize)
                             } else {
-                                &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
+                                &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             };
                             let n_0: usize;
                             if if (*rb_5).get_tagvariant() == TagVariant::NumericInteger {
@@ -4485,14 +4432,14 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     } else {
                                         luah_getint(&mut (*((*ra_14).tvalue_value.value_object as *mut Table)), n_0 as i64)
                                     };
-                                    !(*slot_4).is_tagtype_nil() as i32
+                                    !(*slot_4).get_tagvariant().to_tag_type().is_nil() as i32
                                 }
                             } else if !((*ra_14).get_tagvariant() == TagVariant::Table) {
                                 slot_4 = null();
                                 0
                             } else {
                                 slot_4 = luah_get(&mut (*((*ra_14).tvalue_value.value_object as *mut Table)), rb_5);
-                                !((*slot_4).is_tagtype_nil()) as i32
+                                !((*slot_4).get_tagvariant().to_tag_type().is_nil()) as i32
                             } != 0
                             {
                                 let io1_9: *mut TValue = slot_4 as *mut TValue;
@@ -4519,13 +4466,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 17 => {
-                            let ra_15: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_15: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_5: *const TValue;
-                            let c_0: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                            let c_0: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             let rc_4: *mut TValue = if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize)
+                                k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize)
                             } else {
-                                &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
+                                &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             };
                             if if !((*ra_15).get_tagvariant() == TagVariant::Table) {
                                 slot_5 = null();
@@ -4540,7 +4487,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 } else {
                                     luah_getint(&mut (*((*ra_15).tvalue_value.value_object as *mut Table)), c_0 as i64)
                                 };
-                                !((*slot_5).is_tagtype_nil()) as i32
+                                !((*slot_5).get_tagvariant().to_tag_type().is_nil()) as i32
                             } != 0
                             {
                                 let io1_10: *mut TValue = slot_5 as *mut TValue;
@@ -4571,13 +4518,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 18 => {
-                            let ra_16: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_16: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_6: *const TValue;
-                            let rb_6: *mut TValue = k.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize);
+                            let rb_6: *mut TValue = k.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let rc_5: *mut TValue = if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize)
+                                k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize)
                             } else {
-                                &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
+                                &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             };
                             let key_4: *mut TString = &mut (*((*rb_6).tvalue_value.value_object as *mut TString));
                             if if !((*ra_16).get_tagvariant() == TagVariant::Table) {
@@ -4585,7 +4532,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 0
                             } else {
                                 slot_6 = luah_getshortstr(&mut (*((*ra_16).tvalue_value.value_object as *mut Table)), key_4);
-                                !((*slot_6).is_tagtype_nil()) as i32
+                                !((*slot_6).get_tagvariant().to_tag_type().is_nil()) as i32
                             } != 0
                             {
                                 let io1_11: *mut TValue = slot_6 as *mut TValue;
@@ -4612,15 +4559,15 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_NEWTABLE => {
-                            let ra_17: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut new_table_size = (i >> POSITION_B & !(!(0u32) << 8) << 0) as usize;
-                            let mut new_array_size: usize = (i >> POSITION_C & !(!(0u32) << 8) << 0) as usize;
+                            let ra_17: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let mut new_table_size = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as usize;
+                            let mut new_array_size: usize = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as usize;
                             let table: *mut Table;
                             if new_table_size > 0 {
                                 new_table_size = 1 << new_table_size - 1;
                             }
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                new_array_size += ((*program_counter >> POSITION_A as usize & !(!(0u32) << 8 + 8 + 1 + 8) << 0)
+                                new_array_size += ((*program_counter >> POSITION_A as usize & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0)
                                     as i32
                                     * ((1 << 8) - 1 + 1)) as usize;
                             }
@@ -4635,22 +4582,22 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             if new_table_size != 0 || new_array_size != 0 {
                                 luah_resize(interpreter, table, new_array_size, new_table_size);
                             }
-                            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
+                            if (*interpreter).should_step() {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = ra_17.offset(1 as isize);
-                                (*interpreter).luac_step();
+                                (*interpreter).do_gc_step();
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
                         },
                         | 20 => {
-                            let ra_18: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_18: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let slot_7: *const TValue;
-                            let rb_7: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let rb_7: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let rc_6: *mut TValue = if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize)
+                                k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize)
                             } else {
-                                &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize))
+                                &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize))
                             };
                             let key_5: *mut TString = &mut (*((*rc_6).tvalue_value.value_object as *mut TString));
                             let io1_12: *mut TValue = &mut (*ra_18.offset(1 as isize));
@@ -4661,7 +4608,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 0
                             } else {
                                 slot_7 = luah_getstr(&mut (*((*rb_7).tvalue_value.value_object as *mut Table)), key_5);
-                                !((*slot_7).is_tagtype_nil()) as i32
+                                !((*slot_7).get_tagvariant().to_tag_type().is_nil()) as i32
                             } != 0
                             {
                                 let io1_13: *mut TValue = &mut (*ra_18);
@@ -4676,9 +4623,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 21 => {
-                            let ra_19: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let imm: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let ra_19: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let imm: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*v1).get_tagvariant() == TagVariant::NumericInteger {
                                 let iv1: i64 = (*v1).tvalue_value.value_integer;
                                 program_counter = program_counter.offset(1);
@@ -4696,9 +4643,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 22 => {
-                            let v1_0: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
-                            let ra_20: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_0: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let ra_20: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_0).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -4743,9 +4690,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_SUBK => {
-                            let v1_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_0: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
-                            let ra_21: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_1: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_0: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let ra_21: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_1).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_0).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -4790,9 +4737,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_MULK => {
-                            let v1_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_1: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
-                            let ra_22: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_2: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_1: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let ra_22: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_2).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_1).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -4839,9 +4786,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         | OPCODE_MODK => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                            let v1_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_2: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
-                            let ra_23: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_3: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_2: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let ra_23: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_3).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_2).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -4886,9 +4833,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_POWK => {
-                            let ra_24: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_4: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_3: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let ra_24: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_4: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_3: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let mut n1_3: f64 = 0.0;
                             let mut n2_3: f64 = 0.0;
                             if (if (*v1_4).get_tagvariant() == TagVariant::NumericNumber {
@@ -4922,9 +4869,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_DIVK => {
-                            let ra_25: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_5: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_4: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let ra_25: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_5: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_4: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let mut n1_4: f64 = 0.0;
                             let mut n2_4: f64 = 0.0;
                             if (if (*v1_5).get_tagvariant() == TagVariant::NumericNumber {
@@ -4960,9 +4907,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         | OPCODE_IDIVK => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                            let v1_6: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_5: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
-                            let ra_26: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_6: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_5: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let ra_26: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_6).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_5).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5007,9 +4954,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BANDK => {
-                            let ra_27: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_7: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_6: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let ra_27: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_7: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_6: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let mut i1_4: i64 = 0;
                             let i2_4: i64 = (*v2_6).tvalue_value.value_integer;
                             if if (((*v1_7).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5027,9 +4974,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BORK => {
-                            let ra_28: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_8: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_7: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let ra_28: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_8: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_7: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let mut i1_5: i64 = 0;
                             let i2_5: i64 = (*v2_7).tvalue_value.value_integer;
                             if if (((*v1_8).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5047,9 +4994,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BXORK => {
-                            let ra_29: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_9: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_8: *mut TValue = k.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize);
+                            let ra_29: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_9: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_8: *mut TValue = k.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let mut i1_6: i64 = 0;
                             let i2_6: i64 = (*v2_8).tvalue_value.value_integer;
                             if if (((*v1_9).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5067,9 +5014,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 32 => {
-                            let ra_30: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_8: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let ic: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let ra_30: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_8: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ic: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             let mut ib: i64 = 0;
                             if if (((*rb_8).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                 ib = (*rb_8).tvalue_value.value_integer;
@@ -5086,9 +5033,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 33 => {
-                            let ra_31: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_9: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let ic_0: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let ra_31: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_9: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ic_0: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             let mut ib_0: i64 = 0;
                             if if (((*rb_9).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                 ib_0 = (*rb_9).tvalue_value.value_integer;
@@ -5105,9 +5052,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 34 => {
-                            let v1_10: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_9: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
-                            let ra_32: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_10: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_9: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ra_32: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_10).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_9).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5152,9 +5099,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_SUB => {
-                            let v1_11: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_10: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
-                            let ra_33: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_11: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_10: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ra_33: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_11).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_10).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5199,9 +5146,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_MUL => {
-                            let v1_12: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_11: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
-                            let ra_34: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_12: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_11: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ra_34: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_12).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_11).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5248,9 +5195,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         | OPCODE_MOD => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                            let v1_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_12: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
-                            let ra_35: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_12: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ra_35: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_13).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_12).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5295,9 +5242,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_POW => {
-                            let ra_36: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_14: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_13: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_36: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_14: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_13: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut n1_10: f64 = 0.0;
                             let mut n2_10: f64 = 0.0;
                             if (if (*v1_14).get_tagvariant() == TagVariant::NumericNumber {
@@ -5331,9 +5278,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_DIV => {
-                            let ra_37: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_15: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_14: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_37: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_15: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_14: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut n1_11: f64 = 0.0;
                             let mut n2_11: f64 = 0.0;
                             if (if (*v1_15).get_tagvariant() == TagVariant::NumericNumber {
@@ -5369,9 +5316,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         | OPCODE_IDIV => {
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
-                            let v1_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_15: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
-                            let ra_38: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let v1_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_15: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let ra_38: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*v1_16).get_tagvariant() == TagVariant::NumericInteger
                                 && (*v2_15).get_tagvariant() == TagVariant::NumericInteger
                             {
@@ -5416,9 +5363,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BAND => {
-                            let ra_39: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_17: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_16: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_39: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_17: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_16: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut i1_12: i64 = 0;
                             let mut i2_12: i64 = 0;
                             if (if (((*v1_17).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5442,9 +5389,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BOR => {
-                            let ra_40: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_18: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_17: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_40: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_18: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_17: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut i1_13: i64 = 0;
                             let mut i2_13: i64 = 0;
                             if (if (((*v1_18).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5468,9 +5415,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_BXOR => {
-                            let ra_41: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_19: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_18: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_41: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_19: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_18: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut i1_14: i64 = 0;
                             let mut i2_14: i64 = 0;
                             if (if (((*v1_19).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5494,9 +5441,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_SHR => {
-                            let ra_42: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_20: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_19: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_42: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_20: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_19: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut i1_15: i64 = 0;
                             let mut i2_15: i64 = 0;
                             if (if (((*v1_20).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5521,9 +5468,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_SHL => {
-                            let ra_43: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let v1_21: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let v2_20: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(!(0u32) << 8) << 0) as isize));
+                            let ra_43: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let v1_21: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let v2_20: *mut TValue = &mut (*base.offset((i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut i1_16: i64 = 0;
                             let mut i2_16: i64 = 0;
                             if (if (((*v1_21).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
@@ -5547,11 +5494,11 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 46 => {
-                            let ra_44: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_44: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let pi: u32 = *program_counter.offset(-(2 as isize));
-                            let rb_10: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            let tm: u32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
-                            let result: *mut TValue = base.offset((pi >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let rb_10: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            let tm: u32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as u32;
+                            let result: *mut TValue = base.offset((pi >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luat_trybintm(interpreter, &mut (*ra_44), rb_10, result, tm);
@@ -5559,12 +5506,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 47 => {
-                            let ra_45: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_45: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let pi_0: u32 = *program_counter.offset(-(2 as isize));
-                            let imm_0: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
-                            let tm_0: u32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
-                            let flip: i32 = (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32;
-                            let result_0: *mut TValue = base.offset((pi_0 >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let imm_0: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let tm_0: u32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as u32;
+                            let flip: i32 = (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32;
+                            let result_0: *mut TValue = base.offset((pi_0 >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luat_trybinitm(interpreter, &mut (*ra_45), imm_0 as i64, flip, result_0, tm_0);
@@ -5572,12 +5519,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 48 => {
-                            let ra_46: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_46: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let pi_1: u32 = *program_counter.offset(-(2 as isize));
-                            let imm_1: *mut TValue = k.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize);
-                            let tm_1: u32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
-                            let flip_0: i32 = (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32;
-                            let result_1: *mut TValue = base.offset((pi_1 >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let imm_1: *mut TValue = k.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let tm_1: u32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as u32;
+                            let flip_0: i32 = (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32;
+                            let result_1: *mut TValue = base.offset((pi_1 >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luat_trybinassoctm(interpreter, &mut (*ra_46), imm_1, flip_0, result_1, tm_1);
@@ -5585,8 +5532,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 49 => {
-                            let ra_47: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_11: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let ra_47: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_11: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut nb_0: f64 = 0.0;
                             if (*rb_11).get_tagvariant() == TagVariant::NumericInteger {
                                 let ib_1: i64 = (*rb_11).tvalue_value.value_integer;
@@ -5615,8 +5562,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 50 => {
-                            let ra_48: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_12: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let ra_48: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_12: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             let mut ib_2: i64 = 0;
                             if if (((*rb_12).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                 ib_2 = (*rb_12).tvalue_value.value_integer;
@@ -5637,9 +5584,11 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 51 => {
-                            let ra_49: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            if (*rb_13).get_tagvariant() == TagVariant::BooleanFalse || (*rb_13).is_tagtype_nil() {
+                            let ra_49: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_13: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            if (*rb_13).get_tagvariant() == TagVariant::BooleanFalse
+                                || (*rb_13).get_tagvariant().to_tag_type().is_nil()
+                            {
                                 (*ra_49).tvalue_set_tag_variant(TagVariant::BooleanTrue);
                             } else {
                                 (*ra_49).tvalue_set_tag_variant(TagVariant::BooleanFalse);
@@ -5647,34 +5596,34 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_LEN => {
-                            let ra_50: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_50: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luav_objlen(
                                 interpreter,
                                 ra_50,
-                                &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize)),
+                                &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize)),
                             );
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
                         },
                         | 53 => {
-                            let ra_51: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let n_1: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                            let ra_51: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let n_1: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             (*interpreter).interpreter_top.stkidrel_pointer = ra_51.offset(n_1 as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             concatenate(interpreter, n_1);
                             trap = (*callinfo).callinfo_u.l.trap;
-                            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
+                            if (*interpreter).should_step() {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer;
-                                (*interpreter).luac_step();
+                                (*interpreter).do_gc_step();
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
                         },
                         | 54 => {
-                            let ra_52: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_52: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luaf_close(interpreter, ra_52, Status::OK, 1);
@@ -5682,7 +5631,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 55 => {
-                            let ra_53: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_53: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luaf_newtbcupval(interpreter, ra_53);
@@ -5690,26 +5639,26 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         },
                         | 56 => {
                             program_counter = program_counter.offset(
-                                ((i >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1) + 0)
+                                ((i >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1) + 0)
                                     as isize,
                             );
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
                         },
                         | 57 => {
-                            let ra_54: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_54: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_0: i32;
-                            let rb_14: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let rb_14: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             cond_0 = if luav_equalobj(interpreter, &mut (*ra_54), rb_14) { 1 } else { 0 };
                             trap = (*callinfo).callinfo_u.l.trap;
-                            if cond_0 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_0 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
+                                    ((ni >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
                                 trap = (*callinfo).callinfo_u.l.trap;
@@ -5717,16 +5666,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 58 => {
-                            let ra_55: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_55: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_1: i32;
-                            let rb_15: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let rb_15: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             if (*ra_55).get_tagvariant() == TagVariant::NumericInteger
                                 && (*rb_15).get_tagvariant() == TagVariant::NumericInteger
                             {
                                 let ia: i64 = (*ra_55).tvalue_value.value_integer;
                                 let ib_3: i64 = (*rb_15).tvalue_value.value_integer;
                                 cond_1 = (ia < ib_3) as i32;
-                            } else if (*ra_55).is_tagtype_numeric() && (*rb_15).is_tagtype_numeric() {
+                            } else if (*ra_55).get_tagvariant().to_tag_type().is_numeric()
+                                && (*rb_15).get_tagvariant().to_tag_type().is_numeric()
+                            {
                                 cond_1 = if ltnum(&mut (*ra_55), rb_15) { 1 } else { 0 };
                             } else {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
@@ -5734,12 +5685,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 cond_1 = lessthanothers(interpreter, &mut (*ra_55), rb_15);
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_1 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_1 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_0: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_0 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_0 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5748,16 +5699,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_LE => {
-                            let ra_56: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_56: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_2: i32;
-                            let rb_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
+                            let rb_16: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
                             if (*ra_56).get_tagvariant() == TagVariant::NumericInteger
                                 && (*rb_16).get_tagvariant() == TagVariant::NumericInteger
                             {
                                 let ia_0: i64 = (*ra_56).tvalue_value.value_integer;
                                 let ib_4: i64 = (*rb_16).tvalue_value.value_integer;
                                 cond_2 = (ia_0 <= ib_4) as i32;
-                            } else if (*ra_56).is_tagtype_numeric() && (*rb_16).is_tagtype_numeric() {
+                            } else if (*ra_56).get_tagvariant().to_tag_type().is_numeric()
+                                && (*rb_16).get_tagvariant().to_tag_type().is_numeric()
+                            {
                                 cond_2 = if lenum(&mut (*ra_56), rb_16) { 1 } else { 0 };
                             } else {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
@@ -5765,12 +5718,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 cond_2 = if lessequalothers(interpreter, &mut (*ra_56), rb_16) { 1 } else { 0 };
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_2 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_2 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_1: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_1 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_1 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5779,15 +5732,15 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 60 => {
-                            let ra_57: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_17: *mut TValue = k.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize);
+                            let ra_57: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_17: *mut TValue = k.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_3: i32 = if luav_equalobj(null_mut(), &mut (*ra_57), rb_17) { 1 } else { 0 };
-                            if cond_3 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_3 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_2: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_2 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_2 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5796,9 +5749,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 61 => {
-                            let ra_58: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_58: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_4: i32;
-                            let im: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let im: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*ra_58).get_tagvariant() == TagVariant::NumericInteger {
                                 cond_4 = ((*ra_58).tvalue_value.value_integer == im as i64) as i32;
                             } else if (*ra_58).get_tagvariant() == TagVariant::NumericNumber {
@@ -5806,12 +5759,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             } else {
                                 cond_4 = 0;
                             }
-                            if cond_4 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_4 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_3: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_3 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_3 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5820,9 +5773,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 62 => {
-                            let ra_59: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_59: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_5: i32;
-                            let im_0: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let im_0: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*ra_59).get_tagvariant() == TagVariant::NumericInteger {
                                 cond_5 = ((*ra_59).tvalue_value.value_integer < im_0 as i64) as i32;
                             } else if (*ra_59).get_tagvariant() == TagVariant::NumericNumber {
@@ -5830,18 +5783,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let fim: f64 = im_0 as f64;
                                 cond_5 = (fa < fim) as i32;
                             } else {
-                                let isf: bool = (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
+                                let isf: bool = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) != 0;
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                                 cond_5 = luat_callorderitm(interpreter, &mut (*ra_59), im_0, 0, isf, TM_LT);
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_5 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_5 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_4: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_4 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_4 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5850,9 +5803,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_LEI => {
-                            let ra_60: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_60: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_6: i32;
-                            let im_1: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let im_1: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*ra_60).get_tagvariant() == TagVariant::NumericInteger {
                                 cond_6 = ((*ra_60).tvalue_value.value_integer <= im_1 as i64) as i32;
                             } else if (*ra_60).get_tagvariant() == TagVariant::NumericNumber {
@@ -5860,18 +5813,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let fim_0: f64 = im_1 as f64;
                                 cond_6 = (fa_0 <= fim_0) as i32;
                             } else {
-                                let isf_0: bool = (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
+                                let isf_0: bool = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) != 0;
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                                 cond_6 = luat_callorderitm(interpreter, &mut (*ra_60), im_1, 0, isf_0, TM_LE);
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_6 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_6 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_5: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_5 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_5 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5880,9 +5833,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 64 => {
-                            let ra_61: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_61: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_7: i32;
-                            let im_2: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let im_2: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*ra_61).get_tagvariant() == TagVariant::NumericInteger {
                                 cond_7 = ((*ra_61).tvalue_value.value_integer > im_2 as i64) as i32;
                             } else if (*ra_61).get_tagvariant() == TagVariant::NumericNumber {
@@ -5890,18 +5843,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let fim_1: f64 = im_2 as f64;
                                 cond_7 = (fa_1 > fim_1) as i32;
                             } else {
-                                let isf_1: bool = (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
+                                let isf_1: bool = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) != 0;
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                                 cond_7 = luat_callorderitm(interpreter, &mut (*ra_61), im_2, 1, isf_1, TM_LT);
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_7 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_7 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_6: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_6 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_6 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5910,9 +5863,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | OPCODE_GEI => {
-                            let ra_62: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_62: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let cond_8: i32;
-                            let im_3: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
+                            let im_3: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - ((1 << 8) - 1 >> 1);
                             if (*ra_62).get_tagvariant() == TagVariant::NumericInteger {
                                 cond_8 = ((*ra_62).tvalue_value.value_integer >= im_3 as i64) as i32;
                             } else if (*ra_62).get_tagvariant() == TagVariant::NumericNumber {
@@ -5920,18 +5873,18 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 let fim_2: f64 = im_3 as f64;
                                 cond_8 = (fa_2 >= fim_2) as i32;
                             } else {
-                                let isf_2: bool = (i >> POSITION_C & !(!(0u32) << 8) << 0) != 0;
+                                let isf_2: bool = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) != 0;
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                                 cond_8 = luat_callorderitm(interpreter, &mut (*ra_62), im_3, 1, isf_2, TM_LE);
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
-                            if cond_8 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            if cond_8 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_7: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_7 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_7 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5940,15 +5893,16 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 66 => {
-                            let ra_63: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let cond_9: i32 =
-                                !((*ra_63).get_tagvariant() == TagVariant::BooleanFalse || (*ra_63).is_tagtype_nil()) as i32;
-                            if cond_9 != (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32 {
+                            let ra_63: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let cond_9: i32 = !((*ra_63).get_tagvariant() == TagVariant::BooleanFalse
+                                || (*ra_63).get_tagvariant().to_tag_type().is_nil())
+                                as i32;
+                            if cond_9 != (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32 {
                                 program_counter = program_counter.offset(1);
                             } else {
                                 let ni_8: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_8 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_8 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5957,10 +5911,11 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 67 => {
-                            let ra_64: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let rb_18: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(!(0u32) << 8) << 0) as isize));
-                            if ((*rb_18).get_tagvariant() == TagVariant::BooleanFalse || (*rb_18).is_tagtype_nil()) as i32
-                                == (i >> POSITION_K & !(!(0u32) << 1) << 0) as i32
+                            let ra_64: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let rb_18: *mut TValue = &mut (*base.offset((i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as isize));
+                            if ((*rb_18).get_tagvariant() == TagVariant::BooleanFalse
+                                || (*rb_18).get_tagvariant().to_tag_type().is_nil()) as i32
+                                == (i >> POSITION_K & !(0xFFFFFFFFu32 << 1) << 0) as i32
                             {
                                 program_counter = program_counter.offset(1);
                             } else {
@@ -5969,7 +5924,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 (*io1_14).copy_from(&(*io2_14));
                                 let ni_9: u32 = *program_counter;
                                 program_counter = program_counter.offset(
-                                    ((ni_9 >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((ni_9 >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)
                                         + 1) as isize,
                                 );
@@ -5978,9 +5933,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 68 => {
-                            ra_65 = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            b_4 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-                            count_results = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - 1;
+                            ra_65 = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            b_4 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
+                            count_results = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32 - 1;
                             if b_4 != 0 {
                                 (*interpreter).interpreter_top.stkidrel_pointer = ra_65.offset(b_4 as isize);
                             }
@@ -5993,10 +5948,10 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 69 => {
-                            let ra_66: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut b_5: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
+                            let ra_66: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let mut b_5: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             let n_2: i32;
-                            let nparams1: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                            let nparams1: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             let delta: i32 = if nparams1 != 0 {
                                 (*callinfo).callinfo_u.l.count_extra_arguments + nparams1
                             } else {
@@ -6022,9 +5977,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             break;
                         },
                         | 70 => {
-                            let mut ra_67: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut n_3: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32 - 1;
-                            let nparams1_0: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32;
+                            let mut ra_67: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let mut n_3: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 - 1;
+                            let nparams1_0: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32;
                             if n_3 < 0 {
                                 n_3 = ((*interpreter).interpreter_top.stkidrel_pointer).offset_from(ra_67) as i32;
                             }
@@ -6038,7 +5993,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 trap = (*callinfo).callinfo_u.l.trap;
                                 if (trap != 0) as i64 != 0 {
                                     base = ((*callinfo).callinfo_function.stkidrel_pointer).offset(1 as isize);
-                                    ra_67 = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                                    ra_67 = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                                 }
                             }
                             if nparams1_0 != 0 {
@@ -6052,7 +6007,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         },
                         | 71 => {
                             if ((*interpreter).interpreter_hookmask != 0) as i64 != 0 {
-                                let ra_68: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                                let ra_68: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                                 (*interpreter).interpreter_top.stkidrel_pointer = ra_68;
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 luad_poscall(interpreter, callinfo, 0);
@@ -6074,7 +6029,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         },
                         | 72 => {
                             if ((*interpreter).interpreter_hookmask != 0) as i64 != 0 {
-                                let ra_69: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                                let ra_69: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                                 (*interpreter).interpreter_top.stkidrel_pointer = ra_69.offset(1 as isize);
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 luad_poscall(interpreter, callinfo, 1);
@@ -6085,7 +6040,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 if nres_0 == 0 {
                                     (*interpreter).interpreter_top.stkidrel_pointer = base.offset(-(1 as isize));
                                 } else {
-                                    let ra_70: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                                    let ra_70: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                                     let io1_15: *mut TValue = &mut (*base.offset(-(1 as isize)));
                                     let io2_15: *const TValue = &mut (*ra_70);
                                     (*io1_15).copy_from(&(*io2_15));
@@ -6102,7 +6057,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             break;
                         },
                         | OPCODE_FORLOOP => {
-                            let ra_71: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_71: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             if (*ra_71.offset(2 as isize)).get_tagvariant() == TagVariant::NumericInteger {
                                 let count: usize = (*ra_71.offset(1 as isize)).tvalue_value.value_integer as usize;
                                 if count > 0 {
@@ -6117,31 +6072,31 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                     (*io_45).tvalue_value.value_integer = index;
                                     (*io_45).tvalue_set_tag_variant(TagVariant::NumericInteger);
                                     program_counter =
-                                        program_counter.offset(-((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 as isize));
+                                        program_counter.offset(-((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32 as isize));
                                 }
                             } else if floatforloop(ra_71) != 0 {
                                 program_counter =
-                                    program_counter.offset(-((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 as isize));
+                                    program_counter.offset(-((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32 as isize));
                             }
                             trap = (*callinfo).callinfo_u.l.trap;
                             continue;
                         },
                         | 74 => {
-                            let ra_72: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_72: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             if forprep(interpreter, ra_72) != 0 {
                                 program_counter =
-                                    program_counter.offset(((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as i32 + 1) as isize);
+                                    program_counter.offset(((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as i32 + 1) as isize);
                             }
                             continue;
                         },
                         | 75 => {
-                            let ra_73: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_73: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luaf_newtbcupval(interpreter, ra_73.offset(3 as isize));
-                            program_counter = program_counter.offset((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize);
+                            program_counter = program_counter.offset((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as isize);
                             let fresh143 = program_counter;
                             program_counter = program_counter.offset(1);
                             i = *fresh143;
@@ -6154,9 +6109,9 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             current_block = 15611964311717037170;
                         },
                         | 78 => {
-                            let ra_76: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let mut n_4: i32 = (i >> POSITION_B & !(!(0u32) << 8) << 0) as i32;
-                            let mut last: u32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as u32;
+                            let ra_76: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let mut n_4: i32 = (i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32;
+                            let mut last: u32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as u32;
                             let h: *mut Table = &mut (*((*ra_76).tvalue_value.value_object as *mut Table));
                             if n_4 == 0 {
                                 n_4 = ((*interpreter).interpreter_top.stkidrel_pointer).offset_from(ra_76) as i32 - 1;
@@ -6166,7 +6121,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             last = last.wrapping_add(n_4 as u32);
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
                                 last = last.wrapping_add(
-                                    ((*program_counter >> POSITION_A & !(!(0u32) << 8 + 8 + 1 + 8) << 0) as i32
+                                    ((*program_counter >> POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
                                         * ((1 << 8) - 1 + 1)) as u32,
                                 );
                                 program_counter = program_counter.offset(1);
@@ -6195,23 +6150,23 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             continue;
                         },
                         | 79 => {
-                            let ra_77: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
+                            let ra_77: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
                             let p: *mut Prototype = *((*(*closure).payload.l_prototype).prototype_prototypes.vectort_pointer)
-                                .offset((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize);
+                                .offset((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as isize);
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             pushclosure(interpreter, p, ((*closure).upvalues).l_upvalues.as_mut_ptr(), base, ra_77);
-                            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
+                            if (*interpreter).should_step() {
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                                 (*interpreter).interpreter_top.stkidrel_pointer = ra_77.offset(1 as isize);
-                                (*interpreter).luac_step();
+                                (*interpreter).do_gc_step();
                                 trap = (*callinfo).callinfo_u.l.trap;
                             }
                             continue;
                         },
                         | 80 => {
-                            let ra_78: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            let n_5: i32 = (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32 - 1;
+                            let ra_78: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            let n_5: i32 = (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32 - 1;
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                             luat_getvarargs(interpreter, callinfo, ra_78, n_5);
@@ -6222,7 +6177,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             luat_adjustvarargs(
                                 interpreter,
-                                (i >> POSITION_A & !(!(0u32) << 8) << 0) as i32,
+                                (i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as i32,
                                 callinfo,
                                 (*closure).payload.l_prototype,
                             );
@@ -6240,8 +6195,8 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                     }
                     match current_block {
                         | 13973394567113199817 => {
-                            let ra_74: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                            memcpy(
+                            let ra_74: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                            libc::memcpy(
                                 ra_74.offset(4 as isize) as *mut libc::c_void,
                                 ra_74 as *const libc::c_void,
                                 (3 as usize).wrapping_mul(size_of::<TValue>()),
@@ -6251,7 +6206,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             ccall(
                                 interpreter,
                                 ra_74.offset(4 as isize),
-                                (i >> POSITION_C & !(!(0u32) << 8) << 0) as i32,
+                                (i >> POSITION_C & !(0xFFFFFFFFu32 << 8) << 0) as i32,
                                 1,
                             );
                             trap = (*callinfo).callinfo_u.l.trap;
@@ -6264,12 +6219,12 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                         },
                         | _ => {},
                     }
-                    let ra_75: *mut TValue = base.offset((i >> POSITION_A & !(!(0u32) << 8) << 0) as isize);
-                    if !(*ra_75.offset(4 as isize)).is_tagtype_nil() {
+                    let ra_75: *mut TValue = base.offset((i >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
+                    if !(*ra_75.offset(4 as isize)).get_tagvariant().to_tag_type().is_nil() {
                         let io1_16: *mut TValue = &mut (*ra_75.offset(2 as isize));
                         let io2_16: *const TValue = &mut (*ra_75.offset(4 as isize));
                         (*io1_16).copy_from(&(*io2_16));
-                        program_counter = program_counter.offset(-((i >> POSITION_K & !(!(0u32) << 8 + 8 + 1) << 0) as isize));
+                        program_counter = program_counter.offset(-((i >> POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << 0) as isize));
                     }
                 }
                 if (*callinfo).callinfo_callstatus as i32 & 1 << 2 != 0 {
@@ -6313,7 +6268,7 @@ pub unsafe fn pushglobalfuncname(interpreter: *mut Interpreter, debuginfo: *mut 
         lual_checkstack(interpreter, 6, c"not enough stack".as_ptr());
         if findfield(interpreter, top + 1, 2) {
             let name: *const i8 = lua_tolstring(interpreter, -1, null_mut());
-            if strncmp(name, c"_G.".as_ptr(), 3) == 0 {
+            if libc::strncmp(name, c"_G.".as_ptr(), 3) == 0 {
                 lua_pushstring(interpreter, name.offset(3 as isize));
                 lua_rotate(interpreter, -2, -1);
                 lua_settop(interpreter, -2);
@@ -6441,7 +6396,7 @@ pub unsafe fn lual_argerror(interpreter: *mut Interpreter, mut arg: i32, extrams
             return lual_error(interpreter, c"bad argument #%d (%s)".as_ptr(), arg, extramsg);
         }
         lua_getinfo(interpreter, c"n".as_ptr(), &mut debuginfo);
-        if strcmp(debuginfo.debuginfo_namewhat, c"method".as_ptr()) == 0 {
+        if libc::strcmp(debuginfo.debuginfo_namewhat, c"method".as_ptr()) == 0 {
             arg -= 1;
             if arg == 0 {
                 return lual_error(
@@ -6523,7 +6478,7 @@ pub unsafe fn lual_fileresult(interpreter: *mut Interpreter, stat: i32, fname: *
             return 1;
         } else {
             (*interpreter).push_nil();
-            let message: *const i8 = if en != 0 { strerror(en) as *const i8 } else { c"(no extra info)".as_ptr() };
+            let message: *const i8 = if en != 0 { libc::strerror(en) as *const i8 } else { c"(no extra info)".as_ptr() };
             if !fname.is_null() {
                 lua_pushfstring(interpreter, c"%s: %s".as_ptr(), fname, message);
             } else {
@@ -6613,7 +6568,7 @@ pub unsafe fn lual_checkoption(interpreter: *mut Interpreter, arg: i32, def: *co
         let mut i: i32;
         i = 0;
         while !(*lst.offset(i as isize)).is_null() {
-            if strcmp(*lst.offset(i as isize), name) == 0 {
+            if libc::strcmp(*lst.offset(i as isize), name) == 0 {
                 return i;
             }
             i += 1;
@@ -6657,7 +6612,7 @@ pub unsafe fn lual_optlstring(interpreter: *mut Interpreter, arg: i32, def: *con
         match lua_type(interpreter, arg) {
             | None | Some(TagType::Nil) => {
                 if !length.is_null() {
-                    *length = if !def.is_null() { strlen(def) as usize } else { 0usize };
+                    *length = if !def.is_null() { libc::strlen(def) as usize } else { 0usize };
                 }
                 return def;
             },
@@ -6737,7 +6692,7 @@ pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex
         let err: i32 = *__errno_location();
         let filename: *const i8 = (lua_tolstring(interpreter, fnameindex, null_mut())).offset(1 as isize);
         if err != 0 {
-            lua_pushfstring(interpreter, c"cannot %s %s: %s".as_ptr(), what, filename, strerror(err));
+            lua_pushfstring(interpreter, c"cannot %s %s: %s".as_ptr(), what, filename, libc::strerror(err));
         } else {
             lua_pushfstring(interpreter, c"cannot %s %s".as_ptr(), what, filename);
         }
@@ -7022,9 +6977,9 @@ pub unsafe fn lual_requiref(interpreter: *mut Interpreter, modname: *const i8, o
 pub unsafe fn lual_addgsub(b: *mut Buffer, mut s: *const i8, p: *const i8, r: *const i8) {
     unsafe {
         let mut wild: *const i8;
-        let l = strlen(p);
+        let l = libc::strlen(p);
         loop {
-            wild = strstr(s, p);
+            wild = libc::strstr(s, p);
             if wild.is_null() {
                 break;
             }
@@ -7044,13 +6999,13 @@ pub unsafe fn lual_gsub(interpreter: *mut Interpreter, s: *const i8, p: *const i
         return lua_tolstring(interpreter, -1, null_mut());
     }
 }
-pub unsafe fn raw_allocate(ptr: *mut libc::c_void, mut _old_size: usize, new_size: usize) -> *mut libc::c_void {
+pub unsafe fn raw_allocate(ptr: *mut libc::c_void, mut _old_size: usize, newsize: usize) -> *mut libc::c_void {
     unsafe {
-        if new_size == 0 {
-            free(ptr);
+        if newsize == 0 {
+            libc::free(ptr);
             return null_mut();
         } else {
-            return realloc(ptr, new_size);
+            return libc::realloc(ptr, newsize);
         };
     }
 }
@@ -7075,13 +7030,13 @@ pub unsafe fn checkcontrol(interpreter: *mut Interpreter, mut message: *const i8
         } {
             return 0;
         } else {
-            if strcmp(message, c"off".as_ptr()) == 0 {
+            if libc::strcmp(message, c"off".as_ptr()) == 0 {
                 lua_setwarnf(
                     interpreter,
                     Some(warnfoff as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
                     interpreter as *mut libc::c_void,
                 );
-            } else if strcmp(message, c"on".as_ptr()) == 0 {
+            } else if libc::strcmp(message, c"on".as_ptr()) == 0 {
                 lua_setwarnf(
                     interpreter,
                     Some(warnfon as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
@@ -7137,8 +7092,8 @@ pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
             if interpreter.is_null() {
                 raw_allocate(global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
             } else {
-                (*global).init();
-                (*interpreter).init(&*global);
+                (*global).initialize();
+                (*interpreter).initialize(&*global);
                 (*global).global_totalbytes += size_of::<Interpreter>() as i64;
                 (*global).global_totalbytes += size_of::<Global>() as i64;
                 (*interpreter).preinit_thread(global);
@@ -7169,25 +7124,6 @@ pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
             }
         }
         return (null_mut(), null_mut());
-    }
-}
-pub unsafe fn lual_checkversion_(interpreter: *mut Interpreter, version: f64, size: usize) {
-    unsafe {
-        let v: f64 = 504.0;
-        if size
-            != (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize)
-        {
-            lual_error(interpreter, c"core and library have incompatible numeric types".as_ptr());
-        } else if v != version {
-            lual_error(
-                interpreter,
-                c"version mismatch: app. needs %f, Lua core provides %f".as_ptr(),
-                version,
-                v,
-            );
-        }
     }
 }
 pub unsafe fn luab_print(interpreter: *mut Interpreter) -> i32 {
@@ -7376,16 +7312,16 @@ pub unsafe fn dofile(interpreter: *mut Interpreter, name: *const i8) -> Status {
 }
 pub unsafe fn dostring(interpreter: *mut Interpreter, s: *const i8, name: *const i8) -> Status {
     unsafe {
-        return dochunk(interpreter, lual_loadbufferx(interpreter, s, strlen(s) as usize, name, null()));
+        return dochunk(interpreter, lual_loadbufferx(interpreter, s, libc::strlen(s) as usize, name, null()));
     }
 }
 pub unsafe fn dolibrary(interpreter: *mut Interpreter, globname: *mut i8) -> Status {
     unsafe {
         let mut suffix: *mut i8 = null_mut();
-        let mut modname: *mut i8 = strchr(globname, Character::Equal as i32);
+        let mut modname: *mut i8 = libc::strchr(globname, Character::Equal as i32);
         if modname.is_null() {
             modname = globname;
-            suffix = strchr(modname, *(c"-".as_ptr()) as i32);
+            suffix = libc::strchr(modname, *(c"-".as_ptr()) as i32);
         } else {
             *modname = Character::Null as i8;
             modname = modname.offset(1);
@@ -7421,7 +7357,7 @@ pub unsafe fn pushargs(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn handle_script(interpreter: *mut Interpreter, argv: *mut *mut i8) -> Status {
     unsafe {
         let mut fname: *const i8 = *argv.offset(0 as isize);
-        if strcmp(fname, c"-".as_ptr()) == 0 && strcmp(*argv.offset(-1 as isize), c"--".as_ptr()) != 0 {
+        if libc::strcmp(fname, c"-".as_ptr()) == 0 && libc::strcmp(*argv.offset(-1 as isize), c"--".as_ptr()) != 0 {
             fname = null();
         }
         let mut status = lual_loadfilex(interpreter, fname, null());
@@ -7564,7 +7500,7 @@ pub unsafe fn incomplete(interpreter: *mut Interpreter, status: Status) -> i32 {
             let mut lmsg: usize = 0;
             let message: *const i8 = lua_tolstring(interpreter, -1, &mut lmsg);
             if lmsg >= (size_of::<[i8; 6]>() as usize).wrapping_sub(1 as usize)
-                && strcmp(
+                && libc::strcmp(
                     message
                         .offset(lmsg as isize)
                         .offset(-((size_of::<[i8; 6]>() as usize).wrapping_sub(1 as usize) as isize)),
@@ -7589,7 +7525,7 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
         if !readstatus {
             return false;
         } else {
-            let mut l: usize = strlen(b) as usize;
+            let mut l: usize = libc::strlen(b) as usize;
             if l > 0 && *b.offset(l.wrapping_sub(1 as usize) as isize) as i32 == Character::LineFeed as i32 {
                 l = l.wrapping_sub(1);
                 *b.offset(l as isize) = Character::Null as i8;
@@ -7607,7 +7543,7 @@ pub unsafe fn addreturn(interpreter: *mut Interpreter) -> Status {
     unsafe {
         let line: *const i8 = lua_tolstring(interpreter, -1, null_mut());
         let retline: *const i8 = lua_pushfstring(interpreter, c"return %s;".as_ptr(), line);
-        let status = lual_loadbufferx(interpreter, retline, strlen(retline) as usize, c"=stdin".as_ptr(), null());
+        let status = lual_loadbufferx(interpreter, retline, libc::strlen(retline) as usize, c"=stdin".as_ptr(), null());
         if status == Status::OK {
             lua_rotate(interpreter, -2, -1);
             lua_settop(interpreter, -2);
@@ -7759,13 +7695,13 @@ pub unsafe fn checkupval(interpreter: *mut Interpreter, argf: i32, argnup: i32, 
 pub unsafe fn makemask(smask: *const i8, count: i32) -> i32 {
     unsafe {
         let mut mask: i32 = 0;
-        if !(strchr(smask, Character::LowerC as i32)).is_null() {
+        if !(libc::strchr(smask, Character::LowerC as i32)).is_null() {
             mask |= 1 << 0;
         }
-        if !(strchr(smask, Character::LowerR as i32)).is_null() {
+        if !(libc::strchr(smask, Character::LowerR as i32)).is_null() {
             mask |= 1 << 1;
         }
-        if !(strchr(smask, Character::LowerL as i32)).is_null() {
+        if !(libc::strchr(smask, Character::LowerL as i32)).is_null() {
             mask |= 1 << 2;
         }
         if count > 0 {
@@ -7797,12 +7733,6 @@ pub unsafe fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
     }
 }
 pub const HOOKKEY: *const i8 = c"_HOOKKEY".as_ptr();
-pub unsafe fn fix_memory_error_message_state(interpreter: *mut Interpreter) {
-    unsafe {
-        let global: *mut Global = (*interpreter).interpreter_global;
-        (*global).fix_memory_error_message_global();
-    }
-}
 pub unsafe fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;

@@ -15,7 +15,7 @@ use crate::tm::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 use crate::utility::*;
-use libc::{memchr, memcmp, memcpy, tolower, toupper};
+use libc::{memchr, tolower, toupper};
 use std::ptr::*;
 pub unsafe fn str_len(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -111,14 +111,14 @@ pub unsafe fn str_rep(interpreter: *mut Interpreter) -> i32 {
                 if !(fresh > 1) {
                     break;
                 }
-                memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
+                libc::memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
                 p = p.offset(l as isize);
                 if lsep > 0 {
-                    memcpy(p as *mut libc::c_void, sep as *const libc::c_void, lsep);
+                    libc::memcpy(p as *mut libc::c_void, sep as *const libc::c_void, lsep);
                     p = p.offset(lsep as isize);
                 }
             }
-            memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
+            libc::memcpy(p as *mut libc::c_void, s as *const libc::c_void, l);
             b.push_result_with_size(totallen as usize);
         }
         return 1;
@@ -318,7 +318,7 @@ pub unsafe fn lmemfind(mut s1: *const i8, mut l1: usize, s2: *const i8, mut l2: 
                 !initial.is_null()
             } {
                 initial = initial.offset(1);
-                if memcmp(
+                if libc::memcmp(
                     initial as *const libc::c_void,
                     s2.offset(1 as isize) as *const libc::c_void,
                     l2 as usize,
@@ -338,10 +338,10 @@ pub unsafe fn nospecials(p: *const i8, l: usize) -> i32 {
     unsafe {
         let mut upto: usize = 0;
         loop {
-            if !(strpbrk(p.offset(upto as isize), c"^$*+?.([%-".as_ptr())).is_null() {
+            if !(libc::strpbrk(p.offset(upto as isize), c"^$*+?.([%-".as_ptr())).is_null() {
                 return 0;
             }
-            upto = upto.wrapping_add((strlen(p.offset(upto as isize)) as usize).wrapping_add(1));
+            upto = upto.wrapping_add((libc::strlen(p.offset(upto as isize)) as usize).wrapping_add(1));
             if !(upto <= l) {
                 break;
             }
@@ -609,7 +609,7 @@ pub unsafe fn get2digits(mut s: *const i8) -> *const i8 {
 pub unsafe fn checkformat(interpreter: *mut Interpreter, form: *const i8, flags: *const i8, precision: i32) {
     unsafe {
         let mut spec: *const i8 = form.offset(1 as isize);
-        spec = spec.offset(strspn(spec, flags) as isize);
+        spec = spec.offset(libc::strspn(spec, flags) as isize);
         if *spec as i32 != Character::Digit0 as i32 {
             spec = get2digits(spec);
             if *spec as i32 == Character::Period as i32 && precision != 0 {
@@ -624,7 +624,7 @@ pub unsafe fn checkformat(interpreter: *mut Interpreter, form: *const i8, flags:
 }
 pub unsafe fn getformat(interpreter: *mut Interpreter, strfrmt: *const i8, mut form: *mut i8) -> *const i8 {
     unsafe {
-        let mut length = strspn(strfrmt, c"-+#0 123456789.".as_ptr());
+        let mut length = libc::strspn(strfrmt, c"-+#0 123456789.".as_ptr());
         length = length.wrapping_add(1);
         if length >= 22 {
             lual_error(interpreter, c"invalid format (too long)".as_ptr());
@@ -632,17 +632,17 @@ pub unsafe fn getformat(interpreter: *mut Interpreter, strfrmt: *const i8, mut f
         let fresh173 = form;
         form = form.offset(1);
         *fresh173 = Character::Percent as i8;
-        memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, length);
+        libc::memcpy(form as *mut libc::c_void, strfrmt as *const libc::c_void, length);
         *form.offset(length as isize) = Character::Null as i8;
         return strfrmt.offset(length as isize).offset(-(1 as isize));
     }
 }
 pub unsafe fn addlenmod(form: *mut i8, lenmod: *const i8) {
     unsafe {
-        let length: usize = strlen(form) as usize;
-        let mode_length: usize = strlen(lenmod) as usize;
+        let length: usize = libc::strlen(form) as usize;
+        let mode_length: usize = libc::strlen(lenmod) as usize;
         let spec: i8 = *form.offset(length.wrapping_sub(1 as usize) as isize);
-        strcpy(form.offset(length as isize).offset(-(1 as isize)), lenmod);
+        libc::strcpy(form.offset(length as isize).offset(-(1 as isize)), lenmod);
         *form.offset(length.wrapping_add(mode_length).wrapping_sub(1 as usize) as isize) = spec;
         *form.offset(length.wrapping_add(mode_length) as isize) = Character::Null as i8;
     }
@@ -731,7 +731,7 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 0);
                             if p.is_null() {
                                 p = c"(null)".as_ptr() as *const libc::c_void;
-                                form[(strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] = Character::LowerS as i8;
+                                form[(libc::strlen(form.as_mut_ptr())).wrapping_sub(1) as usize] = Character::LowerS as i8;
                             }
                             nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), p);
                             current_block = 11793792312832361944;
@@ -749,11 +749,11 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
                             if form[2 as usize] as i32 == Character::Null as i32 {
                                 b.add_value();
                             } else {
-                                (((l == strlen(s) as usize) as i32 != 0) as i64 != 0
+                                (((l == libc::strlen(s) as usize) as i32 != 0) as i64 != 0
                                     || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0)
                                     as i32;
                                 checkformat(interpreter, form.as_mut_ptr(), c"-".as_ptr(), 1);
-                                if (strchr(form.as_mut_ptr(), Character::Period as i32)).is_null() && l >= 100 as usize {
+                                if (libc::strchr(form.as_mut_ptr(), Character::Period as i32)).is_null() && l >= 100 as usize {
                                     b.add_value();
                                 } else {
                                     nb = snprintf(buffer, maxitem as usize, form.as_mut_ptr(), s);
@@ -994,7 +994,7 @@ pub unsafe fn packint(b: *mut Buffer, mut n: usize, islittle: i32, size: i32, is
 pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i32, islittle: i32) {
     unsafe {
         if islittle == NATIVE_ENDIAN.nativeendian_little as i32 {
-            memcpy(dest as *mut libc::c_void, src as *const libc::c_void, size as usize);
+            libc::memcpy(dest as *mut libc::c_void, src as *const libc::c_void, size as usize);
         } else {
             dest = dest.offset((size - 1) as isize);
             loop {
@@ -1139,7 +1139,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                 | 7 => {
                     let mut length: usize = 0;
                     let s_1: *const i8 = lual_checklstring(interpreter, arg, &mut length);
-                    (((strlen(s_1) as usize == length) as i32 != 0) as i64 != 0
+                    (((libc::strlen(s_1) as usize == length) as i32 != 0) as i64 != 0
                         || lual_argerror(interpreter, arg, c"string contains zeros".as_ptr()) != 0) as i32;
                     b.add_string_with_length(s_1, length as usize);
                     (b.buffer_loads.get_length() < b.buffer_loads.get_size() || !(b.prepare_with_size(1)).is_null()) as i32;
@@ -1316,7 +1316,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                     position = (position as usize).wrapping_add(length) as usize;
                 },
                 | 7 => {
-                    let length_0: usize = strlen(data.offset(position as isize)) as usize;
+                    let length_0: usize = libc::strlen(data.offset(position as isize)) as usize;
                     (((position.wrapping_add(length_0) < ld) as i32 != 0) as i64 != 0
                         || lual_argerror(interpreter, 2, c"unfinished string for format 'zio'".as_ptr()) != 0)
                         as i32;
@@ -1455,13 +1455,6 @@ pub unsafe fn createmetatable(interpreter: *mut Interpreter) {
 }
 pub unsafe fn luaopen_string(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, STRING_FUNCTIONS.as_ptr(), STRING_FUNCTIONS.len(), 0);
         createmetatable(interpreter);

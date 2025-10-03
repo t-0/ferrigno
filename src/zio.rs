@@ -1,6 +1,5 @@
 use crate::functions::*;
 use crate::interpreter::*;
-use libc::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -83,7 +82,7 @@ impl ZIO {
                     }
                 }
                 let m: usize = if n <= self.zio_length { n } else { self.zio_length };
-                memcpy(b, self.zio_pointer as *const libc::c_void, m as usize);
+                libc::memcpy(b, self.zio_pointer as *const libc::c_void, m as usize);
                 self.zio_length = (self.zio_length as usize).wrapping_sub(m) as usize;
                 self.zio_pointer = (self.zio_pointer).offset(m as isize);
                 b = (b as *mut i8).offset(m as isize) as *mut libc::c_void;

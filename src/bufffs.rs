@@ -50,7 +50,7 @@ impl BuffFS {
         unsafe {
             if length <= (60 + 44 + 95) {
                 let bf = self.get_raw(length as usize);
-                memcpy(bf as *mut c_void, pointer as *const c_void, length as usize);
+                libc::memcpy(bf as *mut c_void, pointer as *const c_void, length as usize);
                 self.bufffs_size += length as usize;
             } else {
                 self.clear();

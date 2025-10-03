@@ -1,6 +1,5 @@
 use crate::blockcontrol::*;
 use crate::buffer::*;
-use crate::c::strlen;
 use crate::character::*;
 use crate::constructorcontrol::*;
 use crate::dynamicdata::*;
@@ -31,7 +30,6 @@ use crate::value::*;
 use crate::variabledescription::*;
 use crate::vectort::*;
 use crate::zio::*;
-use libc::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -135,7 +133,7 @@ impl LexicalState {
             let function_state: *mut FunctionState = self.lexicalstate_functionstate;
             let prototype: *mut Prototype = (*function_state).functionstate_prototype;
             if (*function_state).functionstate_countprototypes >= (*prototype).prototype_prototypes.get_size() as i32 {
-                let mut old_size = (*prototype).prototype_prototypes.get_size();
+                let mut oldsize = (*prototype).prototype_prototypes.get_size();
                 (*prototype).prototype_prototypes.grow(
                     interpreter,
                     (*function_state).functionstate_countprototypes as usize,
@@ -146,9 +144,9 @@ impl LexicalState {
                     },
                     c"functions".as_ptr(),
                 );
-                while old_size < (*prototype).prototype_prototypes.get_size() {
-                    let fresh45 = old_size;
-                    old_size = old_size + 1;
+                while oldsize < (*prototype).prototype_prototypes.get_size() {
+                    let fresh45 = oldsize;
+                    oldsize = oldsize + 1;
                     let ref mut fresh46 = *((*prototype).prototype_prototypes.vectort_pointer).offset(fresh45 as isize);
                     *fresh46 = null_mut();
                 }
@@ -360,9 +358,7 @@ pub unsafe fn close_function(interpreter: *mut Interpreter, lexical_state: *mut 
             .prototype_upvalues
             .shrink(&mut *interpreter, (*function_state).functionstate_countupvalues as usize);
         (*lexical_state).lexicalstate_functionstate = (*function_state).functionstate_previous;
-        if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-            (*interpreter).luac_step();
-        }
+        (*interpreter).do_gc_step_if_should_step();
     }
 }
 pub unsafe fn parse_statement_list(
@@ -479,7 +475,7 @@ pub unsafe fn constructor(
         let line: i32 = (*lexical_state).lexicalstate_linenumber;
         let program_counter: i32 = code_abck(interpreter, lexical_state, function_state, OPCODE_NEWTABLE, 0, 0, 0, 0);
         let mut constructor_control: ConstructorControl = ConstructorControl::new();
-        luak_code(interpreter, lexical_state, function_state, 0u32);
+        luak_code(interpreter, lexical_state, function_state, 0);
         constructor_control.constructorcontrol_counttostore = 0;
         constructor_control.constructorcontrol_counttable = 0;
         constructor_control.constructorcontrol_countarray = 0;
@@ -935,7 +931,7 @@ pub unsafe fn registerlocalvar(
 ) -> i32 {
     unsafe {
         let prototype: *mut Prototype = (*function_state).functionstate_prototype;
-        let mut old_size = (*prototype).prototype_localvariables.get_size();
+        let mut oldsize = (*prototype).prototype_localvariables.get_size();
         (*prototype).prototype_localvariables.grow(
             interpreter,
             (*function_state).functionstate_countdebugvariables as usize,
@@ -946,9 +942,9 @@ pub unsafe fn registerlocalvar(
             },
             c"local variables".as_ptr(),
         );
-        while old_size < (*prototype).prototype_localvariables.get_size() {
-            let fresh33 = old_size;
-            old_size = old_size + 1;
+        while oldsize < (*prototype).prototype_localvariables.get_size() {
+            let fresh33 = oldsize;
+            oldsize = oldsize + 1;
             let ref mut fresh34 =
                 (*((*prototype).prototype_localvariables.vectort_pointer).offset(fresh33 as isize)).localvariable_variablename;
             *fresh34 = null_mut();
@@ -1560,7 +1556,7 @@ pub unsafe fn handle_forbody(
         static mut FOR_LOOP: [u32; 2] = [OPCODE_FORLOOP, OPCODE_TFORLOOP];
         let mut block_control = BlockControl::new();
         checknext(interpreter, lexical_state, function_state, Token::Do as i32);
-        let prep: i32 = luak_codeabx(interpreter, lexical_state, function_state, FOR_PREP[isgen as usize], base, 0u32);
+        let prep: i32 = luak_codeabx(interpreter, lexical_state, function_state, FOR_PREP[isgen as usize], base, 0);
         enterblock(lexical_state, function_state, &mut block_control, false);
         adjustlocalvars(interpreter, lexical_state, count_variables);
         luak_reserveregs(interpreter, lexical_state, function_state, count_variables);
@@ -1595,17 +1591,17 @@ pub unsafe fn handle_for_numeric(
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(interpreter, lexical_state, variable_name);
         checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
@@ -1647,22 +1643,22 @@ pub unsafe fn handle_for_list(
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(
             interpreter,
             lexical_state,
-            luax_newstring(interpreter, lexical_state, s, strlen(s) as usize),
+            luax_newstring(interpreter, lexical_state, s, libc::strlen(s) as usize),
         );
         new_localvar(interpreter, lexical_state, indexname);
         while testnext(interpreter, lexical_state, function_state, Character::Comma as i32) != 0 {
@@ -1856,9 +1852,9 @@ pub unsafe fn getlocalattribute(
         if testnext(interpreter, lexical_state, function_state, Character::AngleLeft as i32) != 0 {
             let attr: *const i8 = (*str_checkname(interpreter, lexical_state, function_state)).get_contents_mut();
             checknext(interpreter, lexical_state, function_state, Character::AngleRight as i32);
-            if strcmp(attr, c"const".as_ptr()) == 0 {
+            if libc::strcmp(attr, c"const".as_ptr()) == 0 {
                 return 1;
-            } else if strcmp(attr, c"close".as_ptr()) == 0 {
+            } else if libc::strcmp(attr, c"close".as_ptr()) == 0 {
                 return 2;
             } else {
                 luak_semerror(
@@ -1986,7 +1982,7 @@ pub unsafe fn handle_expression_statement(
             let inst: *mut u32 = &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                 .offset(new_lhs_assign.expressiondescription_value.value_info as isize)
                 as *mut u32;
-            *inst = *inst & !(!(!(0u32) << 8) << POSITION_C) | (1 as u32) << POSITION_C & !(!(0u32) << 8) << POSITION_C;
+            *inst = *inst & !(!(0xFFFFFFFFu32 << 8) << POSITION_C) | (1 as u32) << POSITION_C & !(0xFFFFFFFFu32 << 8) << POSITION_C;
         };
     }
 }
@@ -2015,8 +2011,8 @@ pub unsafe fn handle_return_statement(
                         .offset(expression_description.expressiondescription_value.value_info as isize) =
                         *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                             .offset(expression_description.expressiondescription_value.value_info as isize)
-                            & !(!(!(0u32) << 7) << 0)
-                            | (OPCODE_TAILCALL as u32) << 0 & !(!(0u32) << 7) << 0;
+                            & !(!(0xFFFFFFFFu32 << 7) << 0)
+                            | (OPCODE_TAILCALL as u32) << 0 & !(0xFFFFFFFFu32 << 7) << 0;
                 }
                 nret = -1;
             } else if nret == 1 {
@@ -2078,8 +2074,8 @@ pub unsafe fn save(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
             {
                 lexerror(interpreter, lexical_state, c"lexical element too long".as_ptr(), 0);
             }
-            let new_size = (*b).buffer_loads.get_size().wrapping_mul(2);
-            (*b).buffer_loads.resize(interpreter, new_size as usize);
+            let newsize = (*b).buffer_loads.get_size().wrapping_mul(2);
+            (*b).buffer_loads.resize(interpreter, newsize as usize);
         }
         let fresh49 = (*b).buffer_loads.get_length();
         (*b).buffer_loads
@@ -2154,7 +2150,7 @@ pub unsafe fn luax_newstring(
     unsafe {
         let mut tstring: *mut TString = luas_newlstr(interpreter, str, length as usize);
         let tvalue: *const TValue = luah_getstr((*lexical_state).lexicalstate_table, tstring);
-        if (*tvalue).is_tagtype_nil() {
+        if (*tvalue).get_tagvariant().to_tag_type().is_nil() {
             let fresh50 = (*interpreter).interpreter_top.stkidrel_pointer;
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
             let stv: *mut TValue = &mut (*fresh50);
@@ -2164,9 +2160,7 @@ pub unsafe fn luax_newstring(
             (*io).tvalue_set_tag_variant((*tstring).get_tagvariant());
             (*io).set_collectable(true);
             luah_finishset(interpreter, (*lexical_state).lexicalstate_table, stv, tvalue, stv);
-            if (*(*interpreter).interpreter_global).global_gcdebt > 0 {
-                (*interpreter).luac_step();
-            }
+            (*interpreter).do_gc_step_if_should_step();
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-1);
         } else {
             tstring = &mut (*((*(tvalue as *mut Node)).node_key.tvalue_value.value_object as *mut TString));

@@ -90,7 +90,7 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             return lual_argerror(interpreter, arg + 2, c"invalid option".as_ptr());
         }
         (*interpreter).lua_createtable();
-        if !(strchr(options, Character::UpperS as i32)).is_null() {
+        if !(libc::strchr(options, Character::UpperS as i32)).is_null() {
             lua_pushlstring(interpreter, debuginfo.debuginfo_source, debuginfo.debuginfo_sourcelength);
             lua_setfield(interpreter, -2, c"source".as_ptr());
             settabss(interpreter, c"short_src".as_ptr(), (debuginfo.debuginfo_shortsrc).as_mut_ptr());
@@ -98,10 +98,10 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
             settabsi(interpreter, c"lastlinedefined".as_ptr(), debuginfo.debuginfo_lastlinedefined);
             settabss(interpreter, c"what".as_ptr(), debuginfo.debuginfo_what);
         }
-        if !(strchr(options, Character::LowerL as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerL as i32)).is_null() {
             settabsi(interpreter, c"currentline".as_ptr(), debuginfo.debuginfo_currentline);
         }
-        if !(strchr(options, Character::LowerU as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerU as i32)).is_null() {
             settabsi(interpreter, c"nups".as_ptr(), debuginfo.debuginfo_nups as i32);
             settabsi(interpreter, c"nparams".as_ptr(), debuginfo.debuginfo_nparams as i32);
             settabsb(
@@ -110,25 +110,25 @@ pub unsafe fn db_getinfo(interpreter: *mut Interpreter) -> i32 {
                 debuginfo.debuginfo_isvariablearguments as i32,
             );
         }
-        if !(strchr(options, Character::LowerN as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerN as i32)).is_null() {
             settabss(interpreter, c"name".as_ptr(), debuginfo.debuginfo_name);
             settabss(interpreter, c"namewhat".as_ptr(), debuginfo.debuginfo_namewhat);
         }
-        if !(strchr(options, Character::LowerR as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerR as i32)).is_null() {
             settabsi(interpreter, c"ftransfer".as_ptr(), debuginfo.debuginfo_ftransfer as i32);
             settabsi(interpreter, c"ntransfer".as_ptr(), debuginfo.debuginfo_ntransfer as i32);
         }
-        if !(strchr(options, Character::LowerT as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerT as i32)).is_null() {
             settabsb(
                 interpreter,
                 c"istailcall".as_ptr(),
                 if debuginfo.debuginfo_istailcall { 1 } else { 0 },
             );
         }
-        if !(strchr(options, Character::UpperL as i32)).is_null() {
+        if !(libc::strchr(options, Character::UpperL as i32)).is_null() {
             treatstackoption(interpreter, other_state, c"activelines".as_ptr());
         }
-        if !(strchr(options, Character::LowerF as i32)).is_null() {
+        if !(libc::strchr(options, Character::LowerF as i32)).is_null() {
             treatstackoption(interpreter, other_state, c"func".as_ptr());
         }
         return 1;
@@ -279,14 +279,14 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
             fprintf(stderr, c"%s".as_ptr(), c"lua_debug> ".as_ptr());
             fflush(stderr);
             if (fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null()
-                || strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0
+                || libc::strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0
             {
                 return 0;
             }
             if lual_loadbufferx(
                 interpreter,
                 buffer.as_mut_ptr(),
-                strlen(buffer.as_mut_ptr()) as usize,
+                libc::strlen(buffer.as_mut_ptr()) as usize,
                 c"=(debug command)".as_ptr(),
                 null(),
             ) != Status::OK
@@ -415,13 +415,6 @@ pub const DEBUG_FUNCTIONS: [RegisteredFunction; 16] = {
 };
 pub unsafe fn luaopen_debug(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        lual_checkversion_(
-            interpreter,
-            504.0,
-            (size_of::<i64>() as usize)
-                .wrapping_mul(16 as usize)
-                .wrapping_add(size_of::<f64>() as usize),
-        );
         (*interpreter).lua_createtable();
         lual_setfuncs(interpreter, DEBUG_FUNCTIONS.as_ptr(), DEBUG_FUNCTIONS.len(), 0);
         return 1;

@@ -72,9 +72,6 @@ impl TObject for Object {
     fn set_tagvariant(&mut self, tagvariant: TagVariant) {
         self.object_tagvariant = tagvariant;
     }
-    fn get_classname(&mut self) -> String {
-        "object".to_string()
-    }
 }
 impl Object {
     pub fn new(tagvariant: TagVariant) -> Self {
@@ -84,7 +81,7 @@ impl Object {
         unsafe {
             if object.is_null() {
                 return 0;
-            } else if (*object).is_tagtype_string() {
+            } else if (*object).get_tagvariant().to_tag_type().is_string() {
                 if (*object).get_marked() & (1 << 3 | 1 << 4) != 0 {
                     Object::really_mark_object(global, &mut (*(object as *mut Object)));
                 }

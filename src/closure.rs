@@ -43,9 +43,6 @@ impl TObject for Closure {
     fn as_object_mut(&mut self) -> &mut Object {
         self.super_.as_object_mut()
     }
-    fn get_classname(&mut self) -> String {
-        "closure".to_string()
-    }
 }
 impl TObjectWithGCList for Closure {
     fn getgclist(&mut self) -> *mut *mut ObjectWithGCList {

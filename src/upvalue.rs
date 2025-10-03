@@ -18,9 +18,6 @@ impl TObject for UpValue {
     fn as_object_mut(&mut self) -> &mut Object {
         &mut self.upvalue_super
     }
-    fn get_classname(&mut self) -> String {
-        "upvalue".to_string()
-    }
 }
 impl UpValue {
     pub unsafe fn upvalue_free(&mut self, interpreter: *mut Interpreter) {
