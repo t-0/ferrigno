@@ -1,5 +1,3 @@
-const CHARACTER_TYPE_NONE: u8 = 0x00;
-const CHARACTER_TYPE_PRINTABLE: u8 = 0x04;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[repr(i32)]
 pub enum Character {
@@ -296,7 +294,7 @@ impl Character {
             | _ => 0,
         }
     }
-    pub fn get_character_type(&self) -> u8 {
+    pub fn is_control(&self) -> bool {
         match self {
             | Character::Null
             | Character::StartOfHeader
@@ -325,13 +323,13 @@ impl Character {
             | Character::GroupSeparator
             | Character::RecordSeparator
             | Character::UnitSeparator
-            | Character::Delete
             | Character::HorizontalTab
             | Character::LineFeed
             | Character::VerticalTab
             | Character::FormFeed
-            | Character::CarriageReturn => CHARACTER_TYPE_NONE,
-            | Character::Space => CHARACTER_TYPE_PRINTABLE,
+            | Character::CarriageReturn
+            | Character::Delete => true,
+            | Character::Space
             | Character::Exclamation
             | Character::DoubleQuote
             | Character::Octothorpe
@@ -362,7 +360,7 @@ impl Character {
             | Character::BraceLeft
             | Character::Bar
             | Character::BraceRight
-            | Character::Tilde => CHARACTER_TYPE_PRINTABLE,
+            | Character::Tilde
             | Character::Digit0
             | Character::Digit1
             | Character::Digit2
@@ -384,7 +382,7 @@ impl Character {
             | Character::LowerC
             | Character::LowerD
             | Character::LowerE
-            | Character::LowerF => CHARACTER_TYPE_PRINTABLE,
+            | Character::LowerF
             | Character::UpperG
             | Character::UpperH
             | Character::UpperI
@@ -424,11 +422,11 @@ impl Character {
             | Character::LowerW
             | Character::LowerX
             | Character::LowerY
-            | Character::LowerZ => CHARACTER_TYPE_PRINTABLE,
-            | Character::Underscore => CHARACTER_TYPE_PRINTABLE,
+            | Character::LowerZ
+            | Character::Underscore => false,
         }
     }
-    pub fn is_control(&self) -> bool {
+    pub fn is_printable(&self) -> bool {
         match self {
             | Character::Null
             | Character::StartOfHeader
@@ -457,13 +455,13 @@ impl Character {
             | Character::GroupSeparator
             | Character::RecordSeparator
             | Character::UnitSeparator
-            | Character::Delete
             | Character::HorizontalTab
             | Character::LineFeed
             | Character::VerticalTab
             | Character::FormFeed
-            | Character::CarriageReturn => true,
-            | Character::Space
+            | Character::CarriageReturn
+            | Character::Delete
+            | Character::Space => false,
             | Character::Exclamation
             | Character::DoubleQuote
             | Character::Octothorpe
@@ -495,6 +493,138 @@ impl Character {
             | Character::Bar
             | Character::BraceRight
             | Character::Tilde
+            | Character::Digit0
+            | Character::Digit1
+            | Character::Digit2
+            | Character::Digit3
+            | Character::Digit4
+            | Character::Digit5
+            | Character::Digit6
+            | Character::Digit7
+            | Character::Digit8
+            | Character::Digit9
+            | Character::UpperA
+            | Character::UpperB
+            | Character::UpperC
+            | Character::UpperD
+            | Character::UpperE
+            | Character::UpperF
+            | Character::LowerA
+            | Character::LowerB
+            | Character::LowerC
+            | Character::LowerD
+            | Character::LowerE
+            | Character::LowerF
+            | Character::UpperG
+            | Character::UpperH
+            | Character::UpperI
+            | Character::UpperJ
+            | Character::UpperK
+            | Character::UpperL
+            | Character::UpperM
+            | Character::UpperN
+            | Character::UpperO
+            | Character::UpperP
+            | Character::UpperQ
+            | Character::UpperR
+            | Character::UpperS
+            | Character::UpperT
+            | Character::UpperU
+            | Character::UpperV
+            | Character::UpperW
+            | Character::UpperX
+            | Character::UpperY
+            | Character::UpperZ
+            | Character::LowerG
+            | Character::LowerH
+            | Character::LowerI
+            | Character::LowerJ
+            | Character::LowerK
+            | Character::LowerL
+            | Character::LowerM
+            | Character::LowerN
+            | Character::LowerO
+            | Character::LowerP
+            | Character::LowerQ
+            | Character::LowerR
+            | Character::LowerS
+            | Character::LowerT
+            | Character::LowerU
+            | Character::LowerV
+            | Character::LowerW
+            | Character::LowerX
+            | Character::LowerY
+            | Character::LowerZ
+            | Character::Underscore => true,
+        }
+    }
+    pub fn is_punctuation(&self) -> bool {
+        match self {
+            | Character::Null
+            | Character::StartOfHeader
+            | Character::StartOfText
+            | Character::EndOfText
+            | Character::EndOfTransmission
+            | Character::Enquiry
+            | Character::Acknowledge
+            | Character::Bell
+            | Character::Backspace
+            | Character::ShiftOut
+            | Character::ShiftIn
+            | Character::DataLinkEscape
+            | Character::DeviceControl1
+            | Character::DeviceControl2
+            | Character::DeviceControl3
+            | Character::DeviceControl4
+            | Character::NegativeAcknowledge
+            | Character::Synchronize
+            | Character::EndOfTransmissionBlock
+            | Character::Cancel
+            | Character::EndOfMedium
+            | Character::Substitute
+            | Character::Escape
+            | Character::FileSeparator
+            | Character::GroupSeparator
+            | Character::RecordSeparator
+            | Character::UnitSeparator
+            | Character::HorizontalTab
+            | Character::LineFeed
+            | Character::VerticalTab
+            | Character::FormFeed
+            | Character::CarriageReturn
+            | Character::Delete
+            | Character::Space => false,
+            | Character::Exclamation
+            | Character::DoubleQuote
+            | Character::Octothorpe
+            | Character::Dollar
+            | Character::Percent
+            | Character::Ampersand
+            | Character::Quote
+            | Character::ParenthesisLeft
+            | Character::ParenthesisRight
+            | Character::Asterisk
+            | Character::Plus
+            | Character::Comma
+            | Character::Hyphen
+            | Character::Period
+            | Character::Solidus
+            | Character::Colon
+            | Character::Semicolon
+            | Character::AngleLeft
+            | Character::Equal
+            | Character::AngleRight
+            | Character::Question
+            | Character::At
+            | Character::BracketLeft
+            | Character::Backslash
+            | Character::BracketRight
+            | Character::Caret
+            | Character::Grave
+            | Character::BraceLeft
+            | Character::Bar
+            | Character::BraceRight
+            | Character::Tilde => true,
             | Character::Digit0
             | Character::Digit1
             | Character::Digit2
@@ -635,9 +765,6 @@ impl Character {
     }
     pub fn is_alphanumeric(&self) -> bool {
         self.is_digit_decimal() || self.is_identifier()
-    }
-    pub fn is_printable(&self) -> bool {
-        return self.get_character_type() & CHARACTER_TYPE_PRINTABLE != 0;
     }
     pub fn is_identifier(&self) -> bool {
         match self {

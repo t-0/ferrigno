@@ -213,7 +213,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
             return null();
         }
         loop {
-            let digit_0: i32 = if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+            let digit_0: i32 = if Character::from(*s as u8 as i32).is_digit_decimal() {
                 *s as i32 - Character::Digit0 as i32
             } else {
                 toupper(*s as u8 as i32) - Character::UpperA as i32 + 10 as i32

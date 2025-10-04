@@ -515,10 +515,10 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                 *((*b).buffer_loads.loads_pointer).offset(fresh170 as isize) = *s;
             } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0 {
                 let mut buffer: [i8; 10] = [0; 10];
-                if *(*__ctype_b_loc()).offset(*s.offset(1 as isize) as u8 as isize) as i32 & _ISDIGIT as i32 == 0 {
-                    libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%d".as_ptr(), *s as u8 as i32);
-                } else {
+                if Character::from(*s.offset(1 as isize) as u8 as i32).is_digit_decimal() {
                     libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%03d".as_ptr(), *s as u8 as i32);
+                } else {
+                    libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%d".as_ptr(), *s as u8 as i32);
                 }
                 (*b).add_string(buffer.as_mut_ptr());
             } else {
@@ -597,9 +597,9 @@ pub unsafe fn addliteral(interpreter: *mut Interpreter, b: *mut Buffer, arg: i32
 }
 pub unsafe fn get2digits(mut s: *const i8) -> *const i8 {
     unsafe {
-        if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+        if Character::from(*s as u8 as i32).is_digit_decimal() {
             s = s.offset(1);
-            if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+            if Character::from(*s as u8 as i32).is_digit_decimal() {
                 s = s.offset(1);
             }
         }
@@ -617,7 +617,7 @@ pub unsafe fn checkformat(interpreter: *mut Interpreter, form: *const i8, flags:
                 spec = get2digits(spec);
             }
         }
-        if *(*__ctype_b_loc()).offset(*spec as u8 as isize) as i32 & _ISALPHA as i32 == 0 {
+        if !Character::from(*spec as u8 as i32).is_alpha() {
             lual_error(interpreter, c"invalid conversion specification: '%s'".as_ptr(), form);
         }
     }

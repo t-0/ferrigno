@@ -614,13 +614,13 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
                 res = Character::from(c).is_digit_decimal();
             },
             | Character::LowerG => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH != 0;
+                res = Character::from(c).is_printable();
             },
             | Character::LowerL => {
                 res = Character::from(c).is_lower();
             },
             | Character::LowerP => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISPUNCTUATION != 0;
+                res = Character::from(c).is_punctuation();
             },
             | Character::LowerS => {
                 res = Character::from(c).is_whitespace();

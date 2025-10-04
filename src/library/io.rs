@@ -298,10 +298,10 @@ pub unsafe fn readdigits(rn: *mut RN, hex: i32) -> i32 {
     unsafe {
         let mut count: i32 = 0;
         while (if hex != 0 {
-            *(*__ctype_b_loc()).offset((*rn).rn_c as isize) as i32 & _ISXDIGIT as i32
+            Character::from((*rn).rn_c as i32).is_digit_hexadecimal()
         } else {
-            *(*__ctype_b_loc()).offset((*rn).rn_c as isize) as i32 & _ISDIGIT as i32
-        }) != 0
+            Character::from((*rn).rn_c as i32).is_digit_decimal()
+        })
             && nextc(rn) != 0
         {
             count += 1;
