@@ -129,10 +129,14 @@ pub enum Character {
     BraceRight = 125,
     Tilde = 126,
     Delete = 127,
+    Bad = 255,
 }
 impl Character {
-    pub fn is_alpha(&self) -> bool {
-        self.is_lower() || self.is_upper()
+    pub fn from_negative(input: i32) -> Option<Character> {
+        match input {
+            | -1 => None,
+            | _ => Some(Character::from(input)),
+        }
     }
     pub fn from(input: i32) -> Self {
         match input {
@@ -264,14 +268,11 @@ impl Character {
             | 125 => Character::BraceRight,
             | 126 => Character::Tilde,
             | 127 => Character::Delete,
-            | _ => Character::Null,
+            | _ => Character::Bad,
         }
     }
-    pub fn from2(input: i32) -> Option<Character> {
-        match input {
-            | -1 => None,
-            | _ => Some(Character::from(input)),
-        }
+    pub fn is_alpha(&self) -> bool {
+        self.is_lower() || self.is_upper()
     }
     pub fn get_hexadecimal_digit_value(&self) -> u8 {
         match self {
@@ -424,6 +425,7 @@ impl Character {
             | Character::LowerY
             | Character::LowerZ
             | Character::Underscore => false,
+            | Character::Bad => false,
         }
     }
     pub fn is_printable(&self) -> bool {
@@ -556,44 +558,11 @@ impl Character {
             | Character::LowerY
             | Character::LowerZ
             | Character::Underscore => true,
+            | Character::Bad => false,
         }
     }
     pub fn is_punctuation(&self) -> bool {
         match self {
-            | Character::Null
-            | Character::StartOfHeader
-            | Character::StartOfText
-            | Character::EndOfText
-            | Character::EndOfTransmission
-            | Character::Enquiry
-            | Character::Acknowledge
-            | Character::Bell
-            | Character::Backspace
-            | Character::ShiftOut
-            | Character::ShiftIn
-            | Character::DataLinkEscape
-            | Character::DeviceControl1
-            | Character::DeviceControl2
-            | Character::DeviceControl3
-            | Character::DeviceControl4
-            | Character::NegativeAcknowledge
-            | Character::Synchronize
-            | Character::EndOfTransmissionBlock
-            | Character::Cancel
-            | Character::EndOfMedium
-            | Character::Substitute
-            | Character::Escape
-            | Character::FileSeparator
-            | Character::GroupSeparator
-            | Character::RecordSeparator
-            | Character::UnitSeparator
-            | Character::HorizontalTab
-            | Character::LineFeed
-            | Character::VerticalTab
-            | Character::FormFeed
-            | Character::CarriageReturn
-            | Character::Delete
-            | Character::Space => false,
             | Character::Exclamation
             | Character::DoubleQuote
             | Character::Octothorpe
@@ -625,69 +594,7 @@ impl Character {
             | Character::Bar
             | Character::BraceRight
             | Character::Tilde => true,
-            | Character::Digit0
-            | Character::Digit1
-            | Character::Digit2
-            | Character::Digit3
-            | Character::Digit4
-            | Character::Digit5
-            | Character::Digit6
-            | Character::Digit7
-            | Character::Digit8
-            | Character::Digit9
-            | Character::UpperA
-            | Character::UpperB
-            | Character::UpperC
-            | Character::UpperD
-            | Character::UpperE
-            | Character::UpperF
-            | Character::LowerA
-            | Character::LowerB
-            | Character::LowerC
-            | Character::LowerD
-            | Character::LowerE
-            | Character::LowerF
-            | Character::UpperG
-            | Character::UpperH
-            | Character::UpperI
-            | Character::UpperJ
-            | Character::UpperK
-            | Character::UpperL
-            | Character::UpperM
-            | Character::UpperN
-            | Character::UpperO
-            | Character::UpperP
-            | Character::UpperQ
-            | Character::UpperR
-            | Character::UpperS
-            | Character::UpperT
-            | Character::UpperU
-            | Character::UpperV
-            | Character::UpperW
-            | Character::UpperX
-            | Character::UpperY
-            | Character::UpperZ
-            | Character::LowerG
-            | Character::LowerH
-            | Character::LowerI
-            | Character::LowerJ
-            | Character::LowerK
-            | Character::LowerL
-            | Character::LowerM
-            | Character::LowerN
-            | Character::LowerO
-            | Character::LowerP
-            | Character::LowerQ
-            | Character::LowerR
-            | Character::LowerS
-            | Character::LowerT
-            | Character::LowerU
-            | Character::LowerV
-            | Character::LowerW
-            | Character::LowerX
-            | Character::LowerY
-            | Character::LowerZ
-            | Character::Underscore => false,
+            | _ => false,
         }
     }
     pub fn is_lower(&self) -> bool {

@@ -2297,7 +2297,7 @@ pub unsafe fn read_long_string(
             inclinenumber(interpreter, lexical_state);
         }
         loop {
-            match Character::from2((*lexical_state).lexicalstate_current) {
+            match Character::from_negative((*lexical_state).lexicalstate_current as i32) {
                 | None => {
                     let what: *const i8 = if !semantic_info.is_null() { c"string".as_ptr() } else { c"comment".as_ptr() };
                     let message: *const i8 =
@@ -2453,7 +2453,7 @@ pub unsafe fn read_string(interpreter: *mut Interpreter, lexical_state: *mut Lex
         save(interpreter, lexical_state, (*lexical_state).lexicalstate_current);
         (*lexical_state).lexicalstate_current = (*(*lexical_state).lexicalstate_zio).get_char();
         while (*lexical_state).lexicalstate_current != del {
-            match Character::from2((*lexical_state).lexicalstate_current) {
+            match Character::from_negative((*lexical_state).lexicalstate_current) {
                 | None => {
                     lexerror(
                         interpreter,
@@ -2577,7 +2577,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
         (*(*lexical_state).lexicalstate_buffer).buffer_loads.zero_length();
         loop {
             let current_block_85: usize;
-            match Character::from2((*lexical_state).lexicalstate_current) {
+            match Character::from_negative((*lexical_state).lexicalstate_current) {
                 | None => {
                     return Token::EndOfStream as i32;
                 },

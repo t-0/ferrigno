@@ -7387,15 +7387,18 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
                 return args;
             }
             let current_block_31: usize;
-            match Character::from2(*(*argv.offset(i as isize)).offset(1 as isize) as i32) {
+            match Character::from_negative(*(*argv.offset(i as isize)).offset(1 as isize) as i32) {
                 | Some(Character::Hyphen) => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;
+                    } else {
+                        *first = i + 1;
+                        return args;
                     }
-                    *first = i + 1;
+                },
+                | None => {
                     return args;
                 },
-                | None => return args,
                 | Some(Character::UpperE) => {
                     if *(*argv.offset(i as isize)).offset(2 as isize) as i32 != Character::Null as i32 {
                         return 1;

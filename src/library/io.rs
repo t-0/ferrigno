@@ -484,17 +484,17 @@ pub unsafe fn g_read(interpreter: *mut Interpreter, file: *mut libc::FILE, first
                     if *p as i32 == Character::Asterisk as i32 {
                         p = p.offset(1);
                     }
-                    match Character::from2(*p as i32) {
-                        | Some(Character::LowerN) => {
+                    match Character::from(*p as i32) {
+                        | Character::LowerN => {
                             success = read_number(interpreter, file);
                         },
-                        | Some(Character::LowerL) => {
+                        | Character::LowerL => {
                             success = read_line(interpreter, file, 1);
                         },
-                        | Some(Character::UpperL) => {
+                        | Character::UpperL => {
                             success = read_line(interpreter, file, 0);
                         },
-                        | Some(Character::LowerA) => {
+                        | Character::LowerA => {
                             read_all(interpreter, file);
                             success = 1;
                         },

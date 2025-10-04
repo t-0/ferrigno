@@ -635,7 +635,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
                 res = Character::from(c).is_digit_hexadecimal();
             },
             | Character::LowerZ => {
-                res = c == 0;
+                res = Character::from_negative(c) == Some(Character::Null);
             },
             | _ => return class_ == c,
         }
