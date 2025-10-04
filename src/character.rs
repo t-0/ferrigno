@@ -444,6 +444,68 @@ impl Character {
             | Character::Underscore => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
         }
     }
+    pub fn is_lower(&self) -> bool {
+        match self {
+            | Character::LowerA
+            | Character::LowerB
+            | Character::LowerC
+            | Character::LowerD
+            | Character::LowerE
+            | Character::LowerF
+            | Character::LowerG
+            | Character::LowerH
+            | Character::LowerI
+            | Character::LowerJ
+            | Character::LowerK
+            | Character::LowerL
+            | Character::LowerM
+            | Character::LowerN
+            | Character::LowerO
+            | Character::LowerP
+            | Character::LowerQ
+            | Character::LowerR
+            | Character::LowerS
+            | Character::LowerT
+            | Character::LowerU
+            | Character::LowerV
+            | Character::LowerW
+            | Character::LowerX
+            | Character::LowerY
+            | Character::LowerZ => true,
+            | _ => false,
+        }
+    }
+    pub fn is_upper(&self) -> bool {
+        match self {
+            | Character::UpperA
+            | Character::UpperB
+            | Character::UpperC
+            | Character::UpperD
+            | Character::UpperE
+            | Character::UpperF
+            | Character::UpperG
+            | Character::UpperH
+            | Character::UpperI
+            | Character::UpperJ
+            | Character::UpperK
+            | Character::UpperL
+            | Character::UpperM
+            | Character::UpperN
+            | Character::UpperO
+            | Character::UpperP
+            | Character::UpperQ
+            | Character::UpperR
+            | Character::UpperS
+            | Character::UpperT
+            | Character::UpperU
+            | Character::UpperV
+            | Character::UpperW
+            | Character::UpperX
+            | Character::UpperY
+            | Character::UpperZ => true,
+            | _ => false,
+        }
+    }
     pub fn is_whitespace(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_WHITESPACE != 0;
     }

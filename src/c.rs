@@ -15,7 +15,6 @@ unsafe extern "C" {
     pub fn flockfile(__stream: *mut libc::FILE);
     pub fn funlockfile(__stream: *mut libc::FILE);
 }
-pub const _ISALPHANUMERIC: u32 = 8;
 pub const _ISPUNCTUATION: u32 = 4;
 pub const _ISCONTROL: u32 = 2;
 pub const _ISGRAPH: u32 = 32768;

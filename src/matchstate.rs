@@ -611,25 +611,25 @@ pub unsafe fn match_class(c: i32, class_: i32) -> i32 {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL as i32;
             },
             | Character::LowerD => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISDIGIT as i32;
+                res = Character::from(c).is_digit() as i32;
             },
             | Character::LowerG => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH as i32;
             },
             | Character::LowerL => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISLOWER as i32;
+                res = Character::from(c).is_lower() as i32;
             },
             | Character::LowerP => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISPUNCTUATION as i32;
             },
             | Character::LowerS => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISSPACE as i32;
+                res = Character::from(c).is_whitespace() as i32;
             },
             | Character::LowerU => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISUPPER as i32;
+                res = Character::from(c).is_upper() as i32;
             },
             | Character::LowerW => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHANUMERIC as i32;
+                res = Character::from(c).is_alphanumeric() as i32;
             },
             | Character::LowerX => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT as i32;

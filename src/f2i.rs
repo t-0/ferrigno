@@ -209,7 +209,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
         } else if *s as i32 == Character::Plus as i32 {
             s = s.offset(1);
         }
-        if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 == 0 {
+        if !Character::from(*s as i32).is_alphanumeric() {
             return null();
         }
         loop {
@@ -223,7 +223,7 @@ pub unsafe fn b_str2int(mut s: *const i8, base: i32, pn: *mut i64) -> *const i8 
             }
             n = n * base as usize + digit_0 as usize;
             s = s.offset(1);
-            if !(*(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISALPHANUMERIC as i32 != 0) {
+            if !Character::from(*s as i32).is_alphanumeric() {
                 break;
             }
         }
