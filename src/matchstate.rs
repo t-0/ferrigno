@@ -608,7 +608,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
                 res = Character::from(c).is_alpha();
             },
             | Character::LowerC => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL != 0;
+                res = Character::from(c).is_control();
             },
             | Character::LowerD => {
                 res = Character::from(c).is_digit_decimal();
