@@ -1,9 +1,5 @@
 const CHARACTER_TYPE_NONE: u8 = 0x00;
-const CHARACTER_TYPE_IDENTIFIER: u8 = 0x01;
-const CHARACTER_TYPE_DIGIT_DECIMAL: u8 = 0x02;
 const CHARACTER_TYPE_PRINTABLE: u8 = 0x04;
-const CHARACTER_TYPE_WHITESPACE: u8 = 0x08;
-const CHARACTER_TYPE_DIGIT_HEXADECIMAL: u8 = 0x10;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[repr(i32)]
 pub enum Character {
@@ -139,21 +135,6 @@ pub enum Character {
 impl Character {
     pub fn is_alpha(&self) -> bool {
         self.is_lower() || self.is_upper()
-    }
-    pub fn is_digit(&self) -> bool {
-        match self {
-            | Character::Digit0
-            | Character::Digit1
-            | Character::Digit2
-            | Character::Digit3
-            | Character::Digit4
-            | Character::Digit5
-            | Character::Digit6
-            | Character::Digit7
-            | Character::Digit8
-            | Character::Digit9 => true,
-            | _ => false,
-        }
     }
     pub fn from(input: i32) -> Self {
         match input {
@@ -344,13 +325,13 @@ impl Character {
             | Character::GroupSeparator
             | Character::RecordSeparator
             | Character::UnitSeparator
-            | Character::Delete => CHARACTER_TYPE_NONE,
+            | Character::Delete
             | Character::HorizontalTab
             | Character::LineFeed
             | Character::VerticalTab
             | Character::FormFeed
-            | Character::CarriageReturn => CHARACTER_TYPE_WHITESPACE,
-            | Character::Space => CHARACTER_TYPE_WHITESPACE | CHARACTER_TYPE_PRINTABLE,
+            | Character::CarriageReturn => CHARACTER_TYPE_NONE,
+            | Character::Space => CHARACTER_TYPE_PRINTABLE,
             | Character::Exclamation
             | Character::DoubleQuote
             | Character::Octothorpe
@@ -391,7 +372,7 @@ impl Character {
             | Character::Digit6
             | Character::Digit7
             | Character::Digit8
-            | Character::Digit9 => CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_DIGIT_DECIMAL,
+            | Character::Digit9
             | Character::UpperA
             | Character::UpperB
             | Character::UpperC
@@ -403,7 +384,7 @@ impl Character {
             | Character::LowerC
             | Character::LowerD
             | Character::LowerE
-            | Character::LowerF => CHARACTER_TYPE_DIGIT_HEXADECIMAL | CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
+            | Character::LowerF => CHARACTER_TYPE_PRINTABLE,
             | Character::UpperG
             | Character::UpperH
             | Character::UpperI
@@ -443,8 +424,8 @@ impl Character {
             | Character::LowerW
             | Character::LowerX
             | Character::LowerY
-            | Character::LowerZ => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
-            | Character::Underscore => CHARACTER_TYPE_PRINTABLE | CHARACTER_TYPE_IDENTIFIER,
+            | Character::LowerZ => CHARACTER_TYPE_PRINTABLE,
+            | Character::Underscore => CHARACTER_TYPE_PRINTABLE,
         }
     }
     pub fn is_lower(&self) -> bool {
@@ -510,22 +491,95 @@ impl Character {
         }
     }
     pub fn is_whitespace(&self) -> bool {
-        return self.get_character_type() & CHARACTER_TYPE_WHITESPACE != 0;
+        match self {
+            | Character::Space
+            | Character::HorizontalTab
+            | Character::VerticalTab
+            | Character::LineFeed
+            | Character::FormFeed
+            | Character::CarriageReturn => true,
+            | _ => false,
+        }
     }
     pub fn is_alphanumeric(&self) -> bool {
-        return self.get_character_type() & (CHARACTER_TYPE_IDENTIFIER | CHARACTER_TYPE_DIGIT_DECIMAL) != 0;
+        self.is_digit_decimal() || self.is_identifier()
     }
     pub fn is_printable(&self) -> bool {
         return self.get_character_type() & CHARACTER_TYPE_PRINTABLE != 0;
     }
     pub fn is_identifier(&self) -> bool {
-        return self.get_character_type() & CHARACTER_TYPE_IDENTIFIER != 0;
+        match self {
+            | Character::LowerA | Character::UpperA
+            | Character::LowerB | Character::UpperB
+            | Character::LowerC | Character::UpperC
+            | Character::LowerD | Character::UpperD
+            | Character::LowerE | Character::UpperE
+            | Character::LowerF | Character::UpperF
+            | Character::LowerG | Character::UpperG
+            | Character::LowerH | Character::UpperH
+            | Character::LowerI | Character::UpperI
+            | Character::LowerJ | Character::UpperJ
+            | Character::LowerK | Character::UpperK
+            | Character::LowerL | Character::UpperL
+            | Character::LowerM | Character::UpperM
+            | Character::LowerN | Character::UpperN
+            | Character::LowerO | Character::UpperO
+            | Character::LowerP | Character::UpperP
+            | Character::LowerQ | Character::UpperQ
+            | Character::LowerR | Character::UpperR
+            | Character::LowerS | Character::UpperS
+            | Character::LowerT | Character::UpperT
+            | Character::LowerU | Character::UpperU
+            | Character::LowerV | Character::UpperV
+            | Character::LowerW | Character::UpperW
+            | Character::LowerX | Character::UpperX
+            | Character::LowerY | Character::UpperY
+            | Character::LowerZ | Character::UpperZ
+            | Character::Underscore => true,
+            | _ => false,
+        }
     }
     pub fn is_digit_hexadecimal(&self) -> bool {
-        return self.get_character_type() & CHARACTER_TYPE_DIGIT_HEXADECIMAL != 0;
+        match self {
+            | Character::Digit0
+            | Character::Digit1
+            | Character::Digit2
+            | Character::Digit3
+            | Character::Digit4
+            | Character::Digit5
+            | Character::Digit6
+            | Character::Digit7
+            | Character::Digit8
+            | Character::Digit9
+            | Character::LowerA
+            | Character::LowerB
+            | Character::LowerC
+            | Character::LowerD
+            | Character::LowerE
+            | Character::LowerF
+            | Character::UpperA
+            | Character::UpperB
+            | Character::UpperC
+            | Character::UpperD
+            | Character::UpperE
+            | Character::UpperF => true,
+            | _ => false,
+        }
     }
     pub fn is_digit_decimal(&self) -> bool {
-        return self.get_character_type() & CHARACTER_TYPE_DIGIT_DECIMAL != 0;
+        match self {
+            | Character::Digit0
+            | Character::Digit1
+            | Character::Digit2
+            | Character::Digit3
+            | Character::Digit4
+            | Character::Digit5
+            | Character::Digit6
+            | Character::Digit7
+            | Character::Digit8
+            | Character::Digit9 => true,
+            | _ => false,
+        }
     }
 }
 pub unsafe fn luao_utf8esc(buffer: *mut i8, mut x: usize) -> i32 {

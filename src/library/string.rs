@@ -793,13 +793,13 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
 pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { nativeendian_dummy: 1 };
 pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
-        if Character::from(**fmt as i32).is_digit() {
+        if Character::from(**fmt as i32).is_digit_decimal() {
             let mut a: i32 = 0;
             loop {
                 let fresh179 = *fmt;
                 *fmt = (*fmt).offset(1);
                 a = a * 10 as i32 + (*fresh179 as i32 - Character::Digit0 as i32);
-                if !(Character::from(**fmt as i32).is_digit()
+                if !(Character::from(**fmt as i32).is_digit_decimal()
                     && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
                         !(0usize)
                     } else {

@@ -611,7 +611,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL != 0;
             },
             | Character::LowerD => {
-                res = Character::from(c).is_digit();
+                res = Character::from(c).is_digit_decimal();
             },
             | Character::LowerG => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH != 0;
