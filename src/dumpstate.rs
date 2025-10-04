@@ -1,33 +1,41 @@
+use libc::*;
+use std::ptr::*;
+//
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
-use libc::*;
-use std::ptr::*;
+use crate::tvalue::*;
+use crate::closure::*;
+use crate::tag::*;
+//
 pub const LUA_SIGNATURE: *const i8 = c"\x1BLua".as_ptr();
 #[repr(C)]
 pub struct DumpState {
-    pub dumpstate_interpreter: *mut Interpreter,
-    pub dumpstate_writefunction: WriteFunction,
-    pub dumpstate_pointer: *mut c_void,
-    pub dumpstate_isstrip: bool,
-    pub dumpstate_status: i32,
+    m_interpreter: *mut Interpreter,
+    m_write_function: WriteFunction,
+    m_pointer: *mut c_void,
+    m_is_strip: bool,
+    m_status: i32,
 }
 impl DumpState {
     pub fn new(interpreter: *mut Interpreter, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool) -> Self {
         return DumpState {
-            dumpstate_interpreter: interpreter,
-            dumpstate_writefunction: write_function,
-            dumpstate_pointer: pointer,
-            dumpstate_isstrip: is_strip,
-            dumpstate_status: 0,
+            m_interpreter: interpreter,
+            m_write_function: write_function,
+            m_pointer: pointer,
+            m_is_strip: is_strip,
+            m_status: 0,
         };
+    }
+    pub fn is_strip(&self) -> bool {
+        self.m_is_strip
     }
     pub unsafe fn dump_block(&mut self, pointer: *const c_void, size: usize) {
         unsafe {
-            if self.dumpstate_status == 0 && size > 0 {
-                self.dumpstate_status = (Some((self.dumpstate_writefunction).expect("non-null function pointer")))
+            if self.m_status == 0 && size > 0 {
+                self.m_status = (Some((self.m_write_function).expect("non-null function pointer")))
                     .expect("non-null function pointer")(
-                    self.dumpstate_interpreter, pointer, size as usize, self.dumpstate_pointer,
+                    self.m_interpreter, pointer, size as usize, self.m_pointer
                 );
             }
         }
@@ -86,15 +94,33 @@ impl DumpState {
             self.dump_number(370.5);
         }
     }
+    pub unsafe fn save_prototype(
+        interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool,
+    ) -> i32 {
+        unsafe {
+            let mut dump_state = DumpState::new(interpreter, write_function, pointer, is_strip);
+            dump_state.dump_header();
+            dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
+            (*prototype).dump_function(&mut dump_state, null_mut());
+            dump_state.m_status
+        }
+    }
 }
-pub unsafe fn save_prototype(
-    interpreter: *mut Interpreter, prototype: *const Prototype, write_function: WriteFunction, pointer: *mut c_void, is_strip: bool,
-) -> i32 {
+pub unsafe fn lua_dump(interpreter: *mut Interpreter, writer_0: WriteFunction, data: *mut libc::c_void, is_strip: bool) -> i32 {
     unsafe {
-        let mut dump_state = DumpState::new(interpreter, write_function, pointer, is_strip);
-        dump_state.dump_header();
-        dump_state.dump_byte((*prototype).prototype_upvalues.get_size() as u8);
-        (*prototype).dump_function(&mut dump_state, null_mut());
-        dump_state.dumpstate_status
+        let status: i32;
+        let o: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
+        if (*o).get_tagvariant() == TagVariant::ClosureL {
+            status = DumpState::save_prototype(
+                interpreter,
+                (*((*o).tvalue_value.value_object as *mut Closure)).payload.l_prototype,
+                writer_0,
+                data,
+                is_strip,
+            );
+        } else {
+            status = 1;
+        }
+        return status;
     }
 }

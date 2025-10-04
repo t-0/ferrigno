@@ -64,7 +64,7 @@ impl Prototype {
     }
     pub unsafe fn dump_function(&self, dump_state: &mut DumpState, source: *mut TString) {
         unsafe {
-            if dump_state.dumpstate_isstrip || self.prototype_source == source {
+            if dump_state.is_strip() || self.prototype_source == source {
                 TString::dump_string(dump_state, null());
             } else {
                 TString::dump_string(dump_state, self.prototype_source);
@@ -83,7 +83,7 @@ impl Prototype {
     }
     pub unsafe fn dump_debug(&self, dump_state: &mut DumpState) {
         unsafe {
-            let n = if dump_state.dumpstate_isstrip {
+            let n = if dump_state.is_strip() {
                 0
             } else {
                 self.prototype_lineinfo.get_size() as usize
@@ -92,7 +92,7 @@ impl Prototype {
             dump_state.dump_block(self.prototype_lineinfo.vectort_pointer as *const libc::c_void, n);
         }
         unsafe {
-            let n = if dump_state.dumpstate_isstrip {
+            let n = if dump_state.is_strip() {
                 0
             } else {
                 self.prototype_absolutelineinfo.get_size() as usize
@@ -106,7 +106,7 @@ impl Prototype {
             }
         }
         unsafe {
-            let n = if dump_state.dumpstate_isstrip {
+            let n = if dump_state.is_strip() {
                 0
             } else {
                 self.prototype_localvariables.get_size() as usize
@@ -122,7 +122,7 @@ impl Prototype {
             }
         }
         unsafe {
-            let n = if dump_state.dumpstate_isstrip {
+            let n = if dump_state.is_strip() {
                 0
             } else {
                 self.prototype_upvalues.get_size() as usize

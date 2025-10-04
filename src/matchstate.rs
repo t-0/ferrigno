@@ -1,5 +1,4 @@
 use crate::buffer::*;
-use crate::c::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::tag::*;

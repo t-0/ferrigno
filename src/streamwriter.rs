@@ -2,6 +2,7 @@ use crate::buffer::*;
 use crate::interpreter::*;
 use crate::tag::*;
 use crate::tdefaultnew::*;
+use crate::dumpstate::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct StreamWriter {

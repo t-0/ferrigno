@@ -7,7 +7,6 @@ use crate::character::*;
 use crate::closeprotected::*;
 use crate::closure::*;
 use crate::debuginfo::*;
-use crate::dumpstate::*;
 use crate::dynamicdata::*;
 use crate::f2i::*;
 use crate::forloop::*;
@@ -2258,24 +2257,6 @@ pub unsafe fn lua_load(
                 } else {
                 }
             }
-        }
-        return status;
-    }
-}
-pub unsafe fn lua_dump(interpreter: *mut Interpreter, writer_0: WriteFunction, data: *mut libc::c_void, is_strip: bool) -> i32 {
-    unsafe {
-        let status: i32;
-        let o: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
-        if (*o).get_tagvariant() == TagVariant::ClosureL {
-            status = save_prototype(
-                interpreter,
-                (*((*o).tvalue_value.value_object as *mut Closure)).payload.l_prototype,
-                writer_0,
-                data,
-                is_strip,
-            );
-        } else {
-            status = 1;
         }
         return status;
     }
