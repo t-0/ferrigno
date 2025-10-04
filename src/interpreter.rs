@@ -6472,7 +6472,7 @@ pub unsafe extern "C" fn lual_error(interpreter: *mut Interpreter, fmt: *const i
 }
 pub unsafe fn lual_fileresult(interpreter: *mut Interpreter, stat: i32, fname: *const i8) -> i32 {
     unsafe {
-        let en: i32 = *__errno_location();
+        let en: i32 = *libc::__errno_location();
         if stat != 0 {
             (*interpreter).push_boolean(true);
             return 1;
@@ -6491,7 +6491,7 @@ pub unsafe fn lual_fileresult(interpreter: *mut Interpreter, stat: i32, fname: *
 }
 pub unsafe fn lual_execresult(interpreter: *mut Interpreter, mut stat: i32) -> i32 {
     unsafe {
-        if stat != 0 && *__errno_location() != 0 {
+        if stat != 0 && *libc::__errno_location() != 0 {
             return lual_fileresult(interpreter, 0, null());
         } else {
             let mut what: *const i8 = c"exit".as_ptr();
@@ -6689,7 +6689,7 @@ pub unsafe fn get_f(mut _state: *mut Interpreter, arbitrary_data: *mut libc::c_v
 }
 pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex: i32) -> Status {
     unsafe {
-        let err: i32 = *__errno_location();
+        let err: i32 = *libc::__errno_location();
         let filename: *const i8 = (lua_tolstring(interpreter, fnameindex, null_mut())).offset(1 as isize);
         if err != 0 {
             lua_pushfstring(interpreter, c"cannot %s %s: %s".as_ptr(), what, filename, libc::strerror(err));
@@ -6740,7 +6740,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
             lf.loadf_file = stdin;
         } else {
             lua_pushfstring(interpreter, c"@%s".as_ptr(), filename);
-            *__errno_location() = 0;
+            *libc::__errno_location() = 0;
             lf.loadf_file = libc::fopen(filename, c"r".as_ptr()) as *mut libc::FILE;
             if (lf.loadf_file).is_null() {
                 return errfile(interpreter, c"open".as_ptr(), fnameindex);
@@ -6755,8 +6755,8 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             lf.loadf_n = 0;
             if !filename.is_null() {
-                *__errno_location() = 0;
-                lf.loadf_file = freopen(filename, c"rb".as_ptr(), lf.loadf_file);
+                *libc::__errno_location() = 0;
+                lf.loadf_file = libc::freopen(filename, c"rb".as_ptr(), lf.loadf_file);
                 if (lf.loadf_file).is_null() {
                     return errfile(interpreter, c"reopen".as_ptr(), fnameindex);
                 }
@@ -6768,7 +6768,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
             lf.loadf_n = lf.loadf_n + 1;
             lf.loadf_buffer[fresh149 as usize] = c as i8;
         }
-        *__errno_location() = 0;
+        *libc::__errno_location() = 0;
         let reader = Reader::new(Some(
             get_f as unsafe fn(*mut Interpreter, *mut libc::c_void, *mut usize) -> *const i8,
         ));
@@ -7016,7 +7016,7 @@ pub unsafe fn panic(interpreter: *mut Interpreter) -> i32 {
         } else {
             c"error object is not a string".as_ptr()
         };
-        fprintf(stderr, c"PANIC: unprotected error in call to Lua API (%s)\n".as_ptr(), message);
+        libc::fprintf(stderr, c"PANIC: unprotected error in call to Lua API (%s)\n".as_ptr(), message);
         libc::fflush(stderr);
         return 0;
     }
@@ -7055,7 +7055,7 @@ pub unsafe fn warnfoff(arbitrary_data: *mut libc::c_void, message: *const i8, to
 pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, tocont: i32) {
     unsafe {
         let interpreter: *mut Interpreter = arbitrary_data as *mut Interpreter;
-        fprintf(stderr, c"%s".as_ptr(), message);
+        libc::fprintf(stderr, c"%s".as_ptr(), message);
         libc::fflush(stderr);
         if tocont != 0 {
             lua_setwarnf(
@@ -7064,7 +7064,7 @@ pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, t
                 interpreter as *mut libc::c_void,
             );
         } else {
-            fprintf(stderr, c"%s".as_ptr(), c"\n".as_ptr());
+            libc::fprintf(stderr, c"%s".as_ptr(), c"\n".as_ptr());
             libc::fflush(stderr);
             lua_setwarnf(
                 interpreter,
@@ -7079,7 +7079,7 @@ pub unsafe fn warnfon(arbitrary_data: *mut libc::c_void, message: *const i8, toc
         if checkcontrol(arbitrary_data as *mut Interpreter, message, tocont) != 0 {
             return;
         }
-        fprintf(stderr, c"%s".as_ptr(), c"Lua warning: ".as_ptr());
+        libc::fprintf(stderr, c"%s".as_ptr(), c"Lua warning: ".as_ptr());
         libc::fflush(stderr);
         warnfcont(arbitrary_data, message, tocont);
     }
@@ -7189,8 +7189,8 @@ pub unsafe fn setsignal(sig: i32, handler: Option<unsafe fn(i32) -> ()>) {
         };
         signalaction.__sigaction_handler.sa_handler = handler;
         signalaction.sa_flags = 0;
-        sigemptyset(&mut signalaction.sa_mask);
-        sigaction(sig, &mut signalaction, null_mut());
+        libc::sigemptyset(&mut signalaction.sa_mask as *mut SIgnalSet as *mut libc::sigset_t);
+        libc::sigaction(sig, &mut signalaction as *mut SignalAction as *mut libc::sigaction, null_mut());
     }
 }
 pub unsafe fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
@@ -7213,18 +7213,18 @@ pub unsafe fn laction(i: i32) {
 }
 pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
-        fprintf(stderr, c"%s: ".as_ptr(), PROGRAM_NAME);
+        libc::fprintf(stderr, c"%s: ".as_ptr(), PROGRAM_NAME);
         libc::fflush(stderr);
         if *badoption.offset(1 as isize) as i32 == Character::LowerE as i32
             || *badoption.offset(1 as isize) as i32 == Character::LowerL as i32
         {
-            fprintf(stderr, c"'%s' needs argument\n".as_ptr(), badoption);
+            libc::fprintf(stderr, c"'%s' needs argument\n".as_ptr(), badoption);
             libc::fflush(stderr);
         } else {
-            fprintf(stderr, c"unrecognized option '%s'\n".as_ptr(), badoption);
+            libc::fprintf(stderr, c"unrecognized option '%s'\n".as_ptr(), badoption);
             libc::fflush(stderr);
         }
-        fprintf(
+        libc::fprintf(
             stderr,
             c"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global Character::LowerG\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n".as_ptr(),
             PROGRAM_NAME,
@@ -7235,10 +7235,10 @@ pub unsafe fn print_usage(badoption: *const i8) {
 pub unsafe fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
-            fprintf(stderr, c"%s: ".as_ptr(), pname);
+            libc::fprintf(stderr, c"%s: ".as_ptr(), pname);
             libc::fflush(stderr);
         }
-        fprintf(stderr, c"%s\n".as_ptr(), message);
+        libc::fprintf(stderr, c"%s\n".as_ptr(), message);
         libc::fflush(stderr);
     }
 }
@@ -7518,9 +7518,9 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
         let mut buffer: [i8; 512] = [0; 512];
         let b: *mut i8 = buffer.as_mut_ptr();
         let prmt: *const i8 = get_prompt(interpreter, firstline);
-        fputs(prmt, stdout);
+        libc::fputs(prmt, stdout);
         libc::fflush(stdout);
-        let readstatus = !fgets(b, 512 as i32, stdin).is_null();
+        let readstatus = !libc::fgets(b, 512 as i32, stdin).is_null();
         lua_settop(interpreter, 0);
         if !readstatus {
             return false;

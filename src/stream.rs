@@ -1,4 +1,3 @@
-use crate::c::*;
 use crate::functions::*;
 #[derive(Copy, Clone)]
 #[repr(C)]

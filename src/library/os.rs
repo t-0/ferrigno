@@ -12,7 +12,7 @@ pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let cmd: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let stat: i32;
-        *__errno_location() = 0;
+        *libc::__errno_location() = 0;
         stat = system(cmd);
         if !cmd.is_null() {
             return lual_execresult(interpreter, stat);
@@ -25,7 +25,7 @@ pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn os_remove(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        *__errno_location() = 0;
+        *libc::__errno_location() = 0;
         return lual_fileresult(interpreter, (remove(filename) == 0) as i32, filename);
     }
 }
@@ -33,7 +33,7 @@ pub unsafe fn os_rename(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fromname: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let toname: *const i8 = lual_checklstring(interpreter, 2, null_mut());
-        *__errno_location() = 0;
+        *libc::__errno_location() = 0;
         return lual_fileresult(interpreter, (rename(fromname, toname) == 0) as i32, null());
     }
 }
@@ -78,7 +78,7 @@ pub unsafe fn setboolfield(interpreter: *mut Interpreter, key: *const i8, value:
         lua_setfield(interpreter, -2, key);
     }
 }
-pub unsafe fn setallfields(interpreter: *mut Interpreter, stm: *mut TM) {
+pub unsafe fn setallfields(interpreter: *mut Interpreter, stm: *mut libc::tm) {
     unsafe {
         setfield(interpreter, c"year".as_ptr(), (*stm).tm_year, 1900 as i32);
         setfield(interpreter, c"month".as_ptr(), (*stm).tm_mon, 1);
@@ -170,7 +170,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             l_checktime(interpreter, 2)
         };
         let stringend: *const i8 = stringpointer.offset(slen as isize);
-        let mut tmr: TM = TM {
+        let mut tmr: libc::tm = libc::tm {
             tm_sec: 0,
             tm_min: 0,
             tm_hour: 0,
@@ -180,15 +180,15 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             tm_wday: 0,
             tm_yday: 0,
             tm_isdst: 0,
-            __tm_gmtoff: 0,
-            __tm_zone: null(),
+            tm_gmtoff: 0,
+            tm_zone: null(),
         };
-        let stm: *mut TM;
+        let stm: *mut libc::tm;
         if *stringpointer as i32 == Character::Exclamation as i32 {
-            stm = gmtime_r(&mut t, &mut tmr);
+            stm = libc::gmtime_r(&mut t, &mut tmr);
             stringpointer = stringpointer.offset(1);
         } else {
-            stm = localtime_r(&mut t, &mut tmr);
+            stm = libc::localtime_r(&mut t, &mut tmr);
         }
         if stm.is_null() {
             return lual_error(interpreter, c"date result cannot be represented in this installation".as_ptr());
@@ -220,7 +220,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
                         stringend.offset_from(stringpointer) as i64,
                         cc.as_mut_ptr().offset(1 as isize),
                     );
-                    reslen = strftime(buffer, 250, cc.as_mut_ptr(), stm);
+                    reslen = libc::strftime(buffer, 250, cc.as_mut_ptr(), stm);
                     b.buffer_loads
                         .set_length((b.buffer_loads.get_length() as usize).wrapping_add(reslen as usize));
                 }
@@ -238,7 +238,7 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                 sometime = time(null_mut());
             },
             | _ => {
-                let mut timestruct: TM = TM {
+                let mut timestruct: libc::tm = libc::tm {
                     tm_sec: 0,
                     tm_min: 0,
                     tm_hour: 0,
@@ -248,8 +248,8 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                     tm_wday: 0,
                     tm_yday: 0,
                     tm_isdst: 0,
-                    __tm_gmtoff: 0,
-                    __tm_zone: null(),
+                    tm_gmtoff: 0,
+                    tm_zone: null(),
                 };
                 (*interpreter).lual_checktype(1, TagType::Table);
                 lua_settop(interpreter, 1);

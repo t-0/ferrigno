@@ -1,4 +1,3 @@
-use crate::c::*;
 #[repr(C)]
 pub struct LoadF {
     pub loadf_n: i32,

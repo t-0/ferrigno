@@ -1,4 +1,3 @@
-use crate::c::*;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct RN {
