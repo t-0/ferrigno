@@ -578,7 +578,7 @@ impl MatchState {
                     *((*b).buffer_loads.at_mut(fresh164 as isize)) = *p;
                 } else if *p as i32 == Character::Digit0 as i32 {
                     (*b).add_string_with_length(s, e.offset_from(s) as usize);
-                } else if *(*__ctype_b_loc()).offset(*p as u8 as isize) as i32 & _ISDIGIT as i32 != 0 {
+                } else if Character::from(*p as u8 as i32).is_digit_decimal() {
                     let mut cap: *const i8 = null();
                     let resl: i64 = self.get_onecapture(*p as i32 - Character::Digit1 as i32, s, e, &mut cap) as i64;
                     if resl == -2 as i64 {
@@ -639,7 +639,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
             },
             | _ => return class_ == c,
         }
-        return if *(*__ctype_b_loc()).offset(class_ as isize) as i32 & _ISLOWER != 0 {
+        return if Character::from(class_ as i32).is_lower() {
             res
         } else {
             !res
