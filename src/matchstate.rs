@@ -632,7 +632,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
                 res = Character::from(c).is_alphanumeric();
             },
             | Character::LowerX => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT != 0;
+                res = Character::from(c).is_digit_hexadecimal();
             },
             | Character::LowerZ => {
                 res = c == 0;
