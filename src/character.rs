@@ -137,6 +137,9 @@ pub enum Character {
     Delete = 127,
 }
 impl Character {
+    pub fn is_alpha(&self) -> bool {
+        self.is_lower() || self.is_upper()
+    }
     pub fn is_digit(&self) -> bool {
         match self {
             | Character::Digit0

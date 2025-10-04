@@ -605,7 +605,7 @@ pub unsafe fn match_class(c: i32, class_: i32) -> bool {
         let res: bool;
         match Character::from(tolower(class_)) {
             | Character::LowerA => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA != 0;
+                res = Character::from(c).is_alpha();
             },
             | Character::LowerC => {
                 res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL != 0;
