@@ -161,19 +161,19 @@ impl MatchState {
             };
         }
     }
-    pub unsafe fn singlematch(&mut self, s: *const i8, p: *const i8, ep: *const i8) -> i32 {
+    pub unsafe fn singlematch(&mut self, s: *const i8, p: *const i8, ep: *const i8) -> bool {
         unsafe {
             if s >= self.src_end {
-                return 0;
+                return false;
             } else {
                 let c: i32 = *s as u8 as i32;
                 match *p as i32 {
-                    | 46 => return 1,
+                    | 46 => return true,
                     | 37 => {
                         return match_class(c, *p.offset(1 as isize) as u8 as i32);
                     },
                     | 91 => return matchbracketclass(c, p, ep.offset(-(1 as isize))),
-                    | _ => return (*p as u8 as i32 == c) as i32,
+                    | _ => return *p as u8 as i32 == c,
                 }
             };
         }
@@ -213,7 +213,7 @@ impl MatchState {
     pub unsafe fn max_expand(&mut self, s: *const i8, p: *const i8, ep: *const i8) -> *const i8 {
         unsafe {
             let mut i: i64 = 0;
-            while self.singlematch(s.offset(i as isize), p, ep) != 0 {
+            while self.singlematch(s.offset(i as isize), p, ep) {
                 i += 1;
             }
             while i >= 0 {
@@ -232,7 +232,7 @@ impl MatchState {
                 let res: *const i8 = self.match_0(s, ep.offset(1 as isize));
                 if !res.is_null() {
                     return res;
-                } else if self.singlematch(s, p, ep) != 0 {
+                } else if self.singlematch(s, p, ep) {
                     s = s.offset(1);
                 } else {
                     return null();
@@ -352,8 +352,8 @@ impl MatchState {
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
-                                    if matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize))) == 0
-                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize))) != 0
+                                    if !matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize)))
+                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize)))
                                     {
                                         p = ep;
                                         continue;
@@ -402,8 +402,8 @@ impl MatchState {
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
-                                    if matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize))) == 0
-                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize))) != 0
+                                    if !matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize)))
+                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize)))
                                     {
                                         p = ep;
                                         continue;
@@ -461,8 +461,8 @@ impl MatchState {
                                     } else {
                                         *s.offset(-(1 as isize)) as i32
                                     }) as i8;
-                                    if matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize))) == 0
-                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize))) != 0
+                                    if !matchbracketclass(previous as u8 as i32, p, ep.offset(-(1 as isize)))
+                                        && matchbracketclass(*s as u8 as i32, p, ep.offset(-(1 as isize)))
                                     {
                                         p = ep;
                                         continue;
@@ -488,7 +488,7 @@ impl MatchState {
                     | _ => {},
                 }
                 ep_0 = self.classend(p);
-                if self.singlematch(s, p, ep_0) == 0 {
+                if !self.singlematch(s, p, ep_0) {
                     if *ep_0 as i32 == Character::Asterisk as i32
                         || *ep_0 as i32 == Character::Question as i32
                         || *ep_0 as i32 == Character::Hyphen as i32
@@ -600,53 +600,53 @@ impl MatchState {
         }
     }
 }
-pub unsafe fn match_class(c: i32, class_: i32) -> i32 {
+pub unsafe fn match_class(c: i32, class_: i32) -> bool {
     unsafe {
-        let res: i32;
+        let res: bool;
         match Character::from(tolower(class_)) {
             | Character::LowerA => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA as i32;
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISALPHA != 0;
             },
             | Character::LowerC => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL as i32;
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISCONTROL != 0;
             },
             | Character::LowerD => {
-                res = Character::from(c).is_digit() as i32;
+                res = Character::from(c).is_digit();
             },
             | Character::LowerG => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH as i32;
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISGRAPH != 0;
             },
             | Character::LowerL => {
-                res = Character::from(c).is_lower() as i32;
+                res = Character::from(c).is_lower();
             },
             | Character::LowerP => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISPUNCTUATION as i32;
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISPUNCTUATION != 0;
             },
             | Character::LowerS => {
-                res = Character::from(c).is_whitespace() as i32;
+                res = Character::from(c).is_whitespace();
             },
             | Character::LowerU => {
-                res = Character::from(c).is_upper() as i32;
+                res = Character::from(c).is_upper();
             },
             | Character::LowerW => {
-                res = Character::from(c).is_alphanumeric() as i32;
+                res = Character::from(c).is_alphanumeric();
             },
             | Character::LowerX => {
-                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT as i32;
+                res = *(*__ctype_b_loc()).offset(c as isize) as i32 & _ISXDIGIT != 0;
             },
             | Character::LowerZ => {
-                res = (c == 0) as i32;
+                res = c == 0;
             },
-            | _ => return (class_ == c) as i32,
+            | _ => return class_ == c,
         }
-        return if *(*__ctype_b_loc()).offset(class_ as isize) as i32 & _ISLOWER as i32 != 0 {
+        return if *(*__ctype_b_loc()).offset(class_ as isize) as i32 & _ISLOWER != 0 {
             res
         } else {
-            (res == 0) as i32
+            !res
         };
     }
 }
-pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 {
+pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> bool {
     unsafe {
         let mut sig: i32 = 1;
         if *p.offset(1 as isize) as i32 == Character::Caret as i32 {
@@ -660,18 +660,18 @@ pub unsafe fn matchbracketclass(c: i32, mut p: *const i8, ec: *const i8) -> i32 
             }
             if *p as i32 == Character::Percent as i32 {
                 p = p.offset(1);
-                if match_class(c, *p as u8 as i32) != 0 {
-                    return sig;
+                if match_class(c, *p as u8 as i32) {
+                    return sig != 0;
                 }
             } else if *p.offset(1 as isize) as i32 == Character::Hyphen as i32 && p.offset(2 as isize) < ec {
                 p = p.offset(2 as isize);
                 if *p.offset(-(2 as isize)) as u8 as i32 <= c && c <= *p as u8 as i32 {
-                    return sig;
+                    return sig != 0;
                 }
             } else if *p as u8 as i32 == c {
-                return sig;
+                return sig != 0;
             }
         }
-        return (sig == 0) as i32;
+        return sig == 0;
     }
 }

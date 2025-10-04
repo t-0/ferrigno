@@ -15,15 +15,15 @@ unsafe extern "C" {
     pub fn flockfile(__stream: *mut libc::FILE);
     pub fn funlockfile(__stream: *mut libc::FILE);
 }
-pub const _ISPUNCTUATION: u32 = 4;
-pub const _ISCONTROL: u32 = 2;
-pub const _ISGRAPH: u32 = 32768;
-pub const _ISSPACE: u32 = 8192;
-pub const _ISXDIGIT: u32 = 4096;
-pub const _ISDIGIT: u32 = 2048;
-pub const _ISALPHA: u32 = 1024;
-pub const _ISLOWER: u32 = 512;
-pub const _ISUPPER: u32 = 256;
+pub const _ISPUNCTUATION: i32 = 4;
+pub const _ISCONTROL: i32 = 2;
+pub const _ISGRAPH: i32 = 32768;
+pub const _ISSPACE: i32 = 8192;
+pub const _ISXDIGIT: i32 = 4096;
+pub const _ISDIGIT: i32 = 2048;
+pub const _ISALPHA: i32 = 1024;
+pub const _ISLOWER: i32 = 512;
+pub const _ISUPPER: i32 = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SIgnalSet {
