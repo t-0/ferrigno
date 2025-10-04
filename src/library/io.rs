@@ -322,7 +322,7 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut libc::FILE) 
         flockfile(rn.rn_file);
         loop {
             rn.rn_c = getc_unlocked(rn.rn_file);
-            if !(*(*__ctype_b_loc()).offset(rn.rn_c as isize) as i32 & _ISSPACE as i32 != 0) {
+            if !Character::from(rn.rn_c as i32).is_whitespace() {
                 break;
             }
         }
