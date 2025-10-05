@@ -5,7 +5,6 @@ unsafe extern "C" {
 
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
-    pub fn clock() -> i64;
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

@@ -1,5 +1,4 @@
 use crate::buffer::*;
-use crate::c::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tag::*;
@@ -208,7 +207,12 @@ pub unsafe fn table_unpack(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn l_randomizepivot() -> u32 {
     unsafe {
-        let mut c: i64 = clock();
+        let mut timespec_ = libc::timespec {
+            tv_nsec: 0,
+            tv_sec: 0,
+        };
+        libc::clock_gettime(0, &mut timespec_);
+        let mut c: i64 = timespec_.tv_nsec;
         let mut t: i64 = time(null_mut());
         let mut buffer: [u32; 4] = [0; 4];
         let mut i: u32;

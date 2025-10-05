@@ -1,5 +1,4 @@
 use crate::buffer::*;
-use crate::c::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
@@ -62,7 +61,12 @@ pub unsafe fn os_getenv(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn os_clock(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        (*interpreter).push_number(clock() as f64 / 1000000 as f64);
+        let mut timespec_ = libc::timespec {
+            tv_nsec: 0,
+            tv_sec: 0,
+        };
+        libc::clock_gettime(0, &mut timespec_);
+        (*interpreter).push_number(timespec_.tv_nsec as f64 / 1000000 as f64);
         return 1;
     }
 }
