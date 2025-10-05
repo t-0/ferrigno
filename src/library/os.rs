@@ -42,7 +42,7 @@ pub unsafe fn os_tmpname(interpreter: *mut Interpreter) -> i32 {
         let mut buffer: [i8; 32] = [0; 32];
         let mut err: i32;
         libc::strcpy(buffer.as_mut_ptr(), c"/tmp/lua_XXXXXX".as_ptr());
-        err = mkstemp(buffer.as_mut_ptr());
+        err = libc::mkstemp(buffer.as_mut_ptr());
         if err != -1 {
             libc::close(err);
         }

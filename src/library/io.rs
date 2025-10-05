@@ -280,7 +280,7 @@ pub unsafe fn nextc(rn: *mut RN) -> i32 {
             let fresh152 = (*rn).rn_n;
             (*rn).rn_n = (*rn).rn_n + 1;
             (*rn).rn_buffer[fresh152 as usize] = (*rn).rn_c as i8;
-            (*rn).rn_c = getc_unlocked((*rn).rn_file);
+            (*rn).rn_c = libc::fgetc((*rn).rn_file);
             return 1;
         };
     }
@@ -321,7 +321,7 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut libc::FILE) 
         decp[1] = Character::Period as i8;
         flockfile(rn.rn_file);
         loop {
-            rn.rn_c = getc_unlocked(rn.rn_file);
+            rn.rn_c = libc::fgetc(rn.rn_file);
             if !Character::from(rn.rn_c as i32).is_whitespace() {
                 break;
             }
@@ -355,7 +355,7 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut libc::FILE) 
 }
 pub unsafe fn test_eof(interpreter: *mut Interpreter, file: *mut libc::FILE) -> i32 {
     unsafe {
-        let c: i32 = getc(file);
+        let c: i32 = libc::fgetc(file);
         libc::ungetc(c, file);
         lua_pushstring(interpreter, c"".as_ptr());
         return (c != -1) as i32;
@@ -379,7 +379,7 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut libc::FILE, ch
                     .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
                     .wrapping_mul(size_of::<f64>() as usize) as i32
                 && {
-                    c = getc_unlocked(file);
+                    c = libc::fgetc(file);
                     c != -1
                 }
                 && c != Character::LineFeed as i32

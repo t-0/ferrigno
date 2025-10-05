@@ -6684,9 +6684,9 @@ pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex
 }
 pub unsafe fn skip_bom(file: *mut libc::FILE) -> i32 {
     unsafe {
-        let c: i32 = getc(file);
-        if c == 0xef as i32 && getc(file) == 0xbb as i32 && getc(file) == 0xbf as i32 {
-            return getc(file);
+        let c: i32 = libc::fgetc(file);
+        if c == 0xef as i32 && libc::fgetc(file) == 0xbb as i32 && libc::fgetc(file) == 0xbf as i32 {
+            return libc::fgetc(file);
         } else {
             return c;
         };
@@ -6698,12 +6698,12 @@ pub unsafe fn skipcomment(file: *mut libc::FILE, pointer: *mut i32) -> i32 {
         let mut c: i32 = *pointer;
         if c == Character::Octothorpe as i32 {
             loop {
-                c = getc(file);
+                c = libc::fgetc(file);
                 if !(c != -1 && c != Character::LineFeed as i32) {
                     break;
                 }
             }
-            *pointer = getc(file);
+            *pointer = libc::fgetc(file);
             return 1;
         } else {
             return 0;

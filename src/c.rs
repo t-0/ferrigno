@@ -5,23 +5,11 @@ unsafe extern "C" {
 
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
-    pub fn getc(__stream: *mut libc::FILE) -> i32;
-    pub fn getc_unlocked(__stream: *mut libc::FILE) -> i32;
-    pub fn mkstemp(__template: *mut i8) -> i32;
     pub fn clock() -> i64;
     pub fn mktime(tp: *mut libc::tm) -> i64;
     pub fn flockfile(__stream: *mut libc::FILE);
     pub fn funlockfile(__stream: *mut libc::FILE);
 }
-pub const _ISPUNCTUATION: i32 = 4;
-pub const _ISCONTROL: i32 = 2;
-pub const _ISGRAPH: i32 = 32768;
-pub const _ISSPACE: i32 = 8192;
-pub const _ISXDIGIT: i32 = 4096;
-pub const _ISDIGIT: i32 = 2048;
-pub const _ISALPHA: i32 = 1024;
-pub const _ISLOWER: i32 = 512;
-pub const _ISUPPER: i32 = 256;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SIgnalSet {
