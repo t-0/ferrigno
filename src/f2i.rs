@@ -1,4 +1,3 @@
-use crate::c::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::tag::*;
@@ -177,13 +176,11 @@ pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     }
 }
 pub unsafe fn luav_modf(mut _state: *mut Interpreter, m: f64, n: f64) -> f64 {
-    unsafe {
-        let mut r: f64 = fmod(m, n);
-        if if r > 0.0 { (n < 0.0) as i32 } else { (r < 0.0 && n > 0.0) as i32 } != 0 {
-            r += n;
-        }
-        return r;
+    let mut r: f64 = m % n;
+    if if r > 0.0 { (n < 0.0) as i32 } else { (r < 0.0 && n > 0.0) as i32 } != 0 {
+        r += n;
     }
+    return r;
 }
 pub unsafe fn luav_shiftl(x: i64, y: i64) -> i64 {
     if y < 0 {

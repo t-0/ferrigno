@@ -3,7 +3,6 @@ unsafe extern "C" {
     pub static mut stdout: *mut libc::FILE;
     pub static mut stderr: *mut libc::FILE;
 
-    pub unsafe fn fmod(_: f64, _: f64) -> f64;
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
     pub fn getc(__stream: *mut libc::FILE) -> i32;

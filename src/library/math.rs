@@ -1,4 +1,3 @@
-use crate::c::*;
 use crate::interpreter::*;
 use crate::randomstate::*;
 use crate::registeredfunction::*;
@@ -187,7 +186,7 @@ unsafe fn math_fmod(interpreter: *mut Interpreter) -> i32 {
                 (*interpreter).push_integer(lua_tointegerx(interpreter, 1, null_mut()) % d);
             }
         } else {
-            (*interpreter).push_number(fmod(lual_checknumber(interpreter, 1), lual_checknumber(interpreter, 2)));
+            (*interpreter).push_number(lual_checknumber(interpreter, 1)  % lual_checknumber(interpreter, 2));
         }
         1
     }
