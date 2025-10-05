@@ -8,6 +8,7 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
 use crate::tag::*;
+use std::io::Write;
 use std::ptr::*;
 pub unsafe fn db_getregistry(interpreter: *mut Interpreter) -> i32 {
     unsafe {
@@ -276,8 +277,7 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         loop {
             let mut buffer: [i8; 250] = [0; 250];
-            libc::fprintf(stderr, c"%s".as_ptr(), c"lua_debug> ".as_ptr());
-            libc::fflush(stderr);
+            eprint!("lua_debug> ");
             if (libc::fgets(buffer.as_mut_ptr(), size_of::<[i8; 250]>() as i32, stdin)).is_null()
                 || libc::strcmp(buffer.as_mut_ptr(), c"cont\n".as_ptr()) == 0
             {
@@ -292,8 +292,7 @@ pub unsafe fn db_debug(interpreter: *mut Interpreter) -> i32 {
             ) != Status::OK
                 || CallS::api_call(interpreter, 0, 0, 0, 0, None) != Status::OK
             {
-                libc::fprintf(stderr, c"%s\n".as_ptr(), lual_tolstring(interpreter, -1, null_mut()));
-                libc::fflush(stderr);
+                eprint!("{}\n", std::ffi::CStr::from_ptr(lual_tolstring(interpreter, -1, null_mut())).display());
             }
             lua_settop(interpreter, 0);
         }

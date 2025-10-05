@@ -4,6 +4,7 @@ use crate::character::*;
 use crate::functions::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
+use std::io::Write;
 use crate::rn::*;
 use crate::stream::*;
 use crate::tag::*;
@@ -163,7 +164,8 @@ pub unsafe fn io_popen(interpreter: *mut Interpreter) -> i32 {
             != 0
             || lual_argerror(interpreter, 2, c"invalid mode".as_ptr()) != 0) as i32;
         *libc::__errno_location() = 0;
-        libc::fflush(null_mut());
+        std::io::stdout().flush().unwrap();
+        std::io::stderr().flush().unwrap();
         (*p).stream_file = libc::popen(filename, mode) as *mut libc::FILE;
         (*p).stream_cfunctionclose = Some(io_pclose as unsafe fn(*mut Interpreter) -> i32);
         return if ((*p).stream_file).is_null() {

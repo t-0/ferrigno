@@ -1,4 +1,4 @@
-#![feature(default_field_values, extern_types, c_variadic)]
+#![feature(default_field_values, extern_types, c_variadic, cstr_display)]
 use std::ptr::*;
 mod absolutelineinfo;
 mod blockcontrol;

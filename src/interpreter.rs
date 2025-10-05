@@ -1,4 +1,5 @@
 use crate::buffer::*;
+use std::io::Write;
 use crate::bufffs::*;
 use crate::c::*;
 use crate::callinfo::*;
@@ -550,7 +551,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
         }
         lua_settop(interpreter, 0);
         libc::fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
-        libc::fflush(stdout);
+        std::io::stdout().flush().unwrap();
         PROGRAM_NAME = oldprogname;
     }
 }
@@ -6997,8 +6998,7 @@ pub unsafe fn panic(interpreter: *mut Interpreter) -> i32 {
         } else {
             c"error object is not a string".as_ptr()
         };
-        libc::fprintf(stderr, c"PANIC: unprotected error in call to Lua API (%s)\n".as_ptr(), message);
-        libc::fflush(stderr);
+        eprint!("PANIC: unprotected error in call to Lua API ({})\n", std::ffi::CStr::from_ptr(message).display());
         return 0;
     }
 }
@@ -7036,8 +7036,7 @@ pub unsafe fn warnfoff(arbitrary_data: *mut libc::c_void, message: *const i8, to
 pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, tocont: i32) {
     unsafe {
         let interpreter: *mut Interpreter = arbitrary_data as *mut Interpreter;
-        libc::fprintf(stderr, c"%s".as_ptr(), message);
-        libc::fflush(stderr);
+        eprint!("{}", std::ffi::CStr::from_ptr(message).display());
         if tocont != 0 {
             lua_setwarnf(
                 interpreter,
@@ -7045,8 +7044,7 @@ pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, t
                 interpreter as *mut libc::c_void,
             );
         } else {
-            libc::fprintf(stderr, c"%s".as_ptr(), c"\n".as_ptr());
-            libc::fflush(stderr);
+            eprint!("\n");
             lua_setwarnf(
                 interpreter,
                 Some(warnfon as unsafe fn(*mut libc::c_void, *const i8, i32) -> ()),
@@ -7057,12 +7055,10 @@ pub unsafe fn warnfcont(arbitrary_data: *mut libc::c_void, message: *const i8, t
 }
 pub unsafe fn warnfon(arbitrary_data: *mut libc::c_void, message: *const i8, tocont: i32) {
     unsafe {
-        if checkcontrol(arbitrary_data as *mut Interpreter, message, tocont) != 0 {
-            return;
+        if checkcontrol(arbitrary_data as *mut Interpreter, message, tocont) == 0 {
+            eprint!("Lua warning: ");
+            warnfcont(arbitrary_data, message, tocont);
         }
-        libc::fprintf(stderr, c"%s".as_ptr(), c"Lua warning: ".as_ptr());
-        libc::fflush(stderr);
-        warnfcont(arbitrary_data, message, tocont);
     }
 }
 pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
@@ -7120,7 +7116,7 @@ pub unsafe fn luab_print(interpreter: *mut Interpreter) -> i32 {
             lua_settop(interpreter, -2);
         }
         libc::fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
-        libc::fflush(stdout);
+        std::io::stdout().flush().unwrap();
         return 0;
     }
 }
@@ -7194,33 +7190,25 @@ pub unsafe fn laction(i: i32) {
 }
 pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
-        libc::fprintf(stderr, c"%s: ".as_ptr(), PROGRAM_NAME);
-        libc::fflush(stderr);
+        eprint!("{}: ", std::ffi::CStr::from_ptr(PROGRAM_NAME).display());
         if *badoption.offset(1 as isize) as i32 == Character::LowerE as i32
             || *badoption.offset(1 as isize) as i32 == Character::LowerL as i32
         {
-            libc::fprintf(stderr, c"'%s' needs argument\n".as_ptr(), badoption);
-            libc::fflush(stderr);
+            eprint!("'{}' needs argument\n", std::ffi::CStr::from_ptr(badoption).display());
         } else {
-            libc::fprintf(stderr, c"unrecognized option '%s'\n".as_ptr(), badoption);
-            libc::fflush(stderr);
+            eprint!("unrecognized option '{}'\n", std::ffi::CStr::from_ptr(badoption).display());
         }
-        libc::fprintf(
-            stderr,
-            c"usage: %s [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global Character::LowerG\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n".as_ptr(),
-            PROGRAM_NAME,
+        eprint!("usage: {} [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l global=mod  require library 'mod' into global Character::LowerG\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  -         stop handling options and execute stdin\n",
+            std::ffi::CStr::from_ptr(PROGRAM_NAME).display(),
         );
-        libc::fflush(stderr);
     }
 }
 pub unsafe fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
-            libc::fprintf(stderr, c"%s: ".as_ptr(), pname);
-            libc::fflush(stderr);
+            eprint!("{}: ", std::ffi::CStr::from_ptr(pname).display());
         }
-        libc::fprintf(stderr, c"%s\n".as_ptr(), message);
-        libc::fflush(stderr);
+        eprint!("{}\n", std::ffi::CStr::from_ptr(message).display());
     }
 }
 pub unsafe fn report(interpreter: *mut Interpreter, status: Status) -> Status {
@@ -7503,7 +7491,7 @@ pub unsafe fn pushline(interpreter: *mut Interpreter, firstline: i32) -> bool {
         let b: *mut i8 = buffer.as_mut_ptr();
         let prmt: *const i8 = get_prompt(interpreter, firstline);
         libc::fputs(prmt, stdout);
-        libc::fflush(stdout);
+        std::io::stdout().flush().unwrap();
         let readstatus = !libc::fgets(b, 512 as i32, stdin).is_null();
         lua_settop(interpreter, 0);
         if !readstatus {
