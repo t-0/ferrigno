@@ -319,7 +319,6 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut libc::FILE) 
         rn.rn_n = 0;
         decp[0] = Character::Period as i8;
         decp[1] = Character::Period as i8;
-        flockfile(rn.rn_file);
         loop {
             rn.rn_c = libc::fgetc(rn.rn_file);
             if !Character::from(rn.rn_c as i32).is_whitespace() {
@@ -343,7 +342,6 @@ pub unsafe fn read_number(interpreter: *mut Interpreter, file: *mut libc::FILE) 
             readdigits(&mut rn, 0);
         }
         libc::ungetc(rn.rn_c, rn.rn_file);
-        funlockfile(rn.rn_file);
         rn.rn_buffer[rn.rn_n as usize] = Character::Null as i8;
         if (lua_stringtonumber(interpreter, (rn.rn_buffer).as_mut_ptr()) != 0) as i64 != 0 {
             return 1;
@@ -373,7 +371,6 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut libc::FILE, ch
                     .wrapping_mul(size_of::<f64>()),
             );
             let mut i: i32 = 0;
-            flockfile(file);
             while i
                 < (16 as usize)
                     .wrapping_mul(size_of::<*mut libc::c_void>() as usize)
@@ -388,7 +385,6 @@ pub unsafe fn read_line(interpreter: *mut Interpreter, file: *mut libc::FILE, ch
                 i = i + 1;
                 *buffer.offset(fresh153 as isize) = c as i8;
             }
-            funlockfile(file);
             b.buffer_loads
                 .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(i as usize) as i32) as usize);
             if !(c != -1 && c != Character::LineFeed as i32) {

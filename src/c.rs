@@ -6,9 +6,6 @@ unsafe extern "C" {
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
     pub fn clock() -> i64;
-    pub fn mktime(tp: *mut libc::tm) -> i64;
-    pub fn flockfile(__stream: *mut libc::FILE);
-    pub fn funlockfile(__stream: *mut libc::FILE);
 }
 #[derive(Copy, Clone)]
 #[repr(C)]

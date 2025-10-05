@@ -260,7 +260,7 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                 timestruct.tm_min = getfield(interpreter, c"min".as_ptr(), 0, 0);
                 timestruct.tm_sec = getfield(interpreter, c"sec".as_ptr(), 0, 0);
                 timestruct.tm_isdst = getboolfield(interpreter, c"isdst".as_ptr());
-                sometime = mktime(&mut timestruct);
+                sometime = libc::mktime(&mut timestruct);
                 setallfields(interpreter, &mut timestruct);
             },
         };
