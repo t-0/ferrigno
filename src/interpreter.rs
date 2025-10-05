@@ -550,7 +550,7 @@ pub unsafe fn do_repl(interpreter: *mut Interpreter) {
             }
         }
         lua_settop(interpreter, 0);
-        libc::fwrite(c"\n".as_ptr() as *const libc::c_void, 1, 1, stdout);
+        print!("\n");
         std::io::stdout().flush().unwrap();
         PROGRAM_NAME = oldprogname;
     }
