@@ -26,7 +26,7 @@ pub type PrototypeSuper = ObjectWithGCList;
 pub struct Prototype {
     pub prototype_super: PrototypeSuper,
     pub prototype_isvariablearguments: bool,
-    pub prototype_countparameters: u8,
+    pub prototype_countparameters: usize,
     pub prototype_maximumstacksize: u8,
     pub prototype_source: *mut TString,
     pub prototype_constants: VectorT<TValue>,
@@ -71,7 +71,7 @@ impl Prototype {
             }
             dump_state.dump_int(self.prototype_linedefined);
             dump_state.dump_int(self.prototype_lastlinedefined);
-            dump_state.dump_byte(self.prototype_countparameters);
+            dump_state.dump_byte(self.prototype_countparameters as u8);
             dump_state.dump_byte(if self.prototype_isvariablearguments { 1 } else { 0 });
             dump_state.dump_byte(self.prototype_maximumstacksize);
             self.dump_code(dump_state);

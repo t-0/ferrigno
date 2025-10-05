@@ -325,7 +325,7 @@ impl LoadState {
             }
             (*prototype).prototype_linedefined = self.load_int();
             (*prototype).prototype_lastlinedefined = self.load_int();
-            (*prototype).prototype_countparameters = self.load_byte();
+            (*prototype).prototype_countparameters = self.load_byte() as usize;
             (*prototype).prototype_isvariablearguments = 0 != self.load_byte();
             (*prototype).prototype_maximumstacksize = self.load_byte();
             self.load_code(prototype);

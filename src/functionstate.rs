@@ -6,7 +6,6 @@ use crate::expressionkind::*;
 use crate::f2i::*;
 use crate::instruction::*;
 use crate::interpreter::*;
-use crate::labeldescription::*;
 use crate::lexicalstate::*;
 use crate::localvariable::*;
 use crate::object::*;
@@ -26,7 +25,6 @@ use crate::tvalue::*;
 use crate::upvaluedescription::*;
 use crate::utility::*;
 use crate::variabledescription::*;
-use crate::vectort::*;
 use libc::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]
@@ -43,9 +41,9 @@ pub struct FunctionState {
     pub functionstate_countabslineinfo: i32,
     pub functionstate_firstlocal: i32,
     pub functionstate_firstlabel: i32,
-    pub functionstate_countdebugvariables: i16,
-    pub functionstate_countactivevariables: u8,
-    pub functionstate_countupvalues: u8,
+    pub functionstate_countdebugvariables: usize,
+    pub functionstate_countactivevariables: usize,
+    pub functionstate_countupvalues: usize,
     pub functionstate_freereg: u8,
     pub functionstate_iwthabs: u8,
     pub functionstate_needsclose: bool,
@@ -74,6 +72,17 @@ impl TDefaultNew for FunctionState {
     }
 }
 impl FunctionState {
+    pub unsafe fn marktobeclosed(& mut self) {
+        unsafe {
+            (*self.functionstate_blockcontrol).marktobeclosed();
+            self.functionstate_needsclose = true;
+        }
+    }
+    pub fn get_first_goto(& self) -> usize {
+        unsafe {
+            (*self.functionstate_blockcontrol).get_first_goto()
+        }
+    }
     pub fn code_get_label(&mut self) -> i32 {
         self.functionstate_lasttarget = self.functionstate_programcounter;
         return self.functionstate_programcounter;
@@ -82,27 +91,6 @@ impl FunctionState {
         unsafe {
             (*self.functionstate_blockcontrol).mark_upvalue_delegated(level);
             self.functionstate_needsclose = true;
-        }
-    }
-}
-pub unsafe fn movegotosout(lexical_state: *mut LexicalState, function_state: *mut FunctionState, block_control: *mut BlockControl) {
-    unsafe {
-        let gl: *mut VectorT<LabelDescription> = &mut (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto;
-        for i in (*block_control).blockcontrol_firstgoto..(*gl).get_length() as i32 {
-            let gt = &mut *((*gl).vectort_pointer).offset(i as isize) as *mut LabelDescription;
-            if reglevel(
-                lexical_state,
-                function_state,
-                (*gt).labeldescription_countactivevariables as i32,
-            ) > reglevel(
-                lexical_state,
-                function_state,
-                (*block_control).blockcontrol_countactivevariables as i32,
-            ) {
-                (*gt).labeldescription_close =
-                    ((*gt).labeldescription_close as i32 | (*block_control).blockcontrol_countupvalues as i32) as u8;
-            }
-            (*gt).labeldescription_countactivevariables = (*block_control).blockcontrol_countactivevariables;
         }
     }
 }
@@ -329,8 +317,7 @@ pub unsafe fn removevars(lexical_state: *mut LexicalState, function_state: *mut 
             .dynamicdata_activevariables
             .subtract_length(((*function_state).functionstate_countactivevariables as i32 - tolevel) as usize);
         while (*function_state).functionstate_countactivevariables as i32 > tolevel {
-            (*function_state).functionstate_countactivevariables =
-                ((*function_state).functionstate_countactivevariables).wrapping_sub(1);
+            (*function_state).functionstate_countactivevariables -= 1;
             let localvariable: *mut LocalVariable = localdebuginfo(
                 lexical_state,
                 function_state,
@@ -460,14 +447,6 @@ pub unsafe fn searchvar(
         -1
     }
 }
-pub unsafe fn marktobeclosed(function_state: *mut FunctionState) {
-    unsafe {
-        let block_control: *mut BlockControl = (*function_state).functionstate_blockcontrol;
-        (*block_control).blockcontrol_countupvalues = 1;
-        (*block_control).blockcontrol_isinsidetbc = true;
-        (*function_state).functionstate_needsclose = true;
-    }
-}
 pub unsafe fn singlevaraux(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, n: *mut TString,
     var: *mut ExpressionDescription, base: i32,
@@ -522,7 +501,7 @@ pub unsafe fn checktoclose(
 ) {
     unsafe {
         if level != -1 {
-            marktobeclosed(function_state);
+            (*function_state).marktobeclosed();
             code_abck(
                 interpreter,
                 lexical_state,

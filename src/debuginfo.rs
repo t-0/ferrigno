@@ -22,7 +22,7 @@ pub struct DebugInfo {
     pub debuginfo_linedefined: i32,
     pub debuginfo_lastlinedefined: i32,
     pub debuginfo_nups: u8,
-    pub debuginfo_nparams: u8,
+    pub debuginfo_nparams: usize,
     pub debuginfo_isvariablearguments: bool,
     pub debuginfo_istailcall: bool,
     pub debuginfo_ftransfer: u16,
