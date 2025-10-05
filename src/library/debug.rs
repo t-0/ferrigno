@@ -8,7 +8,6 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
 use crate::tag::*;
-use std::io::Write;
 use std::ptr::*;
 pub unsafe fn db_getregistry(interpreter: *mut Interpreter) -> i32 {
     unsafe {
