@@ -316,7 +316,7 @@ pub unsafe fn open_function(
         } else {
         };
         (*prototype).prototype_maximumstacksize = 2 as u8;
-        enterblock(lexical_state, function_state, block_control, false);
+        BlockControl::enterblock(lexical_state, function_state, block_control, false);
     }
 }
 pub unsafe fn close_function(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
@@ -329,7 +329,7 @@ pub unsafe fn close_function(interpreter: *mut Interpreter, lexical_state: *mut 
             luay_nvarstack(lexical_state, function_state),
             0,
         );
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
         luak_finish(
             interpreter,
             lexical_state,
@@ -1235,9 +1235,9 @@ pub unsafe fn subexpr(
 pub unsafe fn handle_block(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
     unsafe {
         let mut block_control = BlockControl::new();
-        enterblock(lexical_state, function_state, &mut block_control, false);
+        BlockControl::enterblock(lexical_state, function_state, &mut block_control, false);
         parse_statement_list(interpreter, lexical_state, function_state);
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
     }
 }
 pub unsafe fn check_conflict(
@@ -1472,7 +1472,7 @@ pub unsafe fn handle_while_statement(
         luax_next(interpreter, lexical_state);
         let whileinit: i32 = (*function_state).code_get_label();
         let condexit: i32 = cond(interpreter, lexical_state, function_state);
-        enterblock(lexical_state, function_state, &mut block_control, true);
+        BlockControl::enterblock(lexical_state, function_state, &mut block_control, true);
         checknext(interpreter, lexical_state, function_state, Token::Do as i32);
         handle_block(interpreter, lexical_state, function_state);
         luak_patchlist(
@@ -1490,7 +1490,7 @@ pub unsafe fn handle_while_statement(
             Token::While as i32,
             line,
         );
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
         luak_patchtohere(interpreter, lexical_state, function_state, condexit);
     }
 }
@@ -1501,8 +1501,8 @@ pub unsafe fn handle_repeat_statement(
         let repeat_init: i32 = (*function_state).code_get_label();
         let mut bl1 = BlockControl::new();
         let mut bl2 = BlockControl::new();
-        enterblock(lexical_state, function_state, &mut bl1, true);
-        enterblock(lexical_state, function_state, &mut bl2, false);
+        BlockControl::enterblock(lexical_state, function_state, &mut bl1, true);
+        BlockControl::enterblock(lexical_state, function_state, &mut bl2, false);
         luax_next(interpreter, lexical_state);
         parse_statement_list(interpreter, lexical_state, function_state);
         check_match(
@@ -1514,7 +1514,7 @@ pub unsafe fn handle_repeat_statement(
             line,
         );
         let mut condexit: i32 = cond(interpreter, lexical_state, function_state);
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
         if bl2.blockcontrol_countupvalues != 0 {
             let exit_0: i32 = luak_jump(interpreter, lexical_state, function_state);
             luak_patchtohere(interpreter, lexical_state, function_state, condexit);
@@ -1532,7 +1532,7 @@ pub unsafe fn handle_repeat_statement(
             luak_patchtohere(interpreter, lexical_state, function_state, exit_0);
         }
         luak_patchlist(interpreter, lexical_state, function_state, condexit, repeat_init);
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
     }
 }
 pub unsafe fn exp1(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
@@ -1557,11 +1557,11 @@ pub unsafe fn handle_forbody(
         let mut block_control = BlockControl::new();
         checknext(interpreter, lexical_state, function_state, Token::Do as i32);
         let prep: i32 = luak_codeabx(interpreter, lexical_state, function_state, FOR_PREP[isgen as usize], base, 0);
-        enterblock(lexical_state, function_state, &mut block_control, false);
+        BlockControl::enterblock(lexical_state, function_state, &mut block_control, false);
         adjustlocalvars(interpreter, lexical_state, count_variables);
         luak_reserveregs(interpreter, lexical_state, function_state, count_variables);
         handle_block(interpreter, lexical_state, (*lexical_state).lexicalstate_functionstate);
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
         fixforjump(
             interpreter,
             lexical_state,
@@ -1697,7 +1697,7 @@ pub unsafe fn handle_for_statement(
 ) {
     unsafe {
         let mut block_control = BlockControl::new();
-        enterblock(lexical_state, function_state, &mut block_control, true);
+        BlockControl::enterblock(lexical_state, function_state, &mut block_control, true);
         luax_next(interpreter, lexical_state);
         let variable_name: *mut TString = str_checkname(interpreter, lexical_state, function_state);
         const TK_CHARACTER_EQUAL: i32 = Character::Equal as i32;
@@ -1734,7 +1734,7 @@ pub unsafe fn handle_for_statement(
             TK_FOR as i32,
             line,
         );
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
     }
 }
 pub unsafe fn handle_test_then_block(
@@ -1751,7 +1751,7 @@ pub unsafe fn handle_test_then_block(
             let line: i32 = (*lexical_state).lexicalstate_linenumber;
             luak_goiffalse(interpreter, lexical_state, (*lexical_state).lexicalstate_functionstate, &mut v);
             luax_next(interpreter, lexical_state);
-            enterblock(lexical_state, function_state, &mut block_control, false);
+            BlockControl::enterblock(lexical_state, function_state, &mut block_control, false);
             newgotoentry(
                 interpreter,
                 lexical_state,
@@ -1762,18 +1762,18 @@ pub unsafe fn handle_test_then_block(
             );
             while testnext(interpreter, lexical_state, function_state, Character::Semicolon as i32) != 0 {}
             if block_follow_without_until((*lexical_state).lexicalstate_token.token) {
-                leaveblock(interpreter, lexical_state, function_state);
+                BlockControl::leaveblock(interpreter, lexical_state, function_state);
                 return;
             } else {
                 jf = luak_jump(interpreter, lexical_state, function_state);
             }
         } else {
             luak_goiftrue(interpreter, lexical_state, (*lexical_state).lexicalstate_functionstate, &mut v);
-            enterblock(lexical_state, function_state, &mut block_control, false);
+            BlockControl::enterblock(lexical_state, function_state, &mut block_control, false);
             jf = v.expressiondescription_f;
         }
         parse_statement_list(interpreter, lexical_state, function_state);
-        leaveblock(interpreter, lexical_state, function_state);
+        BlockControl::leaveblock(interpreter, lexical_state, function_state);
         if (*lexical_state).lexicalstate_token.token == Token::Else as i32
             || (*lexical_state).lexicalstate_token.token == Token::Elseif as i32
         {
