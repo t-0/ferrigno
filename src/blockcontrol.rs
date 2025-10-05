@@ -10,12 +10,12 @@ use std::ptr::*;
 #[repr(C)]
 pub struct BlockControl {
     m_previous: *mut BlockControl,
+    m_is_loop: bool,
+    m_is_inside_tbc: bool,
     m_first_label: usize,
     m_first_goto: usize,
     m_count_active_variables: usize,
-    m_count_up_values: usize,
-    m_is_loop: bool,
-    m_is_inside_tbc: bool,
+    m_count_upvalues: usize,
 }
 impl TDefaultNew for BlockControl {
     fn new() -> Self {
@@ -24,7 +24,7 @@ impl TDefaultNew for BlockControl {
             m_first_label: 0,
             m_first_goto: 0,
             m_count_active_variables: 0,
-            m_count_up_values: 0,
+            m_count_upvalues: 0,
             m_is_loop: false,
             m_is_inside_tbc: false,
             ..
@@ -32,16 +32,16 @@ impl TDefaultNew for BlockControl {
     }
 }
 impl BlockControl {
-    pub unsafe fn mark_upvalue_delegated(&mut self, level: i32) {
+    pub unsafe fn mark_upvalue_delegated(&mut self, level: usize) {
         unsafe {
-            let mut block_control: *mut BlockControl = self;
-            while (*block_control).m_count_active_variables as i32 > level {
-                block_control = (*block_control).m_previous;
+            let mut it: *mut BlockControl = self;
+            while (*it).m_count_active_variables > level {
+                it = (*it).m_previous;
             }
-            (*block_control).m_count_up_values = 1;
+            (*it).m_count_upvalues = 1;
         }
     }
-    pub unsafe fn enterblock(& mut self, lexical_state: *mut LexicalState, function_state: *mut FunctionState, is_loop: bool,
+    pub unsafe fn enter_block(& mut self, lexical_state: *mut LexicalState, function_state: *mut FunctionState, is_loop: bool,
     ) {
         unsafe {
             self.m_is_loop = is_loop;
@@ -49,28 +49,27 @@ impl BlockControl {
             self.m_first_label =
                 (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_labels.get_length();
             self.m_first_goto = (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.get_length();
-            self.m_count_up_values = 0;
+            self.m_count_upvalues = 0;
             self.m_is_inside_tbc = !((*function_state).functionstate_blockcontrol).is_null()
-                && (*(*function_state).functionstate_blockcontrol).m_is_inside_tbc as i32 != 0;
+                && (*(*function_state).functionstate_blockcontrol).m_is_inside_tbc;
             self.m_previous = (*function_state).functionstate_blockcontrol;
             (*function_state).functionstate_blockcontrol = self;
         }
     }
-    pub unsafe fn leaveblock(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
+    pub unsafe fn leave_block(& mut self, interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState) {
         unsafe {
-            let block_control: *mut BlockControl = (*function_state).functionstate_blockcontrol;
             let mut has_close = false;
             let stklevel: i32 = reglevel(
                 lexical_state,
                 function_state,
-                (*block_control).m_count_active_variables as i32,
+                self.m_count_active_variables as i32,
             );
             removevars(
                 lexical_state,
                 function_state,
-                (*block_control).m_count_active_variables as i32,
+                self.m_count_active_variables as i32,
             );
-            if (*block_control).m_is_loop {
+            if self.m_is_loop {
                 has_close = (*lexical_state).create_label(
                     interpreter,
                     function_state,
@@ -80,19 +79,19 @@ impl BlockControl {
                 );
             }
             if !has_close
-                && !((*block_control).m_previous).is_null()
-                && (*block_control).m_count_up_values as i32 != 0
+                && !(self.m_previous).is_null()
+                && self.m_count_upvalues as i32 != 0
             {
                 code_abck(interpreter, lexical_state, function_state, OPCODE_CLOSE, stklevel, 0, 0, 0);
             }
             (*function_state).functionstate_freereg = stklevel as u8;
             (*(*lexical_state).lexicalstate_dynamicdata)
                 .dynamicdata_labels
-                .set_length((*block_control).m_first_label as usize);
-            (*function_state).functionstate_blockcontrol = (*block_control).m_previous;
-            if !((*block_control).m_previous).is_null() {
-                BlockControl::movegotosout(lexical_state, function_state, block_control);
-            } else if (*block_control).m_first_goto
+                .set_length(self.m_first_label as usize);
+            (*function_state).functionstate_blockcontrol = self.m_previous;
+            if !(self.m_previous).is_null() {
+                BlockControl::movegotosout(lexical_state, function_state, self);
+            } else if self.m_first_goto
                 < (*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.get_length()
             {
                 undefgoto(
@@ -100,7 +99,7 @@ impl BlockControl {
                     lexical_state,
                     function_state,
                     &mut *((*(*lexical_state).lexicalstate_dynamicdata).dynamicdata_goto.vectort_pointer)
-                        .offset((*block_control).m_first_goto as isize),
+                        .offset(self.m_first_goto as isize),
                 );
             }
         }
@@ -112,7 +111,7 @@ impl BlockControl {
         self.m_count_active_variables
     }
     pub fn get_count_upvalues(& self) -> usize {
-        self.m_count_up_values
+        self.m_count_upvalues
     }
     pub unsafe fn movegotosout(lexical_state: *mut LexicalState, function_state: *mut FunctionState, block_control: *mut BlockControl) {
         unsafe {
@@ -139,7 +138,7 @@ impl BlockControl {
         self.m_first_goto
     }
     pub unsafe fn marktobeclosed(& mut self) {
-        self.m_count_up_values = 1;
+        self.m_count_upvalues = 1;
         self.m_is_inside_tbc = true;
     }
 }

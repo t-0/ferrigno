@@ -87,7 +87,7 @@ impl FunctionState {
         self.functionstate_lasttarget = self.functionstate_programcounter;
         return self.functionstate_programcounter;
     }
-    pub unsafe fn mark_upvalue(&mut self, level: i32) {
+    pub unsafe fn mark_upvalue(&mut self, level: usize) {
         unsafe {
             (*self.functionstate_blockcontrol).mark_upvalue_delegated(level);
             self.functionstate_needsclose = true;
@@ -459,7 +459,7 @@ pub unsafe fn singlevaraux(
             if v >= 0 {
                 if v == ExpressionKind::Local as i32 && base == 0 {
                     (*function_state)
-                        .mark_upvalue((*var).expressiondescription_value.value_variable.valueregister_valueindex as i32);
+                        .mark_upvalue((*var).expressiondescription_value.value_variable.valueregister_valueindex as usize);
                 }
             } else {
                 let mut index: i32 = searchupvalue(function_state, n);
