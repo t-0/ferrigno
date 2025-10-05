@@ -2,27 +2,26 @@ unsafe extern "C" {
     pub static mut stdin: *mut libc::FILE;
     pub static mut stdout: *mut libc::FILE;
     pub static mut stderr: *mut libc::FILE;
-
     pub unsafe fn _setjmp(_: *mut JumpBufferTag) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBufferTag, _: i32) -> !;
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
-pub struct SIgnalSet {
+pub struct SignalSet {
     pub __val: [usize; 16],
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JumpBufferTag {
     pub __mask_was_saved: i32,
-    pub __saved_mask: SIgnalSet,
+    pub __saved_mask: SignalSet,
 }
 pub type SignalHandler = Option<unsafe fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SignalAction {
     pub __sigaction_handler: SigActionA,
-    pub sa_mask: SIgnalSet,
+    pub sa_mask: SignalSet,
     pub sa_flags: i32,
     pub sa_restorer: Option<unsafe fn() -> ()>,
 }

@@ -590,7 +590,7 @@ pub unsafe fn luad_rawrunprotected(
         write_volatile(&mut long_jump.longjump_status as *mut Status as *mut i32, 0);
         long_jump.longjump_previous = (*interpreter).interpreter_longjump;
         (*interpreter).interpreter_longjump = &mut long_jump;
-        if _setjmp((long_jump.longjump_jbt).as_mut_ptr()) == 0 {
+        if _setjmp(long_jump.longjump_jbt.as_mut_ptr()) == 0 {
             (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(interpreter, arbitrary_data);
         }
         (*interpreter).interpreter_longjump = long_jump.longjump_previous;
@@ -7160,13 +7160,13 @@ pub unsafe fn setsignal(sig: i32, handler: Option<unsafe fn(i32) -> ()>) {
     unsafe {
         let mut signalaction: SignalAction = SignalAction {
             __sigaction_handler: SigActionA { sa_handler: None },
-            sa_mask: SIgnalSet { __val: [0; 16] },
+            sa_mask: SignalSet { __val: [0; 16] },
             sa_flags: 0,
             sa_restorer: None,
         };
         signalaction.__sigaction_handler.sa_handler = handler;
         signalaction.sa_flags = 0;
-        libc::sigemptyset(&mut signalaction.sa_mask as *mut SIgnalSet as *mut libc::sigset_t);
+        libc::sigemptyset(&mut signalaction.sa_mask as *mut SignalSet as *mut libc::sigset_t);
         libc::sigaction(sig, &mut signalaction as *mut SignalAction as *mut libc::sigaction, null_mut());
     }
 }
