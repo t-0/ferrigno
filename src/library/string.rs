@@ -513,7 +513,7 @@ pub unsafe fn addquoted(b: *mut Buffer, mut s: *const i8, mut length: usize) {
                 (*b).buffer_loads
                     .set_length((((*b).buffer_loads.get_length()).wrapping_add(1)) as usize);
                 *((*b).buffer_loads.loads_pointer).offset(fresh170 as isize) = *s;
-            } else if *(*__ctype_b_loc()).offset(*s as u8 as isize) as i32 & _ISCONTROL as i32 != 0 {
+            } else if Character::from(*s as u8 as i32).is_control() {
                 let mut buffer: [i8; 10] = [0; 10];
                 if Character::from(*s.offset(1 as isize) as u8 as i32).is_digit_decimal() {
                     libc::snprintf(buffer.as_mut_ptr(), size_of::<[i8; 10]>(), c"\\%03d".as_ptr(), *s as u8 as i32);
