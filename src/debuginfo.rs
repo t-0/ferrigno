@@ -114,7 +114,7 @@ pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
             }
         } else {
             let mut position: *mut TValue = null_mut();
-            let ret = luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
+            let ret = CallInfo::luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
             if !ret.is_null() {
                 (*(*interpreter).interpreter_top.stkidrel_pointer).copy_from(&*position);
                 (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
@@ -126,7 +126,7 @@ pub unsafe fn lua_getlocal(interpreter: *mut Interpreter, debuginfo: *const Debu
 pub unsafe fn lua_setlocal(interpreter: *mut Interpreter, debuginfo: *const DebugInfo, n: i32) -> *const i8 {
     unsafe {
         let mut position: *mut TValue = null_mut();
-        let ret: *const i8 = luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
+        let ret: *const i8 = CallInfo::luag_findlocal(interpreter, (*debuginfo).debuginfo_callinfo, n, &mut position);
         if !ret.is_null() {
             let io1: *mut TValue = &mut (*position);
             let io2: *const TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));

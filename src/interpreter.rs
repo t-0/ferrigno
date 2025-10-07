@@ -2709,7 +2709,7 @@ pub unsafe fn lua_sethook(interpreter: *mut Interpreter, mut function: HookFunct
         (*interpreter).interpreter_hookcount = (*interpreter).interpreter_basehookcount;
         write_volatile(&mut (*interpreter).interpreter_hookmask as *mut i32, mask as u8 as i32);
         if mask != 0 {
-            settraps((*interpreter).interpreter_callinfo);
+            CallInfo::settraps((*interpreter).interpreter_callinfo);
         }
     }
 }
@@ -2764,15 +2764,15 @@ pub unsafe fn varinfo(interpreter: *mut Interpreter, tvalue: *const TValue) -> *
         let mut name: *const i8 = null();
         let mut kind: *const i8 = null();
         if (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0 {
-            kind = getupvalname(callinfo, tvalue, &mut name);
+            kind = CallInfo::getupvalname(callinfo, tvalue, &mut name);
             if kind.is_null() {
-                let reg: i32 = in_stack(callinfo, tvalue);
+                let reg: i32 = CallInfo::in_stack(callinfo, tvalue);
                 if reg >= 0 {
                     kind = getobjname(
                         (*((*(*callinfo).callinfo_function.stkidrel_pointer).tvalue_value.value_object as *mut Closure))
                             .payload
                             .l_prototype,
-                        currentpc(callinfo),
+                        CallInfo::currentpc(callinfo),
                         reg,
                         &mut name,
                     );
@@ -2797,7 +2797,7 @@ pub unsafe fn luag_callerror(interpreter: *mut Interpreter, tvalue: *const TValu
     unsafe {
         let callinfo = (*interpreter).interpreter_callinfo;
         let mut name: *const i8 = null();
-        let kind: *const i8 = funcnamefromcall(interpreter, callinfo, &mut name);
+        let kind: *const i8 = CallInfo::funcnamefromcall(interpreter, callinfo, &mut name);
         let extra: *const i8 = if !kind.is_null() {
             formatvarinfo(interpreter, kind, name)
         } else {
@@ -2909,7 +2909,7 @@ pub unsafe extern "C" fn luag_runerror(interpreter: *mut Interpreter, fmt: *cons
                     .payload
                     .l_prototype)
                     .prototype_source,
-                getcurrentline(callinfo),
+                CallInfo::getcurrentline(callinfo),
             );
             let io1: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(2 as isize)));
             let io2: *const TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)));
@@ -3796,7 +3796,7 @@ pub unsafe fn checkclosemth(interpreter: *mut Interpreter, level: *mut TValue) {
         let tm: *const TValue = luat_gettmbyobj(interpreter, &mut (*level), TM_CLOSE);
         if (*tm).get_tagvariant().to_tag_type().is_nil() {
             let index: i32 = level.offset_from((*(*interpreter).interpreter_callinfo).callinfo_function.stkidrel_pointer) as i32;
-            let mut vname: *const i8 = luag_findlocal(interpreter, (*interpreter).interpreter_callinfo, index, null_mut());
+            let mut vname: *const i8 = CallInfo::luag_findlocal(interpreter, (*interpreter).interpreter_callinfo, index, null_mut());
             if vname.is_null() {
                 vname = c"?".as_ptr();
             }

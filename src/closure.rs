@@ -144,7 +144,7 @@ pub unsafe fn auxgetinfo(
                 | Character::LowerL => {
                     (*debuginfo).debuginfo_currentline =
                         if !callinfo.is_null() && (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0 {
-                            getcurrentline(callinfo)
+                            CallInfo::getcurrentline(callinfo)
                         } else {
                             -1
                         };
@@ -168,7 +168,7 @@ pub unsafe fn auxgetinfo(
                     };
                 },
                 | Character::LowerN => {
-                    (*debuginfo).debuginfo_namewhat = getfuncname(interpreter, callinfo, &mut (*debuginfo).debuginfo_name);
+                    (*debuginfo).debuginfo_namewhat = CallInfo::getfuncname(interpreter, callinfo, &mut (*debuginfo).debuginfo_name);
                     if ((*debuginfo).debuginfo_namewhat).is_null() {
                         (*debuginfo).debuginfo_namewhat = c"".as_ptr();
                         (*debuginfo).debuginfo_name = null();
