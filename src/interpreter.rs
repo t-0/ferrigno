@@ -2838,7 +2838,7 @@ pub unsafe fn luag_opinterror(interpreter: *mut Interpreter, p1: *const TValue, 
 pub unsafe fn luag_tointerror(interpreter: *mut Interpreter, p1: *const TValue, mut p2: *const TValue) -> ! {
     unsafe {
         let mut temp: i64 = 0;
-        if luav_tointegerns(p1, &mut temp, F2I::Equal) == 0 {
+        if F2I::Equal.luav_tointegerns(p1, &mut temp) == 0 {
             p2 = p1;
         }
         luag_runerror(
@@ -3050,13 +3050,13 @@ pub unsafe fn luao_rawarith(interpreter: *mut Interpreter, op: i32, p1: *const T
                     i1 = (*p1).tvalue_value.value_integer;
                     1
                 } else {
-                    luav_tointegerns(p1, &mut i1, F2I::Equal)
+                    F2I::Equal.luav_tointegerns(p1, &mut i1)
                 }) != 0
                     && (if (((*p2).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i32 as i64 != 0 {
                         i2 = (*p2).tvalue_value.value_integer;
                         1
                     } else {
-                        luav_tointegerns(p2, &mut i2, F2I::Equal)
+                        F2I::Equal.luav_tointegerns(p2, &mut i2)
                     }) != 0
                 {
                     (*res).tvalue_value.value_integer = intarith(interpreter, op, i1, i2);
@@ -4945,7 +4945,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_4 = (*v1_7).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_7, &mut i1_4, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_7, &mut i1_4)
                             } != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -4965,7 +4965,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_5 = (*v1_8).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_8, &mut i1_5, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_8, &mut i1_5)
                             } != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -4985,7 +4985,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_6 = (*v1_9).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_9, &mut i1_6, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_9, &mut i1_6)
                             } != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5004,7 +5004,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 ib = (*rb_8).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(rb_8, &mut ib, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(rb_8, &mut ib)
                             } != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5023,7 +5023,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 ib_0 = (*rb_9).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(rb_9, &mut ib_0, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(rb_9, &mut ib_0)
                             } != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5354,13 +5354,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_12 = (*v1_17).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_17, &mut i1_12, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_17, &mut i1_12)
                             }) != 0
                                 && (if (((*v2_16).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                     i2_12 = (*v2_16).tvalue_value.value_integer;
                                     1
                                 } else {
-                                    luav_tointegerns(v2_16, &mut i2_12, F2I::Equal)
+                                    F2I::Equal.luav_tointegerns(v2_16, &mut i2_12)
                                 }) != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5380,13 +5380,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_13 = (*v1_18).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_18, &mut i1_13, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_18, &mut i1_13)
                             }) != 0
                                 && (if (((*v2_17).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                     i2_13 = (*v2_17).tvalue_value.value_integer;
                                     1
                                 } else {
-                                    luav_tointegerns(v2_17, &mut i2_13, F2I::Equal)
+                                    F2I::Equal.luav_tointegerns(v2_17, &mut i2_13)
                                 }) != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5406,13 +5406,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_14 = (*v1_19).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_19, &mut i1_14, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_19, &mut i1_14)
                             }) != 0
                                 && (if (((*v2_18).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                     i2_14 = (*v2_18).tvalue_value.value_integer;
                                     1
                                 } else {
-                                    luav_tointegerns(v2_18, &mut i2_14, F2I::Equal)
+                                    F2I::Equal.luav_tointegerns(v2_18, &mut i2_14)
                                 }) != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5432,13 +5432,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_15 = (*v1_20).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_20, &mut i1_15, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_20, &mut i1_15)
                             }) != 0
                                 && (if (((*v2_19).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                     i2_15 = (*v2_19).tvalue_value.value_integer;
                                     1
                                 } else {
-                                    luav_tointegerns(v2_19, &mut i2_15, F2I::Equal)
+                                    F2I::Equal.luav_tointegerns(v2_19, &mut i2_15)
                                 }) != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5459,13 +5459,13 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 i1_16 = (*v1_21).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(v1_21, &mut i1_16, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(v1_21, &mut i1_16)
                             }) != 0
                                 && (if (((*v2_20).get_tagvariant() == TagVariant::NumericInteger) as i32 != 0) as i64 != 0 {
                                     i2_16 = (*v2_20).tvalue_value.value_integer;
                                     1
                                 } else {
-                                    luav_tointegerns(v2_20, &mut i2_16, F2I::Equal)
+                                    F2I::Equal.luav_tointegerns(v2_20, &mut i2_16)
                                 }) != 0
                             {
                                 program_counter = program_counter.offset(1);
@@ -5551,7 +5551,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                                 ib_2 = (*rb_12).tvalue_value.value_integer;
                                 1
                             } else {
-                                luav_tointegerns(rb_12, &mut ib_2, F2I::Equal)
+                                F2I::Equal.luav_tointegerns(rb_12, &mut ib_2)
                             } != 0
                             {
                                 let io_42: *mut TValue = &mut (*ra_48);

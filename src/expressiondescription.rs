@@ -193,10 +193,9 @@ impl ExpressionDescription {
             if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantInteger {
                 i = (*expression_description).expressiondescription_value.value_integer;
             } else if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantNumber
-                && luav_flttointeger(
+                && F2I::Equal.luav_flttointeger(
                     (*expression_description).expressiondescription_value.value_number,
                     &mut i,
-                    F2I::Equal,
                 )
             {
                 *is_float = true;

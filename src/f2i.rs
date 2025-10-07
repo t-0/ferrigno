@@ -12,32 +12,34 @@ pub enum F2I {
     Floor,
     Ceiling,
 }
-pub unsafe fn luav_flttointeger(input: f64, result: *mut i64, mode: F2I) -> bool {
-    unsafe {
-        let mut number: f64 = input.floor();
-        if input != number {
-            if mode == F2I::Equal {
-                return false;
-            } else if mode == F2I::Ceiling {
-                number += 1.0;
+impl F2I {
+    pub unsafe fn luav_flttointeger(&self, input: f64, result: *mut i64) -> bool {
+        unsafe {
+            let mut number: f64 = input.floor();
+            if input != number {
+                if *self == F2I::Equal {
+                    return false;
+                } else if *self == F2I::Ceiling {
+                    number += 1.0;
+                }
             }
+            return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64 && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64) && {
+                *result = number as i64;
+                true
+            };
         }
-        return number >= (-(MAXIMUM_SIZE as i64) - 1) as f64 && number < -((-(MAXIMUM_SIZE as i64) - 1) as f64) && {
-            *result = number as i64;
-            true
-        };
     }
-}
-pub unsafe fn luav_tointegerns(obj: *const TValue, result: *mut i64, mode: F2I) -> i32 {
-    unsafe {
-        if (*obj).get_tagvariant() == TagVariant::NumericNumber {
-            return if luav_flttointeger((*obj).tvalue_value.value_number, result, mode) { 1 } else { 0 };
-        } else if (*obj).get_tagvariant() == TagVariant::NumericInteger {
-            *result = (*obj).tvalue_value.value_integer;
-            return 1;
-        } else {
-            return 0;
-        };
+    pub unsafe fn luav_tointegerns(&self, obj: *const TValue, result: *mut i64) -> i32 {
+        unsafe {
+            if (*obj).get_tagvariant() == TagVariant::NumericNumber {
+                return if (*self).luav_flttointeger((*obj).tvalue_value.value_number, result) { 1 } else { 0 };
+            } else if (*obj).get_tagvariant() == TagVariant::NumericInteger {
+                *result = (*obj).tvalue_value.value_integer;
+                return 1;
+            } else {
+                return 0;
+            };
+        }
     }
 }
 pub unsafe fn luav_tointeger(mut obj: *const TValue, result: *mut i64, mode: F2I) -> i32 {
@@ -46,7 +48,7 @@ pub unsafe fn luav_tointeger(mut obj: *const TValue, result: *mut i64, mode: F2I
         if tvalue.from_string_to_number(obj) {
             obj = &mut tvalue;
         }
-        luav_tointegerns(obj, result, mode)
+        mode.luav_tointegerns(obj, result)
     }
 }
 pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
@@ -55,7 +57,7 @@ pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
             return (i as f64) < number;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(number, &mut fi, F2I::Ceiling) {
+            if F2I::Ceiling.luav_flttointeger(number, &mut fi) {
                 return i < fi;
             } else {
                 return number > 0.0;
@@ -69,7 +71,7 @@ pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
             return i as f64 <= number;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(number, &mut fi, F2I::Floor) {
+            if F2I::Floor.luav_flttointeger(number, &mut fi) {
                 return i <= fi;
             } else {
                 return number > 0.0;
@@ -83,7 +85,7 @@ pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
             return number < i as f64;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(number, &mut fi, F2I::Floor) {
+            if F2I::Floor.luav_flttointeger(number, &mut fi) {
                 return fi < i;
             } else {
                 return number < 0.0;
@@ -97,7 +99,7 @@ pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
             return number <= i as f64;
         } else {
             let mut fi: i64 = 0;
-            if luav_flttointeger(number, &mut fi, F2I::Ceiling) {
+            if F2I::Ceiling.luav_flttointeger(number, &mut fi) {
                 return fi <= i;
             } else {
                 return number < 0.0;

@@ -1048,7 +1048,7 @@ pub unsafe fn luak_number_k(
         let mut ik: i64 = 0;
         tvalue.tvalue_value.value_number = number;
         tvalue.tvalue_set_tag_variant(TagVariant::NumericNumber);
-        if !luav_flttointeger(number, &mut ik, F2I::Equal) {
+        if !F2I::Equal.luav_flttointeger(number, &mut ik) {
             return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
         } else {
             let nbm: i32 = 53 as i32;
@@ -1108,7 +1108,7 @@ pub unsafe fn code_constant_number(
 ) {
     unsafe {
         let mut fi: i64 = 0;
-        if luav_flttointeger(number, &mut fi, F2I::Equal) && fits_bx(fi) {
+        if F2I::Equal.luav_flttointeger(number, &mut fi) && fits_bx(fi) {
             codeasbx(interpreter, lexical_state, function_state, OPCODE_LOADF, reg, fi as i32);
         } else {
             code_constant(

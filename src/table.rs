@@ -765,7 +765,7 @@ pub unsafe fn luah_newkey(interpreter: *mut Interpreter, table: *mut Table, mut 
         } else if (*key).get_tagvariant() == TagVariant::NumericNumber {
             let number = (*key).tvalue_value.value_number;
             let mut k: i64 = 0;
-            if luav_flttointeger(number, &mut k, F2I::Equal) {
+            if F2I::Equal.luav_flttointeger(number, &mut k) {
                 aux.tvalue_value.value_integer = k;
                 aux.tvalue_set_tag_variant(TagVariant::NumericInteger);
                 key = &mut aux;
@@ -896,7 +896,7 @@ pub unsafe fn luah_get(table: *mut Table, key: *const TValue) -> *const TValue {
             | TagVariant::NilNil => return &ABSENT_KEY,
             | TagVariant::NumericNumber => {
                 let mut k: i64 = 0;
-                if luav_flttointeger((*key).tvalue_value.value_number, &mut k, F2I::Equal) {
+                if F2I::Equal.luav_flttointeger((*key).tvalue_value.value_number, &mut k) {
                     return luah_getint(table, k);
                 }
             },
