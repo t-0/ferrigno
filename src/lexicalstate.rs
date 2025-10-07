@@ -265,7 +265,7 @@ pub unsafe fn undefgoto(
 pub unsafe fn codeclosure(interpreter: *mut Interpreter, lexical_state: *mut LexicalState, v: *mut ExpressionDescription) {
     unsafe {
         let function_state: *mut FunctionState = (*(*lexical_state).lexicalstate_functionstate).functionstate_previous;
-        init_exp(
+        ExpressionDescription::init_exp(
             v,
             ExpressionKind::Relocatable,
             luak_codeabx(
@@ -386,7 +386,7 @@ pub unsafe fn fieldsel(
         luak_exp2anyregup(interpreter, lexical_state, function_state, v);
         luax_next(interpreter, lexical_state);
         codename(interpreter, lexical_state, function_state, &mut key);
-        luak_indexed(interpreter, lexical_state, function_state, v, &mut key);
+        ExpressionDescription::luak_indexed(interpreter, lexical_state, function_state, v, &mut key);
     }
 }
 pub unsafe fn yindex(
@@ -424,7 +424,7 @@ pub unsafe fn recfield(
         (*constructor_control).constructorcontrol_counttable += 1;
         checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
         let mut table: ExpressionDescription = *(*constructor_control).constructorcontrol_table;
-        luak_indexed(interpreter, lexical_state, function_state, &mut table, &mut key);
+        ExpressionDescription::luak_indexed(interpreter, lexical_state, function_state, &mut table, &mut key);
         (*lexical_state).parse_expression(interpreter, function_state, &mut value);
         luak_storevar(interpreter, lexical_state, function_state, &mut table, &mut value);
         (*function_state).functionstate_freereg = reg as u8;
@@ -481,13 +481,13 @@ pub unsafe fn constructor(
         constructor_control.constructorcontrol_counttable = 0;
         constructor_control.constructorcontrol_countarray = 0;
         constructor_control.constructorcontrol_table = t;
-        init_exp(
+        ExpressionDescription::init_exp(
             t,
             ExpressionKind::Nonrelocatable,
             (*function_state).functionstate_freereg as i32,
         );
         luak_reserveregs(interpreter, lexical_state, function_state, 1);
-        init_exp(
+        ExpressionDescription::init_exp(
             &mut constructor_control.constructorcontrol_expressiondescription,
             ExpressionKind::Void,
             0,
@@ -665,7 +665,7 @@ pub unsafe fn funcargs(
                 constructor(interpreter, lexical_state, function_state, &mut args);
             },
             | TK_STRING => {
-                codestring(&mut args, (*lexical_state).lexicalstate_token.semantic_info.value_tstring);
+                ExpressionDescription::codestring(&mut args, (*lexical_state).lexicalstate_token.semantic_info.value_tstring);
                 luax_next(interpreter, lexical_state);
             },
             | _ => {
@@ -684,7 +684,7 @@ pub unsafe fn funcargs(
             }
             nparams = (*function_state).functionstate_freereg as i32 - (base + 1);
         }
-        init_exp(
+        ExpressionDescription::init_exp(
             expression_description,
             ExpressionKind::Call,
             code_abck(interpreter, lexical_state, function_state, OPCODE_CALL, base, nparams + 1, 2, 0),
@@ -747,7 +747,7 @@ pub unsafe fn suffixedexp(
                     let mut key: ExpressionDescription = ExpressionDescription::new();
                     luak_exp2anyregup(interpreter, lexical_state, function_state, v);
                     yindex(interpreter, lexical_state, function_state, &mut key);
-                    luak_indexed(interpreter, lexical_state, function_state, v, &mut key);
+                    ExpressionDescription::luak_indexed(interpreter, lexical_state, function_state, v, &mut key);
                 },
                 | TK_CHARACTER_COLON => {
                     let mut key_0: ExpressionDescription = ExpressionDescription::new();
@@ -781,24 +781,24 @@ pub unsafe fn simpleexp(
         const TK_NIL: i32 = 269;
         match (*lexical_state).lexicalstate_token.token {
             | TK_FLOAT => {
-                init_exp(v, ExpressionKind::ConstantNumber, 0);
+                ExpressionDescription::init_exp(v, ExpressionKind::ConstantNumber, 0);
                 (*v).expressiondescription_value.value_number = (*lexical_state).lexicalstate_token.semantic_info.value_number;
             },
             | TK_INTEGER => {
-                init_exp(v, ExpressionKind::ConstantInteger, 0);
+                ExpressionDescription::init_exp(v, ExpressionKind::ConstantInteger, 0);
                 (*v).expressiondescription_value.value_integer = (*lexical_state).lexicalstate_token.semantic_info.value_integer;
             },
             | TK_STRING => {
-                codestring(v, (*lexical_state).lexicalstate_token.semantic_info.value_tstring);
+                ExpressionDescription::codestring(v, (*lexical_state).lexicalstate_token.semantic_info.value_tstring);
             },
             | TK_NIL => {
-                init_exp(v, ExpressionKind::Nil, 0);
+                ExpressionDescription::init_exp(v, ExpressionKind::Nil, 0);
             },
             | TK_TRUE => {
-                init_exp(v, ExpressionKind::True, 0);
+                ExpressionDescription::init_exp(v, ExpressionKind::True, 0);
             },
             | TK_FALSE => {
-                init_exp(v, ExpressionKind::False, 0);
+                ExpressionDescription::init_exp(v, ExpressionKind::False, 0);
             },
             | TK_DOTS => {
                 let function_state: *mut FunctionState = (*lexical_state).lexicalstate_functionstate;
@@ -809,7 +809,7 @@ pub unsafe fn simpleexp(
                         c"cannot use '...' outside a vararg function".as_ptr(),
                     );
                 }
-                init_exp(
+                ExpressionDescription::init_exp(
                     v,
                     ExpressionKind::VariableArguments,
                     code_abck(interpreter, lexical_state, function_state, OPCODE_VARARG, 0, 0, 1, 0),
@@ -920,7 +920,7 @@ pub unsafe fn codename(
     expression_description: *mut ExpressionDescription,
 ) {
     unsafe {
-        codestring(
+        ExpressionDescription::codestring(
             expression_description,
             str_checkname(interpreter, lexical_state, function_state),
         );
@@ -1093,8 +1093,8 @@ pub unsafe fn singlevar(
                 1,
             );
             luak_exp2anyregup(interpreter, lexical_state, function_state, var);
-            codestring(&mut key, variable_name);
-            luak_indexed(interpreter, lexical_state, function_state, var, &mut key);
+            ExpressionDescription::codestring(&mut key, variable_name);
+            ExpressionDescription::luak_indexed(interpreter, lexical_state, function_state, var, &mut key);
         }
     }
 }
@@ -1355,7 +1355,7 @@ pub unsafe fn restassign(
                 return;
             }
         }
-        init_exp(
+        ExpressionDescription::init_exp(
             &mut expression_description,
             ExpressionKind::Nonrelocatable,
             (*(*lexical_state).lexicalstate_functionstate).functionstate_freereg as i32 - 1,
@@ -1921,7 +1921,7 @@ pub unsafe fn handle_local_statement(
         var = getlocalvardesc(lexical_state, function_state, vidx);
         if count_variables == count_expressions
             && (*var).variabledescription_content.variabledescriptioncontent_kind as i32 == 1
-            && luak_exp2const(
+            && ExpressionDescription::luak_exp2const(
                 lexical_state,
                 function_state,
                 &mut expression_description,

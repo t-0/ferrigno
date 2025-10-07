@@ -436,7 +436,7 @@ pub unsafe fn searchvar(
                     .variabledescriptioncontent_kind as i32
                     == 3
                 {
-                    init_exp(var, ExpressionKind::Constant2, (*function_state).functionstate_firstlocal + i);
+                    ExpressionDescription::init_exp(var, ExpressionKind::Constant2, (*function_state).functionstate_firstlocal + i);
                 } else {
                     init_var(lexical_state, function_state, var, i);
                 }
@@ -453,7 +453,7 @@ pub unsafe fn singlevaraux(
 ) {
     unsafe {
         if function_state.is_null() {
-            init_exp(var, ExpressionKind::Void, 0);
+            ExpressionDescription::init_exp(var, ExpressionKind::Void, 0);
         } else {
             let v: i32 = searchvar(lexical_state, function_state, n, var);
             if v >= 0 {
@@ -473,7 +473,7 @@ pub unsafe fn singlevaraux(
                         return;
                     }
                 }
-                init_exp(var, ExpressionKind::UpValue, index);
+                ExpressionDescription::init_exp(var, ExpressionKind::UpValue, index);
             }
         };
     }
@@ -1182,8 +1182,8 @@ pub unsafe fn luak_dischargevars(
     unsafe {
         match (*expression_description).expressiondescription_expressionkind {
             | ExpressionKind::Constant2 => {
-                const2exp(
-                    const2val(lexical_state, function_state, expression_description),
+                ExpressionDescription::const2exp(
+                    ExpressionDescription::const2val(lexical_state, function_state, expression_description),
                     expression_description,
                 );
             },
@@ -1977,7 +1977,7 @@ pub unsafe fn constfolding(
         let mut v1: TValue = TValue::new(TagVariant::NilNil);
         let mut v2: TValue = TValue::new(TagVariant::NilNil);
         let mut res: TValue = TValue::new(TagVariant::NilNil);
-        if !tonumeral(e1, &mut v1) || !tonumeral(e2, &mut v2) || validop(op, &mut v1, &mut v2) == 0 {
+        if !ExpressionDescription::tonumeral(e1, &mut v1) || !ExpressionDescription::tonumeral(e2, &mut v2) || validop(op, &mut v1, &mut v2) == 0 {
             return 0;
         }
         luao_rawarith(interpreter, op, &mut v1, &mut v2, &mut res);
@@ -2076,7 +2076,7 @@ pub unsafe fn finishbinexpneg(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription, op: u32, line: i32, event: u32,
 ) -> i32 {
     unsafe {
-        if !is_k_int(e2) {
+        if !ExpressionDescription::is_k_int(e2) {
             return 0;
         } else {
             let i2: i64 = (*e2).expressiondescription_value.value_integer;
@@ -2114,7 +2114,7 @@ pub unsafe fn codebinnok(
 ) {
     unsafe {
         if flip != 0 {
-            swapexps(e1, e2);
+            ExpressionDescription::swapexps(e1, e2);
         }
         codebinexpval(interpreter, lexical_state, function_state, opr, e1, e2, line);
     }
@@ -2124,7 +2124,7 @@ pub unsafe fn codearith(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription, flip: i32, line: i32,
 ) {
     unsafe {
-        if tonumeral(e2, null_mut()) && code_expression_to_constant(interpreter, lexical_state, function_state, e2) != 0 {
+        if ExpressionDescription::tonumeral(e2, null_mut()) && code_expression_to_constant(interpreter, lexical_state, function_state, e2) != 0 {
             codebink(interpreter, lexical_state, function_state, opr, e1, e2, flip, line);
         } else {
             codebinnok(interpreter, lexical_state, function_state, opr, e1, e2, flip, line);
@@ -2138,7 +2138,7 @@ pub unsafe fn codebitwise(
     unsafe {
         let mut flip: i32 = 0;
         if (*e1).expressiondescription_expressionkind == ExpressionKind::ConstantInteger {
-            swapexps(e1, e2);
+            ExpressionDescription::swapexps(e1, e2);
             flip = 1;
         }
         if (*e2).expressiondescription_expressionkind == ExpressionKind::ConstantInteger
@@ -2160,11 +2160,11 @@ pub unsafe fn codeorder(
         let r1: i64;
         let r2: i64;
         let op: u32;
-        if is_sc_number(e2, &mut im, &mut is_float) != 0 {
+        if ExpressionDescription::is_sc_number(e2, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(interpreter, lexical_state, function_state, e1) as i64;
             r2 = im;
             op = binopr2op(opr, OperatorBinary::Less, OPCODE_LTI);
-        } else if is_sc_number(e1, &mut im, &mut is_float) != 0 {
+        } else if ExpressionDescription::is_sc_number(e1, &mut im, &mut is_float) != 0 {
             r1 = luak_exp2anyreg(interpreter, lexical_state, function_state, e2) as i64;
             r2 = im;
             op = binopr2op(opr, OperatorBinary::Less, OPCODE_GTI);
@@ -2191,10 +2191,10 @@ pub unsafe fn codeeq(
         let r2: i64;
         let op: u32;
         if (*e1).expressiondescription_expressionkind != ExpressionKind::Nonrelocatable {
-            swapexps(e1, e2);
+            ExpressionDescription::swapexps(e1, e2);
         }
         r1 = luak_exp2anyreg(interpreter, lexical_state, function_state, e1) as i64;
-        if is_sc_number(e2, &mut im, &mut is_float) != 0 {
+        if ExpressionDescription::is_sc_number(e2, &mut im, &mut is_float) != 0 {
             op = OPCODE_EQI;
             r2 = im;
         } else if exp2rk(interpreter, lexical_state, function_state, e2) != 0 {
@@ -2311,19 +2311,19 @@ pub unsafe fn luak_infix(
             | OPCODE_GET_UPVALUE
             | OPCODE_SETUPVAL
             | OPCODE_GET_TABLE_UPVALUE => {
-                if !tonumeral(v, null_mut()) {
+                if !ExpressionDescription::tonumeral(v, null_mut()) {
                     luak_exp2anyreg(interpreter, lexical_state, function_state, v);
                 }
             },
             | OPCODE_INDEX_INTEGER | OPCODE_SETTABLE => {
-                if !tonumeral(v, null_mut()) {
+                if !ExpressionDescription::tonumeral(v, null_mut()) {
                     exp2rk(interpreter, lexical_state, function_state, v);
                 }
             },
             | OPCODE_GET_FIELD | OPCODE_SETTABUP | OPCODE_SETI | OPCODE_SETFIELD => {
                 let mut dummy1: i64 = 0;
                 let mut dummy2 = false;
-                if is_sc_number(v, &mut dummy1, &mut dummy2) == 0 {
+                if ExpressionDescription::is_sc_number(v, &mut dummy1, &mut dummy2) == 0 {
                     luak_exp2anyreg(interpreter, lexical_state, function_state, v);
                 }
             },
@@ -2402,11 +2402,11 @@ pub unsafe fn luak_posfix(
             },
             | OperatorBinary::Add => {
                 let mut flip: i32 = 0;
-                if tonumeral(expression_description_a, null_mut()) {
-                    swapexps(expression_description_a, expression_description_b);
+                if ExpressionDescription::tonumeral(expression_description_a, null_mut()) {
+                    ExpressionDescription::swapexps(expression_description_a, expression_description_b);
                     flip = 1;
                 }
-                if is_sc_int(expression_description_b) {
+                if ExpressionDescription::is_sc_int(expression_description_b) {
                     codebini(
                         interpreter, lexical_state, function_state, OPCODE_ADDI, expression_description_a,
                         expression_description_b, flip, line, TM_ADD,
@@ -2420,8 +2420,8 @@ pub unsafe fn luak_posfix(
             },
             | OperatorBinary::Multiply => {
                 let mut flip: i32 = 0;
-                if tonumeral(expression_description_a, null_mut()) {
-                    swapexps(expression_description_a, expression_description_b);
+                if ExpressionDescription::tonumeral(expression_description_a, null_mut()) {
+                    ExpressionDescription::swapexps(expression_description_a, expression_description_b);
                     flip = 1;
                 }
                 codearith(
@@ -2477,8 +2477,8 @@ pub unsafe fn luak_posfix(
                 );
             },
             | OperatorBinary::ShiftLeft => {
-                if is_sc_int(expression_description_a) {
-                    swapexps(expression_description_a, expression_description_b);
+                if ExpressionDescription::is_sc_int(expression_description_a) {
+                    ExpressionDescription::swapexps(expression_description_a, expression_description_b);
                     codebini(
                         interpreter, lexical_state, function_state, OPCODE_SHLI, expression_description_a,
                         expression_description_b, 1, line, TM_SHL,
@@ -2495,7 +2495,7 @@ pub unsafe fn luak_posfix(
                 }
             },
             | OperatorBinary::ShiftRight => {
-                if is_sc_int(expression_description_b) {
+                if ExpressionDescription::is_sc_int(expression_description_b) {
                     codebini(
                         interpreter, lexical_state, function_state, OPCODE_SHRI, expression_description_a,
                         expression_description_b, 0, line, TM_SHR,
@@ -2518,14 +2518,14 @@ pub unsafe fn luak_posfix(
                 );
             },
             | OperatorBinary::GreaterEqual => {
-                swapexps(expression_description_a, expression_description_b);
+                ExpressionDescription::swapexps(expression_description_a, expression_description_b);
                 binary = OperatorBinary::LessEqual;
                 codeorder(
                     interpreter, lexical_state, function_state, binary, expression_description_a, expression_description_b,
                 );
             },
             | OperatorBinary::Greater => {
-                swapexps(expression_description_a, expression_description_b);
+                ExpressionDescription::swapexps(expression_description_a, expression_description_b);
                 binary = OperatorBinary::Less;
                 codeorder(
                     interpreter, lexical_state, function_state, binary, expression_description_a, expression_description_b,

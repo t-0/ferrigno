@@ -43,7 +43,7 @@ unsafe fn luab_corunning(interpreter: *mut Interpreter) -> i32 {
 unsafe fn luab_close(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let coroutine: *mut Interpreter = get_coroutine(interpreter);
-        match auxiliary_status(interpreter, coroutine) {
+        match CoroutineStatus::auxiliary_status(interpreter, coroutine) {
             | CoroutineStatus::Dead | CoroutineStatus::Yield => match lua_closethread(coroutine, interpreter) {
                 | Status::OK => {
                     (*interpreter).push_boolean(true);
@@ -63,7 +63,7 @@ unsafe fn luab_costatus(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         lua_pushstring(
             interpreter,
-            auxiliary_status(interpreter, get_coroutine(interpreter)).get_name(),
+            CoroutineStatus::auxiliary_status(interpreter, get_coroutine(interpreter)).get_name(),
         );
     }
     1

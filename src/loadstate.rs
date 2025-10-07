@@ -386,7 +386,7 @@ pub unsafe fn load_closure(interpreter: *mut Interpreter, zio: *mut ZIO, name: *
         load_state.loadstate_interpreter = interpreter;
         load_state.loadstate_zio = zio;
         load_state.check_header();
-        let ret: *mut Closure = luaf_newlclosure(interpreter, load_state.load_byte() as i32);
+        let ret: *mut Closure = Closure::luaf_newlclosure(interpreter, load_state.load_byte() as i32);
         let io: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
         (*io).tvalue_value.value_object = &mut (*(ret as *mut Object));
         (*io).tvalue_set_tag_variant(TagVariant::ClosureL);

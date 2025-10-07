@@ -1291,7 +1291,7 @@ pub unsafe fn f_parser(interpreter: *mut Interpreter, arbitrary_data: *mut libc:
                 ch,
             )
         };
-        luaf_initupvals(interpreter, closure);
+        Closure::luaf_initupvals(interpreter, closure);
     }
 }
 pub unsafe fn luad_protectedparser(interpreter: *mut Interpreter, zio: *mut ZIO, name: *const i8, mode: *const i8) -> Status {
@@ -1759,7 +1759,7 @@ pub unsafe fn lua_pushcclosure(interpreter: *mut Interpreter, fn_0: CFunction, m
             (*io).tvalue_set_tag_variant(TagVariant::ClosureCFunction);
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(1);
         } else {
-            let closure: *mut Closure = luaf_newcclosure(interpreter, n);
+            let closure: *mut Closure = Closure::luaf_newcclosure(interpreter, n);
             (*closure).payload.c_cfunction = fn_0;
             (*interpreter).interpreter_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer.offset(-(n as isize));
             loop {
@@ -3906,7 +3906,7 @@ pub unsafe fn luay_parser(
     unsafe {
         let mut lexstate: LexicalState = LexicalState::new();
         let mut funcstate: FunctionState = FunctionState::new();
-        let closure: *mut Closure = luaf_newlclosure(interpreter, 1);
+        let closure: *mut Closure = Closure::luaf_newlclosure(interpreter, 1);
         let io: *mut TValue = &mut (*(*interpreter).interpreter_top.stkidrel_pointer);
         let x_: *mut Closure = closure;
         (*io).tvalue_value.value_object = &mut (*(x_ as *mut Object));
@@ -3981,7 +3981,7 @@ pub unsafe fn pushclosure(
     unsafe {
         let count_upvalues = (*p).prototype_upvalues.get_size();
         let uv: *mut UpValueDescription = (*p).prototype_upvalues.vectort_pointer;
-        let ncl: *mut Closure = luaf_newlclosure(interpreter, count_upvalues as i32);
+        let ncl: *mut Closure = Closure::luaf_newlclosure(interpreter, count_upvalues as i32);
         (*ncl).payload.l_prototype = p;
         let io: *mut TValue = &mut (*ra);
         let x_: *mut Closure = ncl;

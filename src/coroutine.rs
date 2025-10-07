@@ -18,30 +18,30 @@ impl CoroutineStatus {
             | CoroutineStatus::Normal => c"normal".as_ptr(),
         }
     }
-}
-pub unsafe fn auxiliary_status(interpreter: *mut Interpreter, coroutine: *mut Interpreter) -> CoroutineStatus {
-    unsafe {
-        if interpreter == coroutine {
-            return CoroutineStatus::Running;
-        } else {
-            match (*coroutine).get_status() {
-                | Status::Yield => {
-                    return CoroutineStatus::Yield;
-                },
-                | Status::OK => {
-                    let mut debuginfo = DebugInfo::new();
-                    if lua_getstack(coroutine, 0, &mut debuginfo) != 0 {
-                        return CoroutineStatus::Normal;
-                    } else if (*coroutine).get_top() == 0 {
-                        return CoroutineStatus::Dead;
-                    } else {
+    pub unsafe fn auxiliary_status(interpreter: *mut Interpreter, coroutine: *mut Interpreter) -> CoroutineStatus {
+        unsafe {
+            if interpreter == coroutine {
+                return CoroutineStatus::Running;
+            } else {
+                match (*coroutine).get_status() {
+                    | Status::Yield => {
                         return CoroutineStatus::Yield;
-                    }
-                },
-                | _ => {
-                    return CoroutineStatus::Dead;
-                },
-            }
-        };
+                    },
+                    | Status::OK => {
+                        let mut debuginfo = DebugInfo::new();
+                        if lua_getstack(coroutine, 0, &mut debuginfo) != 0 {
+                            return CoroutineStatus::Normal;
+                        } else if (*coroutine).get_top() == 0 {
+                            return CoroutineStatus::Dead;
+                        } else {
+                            return CoroutineStatus::Yield;
+                        }
+                    },
+                    | _ => {
+                        return CoroutineStatus::Dead;
+                    },
+                }
+            };
+        }
     }
 }
