@@ -184,8 +184,8 @@ impl Closure {
                             (*debuginfo).debuginfo_ntransfer = 0;
                             (*debuginfo).debuginfo_ftransfer = (*debuginfo).debuginfo_ntransfer;
                         } else {
-                            (*debuginfo).debuginfo_ftransfer = (*callinfo).callinfo_u2.transferinfo.ftransfer;
-                            (*debuginfo).debuginfo_ntransfer = (*callinfo).callinfo_u2.transferinfo.ntransfer;
+                            (*debuginfo).debuginfo_ftransfer = (*callinfo).callinfo_u2.callinfoconstituentb_transferinfo.callinfoconsistuentbtransferinfo_ftransfer;
+                            (*debuginfo).debuginfo_ntransfer = (*callinfo).callinfo_u2.callinfoconstituentb_transferinfo.callinfoconsistuentbtransferinfo_ntransfer;
                         }
                     },
                     | Character::UpperL | Character::LowerF => {},

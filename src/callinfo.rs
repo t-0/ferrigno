@@ -41,16 +41,16 @@ pub struct CallInfoConstituentAC {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub union CallInfoConsistuentB {
-    pub funcidx: i32,
-    pub nyield: i32,
-    pub nres: i32,
-    pub transferinfo: CallInfoConsistuentBTransferInfo,
+    pub callinfoconstituentb_funcidx: i32,
+    pub callinfoconstituentb_nyield: i32,
+    pub callinfoconstituentb_nres: i32,
+    pub callinfoconstituentb_transferinfo: CallInfoConsistuentBTransferInfo,
 }
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct CallInfoConsistuentBTransferInfo {
-    pub ftransfer: u16,
-    pub ntransfer: u16,
+    pub callinfoconsistuentbtransferinfo_ftransfer: u16,
+    pub callinfoconsistuentbtransferinfo_ntransfer: u16,
 }
 impl CallInfo {
     pub unsafe fn currentpc(callinfo: *mut CallInfo) -> i32 {

@@ -55,7 +55,7 @@ impl CallS {
                 let callinfo = (*interpreter).interpreter_callinfo;
                 (*callinfo).callinfo_u.c.context_function = context_function;
                 (*callinfo).callinfo_u.c.context = context;
-                (*callinfo).callinfo_u2.funcidx = (calls.calls_function as *mut i8)
+                (*callinfo).callinfo_u2.callinfoconstituentb_funcidx = (calls.calls_function as *mut i8)
                     .offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8)
                     as i32;
                 (*callinfo).callinfo_u.c.old_error_function = (*interpreter).interpreter_errorfunction;

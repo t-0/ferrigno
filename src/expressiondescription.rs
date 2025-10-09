@@ -121,41 +121,39 @@ impl ExpressionDescription {
             .variabledescription_k;
         }
     }
-    pub unsafe fn luak_exp2const(
-        lexical_state: *mut LexicalState, function_state: *mut FunctionState, expression_description: *const ExpressionDescription,
-        v: *mut TValue,
-    ) -> bool {
+    pub unsafe fn luak_exp2const(&self, lexical_state: *mut LexicalState, function_state: *mut FunctionState, output: *mut TValue) -> bool {
         unsafe {
-            if (*expression_description).expressiondescription_t != (*expression_description).expressiondescription_f {
+            if self.expressiondescription_t != self.expressiondescription_f {
                 return false;
+            } else {
+                match self.expressiondescription_expressionkind {
+                    | ExpressionKind::False => {
+                        (*output).tvalue_set_tag_variant(TagVariant::BooleanFalse);
+                        return true;
+                    },
+                    | ExpressionKind::True => {
+                        (*output).tvalue_set_tag_variant(TagVariant::BooleanTrue);
+                        return true;
+                    },
+                    | ExpressionKind::Nil => {
+                        (*output).tvalue_set_tag_variant(TagVariant::NilNil);
+                        return true;
+                    },
+                    | ExpressionKind::ConstantString => {
+                        let tstring: *mut TString = self.expressiondescription_value.value_tstring;
+                        (*output).tvalue_value.value_object = &mut (*(tstring as *mut Object));
+                        (*output).tvalue_set_tag_variant((*tstring).get_tagvariant());
+                        (*output).set_collectable(true);
+                        return true;
+                    },
+                    | ExpressionKind::Constant2 => {
+                        let io2: *const TValue = ExpressionDescription::const2val(lexical_state, function_state, self);
+                        (*output).copy_from(&*io2);
+                        return true;
+                    },
+                    | _ => return ExpressionDescription::tonumeral(self, output),
+                }
             }
-            match (*expression_description).expressiondescription_expressionkind {
-                | ExpressionKind::False => {
-                    (*v).tvalue_set_tag_variant(TagVariant::BooleanFalse);
-                    return true;
-                },
-                | ExpressionKind::True => {
-                    (*v).tvalue_set_tag_variant(TagVariant::BooleanTrue);
-                    return true;
-                },
-                | ExpressionKind::Nil => {
-                    (*v).tvalue_set_tag_variant(TagVariant::NilNil);
-                    return true;
-                },
-                | ExpressionKind::ConstantString => {
-                    let tstring: *mut TString = (*expression_description).expressiondescription_value.value_tstring;
-                    (*v).tvalue_value.value_object = &mut (*(tstring as *mut Object));
-                    (*v).tvalue_set_tag_variant((*tstring).get_tagvariant());
-                    (*v).set_collectable(true);
-                    return true;
-                },
-                | ExpressionKind::Constant2 => {
-                    let io2: *const TValue = ExpressionDescription::const2val(lexical_state, function_state, expression_description);
-                    (*v).copy_from(&*io2);
-                    return true;
-                },
-                | _ => return ExpressionDescription::tonumeral(expression_description, v),
-            };
         }
     }
     pub unsafe fn const2exp(v: *mut TValue, expression_description: *mut ExpressionDescription) {

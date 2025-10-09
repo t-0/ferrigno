@@ -1921,10 +1921,9 @@ pub unsafe fn handle_local_statement(
         var = getlocalvardesc(lexical_state, function_state, vidx);
         if count_variables == count_expressions
             && (*var).variabledescription_content.variabledescriptioncontent_kind as i32 == 1
-            && ExpressionDescription::luak_exp2const(
+            && expression_description.luak_exp2const(
                 lexical_state,
                 function_state,
-                &mut expression_description,
                 &mut (*var).variabledescription_k,
             )
         {

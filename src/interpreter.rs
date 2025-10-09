@@ -676,8 +676,8 @@ pub unsafe fn luad_hook(interpreter: *mut Interpreter, event: i32, line: i32, ft
             let mut debuginfo: DebugInfo = DebugInfo::new2(event, line, callinfo);
             if ntransfer != 0 {
                 mask |= 1 << 8;
-                (*callinfo).callinfo_u2.transferinfo.ftransfer = ftransfer as u16;
-                (*callinfo).callinfo_u2.transferinfo.ntransfer = ntransfer as u16;
+                (*callinfo).callinfo_u2.callinfoconstituentb_transferinfo.callinfoconsistuentbtransferinfo_ftransfer = ftransfer as u16;
+                (*callinfo).callinfo_u2.callinfoconstituentb_transferinfo.callinfoconsistuentbtransferinfo_ntransfer = ntransfer as u16;
             }
             if (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0
                 && (*interpreter).interpreter_top.stkidrel_pointer < (*callinfo).callinfo_top.stkidrel_pointer
@@ -815,7 +815,7 @@ pub unsafe fn moveresults(interpreter: *mut Interpreter, mut res: *mut TValue, m
                 if wanted < -1 {
                     (*(*interpreter).interpreter_callinfo).callinfo_callstatus =
                         ((*(*interpreter).interpreter_callinfo).callinfo_callstatus as i32 | 1 << 9 as i32) as u16;
-                    (*(*interpreter).interpreter_callinfo).callinfo_u2.nres = nres;
+                    (*(*interpreter).interpreter_callinfo).callinfo_u2.callinfoconstituentb_nres = nres;
                     res = luaf_close(interpreter, res, Status::Closing, 1);
                     (*(*interpreter).interpreter_callinfo).callinfo_callstatus =
                         ((*(*interpreter).interpreter_callinfo).callinfo_callstatus as i32 & !(1 << 9 as i32)) as u16;
@@ -1063,7 +1063,7 @@ pub unsafe fn finishpcallk(interpreter: *mut Interpreter, callinfo: *mut CallInf
             status = Status::Yield;
         } else {
             let mut function: *mut TValue = ((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8)
-                .offset((*callinfo).callinfo_u2.funcidx as isize) as *mut TValue;
+                .offset((*callinfo).callinfo_u2.callinfoconstituentb_funcidx as isize) as *mut TValue;
             (*interpreter).interpreter_allowhook = ((*callinfo).callinfo_callstatus as i32 & 1 << 0) as u8;
             function = luaf_close(interpreter, function, status, 1);
             (*interpreter).set_error_object(status, function);
@@ -1080,7 +1080,7 @@ pub unsafe fn finishccall(interpreter: *mut Interpreter, callinfo: *mut CallInfo
     unsafe {
         let n: i32;
         if (*callinfo).callinfo_callstatus as i32 & 1 << 9 as i32 != 0 {
-            n = (*callinfo).callinfo_u2.nres;
+            n = (*callinfo).callinfo_u2.callinfoconstituentb_nres;
         } else {
             let mut status = Status::Yield;
             if (*callinfo).callinfo_callstatus as i32 & 1 << 4 != 0 {
@@ -1212,7 +1212,7 @@ pub unsafe fn lua_resume(interpreter: *mut Interpreter, from: *mut Interpreter, 
             (*(*interpreter).interpreter_callinfo).callinfo_top.stkidrel_pointer = (*interpreter).interpreter_top.stkidrel_pointer;
         }
         *count_results = if status == Status::Yield {
-            (*(*interpreter).interpreter_callinfo).callinfo_u2.nyield
+            (*(*interpreter).interpreter_callinfo).callinfo_u2.callinfoconstituentb_nyield
         } else {
             ((*interpreter).interpreter_top.stkidrel_pointer)
                 .offset_from(((*(*interpreter).interpreter_callinfo).callinfo_function.stkidrel_pointer).offset(1 as isize))
@@ -1233,7 +1233,7 @@ pub unsafe fn lua_yieldk(interpreter: *mut Interpreter, count_results: i32, ctx:
             }
         }
         (*interpreter).interpreter_status = Status::Yield;
-        (*callinfo).callinfo_u2.nyield = count_results;
+        (*callinfo).callinfo_u2.callinfoconstituentb_nyield = count_results;
         if (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0 {
         } else {
             (*callinfo).callinfo_u.c.context_function = k;
@@ -4066,7 +4066,7 @@ pub unsafe fn luav_finishop(interpreter: *mut Interpreter) {
             },
             | 70 => {
                 let ra: *mut TValue = base.offset((inst >> POSITION_A & !(0xFFFFFFFFu32 << 8) << 0) as isize);
-                (*interpreter).interpreter_top.stkidrel_pointer = ra.offset((*callinfo).callinfo_u2.nres as isize);
+                (*interpreter).interpreter_top.stkidrel_pointer = ra.offset((*callinfo).callinfo_u2.callinfoconstituentb_nres as isize);
                 (*callinfo).callinfo_u.l.saved_program_counter = ((*callinfo).callinfo_u.l.saved_program_counter).offset(-1);
                 (*callinfo).callinfo_u.l.saved_program_counter;
             },
@@ -5970,7 +5970,7 @@ pub unsafe fn luav_execute(interpreter: *mut Interpreter, mut callinfo: *mut Cal
                             }
                             (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
                             if (i & (1 as u32) << POSITION_K) as i32 != 0 {
-                                (*callinfo).callinfo_u2.nres = n_3;
+                                (*callinfo).callinfo_u2.callinfoconstituentb_nres = n_3;
                                 if (*interpreter).interpreter_top.stkidrel_pointer < (*callinfo).callinfo_top.stkidrel_pointer {
                                     (*interpreter).interpreter_top.stkidrel_pointer = (*callinfo).callinfo_top.stkidrel_pointer;
                                 }
