@@ -881,7 +881,7 @@ pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32
                 return K::Unsigned;
             },
             | Character::LowerF => {
-                *size = size_of::<libc::c_float>() as i32;
+                *size = size_of::<f32>() as i32;
                 return K::Float;
             },
             | Character::LowerN => {
@@ -1065,12 +1065,12 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                     current_block_33 = 3222590281903869779;
                 },
                 | 2 => {
-                    let mut f: libc::c_float = lual_checknumber(interpreter, arg) as libc::c_float;
-                    let buffer: *mut i8 = b.prepare_with_size(size_of::<libc::c_float>());
+                    let mut f: f32 = lual_checknumber(interpreter, arg) as f32;
+                    let buffer: *mut i8 = b.prepare_with_size(size_of::<f32>());
                     copywithendian(
                         buffer,
-                        &mut f as *mut libc::c_float as *mut i8,
-                        size_of::<libc::c_float>() as i32,
+                        &mut f as *mut f32 as *mut i8,
+                        size_of::<f32>() as i32,
                         h.header_islittleendian,
                     );
                     b.buffer_loads
@@ -1274,11 +1274,11 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                     (*interpreter).push_integer(res);
                 },
                 | 2 => {
-                    let mut f: libc::c_float = 0.0;
+                    let mut f: f32 = 0.0;
                     copywithendian(
-                        &mut f as *mut libc::c_float as *mut i8,
+                        &mut f as *mut f32 as *mut i8,
                         data.offset(position as isize),
-                        size_of::<libc::c_float>() as i32,
+                        size_of::<f32>() as i32,
                         h.header_islittleendian,
                     );
                     (*interpreter).push_number(f as f64);

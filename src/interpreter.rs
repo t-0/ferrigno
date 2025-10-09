@@ -560,7 +560,9 @@ pub unsafe fn luad_throw(interpreter: *mut Interpreter, status: Status) -> ! {
     unsafe {
         if !((*interpreter).interpreter_longjump).is_null() {
             (*(*interpreter).interpreter_longjump).longjump_status = status;
-            _longjmp(((*(*interpreter).interpreter_longjump).longjump_jumpbuffer).as_mut_ptr(), 1);
+            let ilj = (*interpreter).interpreter_longjump;
+            let mut lj = (*ilj).longjump_jumpbuffer;
+            _longjmp(&mut lj as *mut JumpBuffer, 1);
         } else {
             let global: *mut Global = (*interpreter).interpreter_global;
             let outerstatus = luae_resetthread(interpreter, status);
@@ -591,7 +593,7 @@ pub unsafe fn luad_rawrunprotected(
         write_volatile(&mut long_jump.longjump_status as *mut Status as *mut i32, 0);
         long_jump.longjump_previous = (*interpreter).interpreter_longjump;
         (*interpreter).interpreter_longjump = &mut long_jump;
-        if _setjmp(long_jump.longjump_jumpbuffer.as_mut_ptr()) == 0 {
+        if _setjmp(&mut long_jump.longjump_jumpbuffer as *mut JumpBuffer) == 0 {
             (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(interpreter, arbitrary_data);
         }
         (*interpreter).interpreter_longjump = long_jump.longjump_previous;
