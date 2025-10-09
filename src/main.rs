@@ -52,6 +52,7 @@ mod opmode;
 mod priority;
 mod prototype;
 mod randomstate;
+mod types;
 mod registeredfunction;
 mod strings;
 mod repl;

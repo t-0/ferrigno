@@ -12,15 +12,15 @@ impl Buffer {
 #[repr(C)]
 pub struct Buffer {
     pub buffer_loads: LoadS<BufferElement>,
-    pub buffer_interpreter: *mut Interpreter,
-    pub buffer_initial_data: [BufferElement; Buffer::INITIAL_SIZE],
+    m_interpreter: *mut Interpreter,
+    m_initial_data: [BufferElement; Buffer::INITIAL_SIZE],
 }
 impl TDefaultNew for Buffer {
     fn new() -> Self {
         Buffer {
             buffer_loads: LoadS::<BufferElement>::new(),
-            buffer_interpreter: null_mut(),
-            buffer_initial_data: [0; Buffer::INITIAL_SIZE],
+            m_interpreter: null_mut(),
+            m_initial_data: [0; Buffer::INITIAL_SIZE],
         }
     }
 }
@@ -41,7 +41,7 @@ impl Buffer {
         unsafe {
             let mut newsize = 2 * self.buffer_loads.get_size();
             if (!0usize) - size < self.buffer_loads.get_length() as usize {
-                lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize
+                lual_error(self.m_interpreter, c"buffer too large".as_ptr()) as usize
             } else {
                 newsize = newsize.max(self.buffer_loads.get_length() + size as i32);
                 newsize as usize
@@ -53,10 +53,10 @@ impl Buffer {
             if self.buffer_loads.get_size() - self.buffer_loads.get_length() >= size as i32 {
                 return self.buffer_loads.loads_pointer.offset(self.buffer_loads.get_length() as isize);
             } else {
-                let interpreter = self.buffer_interpreter;
+                let interpreter = self.m_interpreter;
                 let new_pointer: *mut BufferElement;
                 let newsize = self.new_with_size(size);
-                if self.buffer_loads.loads_pointer != (self.buffer_initial_data).as_mut_ptr() {
+                if self.buffer_loads.loads_pointer != (self.m_initial_data).as_mut_ptr() {
                     new_pointer = UserBox::resize_userbox(interpreter, boxidx, newsize) as *mut BufferElement;
                 } else {
                     lua_rotate(interpreter, boxidx, -1);
@@ -96,13 +96,13 @@ impl Buffer {
     }
     pub unsafe fn push_result(&mut self) {
         unsafe {
-            let interpreter = self.buffer_interpreter;
+            let interpreter = self.m_interpreter;
             lua_pushlstring(
                 interpreter,
                 self.buffer_loads.loads_pointer,
                 self.buffer_loads.get_length() as usize,
             );
-            if self.buffer_loads.loads_pointer != (self.buffer_initial_data).as_mut_ptr() {
+            if self.buffer_loads.loads_pointer != (self.m_initial_data).as_mut_ptr() {
                 lua_closeslot(interpreter, -2);
             }
             lua_rotate(interpreter, -2, -1);
@@ -111,7 +111,7 @@ impl Buffer {
     }
     pub unsafe fn add_value(&mut self) {
         unsafe {
-            let interpreter = self.buffer_interpreter;
+            let interpreter = self.m_interpreter;
             let mut length: usize = 0;
             let s: *const BufferElement = lua_tolstring(interpreter, -1, &mut length);
             let b: *mut BufferElement = self.prepare_with_size_and_index(length as usize, -2);
@@ -126,9 +126,9 @@ impl Buffer {
     }
     pub unsafe fn initialize(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            self.buffer_interpreter = interpreter;
+            self.m_interpreter = interpreter;
             self.buffer_loads
-                .inject(self.buffer_initial_data.as_mut_ptr(), Buffer::INITIAL_SIZE);
+                .inject(self.m_initial_data.as_mut_ptr(), Buffer::INITIAL_SIZE);
             lua_pushlightuserdata(interpreter, self as *mut Buffer as *mut c_void);
         }
     }

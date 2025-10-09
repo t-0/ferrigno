@@ -13,8 +13,13 @@ pub struct SignalSet {
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JumpBufferTag {
-    pub __mask_was_saved: i32,
-    pub __saved_mask: SignalSet,
+    m_mask_was_saved: i32,
+    m_saved_mask: SignalSet,
+}
+impl JumpBufferTag {
+    pub fn new() -> Self {
+        JumpBufferTag { m_mask_was_saved: 0, m_saved_mask: SignalSet { __val: [0; 16] } }
+    }
 }
 pub type SignalHandler = Option<unsafe fn(i32) -> ()>;
 #[derive(Copy, Clone)]
