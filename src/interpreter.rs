@@ -7160,12 +7160,12 @@ pub static mut PROGRAM_NAME: *const i8 = c"lua".as_ptr();
 pub unsafe fn setsignal(sig: i32, handler: Option<unsafe fn(i32) -> ()>) {
     unsafe {
         let mut signalaction: SignalAction = SignalAction {
-            __sigaction_handler: SigActionA { sa_handler: None },
+            sa_handler: SigActionA { sa_handler: None },
             sa_mask: SignalSet { __val: [0; 16] },
             sa_flags: 0,
             sa_restorer: None,
         };
-        signalaction.__sigaction_handler.sa_handler = handler;
+        signalaction.sa_handler.sa_handler = handler;
         signalaction.sa_flags = 0;
         libc::sigemptyset(&mut signalaction.sa_mask as *mut SignalSet as *mut libc::sigset_t);
         libc::sigaction(sig, &mut signalaction as *mut SignalAction as *mut libc::sigaction, null_mut());

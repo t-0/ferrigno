@@ -20,7 +20,7 @@ pub type SignalHandler = Option<unsafe fn(i32) -> ()>;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct SignalAction {
-    pub __sigaction_handler: SigActionA,
+    pub sa_handler: SigActionA,
     pub sa_mask: SignalSet,
     pub sa_flags: i32,
     pub sa_restorer: Option<unsafe fn() -> ()>,
