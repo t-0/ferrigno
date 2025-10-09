@@ -7,7 +7,7 @@ use crate::global::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use std::ptr::*;
 pub unsafe fn luab_tonumber(interpreter: *mut Interpreter) -> i32 {
     unsafe {

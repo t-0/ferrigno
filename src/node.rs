@@ -1,5 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tstring::*;
 use crate::tvalue::*;
 #[derive(Copy, Clone)]

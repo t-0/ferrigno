@@ -1,6 +1,6 @@
 use crate::f2i::*;
 use crate::interpreter::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tvalue::*;
 use crate::utility::*;
 pub unsafe fn forlimit(interpreter: *mut Interpreter, initial: i64, lim: *const TValue, p: *mut i64, step: i64) -> i32 {

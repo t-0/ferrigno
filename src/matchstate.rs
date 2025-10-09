@@ -1,7 +1,7 @@
 use crate::buffer::*;
 use crate::character::*;
 use crate::interpreter::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use libc::*;
 use std::ptr::*;
 pub const MAX_CAPTURES: usize = 32;

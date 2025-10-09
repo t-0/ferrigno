@@ -1,6 +1,6 @@
 use crate::buffer::*;
 use crate::interpreter::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use crate::dumpstate::*;
 #[derive(Copy, Clone)]

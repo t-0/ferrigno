@@ -18,7 +18,7 @@ use crate::priority::*;
 use crate::prototype::*;
 use crate::status::*;
 use crate::table::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tdefaultnew::*;
 use crate::tobject::*;
 use crate::token::*;

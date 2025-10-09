@@ -2,7 +2,7 @@ use crate::buffer::*;
 use crate::character::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use libc::time;
 use libc::{remove, rename, setlocale, system};

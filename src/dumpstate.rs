@@ -6,7 +6,7 @@ use crate::interpreter::*;
 use crate::prototype::*;
 use crate::tvalue::*;
 use crate::closure::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 //
 pub const LUA_SIGNATURE: *const i8 = c"\x1BLua".as_ptr();
 #[repr(C)]

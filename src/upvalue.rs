@@ -1,6 +1,6 @@
 use crate::interpreter::*;
 use crate::object::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tobject::*;
 use crate::tvalue::*;
 pub type UpValueSuper = Object;

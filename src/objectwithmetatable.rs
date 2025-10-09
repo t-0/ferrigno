@@ -1,7 +1,7 @@
 use crate::object::*;
 use crate::objectwithgclist::*;
 use crate::table::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tobject::*;
 use crate::tobjectwithgclist::*;
 use crate::tobjectwithmetatable::*;

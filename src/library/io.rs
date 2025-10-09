@@ -7,7 +7,7 @@ use crate::registeredfunction::*;
 use std::io::Write;
 use crate::rn::*;
 use crate::stream::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use crate::user::*;
 use std::ptr::*;

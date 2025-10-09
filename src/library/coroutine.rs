@@ -2,7 +2,7 @@ use crate::coroutine::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
-use crate::tag::*;
+use crate::tagtype::*;
 unsafe fn luab_cocreate(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         (*interpreter).lual_checktype(1, TagType::Closure);

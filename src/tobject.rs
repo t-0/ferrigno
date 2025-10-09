@@ -1,5 +1,5 @@
 use crate::object::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 pub trait TObject {
     fn as_object(&self) -> &Object;
     fn as_object_mut(&mut self) -> &mut Object;

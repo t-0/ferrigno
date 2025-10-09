@@ -1,3 +1,4 @@
+use crate::strings::*;
 use crate::absolutelineinfo::*;
 use crate::character::*;
 use crate::dumpstate::*;
@@ -11,7 +12,8 @@ use crate::object::*;
 use crate::objectwithgclist::*;
 use crate::opcode::*;
 use crate::opmode::*;
-use crate::tag::*;
+use crate::tagvariant::*;
+use crate::tagtype::*;
 use crate::tm::*;
 use crate::tobject::*;
 use crate::tobjectwithgclist::TObjectWithGCList;

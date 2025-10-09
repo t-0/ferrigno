@@ -8,7 +8,7 @@ use crate::matchstate::*;
 use crate::nativeendian::*;
 use crate::registeredfunction::*;
 use crate::streamwriter::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use crate::tm::*;
 use crate::tstring::*;

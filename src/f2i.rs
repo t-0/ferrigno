@@ -1,6 +1,6 @@
 use crate::character::*;
 use crate::interpreter::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tvalue::*;
 use crate::utility::*;
 use libc::toupper;

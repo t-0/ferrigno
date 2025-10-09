@@ -8,7 +8,7 @@ use crate::object::*;
 use crate::objectwithgclist::*;
 use crate::prototype::*;
 use crate::table::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tobject::*;
 use crate::tobjectwithgclist::TObjectWithGCList;
 use crate::tvalue::*;

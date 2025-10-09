@@ -16,7 +16,7 @@ use crate::operatorunary::*;
 use crate::opmode::*;
 use crate::prototype::*;
 use crate::table::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tdefaultnew::*;
 use crate::tm::*;
 use crate::tobject::*;

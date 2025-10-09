@@ -1,7 +1,7 @@
 use crate::interpreter::*;
 use crate::randomstate::*;
 use crate::registeredfunction::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::user::*;
 use crate::utility::*;
 use libc::time;

@@ -3,7 +3,7 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::prototype::*;
 use crate::stkidrel::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tvalue::*;
 use std::ptr::*;
 #[derive(Copy, Clone)]

@@ -4,7 +4,7 @@ use crate::functions::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::status::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use libc::{dlclose, dlerror, dlopen, dlsym};
 use std::ptr::*;

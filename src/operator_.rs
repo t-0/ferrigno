@@ -2,7 +2,7 @@ use crate::f2i::*;
 use crate::opcode::*;
 use crate::operatorbinary::*;
 use crate::operatorunary::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tm::*;
 use crate::tvalue::*;
 pub unsafe fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {

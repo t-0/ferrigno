@@ -8,7 +8,7 @@ use crate::localvariable::*;
 use crate::object::*;
 use crate::prototype::*;
 use crate::status::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tobject::*;
 use crate::tstring::*;
 use crate::tvalue::*;

@@ -1,7 +1,7 @@
 use crate::buffer::*;
 use crate::interpreter::*;
 use crate::registeredfunction::*;
-use crate::tag::*;
+use crate::tagtype::*;
 use crate::tdefaultnew::*;
 use crate::utility::*;
 use libc::{c_void, time};

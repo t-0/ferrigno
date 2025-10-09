@@ -4,7 +4,7 @@ use crate::functionstate::*;
 use crate::interpreter::*;
 use crate::lexicalstate::LexicalState;
 use crate::object::*;
-use crate::tag::*;
+use crate::tagvariant::*;
 use crate::tdefaultnew::*;
 use crate::tobject::*;
 use crate::tstring::*;
