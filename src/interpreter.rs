@@ -560,7 +560,7 @@ pub unsafe fn luad_throw(interpreter: *mut Interpreter, status: Status) -> ! {
     unsafe {
         if !((*interpreter).interpreter_longjump).is_null() {
             (*(*interpreter).interpreter_longjump).longjump_status = status;
-            _longjmp(((*(*interpreter).interpreter_longjump).longjump_jbt).as_mut_ptr(), 1);
+            _longjmp(((*(*interpreter).interpreter_longjump).longjump_jumpbuffer).as_mut_ptr(), 1);
         } else {
             let global: *mut Global = (*interpreter).interpreter_global;
             let outerstatus = luae_resetthread(interpreter, status);
@@ -591,7 +591,7 @@ pub unsafe fn luad_rawrunprotected(
         write_volatile(&mut long_jump.longjump_status as *mut Status as *mut i32, 0);
         long_jump.longjump_previous = (*interpreter).interpreter_longjump;
         (*interpreter).interpreter_longjump = &mut long_jump;
-        if _setjmp(long_jump.longjump_jbt.as_mut_ptr()) == 0 {
+        if _setjmp(long_jump.longjump_jumpbuffer.as_mut_ptr()) == 0 {
             (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(interpreter, arbitrary_data);
         }
         (*interpreter).interpreter_longjump = long_jump.longjump_previous;
@@ -7157,20 +7157,6 @@ pub unsafe fn l_print(interpreter: *mut Interpreter) {
 }
 pub static mut GLOBAL_STATE: *mut Interpreter = null_mut();
 pub static mut PROGRAM_NAME: *const i8 = c"lua".as_ptr();
-pub unsafe fn setsignal(sig: i32, handler: Option<unsafe fn(i32) -> ()>) {
-    unsafe {
-        let mut signalaction: SignalAction = SignalAction {
-            sa_handler: SigActionA { sa_handler: None },
-            sa_mask: SignalSet { __val: [0; 16] },
-            sa_flags: 0,
-            sa_restorer: None,
-        };
-        signalaction.sa_handler.sa_handler = handler;
-        signalaction.sa_flags = 0;
-        libc::sigemptyset(&mut signalaction.sa_mask as *mut SignalSet as *mut libc::sigset_t);
-        libc::sigaction(sig, &mut signalaction as *mut SignalAction as *mut libc::sigaction, null_mut());
-    }
-}
 pub unsafe fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(interpreter, None, 0, 0);
@@ -7180,7 +7166,7 @@ pub unsafe fn lstop(interpreter: *mut Interpreter, mut _ar: *mut DebugInfo) {
 pub unsafe fn laction(i: i32) {
     unsafe {
         let flag: i32 = 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3;
-        setsignal(i, None);
+        SignalAction::setsignal(i, None);
         lua_sethook(
             GLOBAL_STATE,
             Some(lstop as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()),
@@ -7249,9 +7235,9 @@ pub unsafe fn docall(interpreter: *mut Interpreter, narg: i32, nres: i32) -> Sta
         lua_pushcclosure(interpreter, Some(msghandler as unsafe fn(*mut Interpreter) -> i32), 0);
         lua_rotate(interpreter, base, 1);
         GLOBAL_STATE = interpreter;
-        setsignal(2, Some(laction as unsafe fn(i32) -> ()));
+        SignalAction::setsignal(2, Some(laction as unsafe fn(i32) -> ()));
         let status = CallS::api_call(interpreter, narg, nres, base, 0, None);
-        setsignal(2, None);
+        SignalAction::setsignal(2, None);
         lua_rotate(interpreter, base, -1);
         lua_settop(interpreter, -2);
         return status;

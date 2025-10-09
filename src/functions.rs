@@ -2,6 +2,7 @@ use crate::debuginfo::*;
 use crate::interpreter::*;
 use crate::status::*;
 use libc::*;
+pub type SignalHandlerFunction = Option<unsafe fn(i32) -> ()>;
 pub type ReadFunction = Option<unsafe fn(*mut Interpreter, *mut c_void, *mut usize) -> *const i8>;
 pub type HookFunction = Option<unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()>;
 pub type WarnFunction = Option<unsafe fn(*mut c_void, *const i8, i32) -> ()>;
