@@ -13,7 +13,7 @@ pub enum F2I {
     Ceiling,
 }
 impl F2I {
-    pub unsafe fn luav_flttointeger(&self, input: f64, result: *mut i64) -> bool {
+    pub unsafe fn convert_f64_i64(&self, input: f64, result: *mut i64) -> bool {
         unsafe {
             let mut number: f64 = input.floor();
             if input != number {
@@ -29,40 +29,21 @@ impl F2I {
             };
         }
     }
-    pub unsafe fn luav_tointegerns(&self, obj: *const TValue, result: *mut i64) -> i32 {
+    pub unsafe fn convert_tv_i64(&self, mut obj: *const TValue, result: *mut i64) -> i32 {
         unsafe {
+            let mut tvalue = TValue::new(TagVariant::NilNil);
+            if tvalue.from_string_to_number(obj) {
+                obj = &mut tvalue;
+            }
             if (*obj).get_tagvariant() == TagVariant::NumericNumber {
-                return if (*self).luav_flttointeger((*obj).tvalue_value.value_number, result) { 1 } else { 0 };
+                return if (*self).convert_f64_i64((*obj).tvalue_value.value_number, result) { 1 } else { 0 };
             } else if (*obj).get_tagvariant() == TagVariant::NumericInteger {
                 *result = (*obj).tvalue_value.value_integer;
                 return 1;
             } else {
                 return 0;
-            };
-        }
-    }
-}
-pub unsafe fn luav_tointeger(mut obj: *const TValue, result: *mut i64, mode: F2I) -> i32 {
-    unsafe {
-        let mut tvalue = TValue::new(TagVariant::NilNil);
-        if tvalue.from_string_to_number(obj) {
-            obj = &mut tvalue;
-        }
-        mode.luav_tointegerns(obj, result)
-    }
-}
-pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
-    unsafe {
-        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
-            return (i as f64) < number;
-        } else {
-            let mut fi: i64 = 0;
-            if F2I::Ceiling.luav_flttointeger(number, &mut fi) {
-                return i < fi;
-            } else {
-                return number > 0.0;
             }
-        };
+        }
     }
 }
 pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
@@ -71,7 +52,7 @@ pub unsafe fn leintfloat(i: i64, number: f64) -> bool {
             return i as f64 <= number;
         } else {
             let mut fi: i64 = 0;
-            if F2I::Floor.luav_flttointeger(number, &mut fi) {
+            if F2I::Floor.convert_f64_i64(number, &mut fi) {
                 return i <= fi;
             } else {
                 return number > 0.0;
@@ -85,7 +66,7 @@ pub unsafe fn ltfloatint(number: f64, i: i64) -> bool {
             return number < i as f64;
         } else {
             let mut fi: i64 = 0;
-            if F2I::Floor.luav_flttointeger(number, &mut fi) {
+            if F2I::Floor.convert_f64_i64(number, &mut fi) {
                 return fi < i;
             } else {
                 return number < 0.0;
@@ -99,10 +80,24 @@ pub unsafe fn lefloatint(number: f64, i: i64) -> bool {
             return number <= i as f64;
         } else {
             let mut fi: i64 = 0;
-            if F2I::Ceiling.luav_flttointeger(number, &mut fi) {
+            if F2I::Ceiling.convert_f64_i64(number, &mut fi) {
                 return fi <= i;
             } else {
                 return number < 0.0;
+            }
+        };
+    }
+}
+pub unsafe fn ltintfloat(i: i64, number: f64) -> bool {
+    unsafe {
+        if ((1 as usize) << 53 as i32).wrapping_add(i as usize) <= 2 * ((1 as usize) << 53 as i32) {
+            return (i as f64) < number;
+        } else {
+            let mut fi: i64 = 0;
+            if F2I::Ceiling.convert_f64_i64(number, &mut fi) {
+                return i < fi;
+            } else {
+                return number > 0.0;
             }
         };
     }

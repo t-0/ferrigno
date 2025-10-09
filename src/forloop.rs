@@ -5,7 +5,7 @@ use crate::tvalue::*;
 use crate::utility::*;
 pub unsafe fn forlimit(interpreter: *mut Interpreter, initial: i64, lim: *const TValue, p: *mut i64, step: i64) -> i32 {
     unsafe {
-        if luav_tointeger(lim, p, if step < 0 { F2I::Ceiling } else { F2I::Floor }) == 0 {
+        if if step < 0 { F2I::Ceiling } else { F2I::Floor }.convert_tv_i64(lim, p) == 0 {
             let mut flim: f64 = 0.0;
             if if (*lim).get_tagvariant() == TagVariant::NumericNumber {
                 flim = (*lim).tvalue_value.value_number;

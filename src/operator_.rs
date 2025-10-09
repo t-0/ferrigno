@@ -10,7 +10,7 @@ pub unsafe fn validop(op: i32, v1: *mut TValue, v2: *mut TValue) -> i32 {
         match op {
             | 7 | 8 | 9 | 10 | 11 | 13 => {
                 let mut i: i64 = 0;
-                return (F2I::Equal.luav_tointegerns(v1, &mut i) != 0 && F2I::Equal.luav_tointegerns(v2, &mut i) != 0) as i32;
+                return (F2I::Equal.convert_tv_i64(v1, &mut i) != 0 && F2I::Equal.convert_tv_i64(v2, &mut i) != 0) as i32;
             },
             | 5 | 6 | 3 => {
                 return ((if (*v2).get_tagvariant() == TagVariant::NumericInteger {

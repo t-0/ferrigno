@@ -268,8 +268,8 @@ pub unsafe fn luav_equalobj(interpreter: *mut Interpreter, t1: *const TValue, t2
             } else {
                 let mut i1: i64 = 0;
                 let mut i2: i64 = 0;
-                return F2I::Equal.luav_tointegerns(t1, &mut i1) != 0
-                    && F2I::Equal.luav_tointegerns(t2, &mut i2) != 0
+                return F2I::Equal.convert_tv_i64(t1, &mut i1) != 0
+                    && F2I::Equal.convert_tv_i64(t2, &mut i2) != 0
                     && i1 == i2;
             }
         }

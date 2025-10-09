@@ -191,7 +191,7 @@ impl ExpressionDescription {
             if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantInteger {
                 i = (*expression_description).expressiondescription_value.value_integer;
             } else if (*expression_description).expressiondescription_expressionkind == ExpressionKind::ConstantNumber
-                && F2I::Equal.luav_flttointeger(
+                && F2I::Equal.convert_f64_i64(
                     (*expression_description).expressiondescription_value.value_number,
                     &mut i,
                 )
