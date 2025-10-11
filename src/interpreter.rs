@@ -14,10 +14,8 @@ use crate::forloop::*;
 use crate::functions::*;
 use crate::functionstate::*;
 use crate::global::*;
-use crate::labeldescription::*;
 use crate::lexicalstate::*;
 use crate::loadf::*;
-use crate::loadstate::*;
 use crate::longjump::*;
 use crate::object::*;
 use crate::objectwithgclist::*;
@@ -43,7 +41,6 @@ use crate::upvalue::*;
 use crate::upvaluedescription::*;
 use crate::user::*;
 use crate::utility::*;
-use crate::variabledescription::*;
 use crate::vectort::*;
 use crate::zio::*;
 use libc::time;
@@ -1276,65 +1273,6 @@ pub unsafe fn checkmode(interpreter: *mut Interpreter, mode: *const i8, x: *cons
         }
     }
 }
-pub unsafe fn f_parser(interpreter: *mut Interpreter, arbitrary_data: *mut libc::c_void) {
-    unsafe {
-        let sparser = arbitrary_data as *mut SParser;
-        let ch: i32 = (*(*sparser).sparser_zio).get_char();
-        let closure = if ch == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
-            checkmode(interpreter, (*sparser).sparser_mode, c"binary".as_ptr());
-            load_closure(interpreter, (*sparser).sparser_zio, (*sparser).sparser_name)
-        } else {
-            checkmode(interpreter, (*sparser).sparser_mode, c"text".as_ptr());
-            luay_parser(
-                interpreter,
-                (*sparser).sparser_zio,
-                &mut (*sparser).sparser_buffer,
-                &mut (*sparser).sparser_dynamicdata,
-                (*sparser).sparser_name,
-                ch,
-            )
-        };
-        Closure::luaf_initupvals(interpreter, closure);
-    }
-}
-pub unsafe fn luad_protectedparser(interpreter: *mut Interpreter, zio: *mut ZIO, name: *const i8, mode: *const i8) -> Status {
-    unsafe {
-        let mut sparser = SParser::new(zio, name, mode);
-        (*interpreter).interpreter_countccalls =
-            ((*interpreter).interpreter_countccalls as u32).wrapping_add(0x10000 as u32) as u32;
-        sparser.sparser_dynamicdata.dynamicdata_activevariables.initialize();
-        sparser.sparser_dynamicdata.dynamicdata_goto.initialize();
-        sparser.sparser_dynamicdata.dynamicdata_labels.initialize();
-        sparser.sparser_buffer.buffer_loads.initialize();
-        let status = luad_pcall(
-            interpreter,
-            Some(f_parser as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
-            &mut sparser as *mut SParser as *mut libc::c_void,
-            ((*interpreter).interpreter_top.stkidrel_pointer as *mut i8)
-                .offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64,
-            (*interpreter).interpreter_errorfunction,
-        );
-        sparser.sparser_buffer.buffer_loads.destroy(interpreter);
-        (*interpreter).free_memory(
-            sparser.sparser_dynamicdata.dynamicdata_activevariables.vectort_pointer as *mut libc::c_void,
-            (sparser.sparser_dynamicdata.dynamicdata_activevariables.get_size() as usize)
-                .wrapping_mul(size_of::<VariableDescription>() as usize) as usize,
-        );
-        (*interpreter).free_memory(
-            sparser.sparser_dynamicdata.dynamicdata_goto.vectort_pointer as *mut libc::c_void,
-            (sparser.sparser_dynamicdata.dynamicdata_goto.get_size() as usize).wrapping_mul(size_of::<LabelDescription>() as usize)
-                as usize,
-        );
-        (*interpreter).free_memory(
-            sparser.sparser_dynamicdata.dynamicdata_labels.vectort_pointer as *mut libc::c_void,
-            (sparser.sparser_dynamicdata.dynamicdata_labels.get_size() as usize)
-                .wrapping_mul(size_of::<LabelDescription>() as usize) as usize,
-        );
-        (*interpreter).interpreter_countccalls =
-            ((*interpreter).interpreter_countccalls as u32).wrapping_sub(0x10000 as u32) as u32;
-        return status;
-    }
-}
 pub unsafe fn index2stack(interpreter: *mut Interpreter, index: i32) -> *mut TValue {
     unsafe {
         let callinfo = (*interpreter).interpreter_callinfo;
@@ -2226,20 +2164,16 @@ pub unsafe fn lua_setiuservalue(interpreter: *mut Interpreter, index: i32, n: i3
     }
 }
 pub unsafe fn lua_load(
-    interpreter: *mut Interpreter, reader: Reader, data: *mut libc::c_void, mut chunkname: *const i8, mode: *const i8,
+    interpreter: *mut Interpreter, reader: Reader, data: *mut libc::c_void, chunkname: *const i8, mode: *const i8,
 ) -> Status {
     unsafe {
-        let mut zio: ZIO = ZIO::new(interpreter, reader, data);
-        if chunkname.is_null() {
-            chunkname = c"?".as_ptr();
-        }
-        let status = luad_protectedparser(interpreter, &mut zio, chunkname, mode);
+        let status = do_protected_parser(interpreter, chunkname, mode, reader, data);
         if status == Status::OK {
-            let closure: *mut Closure = &mut (*((*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
+            let closure = &mut (*((*(*interpreter).interpreter_top.stkidrel_pointer.offset(-(1 as isize)))
                 .tvalue_value
                 .value_object as *mut Closure));
             if (*closure).count_upvalues as i32 >= 1 {
-                let gt: *const TValue = &mut *((*((*(*interpreter).interpreter_global).global_lregistry.tvalue_value.value_object
+                let gt = &mut *((*((*(*interpreter).interpreter_global).global_lregistry.tvalue_value.value_object
                     as *mut Table))
                     .table_array)
                     .offset((2 - 1) as isize) as *mut TValue;
