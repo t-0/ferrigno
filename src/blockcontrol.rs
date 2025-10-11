@@ -80,7 +80,7 @@ impl BlockControl {
             }
             if !has_close
                 && !(self.m_previous).is_null()
-                && self.m_count_upvalues as i32 != 0
+                && self.m_count_upvalues != 0
             {
                 code_abck(interpreter, lexical_state, function_state, OPCODE_CLOSE, stklevel, 0, 0, 0);
             }

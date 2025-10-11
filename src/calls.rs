@@ -40,7 +40,7 @@ impl CallS {
                     .stkidrel_pointer
                     .offset(-((count_arguments + 1) as isize)),
             );
-            let status: Status = if context_function.is_none() || (*interpreter).in_nny() {
+            let status: Status = if context_function.is_none() || !(*interpreter).is_yieldable() {
                 calls.calls_countresults = count_results as usize;
                 luad_pcall(
                     interpreter,

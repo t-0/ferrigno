@@ -54,7 +54,7 @@ impl DumpState {
                 n += 1;
                 buffer[(size_of::<usize>() * 8 + 6) / 7 - n] = (integer & 0x7F) as u8;
                 integer >>= 7;
-                if !(integer != 0) {
+                if integer == 0 {
                     break;
                 }
             }

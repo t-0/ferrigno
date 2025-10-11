@@ -142,7 +142,7 @@ pub unsafe fn lenum(l: *const TValue, r: *const TValue) -> bool {
 }
 pub unsafe fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
+        if (n as usize).wrapping_add(1 as usize) <= 1 {
             if n == 0 {
                 luag_runerror(interpreter, c"attempt to divide by zero".as_ptr());
             }
@@ -158,7 +158,7 @@ pub unsafe fn luav_idiv(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
 }
 pub unsafe fn luav_mod(interpreter: *mut Interpreter, m: i64, n: i64) -> i64 {
     unsafe {
-        if (((n as usize).wrapping_add(1 as usize) <= 1 as usize) as i32 != 0) as i64 != 0 {
+        if (n as usize).wrapping_add(1 as usize) <= 1 {
             if n == 0 {
                 luag_runerror(interpreter, c"attempt to perform 'n%%0'".as_ptr());
             }

@@ -81,7 +81,7 @@ pub unsafe fn do_protected_parser(
 ) -> Status {
     unsafe {
         let mut sparser = SParser::new(interpreter, name, mode, reader, data);
-        (*interpreter).incnny();
+        (*interpreter).increment_noyield();
         let status = luad_pcall(
             interpreter,
             Some(f_parser as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
@@ -90,7 +90,7 @@ pub unsafe fn do_protected_parser(
                 .offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64,
             (*interpreter).interpreter_errorfunction,
         );
-        (*interpreter).decnny();
+        (*interpreter).decrement_noyield();
         sparser.clean(interpreter);
         return status;
     }

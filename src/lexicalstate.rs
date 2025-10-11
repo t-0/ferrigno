@@ -1191,7 +1191,7 @@ pub unsafe fn subexpr(
     v: *mut ExpressionDescription, limit: i32,
 ) -> OperatorBinary {
     unsafe {
-        (*(interpreter)).luae_inccstack();
+        (*(interpreter)).increment_c_stack();
         let uop = OperatorUnary::from_token((*lexical_state).lexicalstate_token.token);
         if uop as u32 != OperatorUnary::None_ as u32 {
             let line: i32 = (*lexical_state).lexicalstate_linenumber;
@@ -1228,8 +1228,7 @@ pub unsafe fn subexpr(
             );
             op = nextop;
         }
-        (*interpreter).interpreter_countccalls = ((*interpreter).interpreter_countccalls).wrapping_sub(1);
-        (*interpreter).interpreter_countccalls;
+        (*interpreter).decrement_c_stack();
         return op;
     }
 }
@@ -1325,7 +1324,7 @@ pub unsafe fn restassign(
             if !(new_lhs_assign.expressiondescription_expressionkind.is_index()) {
                 check_conflict(interpreter, lexical_state, lhs_assign, &mut new_lhs_assign);
             }
-            (*(interpreter)).luae_inccstack();
+            (*(interpreter)).increment_c_stack();
             restassign(
                 interpreter,
                 lexical_state,
@@ -1333,8 +1332,7 @@ pub unsafe fn restassign(
                 &mut new_lhs_assign,
                 count_variables + 1,
             );
-            (*interpreter).interpreter_countccalls = ((*interpreter).interpreter_countccalls).wrapping_sub(1);
-            (*interpreter).interpreter_countccalls;
+            (*interpreter).decrement_c_stack();
         } else {
             checknext(interpreter, lexical_state, function_state, Character::Equal as i32);
             let count_expressions: i32 =
@@ -2810,7 +2808,7 @@ pub unsafe fn parse_statement(interpreter: *mut Interpreter, lexical_state: *mut
     unsafe {
         pub const TK_WHILE: i32 = Token::While as i32;
         let line: i32 = (*lexical_state).lexicalstate_linenumber;
-        (*interpreter).luae_inccstack();
+        (*interpreter).increment_c_stack();
         const TK_CHARACTER_SEMICOLON: i32 = Character::Semicolon as i32;
         const TK_DOUBLECOLON: i32 = 287;
         const TK_FUNCTION: i32 = 264;
@@ -2888,7 +2886,6 @@ pub unsafe fn parse_statement(interpreter: *mut Interpreter, lexical_state: *mut
         }
         (*(*lexical_state).lexicalstate_functionstate).functionstate_freereg =
             luay_nvarstack(lexical_state, (*lexical_state).lexicalstate_functionstate) as u8;
-        (*interpreter).interpreter_countccalls = (*interpreter).interpreter_countccalls.wrapping_sub(1);
-        (*interpreter).interpreter_countccalls;
+        (*interpreter).decrement_c_stack();
     }
 }

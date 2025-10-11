@@ -263,9 +263,9 @@ impl Global {
     }
     pub unsafe fn do_gc_step(&mut self, interpreter: *mut Interpreter) {
         unsafe {
-            if self.global_gcstep as i32 != 0 {
+            if self.global_gcstep != 0 {
                 self.set_debt(-2000);
-            } else if self.global_gckind as i32 == 1 || self.global_lastatomic != 0 {
+            } else if self.global_gckind == 1 || self.global_lastatomic != 0 {
                 self.genstep(interpreter);
             } else {
                 self.incstep(interpreter);

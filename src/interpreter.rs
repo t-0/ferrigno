@@ -45,7 +45,8 @@ use crate::vectort::*;
 use crate::zio::*;
 use libc::time;
 use std::ptr::*;
-pub const INTERPRETER_PROTECTED: u32 = 0x10000;
+pub const INTERPRETER_NY: u32 = 0x10000;
+pub const INTERPRETER_NY_MASK: u32 = 0xFFFF0000;
 pub type InterpreterSuper = ObjectWithGCList;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -66,7 +67,8 @@ pub struct Interpreter {
     pub interpreter_basecallinfo: CallInfo,
     pub interpreter_hook: HookFunction,
     pub interpreter_errorfunction: i64,
-    pub interpreter_countccalls: u32,
+    m_countccalls: u32,
+    m_countyield: u32,
     pub interpreter_oldprogramcounter: i32,
     pub interpreter_basehookcount: i32,
     pub interpreter_hookcount: i32,
@@ -86,14 +88,16 @@ impl TObjectWithGCList for Interpreter {
     }
 }
 impl Interpreter {
-    pub fn in_nny (&self) -> bool {
-        self.interpreter_countccalls & 0xffff0000u32 != 0
+    pub fn decrement_c_stack(&mut self) {
+        self.m_countccalls -= 1;
     }
-    pub fn incnny(&mut self) {
-        self.interpreter_countccalls = self.interpreter_countccalls.wrapping_add(INTERPRETER_PROTECTED);
+    pub fn increment_noyield(&mut self) {
+        self.m_countccalls += INTERPRETER_NY;
+        self.m_countyield += 1;
     }
-    pub fn decnny(&mut self) {
-        self.interpreter_countccalls = self.interpreter_countccalls.wrapping_sub(INTERPRETER_PROTECTED);
+    pub fn decrement_noyield(&mut self) {
+        self.m_countccalls -= INTERPRETER_NY;
+        self.m_countyield -= 1;
     }
     pub unsafe fn safereallocate(
         &mut self, oldblock: *mut libc::c_void, oldsize: usize, newsize: usize,
@@ -136,7 +140,8 @@ impl Interpreter {
             self.interpreter_callinfo = null_mut();
             self.interpreter_countcallinfo = 0;
             self.interpreter_twups = self as *mut Interpreter;
-            self.interpreter_countccalls = 0;
+            self.m_countccalls = 0;
+            self.m_countyield = 0;
             self.interpreter_longjump = null_mut();
             write_volatile(&mut self.interpreter_hook as *mut HookFunction, None);
             write_volatile(&mut self.interpreter_hookmask as *mut i32, 0);
@@ -156,7 +161,7 @@ impl Interpreter {
     pub unsafe fn lua_callk(&mut self, nargs: i32, count_results: i32, ctx: i64, k: ContextFunction) {
         unsafe {
             let function: *mut TValue = self.interpreter_top.stkidrel_pointer.offset(-((nargs + 1) as isize));
-            if k.is_some() && self.interpreter_countccalls & 0xffff0000 as u32 == 0 {
+            if k.is_some() && self.is_yieldable() {
                 (*self.interpreter_callinfo).callinfo_u.c.context_function = k;
                 (*self.interpreter_callinfo).callinfo_u.c.context = ctx;
                 ccall(self, function, count_results, 1);
@@ -258,7 +263,8 @@ impl Interpreter {
         }
     }
     pub fn is_yieldable(&mut self) -> bool {
-        return self.interpreter_countccalls & 0xffff0000u32 == 0;
+        0 == self.m_countccalls & INTERPRETER_NY_MASK
+        //0 == self.m_countyield
     }
     pub unsafe fn push_boolean(&mut self, x: bool) {
         unsafe {
@@ -399,18 +405,17 @@ impl Interpreter {
     }
     pub unsafe fn luae_checkcstack(&mut self) {
         unsafe {
-            if self.interpreter_countccalls & 0xffff as u32 == 200 as u32 {
+            if self.m_countccalls & 0xffff as u32 == 200 as u32 {
                 luag_runerror(self, c"C stack overflow".as_ptr());
-            } else if self.interpreter_countccalls & 0xffff as u32 >= (200 as i32 / 10 as i32 * 11 as i32) as u32 {
+            } else if self.m_countccalls & 0xffff as u32 >= (200 as i32 / 10 as i32 * 11 as i32) as u32 {
                 self.luad_errerr();
             }
         }
     }
-    pub unsafe fn luae_inccstack(&mut self) {
+    pub unsafe fn increment_c_stack(&mut self) {
         unsafe {
-            self.interpreter_countccalls = (self.interpreter_countccalls).wrapping_add(1);
-            self.interpreter_countccalls;
-            if ((self.interpreter_countccalls & 0xffff as u32 >= 200 as u32) as i32 != 0) as i32 as i64 != 0 {
+            self.m_countccalls += 1;
+            if ((self.m_countccalls & 0xffff as u32 >= 200 as u32) as i32 != 0) as i32 as i64 != 0 {
                 self.luae_checkcstack();
             }
         }
@@ -595,7 +600,8 @@ pub unsafe fn luad_rawrunprotected(
     interpreter: *mut Interpreter, f: ProtectedFunction, arbitrary_data: *mut libc::c_void,
 ) -> Status {
     unsafe {
-        let old_count_c_calls: u32 = (*interpreter).interpreter_countccalls;
+        let oldcountccalls = (*interpreter).m_countccalls;
+        let oldcountyield = (*interpreter).m_countyield;
         let mut long_jump = LongJump::new();
         write_volatile(&mut long_jump.longjump_status as *mut Status as *mut i32, 0);
         long_jump.longjump_previous = (*interpreter).interpreter_longjump;
@@ -604,7 +610,8 @@ pub unsafe fn luad_rawrunprotected(
             (Some(f.expect("non-null function pointer"))).expect("non-null function pointer")(interpreter, arbitrary_data);
         }
         (*interpreter).interpreter_longjump = long_jump.longjump_previous;
-        (*interpreter).interpreter_countccalls = old_count_c_calls;
+        (*interpreter).m_countyield = oldcountyield;
+        (*interpreter).m_countccalls = oldcountccalls;
         return long_jump.longjump_status;
     }
 }
@@ -1035,13 +1042,11 @@ pub unsafe fn luad_precall(interpreter: *mut Interpreter, mut function: *mut TVa
 pub unsafe fn ccall(interpreter: *mut Interpreter, mut function: *mut TValue, count_results: i32, inc: u32) {
     unsafe {
         let callinfo;
-        (*interpreter).interpreter_countccalls = ((*interpreter).interpreter_countccalls as u32).wrapping_add(inc) as u32;
-        if (((*interpreter).interpreter_countccalls & 0xffff as u32 >= 200 as u32) as i32 != 0) as i32 as i64 != 0 {
-            if ((((*interpreter).interpreter_stacklast.stkidrel_pointer)
+        (*interpreter).m_countccalls += inc;
+        if (*interpreter).m_countccalls & 0xFFFF >= 200 {
+            if ((*interpreter).interpreter_stacklast.stkidrel_pointer)
                 .offset_from((*interpreter).interpreter_top.stkidrel_pointer) as i64
-                <= 0) as i32
-                != 0) as i64
-                != 0
+                <= 0
             {
                 let t__: i64 =
                     (function as *mut i8).offset_from((*interpreter).interpreter_stack.stkidrel_pointer as *mut i8) as i64;
@@ -1055,7 +1060,7 @@ pub unsafe fn ccall(interpreter: *mut Interpreter, mut function: *mut TValue, co
             (*callinfo).callinfo_callstatus = (1 << 2) as u16;
             luav_execute(interpreter, callinfo);
         }
-        (*interpreter).interpreter_countccalls -= inc;
+        (*interpreter).m_countccalls -= inc;
     }
 }
 pub unsafe fn luad_callnoyield(interpreter: *mut Interpreter, function: *mut TValue, count_results: i32) {
@@ -1197,16 +1202,16 @@ pub unsafe fn lua_resume(interpreter: *mut Interpreter, from: *mut Interpreter, 
         } else if (*interpreter).interpreter_status != Status::Yield {
             return resume_error(interpreter, c"cannot resume dead coroutine".as_ptr(), nargs);
         }
-        (*interpreter).interpreter_countccalls = if !from.is_null() {
-            (*from).interpreter_countccalls & 0xffff as u32
-        } else {
+        (*interpreter).m_countyield = 0;
+        (*interpreter).m_countccalls = if from.is_null() {
             0
+        } else {
+            (*from).m_countccalls & 0xffff as u32
         };
-        if (*interpreter).interpreter_countccalls & 0xffff as u32 >= 200 as u32 {
+        if (*interpreter).m_countccalls & 0xffff as u32 >= 200 as u32 {
             return resume_error(interpreter, c"C stack overflow".as_ptr(), nargs);
         }
-        (*interpreter).interpreter_countccalls = ((*interpreter).interpreter_countccalls).wrapping_add(1);
-        (*interpreter).interpreter_countccalls;
+        (*interpreter).m_countccalls += 1;
         status = luad_rawrunprotected(
             interpreter,
             Some(resume as unsafe fn(*mut Interpreter, *mut libc::c_void) -> ()),
@@ -1232,7 +1237,7 @@ pub unsafe fn lua_yieldk(interpreter: *mut Interpreter, count_results: i32, ctx:
     unsafe {
         let callinfo;
         callinfo = (*interpreter).interpreter_callinfo;
-        if (*interpreter).interpreter_countccalls & 0xffff0000 as u32 != 0 {
+        if !(*interpreter).is_yieldable() {
             if interpreter != (*(*interpreter).interpreter_global).global_maininterpreter {
                 luag_runerror(interpreter, c"attempt to yield across a C-call boundary".as_ptr());
             } else {
@@ -2598,13 +2603,13 @@ pub unsafe fn luae_resetthread(interpreter: *mut Interpreter, mut status: Status
 }
 pub unsafe fn lua_closethread(interpreter: *mut Interpreter, from: *mut Interpreter) -> Status {
     unsafe {
-        (*interpreter).interpreter_countccalls = if !from.is_null() {
-            (*from).interpreter_countccalls & 0xffff as u32
-        } else {
+        (*interpreter).m_countyield = 0;
+        (*interpreter).m_countccalls = if from.is_null() {
             0
+        } else {
+            (*from).m_countccalls & 0xFFFF
         };
-        let status = luae_resetthread(interpreter, (*interpreter).interpreter_status);
-        return status;
+        luae_resetthread(interpreter, (*interpreter).interpreter_status)
     }
 }
 pub unsafe fn lua_close(mut interpreter: *mut Interpreter) {
@@ -7018,8 +7023,7 @@ pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
                 (*interpreter).preinit_thread(global);
                 (*global).global_allgc = &mut (*(interpreter as *mut Object));
                 (*interpreter).as_object_mut().object_next = null_mut();
-                (*interpreter).interpreter_countccalls =
-                    ((*interpreter).interpreter_countccalls as u32).wrapping_add(0x10000 as u32) as u32;
+                (*interpreter).increment_noyield();
                 (*global).global_maininterpreter = interpreter;
                 (*global).global_seed = luai_makeseed(interpreter);
                 if luad_rawrunprotected(
