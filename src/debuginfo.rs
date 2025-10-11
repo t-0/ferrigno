@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use crate::strings::*;
 use crate::callinfo::*;
 use crate::character::*;
 use crate::closure::*;
@@ -83,7 +84,7 @@ impl DebugInfo {
                 c"count".as_ptr(),
                 c"tail call".as_ptr(),
             ];
-            lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);
+            lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, STRING_HOOKKEY);
             (*interpreter).push_state();
             if lua_rawget(interpreter, -2) == TagType::Closure {
                 lua_pushstring(interpreter, HOOK_NAMES[(*debuginfo).debuginfo_event as usize]);

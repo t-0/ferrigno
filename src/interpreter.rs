@@ -265,9 +265,9 @@ impl Interpreter {
     }
     pub unsafe fn push_integer(&mut self, x: i64) {
         unsafe {
-            let t_value: *mut TValue = &mut (*self.interpreter_top.stkidrel_pointer);
-            (*t_value).tvalue_value.value_integer = x;
-            (*t_value).tvalue_set_tag_variant(TagVariant::NumericInteger);
+            let tvalue: *mut TValue = &mut (*self.interpreter_top.stkidrel_pointer);
+            (*tvalue).tvalue_value.value_integer = x;
+            (*tvalue).tvalue_set_tag_variant(TagVariant::NumericInteger);
             self.interpreter_top.stkidrel_pointer = self.interpreter_top.stkidrel_pointer.offset(1);
         }
     }
@@ -279,9 +279,9 @@ impl Interpreter {
     }
     pub unsafe fn push_number(&mut self, x: f64) {
         unsafe {
-            let t_value: *mut TValue = &mut (*self.interpreter_top.stkidrel_pointer);
-            (*t_value).tvalue_value.value_number = x;
-            (*t_value).tvalue_set_tag_variant(TagVariant::NumericNumber);
+            let tvalue: *mut TValue = &mut (*self.interpreter_top.stkidrel_pointer);
+            (*tvalue).tvalue_value.value_number = x;
+            (*tvalue).tvalue_set_tag_variant(TagVariant::NumericNumber);
             self.interpreter_top.stkidrel_pointer = self.interpreter_top.stkidrel_pointer.offset(1);
         }
     }
@@ -2332,11 +2332,6 @@ pub unsafe fn lua_setwarnf(interpreter: *mut Interpreter, f: WarnFunction, arbit
         (*(*interpreter).interpreter_global).global_warnfunction = f;
     }
 }
-pub unsafe fn lua_warning(interpreter: *mut Interpreter, message: *const i8, tocont: i32) {
-    unsafe {
-        luae_warning(interpreter, message, tocont);
-    }
-}
 pub unsafe fn lua_getupvalue(interpreter: *mut Interpreter, funcindex: i32, n: i32) -> *const i8 {
     unsafe {
         let mut value: *mut TValue = null_mut();
@@ -3973,7 +3968,7 @@ pub unsafe fn luax_init(interpreter: *mut Interpreter) {
         while i < Token::While as i32 - 255 {
             let tstring: *mut TString = luas_new(interpreter, TOKENS[i as usize]);
             fix_object_state(interpreter, &mut (*(tstring as *mut Object)));
-            (*tstring).tstring_extra = (i + 1) as u8;
+            (*tstring).set_extra((i + 1) as u8);
             i += 1;
         }
     }
@@ -7131,9 +7126,9 @@ pub unsafe fn luab_warn(interpreter: *mut Interpreter) -> i32 {
             lual_checklstring(interpreter, i, null_mut());
         }
         for i in 1..n {
-            lua_warning(interpreter, lua_tolstring(interpreter, i, null_mut()), 1);
+            luae_warning(interpreter, lua_tolstring(interpreter, i, null_mut()), 1);
         }
-        lua_warning(interpreter, lua_tolstring(interpreter, n, null_mut()), 0);
+        luae_warning(interpreter, lua_tolstring(interpreter, n, null_mut()), 0);
         return 0;
     }
 }
@@ -7431,7 +7426,7 @@ pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32)
                     }
                 },
                 | Character::UpperW => {
-                    lua_warning(interpreter, c"@on".as_ptr(), 0);
+                    luae_warning(interpreter, c"@on".as_ptr(), 0);
                 },
                 | _ => {},
             }
@@ -7693,7 +7688,6 @@ pub unsafe fn unmakemask(mask: i32, smask: *mut i8) -> *mut i8 {
         return smask;
     }
 }
-pub const HOOKKEY: *const i8 = c"_HOOKKEY".as_ptr();
 pub unsafe fn fix_object_state(interpreter: *mut Interpreter, object: *mut Object) {
     unsafe {
         let global: *mut Global = (*interpreter).interpreter_global;

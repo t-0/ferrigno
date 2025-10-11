@@ -1,4 +1,5 @@
 #![allow(unpredictable_function_pointer_comparisons)]
+use crate::strings::*;
 use crate::c::*;
 use crate::calls::*;
 use crate::character::*;
@@ -231,7 +232,7 @@ pub unsafe fn db_sethook(interpreter: *mut Interpreter) -> i32 {
                 mask = makemask(smask, count);
             },
         };
-        if lual_getsubtable(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY) == 0 {
+        if lual_getsubtable(interpreter, -(1000000 as i32) - 1000 as i32, STRING_HOOKKEY) == 0 {
             lua_pushstring(interpreter, c"k".as_ptr());
             lua_setfield(interpreter, -2, c"__mode".as_ptr());
             lua_pushvalue(interpreter, -1);
@@ -259,7 +260,7 @@ pub unsafe fn db_gethook(interpreter: *mut Interpreter) -> i32 {
         } else if hook != Some(DebugInfo::hookf as unsafe fn(*mut Interpreter, *mut DebugInfo) -> ()) {
             lua_pushstring(interpreter, c"external hook".as_ptr());
         } else {
-            lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, HOOKKEY);
+            lua_getfield(interpreter, -(1000000 as i32) - 1000 as i32, STRING_HOOKKEY);
             checkstack(interpreter, other_state, 1);
             (*other_state).push_state();
             lua_xmove(other_state, interpreter, 1);

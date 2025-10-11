@@ -367,7 +367,7 @@ pub unsafe fn mainpositiontv(t: *const Table, key: *const TValue) -> *mut Node {
             | TagVariant::StringLong => {
                 let ts_0: *mut TString = &mut (*((*key).tvalue_value.value_object as *mut TString));
                 return &mut *((*t).table_node).offset(
-                    ((hash_string_long as unsafe fn(*mut TString) -> u32)(ts_0) & ((1 << (*t).table_logsizenode as i32) - 1) as u32)
+                    ((*ts_0).hash_string_long() & ((1 << (*t).table_logsizenode as i32) - 1) as u32)
                         as i32 as isize,
                 ) as *mut Node;
             },

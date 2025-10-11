@@ -2743,11 +2743,7 @@ pub unsafe fn llex(interpreter: *mut Interpreter, lexical_state: *mut LexicalSta
                             (*(*lexical_state).lexicalstate_buffer).buffer_loads.get_length() as usize,
                         );
                         (*semantic_info).value_tstring = tstring;
-                        if (*tstring).get_tagvariant() == TagVariant::StringShort && (*tstring).tstring_extra as i32 > 0 {
-                            return (*tstring).tstring_extra as i32 - 1 + (127 as i32 * 2 + 1 + 1);
-                        } else {
-                            return Token::Name as i32;
-                        }
+                        return (*tstring).somefunction();
                     } else {
                         let c: i32 = (*lexical_state).lexicalstate_current;
                         (*lexical_state).lexicalstate_current = (*(*lexical_state).lexicalstate_zio).get_char();

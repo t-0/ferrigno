@@ -789,210 +789,26 @@ pub unsafe fn str_format(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub const NATIVE_ENDIAN: NativeEndian = NativeEndian { nativeendian_dummy: 1 };
-pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
-    unsafe {
-        if Character::from(**fmt as i32).is_digit_decimal() {
-            let mut a: i32 = 0;
-            loop {
-                let fresh179 = *fmt;
-                *fmt = (*fmt).offset(1);
-                a = a * 10 as i32 + (*fresh179 as i32 - Character::Digit0 as i32);
-                if !(Character::from(**fmt as i32).is_digit_decimal()
-                    && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
-                        !(0usize)
-                    } else {
-                        0x7FFFFFFF as usize
-                    }) as i32
-                        - 9 as i32)
-                        / 10 as i32)
-                {
-                    break;
-                }
-            }
-            return a;
-        } else {
-            return df;
-        };
-    }
-}
-pub unsafe fn getnumlimit(header: *mut Header, fmt: *mut *const i8, df: i32) -> i32 {
-    unsafe {
-        let size: i32 = getnum(fmt, df);
-        if size > 16 as i32 || size <= 0 {
-            return lual_error(
-                (*header).header_interpreter,
-                c"integral size (%d) out of limits [1,%d]".as_ptr(),
-                size,
-                16 as i32,
-            );
-        }
-        return size;
-    }
-}
-pub unsafe fn initheader(interpreter: *mut Interpreter, header: *mut Header) {
-    unsafe {
-        (*header).header_interpreter = interpreter;
-        (*header).header_islittleendian = NATIVE_ENDIAN.nativeendian_little as i32;
-        (*header).header_maxmimumalignment = 1;
-    }
-}
-pub unsafe fn getoption(header: *mut Header, fmt: *mut *const i8, size: *mut i32) -> K {
-    unsafe {
-        let fresh180 = *fmt;
-        *fmt = (*fmt).offset(1);
-        let opt: i32 = *fresh180 as i32;
-        *size = 0;
-        match Character::from(opt) {
-            | Character::LowerB => {
-                *size = 1 as i32;
-                return K::Integer;
-            },
-            | Character::UpperB => {
-                *size = 1 as i32;
-                return K::Unsigned;
-            },
-            | Character::LowerH => {
-                *size = size_of::<i16>() as i32;
-                return K::Integer;
-            },
-            | Character::UpperH => {
-                *size = size_of::<i16>() as i32;
-                return K::Unsigned;
-            },
-            | Character::LowerL => {
-                *size = size_of::<i64>() as i32;
-                return K::Integer;
-            },
-            | Character::UpperL => {
-                *size = size_of::<i64>() as i32;
-                return K::Unsigned;
-            },
-            | Character::LowerJ => {
-                *size = size_of::<i64>() as i32;
-                return K::Integer;
-            },
-            | Character::UpperJ => {
-                *size = size_of::<i64>() as i32;
-                return K::Unsigned;
-            },
-            | Character::UpperT => {
-                *size = size_of::<usize>() as i32;
-                return K::Unsigned;
-            },
-            | Character::LowerF => {
-                *size = size_of::<f32>() as i32;
-                return K::Float;
-            },
-            | Character::LowerN => {
-                *size = size_of::<f64>() as i32;
-                return K::Number;
-            },
-            | Character::LowerD => {
-                *size = size_of::<f64>() as i32;
-                return K::Double;
-            },
-            | Character::LowerI => {
-                *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
-                return K::Integer;
-            },
-            | Character::UpperI => {
-                *size = getnumlimit(header, fmt, size_of::<i32>() as i32);
-                return K::Unsigned;
-            },
-            | Character::LowerS => {
-                *size = getnumlimit(header, fmt, size_of::<usize>() as i32);
-                return K::String;
-            },
-            | Character::LowerC => {
-                *size = getnum(fmt, -1);
-                if *size == -1 {
-                    lual_error(
-                        (*header).header_interpreter,
-                        c"missing size for format option Character::LowerC".as_ptr(),
-                    );
-                }
-                return K::Character;
-            },
-            | Character::LowerZ => return K::ZString,
-            | Character::LowerX => {
-                *size = 1;
-                return K::Padding;
-            },
-            | Character::UpperX => return K::PaddingAlignment,
-            | Character::Space => {},
-            | Character::AngleLeft => {
-                (*header).header_islittleendian = 1;
-            },
-            | Character::AngleRight => {
-                (*header).header_islittleendian = 0;
-            },
-            | Character::Equal => {
-                (*header).header_islittleendian = NATIVE_ENDIAN.nativeendian_little as i32;
-            },
-            | Character::Exclamation => {
-                let maxalign: i32 = 8;
-                (*header).header_maxmimumalignment = getnumlimit(header, fmt, maxalign);
-            },
-            | _ => {
-                lual_error((*header).header_interpreter, c"invalid format option '%c'".as_ptr(), opt);
-            },
-        }
-        return K::NoOperator;
-    }
-}
-pub unsafe fn getdetails(
-    header: *mut Header, totalsize: usize, fmt: *mut *const i8, total_size: *mut i32, ntoalign: *mut i32,
-) -> K {
-    unsafe {
-        let opt: K = getoption(header, fmt, total_size);
-        let mut align: i32 = *total_size;
-        if opt as u32 == K::PaddingAlignment as u32 {
-            if **fmt as i32 == Character::Null as i32
-                || getoption(header, fmt, &mut align) as u32 == K::Character as u32
-                || align == 0
-            {
-                lual_argerror((*header).header_interpreter, 1, c"invalid next option for option X".as_ptr());
-            }
-        }
-        if align <= 1 || opt as u32 == K::Character as u32 {
-            *ntoalign = 0;
-        } else {
-            if align > (*header).header_maxmimumalignment {
-                align = (*header).header_maxmimumalignment;
-            }
-            if align & align - 1 != 0 {
-                lual_argerror(
-                    (*header).header_interpreter,
-                    1,
-                    c"format asks for alignment not power of 2".as_ptr(),
-                );
-            }
-            *ntoalign = align - (totalsize & (align - 1) as usize) as i32 & align - 1;
-        }
-        return opt;
-    }
-}
-pub unsafe fn packint(b: *mut Buffer, mut n: usize, islittle: i32, size: i32, is_negative_: i32) {
+pub unsafe fn packint(b: *mut Buffer, mut n: usize, islittle: bool, size: i32, is_negative_: i32) {
     unsafe {
         let buffer: *mut i8 = (*b).prepare_with_size(size as usize);
-        *buffer.offset((if islittle != 0 { 0 } else { size - 1 }) as isize) = (n & ((1 << 8) - 1) as usize) as i8;
+        *buffer.offset((if islittle { 0 } else { size - 1 }) as isize) = (n & ((1 << 8) - 1) as usize) as i8;
         for i in 1..size {
             n >>= 8;
-            *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) = (n & ((1 << 8) - 1) as usize) as i8;
+            *buffer.offset((if islittle { i } else { size - 1 - i }) as isize) = (n & ((1 << 8) - 1) as usize) as i8;
         }
         if is_negative_ != 0 && size > size_of::<i64>() as i32 {
             for i in (size_of::<i64>() as i32)..size {
-                *buffer.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) = ((1 << 8) - 1) as i8;
+                *buffer.offset((if islittle { i } else { size - 1 - i }) as isize) = ((1 << 8) - 1) as i8;
             }
         }
         (*b).buffer_loads
             .set_length((((*b).buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
     }
 }
-pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i32, islittle: i32) {
+pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i32, islittle: bool) {
     unsafe {
-        if islittle == NATIVE_ENDIAN.nativeendian_little as i32 {
+        if islittle as i32 == NATIVE_ENDIAN.nativeendian_little as i32 {
             libc::memcpy(dest as *mut libc::c_void, src as *const libc::c_void, size as usize);
         } else {
             dest = dest.offset((size - 1) as isize);
@@ -1014,21 +830,16 @@ pub unsafe fn copywithendian(mut dest: *mut i8, mut src: *const i8, mut size: i3
 pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let mut b = Buffer::new();
-        let mut h: Header = Header {
-            header_interpreter: null_mut(),
-            header_islittleendian: 0,
-            header_maxmimumalignment: 0,
-        };
+        let mut h: Header = Header::new(interpreter);
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut arg: i32 = 1;
         let mut totalsize: usize = 0;
-        initheader(interpreter, &mut h);
         (*interpreter).push_nil();
         b.initialize(interpreter);
         while *fmt as i32 != Character::Null as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
-            let opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
+            let opt: K = h.getdetails(totalsize, &mut fmt, &mut size, &mut ntoalign);
             totalsize = (totalsize as usize).wrapping_add((ntoalign + size) as usize) as usize;
             loop {
                 let fresh184 = ntoalign;
@@ -1052,7 +863,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         (((-lim <= n && n < lim) as i32 != 0) as i64 != 0
                             || lual_argerror(interpreter, arg, c"integer overflow".as_ptr()) != 0) as i32;
                     }
-                    packint(&mut b, n as usize, h.header_islittleendian, size, (n < 0) as i32);
+                    packint(&mut b, n as usize, h.is_little_endian(), size, (n < 0) as i32);
                     current_block_33 = 3222590281903869779;
                 },
                 | 1 => {
@@ -1061,7 +872,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         ((((n_0 as usize) < (1 as usize) << size * 8) as i32 != 0) as i64 != 0
                             || lual_argerror(interpreter, arg, c"unsigned overflow".as_ptr()) != 0) as i32;
                     }
-                    packint(&mut b, n_0 as usize, h.header_islittleendian, size, 0);
+                    packint(&mut b, n_0 as usize, h.is_little_endian(), size, 0);
                     current_block_33 = 3222590281903869779;
                 },
                 | 2 => {
@@ -1071,7 +882,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         buffer,
                         &mut f as *mut f32 as *mut i8,
                         size_of::<f32>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     b.buffer_loads
                         .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
@@ -1084,7 +895,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         buff_0,
                         &mut f_0 as *mut f64 as *mut i8,
                         size_of::<f64>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     b.buffer_loads
                         .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
@@ -1097,7 +908,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                         buff_1,
                         &mut f_1 as *mut f64 as *mut i8,
                         size_of::<f64>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     b.buffer_loads
                         .set_length(((b.buffer_loads.get_length() as usize).wrapping_add(size as usize) as i32) as usize);
@@ -1130,7 +941,7 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
                     (((size >= size_of::<usize>() as i32 || length < (1 as usize) << size * 8) as i32 != 0) as i64 != 0
                         || lual_argerror(interpreter, arg, c"string length does not fit in given size".as_ptr()) != 0)
                         as i32;
-                    packint(&mut b, length as usize, h.header_islittleendian, size, 0);
+                    packint(&mut b, length as usize, h.is_little_endian(), size, 0);
                     b.add_string_with_length(s_0, length as usize);
                     totalsize = (totalsize as usize).wrapping_add(length) as usize;
                     current_block_33 = 3222590281903869779;
@@ -1177,18 +988,13 @@ pub unsafe fn str_pack(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut h: Header = Header {
-            header_interpreter: null_mut(),
-            header_islittleendian: 0,
-            header_maxmimumalignment: 0,
-        };
+        let mut h: Header = Header::new(interpreter);
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut totalsize: usize = 0;
-        initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
-            let opt: K = getdetails(&mut h, totalsize, &mut fmt, &mut size, &mut ntoalign);
+            let opt: K = h.getdetails(totalsize, &mut fmt, &mut size, &mut ntoalign);
             (((opt as u32 != K::String as u32 && opt as u32 != K::ZString as u32) as i32 != 0) as i64 != 0
                 || lual_argerror(interpreter, 1, c"variable-length format".as_ptr()) != 0) as i32;
             size += ntoalign;
@@ -1208,7 +1014,7 @@ pub unsafe fn str_packsize(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
-pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle: i32, size: i32, issigned: i32) -> i64 {
+pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle: bool, size: i32, issigned: i32) -> i64 {
     unsafe {
         let mut res: u64 = 0;
         let mut i: i32;
@@ -1216,7 +1022,7 @@ pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle:
         i = limit - 1;
         while i >= 0 {
             res <<= 8;
-            res |= *str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as u64;
+            res |= *str.offset((if islittle { i } else { size - 1 - i }) as isize) as u8 as u64;
             i -= 1;
         }
         if size < size_of::<i64>() as i32 {
@@ -1227,7 +1033,7 @@ pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle:
         } else if size > size_of::<i64>() as i32 {
             let mask_0: i32 = if issigned == 0 || res as i64 >= 0 { 0 } else { (1 << 8) - 1 };
             for i in limit..size {
-                if ((*str.offset((if islittle != 0 { i } else { size - 1 - i }) as isize) as u8 as i32 != mask_0) as i32 != 0)
+                if ((*str.offset((if islittle { i } else { size - 1 - i }) as isize) as u8 as i32 != mask_0) as i32 != 0)
                     as i64
                     != 0
                 {
@@ -1240,11 +1046,7 @@ pub unsafe fn unpackint(interpreter: *mut Interpreter, str: *const i8, islittle:
 }
 pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        let mut h: Header = Header {
-            header_interpreter: null_mut(),
-            header_islittleendian: 0,
-            header_maxmimumalignment: 0,
-        };
+        let mut h: Header = Header::new(interpreter);
         let mut fmt: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let mut ld: usize = 0;
         let data: *const i8 = lual_checklstring(interpreter, 2, &mut ld);
@@ -1252,11 +1054,10 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
         let mut n: i32 = 0;
         (((position <= ld) as i32 != 0) as i64 != 0
             || lual_argerror(interpreter, 3, c"initial position out of string".as_ptr()) != 0) as i32;
-        initheader(interpreter, &mut h);
         while *fmt as i32 != Character::Null as i32 {
             let mut size: i32 = 0;
             let mut ntoalign: i32 = 0;
-            let opt: K = getdetails(&mut h, position, &mut fmt, &mut size, &mut ntoalign);
+            let opt: K = h.getdetails(position, &mut fmt, &mut size, &mut ntoalign);
             ((((ntoalign as usize).wrapping_add(size as usize) <= ld.wrapping_sub(position)) as i32 != 0) as i64 != 0
                 || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
             position = (position as usize).wrapping_add(ntoalign as usize) as usize;
@@ -1267,7 +1068,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                     let res: i64 = unpackint(
                         interpreter,
                         data.offset(position as isize),
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                         size,
                         (opt as u32 == K::Integer as u32) as i32,
                     );
@@ -1279,7 +1080,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         &mut f as *mut f32 as *mut i8,
                         data.offset(position as isize),
                         size_of::<f32>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     (*interpreter).push_number(f as f64);
                 },
@@ -1289,7 +1090,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         &mut f_0 as *mut f64 as *mut i8,
                         data.offset(position as isize),
                         size_of::<f64>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     (*interpreter).push_number(f_0);
                 },
@@ -1299,7 +1100,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                         &mut f_1 as *mut f64 as *mut i8,
                         data.offset(position as isize),
                         size_of::<f64>() as i32,
-                        h.header_islittleendian,
+                        h.is_little_endian(),
                     );
                     (*interpreter).push_number(f_1);
                 },
@@ -1308,7 +1109,7 @@ pub unsafe fn str_unpack(interpreter: *mut Interpreter) -> i32 {
                 },
                 | 6 => {
                     let length: usize =
-                        unpackint(interpreter, data.offset(position as isize), h.header_islittleendian, size, 0) as usize;
+                        unpackint(interpreter, data.offset(position as isize), h.is_little_endian(), size, 0) as usize;
                     (((length <= ld.wrapping_sub(position).wrapping_sub(size as usize)) as i32 != 0) as i32 as i64 != 0
                         || lual_argerror(interpreter, 2, c"data string too short".as_ptr()) != 0) as i32;
                     lua_pushlstring(interpreter, data.offset(position as isize).offset(size as isize), length);

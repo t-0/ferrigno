@@ -239,3 +239,29 @@ pub unsafe fn fits_c(i: i64) -> bool {
 pub unsafe fn fits_bx(i: i64) -> bool {
     return -((1 << 8 + 8 + 1) - 1 >> 1) as i64 <= i && i <= ((1 << 8 + 8 + 1) - 1 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
 }
+pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
+    unsafe {
+        if Character::from(**fmt as i32).is_digit_decimal() {
+            let mut a: i32 = 0;
+            loop {
+                let fresh179 = *fmt;
+                *fmt = (*fmt).offset(1);
+                a = a * 10 as i32 + (*fresh179 as i32 - Character::Digit0 as i32);
+                if !(Character::from(**fmt as i32).is_digit_decimal()
+                    && a <= ((if (size_of::<usize>() as usize) < size_of::<i32>() as usize {
+                        !0usize
+                    } else {
+                        0x7FFFFFFF as usize
+                    }) as i32
+                        - 9 as i32)
+                        / 10 as i32)
+                {
+                    break;
+                }
+            }
+            return a;
+        } else {
+            return df;
+        };
+    }
+}

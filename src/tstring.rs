@@ -6,29 +6,75 @@ use crate::object::*;
 use crate::stringtable::*;
 use crate::tagvariant::*;
 use crate::tobject::*;
+use crate::token::*;
 use crate::tvalue::*;
 use crate::utility::*;
-pub const STRING_SHORT_MAX: usize = 40;
 pub type TStringSuper = Object;
+pub const TSTRING_SHORT_MAX: usize = 40;
+#[derive(Copy, Clone, Eq, PartialEq)]
+#[repr(u8)]
+pub enum TStringExtra {
+    Short{extra: u8},
+    Long{hashed: bool,},
+}
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TString {
-    pub tstring_super: TStringSuper,
-    pub tstring_longlength: usize,
+    m_super: TStringSuper,
+    m_length: usize,
     pub tstring_hashnext: *mut TString,
     pub tstring_hash: u32,
-    pub tstring_extra: u8,
-    pub tstring_contents: [i8; 0],
+    m_extra: TStringExtra,
+    m_contents: [i8; 0],
 }
 impl TObject for TString {
     fn as_object(&self) -> &Object {
-        &self.tstring_super
+        &self.m_super
     }
     fn as_object_mut(&mut self) -> &mut Object {
-        &mut self.tstring_super
+        &mut self.m_super
     }
 }
 impl TString {
+    pub fn is_unhashed(&self) -> bool {
+        match self.m_extra {
+            TStringExtra::Long{hashed: true} => false,
+            _ => false,
+        }
+    }
+    pub fn set_hashed(&mut self) {
+        self.m_extra = TStringExtra::Long{hashed: true};
+    }
+    pub unsafe fn hash_string_long(&mut self) -> u32 {
+        unsafe {
+            if self.is_unhashed() {
+                let length = self.get_length();
+                self.tstring_hash = luas_hash(self.get_contents_mut(), length, self.tstring_hash);
+                self.set_hashed();
+            }
+            return self.tstring_hash;
+        }
+    }
+    pub fn set_extra(&mut self, extra: u8) {
+        self.m_extra = TStringExtra::Short { extra: extra };
+    }
+    pub unsafe fn somefunction (&self) -> i32 {
+        if self.get_tagvariant() == TagVariant::StringShort {
+            match self.m_extra {
+                TStringExtra::Short{extra: x} => {
+                    if 0 == x {
+                        return Token::Name as i32;
+                    } else {
+                        return x as i32 - 1 + (127 as i32 * 2 + 1 + 1);
+                    }
+                },
+                _ => {
+                    return Token::Name as i32;
+                },
+            }
+        }
+        return Token::Name as i32;
+    }
     pub unsafe fn tstring_free(&mut self, interpreter: *mut Interpreter) {
         unsafe {
             if self.get_tagvariant() == TagVariant::StringShort {
@@ -58,16 +104,16 @@ impl TString {
         }
     }
     pub fn get_contents_mut(&self) -> *const i8 {
-        return &self.tstring_contents as *const i8;
+        return &self.m_contents as *const i8;
     }
     pub fn get_contents(&mut self) -> *mut i8 {
-        return &mut self.tstring_contents as *mut i8;
+        return &mut self.m_contents as *mut i8;
     }
     pub fn get_length(&self) -> usize {
-        return self.tstring_longlength;
+        return self.m_length;
     }
     pub fn get_length_raw(&self) -> usize {
-        return self.tstring_longlength;
+        return self.m_length;
     }
     pub unsafe fn create_long(interpreter: *mut Interpreter, length: usize) -> *mut TString {
         unsafe {
@@ -77,7 +123,7 @@ impl TString {
                 TagVariant::StringLong,
                 (*(*interpreter).interpreter_global).global_seed,
             );
-            (*ret).tstring_longlength = length;
+            (*ret).m_length = length;
             return ret;
         }
     }
@@ -110,7 +156,7 @@ impl TString {
                     &mut *((*tb).stringtable_hash).offset((h & ((*tb).stringtable_size - 1) as u32) as isize) as *mut *mut TString;
             }
             tstring = createstrobj(interpreter, length as usize, TagVariant::StringShort, h);
-            (*tstring).tstring_longlength = length;
+            (*tstring).m_length = length;
             libc::memcpy(
                 (*tstring).get_contents() as *mut libc::c_void,
                 str as *const libc::c_void,
@@ -166,30 +212,20 @@ pub unsafe fn luas_hash(pointer: *const i8, mut length: usize, seed: u32) -> u32
         return ret;
     }
 }
-pub unsafe fn hash_string_long(tstring: *mut TString) -> u32 {
-    unsafe {
-        if (*tstring).tstring_extra == 0 {
-            let length = (*tstring).get_length();
-            (*tstring).tstring_hash = luas_hash((*tstring).get_contents_mut(), length, (*tstring).tstring_hash);
-            (*tstring).tstring_extra = 1;
-        }
-        return (*tstring).tstring_hash;
-    }
-}
 pub unsafe fn createstrobj(interpreter: *mut Interpreter, l: usize, tagvariant: TagVariant, h: u32) -> *mut TString {
     unsafe {
         let total_size = core::mem::size_of::<TString>() + 1 + l as usize;
         let object: *mut Object = luac_newobj(interpreter, tagvariant, total_size);
         let ret: *mut TString = &mut (*(object as *mut TString));
         (*ret).tstring_hash = h;
-        (*ret).tstring_extra = 0;
+        (*ret).m_extra = TStringExtra::Long{hashed: false};
         *((*ret).get_contents()).offset(l as isize) = Character::Null as i8;
         return ret;
     }
 }
 pub unsafe fn luas_newlstr(interpreter: *mut Interpreter, str: *const i8, length: usize) -> *mut TString {
     unsafe {
-        if length <= STRING_SHORT_MAX {
+        if length <= TSTRING_SHORT_MAX {
             return TString::intern(interpreter, str, length);
         } else {
             if length >= (if (size_of::<usize>()) < size_of::<i64>() { !(0usize) } else { MAXIMUM_SIZE }) - size_of::<TString>() {
