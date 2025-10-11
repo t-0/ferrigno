@@ -45,6 +45,7 @@ use crate::vectort::*;
 use crate::zio::*;
 use libc::time;
 use std::ptr::*;
+pub const INTERPRETER_PROTECTED: u32 = 0x10000;
 pub type InterpreterSuper = ObjectWithGCList;
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -85,6 +86,15 @@ impl TObjectWithGCList for Interpreter {
     }
 }
 impl Interpreter {
+    pub fn in_nny (&self) -> bool {
+        self.interpreter_countccalls & 0xffff0000u32 != 0
+    }
+    pub fn incnny(&mut self) {
+        self.interpreter_countccalls = self.interpreter_countccalls.wrapping_add(INTERPRETER_PROTECTED);
+    }
+    pub fn decnny(&mut self) {
+        self.interpreter_countccalls = self.interpreter_countccalls.wrapping_sub(INTERPRETER_PROTECTED);
+    }
     pub unsafe fn safereallocate(
         &mut self, oldblock: *mut libc::c_void, oldsize: usize, newsize: usize,
     ) -> *mut libc::c_void {
