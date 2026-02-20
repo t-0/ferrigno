@@ -1,8 +1,11 @@
 use std::ptr::*;
 use crate::functions::*;
 unsafe extern "C" {
+    #[cfg_attr(target_os = "macos", link_name = "__stdinp")]
     pub static mut stdin: *mut libc::FILE;
+    #[cfg_attr(target_os = "macos", link_name = "__stdoutp")]
     pub static mut stdout: *mut libc::FILE;
+    #[cfg_attr(target_os = "macos", link_name = "__stderrp")]
     pub static mut stderr: *mut libc::FILE;
     pub unsafe fn _setjmp(_: *mut JumpBuffer) -> i32;
     pub unsafe fn _longjmp(_: *mut JumpBuffer, _: i32) -> !;

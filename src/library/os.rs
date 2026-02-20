@@ -11,7 +11,7 @@ pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let cmd: *const i8 = lual_optlstring(interpreter, 1, null(), null_mut());
         let stat: i32;
-        *libc::__errno_location() = 0;
+        *errno_location() = 0;
         stat = system(cmd);
         if !cmd.is_null() {
             return lual_execresult(interpreter, stat);
@@ -24,7 +24,7 @@ pub unsafe fn os_execute(interpreter: *mut Interpreter) -> i32 {
 pub unsafe fn os_remove(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let filename: *const i8 = lual_checklstring(interpreter, 1, null_mut());
-        *libc::__errno_location() = 0;
+        *errno_location() = 0;
         return lual_fileresult(interpreter, (remove(filename) == 0) as i32, filename);
     }
 }
@@ -32,7 +32,7 @@ pub unsafe fn os_rename(interpreter: *mut Interpreter) -> i32 {
     unsafe {
         let fromname: *const i8 = lual_checklstring(interpreter, 1, null_mut());
         let toname: *const i8 = lual_checklstring(interpreter, 2, null_mut());
-        *libc::__errno_location() = 0;
+        *errno_location() = 0;
         return lual_fileresult(interpreter, (rename(fromname, toname) == 0) as i32, null());
     }
 }
@@ -185,7 +185,7 @@ pub unsafe fn os_date(interpreter: *mut Interpreter) -> i32 {
             tm_yday: 0,
             tm_isdst: 0,
             tm_gmtoff: 0,
-            tm_zone: null(),
+            tm_zone: null_mut(),
         };
         let stm: *mut libc::tm;
         if *stringpointer as i32 == Character::Exclamation as i32 {
@@ -253,7 +253,7 @@ pub unsafe fn os_time(interpreter: *mut Interpreter) -> i32 {
                     tm_yday: 0,
                     tm_isdst: 0,
                     tm_gmtoff: 0,
-                    tm_zone: null(),
+                    tm_zone: null_mut(),
                 };
                 (*interpreter).lual_checktype(1, TagType::Table);
                 lua_settop(interpreter, 1);

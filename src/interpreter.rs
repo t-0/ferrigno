@@ -45,6 +45,12 @@ use crate::vectort::*;
 use crate::zio::*;
 use libc::time;
 use std::ptr::*;
+
+#[cfg(target_os = "macos")]
+pub unsafe fn errno_location() -> *mut libc::c_int { libc::__error() }
+#[cfg(not(target_os = "macos"))]
+pub unsafe fn errno_location() -> *mut libc::c_int { libc::__errno_location() }
+
 pub const INTERPRETER_NY: u32 = 0x10000;
 pub const INTERPRETER_NY_MASK: u32 = 0xFFFF0000;
 pub type InterpreterSuper = ObjectWithGCList;
@@ -6392,7 +6398,7 @@ pub unsafe extern "C" fn lual_error(interpreter: *mut Interpreter, fmt: *const i
 }
 pub unsafe fn lual_fileresult(interpreter: *mut Interpreter, stat: i32, fname: *const i8) -> i32 {
     unsafe {
-        let en: i32 = *libc::__errno_location();
+        let en: i32 = *errno_location();
         if stat != 0 {
             (*interpreter).push_boolean(true);
             return 1;
@@ -6411,7 +6417,7 @@ pub unsafe fn lual_fileresult(interpreter: *mut Interpreter, stat: i32, fname: *
 }
 pub unsafe fn lual_execresult(interpreter: *mut Interpreter, mut stat: i32) -> i32 {
     unsafe {
-        if stat != 0 && *libc::__errno_location() != 0 {
+        if stat != 0 && *errno_location() != 0 {
             return lual_fileresult(interpreter, 0, null());
         } else {
             let mut what: *const i8 = c"exit".as_ptr();
@@ -6609,7 +6615,7 @@ pub unsafe fn get_f(mut _state: *mut Interpreter, arbitrary_data: *mut libc::c_v
 }
 pub unsafe fn errfile(interpreter: *mut Interpreter, what: *const i8, fnameindex: i32) -> Status {
     unsafe {
-        let err: i32 = *libc::__errno_location();
+        let err: i32 = *errno_location();
         let filename: *const i8 = (lua_tolstring(interpreter, fnameindex, null_mut())).offset(1 as isize);
         if err != 0 {
             lua_pushfstring(interpreter, c"cannot %s %s: %s".as_ptr(), what, filename, libc::strerror(err));
@@ -6660,7 +6666,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
             lf.loadf_file = stdin;
         } else {
             lua_pushfstring(interpreter, c"@%s".as_ptr(), filename);
-            *libc::__errno_location() = 0;
+            *errno_location() = 0;
             lf.loadf_file = libc::fopen(filename, c"r".as_ptr()) as *mut libc::FILE;
             if (lf.loadf_file).is_null() {
                 return errfile(interpreter, c"open".as_ptr(), fnameindex);
@@ -6675,7 +6681,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
         if c == (*::core::mem::transmute::<&[u8; 5], &[i8; 5]>(b"\x1BLua\0"))[0] as i32 {
             lf.loadf_n = 0;
             if !filename.is_null() {
-                *libc::__errno_location() = 0;
+                *errno_location() = 0;
                 lf.loadf_file = libc::freopen(filename, c"rb".as_ptr(), lf.loadf_file);
                 if (lf.loadf_file).is_null() {
                     return errfile(interpreter, c"reopen".as_ptr(), fnameindex);
@@ -6688,7 +6694,7 @@ pub unsafe fn lual_loadfilex(interpreter: *mut Interpreter, filename: *const i8,
             lf.loadf_n = lf.loadf_n + 1;
             lf.loadf_buffer[fresh149 as usize] = c as i8;
         }
-        *libc::__errno_location() = 0;
+        *errno_location() = 0;
         let reader = Reader::new(Some(
             get_f as unsafe fn(*mut Interpreter, *mut libc::c_void, *mut usize) -> *const i8,
         ));
