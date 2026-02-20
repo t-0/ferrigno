@@ -935,13 +935,12 @@ pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
 }
 pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: ...) -> i32 {
     unsafe {
-        let mut argp: ::core::ffi::VaListImpl;
         let mut res: i32 = 0;
         let global: *mut Global = (*interpreter).interpreter_global;
         if (*global).global_gcstep as i32 & 2 != 0 {
             return -1;
         }
-        argp = args.clone();
+        let mut args = args;
         match what {
             | 0 => {
                 (*global).global_gcstep = 1;
@@ -960,7 +959,7 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 res = (((*global).global_totalbytes + (*global).global_gcdebt) as usize & 0x3ff as usize) as i32;
             },
             | 5 => {
-                let data: i32 = argp.arg::<i32>();
+                let data: i32 = args.arg::<i32>();
                 let mut debt: i64 = 1;
                 let oldstp: u8 = (*global).global_gcstep;
                 (*global).global_gcstep = 0;
@@ -980,12 +979,12 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 }
             },
             | 6 => {
-                let data_0: i32 = argp.arg::<i32>();
+                let data_0: i32 = args.arg::<i32>();
                 res = (*global).global_gcpause as i32 * 4;
                 (*global).global_gcpause = (data_0 / 4) as u8;
             },
             | 7 => {
-                let data_1: i32 = argp.arg::<i32>();
+                let data_1: i32 = args.arg::<i32>();
                 res = (*global).global_gcstepmultiplier as i32 * 4;
                 (*global).global_gcstepmultiplier = (data_1 / 4) as u8;
             },
@@ -993,8 +992,8 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 res = ((*global).global_gcstep as i32 == 0) as i32;
             },
             | 10 => {
-                let minormul: i32 = argp.arg::<i32>();
-                let majormul: i32 = argp.arg::<i32>();
+                let minormul: i32 = args.arg::<i32>();
+                let majormul: i32 = args.arg::<i32>();
                 res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 {
                     10 as i32
                 } else {
@@ -1009,9 +1008,9 @@ pub unsafe extern "C" fn lua_gc(interpreter: *mut Interpreter, what: i32, args: 
                 (*global).luac_changemode(interpreter, 1);
             },
             | 11 => {
-                let pause: i32 = argp.arg::<i32>();
-                let stepmul: i32 = argp.arg::<i32>();
-                let stepsize: i32 = argp.arg::<i32>();
+                let pause: i32 = args.arg::<i32>();
+                let stepmul: i32 = args.arg::<i32>();
+                let stepsize: i32 = args.arg::<i32>();
                 res = if (*global).global_gckind as i32 == 1 || (*global).global_lastatomic != 0 {
                     10 as i32
                 } else {

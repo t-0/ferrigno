@@ -1692,17 +1692,16 @@ pub unsafe fn lua_pushstring(interpreter: *mut Interpreter, mut s: *const i8) ->
         return s;
     }
 }
-pub unsafe fn lua_pushvfstring(interpreter: *mut Interpreter, fmt: *const i8, mut argp: ::core::ffi::VaList) -> *const i8 {
+pub unsafe fn lua_pushvfstring(interpreter: *mut Interpreter, fmt: *const i8, argp: ::core::ffi::VaList) -> *const i8 {
     unsafe {
-        let ret = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        let ret = luao_pushvfstring(interpreter, fmt, argp);
         (*interpreter).do_gc_step_if_should_step();
         return ret;
     }
 }
 pub unsafe extern "C" fn lua_pushfstring(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> *const i8 {
     unsafe {
-        let mut argp = args.clone();
-        let ret: *const i8 = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        let ret: *const i8 = luao_pushvfstring(interpreter, fmt, args);
         (*interpreter).do_gc_step_if_should_step();
         return ret;
     }
@@ -2843,11 +2842,8 @@ pub unsafe fn luag_errormsg(interpreter: *mut Interpreter) -> ! {
 pub unsafe extern "C" fn luag_runerror(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> ! {
     unsafe {
         let callinfo = (*interpreter).interpreter_callinfo;
-        let message: *const i8;
-        let mut argp: ::core::ffi::VaListImpl;
         (*interpreter).do_gc_step_if_should_step();
-        argp = args.clone();
-        message = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
+        let message = luao_pushvfstring(interpreter, fmt, args);
         if (*callinfo).callinfo_callstatus as i32 & 1 << 1 == 0 {
             luag_addinfo(
                 interpreter,
@@ -3171,11 +3167,7 @@ pub unsafe fn luao_pushvfstring(interpreter: *mut Interpreter, mut fmt: *const i
 }
 pub unsafe extern "C" fn luao_pushfstring(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> *const i8 {
     unsafe {
-        let message: *const i8;
-        let mut argp: ::core::ffi::VaListImpl;
-        argp = args.clone();
-        message = luao_pushvfstring(interpreter, fmt, argp.as_va_list());
-        return message;
+        return luao_pushvfstring(interpreter, fmt, args);
     }
 }
 pub unsafe fn luat_init(interpreter: *mut Interpreter) {
@@ -6392,9 +6384,8 @@ pub unsafe fn lual_where(interpreter: *mut Interpreter, level: i32) {
 }
 pub unsafe extern "C" fn lual_error(interpreter: *mut Interpreter, fmt: *const i8, args: ...) -> i32 {
     unsafe {
-        let mut argp: ::core::ffi::VaListImpl = args.clone();
         lual_where(interpreter, 1);
-        lua_pushvfstring(interpreter, fmt, argp.as_va_list());
+        lua_pushvfstring(interpreter, fmt, args);
         lua_concat(interpreter, 2);
         return lua_error(interpreter);
     }
