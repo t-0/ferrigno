@@ -193,6 +193,59 @@ tui.raw()
 tui.hide_cursor()
 tui.clear()
 
+-- ── Splash screen ─────────────────────────────────────────────────────────────
+
+do
+    local VERSION   = "v0.1.0"
+    local COPYRIGHT = "© 2026 Rhodium Audio"
+    local LINES = {
+        "",
+        "  Sequencer Sharp Rhodium  ",
+        "",
+        "  " .. VERSION .. "  ",
+        "",
+        "  " .. COPYRIGHT .. "  ",
+        "",
+    }
+
+    local w, h   = tui.size()
+    local bw     = math.floor(w * 0.5)
+    local bh     = math.floor(h * 0.5)
+    local bx     = math.floor((w - bw) / 2) + 1
+    local by     = math.floor((h - bh) / 2) + 1
+
+    -- Draw box background.
+    for row = 0, bh - 1 do
+        tui.print_at(by + row, bx, string.rep(' ', bw), tui.WHITE, tui.BRIGHT_BLACK, 0)
+    end
+
+    -- Top and bottom border.
+    tui.print_at(by,          bx, string.rep('─', bw), tui.BRIGHT_WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+    tui.print_at(by + bh - 1, bx, string.rep('─', bw), tui.BRIGHT_WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+
+    -- Content lines, centred vertically within the box.
+    local content_start = by + math.floor((bh - #LINES) / 2)
+    for i, line in ipairs(LINES) do
+        local row = content_start + i - 1
+        if row > by and row < by + bh - 1 then
+            -- Centre the text horizontally within the box.
+            local text = line
+            local pad_l = math.floor((bw - #text) / 2)
+            local pad_r = bw - #text - pad_l
+            local display = string.rep(' ', pad_l) .. text .. string.rep(' ', pad_r)
+            local is_title = (i == 2)
+            tui.print_at(row, bx, display,
+                is_title and tui.WHITE or tui.BRIGHT_WHITE,
+                tui.BRIGHT_BLACK,
+                is_title and tui.BOLD or 0)
+        end
+    end
+
+    tui.flush()
+    tui.read_key(2000)
+    tui.clear()
+end
+
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
 local function current_track()
