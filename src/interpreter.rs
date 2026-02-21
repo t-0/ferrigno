@@ -7356,13 +7356,15 @@ pub unsafe fn collectargs(argv: *mut *mut i8, first: *mut i32) -> i32 {
 }
 pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32) -> i32 {
     unsafe {
-        for i in 0..n {
+        let mut i = 0i32;
+        while i < n {
             let option: Character = Character::from(*(*argv.offset(i as isize)).offset(1 as isize) as i32);
             match option {
                 | Character::LowerE | Character::LowerL => {
-                    let extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
+                    let mut extra: *mut i8 = (*argv.offset(i as isize)).offset(2 as isize);
                     if *extra as i32 == Character::Null as i32 {
-                        continue;
+                        i += 1;
+                        extra = *argv.offset(i as isize);
                     }
                     let status = if option == Character::LowerE {
                         dostring(interpreter, extra, c"=(command line)".as_ptr())
@@ -7378,6 +7380,7 @@ pub unsafe fn runargs(interpreter: *mut Interpreter, argv: *mut *mut i8, n: i32)
                 },
                 | _ => {},
             }
+            i += 1;
         }
         return 1;
     }

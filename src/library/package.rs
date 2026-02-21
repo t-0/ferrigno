@@ -150,7 +150,7 @@ pub unsafe fn ll_loadlib(interpreter: *mut Interpreter) -> i32 {
         } else {
             (*interpreter).push_nil();
             lua_rotate(interpreter, -2, 1);
-            lua_pushstring(interpreter, if stat == 1 { c"open".as_ptr() } else { c"initial".as_ptr() });
+            lua_pushstring(interpreter, if stat == 1 { c"absent".as_ptr() } else { c"init".as_ptr() });
             return 3;
         };
     }
