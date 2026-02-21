@@ -70,6 +70,16 @@ pub unsafe fn os_clock(interpreter: *mut Interpreter) -> i32 {
         return 1;
     }
 }
+// os.monotime() — wall-clock seconds (CLOCK_MONOTONIC), high resolution.
+// Unlike os.clock() this advances even while the process is blocked in I/O.
+pub unsafe fn os_monotime(interpreter: *mut Interpreter) -> i32 {
+    unsafe {
+        let mut ts = libc::timespec { tv_sec: 0, tv_nsec: 0 };
+        libc::clock_gettime(libc::CLOCK_MONOTONIC, &mut ts);
+        (*interpreter).push_number(ts.tv_sec as f64 + ts.tv_nsec as f64 / 1_000_000_000.0);
+        1
+    }
+}
 pub unsafe fn setfield(interpreter: *mut Interpreter, key: *const i8, value: i32, delta: i32) {
     unsafe {
         (*interpreter).push_integer(value as i64 + delta as i64);
@@ -318,10 +328,14 @@ pub unsafe fn os_exit(interpreter: *mut Interpreter) -> i32 {
         }
     }
 }
-pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 11] = [
+pub const SYSTEM_FUNCTIONS: [RegisteredFunction; 12] = [
     RegisteredFunction {
         registeredfunction_name: c"clock".as_ptr(),
         registeredfunction_function: Some(os_clock as unsafe fn(*mut Interpreter) -> i32),
+    },
+    RegisteredFunction {
+        registeredfunction_name: c"monotime".as_ptr(),
+        registeredfunction_function: Some(os_monotime as unsafe fn(*mut Interpreter) -> i32),
     },
     RegisteredFunction {
         registeredfunction_name: c"date".as_ptr(),

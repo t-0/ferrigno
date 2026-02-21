@@ -1,13 +1,13 @@
 -- sequencer/engine.lua
 -- MIDI playback and recording engine.
--- Uses os.clock() for timing (seconds, high precision on macOS).
+-- Uses os.monotime() for timing (seconds, high precision on macOS).
 
 local M = {}
 
 M.bpm       = 120.0
 M.playing   = false
 M.beat_pos  = 0.0    -- beat position when transport last stopped/started
-M.start_time = 0.0   -- os.clock() when transport started
+M.start_time = 0.0   -- os.monotime() when transport started
 
 -- active_clips[track_idx] = {
 --   inst_id, clip_id, events, event_idx,
@@ -34,14 +34,14 @@ end
 
 function M.cur_beat()
     if not M.playing then return M.beat_pos end
-    return M.beat_pos + (os.clock() - M.start_time) * M.beats_per_sec()
+    return M.beat_pos + (os.monotime() - M.start_time) * M.beats_per_sec()
 end
 
 -- ── Transport ─────────────────────────────────────────────────────────────────
 
 function M.start_transport()
     if M.playing then return end
-    M.start_time = os.clock()
+    M.start_time = os.monotime()
     M.playing    = true
 end
 
@@ -64,7 +64,7 @@ function M.set_bpm(bpm)
         local cur   = M.cur_beat()
         M.bpm       = bpm
         M.beat_pos  = cur
-        M.start_time = os.clock()
+        M.start_time = os.monotime()
     else
         M.bpm = bpm
     end

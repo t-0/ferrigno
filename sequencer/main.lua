@@ -337,7 +337,8 @@ end
 
 local running       = true
 local DRAW_INTERVAL = 1.0 / 30   -- target ~30 FPS
-local last_draw     = 0
+-- Initialise to a negative value so the very first iteration always draws.
+local last_draw     = -1
 
 while running do
     -- 1. Engine tick (dispatch scheduled MIDI events).
@@ -389,7 +390,7 @@ while running do
     end
 
     -- 4. Redraw at ~30 FPS.
-    local now = os.clock()
+    local now = os.monotime()
     if (now - last_draw) >= DRAW_INTERVAL then
         ui.draw(engine)
         last_draw = now
