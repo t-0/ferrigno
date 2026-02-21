@@ -575,9 +575,11 @@ function M.open(clip, raw_events)
         elseif key == ' '         then op_select_toggle(st)
         elseif key == 'a' or key == 'A' then op_select_all(st)
 
-        -- Transpose selected notes with + / -
-        elseif key == '+' or key == '=' then op_transpose(st,  1)
-        elseif key == '-'               then op_transpose(st, -1)
+        -- Transpose: = / - → ±1 semitone;  + (shift+=) / _ (shift+-) → ±1 octave
+        elseif key == '='  then op_transpose(st,   1)
+        elseif key == '+'  then op_transpose(st,  12)
+        elseif key == '-'  then op_transpose(st,  -1)
+        elseif key == '_'  then op_transpose(st, -12)
 
         -- Resize selected notes with , / .
         elseif key == '.' or key == '>' then op_resize_sel(st,  1)
