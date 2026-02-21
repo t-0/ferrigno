@@ -12,6 +12,7 @@ mod sqlite;
 mod string;
 mod toml;
 mod table;
+mod tui;
 mod urllib;
 mod utf8;
 use crate::interpreter::*;
@@ -30,9 +31,10 @@ use crate::library::string::*;
 use crate::library::urllib::*;
 use crate::library::toml::*;
 use crate::library::table::*;
+use crate::library::tui::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 16] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 17] = {
     [
         {
             RegisteredFunction {
@@ -128,6 +130,12 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 16] = {
             RegisteredFunction {
                 registeredfunction_name: c"requests".as_ptr(),
                 registeredfunction_function: Some(luaopen_requests as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"tui".as_ptr(),
+                registeredfunction_function: Some(luaopen_tui as unsafe fn(*mut Interpreter) -> i32),
             }
         },
     ]
