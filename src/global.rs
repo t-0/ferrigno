@@ -138,8 +138,8 @@ impl Global {
                 (*(*maininterpreter).interpreter_global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
             );
             freestack(maininterpreter);
-            raw_allocate(maininterpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
-            raw_allocate(self as *mut Global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
+            std::alloc::dealloc(maininterpreter as *mut u8, std::alloc::Layout::new::<Interpreter>());
+            std::alloc::dealloc(self as *mut Global as *mut u8, std::alloc::Layout::new::<Global>());
         }
     }
     pub fn initialize(&mut self) {

@@ -1,7 +1,8 @@
 use crate::calls::*;
-use crate::global::*;
+use crate::global::lua_gc;
 use crate::interpreter::*;
 use crate::library::*;
+use crate::luastate::LuaState;
 use crate::status::*;
 use libc::isatty;
 use std::ptr::*;
@@ -52,20 +53,22 @@ pub unsafe fn pmain(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
     unsafe {
-        let (global, interpreter) = lual_newstate();
-        if global.is_null() {
-            l_message(*argv.offset(0), c"cannot create interpreter: not enough memory".as_ptr());
-            return 1;
-        } else {
-            lua_gc(interpreter, 0);
-            lua_pushcclosure(interpreter, Some(pmain as unsafe fn(*mut Interpreter) -> i32), 0);
-            (*interpreter).push_integer(argc as i64);
-            lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
-            let status = CallS::api_call(interpreter, 2, 1, 0, 0, None);
-            let result = lua_toboolean(interpreter, -1);
-            report(interpreter, status);
-            (*global).close();
-            return if result && status == Status::OK { 0 } else { 1 };
-        }
+        let state = match LuaState::new() {
+            None => {
+                l_message(*argv.offset(0), c"cannot create interpreter: not enough memory".as_ptr());
+                return 1;
+            }
+            Some(s) => s,
+        };
+        let interpreter = state.interpreter();
+        lua_gc(interpreter, 0);
+        lua_pushcclosure(interpreter, Some(pmain as unsafe fn(*mut Interpreter) -> i32), 0);
+        (*interpreter).push_integer(argc as i64);
+        lua_pushlightuserdata(interpreter, argv as *mut libc::c_void);
+        let status = CallS::api_call(interpreter, 2, 1, 0, 0, None);
+        let result = lua_toboolean(interpreter, -1);
+        report(interpreter, status);
+        // state drops here, calling close_state automatically
+        if result && status == Status::OK { 0 } else { 1 }
     }
 }

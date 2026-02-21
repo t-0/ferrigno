@@ -55,6 +55,7 @@ mod randomstate;
 mod types;
 mod registeredfunction;
 mod strings;
+mod luastate;
 mod repl;
 mod rn;
 mod sparser;

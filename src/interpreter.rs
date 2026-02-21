@@ -2549,8 +2549,8 @@ pub unsafe fn close_state(interpreter: *mut Interpreter) {
             (*(*interpreter).interpreter_global).global_stringtable.stringtable_size * size_of::<*mut TString>(),
         );
         freestack(interpreter);
-        raw_allocate(interpreter as *mut u8 as *mut libc::c_void, size_of::<Interpreter>(), 0);
-        raw_allocate(global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
+        std::alloc::dealloc(interpreter as *mut u8, std::alloc::Layout::new::<Interpreter>());
+        std::alloc::dealloc(global as *mut u8, std::alloc::Layout::new::<Global>());
     }
 }
 pub unsafe fn lua_newthread(interpreter: *mut Interpreter) -> *mut Interpreter {
@@ -7006,12 +7006,15 @@ pub unsafe fn warnfon(arbitrary_data: *mut libc::c_void, message: *const i8, toc
     }
 }
 pub unsafe fn lual_newstate() -> (*mut Global, *mut Interpreter) {
+    use std::alloc::{alloc_zeroed, dealloc, Layout};
     unsafe {
-        let global: *mut Global = raw_allocate(null_mut(), 0, size_of::<Global>()) as *mut Global;
+        let global_layout = Layout::new::<Global>();
+        let global = alloc_zeroed(global_layout) as *mut Global;
         if !global.is_null() {
-            let mut interpreter: *mut Interpreter = raw_allocate(null_mut(), 0, size_of::<Interpreter>()) as *mut Interpreter;
+            let interp_layout = Layout::new::<Interpreter>();
+            let mut interpreter = alloc_zeroed(interp_layout) as *mut Interpreter;
             if interpreter.is_null() {
-                raw_allocate(global as *mut u8 as *mut libc::c_void, size_of::<Global>(), 0);
+                dealloc(global as *mut u8, global_layout);
             } else {
                 (*global).initialize();
                 (*interpreter).initialize(&*global);
