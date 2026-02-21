@@ -174,13 +174,28 @@ function M.launch(track_idx, inst_id, clip, events)
     if next_bar - cur < 0.05 then next_bar = next_bar + 4 end
     if not M.playing then next_bar = 0 end
 
+    local len        = clip.length_beats or 4.0
+    local start_off  = clip.start_offset or 0.0
+    local ls         = clip.loop_start   or 0.0
+    local ll         = clip.loop_length  -- nil means full clip from ls
+    local loop_end   = ll and (ls + math.max(0.001, ll)) or len
+
+    -- Advance event_idx past events before start_offset so first-play begins there.
+    local event_idx = 1
+    while event_idx <= #events and events[event_idx].beat_offset < start_off do
+        event_idx = event_idx + 1
+    end
+
     M.active_clips[track_idx] = {
         inst_id         = inst_id,
         clip_id         = clip.id,
         events          = events,
-        event_idx       = 1,
+        event_idx       = event_idx,
         loop_start_beat = next_bar,
-        length_beats    = clip.length_beats or 4.0,
+        length_beats    = len,
+        start_offset    = start_off,
+        loop_start_off  = ls,
+        loop_end        = loop_end,
         is_looping      = (clip.is_looping == 1 or clip.is_looping == true),
         held_notes      = {},
     }
@@ -269,16 +284,22 @@ function M.tick()
     local to_stop = {}
 
     for track_idx, ac in pairs(M.active_clips) do
-        local clip_beat = now - ac.loop_start_beat
+        -- clip_beat_raw: position relative to loop_start_beat (for quantise wait check).
+        -- clip_beat: effective position in clip coordinates (shifted by start_offset).
+        local clip_beat_raw = now - ac.loop_start_beat
+        local clip_beat     = clip_beat_raw + (ac.start_offset or 0)
+        local ls            = ac.loop_start_off or 0
+        local loop_end      = ac.loop_end or ac.length_beats
 
-        if clip_beat < 0 then
+        if clip_beat_raw < 0 then
             -- Waiting for launch quantisation — nothing to do yet.
-        elseif clip_beat >= ac.length_beats then
+        elseif clip_beat >= loop_end then
             if ac.is_looping then
-                -- Advance loop: release held notes, reset events.
-                local loops = math.floor(clip_beat / ac.length_beats)
-                ac.loop_start_beat = ac.loop_start_beat + loops * ac.length_beats
-                clip_beat = clip_beat - loops * ac.length_beats
+                -- Advance loop to loop_start_off, release held notes, reset events.
+                local period = math.max(0.001, loop_end - ls)
+                local loops  = math.max(1, math.floor((clip_beat - ls) / period))
+                ac.loop_start_beat = ac.loop_start_beat + loops * period
+                clip_beat = clip_beat - loops * period
                 local p = M.output_ports[ac.inst_id]
                 if p then
                     for note in pairs(ac.held_notes) do
@@ -286,13 +307,18 @@ function M.tick()
                     end
                 end
                 ac.held_notes = {}
-                ac.event_idx  = 1
+                -- Find first event at or after current clip_beat (≈ loop_start_off).
+                local idx = 1
+                while idx <= #ac.events and ac.events[idx].beat_offset < clip_beat do
+                    idx = idx + 1
+                end
+                ac.event_idx = idx
             else
                 table.insert(to_stop, track_idx)
             end
         end
 
-        if clip_beat >= 0 then
+        if clip_beat_raw >= 0 then
             local p = M.output_ports[ac.inst_id]
             -- Dispatch all events whose beat_offset <= clip_beat.
             while ac.event_idx <= #ac.events do

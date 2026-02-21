@@ -60,6 +60,9 @@ function M.init_schema(db)
             name          TEXT             DEFAULT '',
             length_beats  REAL    NOT NULL DEFAULT 4.0,
             is_looping    INTEGER NOT NULL DEFAULT 1,
+            start_offset  REAL    NOT NULL DEFAULT 0.0,
+            loop_start    REAL    NOT NULL DEFAULT 0.0,
+            loop_length   REAL             DEFAULT NULL,
             bank_msb      INTEGER          DEFAULT NULL,
             bank_lsb      INTEGER          DEFAULT NULL,
             program       INTEGER          DEFAULT NULL
@@ -102,9 +105,12 @@ function M.init_schema(db)
         "instruments ADD COLUMN bank_msb INTEGER DEFAULT NULL",
         "instruments ADD COLUMN bank_lsb INTEGER DEFAULT NULL",
         "instruments ADD COLUMN program  INTEGER DEFAULT NULL",
-        "clips        ADD COLUMN bank_msb INTEGER DEFAULT NULL",
-        "clips        ADD COLUMN bank_lsb INTEGER DEFAULT NULL",
-        "clips        ADD COLUMN program  INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN bank_msb      INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN bank_lsb      INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN program       INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN start_offset  REAL    NOT NULL DEFAULT 0.0",
+        "clips        ADD COLUMN loop_start    REAL    NOT NULL DEFAULT 0.0",
+        "clips        ADD COLUMN loop_length   REAL    DEFAULT NULL",
     }) do
         pcall(function() db:exec("ALTER TABLE " .. col) end)
     end
@@ -183,22 +189,28 @@ end
 function M.upsert_clip(db, clip)
     if clip.id then
         run(db,
-            "UPDATE clips SET name=?, length_beats=?, is_looping=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
+            "UPDATE clips SET name=?, length_beats=?, is_looping=?, start_offset=?, loop_start=?, loop_length=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
             clip.name or '',
             clip.length_beats or 4.0,
             clip.is_looping ~= false and 1 or 0,
+            clip.start_offset or 0.0,
+            clip.loop_start   or 0.0,
+            clip.loop_length,
             clip.bank_msb,
             clip.bank_lsb,
             clip.program,
             clip.id)
     else
         run(db,
-            "INSERT INTO clips (instrument_id,slot_index,name,length_beats,is_looping,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?)",
+            "INSERT INTO clips (instrument_id,slot_index,name,length_beats,is_looping,start_offset,loop_start,loop_length,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             clip.instrument_id,
             clip.slot_index,
             clip.name or '',
             clip.length_beats or 4.0,
             clip.is_looping ~= false and 1 or 0,
+            clip.start_offset or 0.0,
+            clip.loop_start   or 0.0,
+            clip.loop_length,
             clip.bank_msb,
             clip.bank_lsb,
             clip.program)

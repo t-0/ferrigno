@@ -299,37 +299,201 @@ local function edit_clip_settings()
         ui.set_status("No clip here — press N to create one first", tui.YELLOW)
         return
     end
-    local w = tui.size()
-    tui.clear()
-    tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
-    tui.print_at(1, 2, "Clip Settings", tui.WHITE, tui.BLUE, tui.BOLD)
 
-    local name_val = ui.read_line(3, "Clip name: ", clip.name or '')
-    if name_val ~= nil then clip.name = name_val end
-
-    tui.clear()
-    local bank_msb_val = ui.read_line(3, "Bank MSB override (0-127, blank=none): ",
-        clip.bank_msb ~= nil and tostring(clip.bank_msb) or '')
-    if bank_msb_val ~= nil then
-        local n = tonumber(bank_msb_val)
-        clip.bank_msb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    -- Format a float for display: trim trailing zeros after decimal point.
+    local function fmt_f(v)
+        if v == nil then return '' end
+        local s = string.format("%.3f", v)
+        return s:gsub("%.?0+$", "")
     end
 
-    tui.clear()
-    local bank_lsb_val = ui.read_line(3, "Bank LSB override (0-127, blank=none): ",
-        clip.bank_lsb ~= nil and tostring(clip.bank_lsb) or '')
-    if bank_lsb_val ~= nil then
-        local n = tonumber(bank_lsb_val)
-        clip.bank_lsb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    -- Field definitions.
+    -- type "text": free string
+    -- type "float": real number, min/max, nullable (blank → nil or default)
+    -- type "int":   integer, min/max, nullable
+    -- type "toggle": cycles through opts with ←→ (stored as index)
+    local loop_opts = {"No", "Yes"}
+    local fields = {
+        { label="Name",        type="text"                                        },
+        { label="Length",      type="float", min=0.01, nullable=false             },
+        { label="Loopable",    type="toggle", opts=loop_opts                      },
+        { label="Start",       type="float", min=0,    nullable=false, hint="beats" },
+        { label="Loop Start",  type="float", min=0,    nullable=false, hint="beats" },
+        { label="Loop Length", type="float", min=0.01, nullable=true,  hint="blank=full" },
+        { label="Bank MSB",    type="int",   min=0,    max=127, nullable=true     },
+        { label="Bank LSB",    type="int",   min=0,    max=127, nullable=true     },
+        { label="Program",     type="int",   min=0,    max=127, nullable=true     },
+    }
+
+    local is_looping = (clip.is_looping ~= 0 and clip.is_looping ~= false)
+    local vals = {
+        clip.name or '',
+        fmt_f(clip.length_beats or 4.0),
+        is_looping and 2 or 1,                -- index into loop_opts
+        fmt_f(clip.start_offset or 0),
+        fmt_f(clip.loop_start   or 0),
+        clip.loop_length ~= nil and fmt_f(clip.loop_length) or '',
+        clip.bank_msb ~= nil and tostring(clip.bank_msb) or '',
+        clip.bank_lsb ~= nil and tostring(clip.bank_lsb) or '',
+        clip.program  ~= nil and tostring(clip.program)  or '',
+    }
+
+    local LABEL_W  = 14
+    local VAL_COL  = LABEL_W + 5
+    local sel      = 1
+    local editing  = false
+    local edit_buf = ''
+
+    local function pad(s, n)
+        s = tostring(s or '')
+        if #s >= n then return s:sub(1, n) end
+        return s .. string.rep(' ', n - #s)
     end
 
-    tui.clear()
-    local prog_val = ui.read_line(3, "Program Change override (0-127, blank=none): ",
-        clip.program ~= nil and tostring(clip.program) or '')
-    if prog_val ~= nil then
-        local n = tonumber(prog_val)
-        clip.program = n and math.max(0, math.min(127, math.floor(n))) or nil
+    local function draw()
+        local w, h = tui.size()
+        local val_w = math.max(10, w - VAL_COL - 4)
+        tui.hide_cursor()
+        tui.clear()
+
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Clip Settings", tui.WHITE, tui.BLUE, tui.BOLD)
+
+        for i, f in ipairs(fields) do
+            local row    = i + 2
+            local is_sel = (i == sel)
+            local lbl    = string.format("  %-" .. LABEL_W .. "s  ", f.label)
+
+            if is_sel then
+                tui.print_at(row, 1, lbl, tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+            else
+                tui.print_at(row, 1, lbl, tui.BRIGHT_WHITE, tui.BLACK, 0)
+            end
+
+            if f.type == "toggle" then
+                local display = pad(f.opts[vals[i]] or '', val_w)
+                if is_sel then
+                    tui.print_at(row, VAL_COL, "◄ " .. display .. " ►", tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                end
+            else
+                -- Append hint in dim after the value.
+                local hint = f.hint and ("  " .. f.hint) or ""
+                if is_sel and editing then
+                    local display = pad(edit_buf, val_w)
+                    tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.YELLOW, tui.BOLD)
+                    tui.move(row, VAL_COL + 2 + math.min(#edit_buf, val_w))
+                    tui.show_cursor()
+                else
+                    local display = pad(vals[i] .. hint, val_w)
+                    if is_sel then
+                        tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.CYAN, tui.BOLD)
+                    else
+                        tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                    end
+                end
+            end
+        end
+
+        local hint_row = #fields + 4
+        if editing then
+            tui.print_at(hint_row, 1,
+                pad("  Enter=confirm  ESC=cancel edit", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            tui.print_at(hint_row, 1,
+                pad("  ↑↓/Tab=navigate  ←→=cycle  Enter=edit  S=save  ESC=cancel", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        end
+        tui.flush()
     end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto clip_again end
+
+        if editing then
+            if key == 'enter' or key == 'return' then
+                local f = fields[sel]
+                if f.type == "float" then
+                    local n = tonumber(edit_buf)
+                    if edit_buf == '' and f.nullable then
+                        vals[sel] = ''
+                    elseif n then
+                        local clamped = math.max(f.min, n)
+                        vals[sel] = (clamped == math.floor(clamped))
+                            and tostring(math.floor(clamped)) or fmt_f(clamped)
+                    end
+                elseif f.type == "int" then
+                    local n = tonumber(edit_buf)
+                    if edit_buf == '' and f.nullable then
+                        vals[sel] = ''
+                    elseif n then
+                        vals[sel] = tostring(math.max(f.min, math.min(f.max, math.floor(n))))
+                    end
+                else
+                    vals[sel] = edit_buf
+                end
+                editing = false
+                sel = (sel % #fields) + 1
+            elseif key == 'esc' then
+                editing = false
+            elseif key == 'backspace' then
+                if #edit_buf > 0 then edit_buf = edit_buf:sub(1, -2) end
+            elseif #key == 1 then
+                edit_buf = edit_buf .. key
+            end
+        else
+            if key == 'esc' then
+                tui.clear()
+                return
+            elseif key == 's' or key == 'S' then
+                break
+            elseif key == 'tab' or key == 'down' then
+                sel = (sel % #fields) + 1
+            elseif key == 'up' then
+                sel = ((sel - 2 + #fields) % #fields) + 1
+            elseif key == 'left' or key == 'right' then
+                local f = fields[sel]
+                if f.type == "toggle" then
+                    local n = #f.opts
+                    vals[sel] = key == 'right' and (vals[sel] % n) + 1
+                                                or ((vals[sel] - 2 + n) % n) + 1
+                end
+            elseif key == 'enter' or key == 'return' then
+                if fields[sel].type ~= "toggle" then
+                    editing  = true
+                    edit_buf = vals[sel]
+                end
+            end
+        end
+        draw()
+        ::clip_again::
+    end
+
+    -- Apply values back to clip.
+    local function parse_float(s, default, mn)
+        local n = tonumber(s)
+        if n then return math.max(mn or 0, n) end
+        return default
+    end
+    local function parse_opt_int(s, mn, mx)
+        if s == '' then return nil end
+        local n = tonumber(s)
+        return n and math.max(mn, math.min(mx, math.floor(n))) or nil
+    end
+
+    if vals[1] ~= '' then clip.name = vals[1] end
+    clip.length_beats  = parse_float(vals[2], clip.length_beats or 4.0, 0.01)
+    clip.is_looping    = (loop_opts[vals[3]] == "Yes") and 1 or 0
+    clip.start_offset  = parse_float(vals[4], 0, 0)
+    clip.loop_start    = parse_float(vals[5], 0, 0)
+    clip.loop_length   = vals[6] ~= '' and parse_float(vals[6], nil, 0.01) or nil
+    clip.bank_msb      = parse_opt_int(vals[7], 0, 127)
+    clip.bank_lsb      = parse_opt_int(vals[8], 0, 127)
+    clip.program       = parse_opt_int(vals[9], 0, 127)
 
     db_mod.upsert_clip(db, clip)
     tui.clear()
