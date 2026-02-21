@@ -55,7 +55,21 @@ unsafe fn read_byte(timeout_ms: i32) -> Option<u8> {
 // ─── Escape-sequence parsing ──────────────────────────────────────────────────
 
 fn decode_csi(params: &[u8], final_byte: u8) -> Vec<u8> {
+    // Parse optional modifier from params (e.g. "1;2" → modifier=2 = shift).
+    // xterm encodes: modifier_value = (shift?1:0)|(alt?2:0)|(ctrl?4:0) + 1
+    let modifier: u8 = std::str::from_utf8(params)
+        .unwrap_or("")
+        .split(';')
+        .nth(1)
+        .and_then(|m| m.parse().ok())
+        .unwrap_or(1);
+    let shifted = (modifier.saturating_sub(1) & 1) != 0;
+
     match final_byte {
+        b'A' if shifted => b"shift-up".to_vec(),
+        b'B' if shifted => b"shift-down".to_vec(),
+        b'C' if shifted => b"shift-right".to_vec(),
+        b'D' if shifted => b"shift-left".to_vec(),
         b'A' => b"up".to_vec(),
         b'B' => b"down".to_vec(),
         b'C' => b"right".to_vec(),

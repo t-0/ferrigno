@@ -290,8 +290,9 @@ local function draw(st, w, h)
     -- ── Footer rows ───────────────────────────────────────────────────────────
     tui.print_at(h - 1, 1, pad(st.status, w), tui.BRIGHT_WHITE, tui.BLACK, 0)
     tui.print_at(h, 1,
-        pad(" ←→=beat  ↑↓=pitch  ENTER=add/del  SPC=sel  A=sel-all  HJKL=move-sel" ..
-            "  .,=resize  []={Q}  ±=zoom  Q=quant  R=rev  I=inv  T=transp  C/X/V  L=loop  O=loop-tog  S=save  ESC=cancel",
+        pad(" ←→↑↓=navigate  Shift+←→↑↓=sel-range  SPC=sel  A=sel-all" ..
+            "  +/-=transpose  ,/.=length  z/x=position  ENTER=add/del  DEL=delete" ..
+            "  []={Q}  Q=quant  R=rev  I=inv  C/V/^X=copy/paste/cut  L=loop  O=loop-tog  S=save  ESC=cancel",
             w),
         tui.BRIGHT_BLACK, tui.BLACK, 0)
 end
@@ -533,11 +534,37 @@ function M.open(clip, raw_events)
         end
         w, h = tui.size()
 
-        -- Navigation
-        if     key == 'right' then st.cursor_beat = math.max(0, st.cursor_beat + Q_VALS[st.q_idx])
-        elseif key == 'left'  then st.cursor_beat = math.max(0, st.cursor_beat - Q_VALS[st.q_idx])
-        elseif key == 'up'    then st.cursor_pitch = math.min(127, st.cursor_pitch + 1)
-        elseif key == 'down'  then st.cursor_pitch = math.max(0,   st.cursor_pitch - 1)
+            -- Navigation: plain arrows move cursor; shift-arrows extend selection.
+        if key == 'right' or key == 'shift-right' then
+            st.cursor_beat = math.max(0, st.cursor_beat + Q_VALS[st.q_idx])
+            if key == 'shift-right' then
+                -- Select every note under/at the new cursor beat on this pitch row.
+                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                if n then n.sel = true end
+            end
+        elseif key == 'left' or key == 'shift-left' then
+            st.cursor_beat = math.max(0, st.cursor_beat - Q_VALS[st.q_idx])
+            if key == 'shift-left' then
+                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                if n then n.sel = true end
+            end
+        elseif key == 'up' or key == 'shift-up' then
+            st.cursor_pitch = math.min(127, st.cursor_pitch + 1)
+            if key == 'shift-up' then
+                -- Select all notes at the new pitch row that overlap the cursor beat.
+                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                if n then n.sel = true end
+            end
+        elseif key == 'down' or key == 'shift-down' then
+            st.cursor_pitch = math.max(0, st.cursor_pitch - 1)
+            if key == 'shift-down' then
+                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                if n then n.sel = true end
+            end
         elseif key == 'pgup'  then st.view_top = math.min(127, st.view_top + 12)
         elseif key == 'pgdn'  then st.view_top = math.max(12,  st.view_top - 12)
         elseif key == 'home'  then st.cursor_beat = 0; st.view_left = 0
@@ -548,21 +575,23 @@ function M.open(clip, raw_events)
         elseif key == ' '         then op_select_toggle(st)
         elseif key == 'a' or key == 'A' then op_select_all(st)
 
-        -- Move selection (HJKL)
-        elseif key == 'h' then op_move_sel(st, -1,  0)
-        elseif key == 'l' then op_move_sel(st,  1,  0)
-        elseif key == 'k' then op_move_sel(st,  0,  1)
-        elseif key == 'j' then op_move_sel(st,  0, -1)
+        -- Transpose selected notes with + / -
+        elseif key == '+' or key == '=' then op_transpose(st,  1)
+        elseif key == '-'               then op_transpose(st, -1)
 
-        -- Resize
+        -- Resize selected notes with , / .
         elseif key == '.' or key == '>' then op_resize_sel(st,  1)
         elseif key == ',' or key == '<' then op_resize_sel(st, -1)
 
-        -- Zoom / quantize
-        elseif key == ']' or key == '+' or key == '=' then
+        -- Move selected notes with z / x
+        elseif key == 'z' or key == 'Z' then op_move_sel(st, -1,  0)
+        elseif key == 'x' or key == 'X' then op_move_sel(st,  1,  0)
+
+        -- Zoom with ] / [
+        elseif key == ']' then
             st.zoom_idx = math.min(#ZOOM_VALS, st.zoom_idx + 1)
             st.status = "Zoom: " .. ZOOM_VALS[st.zoom_idx]
-        elseif key == '[' or key == '-' then
+        elseif key == '[' then
             st.zoom_idx = math.max(1, st.zoom_idx - 1)
             st.status = "Zoom: " .. ZOOM_VALS[st.zoom_idx]
         elseif key == '{' then
@@ -580,7 +609,7 @@ function M.open(clip, raw_events)
         elseif key == 'i' or key == 'I' then op_invert(st)
         elseif key == 'c' or key == 'C' then op_copy(st)
         elseif key == 'v' or key == 'V' then op_paste(st)
-        elseif key == 'x' or key == 'X' then
+        elseif key == 'ctrl-x' then
             op_copy(st)
             local cnt = sel_count(st.notes)
             if cnt > 0 then
@@ -592,14 +621,9 @@ function M.open(clip, raw_events)
                 st.status = "Cut " .. cnt .. " notes"
             end
 
-        elseif key == 't' or key == 'T' then
-            local val = read_line(h - 1, "Transpose semitones: ", "0")
-            tui.clear()
-            if val then
-                local n = tonumber(val)
-                if n then op_transpose(st, math.floor(n)) end
-            end
-
+        elseif key == 'h' or key == 'H' then
+            -- HJKL still available for moving selection (alternative to z/x/+/-)
+            op_move_sel(st, -1,  0)
         elseif key == 'l' or key == 'L' then
             local val = read_line(h - 1, "Loop length (beats): ",
                                   string.format("%.2f", st.loop_len))
@@ -610,6 +634,16 @@ function M.open(clip, raw_events)
                     st.loop_len = n; st.dirty = true
                     st.status = string.format("Loop length: %.2f beats", n)
                 end
+            end
+        elseif key == 'k' or key == 'K' then op_move_sel(st,  0,  1)
+        elseif key == 'j' or key == 'J' then op_move_sel(st,  0, -1)
+
+        elseif key == 't' or key == 'T' then
+            local val = read_line(h - 1, "Transpose semitones: ", "0")
+            tui.clear()
+            if val then
+                local n = tonumber(val)
+                if n then op_transpose(st, math.floor(n)) end
             end
 
         elseif key == 'o' or key == 'O' then
