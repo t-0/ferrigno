@@ -6,6 +6,7 @@ mod math;
 mod os;
 mod package;
 mod sh;
+mod sqlite;
 mod string;
 mod toml;
 mod table;
@@ -20,13 +21,14 @@ use crate::library::math::*;
 use crate::library::os::*;
 use crate::library::package::*;
 use crate::library::sh::*;
+use crate::library::sqlite::*;
 use crate::library::string::*;
 use crate::library::urllib::*;
 use crate::library::toml::*;
 use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 13] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 14] = {
     [
         {
             RegisteredFunction {
@@ -104,6 +106,12 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 13] = {
             RegisteredFunction {
                 registeredfunction_name: c"urllib".as_ptr(),
                 registeredfunction_function: Some(luaopen_urllib as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"sqlite".as_ptr(),
+                registeredfunction_function: Some(luaopen_sqlite as unsafe fn(*mut Interpreter) -> i32),
             }
         },
     ]
