@@ -413,113 +413,196 @@ local function edit_instrument()
     local dests = midi.destinations() or {}
     local srcs  = midi.sources()      or {}
 
-    -- Pick from an enumerated list. items = {"None", name1, name2, ...}
-    -- Returns the selected name, or nil if ESC pressed.
-    local function pick_port(label, items, current)
-        local w, h = tui.size()
-        local sel = 1  -- default to "None"
-        for i, v in ipairs(items) do
-            if v == current then sel = i; break end
-        end
+    -- Extract name strings (midi.destinations/sources return {name=..., index=...} tables).
+    local dest_opts = {"None"}
+    for _, d in ipairs(dests) do dest_opts[#dest_opts+1] = d.name end
 
-        local function draw_picker()
-            tui.clear()
-            tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
-            tui.print_at(1, 2, label, tui.WHITE, tui.BLUE, tui.BOLD)
-            tui.print_at(3, 2, "Use ↑↓ to select, ENTER to confirm, ESC to cancel.",
-                tui.BRIGHT_BLACK, tui.BLACK, 0)
-            for i, v in ipairs(items) do
-                if i == sel then
-                    tui.print_at(3 + i, 2, string.format(" ► %s", v), tui.BLACK, tui.CYAN, tui.BOLD)
+    local src_opts = {"None"}
+    for _, s in ipairs(srcs) do src_opts[#src_opts+1] = s.name end
+
+    local function opt_index(opts, val)
+        for i, v in ipairs(opts) do
+            if v == (val or '') then return i end
+        end
+        return 1
+    end
+
+    -- Field definitions: text, number (with range + optional nil), picker (cycle with ←→).
+    local fields = {
+        { label="Name",        type="text"                                     },
+        { label="MIDI Output", type="picker", opts=dest_opts                   },
+        { label="MIDI Input",  type="picker", opts=src_opts                    },
+        { label="Channel",     type="number", min=1,   max=16,  nullable=false },
+        { label="Bank MSB",    type="number", min=0,   max=127, nullable=true  },
+        { label="Bank LSB",    type="number", min=0,   max=127, nullable=true  },
+        { label="Program",     type="number", min=0,   max=127, nullable=true  },
+    }
+
+    -- Working values: pickers store index into opts; text/number store string.
+    local vals = {
+        inst.name or '',
+        opt_index(dest_opts, inst.midi_output or ''),
+        opt_index(src_opts,  inst.midi_input  or ''),
+        tostring(inst.midi_channel or 1),
+        inst.bank_msb ~= nil and tostring(inst.bank_msb) or '',
+        inst.bank_lsb ~= nil and tostring(inst.bank_lsb) or '',
+        inst.program  ~= nil and tostring(inst.program)  or '',
+    }
+
+    local LABEL_W  = 14
+    local VAL_COL  = LABEL_W + 5   -- column where value field starts
+    local sel      = 1
+    local editing  = false
+    local edit_buf = ''
+    local do_sysex = false
+
+    local function pad(s, n)
+        s = tostring(s or '')
+        if #s >= n then return s:sub(1, n) end
+        return s .. string.rep(' ', n - #s)
+    end
+
+    local function draw()
+        local w, h = tui.size()
+        local val_w = math.max(10, w - VAL_COL - 4)
+        tui.hide_cursor()
+        tui.clear()
+
+        -- Header
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Instrument Settings", tui.WHITE, tui.BLUE, tui.BOLD)
+
+        for i, f in ipairs(fields) do
+            local row    = i + 2
+            local is_sel = (i == sel)
+            local lbl    = string.format("  %-" .. LABEL_W .. "s  ", f.label)
+
+            if is_sel then
+                tui.print_at(row, 1, lbl, tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+            else
+                tui.print_at(row, 1, lbl, tui.BRIGHT_WHITE, tui.BLACK, 0)
+            end
+
+            if f.type == "picker" then
+                local display = pad(f.opts[vals[i]] or '', val_w)
+                if is_sel then
+                    tui.print_at(row, VAL_COL, "◄ " .. display .. " ►", tui.BLACK, tui.CYAN, tui.BOLD)
                 else
-                    tui.print_at(3 + i, 2, string.format("   %s", v), tui.WHITE, tui.BLACK, 0)
+                    tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                end
+            else
+                if is_sel and editing then
+                    local display = pad(edit_buf, val_w)
+                    tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.YELLOW, tui.BOLD)
+                    tui.move(row, VAL_COL + 2 + math.min(#edit_buf, val_w))
+                    tui.show_cursor()
+                else
+                    local display = pad(vals[i], val_w)
+                    if is_sel then
+                        tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.CYAN, tui.BOLD)
+                    else
+                        tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                    end
                 end
             end
-            tui.flush()
         end
 
-        draw_picker()
-        while true do
-            local key = tui.read_key(5000)
-            if not key then goto again end
-            if key == 'up'   then sel = math.max(1, sel - 1)
-            elseif key == 'down' then sel = math.min(#items, sel + 1)
-            elseif key == 'enter' or key == 'return' then return items[sel]
-            elseif key == 'esc' then return nil
+        local hint_row = #fields + 4
+        if editing then
+            tui.print_at(hint_row, 1,
+                pad("  Enter=confirm  ESC=cancel edit", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            tui.print_at(hint_row, 1,
+                pad("  ↑↓/Tab=navigate  ←→=cycle options  Enter=edit  S=save  X=sysex  ESC=cancel", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto inst_again end
+
+        if editing then
+            if key == 'enter' or key == 'return' then
+                local f = fields[sel]
+                if f.type == "number" then
+                    local n = tonumber(edit_buf)
+                    if edit_buf == '' and f.nullable then
+                        vals[sel] = ''
+                    elseif n then
+                        vals[sel] = tostring(math.max(f.min, math.min(f.max, math.floor(n))))
+                    end
+                else
+                    vals[sel] = edit_buf
+                end
+                editing = false
+                sel = (sel % #fields) + 1  -- advance to next field on confirm
+            elseif key == 'esc' then
+                editing = false
+            elseif key == 'backspace' then
+                if #edit_buf > 0 then edit_buf = edit_buf:sub(1, -2) end
+            elseif #key == 1 then
+                edit_buf = edit_buf .. key
             end
-            draw_picker()
-            ::again::
+        else
+            if key == 'esc' then
+                tui.clear()
+                return
+            elseif key == 's' or key == 'S' then
+                break
+            elseif key == 'x' or key == 'X' then
+                do_sysex = true
+                break
+            elseif key == 'tab' or key == 'down' then
+                sel = (sel % #fields) + 1
+            elseif key == 'up' then
+                sel = ((sel - 2 + #fields) % #fields) + 1
+            elseif key == 'left' then
+                if fields[sel].type == "picker" then
+                    local n = #fields[sel].opts
+                    vals[sel] = ((vals[sel] - 2 + n) % n) + 1
+                end
+            elseif key == 'right' then
+                if fields[sel].type == "picker" then
+                    local n = #fields[sel].opts
+                    vals[sel] = (vals[sel] % n) + 1
+                end
+            elseif key == 'enter' or key == 'return' then
+                if fields[sel].type ~= "picker" then
+                    editing  = true
+                    edit_buf = vals[sel]
+                end
+            end
         end
+        draw()
+        ::inst_again::
     end
 
-    -- Build option lists with "None" prepended.
-    -- midi.destinations()/sources() return {name=..., index=...} tables; extract names.
-    local dest_items = {"None"}
-    for _, d in ipairs(dests) do dest_items[#dest_items+1] = d.name end
-
-    local src_items = {"None"}
-    for _, s in ipairs(srcs) do src_items[#src_items+1] = s.name end
-
-    -- Name (free text, same as before).
-    local w, h = tui.size()
-    tui.clear()
-    tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
-    tui.print_at(1, 2, "Instrument Settings", tui.WHITE, tui.BLUE, tui.BOLD)
-    local name_val = ui.read_line(3, "Name: ", inst.name)
-    if name_val and name_val ~= '' then inst.name = name_val end
-
-    -- MIDI Output picker.
-    local out_val = pick_port("MIDI Output", dest_items, inst.midi_output or "None")
-    if out_val ~= nil then
-        inst.midi_output = (out_val == "None") and '' or out_val
+    -- Apply values back to inst.
+    local function parse_opt_num(s, mn, mx)
+        if s == '' then return nil end
+        local n = tonumber(s)
+        return n and math.max(mn, math.min(mx, math.floor(n))) or nil
     end
 
-    -- MIDI Input picker.
-    local in_val = pick_port("MIDI Input", src_items, inst.midi_input or "None")
-    if in_val ~= nil then
-        inst.midi_input = (in_val == "None") and '' or in_val
-    end
-
-    -- Channel (free text, small range).
-    tui.clear()
-    local ch_val = ui.read_line(3, "Channel (1-16): ", tostring(inst.midi_channel or 1))
-    if ch_val then
-        inst.midi_channel = math.max(1, math.min(16, tonumber(ch_val) or inst.midi_channel))
-    end
-
-    -- Bank MSB (CC 0), optional 0-127.
-    tui.clear()
-    local bank_msb_val = ui.read_line(3, "Bank MSB (0-127, blank=none): ",
-        inst.bank_msb ~= nil and tostring(inst.bank_msb) or '')
-    if bank_msb_val ~= nil then
-        local n = tonumber(bank_msb_val)
-        inst.bank_msb = n and math.max(0, math.min(127, math.floor(n))) or nil
-    end
-
-    -- Bank LSB (CC 32), optional 0-127.
-    tui.clear()
-    local bank_lsb_val = ui.read_line(3, "Bank LSB (0-127, blank=none): ",
-        inst.bank_lsb ~= nil and tostring(inst.bank_lsb) or '')
-    if bank_lsb_val ~= nil then
-        local n = tonumber(bank_lsb_val)
-        inst.bank_lsb = n and math.max(0, math.min(127, math.floor(n))) or nil
-    end
-
-    -- Program Change, optional 0-127.
-    tui.clear()
-    local prog_val = ui.read_line(3, "Program Change (0-127, blank=none): ",
-        inst.program ~= nil and tostring(inst.program) or '')
-    if prog_val ~= nil then
-        local n = tonumber(prog_val)
-        inst.program = n and math.max(0, math.min(127, math.floor(n))) or nil
-    end
+    if vals[1] ~= '' then inst.name = vals[1] end
+    inst.midi_output  = (dest_opts[vals[2]] == "None") and '' or (dest_opts[vals[2]] or '')
+    inst.midi_input   = (src_opts[vals[3]]  == "None") and '' or (src_opts[vals[3]]  or '')
+    inst.midi_channel = math.max(1, math.min(16, tonumber(vals[4]) or 1))
+    inst.bank_msb     = parse_opt_num(vals[5], 0, 127)
+    inst.bank_lsb     = parse_opt_num(vals[6], 0, 127)
+    inst.program      = parse_opt_num(vals[7], 0, 127)
 
     db_mod.upsert_instrument(db, inst, song.id)
     engine.output_ports[inst.id] = nil
     open_and_configure_output(inst)
 
-    -- SysEx dump manager.
-    edit_sysex(inst)
+    if do_sysex then
+        edit_sysex(inst)
+    end
 
     tui.clear()
     ui.set_status("Instrument updated: " .. inst.name)
