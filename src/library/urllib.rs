@@ -382,13 +382,14 @@ unsafe fn build_header_slist(interpreter: *mut Interpreter, idx: i32) -> *mut li
         (*interpreter).push_nil();
         let abs_idx = if idx < 0 { (*interpreter).get_top() + idx } else { idx };
         while lua_next(interpreter, abs_idx) != 0 {
-            // key at -2, value at -1
+            // Capture absolute positions before lual_tolstring shifts the stack
+            let abs_key = (*interpreter).get_top() - 1;
+            let abs_val = (*interpreter).get_top();
             let mut klen = 0usize;
             let mut vlen = 0usize;
-            let kptr = lual_tolstring(interpreter, -2, &mut klen);
-            let vptr = lual_tolstring(interpreter, -1, &mut vlen);
+            let kptr = lual_tolstring(interpreter, abs_key, &mut klen);
+            let vptr = lual_tolstring(interpreter, abs_val, &mut vlen);
             if !kptr.is_null() && !vptr.is_null() {
-                // Build "Key: Value\0"
                 let k = std::slice::from_raw_parts(kptr as *const u8, klen);
                 let v = std::slice::from_raw_parts(vptr as *const u8, vlen);
                 let mut hdr: Vec<u8> = Vec::with_capacity(klen + 2 + vlen + 1);
@@ -397,10 +398,8 @@ unsafe fn build_header_slist(interpreter: *mut Interpreter, idx: i32) -> *mut li
                 hdr.extend_from_slice(v);
                 hdr.push(0);
                 list = curl_slist_append(list, hdr.as_ptr() as *const i8);
-                lua_settop(interpreter, -2); // pop lual_tolstring pushed str for value
             }
-            lua_settop(interpreter, -3); // pop key's tolstring + value
-            lua_pushvalue(interpreter, -1); // keep key for next iteration
+            lua_settop(interpreter, abs_key); // restore to just key for next lua_next
         }
         list
     }

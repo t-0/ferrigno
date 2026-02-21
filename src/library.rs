@@ -2,9 +2,11 @@ mod base;
 mod coroutine;
 mod debug;
 mod io;
+pub mod json;
 mod math;
 mod os;
 mod package;
+mod requests;
 mod sh;
 mod sqlite;
 mod string;
@@ -17,9 +19,11 @@ use crate::library::base::*;
 use crate::library::coroutine::*;
 use crate::library::debug::*;
 use crate::library::io::*;
+use crate::library::json::*;
 use crate::library::math::*;
 use crate::library::os::*;
 use crate::library::package::*;
+use crate::library::requests::*;
 use crate::library::sh::*;
 use crate::library::sqlite::*;
 use crate::library::string::*;
@@ -28,7 +32,7 @@ use crate::library::toml::*;
 use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 14] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 16] = {
     [
         {
             RegisteredFunction {
@@ -112,6 +116,18 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 14] = {
             RegisteredFunction {
                 registeredfunction_name: c"sqlite".as_ptr(),
                 registeredfunction_function: Some(luaopen_sqlite as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"json".as_ptr(),
+                registeredfunction_function: Some(luaopen_json as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"requests".as_ptr(),
+                registeredfunction_function: Some(luaopen_requests as unsafe fn(*mut Interpreter) -> i32),
             }
         },
     ]
