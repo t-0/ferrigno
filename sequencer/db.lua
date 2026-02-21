@@ -59,7 +59,17 @@ function M.init_schema(db)
             slot_index    INTEGER NOT NULL,
             name          TEXT             DEFAULT '',
             length_beats  REAL    NOT NULL DEFAULT 4.0,
-            is_looping    INTEGER NOT NULL DEFAULT 1
+            is_looping    INTEGER NOT NULL DEFAULT 1,
+            bank_msb      INTEGER          DEFAULT NULL,
+            bank_lsb      INTEGER          DEFAULT NULL,
+            program       INTEGER          DEFAULT NULL
+        );
+        CREATE TABLE IF NOT EXISTS sysex_dumps (
+            id            INTEGER PRIMARY KEY,
+            instrument_id INTEGER NOT NULL,
+            name          TEXT             DEFAULT '',
+            data          TEXT    NOT NULL DEFAULT '',
+            send_on       TEXT    NOT NULL DEFAULT 'connect'
         );
         CREATE TABLE IF NOT EXISTS midi_events (
             id          INTEGER PRIMARY KEY,
@@ -92,6 +102,9 @@ function M.init_schema(db)
         "instruments ADD COLUMN bank_msb INTEGER DEFAULT NULL",
         "instruments ADD COLUMN bank_lsb INTEGER DEFAULT NULL",
         "instruments ADD COLUMN program  INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN bank_msb INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN bank_lsb INTEGER DEFAULT NULL",
+        "clips        ADD COLUMN program  INTEGER DEFAULT NULL",
     }) do
         pcall(function() db:exec("ALTER TABLE " .. col) end)
     end
@@ -170,19 +183,25 @@ end
 function M.upsert_clip(db, clip)
     if clip.id then
         run(db,
-            "UPDATE clips SET name=?, length_beats=?, is_looping=? WHERE id=?",
+            "UPDATE clips SET name=?, length_beats=?, is_looping=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
             clip.name or '',
             clip.length_beats or 4.0,
             clip.is_looping ~= false and 1 or 0,
+            clip.bank_msb,
+            clip.bank_lsb,
+            clip.program,
             clip.id)
     else
         run(db,
-            "INSERT INTO clips (instrument_id,slot_index,name,length_beats,is_looping) VALUES (?,?,?,?,?)",
+            "INSERT INTO clips (instrument_id,slot_index,name,length_beats,is_looping,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?)",
             clip.instrument_id,
             clip.slot_index,
             clip.name or '',
             clip.length_beats or 4.0,
-            clip.is_looping ~= false and 1 or 0)
+            clip.is_looping ~= false and 1 or 0,
+            clip.bank_msb,
+            clip.bank_lsb,
+            clip.program)
         clip.id = db:last_insert_rowid()
     end
     return clip
@@ -225,6 +244,32 @@ function M.ensure_scenes(db, song_id, count)
         return M.get_scenes(db, song_id)
     end
     return scenes
+end
+
+-- ── SysEx dumps ───────────────────────────────────────────────────────────────
+
+function M.get_sysex_dumps(db, instrument_id)
+    return db:query(
+        "SELECT * FROM sysex_dumps WHERE instrument_id=? ORDER BY id",
+        instrument_id) or {}
+end
+
+function M.upsert_sysex_dump(db, dump)
+    if dump.id then
+        run(db,
+            "UPDATE sysex_dumps SET name=?, data=?, send_on=? WHERE id=?",
+            dump.name or '', dump.data or '', dump.send_on or 'connect', dump.id)
+    else
+        run(db,
+            "INSERT INTO sysex_dumps (instrument_id, name, data, send_on) VALUES (?,?,?,?)",
+            dump.instrument_id, dump.name or '', dump.data or '', dump.send_on or 'connect')
+        dump.id = db:last_insert_rowid()
+    end
+    return dump
+end
+
+function M.delete_sysex_dump(db, dump_id)
+    run(db, "DELETE FROM sysex_dumps WHERE id=?", dump_id)
 end
 
 -- ── Arp settings ──────────────────────────────────────────────────────────────

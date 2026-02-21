@@ -98,6 +98,25 @@ function M.open_input(device_name)
     return false, tostring(port)
 end
 
+-- Parse a space-separated hex string (e.g. "F0 41 10 42 F7") into a binary string.
+local function parse_hex(hex_str)
+    local bytes = {}
+    for b in (hex_str or ''):gmatch("%x%x") do
+        bytes[#bytes + 1] = string.char(tonumber(b, 16))
+    end
+    return table.concat(bytes)
+end
+
+-- Send a raw SysEx (or any MIDI) message given as a hex string.
+function M.send_sysex(inst_id, hex_data)
+    local p = M.output_ports[inst_id]
+    if not p or not hex_data or hex_data == '' then return end
+    local data = parse_hex(hex_data)
+    if #data > 0 then
+        pcall(function() p.port:send(data) end)
+    end
+end
+
 -- Send Bank Select (CC 0 MSB + CC 32 LSB) and/or Program Change for an instrument.
 -- Only sends the messages that are actually set (non-nil) on the instrument.
 function M.send_program_change(inst)
@@ -112,6 +131,23 @@ function M.send_program_change(inst)
     end
     if inst.program then
         pcall(function() p.port:send(string.char(0xC0 | ch, inst.program))       end)
+    end
+end
+
+-- Send any bank/program fields set on a clip (used when launching a clip).
+-- Clip values are sent as-is; fields not present on the clip are not sent.
+function M.send_clip_patch(inst, clip)
+    local p = M.output_ports[inst.id]
+    if not p then return end
+    local ch = (p.channel - 1) & 0x0F
+    if clip.bank_msb then
+        pcall(function() p.port:send(string.char(0xB0 | ch, 0,  clip.bank_msb)) end)
+    end
+    if clip.bank_lsb then
+        pcall(function() p.port:send(string.char(0xB0 | ch, 32, clip.bank_lsb)) end)
+    end
+    if clip.program then
+        pcall(function() p.port:send(string.char(0xC0 | ch, clip.program))       end)
     end
 end
 

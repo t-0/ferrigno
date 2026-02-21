@@ -7,6 +7,7 @@
 --   ENTER            Trigger (launch) the clip under the cursor
 --   R                Start / stop recording on the current track
 --   E                Open piano roll editor for clip under cursor
+--   C                Clip settings (name, bank/program patch override)
 --   N                New empty clip in current slot
 --   D                Delete clip in current slot
 --   I                Edit current instrument (name, MIDI device, channel)
@@ -71,14 +72,31 @@ for _, inst in ipairs(instruments) do
     end
 end
 
+-- Load SysEx dumps per instrument.
+local sysex_dumps = {}
+for _, inst in ipairs(instruments) do
+    sysex_dumps[inst.id] = db_mod.get_sysex_dumps(db, inst.id)
+end
+
 -- Ensure scene rows exist.
 local scenes = db_mod.ensure_scenes(db, song.id, NUM_SLOTS)
 
 -- ── Open MIDI outputs ─────────────────────────────────────────────────────────
 
+-- Open output port, then send sysex dumps and instrument-level program change.
+local function open_and_configure_output(inst)
+    local ok, err = engine.open_output(inst)
+    if not ok then return false, err end
+    for _, dump in ipairs(sysex_dumps[inst.id] or {}) do
+        engine.send_sysex(inst.id, dump.data)
+    end
+    engine.send_program_change(inst)
+    return true
+end
+
 engine.bpm = song.bpm
 for _, inst in ipairs(instruments) do
-    engine.open_output(inst)
+    open_and_configure_output(inst)
 end
 
 -- ── Wire arp callback into engine ─────────────────────────────────────────────
@@ -148,6 +166,10 @@ local function trigger_clip()
         return
     end
     local evts = events[clip.id] or {}
+    -- Send clip-level patch override before launch so the synth is ready.
+    if clip.bank_msb or clip.bank_lsb or clip.program then
+        engine.send_clip_patch(inst, clip)
+    end
     engine.launch(ui.cursor.track, inst.id, clip, evts)
     if not engine.playing then
         engine.start_transport()
@@ -243,9 +265,10 @@ local function add_track()
     }
     db_mod.upsert_instrument(db, inst, song.id)
     clips[inst.id] = {}
+    sysex_dumps[inst.id] = {}
     table.insert(instruments, inst)
     ui.cursor.track = #instruments
-    engine.open_output(inst)
+    open_and_configure_output(inst)
     ui.set_status("Added track: " .. inst.name)
 end
 
@@ -268,6 +291,119 @@ local function remove_track()
     table.remove(instruments)
     ui.cursor.track = math.min(ui.cursor.track, #instruments)
     ui.set_status("Track removed")
+end
+
+local function edit_clip_settings()
+    local clip = current_clip()
+    if not clip then
+        ui.set_status("No clip here — press N to create one first", tui.YELLOW)
+        return
+    end
+    local w = tui.size()
+    tui.clear()
+    tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+    tui.print_at(1, 2, "Clip Settings", tui.WHITE, tui.BLUE, tui.BOLD)
+
+    local name_val = ui.read_line(3, "Clip name: ", clip.name or '')
+    if name_val ~= nil then clip.name = name_val end
+
+    tui.clear()
+    local bank_msb_val = ui.read_line(3, "Bank MSB override (0-127, blank=none): ",
+        clip.bank_msb ~= nil and tostring(clip.bank_msb) or '')
+    if bank_msb_val ~= nil then
+        local n = tonumber(bank_msb_val)
+        clip.bank_msb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
+    tui.clear()
+    local bank_lsb_val = ui.read_line(3, "Bank LSB override (0-127, blank=none): ",
+        clip.bank_lsb ~= nil and tostring(clip.bank_lsb) or '')
+    if bank_lsb_val ~= nil then
+        local n = tonumber(bank_lsb_val)
+        clip.bank_lsb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
+    tui.clear()
+    local prog_val = ui.read_line(3, "Program Change override (0-127, blank=none): ",
+        clip.program ~= nil and tostring(clip.program) or '')
+    if prog_val ~= nil then
+        local n = tonumber(prog_val)
+        clip.program = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
+    db_mod.upsert_clip(db, clip)
+    tui.clear()
+    ui.set_status("Clip settings saved")
+end
+
+-- SysEx dump manager for an instrument.
+-- Called from edit_instrument(); edits sysex_dumps[inst.id] in-place.
+local function edit_sysex(inst)
+    sysex_dumps[inst.id] = sysex_dumps[inst.id] or {}
+    local dumps = sysex_dumps[inst.id]
+    local sel   = math.max(1, #dumps)
+
+    local function draw()
+        local w, h = tui.size()
+        tui.clear()
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "SysEx Dumps — " .. inst.name, tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(3, 2, "↑↓=select  A=add  D=delete  ESC=done",
+            tui.BRIGHT_BLACK, tui.BLACK, 0)
+        if #dumps == 0 then
+            tui.print_at(5, 2, "(no sysex dumps)", tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            for i, d in ipairs(dumps) do
+                local label = string.format(" %-18s  %s", d.name or '', d.data or '')
+                if i == sel then
+                    tui.print_at(4 + i, 2, "►" .. label, tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(4 + i, 2, " " .. label, tui.WHITE, tui.BLACK, 0)
+                end
+            end
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto sysex_again end
+
+        if key == 'esc' then
+            break
+        elseif key == 'up' then
+            sel = math.max(1, sel - 1)
+        elseif key == 'down' then
+            sel = math.min(math.max(1, #dumps), sel + 1)
+        elseif key == 'd' or key == 'D' then
+            if #dumps > 0 then
+                local d = table.remove(dumps, sel)
+                db_mod.delete_sysex_dump(db, d.id)
+                sel = math.max(1, math.min(sel, #dumps))
+            end
+        elseif key == 'a' or key == 'A' then
+            tui.clear()
+            local name_val = ui.read_line(3, "Dump name: ", '')
+            if name_val then
+                tui.clear()
+                local data_val = ui.read_line(3, "Hex bytes (e.g. F0 41 10 42 F7): ", '')
+                if data_val and data_val ~= '' then
+                    local dump = {
+                        instrument_id = inst.id,
+                        name    = name_val,
+                        data    = data_val:upper(),
+                        send_on = 'connect',
+                    }
+                    db_mod.upsert_sysex_dump(db, dump)
+                    table.insert(dumps, dump)
+                    sel = #dumps
+                end
+            end
+        end
+        draw()
+        ::sysex_again::
+    end
 end
 
 local function edit_instrument()
@@ -379,8 +515,11 @@ local function edit_instrument()
 
     db_mod.upsert_instrument(db, inst, song.id)
     engine.output_ports[inst.id] = nil
-    engine.open_output(inst)
-    engine.send_program_change(inst)
+    open_and_configure_output(inst)
+
+    -- SysEx dump manager.
+    edit_sysex(inst)
+
     tui.clear()
     ui.set_status("Instrument updated: " .. inst.name)
 end
@@ -541,6 +680,7 @@ while running do
 
         elseif key == 'r' or key == 'R' then toggle_record()
         elseif key == 'e' or key == 'E' then edit_clip_piano_roll()
+        elseif key == 'c' or key == 'C' then edit_clip_settings()
         elseif key == 'n' or key == 'N' then new_clip()
         elseif key == 'd' or key == 'D' then delete_clip()
         elseif key == 'i' or key == 'I' then edit_instrument()
