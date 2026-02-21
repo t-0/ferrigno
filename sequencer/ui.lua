@@ -154,8 +154,10 @@ function M.draw(engine)
                 local cname  = (clip.name and clip.name ~= '') and clip.name or ("Clip " .. si)
                 local marker = playing and "►" or " "
                 label = pad(" " .. marker .. " " .. cname, COL_W)
-            else
+            elseif track then
                 label = pad("  [ empty ]", COL_W)
+            else
+                label = pad("", COL_W)
             end
 
             if is_cur and clip then
