@@ -307,9 +307,10 @@ function M.tick()
                     end
                 end
                 ac.held_notes = {}
-                -- Find first event at or after current clip_beat (≈ loop_start_off).
+                -- Reset to loop_start_off so notes at the start of each new
+                -- loop iteration are never skipped (clip_beat is the overshoot).
                 local idx = 1
-                while idx <= #ac.events and ac.events[idx].beat_offset < clip_beat do
+                while idx <= #ac.events and ac.events[idx].beat_offset < ls do
                     idx = idx + 1
                 end
                 ac.event_idx = idx

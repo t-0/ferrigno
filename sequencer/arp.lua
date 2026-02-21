@@ -175,21 +175,28 @@ end
 -- Call every engine frame while transport is running.
 function M.tick(track_idx, cur_beat, port_rec)
     local st = M.states[track_idx]
-    if not st or #st.sequence == 0 then return end
+    if not st then return end
 
-    -- Send pending note-off.
-    if st.active_note ~= nil and st.active_off ~= nil and cur_beat >= st.active_off then
-        local ch = (port_rec.channel - 1) & 0x0F
-        pcall(function()
-            port_rec.port:send(string.char(0x80 | ch, st.active_note, 0))
-        end)
-        st.active_note = nil
-        st.active_off  = nil
+    local ch = (port_rec.channel - 1) & 0x0F
+
+    -- Send pending note-off first, BEFORE the sequence-empty guard.
+    -- If the sequence emptied (all keys released) while a note was gating,
+    -- we must still send the note-off or it hangs indefinitely.
+    if st.active_note ~= nil then
+        local gate_done = st.active_off ~= nil and cur_beat >= st.active_off
+        if gate_done or #st.sequence == 0 then
+            pcall(function()
+                port_rec.port:send(string.char(0x80 | ch, st.active_note, 0))
+            end)
+            st.active_note = nil
+            st.active_off  = nil
+        end
     end
+
+    if #st.sequence == 0 then return end
 
     -- Fire next arp step.
     if cur_beat >= st.next_beat then
-        if #st.sequence == 0 then return end
         local idx  = ((st.seq_idx - 1) % #st.sequence) + 1
         local note = st.sequence[idx]
         -- Resolve velocity: find the base note (same pitch class) in held.
@@ -198,7 +205,6 @@ function M.tick(track_idx, cur_beat, port_rec)
             if hn % 12 == note % 12 then vel = hv; break end
         end
 
-        local ch = (port_rec.channel - 1) & 0x0F
         -- Terminate previous note early if still sounding.
         if st.active_note ~= nil then
             pcall(function()
