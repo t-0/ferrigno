@@ -350,9 +350,37 @@ local function edit_instrument()
         inst.midi_channel = math.max(1, math.min(16, tonumber(ch_val) or inst.midi_channel))
     end
 
+    -- Bank MSB (CC 0), optional 0-127.
+    tui.clear()
+    local bank_msb_val = ui.read_line(3, "Bank MSB (0-127, blank=none): ",
+        inst.bank_msb ~= nil and tostring(inst.bank_msb) or '')
+    if bank_msb_val ~= nil then
+        local n = tonumber(bank_msb_val)
+        inst.bank_msb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
+    -- Bank LSB (CC 32), optional 0-127.
+    tui.clear()
+    local bank_lsb_val = ui.read_line(3, "Bank LSB (0-127, blank=none): ",
+        inst.bank_lsb ~= nil and tostring(inst.bank_lsb) or '')
+    if bank_lsb_val ~= nil then
+        local n = tonumber(bank_lsb_val)
+        inst.bank_lsb = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
+    -- Program Change, optional 0-127.
+    tui.clear()
+    local prog_val = ui.read_line(3, "Program Change (0-127, blank=none): ",
+        inst.program ~= nil and tostring(inst.program) or '')
+    if prog_val ~= nil then
+        local n = tonumber(prog_val)
+        inst.program = n and math.max(0, math.min(127, math.floor(n))) or nil
+    end
+
     db_mod.upsert_instrument(db, inst, song.id)
     engine.output_ports[inst.id] = nil
     engine.open_output(inst)
+    engine.send_program_change(inst)
     tui.clear()
     ui.set_status("Instrument updated: " .. inst.name)
 end

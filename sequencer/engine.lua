@@ -98,6 +98,23 @@ function M.open_input(device_name)
     return false, tostring(port)
 end
 
+-- Send Bank Select (CC 0 MSB + CC 32 LSB) and/or Program Change for an instrument.
+-- Only sends the messages that are actually set (non-nil) on the instrument.
+function M.send_program_change(inst)
+    local p = M.output_ports[inst.id]
+    if not p then return end
+    local ch = (p.channel - 1) & 0x0F
+    if inst.bank_msb then
+        pcall(function() p.port:send(string.char(0xB0 | ch, 0,  inst.bank_msb)) end)
+    end
+    if inst.bank_lsb then
+        pcall(function() p.port:send(string.char(0xB0 | ch, 32, inst.bank_lsb)) end)
+    end
+    if inst.program then
+        pcall(function() p.port:send(string.char(0xC0 | ch, inst.program))       end)
+    end
+end
+
 function M.close_all()
     for _, p in pairs(M.output_ports) do
         pcall(function() p.port:close() end)

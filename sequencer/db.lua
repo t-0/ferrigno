@@ -48,7 +48,10 @@ function M.init_schema(db)
             midi_input   TEXT             DEFAULT '',
             midi_channel INTEGER NOT NULL DEFAULT 1,
             track_index  INTEGER NOT NULL DEFAULT 0,
-            color        INTEGER NOT NULL DEFAULT 0
+            color        INTEGER NOT NULL DEFAULT 0,
+            bank_msb     INTEGER          DEFAULT NULL,
+            bank_lsb     INTEGER          DEFAULT NULL,
+            program      INTEGER          DEFAULT NULL
         );
         CREATE TABLE IF NOT EXISTS clips (
             id            INTEGER PRIMARY KEY,
@@ -83,6 +86,15 @@ function M.init_schema(db)
         );
     ]])
     if not ok then error("Schema init failed: " .. tostring(err)) end
+    -- Migrate existing databases: add columns that may be absent.
+    -- ALTER TABLE ADD COLUMN fails if the column exists; wrap in pcall to ignore.
+    for _, col in ipairs({
+        "instruments ADD COLUMN bank_msb INTEGER DEFAULT NULL",
+        "instruments ADD COLUMN bank_lsb INTEGER DEFAULT NULL",
+        "instruments ADD COLUMN program  INTEGER DEFAULT NULL",
+    }) do
+        pcall(function() db:exec("ALTER TABLE " .. col) end)
+    end
 end
 
 function M.get_or_create_song(db, name)
@@ -107,24 +119,30 @@ end
 function M.upsert_instrument(db, inst, song_id)
     if inst.id then
         run(db,
-            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, track_index=?, color=? WHERE id=?",
+            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, track_index=?, color=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
             inst.name,
             inst.midi_output  or '',
             inst.midi_input   or '',
             inst.midi_channel or 1,
             inst.track_index,
             inst.color        or 0,
+            inst.bank_msb,
+            inst.bank_lsb,
+            inst.program,
             inst.id)
     else
         run(db,
-            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,track_index,color) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,track_index,color,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?,?,?)",
             song_id,
             inst.name,
             inst.midi_output  or '',
             inst.midi_input   or '',
             inst.midi_channel or 1,
             inst.track_index,
-            inst.color        or 0)
+            inst.color        or 0,
+            inst.bank_msb,
+            inst.bank_lsb,
+            inst.program)
         inst.id = db:last_insert_rowid()
     end
     return inst
