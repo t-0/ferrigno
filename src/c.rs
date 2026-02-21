@@ -22,15 +22,20 @@ impl SignalSet {
         }
     }
 }
+// jmp_buf size: 192 bytes on macOS/ARM64, 200 bytes on Linux/x86_64.
+// _setjmp writes the full jmp_buf, so we must match the platform size.
+#[cfg(target_os = "macos")]
+const JUMP_BUFFER_SIZE: usize = 192;
+#[cfg(not(target_os = "macos"))]
+const JUMP_BUFFER_SIZE: usize = 200;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct JumpBuffer {
-    m_mask_was_saved: i32,
-    m_saved_mask: SignalSet,
+    m_data: [u8; JUMP_BUFFER_SIZE],
 }
 impl JumpBuffer {
     pub fn new() -> Self {
-        JumpBuffer { m_mask_was_saved: 0, m_saved_mask: SignalSet::new(), }
+        JumpBuffer { m_data: [0; JUMP_BUFFER_SIZE] }
     }
 }
 #[derive(Copy, Clone)]
