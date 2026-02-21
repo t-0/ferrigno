@@ -5,6 +5,7 @@ mod io;
 mod math;
 mod os;
 mod package;
+mod sh;
 mod string;
 mod table;
 mod utf8;
@@ -16,11 +17,12 @@ use crate::library::io::*;
 use crate::library::math::*;
 use crate::library::os::*;
 use crate::library::package::*;
+use crate::library::sh::*;
 use crate::library::string::*;
 use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 10] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 11] = {
     [
         {
             RegisteredFunction {
@@ -80,6 +82,12 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 10] = {
             RegisteredFunction {
                 registeredfunction_name: c"debug".as_ptr(),
                 registeredfunction_function: Some(luaopen_debug as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"sh".as_ptr(),
+                registeredfunction_function: Some(luaopen_sh as unsafe fn(*mut Interpreter) -> i32),
             }
         },
     ]
