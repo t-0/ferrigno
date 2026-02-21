@@ -228,8 +228,7 @@ pub fn l_hashfloat(n: f64) -> i32 {
     let (m, e) = frexp_(n);
     let scaled = m * -(i32::MIN as f64);
     if scaled >= (i64::MIN as f64) && scaled < -(i64::MIN as f64) {
-        let ni = scaled as i64;
-        let u = (e as u32).wrapping_add(ni as u32);
+        let u = (e as u32).wrapping_add(scaled as i64 as u32);
         (if u <= i32::MAX as u32 { u } else { !u }) as i32
     } else {
         0

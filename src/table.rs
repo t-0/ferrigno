@@ -268,8 +268,6 @@ pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
 }
 pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
-        let weakkey: *const i8;
-        let weakvalue: *const i8;
         let mode: *const TValue = if ((*h).get_metatable()).is_null() {
             null()
         } else if (*(*h).get_metatable()).table_flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
@@ -283,6 +281,8 @@ pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
                 Object::really_mark_object(global, &mut (*((*h).get_metatable() as *mut Object)));
             }
         }
+        let weakkey: *const i8;
+        let weakvalue: *const i8;
         if !mode.is_null() && (*mode).get_tagvariant() == TagVariant::StringShort && {
             smode = &mut (*((*mode).tvalue_value.value_object as *mut TString)) as *mut TString;
             weakkey = libc::strchr((*smode).get_contents_mut(), Character::LowerK as i32);
