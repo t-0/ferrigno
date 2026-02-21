@@ -47,7 +47,7 @@ use libc::time;
 use std::ptr::*;
 
 #[cfg(target_os = "macos")]
-pub unsafe fn errno_location() -> *mut libc::c_int { libc::__error() }
+pub unsafe fn errno_location() -> *mut libc::c_int { unsafe { libc::__error() } }
 #[cfg(not(target_os = "macos"))]
 pub unsafe fn errno_location() -> *mut libc::c_int { libc::__errno_location() }
 
