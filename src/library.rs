@@ -9,6 +9,7 @@ mod sh;
 mod string;
 mod toml;
 mod table;
+mod urllib;
 mod utf8;
 use crate::interpreter::*;
 use crate::library::base::*;
@@ -20,11 +21,12 @@ use crate::library::os::*;
 use crate::library::package::*;
 use crate::library::sh::*;
 use crate::library::string::*;
+use crate::library::urllib::*;
 use crate::library::toml::*;
 use crate::library::table::*;
 use crate::library::utf8::*;
 use crate::registeredfunction::*;
-pub const LOADED_FUNCTIONS: [RegisteredFunction; 12] = {
+pub const LOADED_FUNCTIONS: [RegisteredFunction; 13] = {
     [
         {
             RegisteredFunction {
@@ -96,6 +98,12 @@ pub const LOADED_FUNCTIONS: [RegisteredFunction; 12] = {
             RegisteredFunction {
                 registeredfunction_name: c"toml".as_ptr(),
                 registeredfunction_function: Some(luaopen_toml as unsafe fn(*mut Interpreter) -> i32),
+            }
+        },
+        {
+            RegisteredFunction {
+                registeredfunction_name: c"urllib".as_ptr(),
+                registeredfunction_function: Some(luaopen_urllib as unsafe fn(*mut Interpreter) -> i32),
             }
         },
     ]
