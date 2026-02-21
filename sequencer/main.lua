@@ -7,10 +7,14 @@
 --   ENTER            Trigger (launch) the clip under the cursor
 --   ESC              Stop the clip on the current track
 --   R                Start / stop recording on the current track
+--   E                Open piano roll editor for clip under cursor
 --   N                New empty clip in current slot
 --   D                Delete clip in current slot
 --   I                Edit current instrument (name, MIDI device, channel)
 --   B                Set BPM
+--   P                Toggle arpeggiator on/off for current track
+--   A                Cycle arp mode  (when arp is on)
+--   O                Cycle arp rate  (when arp is on)
 --   +  (or =)        Add a new track
 --   -                Remove the rightmost track (if empty)
 --   S                Save to database
@@ -21,9 +25,11 @@ local function req(name)
     return dofile(script_dir .. name .. ".lua")
 end
 
-local db_mod = req("db")
-local engine = req("engine")
-local ui     = req("ui")
+local db_mod     = req("db")
+local engine     = req("engine")
+local ui         = req("ui")
+local piano_roll = req("piano_roll")
+local arp        = req("arp")
 
 -- ── Open song ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +81,15 @@ for _, inst in ipairs(instruments) do
     engine.open_output(inst)
 end
 
+-- ── Wire arp callback into engine ─────────────────────────────────────────────
+
+engine.on_midi_input = function(track_idx, status, data1, data2, cur)
+    if arp.states[track_idx] then
+        return arp.feed(track_idx, status, data1, data2, cur)
+    end
+    return false
+end
+
 -- ── Wire UI state ─────────────────────────────────────────────────────────────
 
 ui.song        = song
@@ -83,6 +98,7 @@ ui.clips       = clips
 ui.scenes      = scenes
 ui.num_slots   = NUM_SLOTS
 ui.bpm         = song.bpm
+ui.arp_states  = arp.states  -- live reference so ui.draw sees arp status
 
 -- ── TUI setup ─────────────────────────────────────────────────────────────────
 
@@ -333,6 +349,83 @@ local function rename_song()
     end
 end
 
+local function edit_clip_piano_roll()
+    local inst = current_inst()
+    local clip = current_clip()
+    if not clip then
+        ui.set_status("No clip here — press N to create one first", tui.YELLOW)
+        return
+    end
+    local was_playing = engine.playing
+    if was_playing then engine.stop_transport() end
+
+    local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {})
+    tui.clear()
+
+    if new_evts then
+        events[clip.id]   = new_evts
+        clip.length_beats = new_len
+        clip.is_looping   = new_loop and 1 or 0
+        db_mod.upsert_clip(db, clip)
+        db_mod.save_events(db, clip.id, new_evts)
+        ui.set_status(string.format("Clip saved: %d events, %.1f beats", #new_evts, new_len), tui.GREEN)
+    else
+        ui.set_status("Piano roll closed")
+    end
+
+    if was_playing then
+        engine.start_transport()
+        -- Re-launch clip if it was active.
+        if inst and engine.active_clips[ui.cursor.track] then
+            engine.launch(ui.cursor.track, inst.id, clip, events[clip.id] or {})
+        end
+    end
+end
+
+local function toggle_arp()
+    local ti   = ui.cursor.track
+    local inst = current_inst()
+    if not inst then return end
+    if arp.states[ti] then
+        arp.disable(ti, engine.output_ports[inst.id])
+        db_mod.save_arp_settings(db, inst.id, { mode="up", octaves=1, rate=0.25, gate=0.8, hold=false })
+        ui.set_status("Arp OFF — track " .. ti)
+    else
+        local settings = db_mod.get_arp_settings(db, inst.id)
+        arp.enable(ti, settings, engine.cur_beat())
+        -- Open MIDI input if needed.
+        if inst.midi_input and inst.midi_input ~= '' then
+            engine.open_input(inst.midi_input)
+        end
+        if not engine.playing then engine.start_transport() end
+        ui.set_status(string.format("Arp ON — track %d [%s]", ti, settings.mode or "up"))
+    end
+end
+
+local function cycle_arp_mode()
+    local ti   = ui.cursor.track
+    local inst = current_inst()
+    if not arp.states[ti] then
+        ui.set_status("Arp not active on this track (press P to enable)", tui.YELLOW)
+        return
+    end
+    local next_mode = arp.cycle(ti, "mode", arp.MODES)
+    if inst then db_mod.save_arp_settings(db, inst.id, arp.get_state(ti)) end
+    ui.set_status("Arp mode: " .. next_mode)
+end
+
+local function cycle_arp_rate()
+    local ti   = ui.cursor.track
+    local inst = current_inst()
+    if not arp.states[ti] then
+        ui.set_status("Arp not active on this track (press P to enable)", tui.YELLOW)
+        return
+    end
+    local next_rate = arp.cycle(ti, "rate", arp.RATES)
+    if inst then db_mod.save_arp_settings(db, inst.id, arp.get_state(ti)) end
+    ui.set_status("Arp rate: " .. (arp.RATE_NAMES[next_rate] or tostring(next_rate)))
+end
+
 -- ── Main loop ─────────────────────────────────────────────────────────────────
 
 local running       = true
@@ -345,12 +438,23 @@ while running do
     engine.tick()
     engine.process_input()
 
-    -- 2. Sync UI state from engine.
+    -- 2. Arp output tick (generates arpeggiated notes per active track).
+    if engine.playing then
+        local cur = engine.cur_beat()
+        for ti, inst in ipairs(instruments) do
+            if arp.states[ti] then
+                local port_rec = engine.output_ports[inst.id]
+                if port_rec then arp.tick(ti, cur, port_rec) end
+            end
+        end
+    end
+
+    -- 3. Sync UI state from engine.
     ui.playing   = engine.playing
     ui.recording = engine.recording
     ui.bpm       = engine.bpm
 
-    -- 3. Non-blocking key read (10 ms timeout keeps timing granularity tight).
+    -- 4. Non-blocking key read (10 ms timeout keeps timing granularity tight).
     local key = tui.read_key(10)
     if key then
         if key == 'q' or key == 'Q' then
@@ -368,7 +472,7 @@ while running do
         elseif key == 'enter' or key == 'return' then
             trigger_clip()
 
-        elseif key == 'escape' then
+        elseif key == 'esc' then
             engine.stop_track(ui.cursor.track)
             ui.set_status("Track " .. ui.cursor.track .. " stopped")
 
@@ -378,10 +482,14 @@ while running do
         elseif key == 'right' then ui.move_cursor( 1, 0)
 
         elseif key == 'r' or key == 'R' then toggle_record()
+        elseif key == 'e' or key == 'E' then edit_clip_piano_roll()
         elseif key == 'n' or key == 'N' then new_clip()
         elseif key == 'd' or key == 'D' then delete_clip()
         elseif key == 'i' or key == 'I' then edit_instrument()
         elseif key == 'b' or key == 'B' then edit_bpm()
+        elseif key == 'p' or key == 'P' then toggle_arp()
+        elseif key == 'a' or key == 'A' then cycle_arp_mode()
+        elseif key == 'o' or key == 'O' then cycle_arp_rate()
         elseif key == 's' or key == 'S' then save_all()
         elseif key == 'f' or key == 'F' then rename_song()
         elseif key == '+' or key == '=' then add_track()
@@ -398,6 +506,13 @@ while running do
 end
 
 -- ── Cleanup ───────────────────────────────────────────────────────────────────
+
+-- Disable all arps (sends note-off for any active arp note).
+for ti, inst in ipairs(instruments) do
+    if arp.states[ti] then
+        arp.disable(ti, engine.output_ports[inst.id])
+    end
+end
 
 engine.stop_transport()
 engine.close_all()

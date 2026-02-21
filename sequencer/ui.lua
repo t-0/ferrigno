@@ -37,6 +37,7 @@ M.status_color = tui.BRIGHT_WHITE
 M.playing      = false
 M.recording    = false
 M.bpm          = 120.0
+M.arp_states   = nil   -- reference to arp.states (set by main)
 
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -99,10 +100,12 @@ function M.draw(engine)
         local inst = M.instruments[ti]
         local name = inst and inst.name or ""
         local col  = TRACK_COLORS[((ti - 1) % #TRACK_COLORS) + 1]
+        local arp_on = M.arp_states and M.arp_states[ti] ~= nil
+        local display_name = arp_on and ("♩" .. name) or name
         if ti == M.cursor.track then
-            put(2, SCENE_W + (i-1)*COL_W + 1, center(name, COL_W), tui.BLACK, col, tui.BOLD)
+            put(2, SCENE_W + (i-1)*COL_W + 1, center(display_name, COL_W), tui.BLACK, col, tui.BOLD)
         else
-            put(2, SCENE_W + (i-1)*COL_W + 1, center(name, COL_W), col, tui.BRIGHT_BLACK, tui.BOLD)
+            put(2, SCENE_W + (i-1)*COL_W + 1, center(display_name, COL_W), col, tui.BRIGHT_BLACK, tui.BOLD)
         end
     end
     -- Blank out remainder of track-header row.
@@ -181,7 +184,7 @@ function M.draw(engine)
 
     -- ── Footer row 2: key hints ────────────────────────────────────────────────
     put(h, 1,
-        pad(" SPC=play  ENTER=trigger  R=rec  N=new  D=del  I=instrument  B=bpm  +=track  S=save  Q=quit", w),
+        pad(" SPC=play  ENTER=trigger  R=rec  E=edit  N=new  D=del  I=inst  B=bpm  P=arp  A=arp-mode  O=arp-rate  +=track  S=save  Q=quit", w),
         tui.BRIGHT_BLACK, tui.BLACK, 0)
 
     tui.flush()
@@ -218,7 +221,7 @@ function M.read_line(prompt_row, label, default)
             tui.hide_cursor()
             tui.print(tui.reset())
             return buf
-        elseif key == 'escape' then
+        elseif key == 'esc' then
             tui.hide_cursor()
             tui.print(tui.reset())
             return nil

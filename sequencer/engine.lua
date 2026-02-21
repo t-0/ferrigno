@@ -170,19 +170,37 @@ function M.stop_record()
     return track, evts, length
 end
 
--- Poll MIDI input and append any new messages to the recording buffer.
+-- Optional callback: on_midi_input(track_idx, status, data1, data2, cur_beat) → bool consumed
+-- Set by main.lua to route input to the arpeggiator.
+M.on_midi_input = nil
+
+-- Poll MIDI input, decode raw bytes, route to arp callback, then record.
 function M.process_input()
     if not M.input_port then return end
+    local cur = M.cur_beat()
     while true do
         local ok, msg = pcall(function() return M.input_port:recv(0) end)
         if not ok or not msg then break end
-        if M.recording then
-            local beat = M.cur_beat() - M.rec_start_beat
+
+        -- recv() returns {data=rawstring, time=integer} — decode bytes.
+        local raw    = msg.data or ''
+        local status = raw:byte(1) or 0
+        local data1  = raw:byte(2) or 0
+        local data2  = raw:byte(3) or 0
+
+        -- Offer to arp callback first; record only if not consumed.
+        local consumed = false
+        if M.on_midi_input and M.rec_track_idx then
+            consumed = M.on_midi_input(M.rec_track_idx, status, data1, data2, cur)
+        end
+
+        if not consumed and M.recording then
+            local beat = cur - M.rec_start_beat
             table.insert(M.rec_events, {
                 beat_offset = beat,
-                status      = msg.status,
-                data1       = msg.data1 or 0,
-                data2       = msg.data2 or 0,
+                status      = status,
+                data1       = data1,
+                data2       = data2,
             })
         end
     end

@@ -72,6 +72,15 @@ function M.init_schema(db)
             scene_index INTEGER NOT NULL,
             name        TEXT             DEFAULT ''
         );
+        CREATE TABLE IF NOT EXISTS arp_settings (
+            id            INTEGER PRIMARY KEY,
+            instrument_id INTEGER NOT NULL UNIQUE,
+            mode          TEXT    NOT NULL DEFAULT 'up',
+            octaves       INTEGER NOT NULL DEFAULT 1,
+            rate          REAL    NOT NULL DEFAULT 0.25,
+            gate          REAL    NOT NULL DEFAULT 0.8,
+            hold_mode     INTEGER NOT NULL DEFAULT 0
+        );
     ]])
     if not ok then error("Schema init failed: " .. tostring(err)) end
 end
@@ -198,6 +207,30 @@ function M.ensure_scenes(db, song_id, count)
         return M.get_scenes(db, song_id)
     end
     return scenes
+end
+
+-- ── Arp settings ──────────────────────────────────────────────────────────────
+
+function M.get_arp_settings(db, instrument_id)
+    local rows = db:query(
+        "SELECT * FROM arp_settings WHERE instrument_id=?", instrument_id) or {}
+    if rows[1] then return rows[1] end
+    return { instrument_id=instrument_id, mode="up", octaves=1, rate=0.25, gate=0.8, hold_mode=0 }
+end
+
+function M.save_arp_settings(db, instrument_id, state)
+    run(db,
+        [[INSERT INTO arp_settings (instrument_id, mode, octaves, rate, gate, hold_mode)
+          VALUES (?,?,?,?,?,?)
+          ON CONFLICT(instrument_id) DO UPDATE SET
+            mode=excluded.mode, octaves=excluded.octaves,
+            rate=excluded.rate, gate=excluded.gate, hold_mode=excluded.hold_mode]],
+        instrument_id,
+        state.mode    or "up",
+        state.octaves or 1,
+        state.rate    or 0.25,
+        state.gate    or 0.8,
+        state.hold    and 1 or 0)
 end
 
 return M
