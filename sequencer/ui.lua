@@ -184,7 +184,7 @@ function M.draw(engine)
 
     -- ── Footer row 2: key hints ────────────────────────────────────────────────
     put(h, 1,
-        pad(" SPC=play  ENTER=trigger  R=rec  E=piano-roll  C=clip  N=new  D=del  I=instruments  T=track  B=bpm  P=arp  A=arp-mode  O=arp-rate  +=add  S=save  ESC=quit", w),
+        pad(" SPC=play  ENTER=trigger  L=scene  R=rec  E=roll  C=clip  N=new  D=del  [=ins-row  ]=del-row  I=inst  T=track  B=bpm  P=arp  A=mode  O=rate  +=trk  S=save  ESC=quit", w),
         tui.BRIGHT_BLACK, tui.BLACK, 0)
 
     tui.flush()

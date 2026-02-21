@@ -298,6 +298,54 @@ function M.get_scenes(db, song_id)
     return db:query("SELECT * FROM scenes WHERE song_id=? ORDER BY scene_index", song_id) or {}
 end
 
+-- Shift slot_index by delta for all clips in this song where slot_index >= from_slot.
+function M.shift_clips(db, song_id, from_slot, delta)
+    run(db, [[
+        UPDATE clips SET slot_index = slot_index + ?
+        WHERE slot_index >= ?
+          AND instrument_id IN (SELECT id FROM tracks WHERE song_id = ?)
+    ]], delta, from_slot, song_id)
+end
+
+-- Delete all clips (and their events) at a specific slot across all tracks in the song.
+function M.delete_clips_at_slot(db, song_id, slot)
+    run(db, [[
+        DELETE FROM midi_events WHERE clip_id IN (
+            SELECT c.id FROM clips c
+            WHERE c.slot_index = ?
+              AND c.instrument_id IN (SELECT id FROM tracks WHERE song_id = ?)
+        )
+    ]], slot, song_id)
+    run(db, [[
+        DELETE FROM clips
+        WHERE slot_index = ?
+          AND instrument_id IN (SELECT id FROM tracks WHERE song_id = ?)
+    ]], slot, song_id)
+end
+
+-- Shift scene_index by delta for all scenes in this song where scene_index >= from_idx.
+function M.shift_scenes(db, song_id, from_idx, delta)
+    run(db, [[
+        UPDATE scenes SET scene_index = scene_index + ?
+        WHERE scene_index >= ? AND song_id = ?
+    ]], delta, from_idx, song_id)
+end
+
+-- Insert a new scene row and return a Lua table representing it.
+function M.insert_scene_at(db, song_id, scene_index, name)
+    run(db,
+        "INSERT INTO scenes (song_id, scene_index, name) VALUES (?, ?, ?)",
+        song_id, scene_index, name or '')
+    return { id = db:last_insert_rowid(), song_id = song_id,
+             scene_index = scene_index, name = name or '' }
+end
+
+-- Delete the scene row at the given scene_index.
+function M.delete_scene_at(db, song_id, scene_index)
+    run(db, "DELETE FROM scenes WHERE song_id = ? AND scene_index = ?",
+        song_id, scene_index)
+end
+
 -- Ensure at least `count` scene rows exist, creating missing ones.
 function M.ensure_scenes(db, song_id, count)
     local scenes = M.get_scenes(db, song_id)

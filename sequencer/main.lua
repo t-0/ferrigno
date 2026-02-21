@@ -10,6 +10,9 @@
 --   C                Clip settings (name, bank/program patch override)
 --   N                New empty clip in current slot
 --   D                Delete clip in current slot
+--   L                Launch all clips in the current scene row
+--   [                Insert a scene row at the cursor position
+--   ]                Delete the current scene row
 --   I                Instruments page (list, add, edit, delete instruments)
 --   T                Edit current track (name + instrument assignment)
 --   B                Set BPM
@@ -38,8 +41,6 @@ local arp        = req("arp")
 local song_path = (arg and arg[1]) or "song.db"
 local db        = db_mod.open(song_path)
 local song      = db_mod.get_or_create_song(db, "Untitled")
-
-local NUM_SLOTS = 8
 
 -- ── Load instruments (standalone MIDI device/patch definitions) ───────────────
 
@@ -99,8 +100,9 @@ for _, inst in ipairs(instruments) do
     sysex_dumps[inst.id] = db_mod.get_sysex_dumps(db, inst.id)
 end
 
--- Ensure scene rows exist.
-local scenes = db_mod.ensure_scenes(db, song.id, NUM_SLOTS)
+-- Ensure at least 8 scene rows exist; NUM_SLOTS is dynamic after that.
+local scenes    = db_mod.ensure_scenes(db, song.id, 8)
+local NUM_SLOTS = #scenes
 
 -- ── Open MIDI outputs ─────────────────────────────────────────────────────────
 
@@ -1155,6 +1157,115 @@ local function cycle_arp_rate()
     ui.set_status("Arp rate: " .. (arp.RATE_NAMES[next_rate] or tostring(next_rate)))
 end
 
+-- ── Scene (row) operations ────────────────────────────────────────────────────
+
+-- Launch all clips in the current scene row across every track.
+local function launch_scene()
+    local si       = ui.cursor.slot
+    local launched = 0
+    for ti, track in ipairs(tracks) do
+        local clip = clips[track.id] and clips[track.id][si]
+        if clip then
+            local inst = instruments_by_name[track.instrument_name]
+            local evts = events[clip.id] or {}
+            if clip.bank_msb or clip.bank_lsb or clip.program then
+                if inst then engine.send_clip_patch(inst, clip) end
+            end
+            engine.launch(ti, inst and inst.id, clip, evts)
+            launched = launched + 1
+        end
+    end
+    if launched > 0 then
+        if not engine.playing then engine.start_transport() end
+        ui.set_status(string.format("► Scene %d (%d clips)", si, launched))
+    else
+        ui.set_status("Scene " .. si .. " is empty", tui.YELLOW)
+    end
+end
+
+-- Insert an empty scene row at the cursor position, pushing rows below down.
+local function insert_scene_row()
+    local si = ui.cursor.slot
+
+    -- Shift clips in memory (high-to-low to avoid self-overwrite).
+    for _, track in ipairs(tracks) do
+        local tc = clips[track.id]
+        if tc then
+            for slot = NUM_SLOTS, si, -1 do
+                if tc[slot] then
+                    tc[slot + 1]            = tc[slot]
+                    tc[slot + 1].slot_index = slot + 1
+                    tc[slot]                = nil
+                end
+            end
+        end
+    end
+
+    -- Shift scenes in memory (scene_index is 0-based; si is 1-based).
+    for _, scene in ipairs(scenes) do
+        if scene.scene_index >= si - 1 then
+            scene.scene_index = scene.scene_index + 1
+        end
+    end
+
+    -- Persist to DB.
+    db_mod.shift_clips(db, song.id, si, 1)
+    db_mod.shift_scenes(db, song.id, si - 1, 1)
+    local new_scene = db_mod.insert_scene_at(db, song.id, si - 1, '')
+    table.insert(scenes, si, new_scene)
+
+    NUM_SLOTS       = #scenes
+    ui.num_slots    = NUM_SLOTS
+    ui.set_status("Inserted scene row at " .. si)
+end
+
+-- Delete the current scene row, shifting rows below up.
+local function delete_scene_row()
+    if NUM_SLOTS <= 1 then
+        ui.set_status("Cannot delete the last scene row", tui.YELLOW)
+        return
+    end
+    local si = ui.cursor.slot
+
+    -- Stop any clips playing on this row and clear in-memory data.
+    for ti, track in ipairs(tracks) do
+        local tc   = clips[track.id]
+        local clip = tc and tc[si]
+        if clip then
+            local ac = engine.active_clips[ti]
+            if ac and ac.clip_id == clip.id then engine.stop_track(ti) end
+            events[clip.id] = nil
+            tc[si] = nil
+        end
+    end
+
+    -- Persist deletions to DB, then shift remaining rows up.
+    db_mod.delete_clips_at_slot(db, song.id, si)
+    db_mod.delete_scene_at(db, song.id, si - 1)
+    db_mod.shift_clips(db, song.id, si + 1, -1)
+    db_mod.shift_scenes(db, song.id, si, -1)
+
+    -- Shift clips in memory (low-to-high).
+    for _, track in ipairs(tracks) do
+        local tc = clips[track.id]
+        if tc then
+            for slot = si + 1, NUM_SLOTS do
+                tc[slot - 1] = tc[slot]
+                if tc[slot - 1] then tc[slot - 1].slot_index = slot - 1 end
+                tc[slot] = nil
+            end
+        end
+    end
+
+    -- Remove scene from memory.
+    table.remove(scenes, si)
+
+    NUM_SLOTS    = #scenes
+    ui.num_slots = NUM_SLOTS
+    if ui.cursor.slot > NUM_SLOTS then ui.cursor.slot = NUM_SLOTS end
+    ui.set_status("Deleted scene row " .. si)
+end
+
 -- ── Main loop ─────────────────────────────────────────────────────────────────
 
 local running       = true
@@ -1211,6 +1322,9 @@ while running do
         elseif key == 'c' or key == 'C' then edit_clip_settings()
         elseif key == 'n' or key == 'N' then new_clip()
         elseif key == 'd' or key == 'D' then delete_clip()
+        elseif key == 'l' or key == 'L' then launch_scene()
+        elseif key == '['               then insert_scene_row()
+        elseif key == ']'               then delete_scene_row()
         elseif key == 'i' or key == 'I' then instruments_page()
         elseif key == 't' or key == 'T' then edit_track()
         elseif key == 'b' or key == 'B' then edit_bpm()
