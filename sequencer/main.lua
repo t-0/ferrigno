@@ -1310,7 +1310,7 @@ while running do
             end
 
         elseif key == 'enter' or key == 'return' then
-            trigger_clip()
+            if ui.cursor.track == 0 then launch_scene() else trigger_clip() end
 
         elseif key == 'up'    then ui.move_cursor(0, -1)
         elseif key == 'down'  then ui.move_cursor(0,  1)

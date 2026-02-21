@@ -125,14 +125,18 @@ function M.draw(engine)
         local scn = M.scenes[si]
         local sc_name = scn and (scn.name ~= '' and scn.name or ("Scene " .. si)) or ("Scene " .. si)
 
-        -- Scene label
-        if si == M.cursor.slot then
+        -- Scene label — ► prefix when the scene column itself is selected.
+        local scene_selected = (M.cursor.track == 0 and si == M.cursor.slot)
+        if scene_selected then
+            put(HEADER_ROWS + row, 1, pad("►" .. sc_name:sub(1, SCENE_W-2), SCENE_W), tui.BLACK, tui.CYAN, tui.BOLD)
+        elseif si == M.cursor.slot then
             put(HEADER_ROWS + row, 1, pad(sc_name:sub(1, SCENE_W-1), SCENE_W), tui.BLACK, tui.CYAN, tui.BOLD)
         else
             put(HEADER_ROWS + row, 1, pad(sc_name:sub(1, SCENE_W-1), SCENE_W), tui.BRIGHT_WHITE, tui.BRIGHT_BLACK, 0)
         end
 
         -- Clip cells
+        local row_sel = (M.cursor.track == 0 and si == M.cursor.slot)
         for i = 1, vt do
             local ti       = i + M.scroll_x
             local track    = M.tracks[ti]
@@ -158,6 +162,10 @@ function M.draw(engine)
                 fg, bg, attrs = tui.CYAN, tui.BLACK, tui.BOLD
             elseif playing then
                 fg, bg, attrs = tui.BLACK, tcol, tui.BOLD
+            elseif row_sel and clip then
+                fg, bg, attrs = tui.BLACK, tui.CYAN, 0
+            elseif row_sel then
+                fg, bg, attrs = tui.CYAN, tui.BRIGHT_BLACK, 0
             elseif clip then
                 fg, bg, attrs = tcol, tui.BLACK, 0
             else
@@ -244,13 +252,16 @@ function M.move_cursor(dt, ds)
     local max_t = math.max(1, #M.tracks)
     local max_s = M.num_slots
 
-    M.cursor.track = math.max(1, math.min(max_t, M.cursor.track + dt))
+    M.cursor.track = math.max(0, math.min(max_t, M.cursor.track + dt))
     M.cursor.slot  = math.max(1, math.min(max_s, M.cursor.slot  + ds))
 
-    if M.cursor.track <= M.scroll_x then
-        M.scroll_x = M.cursor.track - 1
-    elseif M.cursor.track > M.scroll_x + vt then
-        M.scroll_x = M.cursor.track - vt
+    -- Scene column (track == 0) is always visible; only scroll for actual tracks.
+    if M.cursor.track > 0 then
+        if M.cursor.track <= M.scroll_x then
+            M.scroll_x = M.cursor.track - 1
+        elseif M.cursor.track > M.scroll_x + vt then
+            M.scroll_x = M.cursor.track - vt
+        end
     end
 
     if M.cursor.slot <= M.scroll_y then
