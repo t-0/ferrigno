@@ -218,20 +218,16 @@ pub fn ldexp_(x: f64, exp: i32) -> f64 {
         }
     }
 }
-pub unsafe fn l_hashfloat(mut n: f64) -> i32 {
-    let i: i32;
-    let ni: i64;
-    (n, i) = frexp_(n);
-    n = n * -((-(0x7FFFFFFF as i32) - 1) as f64);
-    if !(n >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64 && n < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64) && {
-        ni = n as i64;
-        1 != 0
-    }) {
-        return 0;
+pub fn l_hashfloat(n: f64) -> i32 {
+    let (m, e) = frexp_(n);
+    let scaled = m * -(i32::MIN as f64);
+    if scaled >= (i64::MIN as f64) && scaled < -(i64::MIN as f64) {
+        let ni = scaled as i64;
+        let u = (e as u32).wrapping_add(ni as u32);
+        (if u <= i32::MAX as u32 { u } else { !u }) as i32
     } else {
-        let u: u32 = (i as u32).wrapping_add(ni as u32);
-        return (if u <= 0x7FFFFFFF as u32 { u } else { !u }) as i32;
-    };
+        0
+    }
 }
 pub unsafe fn fits_c(i: i64) -> bool {
     return (i as usize).wrapping_add(((1 << 8) - 1 >> 1) as usize) <= ((1 << 8) - 1) as usize;
