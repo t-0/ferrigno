@@ -23,8 +23,8 @@ local TRACK_COLORS = {
 -- ── Public state (set by main before first draw) ──────────────────────────────
 
 M.song        = nil
-M.instruments = {}
-M.clips       = {}    -- clips[inst_id][slot_idx] = clip_table
+M.tracks      = {}
+M.clips       = {}    -- clips[track_id][slot_idx] = clip_table
 M.scenes      = {}    -- indexed 1..n, each has .scene_index (0-based) and .name
 M.num_slots   = 8
 
@@ -96,10 +96,10 @@ function M.draw(engine)
     -- ── Row 2: track name headers ─────────────────────────────────────────────
     put(2, 1, pad("", SCENE_W), tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
     for i = 1, vt do
-        local ti   = i + M.scroll_x
-        local inst = M.instruments[ti]
-        local name = inst and inst.name or ""
-        local col  = TRACK_COLORS[((ti - 1) % #TRACK_COLORS) + 1]
+        local ti    = i + M.scroll_x
+        local track = M.tracks[ti]
+        local name  = track and track.name or ""
+        local col   = TRACK_COLORS[((ti - 1) % #TRACK_COLORS) + 1]
         local arp_on = M.arp_states and M.arp_states[ti] ~= nil
         local display_name = arp_on and ("♩" .. name) or name
         if ti == M.cursor.track then
@@ -134,10 +134,10 @@ function M.draw(engine)
 
         -- Clip cells
         for i = 1, vt do
-            local ti      = i + M.scroll_x
-            local inst    = M.instruments[ti]
-            local inst_id = inst and inst.id
-            local clip    = inst_id and M.clips[inst_id] and M.clips[inst_id][si]
+            local ti       = i + M.scroll_x
+            local track    = M.tracks[ti]
+            local track_id = track and track.id
+            local clip     = track_id and M.clips[track_id] and M.clips[track_id][si]
             local ac      = engine and engine.active_clips[ti]
             local playing = ac and clip and (ac.clip_id == clip.id)
             local is_cur  = (ti == M.cursor.track and si == M.cursor.slot)
@@ -184,7 +184,7 @@ function M.draw(engine)
 
     -- ── Footer row 2: key hints ────────────────────────────────────────────────
     put(h, 1,
-        pad(" SPC=play  ENTER=trigger  R=rec  E=piano-roll  C=clip  N=new  D=del  I=inst  B=bpm  P=arp  A=arp-mode  O=arp-rate  +=track  S=save  ESC=quit", w),
+        pad(" SPC=play  ENTER=trigger  R=rec  E=piano-roll  C=clip  N=new  D=del  I=instruments  T=track  B=bpm  P=arp  A=arp-mode  O=arp-rate  +=add  S=save  ESC=quit", w),
         tui.BRIGHT_BLACK, tui.BLACK, 0)
 
     tui.flush()
@@ -241,7 +241,7 @@ function M.move_cursor(dt, ds)
     local w, h  = tui.size()
     local vt    = visible_tracks(w)
     local vr    = visible_rows(h)
-    local max_t = math.max(1, #M.instruments)
+    local max_t = math.max(1, #M.tracks)
     local max_s = M.num_slots
 
     M.cursor.track = math.max(1, math.min(max_t, M.cursor.track + dt))

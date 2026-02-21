@@ -10,13 +10,14 @@
 --   C                Clip settings (name, bank/program patch override)
 --   N                New empty clip in current slot
 --   D                Delete clip in current slot
---   I                Edit current instrument (name, MIDI device, channel)
+--   I                Instruments page (list, add, edit, delete instruments)
+--   T                Edit current track (name + instrument assignment)
 --   B                Set BPM
 --   F                Rename song
 --   P                Toggle arpeggiator on/off for current track
 --   A                Cycle arp mode  (when arp is on)
 --   O                Cycle arp rate  (when arp is on)
---   +  (or =)        Add a new track
+--   +  (or =)        Add a new sequencer track
 --   -                Remove the rightmost track (if empty)
 --   S                Save to database
 --   ESC              Quit (auto-saves first)
@@ -40,39 +41,59 @@ local song      = db_mod.get_or_create_song(db, "Untitled")
 
 local NUM_SLOTS = 8
 
--- Load instruments, creating two defaults if the song is brand-new.
+-- ── Load instruments (standalone MIDI device/patch definitions) ───────────────
+
 local instruments = db_mod.get_instruments(db, song.id)
-if #instruments == 0 then
+local instruments_by_name = {}
+for _, inst in ipairs(instruments) do
+    instruments_by_name[inst.name] = inst
+end
+
+-- ── Load tracks (sequencer lanes that reference an instrument by name) ────────
+
+local tracks = db_mod.get_tracks(db, song.id)
+
+-- Fresh song: create 2 default instruments + 2 tracks.
+if #instruments == 0 and #tracks == 0 then
     local dests       = midi.destinations() or {}
     local default_out = (dests[1] and dests[1].name) or ''
     local srcs        = midi.sources()      or {}
     local default_in  = (srcs[1]  and srcs[1].name)  or ''
 
-    local t1 = db_mod.upsert_instrument(db, {
+    local i1 = db_mod.upsert_instrument(db, {
         name = "Synth", midi_output = default_out, midi_input = default_in,
-        midi_channel = 1, track_index = 0, color = 2,
+        midi_channel = 1, color = 2,
     }, song.id)
-    local t2 = db_mod.upsert_instrument(db, {
+    local i2 = db_mod.upsert_instrument(db, {
         name = "Bass", midi_output = default_out, midi_input = default_in,
-        midi_channel = 2, track_index = 1, color = 4,
+        midi_channel = 2, color = 4,
     }, song.id)
-    instruments = { t1, t2 }
+    instruments = { i1, i2 }
+    instruments_by_name = { ["Synth"] = i1, ["Bass"] = i2 }
+
+    local t1 = db_mod.upsert_track(db, {
+        name = "Synth", track_index = 0, instrument_name = "Synth", color = 2,
+    }, song.id)
+    local t2 = db_mod.upsert_track(db, {
+        name = "Bass", track_index = 1, instrument_name = "Bass", color = 4,
+    }, song.id)
+    tracks = { t1, t2 }
 end
 
--- Load clips and their MIDI events into memory.
--- clips[inst_id][slot_idx] = clip_table
+-- ── Load clips and MIDI events ────────────────────────────────────────────────
+-- clips[track.id][slot_idx] = clip_table
 -- events[clip_id] = { {beat_offset,status,data1,data2}, ... }
 local clips  = {}
 local events = {}
-for _, inst in ipairs(instruments) do
-    clips[inst.id] = {}
-    for _, clip in ipairs(db_mod.get_clips(db, inst.id)) do
-        clips[inst.id][clip.slot_index] = clip
+for _, track in ipairs(tracks) do
+    clips[track.id] = {}
+    for _, clip in ipairs(db_mod.get_clips(db, track.id)) do
+        clips[track.id][clip.slot_index] = clip
         events[clip.id] = db_mod.get_events(db, clip.id)
     end
 end
 
--- Load SysEx dumps per instrument.
+-- ── Load SysEx dumps per instrument ──────────────────────────────────────────
 local sysex_dumps = {}
 for _, inst in ipairs(instruments) do
     sysex_dumps[inst.id] = db_mod.get_sysex_dumps(db, inst.id)
@@ -84,7 +105,6 @@ local scenes = db_mod.ensure_scenes(db, song.id, NUM_SLOTS)
 -- ── Open MIDI outputs ─────────────────────────────────────────────────────────
 
 -- Open output port and send any 'connect' sysex dumps.
--- Program change is NOT sent here — only when explicitly edited via I.
 local function open_and_configure_output(inst)
     local ok, err = engine.open_output(inst)
     if not ok then return false, err end
@@ -110,13 +130,13 @@ end
 
 -- ── Wire UI state ─────────────────────────────────────────────────────────────
 
-ui.song        = song
-ui.instruments = instruments
-ui.clips       = clips
-ui.scenes      = scenes
-ui.num_slots   = NUM_SLOTS
-ui.bpm         = song.bpm
-ui.arp_states  = arp.states  -- live reference so ui.draw sees arp status
+ui.song       = song
+ui.tracks     = tracks
+ui.clips      = clips
+ui.scenes     = scenes
+ui.num_slots  = NUM_SLOTS
+ui.bpm        = song.bpm
+ui.arp_states = arp.states  -- live reference so ui.draw sees arp status
 
 -- ── TUI setup ─────────────────────────────────────────────────────────────────
 
@@ -128,14 +148,20 @@ tui.clear()
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
+local function current_track()
+    return tracks[ui.cursor.track]
+end
+
 local function current_inst()
-    return instruments[ui.cursor.track]
+    local track = current_track()
+    if not track then return nil end
+    return instruments_by_name[track.instrument_name]
 end
 
 local function current_clip()
-    local inst = current_inst()
-    if not inst then return nil end
-    return clips[inst.id] and clips[inst.id][ui.cursor.slot]
+    local track = current_track()
+    if not track then return nil end
+    return clips[track.id] and clips[track.id][ui.cursor.slot]
 end
 
 local function save_all()
@@ -143,9 +169,12 @@ local function save_all()
     for _, inst in ipairs(instruments) do
         db_mod.upsert_instrument(db, inst, song.id)
     end
-    for _, inst in ipairs(instruments) do
-        local ic = clips[inst.id] or {}
-        for _, clip in pairs(ic) do
+    for _, track in ipairs(tracks) do
+        db_mod.upsert_track(db, track, song.id)
+    end
+    for _, track in ipairs(tracks) do
+        local tc = clips[track.id] or {}
+        for _, clip in pairs(tc) do
             db_mod.upsert_clip(db, clip)
             if events[clip.id] then
                 db_mod.save_events(db, clip.id, events[clip.id])
@@ -158,19 +187,19 @@ end
 -- ── Action handlers ───────────────────────────────────────────────────────────
 
 local function trigger_clip()
+    local track = current_track()
+    if not track then return end
     local inst = current_inst()
-    if not inst then return end
     local clip = current_clip()
     if not clip then
         ui.set_status("Empty slot — press N to create a clip", tui.YELLOW)
         return
     end
     local evts = events[clip.id] or {}
-    -- Send clip-level patch override before launch so the synth is ready.
     if clip.bank_msb or clip.bank_lsb or clip.program then
-        engine.send_clip_patch(inst, clip)
+        if inst then engine.send_clip_patch(inst, clip) end
     end
-    engine.launch(ui.cursor.track, inst.id, clip, evts)
+    engine.launch(ui.cursor.track, inst and inst.id, clip, evts)
     if not engine.playing then
         engine.start_transport()
     end
@@ -178,25 +207,25 @@ local function trigger_clip()
 end
 
 local function new_clip()
-    local inst = current_inst()
-    if not inst then return end
+    local track = current_track()
+    if not track then return end
     local si = ui.cursor.slot
-    if not clips[inst.id] then clips[inst.id] = {} end
-    if clips[inst.id][si] then
+    if not clips[track.id] then clips[track.id] = {} end
+    if clips[track.id][si] then
         ui.set_status("Slot occupied — press D to delete first", tui.YELLOW)
         return
     end
-    local clip = { instrument_id = inst.id, slot_index = si,
+    local clip = { instrument_id = track.id, slot_index = si,
                    name = '', length_beats = 4.0, is_looping = true }
     db_mod.upsert_clip(db, clip)
-    clips[inst.id][si] = clip
+    clips[track.id][si] = clip
     events[clip.id] = {}
     ui.set_status("New clip created in slot " .. si)
 end
 
 local function delete_clip()
-    local inst = current_inst()
-    if not inst then return end
+    local track = current_track()
+    if not track then return end
     local clip = current_clip()
     if not clip then
         ui.set_status("No clip here", tui.YELLOW)
@@ -205,7 +234,7 @@ local function delete_clip()
     engine.stop_track(ui.cursor.track)
     db_mod.delete_clip(db, clip.id)
     events[clip.id] = nil
-    clips[inst.id][ui.cursor.slot] = nil
+    clips[track.id][ui.cursor.slot] = nil
     ui.set_status("Clip deleted")
 end
 
@@ -214,16 +243,16 @@ local function toggle_record()
         -- ── Stop recording ────────────────────────────────────────────────────
         local track_idx, rec_evts, length = engine.stop_record()
         ui.recording = false
-        local inst = instruments[track_idx]
-        if not inst then return end
+        local track = tracks[track_idx]
+        if not track then return end
         local si = ui.cursor.slot
-        if not clips[inst.id] then clips[inst.id] = {} end
-        local clip = clips[inst.id][si]
+        if not clips[track.id] then clips[track.id] = {} end
+        local clip = clips[track.id][si]
         if not clip then
-            clip = { instrument_id = inst.id, slot_index = si,
+            clip = { instrument_id = track.id, slot_index = si,
                      name = '', length_beats = length, is_looping = true }
             db_mod.upsert_clip(db, clip)
-            clips[inst.id][si] = clip
+            clips[track.id][si] = clip
         else
             clip.length_beats = length
             db_mod.upsert_clip(db, clip)
@@ -234,7 +263,10 @@ local function toggle_record()
     else
         -- ── Start recording ───────────────────────────────────────────────────
         local inst = current_inst()
-        if not inst then return end
+        if not inst then
+            ui.set_status("No instrument assigned to this track — press T to assign", tui.YELLOW)
+            return
+        end
         if inst.midi_input and inst.midi_input ~= '' then
             local ok, err = engine.open_input(inst.midi_input)
             if not ok then
@@ -253,43 +285,37 @@ local function toggle_record()
 end
 
 local function add_track()
-    local dests       = midi.destinations() or {}
-    local default_out = (dests[1] and dests[1].name) or ''
-    local inst = {
-        name = "Track " .. (#instruments + 1),
-        midi_output  = default_out,
-        midi_input   = '',
-        midi_channel = math.min(16, #instruments + 1),
-        track_index  = #instruments,
-        color = 0,
+    local default_inst_name = (#instruments > 0) and instruments[1].name or ''
+    local track = {
+        name            = "Track " .. (#tracks + 1),
+        track_index     = #tracks,
+        instrument_name = default_inst_name,
+        color           = 0,
     }
-    db_mod.upsert_instrument(db, inst, song.id)
-    clips[inst.id] = {}
-    sysex_dumps[inst.id] = {}
-    table.insert(instruments, inst)
-    ui.cursor.track = #instruments
-    open_and_configure_output(inst)
-    ui.set_status("Added track: " .. inst.name)
+    db_mod.upsert_track(db, track, song.id)
+    clips[track.id] = {}
+    table.insert(tracks, track)
+    ui.cursor.track = #tracks
+    ui.set_status("Added track: " .. track.name)
 end
 
 local function remove_track()
-    if #instruments <= 1 then
+    if #tracks <= 1 then
         ui.set_status("Cannot remove the last track", tui.YELLOW)
         return
     end
-    local inst = instruments[#instruments]
-    -- Only remove if the track has no clips.
+    local track = tracks[#tracks]
     local has_clip = false
-    for _ in pairs(clips[inst.id] or {}) do has_clip = true; break end
+    for _ in pairs(clips[track.id] or {}) do has_clip = true; break end
     if has_clip then
         ui.set_status("Track has clips — delete clips first", tui.YELLOW)
         return
     end
-    engine.stop_track(#instruments)
-    db_mod.delete_instrument(db, inst.id)
-    clips[inst.id] = nil
-    table.remove(instruments)
-    ui.cursor.track = math.min(ui.cursor.track, #instruments)
+    engine.stop_track(#tracks)
+    db_mod.delete_track(db, track.id)
+    clips[track.id] = nil
+    table.remove(tracks)
+    ui.cursor.track = math.min(ui.cursor.track, #tracks)
     ui.set_status("Track removed")
 end
 
@@ -300,18 +326,12 @@ local function edit_clip_settings()
         return
     end
 
-    -- Format a float for display: trim trailing zeros after decimal point.
     local function fmt_f(v)
         if v == nil then return '' end
         local s = string.format("%.3f", v)
         return s:gsub("%.?0+$", "")
     end
 
-    -- Field definitions.
-    -- type "text": free string
-    -- type "float": real number, min/max, nullable (blank → nil or default)
-    -- type "int":   integer, min/max, nullable
-    -- type "toggle": cycles through opts with ←→ (stored as index)
     local loop_opts = {"No", "Yes"}
     local fields = {
         { label="Name",        type="text"                                        },
@@ -329,7 +349,7 @@ local function edit_clip_settings()
     local vals = {
         clip.name or '',
         fmt_f(clip.length_beats or 4.0),
-        is_looping and 2 or 1,                -- index into loop_opts
+        is_looping and 2 or 1,
         fmt_f(clip.start_offset or 0),
         fmt_f(clip.loop_start   or 0),
         clip.loop_length ~= nil and fmt_f(clip.loop_length) or '',
@@ -378,7 +398,6 @@ local function edit_clip_settings()
                     tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
                 end
             else
-                -- Append hint in dim after the value.
                 local hint = f.hint and ("  " .. f.hint) or ""
                 if is_sel and editing then
                     local display = pad(edit_buf, val_w)
@@ -473,7 +492,6 @@ local function edit_clip_settings()
         ::clip_again::
     end
 
-    -- Apply values back to clip.
     local function parse_float(s, default, mn)
         local n = tonumber(s)
         if n then return math.max(mn or 0, n) end
@@ -501,7 +519,6 @@ local function edit_clip_settings()
 end
 
 -- SysEx dump manager for an instrument.
--- Called from edit_instrument(); edits sysex_dumps[inst.id] in-place.
 local function edit_sysex(inst)
     sysex_dumps[inst.id] = sysex_dumps[inst.id] or {}
     local dumps = sysex_dumps[inst.id]
@@ -570,14 +587,14 @@ local function edit_sysex(inst)
     end
 end
 
-local function edit_instrument()
-    local inst = current_inst()
-    if not inst then return end
+-- Edit an instrument's definition (MIDI settings, name, patch).
+-- Accepts the instrument object directly.
+local function edit_instrument_def(inst)
+    local old_name = inst.name
 
     local dests = midi.destinations() or {}
     local srcs  = midi.sources()      or {}
 
-    -- Extract name strings (midi.destinations/sources return {name=..., index=...} tables).
     local dest_opts = {"None"}
     for _, d in ipairs(dests) do dest_opts[#dest_opts+1] = d.name end
 
@@ -591,7 +608,6 @@ local function edit_instrument()
         return 1
     end
 
-    -- Field definitions: text, number (with range + optional nil), picker (cycle with ←→).
     local fields = {
         { label="Name",        type="text"                                     },
         { label="MIDI Output", type="picker", opts=dest_opts                   },
@@ -602,7 +618,6 @@ local function edit_instrument()
         { label="Program",     type="number", min=0,   max=127, nullable=true  },
     }
 
-    -- Working values: pickers store index into opts; text/number store string.
     local vals = {
         inst.name or '',
         opt_index(dest_opts, inst.midi_output or ''),
@@ -614,7 +629,7 @@ local function edit_instrument()
     }
 
     local LABEL_W  = 14
-    local VAL_COL  = LABEL_W + 5   -- column where value field starts
+    local VAL_COL  = LABEL_W + 5
     local sel      = 1
     local editing  = false
     local edit_buf = ''
@@ -632,9 +647,8 @@ local function edit_instrument()
         tui.hide_cursor()
         tui.clear()
 
-        -- Header
         tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
-        tui.print_at(1, 2, "Instrument Settings", tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Instrument: " .. inst.name, tui.WHITE, tui.BLUE, tui.BOLD)
 
         for i, f in ipairs(fields) do
             local row    = i + 2
@@ -687,7 +701,7 @@ local function edit_instrument()
     draw()
     while true do
         local key = tui.read_key(5000)
-        if not key then goto inst_again end
+        if not key then goto inst_def_again end
 
         if editing then
             if key == 'enter' or key == 'return' then
@@ -703,7 +717,7 @@ local function edit_instrument()
                     vals[sel] = edit_buf
                 end
                 editing = false
-                sel = (sel % #fields) + 1  -- advance to next field on confirm
+                sel = (sel % #fields) + 1
             elseif key == 'esc' then
                 editing = false
             elseif key == 'backspace' then
@@ -742,23 +756,35 @@ local function edit_instrument()
             end
         end
         draw()
-        ::inst_again::
+        ::inst_def_again::
     end
 
-    -- Apply values back to inst.
     local function parse_opt_num(s, mn, mx)
         if s == '' then return nil end
         local n = tonumber(s)
         return n and math.max(mn, math.min(mx, math.floor(n))) or nil
     end
 
-    if vals[1] ~= '' then inst.name = vals[1] end
-    inst.midi_output  = (dest_opts[vals[2]] == "None") and '' or (dest_opts[vals[2]] or '')
-    inst.midi_input   = (src_opts[vals[3]]  == "None") and '' or (src_opts[vals[3]]  or '')
-    inst.midi_channel = math.max(1, math.min(16, tonumber(vals[4]) or 1))
-    inst.bank_msb     = parse_opt_num(vals[5], 0, 127)
-    inst.bank_lsb     = parse_opt_num(vals[6], 0, 127)
-    inst.program      = parse_opt_num(vals[7], 0, 127)
+    local new_name        = vals[1] ~= '' and vals[1] or inst.name
+    inst.midi_output      = (dest_opts[vals[2]] == "None") and '' or (dest_opts[vals[2]] or '')
+    inst.midi_input       = (src_opts[vals[3]]  == "None") and '' or (src_opts[vals[3]]  or '')
+    inst.midi_channel     = math.max(1, math.min(16, tonumber(vals[4]) or 1))
+    inst.bank_msb         = parse_opt_num(vals[5], 0, 127)
+    inst.bank_lsb         = parse_opt_num(vals[6], 0, 127)
+    inst.program          = parse_opt_num(vals[7], 0, 127)
+
+    -- Handle name change: update instruments_by_name and all track references.
+    if new_name ~= old_name then
+        instruments_by_name[old_name] = nil
+        inst.name = new_name
+        instruments_by_name[new_name] = inst
+        for _, track in ipairs(tracks) do
+            if track.instrument_name == old_name then
+                track.instrument_name = new_name
+                db_mod.upsert_track(db, track, song.id)
+            end
+        end
+    end
 
     db_mod.upsert_instrument(db, inst, song.id)
     engine.output_ports[inst.id] = nil
@@ -770,6 +796,260 @@ local function edit_instrument()
 
     tui.clear()
     ui.set_status("Instrument updated: " .. inst.name)
+end
+
+-- Full-screen instruments list page.
+local function instruments_page()
+    local sel = math.max(1, #instruments > 0 and 1 or 0)
+
+    local function draw()
+        local w, h = tui.size()
+        tui.hide_cursor()
+        tui.clear()
+
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Instruments", tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(3, 2, "↑↓=select  E/Enter=edit  A=add  D=delete  X=sysex  ESC=close",
+            tui.BRIGHT_BLACK, tui.BLACK, 0)
+
+        if #instruments == 0 then
+            tui.print_at(5, 2, "(no instruments — press A to add one)", tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            for i, inst in ipairs(instruments) do
+                local label = string.format(" %-18s  ch:%-2d  out: %s",
+                    inst.name or '',
+                    inst.midi_channel or 1,
+                    inst.midi_output or '')
+                if i == sel then
+                    tui.print_at(4 + i, 2, "►" .. label, tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(4 + i, 2, " " .. label, tui.WHITE, tui.BLACK, 0)
+                end
+            end
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto inst_page_again end
+
+        if key == 'esc' then
+            break
+        elseif key == 'up' then
+            sel = math.max(1, sel - 1)
+        elseif key == 'down' then
+            sel = math.min(math.max(1, #instruments), sel + 1)
+        elseif key == 'e' or key == 'E' or key == 'enter' or key == 'return' then
+            if instruments[sel] then
+                tui.clear()
+                edit_instrument_def(instruments[sel])
+                sel = math.max(1, math.min(sel, #instruments))
+            end
+        elseif key == 'a' or key == 'A' then
+            local dests       = midi.destinations() or {}
+            local default_out = (dests[1] and dests[1].name) or ''
+            local srcs        = midi.sources()      or {}
+            local default_in  = (srcs[1]  and srcs[1].name)  or ''
+            local inst = {
+                name         = "Inst " .. (#instruments + 1),
+                midi_output  = default_out,
+                midi_input   = default_in,
+                midi_channel = math.min(16, #instruments + 1),
+                color        = 0,
+            }
+            db_mod.upsert_instrument(db, inst, song.id)
+            sysex_dumps[inst.id] = {}
+            instruments_by_name[inst.name] = inst
+            table.insert(instruments, inst)
+            open_and_configure_output(inst)
+            sel = #instruments
+        elseif key == 'd' or key == 'D' then
+            if #instruments > 0 then
+                local inst = instruments[sel]
+                -- Guard: check no track currently references this instrument.
+                local in_use = false
+                for _, track in ipairs(tracks) do
+                    if track.instrument_name == inst.name then
+                        in_use = true; break
+                    end
+                end
+                if in_use then
+                    ui.set_status("Instrument in use by a track — reassign tracks first (T)", tui.YELLOW)
+                else
+                    db_mod.delete_instrument(db, inst.id)
+                    instruments_by_name[inst.name] = nil
+                    sysex_dumps[inst.id] = nil
+                    engine.output_ports[inst.id] = nil
+                    table.remove(instruments, sel)
+                    sel = math.max(1, math.min(sel, #instruments))
+                    ui.set_status("Instrument deleted")
+                end
+            end
+        elseif key == 'x' or key == 'X' then
+            if instruments[sel] then
+                tui.clear()
+                edit_sysex(instruments[sel])
+            end
+        end
+        draw()
+        ::inst_page_again::
+    end
+    tui.clear()
+end
+
+-- Edit the current track's name and instrument assignment.
+local function edit_track()
+    local track = current_track()
+    if not track then return end
+
+    -- Build picker list from current instruments.
+    local inst_names = {}
+    for _, inst in ipairs(instruments) do
+        inst_names[#inst_names+1] = inst.name
+    end
+    if #inst_names == 0 then inst_names = {"(none)"} end
+
+    local function name_index(name)
+        for i, n in ipairs(inst_names) do
+            if n == (name or '') then return i end
+        end
+        return 1
+    end
+
+    local fields = {
+        { label="Track Name",  type="text"                       },
+        { label="Instrument",  type="picker", opts=inst_names    },
+    }
+
+    local vals = {
+        track.name or '',
+        name_index(track.instrument_name),
+    }
+
+    local LABEL_W  = 14
+    local VAL_COL  = LABEL_W + 5
+    local sel      = 1
+    local editing  = false
+    local edit_buf = ''
+
+    local function pad(s, n)
+        s = tostring(s or '')
+        if #s >= n then return s:sub(1, n) end
+        return s .. string.rep(' ', n - #s)
+    end
+
+    local function draw()
+        local w, h = tui.size()
+        local val_w = math.max(10, w - VAL_COL - 4)
+        tui.hide_cursor()
+        tui.clear()
+
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Track: " .. track.name, tui.WHITE, tui.BLUE, tui.BOLD)
+
+        for i, f in ipairs(fields) do
+            local row    = i + 2
+            local is_sel = (i == sel)
+            local lbl    = string.format("  %-" .. LABEL_W .. "s  ", f.label)
+
+            if is_sel then
+                tui.print_at(row, 1, lbl, tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+            else
+                tui.print_at(row, 1, lbl, tui.BRIGHT_WHITE, tui.BLACK, 0)
+            end
+
+            if f.type == "picker" then
+                local display = pad(f.opts[vals[i]] or '', val_w)
+                if is_sel then
+                    tui.print_at(row, VAL_COL, "◄ " .. display .. " ►", tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                end
+            else
+                if is_sel and editing then
+                    local display = pad(edit_buf, val_w)
+                    tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.YELLOW, tui.BOLD)
+                    tui.move(row, VAL_COL + 2 + math.min(#edit_buf, val_w))
+                    tui.show_cursor()
+                else
+                    local display = pad(vals[i], val_w)
+                    if is_sel then
+                        tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.CYAN, tui.BOLD)
+                    else
+                        tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                    end
+                end
+            end
+        end
+
+        local hint_row = #fields + 4
+        if editing then
+            tui.print_at(hint_row, 1,
+                pad("  Enter=confirm  ESC=cancel edit", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            tui.print_at(hint_row, 1,
+                pad("  ↑↓/Tab=navigate  ←→=cycle  Enter=edit  S=save  ESC=cancel", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto track_edit_again end
+
+        if editing then
+            if key == 'enter' or key == 'return' then
+                vals[sel] = edit_buf
+                editing = false
+                sel = (sel % #fields) + 1
+            elseif key == 'esc' then
+                editing = false
+            elseif key == 'backspace' then
+                if #edit_buf > 0 then edit_buf = edit_buf:sub(1, -2) end
+            elseif #key == 1 then
+                edit_buf = edit_buf .. key
+            end
+        else
+            if key == 'esc' then
+                tui.clear()
+                return
+            elseif key == 's' or key == 'S' then
+                break
+            elseif key == 'tab' or key == 'down' then
+                sel = (sel % #fields) + 1
+            elseif key == 'up' then
+                sel = ((sel - 2 + #fields) % #fields) + 1
+            elseif key == 'left' then
+                if fields[sel].type == "picker" then
+                    local n = #fields[sel].opts
+                    vals[sel] = ((vals[sel] - 2 + n) % n) + 1
+                end
+            elseif key == 'right' then
+                if fields[sel].type == "picker" then
+                    local n = #fields[sel].opts
+                    vals[sel] = (vals[sel] % n) + 1
+                end
+            elseif key == 'enter' or key == 'return' then
+                if fields[sel].type ~= "picker" then
+                    editing  = true
+                    edit_buf = vals[sel]
+                end
+            end
+        end
+        draw()
+        ::track_edit_again::
+    end
+
+    if vals[1] ~= '' then track.name = vals[1] end
+    track.instrument_name = inst_names[vals[2]] or track.instrument_name
+    db_mod.upsert_track(db, track, song.id)
+    tui.clear()
+    ui.set_status("Track updated: " .. track.name)
 end
 
 local function edit_bpm()
@@ -799,8 +1079,9 @@ local function rename_song()
 end
 
 local function edit_clip_piano_roll()
-    local inst = current_inst()
-    local clip = current_clip()
+    local track = current_track()
+    local inst  = current_inst()
+    local clip  = current_clip()
     if not clip then
         ui.set_status("No clip here — press N to create one first", tui.YELLOW)
         return
@@ -824,7 +1105,6 @@ local function edit_clip_piano_roll()
 
     if was_playing then
         engine.start_transport()
-        -- Re-launch clip if it was active.
         if inst and engine.active_clips[ui.cursor.track] then
             engine.launch(ui.cursor.track, inst.id, clip, events[clip.id] or {})
         end
@@ -832,18 +1112,18 @@ local function edit_clip_piano_roll()
 end
 
 local function toggle_arp()
-    local ti   = ui.cursor.track
-    local inst = current_inst()
-    if not inst then return end
+    local ti    = ui.cursor.track
+    local track = current_track()
+    local inst  = current_inst()
+    if not track then return end
     if arp.states[ti] then
-        arp.disable(ti, engine.output_ports[inst.id])
-        db_mod.save_arp_settings(db, inst.id, { mode="up", octaves=1, rate=0.25, gate=0.8, hold=false })
+        arp.disable(ti, inst and engine.output_ports[inst.id])
+        db_mod.save_arp_settings(db, track.id, { mode="up", octaves=1, rate=0.25, gate=0.8, hold=false })
         ui.set_status("Arp OFF — track " .. ti)
     else
-        local settings = db_mod.get_arp_settings(db, inst.id)
+        local settings = db_mod.get_arp_settings(db, track.id)
         arp.enable(ti, settings, engine.cur_beat())
-        -- Open MIDI input if needed.
-        if inst.midi_input and inst.midi_input ~= '' then
+        if inst and inst.midi_input and inst.midi_input ~= '' then
             engine.open_input(inst.midi_input)
         end
         if not engine.playing then engine.start_transport() end
@@ -852,26 +1132,26 @@ local function toggle_arp()
 end
 
 local function cycle_arp_mode()
-    local ti   = ui.cursor.track
-    local inst = current_inst()
+    local ti    = ui.cursor.track
+    local track = current_track()
     if not arp.states[ti] then
         ui.set_status("Arp not active on this track (press P to enable)", tui.YELLOW)
         return
     end
     local next_mode = arp.cycle(ti, "mode", arp.MODES)
-    if inst then db_mod.save_arp_settings(db, inst.id, arp.get_state(ti)) end
+    if track then db_mod.save_arp_settings(db, track.id, arp.get_state(ti)) end
     ui.set_status("Arp mode: " .. next_mode)
 end
 
 local function cycle_arp_rate()
-    local ti   = ui.cursor.track
-    local inst = current_inst()
+    local ti    = ui.cursor.track
+    local track = current_track()
     if not arp.states[ti] then
         ui.set_status("Arp not active on this track (press P to enable)", tui.YELLOW)
         return
     end
     local next_rate = arp.cycle(ti, "rate", arp.RATES)
-    if inst then db_mod.save_arp_settings(db, inst.id, arp.get_state(ti)) end
+    if track then db_mod.save_arp_settings(db, track.id, arp.get_state(ti)) end
     ui.set_status("Arp rate: " .. (arp.RATE_NAMES[next_rate] or tostring(next_rate)))
 end
 
@@ -879,7 +1159,6 @@ end
 
 local running       = true
 local DRAW_INTERVAL = 1.0 / 30   -- target ~30 FPS
--- Initialise to a negative value so the very first iteration always draws.
 local last_draw     = -1
 
 while running do
@@ -890,9 +1169,10 @@ while running do
     -- 2. Arp output tick (generates arpeggiated notes per active track).
     if engine.playing then
         local cur = engine.cur_beat()
-        for ti, inst in ipairs(instruments) do
+        for ti, track in ipairs(tracks) do
             if arp.states[ti] then
-                local port_rec = engine.output_ports[inst.id]
+                local inst     = instruments_by_name[track.instrument_name]
+                local port_rec = inst and engine.output_ports[inst.id]
                 if port_rec then arp.tick(ti, cur, port_rec) end
             end
         end
@@ -931,7 +1211,8 @@ while running do
         elseif key == 'c' or key == 'C' then edit_clip_settings()
         elseif key == 'n' or key == 'N' then new_clip()
         elseif key == 'd' or key == 'D' then delete_clip()
-        elseif key == 'i' or key == 'I' then edit_instrument()
+        elseif key == 'i' or key == 'I' then instruments_page()
+        elseif key == 't' or key == 'T' then edit_track()
         elseif key == 'b' or key == 'B' then edit_bpm()
         elseif key == 'p' or key == 'P' then toggle_arp()
         elseif key == 'a' or key == 'A' then cycle_arp_mode()
@@ -943,7 +1224,7 @@ while running do
         end
     end
 
-    -- 4. Redraw at ~30 FPS.
+    -- 5. Redraw at ~30 FPS.
     local now = os.monotime()
     if (now - last_draw) >= DRAW_INTERVAL then
         ui.draw(engine)
@@ -954,9 +1235,10 @@ end
 -- ── Cleanup ───────────────────────────────────────────────────────────────────
 
 -- Disable all arps (sends note-off for any active arp note).
-for ti, inst in ipairs(instruments) do
+for ti, track in ipairs(tracks) do
     if arp.states[ti] then
-        arp.disable(ti, engine.output_ports[inst.id])
+        local inst = instruments_by_name[track.instrument_name]
+        arp.disable(ti, inst and engine.output_ports[inst.id])
     end
 end
 

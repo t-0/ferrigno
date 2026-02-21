@@ -53,6 +53,14 @@ function M.init_schema(db)
             bank_lsb     INTEGER          DEFAULT NULL,
             program      INTEGER          DEFAULT NULL
         );
+        CREATE TABLE IF NOT EXISTS tracks (
+            id              INTEGER PRIMARY KEY,
+            song_id         INTEGER NOT NULL,
+            name            TEXT    NOT NULL DEFAULT 'Track',
+            track_index     INTEGER NOT NULL DEFAULT 0,
+            instrument_name TEXT    NOT NULL DEFAULT '',
+            color           INTEGER NOT NULL DEFAULT 0
+        );
         CREATE TABLE IF NOT EXISTS clips (
             id            INTEGER PRIMARY KEY,
             instrument_id INTEGER NOT NULL,
@@ -114,6 +122,17 @@ function M.init_schema(db)
     }) do
         pcall(function() db:exec("ALTER TABLE " .. col) end)
     end
+    -- Migrate instruments → tracks: if tracks is empty but instruments has rows,
+    -- populate tracks from instruments so existing clip references (instrument_id)
+    -- remain valid (track.id == old instrument.id).
+    local tc = db:query("SELECT COUNT(*) as n FROM tracks") or {}
+    local ic = db:query("SELECT COUNT(*) as n FROM instruments") or {}
+    if (tc[1] and tc[1].n == 0) and (ic[1] and ic[1].n > 0) then
+        db:exec([[
+            INSERT OR IGNORE INTO tracks (id, song_id, name, track_index, instrument_name, color)
+            SELECT id, song_id, name, track_index, name, color FROM instruments
+        ]])
+    end
 end
 
 function M.get_or_create_song(db, name)
@@ -135,15 +154,15 @@ function M.get_instruments(db, song_id)
 end
 
 -- Insert or update an instrument. Sets inst.id on insert.
+-- instruments are standalone patch/device definitions; track_index is not used.
 function M.upsert_instrument(db, inst, song_id)
     if inst.id then
         run(db,
-            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, track_index=?, color=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
+            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, color=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
             inst.name,
             inst.midi_output  or '',
             inst.midi_input   or '',
             inst.midi_channel or 1,
-            inst.track_index,
             inst.color        or 0,
             inst.bank_msb,
             inst.bank_lsb,
@@ -151,13 +170,12 @@ function M.upsert_instrument(db, inst, song_id)
             inst.id)
     else
         run(db,
-            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,track_index,color,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,color,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?,?)",
             song_id,
             inst.name,
             inst.midi_output  or '',
             inst.midi_input   or '',
             inst.midi_channel or 1,
-            inst.track_index,
             inst.color        or 0,
             inst.bank_msb,
             inst.bank_lsb,
@@ -168,10 +186,46 @@ function M.upsert_instrument(db, inst, song_id)
 end
 
 function M.delete_instrument(db, inst_id)
-    -- Cascade manually (no FK enforcement guarantee without PRAGMA).
-    run(db, "DELETE FROM midi_events WHERE clip_id IN (SELECT id FROM clips WHERE instrument_id=?)", inst_id)
-    run(db, "DELETE FROM clips WHERE instrument_id=?", inst_id)
+    -- Clips belong to tracks (not instruments), so only remove sysex + instrument row.
+    run(db, "DELETE FROM sysex_dumps WHERE instrument_id=?", inst_id)
     run(db, "DELETE FROM instruments WHERE id=?", inst_id)
+end
+
+-- ── Tracks ────────────────────────────────────────────────────────────────────
+
+function M.get_tracks(db, song_id)
+    return db:query("SELECT * FROM tracks WHERE song_id=? ORDER BY track_index", song_id) or {}
+end
+
+-- Insert or update a track. Sets track.id on insert.
+function M.upsert_track(db, track, song_id)
+    if track.id then
+        run(db,
+            "UPDATE tracks SET name=?, track_index=?, instrument_name=?, color=? WHERE id=?",
+            track.name,
+            track.track_index     or 0,
+            track.instrument_name or '',
+            track.color           or 0,
+            track.id)
+    else
+        run(db,
+            "INSERT INTO tracks (song_id,name,track_index,instrument_name,color) VALUES (?,?,?,?,?)",
+            song_id,
+            track.name,
+            track.track_index     or 0,
+            track.instrument_name or '',
+            track.color           or 0)
+        track.id = db:last_insert_rowid()
+    end
+    return track
+end
+
+function M.delete_track(db, track_id)
+    -- Cascade: midi_events → clips → arp_settings → track row.
+    run(db, "DELETE FROM midi_events WHERE clip_id IN (SELECT id FROM clips WHERE instrument_id=?)", track_id)
+    run(db, "DELETE FROM clips WHERE instrument_id=?", track_id)
+    run(db, "DELETE FROM arp_settings WHERE instrument_id=?", track_id)
+    run(db, "DELETE FROM tracks WHERE id=?", track_id)
 end
 
 function M.get_clips(db, instrument_id)
