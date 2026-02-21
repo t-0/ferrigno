@@ -5,20 +5,20 @@
 --   Arrow keys       Navigate the session grid
 --   SPACE            Start / stop transport
 --   ENTER            Trigger (launch) the clip under the cursor
---   ESC              Stop the clip on the current track
 --   R                Start / stop recording on the current track
 --   E                Open piano roll editor for clip under cursor
 --   N                New empty clip in current slot
 --   D                Delete clip in current slot
 --   I                Edit current instrument (name, MIDI device, channel)
 --   B                Set BPM
+--   F                Rename song
 --   P                Toggle arpeggiator on/off for current track
 --   A                Cycle arp mode  (when arp is on)
 --   O                Cycle arp rate  (when arp is on)
 --   +  (or =)        Add a new track
 --   -                Remove the rightmost track (if empty)
 --   S                Save to database
---   Q                Quit (auto-saves first)
+--   ESC              Quit (auto-saves first)
 
 local script_dir = (arg and arg[0]) and arg[0]:match("(.*/)") or "./"
 local function req(name)
@@ -273,50 +273,84 @@ end
 local function edit_instrument()
     local inst = current_inst()
     if not inst then return end
-    local h = select(2, tui.size())
 
-    tui.clear()
-
-    -- Show available MIDI devices.
     local dests = midi.destinations() or {}
     local srcs  = midi.sources()      or {}
-    tui.color(tui.BRIGHT_YELLOW, tui.BLACK, tui.BOLD)
-    tui.print_at(1, 1, " Instrument Settings — ESC to cancel each field ")
-    tui.color(tui.YELLOW, tui.BLACK, 0)
-    tui.print_at(3, 2, "MIDI Outputs:")
-    for i, d in ipairs(dests) do
-        tui.color(tui.WHITE, tui.BLACK, 0)
-        tui.print_at(3 + i, 4, string.format("%d: %s", i, d))
-    end
-    local src_top = 3 + #dests + 1
-    tui.color(tui.YELLOW, tui.BLACK, 0)
-    tui.print_at(src_top, 2, "MIDI Inputs:")
-    for i, s in ipairs(srcs) do
-        tui.color(tui.WHITE, tui.BLACK, 0)
-        tui.print_at(src_top + i, 4, string.format("%d: %s", i, s))
-    end
-    tui.flush()
 
-    local edit_row = src_top + #srcs + 2
+    -- Pick from an enumerated list. items = {"None", name1, name2, ...}
+    -- Returns the selected name, or nil if ESC pressed.
+    local function pick_port(label, items, current)
+        local w, h = tui.size()
+        local sel = 1  -- default to "None"
+        for i, v in ipairs(items) do
+            if v == current then sel = i; break end
+        end
 
-    local function field(label, key, current)
-        local val = ui.read_line(edit_row, label, tostring(current or ''))
-        edit_row = edit_row + 1
-        if val == nil then return end  -- ESC = keep current
-        if key == 'midi_channel' then
-            inst[key] = math.max(1, math.min(16, tonumber(val) or inst[key]))
-        else
-            inst[key] = val
+        local function draw_picker()
+            tui.clear()
+            tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+            tui.print_at(1, 2, label, tui.WHITE, tui.BLUE, tui.BOLD)
+            tui.print_at(3, 2, "Use ↑↓ to select, ENTER to confirm, ESC to cancel.",
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+            for i, v in ipairs(items) do
+                if i == sel then
+                    tui.print_at(3 + i, 2, string.format(" ► %s", v), tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(3 + i, 2, string.format("   %s", v), tui.WHITE, tui.BLACK, 0)
+                end
+            end
+            tui.flush()
+        end
+
+        draw_picker()
+        while true do
+            local key = tui.read_key(5000)
+            if not key then goto again end
+            if key == 'up'   then sel = math.max(1, sel - 1)
+            elseif key == 'down' then sel = math.min(#items, sel + 1)
+            elseif key == 'enter' or key == 'return' then return items[sel]
+            elseif key == 'esc' then return nil
+            end
+            draw_picker()
+            ::again::
         end
     end
 
-    field("Name          ", "name",         inst.name)
-    field("MIDI Output   ", "midi_output",  inst.midi_output  or '')
-    field("MIDI Input    ", "midi_input",   inst.midi_input   or '')
-    field("Channel (1-16)", "midi_channel", inst.midi_channel or 1)
+    -- Build option lists with "None" prepended.
+    local dest_items = {"None"}
+    for _, d in ipairs(dests) do dest_items[#dest_items+1] = d end
+
+    local src_items = {"None"}
+    for _, s in ipairs(srcs) do src_items[#src_items+1] = s end
+
+    -- Name (free text, same as before).
+    local w, h = tui.size()
+    tui.clear()
+    tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+    tui.print_at(1, 2, "Instrument Settings", tui.WHITE, tui.BLUE, tui.BOLD)
+    local name_val = ui.read_line(3, "Name: ", inst.name)
+    if name_val and name_val ~= '' then inst.name = name_val end
+
+    -- MIDI Output picker.
+    local out_val = pick_port("MIDI Output", dest_items, inst.midi_output or "None")
+    if out_val ~= nil then
+        inst.midi_output = (out_val == "None") and '' or out_val
+    end
+
+    -- MIDI Input picker.
+    local in_val = pick_port("MIDI Input", src_items, inst.midi_input or "None")
+    if in_val ~= nil then
+        inst.midi_input = (in_val == "None") and '' or in_val
+    end
+
+    -- Channel (free text, small range).
+    tui.clear()
+    local ch_val = ui.read_line(3, "Channel (1-16): ", tostring(inst.midi_channel or 1))
+    if ch_val then
+        inst.midi_channel = math.max(1, math.min(16, tonumber(ch_val) or inst.midi_channel))
+    end
 
     db_mod.upsert_instrument(db, inst, song.id)
-    -- Re-open output with updated settings.
     engine.output_ports[inst.id] = nil
     engine.open_output(inst)
     tui.clear()
@@ -457,7 +491,7 @@ while running do
     -- 4. Non-blocking key read (10 ms timeout keeps timing granularity tight).
     local key = tui.read_key(10)
     if key then
-        if key == 'q' or key == 'Q' then
+        if key == 'esc' then
             running = false
 
         elseif key == ' ' then
@@ -471,10 +505,6 @@ while running do
 
         elseif key == 'enter' or key == 'return' then
             trigger_clip()
-
-        elseif key == 'esc' then
-            engine.stop_track(ui.cursor.track)
-            ui.set_status("Track " .. ui.cursor.track .. " stopped")
 
         elseif key == 'up'    then ui.move_cursor(0, -1)
         elseif key == 'down'  then ui.move_cursor(0,  1)
