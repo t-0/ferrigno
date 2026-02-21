@@ -115,7 +115,7 @@ pub unsafe fn closelistfield(
         (*constructor_control)
             .constructorcontrol_expressiondescription
             .expressiondescription_expressionkind = ExpressionKind::Void;
-        if (*constructor_control).constructorcontrol_counttostore == 50 as i32 {
+        if (*constructor_control).constructorcontrol_counttostore == LFIELDS_PER_FLUSH {
             luak_setlist(
                 interpreter,
                 lexical_state,
@@ -250,7 +250,7 @@ pub unsafe fn reglevel(lexical_state: *mut LexicalState, function_state: *mut Fu
             if (*variable_description)
                 .variabledescription_content
                 .variabledescriptioncontent_kind as i32
-                != 3
+                != RDKCTC
             {
                 return (*variable_description)
                     .variabledescription_content
@@ -278,7 +278,7 @@ pub unsafe fn localdebuginfo(
         if (*variable_description)
             .variabledescription_content
             .variabledescriptioncontent_kind as i32
-            == 3
+            == RDKCTC
         {
             return null_mut();
         } else {
@@ -351,14 +351,14 @@ pub unsafe fn allocate_upvalue_description(
             lexical_state,
             function_state,
             (*function_state).functionstate_countupvalues as i32 + 1,
-            255 as i32,
+            MAXUPVAL as i32,
             c"upvalues".as_ptr(),
         );
         (*prototype).prototype_upvalues.grow(
             interpreter,
             (*function_state).functionstate_countupvalues as usize,
-            if 255 as usize <= (!0usize) / size_of::<UpValueDescription>() {
-                255
+            if MAXUPVAL <= (!0usize) / size_of::<UpValueDescription>() {
+                MAXUPVAL
             } else {
                 (!0usize) / size_of::<UpValueDescription>()
             },
@@ -408,7 +408,7 @@ pub unsafe fn newupvalue(
                 .upvaluedescription_kind;
         }
         (*upvalue_description).upvaluedescription_name = name;
-        if (*(*function_state).functionstate_prototype).get_marked() & 1 << 5 != 0 && (*name).get_marked() & (1 << 3 | 1 << 4) != 0
+        if (*(*function_state).functionstate_prototype).get_marked() & BLACKBIT != 0 && (*name).get_marked() & (WHITE0BIT | WHITE1BIT) != 0
         {
             Object::luac_barrier_(
                 interpreter,
@@ -434,7 +434,7 @@ pub unsafe fn searchvar(
                 if (*variable_description)
                     .variabledescription_content
                     .variabledescriptioncontent_kind as i32
-                    == 3
+                    == RDKCTC
                 {
                     ExpressionDescription::init_exp(var, ExpressionKind::Constant2, (*function_state).functionstate_firstlocal + i);
                 } else {
@@ -489,11 +489,11 @@ pub unsafe fn fixforjump(
         if back != 0 {
             offset = -offset;
         }
-        if offset > (1 << 8 + 8 + 1) - 1 {
+        if offset > MAXARG_BX {
             luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
         *jmp =
-            *jmp & !(!(0xFFFFFFFFu32 << 8 + 8 + 1) << POSITION_K) | (offset as u32) << POSITION_K & !(0xFFFFFFFFu32 << 8 + 8 + 1) << POSITION_K;
+            *jmp & !(!(0xFFFFFFFFu32 << SIZE_BX) << POSITION_K) | (offset as u32) << POSITION_K & !(0xFFFFFFFFu32 << SIZE_BX) << POSITION_K;
     }
 }
 pub unsafe fn checktoclose(
@@ -557,8 +557,8 @@ pub unsafe fn code_get_jump(function_state: *mut FunctionState, program_counter:
         let offset: i32 = (*((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
             .offset(program_counter as isize)
             >> POSITION_A
-            & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << 0) as i32
-            - ((1 << 8 + 8 + 1 + 8) - 1 >> 1);
+            & !(0xFFFFFFFFu32 << SIZE_AX) << 0) as i32
+            - OFFSET_SJ;
         if offset == -1 {
             return -1;
         } else {
@@ -574,11 +574,11 @@ pub unsafe fn fixjump(
         let jmp: *mut u32 = &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
             .offset(program_counter as isize) as *mut u32;
         let offset: i32 = dest - (program_counter + 1);
-        if !(-((1 << 8 + 8 + 1 + 8) - 1 >> 1) <= offset && offset <= (1 << 8 + 8 + 1 + 8) - 1 - ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) {
+        if !(-OFFSET_SJ <= offset && offset <= MAXARG_AX as i32 - OFFSET_SJ) {
             luax_syntaxerror(interpreter, lexical_state, c"control structure too long".as_ptr());
         }
-        *jmp = *jmp & !(!(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << POSITION_A)
-            | ((offset + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8 + 8 + 1 + 8) << POSITION_A;
+        *jmp = *jmp & !(!(0xFFFFFFFFu32 << SIZE_AX) << POSITION_A)
+            | ((offset + OFFSET_SJ) as u32) << POSITION_A & !(0xFFFFFFFFu32 << SIZE_AX) << POSITION_A;
     }
 }
 pub unsafe fn luak_concat(
@@ -655,7 +655,7 @@ pub unsafe fn patchtestreg(function_state: *mut FunctionState, node: i32, reg: i
         if (*i >> 0 & !(0xFFFFFFFFu32 << 7) << 0) != OPCODE_TESTSET {
             return 0;
         }
-        if reg != (1 << 8) - 1 && reg != (*i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 {
+        if reg != NO_REG && reg != (*i >> POSITION_B & !(0xFFFFFFFFu32 << 8) << 0) as i32 {
             *i = *i & !(!(0xFFFFFFFFu32 << 8) << POSITION_A) | (reg as u32) << POSITION_A & !(0xFFFFFFFFu32 << 8) << POSITION_A;
         } else {
             *i = OPCODE_TEST << 0
@@ -670,7 +670,7 @@ pub unsafe fn patchtestreg(function_state: *mut FunctionState, node: i32, reg: i
 pub unsafe fn removevalues(function_state: *mut FunctionState, mut list: i32) {
     unsafe {
         while list != -1 {
-            patchtestreg(function_state, list, (1 << 8) - 1);
+            patchtestreg(function_state, list, NO_REG);
             list = code_get_jump(function_state, list);
         }
     }
@@ -695,7 +695,7 @@ pub unsafe fn luak_patchlist(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, list: i32, target: i32,
 ) {
     unsafe {
-        patchlistaux(interpreter, lexical_state, function_state, list, target, (1 << 8) - 1, target);
+        patchlistaux(interpreter, lexical_state, function_state, list, target, NO_REG, target);
     }
 }
 pub unsafe fn luak_patchtohere(
@@ -713,16 +713,16 @@ pub unsafe fn savelineinfo(
     unsafe {
         let mut linedif: i32 = line - (*function_state).functionstate_previousline;
         let program_counter: i32 = (*function_state).functionstate_programcounter - 1;
-        if abs(linedif) >= 0x80 as i32 || {
+        if abs(linedif) >= MAXLINEDIFF || {
             let fresh132 = (*function_state).functionstate_iwthabs;
             (*function_state).functionstate_iwthabs = ((*function_state).functionstate_iwthabs).wrapping_add(1);
-            fresh132 as i32 >= 128 as i32
+            fresh132 as i32 >= MAXLINEDIFF
         } {
             (*prototype).prototype_absolutelineinfo.grow(
                 interpreter,
                 (*function_state).functionstate_countabslineinfo as usize,
-                if 0x7FFFFFFF as usize <= (!0usize) / size_of::<AbsoluteLineInfo>() {
-                    0x7FFFFFFF
+                if MAX_INT <= (!0usize) / size_of::<AbsoluteLineInfo>() {
+                    MAX_INT
                 } else {
                     (!0usize) / size_of::<AbsoluteLineInfo>()
                 },
@@ -734,13 +734,13 @@ pub unsafe fn savelineinfo(
             let fresh133 = (*function_state).functionstate_countabslineinfo;
             (*function_state).functionstate_countabslineinfo = (*function_state).functionstate_countabslineinfo + 1;
             (*((*prototype).prototype_absolutelineinfo.vectort_pointer).offset(fresh133 as isize)).absolutelineinfo_line = line;
-            linedif = -(0x80 as i32);
+            linedif = -MAXLINEDIFF;
             (*function_state).functionstate_iwthabs = 1;
         }
         (*prototype).prototype_lineinfo.grow(
             interpreter,
             program_counter as usize,
-            if 0x7FFFFFFF <= (!(0usize)) { 0x7FFFFFFF } else { !(0usize) },
+            if MAX_INT <= (!(0usize)) { MAX_INT } else { !(0usize) },
             c"opcodes".as_ptr(),
         );
         *((*prototype).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) = linedif as i8;
@@ -751,7 +751,7 @@ pub unsafe fn removelastlineinfo(function_state: *mut FunctionState) {
     unsafe {
         let prototype: *mut Prototype = (*function_state).functionstate_prototype;
         let program_counter: i32 = (*function_state).functionstate_programcounter - 1;
-        if *((*prototype).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32 != -(0x80 as i32) {
+        if *((*prototype).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32 != -MAXLINEDIFF {
             (*function_state).functionstate_previousline -=
                 *((*prototype).prototype_lineinfo.vectort_pointer).offset(program_counter as isize) as i32;
             (*function_state).functionstate_iwthabs = ((*function_state).functionstate_iwthabs).wrapping_sub(1);
@@ -759,7 +759,7 @@ pub unsafe fn removelastlineinfo(function_state: *mut FunctionState) {
         } else {
             (*function_state).functionstate_countabslineinfo -= 1;
             (*function_state).functionstate_countabslineinfo;
-            (*function_state).functionstate_iwthabs = (128 as i32 + 1) as u8;
+            (*function_state).functionstate_iwthabs = (MAXLINEDIFF + 1) as u8;
         };
     }
 }
@@ -778,8 +778,8 @@ pub unsafe fn luak_code(
         (*prototype).prototype_code.grow(
             interpreter,
             (*function_state).functionstate_programcounter as usize,
-            if 0x7FFFFFFF as usize <= (!0usize) / size_of::<u32>() {
-                0x7FFFFFFF
+            if MAX_INT <= (!0usize) / size_of::<u32>() {
+                MAX_INT
             } else {
                 (!0usize) / size_of::<u32>()
             },
@@ -831,7 +831,7 @@ pub unsafe fn codeasbx(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, o: u32, a: i32, bc: i32,
 ) -> i32 {
     unsafe {
-        let b: u32 = (bc + ((1 << 8 + 8 + 1) - 1 >> 1)) as u32;
+        let b: u32 = (bc + OFFSET_SBX) as u32;
         return luak_code(
             interpreter,
             lexical_state,
@@ -844,7 +844,7 @@ pub unsafe fn codesj(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, o: u32, sj: i32, k: i32,
 ) -> i32 {
     unsafe {
-        let j = (sj + ((1 << 8 + 8 + 1 + 8) - 1 >> 1)) as u32;
+        let j = (sj + OFFSET_SJ) as u32;
         return luak_code(
             interpreter,
             lexical_state,
@@ -869,7 +869,7 @@ pub unsafe fn code_constant(
     interpreter: *mut Interpreter, lexical_state: *mut LexicalState, function_state: *mut FunctionState, reg: i32, k: i32,
 ) -> i32 {
     unsafe {
-        if k <= (1 << 8 + 8 + 1) - 1 {
+        if k <= MAXARG_BX {
             return luak_codeabx(interpreter, lexical_state, function_state, OPCODE_LOADK, reg, k as u32);
         } else {
             let p = luak_codeabx(interpreter, lexical_state, function_state, OPCODE_LOADKX, reg, 0);
@@ -884,7 +884,7 @@ pub unsafe fn luak_checkstack(
     unsafe {
         let new_stack = (*function_state).functionstate_freereg as i32 + n;
         if new_stack > (*(*function_state).functionstate_prototype).prototype_maximumstacksize as i32 {
-            if new_stack >= 255 as i32 {
+            if new_stack >= MAXREGS {
                 luax_syntaxerror(
                     interpreter,
                     lexical_state,
@@ -985,8 +985,8 @@ pub unsafe fn addk(
         (*prototype).prototype_constants.grow(
             interpreter,
             count_constants as usize,
-            if ((1 << 8 + 8 + 1 + 8) - 1) as usize <= (!0usize) / size_of::<TValue>() {
-                (1 << 8 + 8 + 1 + 8) - 1
+            if MAXARG_AX <= (!0usize) / size_of::<TValue>() {
+                MAXARG_AX
             } else {
                 (!0usize) / size_of::<TValue>()
             },
@@ -1005,7 +1005,7 @@ pub unsafe fn addk(
         (*function_state).functionstate_countconstants += 1;
         (*function_state).functionstate_countconstants;
         if (*v).is_collectable() {
-            if (*prototype).get_marked() & 1 << 5 != 0 && (*(*v).tvalue_value.value_object).get_marked() & (1 << 3 | 1 << 4) != 0 {
+            if (*prototype).get_marked() & BLACKBIT != 0 && (*(*v).tvalue_value.value_object).get_marked() & (WHITE0BIT | WHITE1BIT) != 0 {
                 Object::luac_barrier_(
                     interpreter,
                     &mut (*(prototype as *mut Object)),
@@ -1051,7 +1051,7 @@ pub unsafe fn luak_number_k(
         if !F2I::Equal.convert_f64_i64(number, &mut ik) {
             return addk(interpreter, lexical_state, function_state, &mut tvalue, &mut tvalue);
         } else {
-            let nbm: i32 = 53 as i32;
+            let nbm: i32 = NBM;
             let q: f64 = ldexp_(1.0f64, -nbm + 1);
             let k: f64 = if ik == 0 { q } else { number + number * q };
             let mut kv: TValue = TValue::new(TagVariant::NumericNumber);
@@ -1572,7 +1572,7 @@ pub unsafe fn code_expression_to_constant(
             match (*expression_description).expressiondescription_expressionkind {
                 | ExpressionKind::True => {
                     info = bool_true(interpreter, lexical_state, function_state);
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1582,7 +1582,7 @@ pub unsafe fn code_expression_to_constant(
                 },
                 | ExpressionKind::False => {
                     info = bool_false(interpreter, lexical_state, function_state);
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1592,7 +1592,7 @@ pub unsafe fn code_expression_to_constant(
                 },
                 | ExpressionKind::Nil => {
                     info = nil_k(interpreter, lexical_state, function_state);
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1607,7 +1607,7 @@ pub unsafe fn code_expression_to_constant(
                         function_state,
                         (*expression_description).expressiondescription_value.value_integer,
                     );
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1622,7 +1622,7 @@ pub unsafe fn code_expression_to_constant(
                         function_state,
                         (*expression_description).expressiondescription_value.value_number,
                     );
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1637,7 +1637,7 @@ pub unsafe fn code_expression_to_constant(
                         function_state,
                         (*expression_description).expressiondescription_value.value_tstring,
                     );
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1647,7 +1647,7 @@ pub unsafe fn code_expression_to_constant(
                 },
                 | ExpressionKind::Constant => {
                     info = (*expression_description).expressiondescription_value.value_info;
-                    if info <= (1 << 8) - 1 {
+                    if info <= MAXARG_C {
                         (*expression_description).expressiondescription_expressionkind = ExpressionKind::Constant;
                         (*expression_description).expressiondescription_value.value_info = info;
                         return 1;
@@ -1835,7 +1835,7 @@ pub unsafe fn jumponcond(
             lexical_state,
             function_state,
             OPCODE_TESTSET,
-            (1 << 8) - 1,
+            NO_REG,
             (*expression_description).expressiondescription_value.value_info,
             0,
             cond_0,
@@ -1962,7 +1962,7 @@ pub unsafe fn is_k_string(function_state: *mut FunctionState, expression_descrip
     unsafe {
         return (*expression_description).expressiondescription_expressionkind == ExpressionKind::Constant
             && !((*expression_description).expressiondescription_t != (*expression_description).expressiondescription_f)
-            && (*expression_description).expressiondescription_value.value_info <= ((1 << 8) - 1)
+            && (*expression_description).expressiondescription_value.value_info <= MAXARG_C
             && (*((*(*function_state).functionstate_prototype).prototype_constants.vectort_pointer)
                 .offset((*expression_description).expressiondescription_value.value_info as isize))
             .get_tagvariant()
@@ -2052,7 +2052,7 @@ pub unsafe fn codebini(
     e1: *mut ExpressionDescription, e2: *mut ExpressionDescription, flip: i32, line: i32, event: u32,
 ) {
     unsafe {
-        let v2: i32 = (*e2).expressiondescription_value.value_integer as i32 + ((1 << 8) - 1 >> 1);
+        let v2: i32 = (*e2).expressiondescription_value.value_integer as i32 + OFFSET_SC;
         finishbinexpval(
             interpreter, lexical_state, function_state, e1, e2, op, v2, flip, line, OPCODE_MMBINI, event,
         );
@@ -2091,7 +2091,7 @@ pub unsafe fn finishbinexpneg(
                     e1,
                     e2,
                     op,
-                    -v2 + ((1 << 8) - 1 >> 1),
+                    -v2 + OFFSET_SC,
                     0,
                     line,
                     OPCODE_MMBINI,
@@ -2102,7 +2102,7 @@ pub unsafe fn finishbinexpneg(
                     *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
                         .offset(((*function_state).functionstate_programcounter - 1) as isize)
                         & !(!(0xFFFFFFFFu32 << 8) << POSITION_B)
-                        | ((v2 + ((1 << 8) - 1 >> 1)) as u32) << POSITION_B & !(0xFFFFFFFFu32 << 8) << POSITION_B;
+                        | ((v2 + OFFSET_SC) as u32) << POSITION_B & !(0xFFFFFFFFu32 << 8) << POSITION_B;
                 return 1;
             }
         };
@@ -2563,6 +2563,25 @@ pub const POSITION_A: usize = 7;
 pub const POSITION_K: usize = POSITION_A + 8;
 pub const POSITION_B: usize = POSITION_K + 1;
 pub const POSITION_C: usize = POSITION_B + 8;
+pub const SIZE_BX: usize = 17;
+pub const SIZE_AX: usize = 25;
+pub const MAXARG_BX: i32 = (1 << SIZE_BX) - 1;
+pub const MAXARG_AX: usize = (1 << SIZE_AX) - 1;
+pub const OFFSET_SBX: i32 = MAXARG_BX >> 1;
+pub const OFFSET_SJ: i32 = (MAXARG_AX >> 1) as i32;
+pub const MAXARG_C: i32 = (1 << 8) - 1;
+pub const OFFSET_SC: i32 = MAXARG_C >> 1;
+pub const NO_REG: i32 = (1 << 8) - 1;
+pub const MAXREGS: i32 = 255;
+pub const MAXUPVAL: usize = 255;
+pub const BLACKBIT: u8 = 1 << 5;
+pub const WHITE0BIT: u8 = 1 << 3;
+pub const WHITE1BIT: u8 = 1 << 4;
+pub const MAXLINEDIFF: i32 = 0x80;
+pub const MAX_INT: usize = 0x7FFFFFFF;
+pub const LFIELDS_PER_FLUSH: i32 = 50;
+pub const RDKCTC: i32 = 3;
+pub const NBM: i32 = 53;
 pub unsafe fn luak_settablesize(
     _interpreter: *mut Interpreter, function_state: *mut FunctionState, program_counter: i32, ra: i32, asize: i32, hsize: i32,
 ) {
@@ -2570,8 +2589,8 @@ pub unsafe fn luak_settablesize(
         let inst: *mut u32 = &mut *((*(*function_state).functionstate_prototype).prototype_code.vectort_pointer)
             .offset(program_counter as isize) as *mut u32;
         let rb: i32 = if hsize == 0 { 0 } else { 1 + hsize.ilog2() as i32 };
-        let extra: i32 = asize / ((1 << 8) - 1 + 1);
-        let rc: i32 = asize % ((1 << 8) - 1 + 1);
+        let extra: i32 = asize / (MAXARG_C + 1);
+        let rc: i32 = asize % (MAXARG_C + 1);
         let k: i32 = (extra > 0) as i32;
         *inst = (OPCODE_NEWTABLE as u32) << 0
             | (ra as u32) << POSITION_A
@@ -2589,13 +2608,13 @@ pub unsafe fn luak_setlist(
         if tostore == -1 {
             tostore = 0;
         }
-        if count_elements <= (1 << 8) - 1 {
+        if count_elements <= MAXARG_C as usize {
             code_abck(
                 interpreter, lexical_state, function_state, OPCODE_SETLIST, base, tostore, count_elements as i32, 0,
             );
         } else {
-            let extra = count_elements / ((1 << 8) - 1 + 1);
-            count_elements %= (1 << 8) - 1 + 1;
+            let extra = count_elements / (MAXARG_C as usize + 1);
+            count_elements %= MAXARG_C as usize + 1;
             code_abck(
                 interpreter, lexical_state, function_state, OPCODE_SETLIST, base, tostore, count_elements as i32, 1,
             );
