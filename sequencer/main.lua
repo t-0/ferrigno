@@ -184,8 +184,6 @@ ui.num_slots   = NUM_SLOTS
 ui.bpm         = song.bpm
 ui.arp_states  = arp.states  -- live reference so ui.draw sees arp status
 ui.studio_name = current_studio and current_studio.name or "all"
-ui.on_idle     = tick_all
-piano_roll.on_idle = tick_all
 
 -- ── TUI setup ─────────────────────────────────────────────────────────────────
 
@@ -275,6 +273,9 @@ local function read_key_live()
         tick_all()
     end
 end
+
+ui.on_idle         = tick_all
+piano_roll.on_idle = tick_all
 
 local function current_track()
     return tracks[ui.cursor.track]
@@ -1497,9 +1498,6 @@ local function edit_clip_piano_roll()
         ui.set_status("No clip here — press N to create one first", tui.YELLOW)
         return
     end
-    local was_playing = engine.playing
-    if was_playing then engine.stop_transport() end
-
     local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {})
     tui.clear()
 
@@ -1514,12 +1512,6 @@ local function edit_clip_piano_roll()
         ui.set_status("Piano roll closed")
     end
 
-    if was_playing then
-        engine.start_transport()
-        if inst and engine.active_clips[ui.cursor.track] then
-            engine.launch(ui.cursor.track, inst.id, clip, events[clip.id] or {})
-        end
-    end
 end
 
 local function toggle_arp()
