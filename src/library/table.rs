@@ -292,7 +292,7 @@ pub unsafe fn partition(interpreter: *mut Interpreter, low: u32, high: u32) -> u
         }
     }
 }
-pub unsafe fn choose_pivot(low: u32, high: u32, rnd: u32) -> u32 {
+pub fn choose_pivot(low: u32, high: u32, rnd: u32) -> u32 {
     let r4: u32 = (high - low) / 4;
     let p: u32 = rnd.wrapping_rem(r4.wrapping_mul(2 as u32)).wrapping_add(low.wrapping_add(r4));
     return p;

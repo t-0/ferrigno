@@ -3,7 +3,7 @@ use crate::interpreter::*;
 use crate::registeredfunction::*;
 use crate::tdefaultnew::*;
 use std::ptr::*;
-pub unsafe fn u_posrelat(position: i64, length: usize) -> i64 {
+pub fn u_posrelat(position: i64, length: usize) -> i64 {
     if position >= 0 {
         return position;
     } else if -position as usize > length {

@@ -20,7 +20,7 @@ pub unsafe fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
         };
     }
 }
-pub unsafe fn rotate_left(x: usize, n: i32) -> usize {
+pub fn rotate_left(x: usize, n: i32) -> usize {
     (x << n) | ((x & 0xffffffffffffffff as usize) >> (64 - n))
 }
 pub unsafe fn next_random(randomstate: *mut usize) -> usize {
@@ -37,7 +37,7 @@ pub unsafe fn next_random(randomstate: *mut usize) -> usize {
         res
     }
 }
-pub unsafe fn i2d(x: usize) -> f64 {
+pub fn i2d(x: usize) -> f64 {
     let sx: i64 = ((x & 0xffffffffffffffff as usize) >> (64 - 53)) as i64;
     let mut res: f64 = sx as f64 * (0.5f64 / ((1 as usize) << (53 - 1)) as f64);
     if sx < 0 {
