@@ -220,7 +220,7 @@ pub fn ldexp_(x: f64, exp: i32) -> f64 {
 }
 pub unsafe fn l_hashfloat(mut n: f64) -> i32 {
     let i: i32;
-    let mut ni: i64 = 0;
+    let ni: i64;
     (n, i) = frexp_(n);
     n = n * -((-(0x7FFFFFFF as i32) - 1) as f64);
     if !(n >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64 && n < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64) && {

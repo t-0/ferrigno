@@ -9,7 +9,7 @@ use std::ptr::*;
 pub const PI: f64 = 3.141592653589793238462643383279502884f64;
 pub unsafe fn push_numericcc(interpreter: *mut Interpreter, d: f64) {
     unsafe {
-        let mut n: i64 = 0;
+        let n: i64;
         if d >= (-(MAXIMUM_SIZE as i64) - 1 as i64) as f64 && d < -((-(MAXIMUM_SIZE as i64) - 1 as i64) as f64) && {
             n = d as i64;
             1 != 0

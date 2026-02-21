@@ -309,7 +309,7 @@ pub unsafe fn lmemfind(mut s1: *const i8, mut l1: usize, s2: *const i8, mut l2: 
         } else if l2 > l1 {
             return null();
         } else {
-            let mut initial: *const i8 = null();
+            let mut initial: *const i8;
             l2 = l2.wrapping_sub(1);
             l1 = l1.wrapping_sub(l2);
             while l1 > 0 && {

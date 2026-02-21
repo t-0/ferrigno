@@ -268,8 +268,8 @@ pub unsafe fn traversestrongtable(global: *mut Global, h: *mut Table) {
 }
 pub unsafe fn traversetable(global: *mut Global, h: *mut Table) -> usize {
     unsafe {
-        let mut weakkey: *const i8 = null();
-        let mut weakvalue: *const i8 = null();
+        let weakkey: *const i8;
+        let weakvalue: *const i8;
         let mode: *const TValue = if ((*h).get_metatable()).is_null() {
             null()
         } else if (*(*h).get_metatable()).table_flags as u32 & (1 as u32) << TM_MODE as i32 != 0 {
