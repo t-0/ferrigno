@@ -44,9 +44,9 @@ local NUM_SLOTS = 8
 local instruments = db_mod.get_instruments(db, song.id)
 if #instruments == 0 then
     local dests       = midi.destinations() or {}
-    local default_out = dests[1] or ''
+    local default_out = (dests[1] and dests[1].name) or ''
     local srcs        = midi.sources()      or {}
-    local default_in  = srcs[1]  or ''
+    local default_in  = (srcs[1]  and srcs[1].name)  or ''
 
     local t1 = db_mod.upsert_instrument(db, {
         name = "Synth", midi_output = default_out, midi_input = default_in,
@@ -83,14 +83,14 @@ local scenes = db_mod.ensure_scenes(db, song.id, NUM_SLOTS)
 
 -- ── Open MIDI outputs ─────────────────────────────────────────────────────────
 
--- Open output port, then send sysex dumps and instrument-level program change.
+-- Open output port and send any 'connect' sysex dumps.
+-- Program change is NOT sent here — only when explicitly edited via I.
 local function open_and_configure_output(inst)
     local ok, err = engine.open_output(inst)
     if not ok then return false, err end
     for _, dump in ipairs(sysex_dumps[inst.id] or {}) do
         engine.send_sysex(inst.id, dump.data)
     end
-    engine.send_program_change(inst)
     return true
 end
 
@@ -254,7 +254,7 @@ end
 
 local function add_track()
     local dests       = midi.destinations() or {}
-    local default_out = dests[1] or ''
+    local default_out = (dests[1] and dests[1].name) or ''
     local inst = {
         name = "Track " .. (#instruments + 1),
         midi_output  = default_out,
@@ -453,11 +453,12 @@ local function edit_instrument()
     end
 
     -- Build option lists with "None" prepended.
+    -- midi.destinations()/sources() return {name=..., index=...} tables; extract names.
     local dest_items = {"None"}
-    for _, d in ipairs(dests) do dest_items[#dest_items+1] = d end
+    for _, d in ipairs(dests) do dest_items[#dest_items+1] = d.name end
 
     local src_items = {"None"}
-    for _, s in ipairs(srcs) do src_items[#src_items+1] = s end
+    for _, s in ipairs(srcs) do src_items[#src_items+1] = s.name end
 
     -- Name (free text, same as before).
     local w, h = tui.size()

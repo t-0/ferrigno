@@ -663,7 +663,7 @@ unsafe fn read_line(
     unsafe {
         let mut b = Buffer::new();
         b.initialize(interpreter);
-        let mut last_c: Option<u8> = None;
+        let last_c: Option<u8>;
 
         'outer: loop {
             let buf_ptr = b.prepare_with_size(1024);
