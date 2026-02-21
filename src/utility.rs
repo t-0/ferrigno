@@ -59,7 +59,13 @@ pub unsafe fn l_str2d(s: *const i8, result: *mut f64) -> *const i8 {
                 return null();
             }
             libc::strcpy(buffer.as_mut_ptr(), s);
-            buffer[pdot.offset_from(s) as usize] = Character::Period as i8;
+            let lc = libc::localeconv();
+            let locale_dec = if !lc.is_null() && !(*lc).decimal_point.is_null() {
+                *(*lc).decimal_point
+            } else {
+                Character::Period as i8
+            };
+            buffer[pdot.offset_from(s) as usize] = locale_dec;
             endptr = l_str2dloc(buffer.as_mut_ptr(), result, mode);
             if !endptr.is_null() {
                 endptr = s.offset(endptr.offset_from(buffer.as_mut_ptr()) as isize);

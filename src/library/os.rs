@@ -285,7 +285,7 @@ pub unsafe fn os_difftime(interpreter: *mut Interpreter) -> i32 {
 }
 pub unsafe fn os_setlocale(interpreter: *mut Interpreter) -> i32 {
     unsafe {
-        pub const CATEGORY: [i32; 6] = [6, 3, 0, 4, 1, 2];
+        pub const CATEGORY: [i32; 6] = [libc::LC_ALL, libc::LC_COLLATE, libc::LC_CTYPE, libc::LC_MONETARY, libc::LC_NUMERIC, libc::LC_TIME];
         pub const CATEGORY_NAMES: [*const i8; 7] = [
             c"all".as_ptr(),
             c"collate".as_ptr(),

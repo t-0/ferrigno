@@ -548,8 +548,14 @@ pub unsafe fn quotefloat(mut _state: *mut Interpreter, buffer: *mut i8, n: f64) 
         } else {
             let nb: i32 = libc::snprintf(buffer, 120, c"%a".as_ptr(), n);
             if (memchr(buffer as *const libc::c_void, Character::Period as i32, nb as usize)).is_null() {
-                let point: i8 = Character::Period as i8;
-                let ppoint: *mut i8 = memchr(buffer as *const libc::c_void, point as i32, nb as usize) as *mut i8;
+                // locale decimal point may differ from '.'; find and replace it
+                let lc = libc::localeconv();
+                let locale_dec = if !lc.is_null() && !(*lc).decimal_point.is_null() {
+                    *(*lc).decimal_point as i32
+                } else {
+                    Character::Period as i32
+                };
+                let ppoint: *mut i8 = memchr(buffer as *const libc::c_void, locale_dec, nb as usize) as *mut i8;
                 if !ppoint.is_null() {
                     *ppoint = Character::Period as i8;
                 }
