@@ -229,11 +229,11 @@ pub fn l_hashfloat(n: f64) -> i32 {
         0
     }
 }
-pub unsafe fn fits_c(i: i64) -> bool {
-    return (i as usize).wrapping_add(((1 << 8) - 1 >> 1) as usize) <= ((1 << 8) - 1) as usize;
+pub fn fits_c(i: i64) -> bool {
+    (i as usize).wrapping_add(((1 << 8) - 1 >> 1) as usize) <= ((1 << 8) - 1) as usize
 }
-pub unsafe fn fits_bx(i: i64) -> bool {
-    return -((1 << 8 + 8 + 1) - 1 >> 1) as i64 <= i && i <= ((1 << 8 + 8 + 1) - 1 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64;
+pub fn fits_bx(i: i64) -> bool {
+    -((1 << 8 + 8 + 1) - 1 >> 1) as i64 <= i && i <= ((1 << 8 + 8 + 1) - 1 - ((1 << 8 + 8 + 1) - 1 >> 1)) as i64
 }
 pub unsafe fn getnum(fmt: *mut *const i8, df: i32) -> i32 {
     unsafe {
