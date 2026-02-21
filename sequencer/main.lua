@@ -14,6 +14,7 @@
 --   [                Insert a scene row at the cursor position
 --   ]                Delete the current scene row
 --   I                Instruments page (list, add, edit, delete instruments)
+--   W                Studios page (named MIDI routing profiles)
 --   T                Edit current track (name + instrument assignment)
 --   B                Set BPM
 --   F                Rename song
@@ -104,16 +105,59 @@ end
 local scenes    = db_mod.ensure_scenes(db, song.id, 8)
 local NUM_SLOTS = #scenes
 
+-- ── Load studios ──────────────────────────────────────────────────────────────
+
+local studios        = db_mod.get_studios(db)
+local studios_by_id  = {}
+local default_studio
+for _, s in ipairs(studios) do
+    studios_by_id[s.id] = s
+    if s.name == "all" then default_studio = s end
+end
+local current_studio = studios_by_id[song.studio_id] or default_studio
+
+local function load_studio_entries(studio)
+    local entries = {}
+    for _, e in ipairs(db_mod.get_studio_instruments(db, studio.id)) do
+        entries[e.instrument_name] = e
+    end
+    studio.entries = entries
+end
+if current_studio then load_studio_entries(current_studio) end
+
+-- ── Routing helpers ───────────────────────────────────────────────────────────
+
+local function effective_routing(inst)
+    local ov = current_studio and current_studio.entries
+               and current_studio.entries[inst.name]
+    if ov then
+        return ov.port_override or inst.midi_output,
+               ov.channel_override or inst.midi_channel,
+               ov.is_live ~= 0
+    end
+    return inst.midi_output, inst.midi_channel, true
+end
+
 -- ── Open MIDI outputs ─────────────────────────────────────────────────────────
 
 -- Open output port and send any 'connect' sysex dumps.
 local function open_and_configure_output(inst)
-    local ok, err = engine.open_output(inst)
+    local port, ch, live = effective_routing(inst)
+    if not live then return true end
+    local resolved = { id = inst.id, midi_output = port, midi_channel = ch }
+    local ok, err = engine.open_output(resolved)
     if not ok then return false, err end
     for _, dump in ipairs(sysex_dumps[inst.id] or {}) do
         engine.send_sysex(inst.id, dump.data)
     end
     return true
+end
+
+local function apply_studio()
+    for _, inst in ipairs(instruments) do
+        engine.close_output(inst.id)
+        open_and_configure_output(inst)
+    end
 end
 
 engine.bpm = song.bpm
@@ -132,13 +176,14 @@ end
 
 -- ── Wire UI state ─────────────────────────────────────────────────────────────
 
-ui.song       = song
-ui.tracks     = tracks
-ui.clips      = clips
-ui.scenes     = scenes
-ui.num_slots  = NUM_SLOTS
-ui.bpm        = song.bpm
-ui.arp_states = arp.states  -- live reference so ui.draw sees arp status
+ui.song        = song
+ui.tracks      = tracks
+ui.clips       = clips
+ui.scenes      = scenes
+ui.num_slots   = NUM_SLOTS
+ui.bpm         = song.bpm
+ui.arp_states  = arp.states  -- live reference so ui.draw sees arp status
+ui.studio_name = current_studio and current_studio.name or "all"
 
 -- ── TUI setup ─────────────────────────────────────────────────────────────────
 
@@ -901,6 +946,289 @@ local function instruments_page()
     tui.clear()
 end
 
+-- Edit a studio's name and per-instrument routing overrides.
+local function edit_studio(studio)
+    local is_all = (studio.name == "all")
+
+    -- Build fields: Name field + 3 fields per instrument.
+    local fields = {
+        { label = "Name", type = "text" },
+    }
+    for _, inst in ipairs(instruments) do
+        fields[#fields+1] = { label = inst.name .. " Live", type = "toggle",
+                              opts = {"yes","no"}, inst_name = inst.name, key = "live" }
+        fields[#fields+1] = { label = inst.name .. " Port", type = "text",
+                              inst_name = inst.name, key = "port" }
+        fields[#fields+1] = { label = inst.name .. " Chan", type = "int",
+                              min = 0, max = 16, inst_name = inst.name, key = "chan" }
+    end
+
+    -- Initial values.
+    local vals = { studio.name }
+    for _, inst in ipairs(instruments) do
+        local ov  = studio.entries and studio.entries[inst.name]
+        local live = ov and (ov.is_live ~= 0) or true
+        vals[#vals+1] = live and 1 or 2           -- toggle: 1=yes, 2=no
+        vals[#vals+1] = (ov and ov.port_override) or ''
+        vals[#vals+1] = tostring((ov and ov.channel_override) or 0)
+    end
+
+    local LABEL_W = 22
+    local VAL_COL = LABEL_W + 5
+    local sel     = 1
+    local editing = false
+    local edit_buf = ''
+
+    local function pad(s, n)
+        s = tostring(s or '')
+        if #s >= n then return s:sub(1, n) end
+        return s .. string.rep(' ', n - #s)
+    end
+
+    local function draw()
+        local w, h = tui.size()
+        local val_w = math.max(10, w - VAL_COL - 4)
+        tui.hide_cursor()
+        tui.clear()
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Studio: " .. studio.name, tui.WHITE, tui.BLUE, tui.BOLD)
+
+        local max_row = h - 3
+        for i, f in ipairs(fields) do
+            local row = i + 2
+            if row > max_row then break end
+            local is_sel = (i == sel)
+            local lbl = string.format("  %-" .. LABEL_W .. "s  ", f.label)
+            if is_sel then
+                tui.print_at(row, 1, lbl, tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
+            else
+                tui.print_at(row, 1, lbl, tui.BRIGHT_WHITE, tui.BLACK, 0)
+            end
+
+            if f.type == "toggle" then
+                local display = pad(f.opts[vals[i]] or '', val_w)
+                if is_sel then
+                    tui.print_at(row, VAL_COL, "◄ " .. display .. " ►", tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                end
+            else
+                -- field 1 (Name) is read-only for "all"
+                local locked = (i == 1 and is_all)
+                if locked then
+                    local display = pad(vals[i] .. "  (default, cannot rename)", val_w)
+                    tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_BLACK, tui.BLACK, 0)
+                elseif is_sel and editing then
+                    local display = pad(edit_buf, val_w)
+                    tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.YELLOW, tui.BOLD)
+                    tui.move(row, VAL_COL + 2 + math.min(#edit_buf, val_w))
+                    tui.show_cursor()
+                else
+                    local hint = (f.key == "chan") and "  (0=inst default)" or ""
+                    local display = pad(vals[i] .. hint, val_w)
+                    if is_sel then
+                        tui.print_at(row, VAL_COL, "[ " .. display .. " ]", tui.BLACK, tui.CYAN, tui.BOLD)
+                    else
+                        tui.print_at(row, VAL_COL, "  " .. display .. "  ", tui.BRIGHT_WHITE, tui.BLACK, 0)
+                    end
+                end
+            end
+        end
+
+        local hint_row = h - 1
+        if editing then
+            tui.print_at(hint_row, 1, pad("  Enter=confirm  ESC=cancel edit", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            tui.print_at(hint_row, 1,
+                pad("  ↑↓/Tab=navigate  ←→=cycle  Enter=edit  S=save  ESC=cancel", w),
+                tui.BRIGHT_BLACK, tui.BLACK, 0)
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto studio_edit_again end
+
+        if editing then
+            if key == 'enter' or key == 'return' then
+                local f = fields[sel]
+                if f.type == "int" then
+                    local n = tonumber(edit_buf)
+                    if n then
+                        vals[sel] = tostring(math.max(f.min, math.min(f.max, math.floor(n))))
+                    end
+                else
+                    vals[sel] = edit_buf
+                end
+                editing = false
+                sel = (sel % #fields) + 1
+            elseif key == 'esc' then
+                editing = false
+            elseif key == 'backspace' then
+                if #edit_buf > 0 then edit_buf = edit_buf:sub(1, -2) end
+            elseif #key == 1 then
+                edit_buf = edit_buf .. key
+            end
+        else
+            if key == 'esc' then
+                tui.clear()
+                return
+            elseif key == 's' or key == 'S' then
+                break
+            elseif key == 'tab' or key == 'down' then
+                sel = (sel % #fields) + 1
+            elseif key == 'up' then
+                sel = ((sel - 2 + #fields) % #fields) + 1
+            elseif key == 'left' or key == 'right' then
+                local f = fields[sel]
+                if f.type == "toggle" then
+                    local n = #f.opts
+                    vals[sel] = key == 'right' and (vals[sel] % n) + 1
+                                                or ((vals[sel] - 2 + n) % n) + 1
+                end
+            elseif key == 'enter' or key == 'return' then
+                local f = fields[sel]
+                if f.type ~= "toggle" and not (sel == 1 and is_all) then
+                    editing  = true
+                    edit_buf = vals[sel]
+                end
+            end
+        end
+        draw()
+        ::studio_edit_again::
+    end
+
+    -- Save name (unless it's "all").
+    if not is_all and vals[1] ~= '' then
+        studio.name = vals[1]
+        db_mod.upsert_studio(db, studio)
+    end
+
+    -- Build entries list from fields (fields 2+ correspond to instruments, 3 fields each).
+    local entries_list = {}
+    for idx, inst in ipairs(instruments) do
+        local base  = 1 + (idx - 1) * 3 + 1   -- index of the "Live" toggle for this inst
+        local live_v = vals[base]               -- 1=yes, 2=no
+        local port_v = vals[base + 1]
+        local chan_v = tonumber(vals[base + 2]) or 0
+        local is_live = (live_v == 1 or live_v == nil)
+        local port_ov = (port_v ~= '') and port_v or nil
+        local chan_ov = (chan_v > 0) and chan_v or nil
+        -- Only persist entries that differ from defaults.
+        if not is_live or port_ov or chan_ov then
+            entries_list[#entries_list+1] = {
+                instrument_name  = inst.name,
+                is_live          = is_live and 1 or 0,
+                port_override    = port_ov,
+                channel_override = chan_ov,
+            }
+        end
+    end
+
+    db_mod.save_studio_instruments(db, studio.id, entries_list)
+    load_studio_entries(studio)
+    if studio.id == (current_studio and current_studio.id) then
+        apply_studio()
+    end
+    tui.clear()
+    ui.set_status("Studio saved: " .. studio.name)
+end
+
+-- Full-screen studios list page.
+local function studios_page()
+    local sel = 1
+
+    local function draw()
+        local w, h = tui.size()
+        tui.hide_cursor()
+        tui.clear()
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        local cur_name = current_studio and current_studio.name or "all"
+        tui.print_at(1, 2, "STUDIOS  (current: " .. cur_name .. ")", tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(3, 2, "↑↓=select  ENTER=use for song  E=edit  A=add  D=delete  ESC=close",
+            tui.BRIGHT_BLACK, tui.BLACK, 0)
+        for i, s in ipairs(studios) do
+            local is_cur = current_studio and (s.id == current_studio.id)
+            local marker = is_cur and "►" or " "
+            local label  = marker .. " " .. (s.name or '')
+            if i == sel then
+                tui.print_at(4 + i, 2, label, tui.BLACK, tui.CYAN, tui.BOLD)
+            elseif is_cur then
+                tui.print_at(4 + i, 2, label, tui.GREEN, tui.BLACK, tui.BOLD)
+            else
+                tui.print_at(4 + i, 2, label, tui.WHITE, tui.BLACK, 0)
+            end
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = tui.read_key(5000)
+        if not key then goto studios_again end
+
+        if key == 'esc' then
+            break
+        elseif key == 'up' then
+            sel = math.max(1, sel - 1)
+        elseif key == 'down' then
+            sel = math.min(math.max(1, #studios), sel + 1)
+        elseif key == 'enter' or key == 'return' then
+            -- Use selected studio for this song.
+            local s = studios[sel]
+            if s then
+                current_studio   = s
+                song.studio_id   = s.id
+                load_studio_entries(current_studio)
+                db_mod.save_song(db, song)
+                apply_studio()
+                ui.studio_name = current_studio.name
+                ui.set_status("Studio → " .. s.name, tui.GREEN)
+            end
+        elseif key == 'e' or key == 'E' then
+            if studios[sel] then
+                tui.clear()
+                edit_studio(studios[sel])
+                -- Refresh name in case it changed.
+                ui.studio_name = current_studio and current_studio.name or "all"
+            end
+        elseif key == 'a' or key == 'A' then
+            tui.clear()
+            local name_val = ui.read_line(3, "Studio name: ", '')
+            if name_val and name_val ~= '' then
+                local ns = { name = name_val }
+                db_mod.upsert_studio(db, ns)
+                load_studio_entries(ns)
+                studios_by_id[ns.id] = ns
+                table.insert(studios, ns)
+                sel = #studios
+                ui.set_status("Added studio: " .. name_val)
+            end
+        elseif key == 'd' or key == 'D' then
+            local s = studios[sel]
+            if s then
+                if s.name == "all" then
+                    ui.set_status("Cannot delete the default studio", tui.YELLOW)
+                elseif current_studio and s.id == current_studio.id then
+                    ui.set_status("Cannot delete the current studio — switch first", tui.YELLOW)
+                else
+                    db_mod.delete_studio(db, s.id)
+                    studios_by_id[s.id] = nil
+                    table.remove(studios, sel)
+                    sel = math.max(1, math.min(sel, #studios))
+                    ui.set_status("Studio deleted")
+                end
+            end
+        end
+        draw()
+        ::studios_again::
+    end
+    tui.clear()
+end
+
 -- Edit the current track's name and instrument assignment.
 local function edit_track()
     local track = current_track()
@@ -1290,9 +1618,10 @@ while running do
     end
 
     -- 3. Sync UI state from engine.
-    ui.playing   = engine.playing
-    ui.recording = engine.recording
-    ui.bpm       = engine.bpm
+    ui.playing      = engine.playing
+    ui.recording    = engine.recording
+    ui.bpm          = engine.bpm
+    ui.studio_name  = current_studio and current_studio.name or "all"
 
     -- 4. Non-blocking key read (10 ms timeout keeps timing granularity tight).
     local key = tui.read_key(10)
@@ -1326,6 +1655,7 @@ while running do
         elseif key == '['               then insert_scene_row()
         elseif key == ']'               then delete_scene_row()
         elseif key == 'i' or key == 'I' then instruments_page()
+        elseif key == 'w' or key == 'W' then studios_page()
         elseif key == 't' or key == 'T' then edit_track()
         elseif key == 'b' or key == 'B' then edit_bpm()
         elseif key == 'p' or key == 'P' then toggle_arp()

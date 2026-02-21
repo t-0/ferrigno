@@ -201,6 +201,15 @@ function M.launch(track_idx, inst_id, clip, events)
     }
 end
 
+-- Close a single instrument's output port.
+function M.close_output(inst_id)
+    local p = M.output_ports[inst_id]
+    if p then
+        pcall(function() p.port:close() end)
+        M.output_ports[inst_id] = nil
+    end
+end
+
 -- Stop a single track and release any held notes.
 function M.stop_track(track_idx)
     local ac = M.active_clips[track_idx]

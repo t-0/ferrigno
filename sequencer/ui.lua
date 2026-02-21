@@ -38,6 +38,7 @@ M.playing      = false
 M.recording    = false
 M.bpm          = 120.0
 M.arp_states   = nil   -- reference to arp.states (set by main)
+M.studio_name  = "all"
 
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -89,9 +90,10 @@ function M.draw(engine)
         transport_label = " ■ STOPPED "
         tfg, tbg, tbold = tui.BRIGHT_WHITE,  tui.BRIGHT_BLACK, tui.BOLD
     end
-    local bpm_s  = string.format(" BPM:%.1f", M.bpm)
-    local name_s = "  Song: " .. (M.song and M.song.name or "Untitled")
-    put(1, 1, pad(transport_label .. bpm_s .. name_s, w), tfg, tbg, tbold)
+    local bpm_s     = string.format(" BPM:%.1f", M.bpm)
+    local name_s    = "  Song: " .. (M.song and M.song.name or "Untitled")
+    local studio_s  = "  Studio: " .. (M.studio_name or "all")
+    put(1, 1, pad(transport_label .. bpm_s .. name_s .. studio_s, w), tfg, tbg, tbold)
 
     -- ── Row 2: track name headers ─────────────────────────────────────────────
     put(2, 1, pad("", SCENE_W), tui.WHITE, tui.BRIGHT_BLACK, tui.BOLD)
@@ -192,7 +194,7 @@ function M.draw(engine)
 
     -- ── Footer row 2: key hints ────────────────────────────────────────────────
     put(h, 1,
-        pad(" SPC=play  ENTER=trigger  L=scene  R=rec  E=roll  C=clip  N=new  D=del  [=ins-row  ]=del-row  I=inst  T=track  B=bpm  P=arp  A=mode  O=rate  +=trk  S=save  ESC=quit", w),
+        pad(" SPC=play  ENTER=trigger  L=scene  R=rec  E=roll  C=clip  N=new  D=del  [=ins-row  ]=del-row  I=inst  T=track  B=bpm  W=studio  P=arp  A=mode  O=rate  +=trk  S=save  ESC=quit", w),
         tui.BRIGHT_BLACK, tui.BLACK, 0)
 
     tui.flush()

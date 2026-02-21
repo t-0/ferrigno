@@ -105,6 +105,19 @@ function M.init_schema(db)
             gate          REAL    NOT NULL DEFAULT 0.8,
             hold_mode     INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS studios (
+            id    INTEGER PRIMARY KEY,
+            name  TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS studio_instruments (
+            id               INTEGER PRIMARY KEY,
+            studio_id        INTEGER NOT NULL,
+            instrument_name  TEXT    NOT NULL,
+            is_live          INTEGER NOT NULL DEFAULT 1,
+            port_override    TEXT             DEFAULT NULL,
+            channel_override INTEGER          DEFAULT NULL,
+            UNIQUE(studio_id, instrument_name)
+        );
     ]])
     if not ok then error("Schema init failed: " .. tostring(err)) end
     -- Migrate existing databases: add columns that may be absent.
@@ -119,9 +132,12 @@ function M.init_schema(db)
         "clips        ADD COLUMN start_offset  REAL    NOT NULL DEFAULT 0.0",
         "clips        ADD COLUMN loop_start    REAL    NOT NULL DEFAULT 0.0",
         "clips        ADD COLUMN loop_length   REAL    DEFAULT NULL",
+        "song         ADD COLUMN studio_id     INTEGER DEFAULT NULL",
     }) do
         pcall(function() db:exec("ALTER TABLE " .. col) end)
     end
+    -- Seed the default studio.
+    db:exec("INSERT OR IGNORE INTO studios (id, name) VALUES (1, 'all')")
     -- Migrate instruments → tracks: if tracks is empty but instruments has rows,
     -- populate tracks from instruments so existing clip references (instrument_id)
     -- remain valid (track.id == old instrument.id).
@@ -145,8 +161,8 @@ end
 
 function M.save_song(db, song)
     run(db,
-        "UPDATE song SET name=?, bpm=?, time_sig_num=?, time_sig_den=?, updated_at=datetime('now') WHERE id=?",
-        song.name, song.bpm, song.time_sig_num, song.time_sig_den, song.id)
+        "UPDATE song SET name=?, bpm=?, time_sig_num=?, time_sig_den=?, studio_id=?, updated_at=datetime('now') WHERE id=?",
+        song.name, song.bpm, song.time_sig_num, song.time_sig_den, song.studio_id, song.id)
 end
 
 function M.get_instruments(db, song_id)
@@ -408,6 +424,48 @@ function M.save_arp_settings(db, instrument_id, state)
         state.rate    or 0.25,
         state.gate    or 0.8,
         state.hold    and 1 or 0)
+end
+
+-- ── Studios ───────────────────────────────────────────────────────────────────
+
+function M.get_studios(db)
+    return db:query("SELECT * FROM studios ORDER BY id") or {}
+end
+
+-- Insert or update a studio. Sets studio.id on insert.
+function M.upsert_studio(db, studio)
+    if studio.id then
+        run(db, "UPDATE studios SET name=? WHERE id=?", studio.name, studio.id)
+    else
+        run(db, "INSERT INTO studios (name) VALUES (?)", studio.name)
+        studio.id = db:last_insert_rowid()
+    end
+    return studio
+end
+
+function M.delete_studio(db, studio_id)
+    run(db, "DELETE FROM studio_instruments WHERE studio_id=?", studio_id)
+    run(db, "DELETE FROM studios WHERE id=?", studio_id)
+end
+
+function M.get_studio_instruments(db, studio_id)
+    return db:query(
+        "SELECT * FROM studio_instruments WHERE studio_id=? ORDER BY id",
+        studio_id) or {}
+end
+
+-- Replace all studio_instruments for a studio.
+function M.save_studio_instruments(db, studio_id, list)
+    run(db, "DELETE FROM studio_instruments WHERE studio_id=?", studio_id)
+    for _, e in ipairs(list) do
+        run(db,
+            "INSERT INTO studio_instruments (studio_id, instrument_name, is_live, port_override, channel_override) VALUES (?,?,?,?,?)",
+            studio_id,
+            e.instrument_name,
+            e.is_live ~= nil and e.is_live or 1,
+            e.port_override    or nil,
+            e.channel_override or nil)
+    end
 end
 
 return M
