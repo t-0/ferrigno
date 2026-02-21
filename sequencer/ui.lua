@@ -39,6 +39,7 @@ M.recording    = false
 M.bpm          = 120.0
 M.arp_states   = nil   -- reference to arp.states (set by main)
 M.studio_name  = "all"
+M.on_idle      = nil   -- called each 10 ms tick when no key is available
 
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -226,8 +227,8 @@ function M.read_line(prompt_row, label, default)
     redraw()
 
     while true do
-        local key = tui.read_key(10000)
-        if not key then goto again end
+        local key = tui.read_key(10)
+        if not key then if M.on_idle then M.on_idle() end; goto again end
 
         if key == 'enter' or key == 'return' then
             tui.hide_cursor()

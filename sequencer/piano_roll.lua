@@ -4,6 +4,8 @@
 
 local M = {}
 
+M.on_idle = nil   -- set by main.lua; called each 10 ms tick when no key is available
+
 -- ── Constants ─────────────────────────────────────────────────────────────────
 
 local PIANO_W = 4                    -- chars for pitch label column
@@ -121,8 +123,8 @@ local function read_line(prompt_row, label, default)
 
     redraw()
     while true do
-        local key = tui.read_key(10000)
-        if not key then goto again end
+        local key = tui.read_key(10)
+        if not key then if M.on_idle then M.on_idle() end; goto again end
         if     key == 'enter' or key == 'return' then tui.hide_cursor(); return buf
         elseif key == 'esc'                   then tui.hide_cursor(); return nil
         elseif key == 'backspace' then if #buf > 0 then buf = buf:sub(1,-2) end
@@ -526,8 +528,9 @@ function M.open(clip, raw_events)
     local result = nil
 
     while true do
-        local key = tui.read_key(50)
+        local key = tui.read_key(10)
         if not key then
+            if M.on_idle then M.on_idle() end
             w, h = tui.size()
             draw(st, w, h)
             goto next
@@ -660,7 +663,11 @@ function M.open(clip, raw_events)
             if st.dirty then
                 st.status = "Unsaved changes! Press S to save or ESC again to discard."
                 draw(st, w, h)
-                local k2 = tui.read_key(5000)
+                local k2
+                repeat
+                    k2 = tui.read_key(10)
+                    if not k2 and M.on_idle then M.on_idle() end
+                until k2
                 if k2 == 'esc' then break end
             else
                 break

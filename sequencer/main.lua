@@ -184,6 +184,8 @@ ui.num_slots   = NUM_SLOTS
 ui.bpm         = song.bpm
 ui.arp_states  = arp.states  -- live reference so ui.draw sees arp status
 ui.studio_name = current_studio and current_studio.name or "all"
+ui.on_idle     = tick_all
+piano_roll.on_idle = tick_all
 
 -- ── TUI setup ─────────────────────────────────────────────────────────────────
 
@@ -247,6 +249,32 @@ do
 end
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
+
+-- Tick engine + arp while a sub-page is open so MIDI keeps playing.
+local function tick_all()
+    engine.tick()
+    engine.process_input()
+    if engine.playing then
+        local cur = engine.cur_beat()
+        for ti, track in ipairs(tracks) do
+            if arp.states[ti] then
+                local inst     = instruments_by_name[track.instrument_name]
+                local port_rec = inst and engine.output_ports[inst.id]
+                if port_rec then arp.tick(ti, cur, port_rec) end
+            end
+        end
+    end
+end
+
+-- Drop-in replacement for tui.read_key() that keeps the engine ticking.
+-- Returns a key string when one arrives, nil is never returned to callers.
+local function read_key_live()
+    while true do
+        local key = tui.read_key(10)
+        if key then return key end
+        tick_all()
+    end
+end
 
 local function current_track()
     return tracks[ui.cursor.track]
@@ -530,7 +558,7 @@ local function edit_clip_settings()
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto clip_again end
 
         if editing then
@@ -648,7 +676,7 @@ local function edit_sysex(inst)
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto sysex_again end
 
         if key == 'esc' then
@@ -800,7 +828,7 @@ local function edit_instrument_def(inst)
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto inst_def_again end
 
         if editing then
@@ -932,7 +960,7 @@ local function instruments_page()
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto inst_page_again end
 
         if key == 'esc' then
@@ -1102,7 +1130,7 @@ local function edit_studio(studio)
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto studio_edit_again end
 
         if editing then
@@ -1220,7 +1248,7 @@ local function studios_page()
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto studios_again end
 
         if key == 'esc' then
@@ -1382,7 +1410,7 @@ local function edit_track()
 
     draw()
     while true do
-        local key = tui.read_key(5000)
+        local key = read_key_live()
         if not key then goto track_edit_again end
 
         if editing then
