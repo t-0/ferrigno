@@ -65,8 +65,8 @@ pub unsafe fn os_clock(interpreter: *mut Interpreter) -> i32 {
             tv_nsec: 0,
             tv_sec: 0,
         };
-        libc::clock_gettime(0, &mut timespec_);
-        (*interpreter).push_number(timespec_.tv_nsec as f64 / 1000000 as f64);
+        libc::clock_gettime(libc::CLOCK_PROCESS_CPUTIME_ID, &mut timespec_);
+        (*interpreter).push_number(timespec_.tv_sec as f64 + timespec_.tv_nsec as f64 / 1_000_000_000.0);
         return 1;
     }
 }
