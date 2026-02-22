@@ -10,13 +10,16 @@ M.on_idle = nil   -- set by main.lua; called each 10 ms tick when no key is avai
 
 -- ── Constants ─────────────────────────────────────────────────────────────────
 
-local PIANO_W = 4                    -- chars for pitch label column
+local PIANO_W  = 4                    -- chars for pitch label column
 local NOTE_NAMES = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
 local BLACK_KEYS = {[1]=true,[3]=true,[6]=true,[8]=true,[10]=true}
 
 local ZOOM_VALS = {1, 2, 4, 8, 16, 32}   -- chars per beat
 local Q_VALS   = {4.0, 2.0, 1.0, 0.5, 0.25, 0.125, 0.0625}
 local Q_NAMES  = {"1/1","1/2","1/4","1/8","1/16","1/32","1/64"}
+
+local CC_PB     = 128   -- sentinel: pitch-bend lane
+local CC_LANE_H = 4     -- bar-chart rows per lane (+ 1 header row = 5 rows total per lane)
 
 -- ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -41,8 +44,9 @@ end
 
 -- ── Event ↔ Note conversion ───────────────────────────────────────────────────
 
-local function events_to_notes(evts)
+local function events_to_notes_and_cc(evts)
     local notes, open = {}, {}
+    local cc_extras = {}
     for _, ev in ipairs(evts) do
         local t = ev.status & 0xF0
         local p = ev.data1 or 0
@@ -59,6 +63,8 @@ local function events_to_notes(evts)
                 }
                 open[p] = nil
             end
+        else
+            cc_extras[#cc_extras+1] = ev
         end
     end
     -- Close any still-open notes with a minimum duration.
@@ -69,7 +75,8 @@ local function events_to_notes(evts)
         if a.start ~= b.start then return a.start < b.start end
         return a.pitch < b.pitch
     end)
-    return notes
+    table.sort(cc_extras, function(a, b) return a.beat_offset < b.beat_offset end)
+    return notes, cc_extras
 end
 
 local function notes_to_events(notes)
@@ -82,6 +89,18 @@ local function notes_to_events(notes)
     table.sort(evts, function(a, b)
         if a.beat_offset ~= b.beat_offset then return a.beat_offset < b.beat_offset end
         return (a.status & 0xF0) > (b.status & 0xF0)  -- note-off before note-on at same time
+    end)
+    return evts
+end
+
+local function notes_and_cc_to_events(notes, cc_extras)
+    local evts = notes_to_events(notes)
+    for _, ev in ipairs(cc_extras) do
+        evts[#evts+1] = ev
+    end
+    table.sort(evts, function(a, b)
+        if a.beat_offset ~= b.beat_offset then return a.beat_offset < b.beat_offset end
+        return (a.status & 0xF0) > (b.status & 0xF0)
     end)
     return evts
 end
@@ -106,6 +125,126 @@ local function sel_count(notes)
     return c
 end
 
+-- ── CC Helpers ────────────────────────────────────────────────────────────────
+
+local function lane_label(cc_num, cc_names)
+    if cc_num == CC_PB then
+        return "Pitch Bend"
+    end
+    local name = cc_names and cc_names[cc_num]
+    if name then
+        return string.format("CC%3d %s", cc_num, name)
+    end
+    return string.format("CC%3d", cc_num)
+end
+
+-- Returns the last held value at or before `beat`, or nil if none.
+local function cc_value_before_beat(cc_extras, cc_num, beat)
+    local val = nil
+    for _, ev in ipairs(cc_extras) do  -- sorted by beat_offset
+        if ev.beat_offset > beat then break end
+        local is_match
+        if cc_num == CC_PB then
+            is_match = (ev.status & 0xF0) == 0xE0
+        else
+            is_match = (ev.status & 0xF0) == 0xB0 and ev.data1 == cc_num
+        end
+        if is_match then
+            if cc_num == CC_PB then
+                val = (ev.data1 or 0) + ((ev.data2 or 0) * 128) - 8192
+            else
+                val = ev.data2 or 0
+            end
+        end
+    end
+    return val
+end
+
+-- Returns the value of a CC event at snap(beat, q) ±q/2, or nil.
+local function cc_event_at_beat(cc_extras, cc_num, beat, q)
+    local sb = snap(beat, q)
+    for _, ev in ipairs(cc_extras) do
+        if math.abs(ev.beat_offset - sb) <= q / 2 then
+            local is_match
+            if cc_num == CC_PB then
+                is_match = (ev.status & 0xF0) == 0xE0
+            else
+                is_match = (ev.status & 0xF0) == 0xB0 and ev.data1 == cc_num
+            end
+            if is_match then
+                if cc_num == CC_PB then
+                    return (ev.data1 or 0) + ((ev.data2 or 0) * 128) - 8192
+                else
+                    return ev.data2 or 0
+                end
+            end
+        end
+    end
+    return nil
+end
+
+-- Returns true if there's a CC event near `beat` (within hw half-window).
+local function cc_has_event_near(cc_extras, cc_num, beat, hw)
+    for _, ev in ipairs(cc_extras) do
+        if math.abs(ev.beat_offset - beat) <= hw then
+            local is_match
+            if cc_num == CC_PB then
+                is_match = (ev.status & 0xF0) == 0xE0
+            else
+                is_match = (ev.status & 0xF0) == 0xB0 and ev.data1 == cc_num
+            end
+            if is_match then return true end
+        end
+    end
+    return false
+end
+
+-- Place a CC event (remove exact-beat duplicate first, insert new, re-sort).
+local function cc_place(cc_extras, cc_num, beat, value)
+    local new = {}
+    for _, ev in ipairs(cc_extras) do
+        local is_match
+        if cc_num == CC_PB then
+            is_match = (ev.status & 0xF0) == 0xE0 and ev.beat_offset == beat
+        else
+            is_match = (ev.status & 0xF0) == 0xB0 and ev.data1 == cc_num and ev.beat_offset == beat
+        end
+        if not is_match then new[#new+1] = ev end
+    end
+    local ev
+    if cc_num == CC_PB then
+        local pb = math.max(0, math.min(16383, value + 8192))
+        ev = { beat_offset=beat, status=0xE0, data1=pb & 0x7F, data2=(pb >> 7) & 0x7F }
+    else
+        local v = math.max(0, math.min(127, value))
+        ev = { beat_offset=beat, status=0xB0, data1=cc_num, data2=v }
+    end
+    new[#new+1] = ev
+    table.sort(new, function(a, b) return a.beat_offset < b.beat_offset end)
+    return new
+end
+
+-- Erase CC events within q/2 of snap(beat, q). Returns new list and count erased.
+local function cc_erase(cc_extras, cc_num, beat, q)
+    local sb = snap(beat, q)
+    local new, cnt = {}, 0
+    for _, ev in ipairs(cc_extras) do
+        local is_match
+        if cc_num == CC_PB then
+            is_match = (ev.status & 0xF0) == 0xE0 and math.abs(ev.beat_offset - sb) <= q / 2
+        else
+            is_match = (ev.status & 0xF0) == 0xB0 and ev.data1 == cc_num
+                       and math.abs(ev.beat_offset - sb) <= q / 2
+        end
+        if is_match then
+            cnt = cnt + 1
+        else
+            new[#new+1] = ev
+        end
+    end
+    return new, cnt
+end
+
 -- ── Self-contained line input ─────────────────────────────────────────────────
 -- (mirrors ui.read_line without requiring ui.lua)
 
@@ -128,7 +267,7 @@ local function read_line(prompt_row, label, default)
         local key = tui.read_key(10)
         if not key then if M.on_idle then M.on_idle() end; goto again end
         if     key == 'enter' or key == 'return' then tui.hide_cursor(); return buf
-        elseif key == 'esc'                   then tui.hide_cursor(); return nil
+        elseif key == 'esc'                      then tui.hide_cursor(); return nil
         elseif key == 'backspace' then if #buf > 0 then buf = buf:sub(1,-2) end
         elseif #key == 1          then buf = buf .. key
         end
@@ -157,7 +296,8 @@ local function draw(st, w, h)
     local z    = ZOOM_VALS[st.zoom_idx]
     local Q    = Q_VALS[st.q_idx]
     local gw   = w - PIANO_W          -- grid width in chars
-    local gh   = h - 4                -- grid height in pitch rows
+    local total_lane_rows = #st.cc_lanes * (CC_LANE_H + 1)
+    local gh = math.max(4, h - 4 - total_lane_rows)   -- grid height in pitch rows
 
     local function pitch_label(pitch)
         if st.drum_map then
@@ -177,12 +317,25 @@ local function draw(st, w, h)
     -- ── Row 1: header ─────────────────────────────────────────────────────────
     local sel = sel_count(st.notes)
     local roll_type = st.drum_map and "Drum Roll" or "Piano Roll"
-    local hdr = string.format(
-        " %s | %s | Loop:%.2f %s | Q:%s | Zoom:%d | Sel:%d", roll_type,
-        pad(st.clip.name ~= '' and st.clip.name or "Clip", 10),
-        st.loop_len,
-        st.looping and "[LOOP]" or "[ ONE]",
-        Q_NAMES[st.q_idx], z, sel)
+    local hdr
+    if st.active_lane > 0 then
+        local cc_num = st.cc_lanes[st.active_lane]
+        local lbl = lane_label(cc_num, st.cc_names)
+        hdr = string.format(
+            " %s | %s | Loop:%.2f %s | CC: %s  val:%d",
+            roll_type,
+            pad(st.clip.name ~= '' and st.clip.name or "Clip", 10),
+            st.loop_len,
+            st.looping and "[LOOP]" or "[ ONE]",
+            lbl, st.cc_cur_val)
+    else
+        hdr = string.format(
+            " %s | %s | Loop:%.2f %s | Q:%s | Zoom:%d | Sel:%d", roll_type,
+            pad(st.clip.name ~= '' and st.clip.name or "Clip", 10),
+            st.loop_len,
+            st.looping and "[LOOP]" or "[ ONE]",
+            Q_NAMES[st.q_idx], z, sel)
+    end
     tui.print_at(1, 1, pad(hdr, w), tui.WHITE, tui.BLUE, tui.BOLD)
 
     -- ── Row 2: beat ruler ─────────────────────────────────────────────────────
@@ -192,25 +345,23 @@ local function draw(st, w, h)
     emit(tui.BRIGHT_BLACK, tui.BLACK, 0)
     parts[#parts+1] = string.rep(' ', PIANO_W)
 
-    -- Build ruler char-by-char into a flat table, tracking a "skip" counter
-    -- for multi-char bar numbers (can't modify for-var in Lua).
-    local ruler_chars = {}   -- [col+1] = char string
+    local ruler_chars = {}
     local skip_until  = -1
     for col = 0, gw - 1 do
         if col <= skip_until then
-            ruler_chars[col+1] = ""   -- already emitted as part of bar number
+            ruler_chars[col+1] = ""
         else
             local beat      = st.view_left + col / z
             local at_cursor = (math.abs(beat - snap(st.cursor_beat, 1/z)) < 0.5/z)
             local at_loop   = (beat >= st.loop_len - 0.5/z and beat < st.loop_len + 0.5/z)
             if at_loop then
-                ruler_chars[col+1] = "\1║"         -- \1 = marker for bold-white
+                ruler_chars[col+1] = "\1║"
             elseif at_cursor then
-                ruler_chars[col+1] = "\2▼"         -- \2 = cursor colour
+                ruler_chars[col+1] = "\2▼"
             elseif math.abs(beat % 1.0) < 0.5/z then
                 local s = tostring(math.floor(beat) + 1)
                 if col + #s <= gw then
-                    ruler_chars[col+1] = "\3" .. s   -- \3 = bar-number colour
+                    ruler_chars[col+1] = "\3" .. s
                     skip_until = col + #s - 1
                 else
                     ruler_chars[col+1] = "\3|"
@@ -222,7 +373,6 @@ local function draw(st, w, h)
             end
         end
     end
-    -- Second pass: emit with colour transitions.
     for _, rc in ipairs(ruler_chars) do
         if rc == "" then
             -- skip (already part of a multi-char number)
@@ -249,7 +399,8 @@ local function draw(st, w, h)
         else
             local black  = is_black(pitch)
             local is_c   = (pitch % 12 == 0)
-            local at_cur_pitch = (pitch == st.cursor_pitch)
+            -- Cursor highlight only when in note mode
+            local at_cur_pitch = (pitch == st.cursor_pitch) and (st.active_lane == 0)
 
             parts = {}
             emit  = make_emitter(parts)
@@ -277,7 +428,6 @@ local function draw(st, w, h)
                 if at_loop then
                     ch = "│"; fg = tui.BRIGHT_WHITE; bg = tui.BLACK; attrs = tui.BOLD
                 elseif ni then
-                    -- Detect note head vs. body: first char of the note
                     local is_head = (beat < n.start + 1/z)
                     ch = is_head and "▐" or "█"
                     if at_cursor then
@@ -305,14 +455,105 @@ local function draw(st, w, h)
         end
     end
 
+    -- ── CC Lanes ──────────────────────────────────────────────────────────────
+    for li = 1, #st.cc_lanes do
+        local cc_num    = st.cc_lanes[li]
+        local lane_row  = 3 + gh + (li - 1) * (CC_LANE_H + 1)
+        local is_active = (st.active_lane == li)
+
+        -- Header row
+        local lbl     = lane_label(cc_num, st.cc_names)
+        local cur_str = string.format("%.3f", st.cursor_beat)
+        local hdr_str = string.format(" %s %s  val:%-4d  cursor:%s",
+            is_active and "▶" or " ", lbl, st.cc_cur_val, cur_str)
+        if lane_row <= h - 2 then
+            tui.print_at(lane_row, 1, pad(hdr_str, w),
+                is_active and tui.BLACK    or tui.BRIGHT_BLACK,
+                is_active and tui.MAGENTA  or tui.BLACK,
+                is_active and tui.BOLD     or 0)
+        end
+
+        -- Bar rows
+        for bar_row = 1, CC_LANE_H do
+            local scr_row = lane_row + bar_row
+            if scr_row > h - 2 then break end  -- protect footer
+
+            parts = {}
+            emit  = make_emitter(parts)
+
+            -- Left label column (same width as PIANO_W)
+            emit(tui.BRIGHT_BLACK, tui.BLACK, 0)
+            parts[#parts+1] = string.rep(' ', PIANO_W)
+
+            for col = 0, gw - 1 do
+                local beat = st.view_left + col / z
+                local held = cc_value_before_beat(st.cc_extras, cc_num, beat)
+                if held == nil then held = 0 end
+
+                -- Normalize value to 0..1
+                local norm
+                if cc_num == CC_PB then
+                    norm = (held + 8192) / 16383
+                else
+                    norm = held / 127
+                end
+
+                local bar_h = math.floor(norm * CC_LANE_H + 0.5)
+                -- row_from_bottom: 1 = bottom row, CC_LANE_H = top row
+                local row_from_bottom = CC_LANE_H - bar_row + 1
+                local inside_bar  = (row_from_bottom <= bar_h)
+                local is_top_of_bar = (row_from_bottom == bar_h) or (bar_h == 0 and row_from_bottom == 1)
+
+                local hw = 0.5 / z
+                local at_cursor_col = (math.abs(beat - snap(st.cursor_beat, 1/z)) < hw)
+                local has_ev  = cc_has_event_near(st.cc_extras, cc_num, beat, hw)
+                local on_beat_col = math.abs(beat % 1.0) < hw
+
+                local ch, fg, bg, attrs = " ", tui.BRIGHT_BLACK, tui.BLACK, 0
+
+                if inside_bar then
+                    if at_cursor_col and is_active then
+                        ch = "█"; fg = tui.BLACK; bg = tui.MAGENTA; attrs = tui.BOLD
+                    elseif has_ev and is_top_of_bar then
+                        ch = "▐"; fg = tui.MAGENTA; bg = tui.BLACK; attrs = 0
+                    elseif has_ev then
+                        ch = "█"; fg = tui.MAGENTA; bg = tui.BLACK; attrs = 0
+                    else
+                        ch = "▒"; fg = tui.BRIGHT_BLACK; bg = tui.BLACK; attrs = 0
+                    end
+                else
+                    -- Above bar
+                    if at_cursor_col and is_active then
+                        ch = "│"; fg = tui.MAGENTA; bg = tui.BLACK; attrs = tui.BOLD
+                    elseif on_beat_col and row_from_bottom == CC_LANE_H then
+                        ch = "·"; fg = tui.BRIGHT_BLACK; bg = tui.BLACK; attrs = 0
+                    else
+                        ch = " "; fg = tui.BRIGHT_BLACK; bg = tui.BLACK; attrs = 0
+                    end
+                end
+                emit(fg, bg, attrs)
+                parts[#parts+1] = ch
+            end
+
+            parts[#parts+1] = RST
+            tui.move(scr_row, 1)
+            tui.print(table.concat(parts))
+        end
+    end
+
     -- ── Footer rows ───────────────────────────────────────────────────────────
     tui.print_at(h - 1, 1, pad(st.status, w), tui.BRIGHT_WHITE, tui.BLACK, 0)
-    tui.print_at(h, 1,
-        pad(" ←→↑↓=navigate  Shift+←→↑↓=sel-range  SPC=sel  A=sel-all" ..
-            "  +/-=transpose  ,/.=length  z/x=position  ENTER=add/del  DEL=delete" ..
-            "  []={Q}  Q=quant  R=rev  I=inv  C/V/^X=copy/paste/cut  L=loop  O=loop-tog  S=save  ESC=cancel",
-            w),
-        tui.BRIGHT_BLACK, tui.BLACK, 0)
+    local hint
+    if st.active_lane > 0 then
+        hint = " ←→=move  ↑↓=±1 val  Shift↑↓=±10  Enter=place  Del=erase" ..
+               "  v=set val  -=rm lane  Tab=note mode  S=save  ESC=cancel"
+    else
+        hint = " ←→↑↓=navigate  Shift+←→↑↓=sel-range  SPC=sel  A=sel-all" ..
+               "  +/-=transpose  ,/.=length  z/x=position  ENTER=add/del  DEL=delete" ..
+               "  []={Q}  Q=quant  R=rev  I=inv  C/V/^X=copy/paste/cut  L=loop  O=loop-tog" ..
+               "  F=+CC  Tab=CC lane  S=save  ESC=cancel"
+    end
+    tui.print_at(h, 1, pad(hint, w), tui.BRIGHT_BLACK, tui.BLACK, 0)
 end
 
 -- ── Operations ────────────────────────────────────────────────────────────────
@@ -500,7 +741,8 @@ end
 local function scroll_to_cursor(st, w, h)
     local z  = ZOOM_VALS[st.zoom_idx]
     local gw = w - PIANO_W
-    local gh = h - 4
+    local total_lane_rows = #st.cc_lanes * (CC_LANE_H + 1)
+    local gh = math.max(4, h - 4 - total_lane_rows)
     local vb = gw / z  -- visible beats
 
     if st.cursor_beat < st.view_left then
@@ -508,10 +750,13 @@ local function scroll_to_cursor(st, w, h)
     elseif st.cursor_beat >= st.view_left + vb then
         st.view_left = snap(st.cursor_beat - vb + Q_VALS[st.q_idx], Q_VALS[st.q_idx])
     end
-    if st.cursor_pitch > st.view_top then
-        st.view_top = st.cursor_pitch
-    elseif st.cursor_pitch < st.view_top - gh + 1 then
-        st.view_top = st.cursor_pitch + gh - 1
+    -- Only pitch-scroll in note mode
+    if st.active_lane == 0 then
+        if st.cursor_pitch > st.view_top then
+            st.view_top = st.cursor_pitch
+        elseif st.cursor_pitch < st.view_top - gh + 1 then
+            st.view_top = st.cursor_pitch + gh - 1
+        end
     end
 end
 
@@ -521,11 +766,16 @@ function M.open(clip, raw_events, drum_map, cc_names)
     RST = tui.reset()
 
     local w, h = tui.size()
+    local notes, cc_extras = events_to_notes_and_cc(raw_events or {})
     local st = {
-        clip       = clip,
-        notes      = events_to_notes(raw_events or {}),
-        loop_len   = clip.length_beats or 4.0,
-        looping    = (clip.is_looping == 1 or clip.is_looping == true),
+        clip        = clip,
+        notes       = notes,
+        cc_extras   = cc_extras,   -- non-note events (CC, PB) from input + edits
+        cc_lanes    = {},          -- list of active CC numbers (128=pitch bend)
+        active_lane = 0,           -- 0=note mode, 1..n=CC lane index
+        cc_cur_val  = 64,          -- value staged for placement with Enter
+        loop_len    = clip.length_beats or 4.0,
+        looping     = (clip.is_looping == 1 or clip.is_looping == true),
         cursor_beat  = 0.0,
         cursor_pitch = 60,
         view_left    = 0.0,
@@ -555,62 +805,10 @@ function M.open(clip, raw_events, drum_map, cc_names)
         end
         w, h = tui.size()
 
-            -- Navigation: plain arrows move cursor; shift-arrows extend selection.
-        if key == 'right' or key == 'shift-right' then
-            st.cursor_beat = math.max(0, st.cursor_beat + Q_VALS[st.q_idx])
-            if key == 'shift-right' then
-                -- Select every note under/at the new cursor beat on this pitch row.
-                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
-                local _, n = note_at(st.notes, st.cursor_pitch, beat)
-                if n then n.sel = true end
-            end
-        elseif key == 'left' or key == 'shift-left' then
-            st.cursor_beat = math.max(0, st.cursor_beat - Q_VALS[st.q_idx])
-            if key == 'shift-left' then
-                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
-                local _, n = note_at(st.notes, st.cursor_pitch, beat)
-                if n then n.sel = true end
-            end
-        elseif key == 'up' or key == 'shift-up' then
-            st.cursor_pitch = math.min(127, st.cursor_pitch + 1)
-            if key == 'shift-up' then
-                -- Select all notes at the new pitch row that overlap the cursor beat.
-                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
-                local _, n = note_at(st.notes, st.cursor_pitch, beat)
-                if n then n.sel = true end
-            end
-        elseif key == 'down' or key == 'shift-down' then
-            st.cursor_pitch = math.max(0, st.cursor_pitch - 1)
-            if key == 'shift-down' then
-                local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
-                local _, n = note_at(st.notes, st.cursor_pitch, beat)
-                if n then n.sel = true end
-            end
-        elseif key == 'pgup'  then st.view_top = math.min(127, st.view_top + 12)
-        elseif key == 'pgdn'  then st.view_top = math.max(12,  st.view_top - 12)
-        elseif key == 'home'  then st.cursor_beat = 0; st.view_left = 0
+        -- ── Shared keys (both note mode and CC mode) ──────────────────────────
+        if key == 'home' then
+            st.cursor_beat = 0; st.view_left = 0
 
-        -- Edit
-        elseif key == 'enter' or key == 'return' then op_add_or_delete(st)
-        elseif key == 'backspace' or key == 'del' then op_delete_sel_or_cursor(st)
-        elseif key == ' '         then op_select_toggle(st)
-        elseif key == 'a' or key == 'A' then op_select_all(st)
-
-        -- Transpose: = / - → ±1 semitone;  + (shift+=) / _ (shift+-) → ±1 octave
-        elseif key == '='  then op_transpose(st,   1)
-        elseif key == '+'  then op_transpose(st,  12)
-        elseif key == '-'  then op_transpose(st,  -1)
-        elseif key == '_'  then op_transpose(st, -12)
-
-        -- Resize selected notes with , / .
-        elseif key == '.' or key == '>' then op_resize_sel(st,  1)
-        elseif key == ',' or key == '<' then op_resize_sel(st, -1)
-
-        -- Move selected notes with z / x
-        elseif key == 'z' or key == 'Z' then op_move_sel(st, -1,  0)
-        elseif key == 'x' or key == 'X' then op_move_sel(st,  1,  0)
-
-        -- Zoom with ] / [
         elseif key == ']' then
             st.zoom_idx = math.min(#ZOOM_VALS, st.zoom_idx + 1)
             st.status = "Zoom: " .. ZOOM_VALS[st.zoom_idx]
@@ -626,57 +824,10 @@ function M.open(clip, raw_events, drum_map, cc_names)
             st.note_dur = Q_VALS[st.q_idx]
             st.status = "Quantize: " .. Q_NAMES[st.q_idx]
 
-        -- Operations
-        elseif key == 'q' or key == 'Q' then op_quantize(st)
-        elseif key == 'r' or key == 'R' then op_reverse(st)
-        elseif key == 'i' or key == 'I' then op_invert(st)
-        elseif key == 'c' or key == 'C' then op_copy(st)
-        elseif key == 'v' or key == 'V' then op_paste(st)
-        elseif key == 'ctrl-x' then
-            op_copy(st)
-            local cnt = sel_count(st.notes)
-            if cnt > 0 then
-                local new = {}
-                for _, n in ipairs(st.notes) do
-                    if not n.sel then new[#new+1] = n end
-                end
-                st.notes = new; st.dirty = true
-                st.status = "Cut " .. cnt .. " notes"
-            end
-
-        elseif key == 'h' or key == 'H' then
-            -- HJKL still available for moving selection (alternative to z/x/+/-)
-            op_move_sel(st, -1,  0)
-        elseif key == 'l' or key == 'L' then
-            local val = read_line(h - 1, "Loop length (beats): ",
-                                  string.format("%.2f", st.loop_len))
-            tui.clear()
-            if val then
-                local n = tonumber(val)
-                if n and n > 0 then
-                    st.loop_len = n; st.dirty = true
-                    st.status = string.format("Loop length: %.2f beats", n)
-                end
-            end
-        elseif key == 'k' or key == 'K' then op_move_sel(st,  0,  1)
-        elseif key == 'j' or key == 'J' then op_move_sel(st,  0, -1)
-
-        elseif key == 't' or key == 'T' then
-            local val = read_line(h - 1, "Transpose semitones: ", "0")
-            tui.clear()
-            if val then
-                local n = tonumber(val)
-                if n then op_transpose(st, math.floor(n)) end
-            end
-
-        elseif key == 'o' or key == 'O' then
-            st.looping = not st.looping; st.dirty = true
-            st.status = "Looping: " .. (st.looping and "ON" or "OFF")
-
-        -- Save / cancel
         elseif key == 's' or key == 'S' then
-            result = notes_to_events(st.notes)
+            result = notes_and_cc_to_events(st.notes, st.cc_extras)
             break
+
         elseif key == 'esc' then
             if st.dirty then
                 st.status = "Unsaved changes! Press S to save or ESC again to discard."
@@ -689,6 +840,265 @@ function M.open(clip, raw_events, drum_map, cc_names)
                 if k2 == 'esc' then break end
             else
                 break
+            end
+
+        elseif key == 'tab' then
+            -- Cycle: note mode (0) → lane 1 → lane 2 → … → last lane → note mode (0)
+            if #st.cc_lanes == 0 then
+                st.active_lane = 0
+                st.status = "No CC lanes — press F to add one"
+            else
+                st.active_lane = (st.active_lane + 1) % (#st.cc_lanes + 1)
+                if st.active_lane > 0 then
+                    -- Entering a CC lane: sync cc_cur_val to event at cursor or held value
+                    local cc_num = st.cc_lanes[st.active_lane]
+                    local Q = Q_VALS[st.q_idx]
+                    local ev_val = cc_event_at_beat(st.cc_extras, cc_num, st.cursor_beat, Q)
+                    if ev_val ~= nil then
+                        st.cc_cur_val = ev_val
+                    else
+                        local held = cc_value_before_beat(st.cc_extras, cc_num, st.cursor_beat)
+                        if held ~= nil then
+                            st.cc_cur_val = held
+                        else
+                            st.cc_cur_val = (cc_num == CC_PB) and 0 or 64
+                        end
+                    end
+                    local lbl = lane_label(cc_num, st.cc_names)
+                    st.status = string.format("CC lane: %s  val:%d", lbl, st.cc_cur_val)
+                else
+                    st.status = "Note mode"
+                end
+            end
+
+        -- ── CC mode keys ──────────────────────────────────────────────────────
+        elseif st.active_lane > 0 then
+            local cc_num = st.cc_lanes[st.active_lane]
+            local Q = Q_VALS[st.q_idx]
+            local pb_step = 64
+            local pb_big  = 512
+
+            if key == 'right' then
+                st.cursor_beat = math.max(0, st.cursor_beat + Q)
+                -- Update cc_cur_val to event at new position or held
+                local ev_val = cc_event_at_beat(st.cc_extras, cc_num, st.cursor_beat, Q)
+                if ev_val ~= nil then st.cc_cur_val = ev_val end
+
+            elseif key == 'left' then
+                st.cursor_beat = math.max(0, st.cursor_beat - Q)
+                local ev_val = cc_event_at_beat(st.cc_extras, cc_num, st.cursor_beat, Q)
+                if ev_val ~= nil then st.cc_cur_val = ev_val end
+
+            elseif key == 'up' then
+                if cc_num == CC_PB then
+                    st.cc_cur_val = math.min(8191, st.cc_cur_val + pb_step)
+                else
+                    st.cc_cur_val = math.min(127, st.cc_cur_val + 1)
+                end
+            elseif key == 'down' then
+                if cc_num == CC_PB then
+                    st.cc_cur_val = math.max(-8192, st.cc_cur_val - pb_step)
+                else
+                    st.cc_cur_val = math.max(0, st.cc_cur_val - 1)
+                end
+            elseif key == 'shift-up' then
+                if cc_num == CC_PB then
+                    st.cc_cur_val = math.min(8191, st.cc_cur_val + pb_big)
+                else
+                    st.cc_cur_val = math.min(127, st.cc_cur_val + 10)
+                end
+            elseif key == 'shift-down' then
+                if cc_num == CC_PB then
+                    st.cc_cur_val = math.max(-8192, st.cc_cur_val - pb_big)
+                else
+                    st.cc_cur_val = math.max(0, st.cc_cur_val - 10)
+                end
+
+            elseif key == 'enter' or key == 'return' then
+                local beat = snap(st.cursor_beat, Q)
+                st.cc_extras = cc_place(st.cc_extras, cc_num, beat, st.cc_cur_val)
+                st.dirty = true
+                local lbl = lane_label(cc_num, st.cc_names)
+                st.status = string.format("CC placed: %s = %d @ %.3f", lbl, st.cc_cur_val, beat)
+
+            elseif key == 'del' or key == 'backspace' then
+                local new_extras, cnt = cc_erase(st.cc_extras, cc_num, st.cursor_beat, Q)
+                if cnt > 0 then
+                    st.cc_extras = new_extras; st.dirty = true
+                    st.status = string.format("Erased %d CC event(s)", cnt)
+                else
+                    st.status = "No CC event at cursor"
+                end
+
+            elseif key == 'v' or key == 'V' then
+                local range_str = (cc_num == CC_PB) and "-8192..8191" or "0..127"
+                local val_str = read_line(h - 1, "CC value (" .. range_str .. "): ",
+                                          tostring(st.cc_cur_val))
+                tui.clear()
+                if val_str then
+                    local n = tonumber(val_str)
+                    if n then
+                        if cc_num == CC_PB then
+                            st.cc_cur_val = math.max(-8192, math.min(8191, math.floor(n)))
+                        else
+                            st.cc_cur_val = math.max(0, math.min(127, math.floor(n)))
+                        end
+                        st.status = string.format("CC value set to %d", st.cc_cur_val)
+                    end
+                end
+
+            elseif key == '-' then
+                -- Remove current CC lane
+                table.remove(st.cc_lanes, st.active_lane)
+                st.active_lane = math.min(st.active_lane, #st.cc_lanes)
+                -- active_lane=0 means note mode now if no more lanes, or stayed on previous lane
+                if #st.cc_lanes == 0 then
+                    st.active_lane = 0
+                    st.status = "CC lane removed; back to note mode"
+                else
+                    -- If we removed the last lane, go to note mode; otherwise stay
+                    if st.active_lane == 0 then
+                        st.status = "CC lane removed; back to note mode"
+                    else
+                        local lbl = lane_label(st.cc_lanes[st.active_lane], st.cc_names)
+                        st.status = string.format("CC lane removed; now on %s", lbl)
+                    end
+                end
+            end
+
+        -- ── Note mode keys ────────────────────────────────────────────────────
+        else
+            if key == 'right' or key == 'shift-right' then
+                st.cursor_beat = math.max(0, st.cursor_beat + Q_VALS[st.q_idx])
+                if key == 'shift-right' then
+                    local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                    local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                    if n then n.sel = true end
+                end
+            elseif key == 'left' or key == 'shift-left' then
+                st.cursor_beat = math.max(0, st.cursor_beat - Q_VALS[st.q_idx])
+                if key == 'shift-left' then
+                    local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                    local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                    if n then n.sel = true end
+                end
+            elseif key == 'up' or key == 'shift-up' then
+                st.cursor_pitch = math.min(127, st.cursor_pitch + 1)
+                if key == 'shift-up' then
+                    local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                    local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                    if n then n.sel = true end
+                end
+            elseif key == 'down' or key == 'shift-down' then
+                st.cursor_pitch = math.max(0, st.cursor_pitch - 1)
+                if key == 'shift-down' then
+                    local beat = snap(st.cursor_beat, Q_VALS[st.q_idx])
+                    local _, n = note_at(st.notes, st.cursor_pitch, beat)
+                    if n then n.sel = true end
+                end
+            elseif key == 'pgup'  then st.view_top = math.min(127, st.view_top + 12)
+            elseif key == 'pgdn'  then st.view_top = math.max(12,  st.view_top - 12)
+
+            -- Edit
+            elseif key == 'enter' or key == 'return' then op_add_or_delete(st)
+            elseif key == 'backspace' or key == 'del' then op_delete_sel_or_cursor(st)
+            elseif key == ' '         then op_select_toggle(st)
+            elseif key == 'a' or key == 'A' then op_select_all(st)
+
+            -- Transpose: = / - → ±1 semitone;  + (shift+=) / _ (shift+-) → ±1 octave
+            elseif key == '='  then op_transpose(st,   1)
+            elseif key == '+'  then op_transpose(st,  12)
+            elseif key == '-'  then op_transpose(st,  -1)
+            elseif key == '_'  then op_transpose(st, -12)
+
+            -- Resize selected notes with , / .
+            elseif key == '.' or key == '>' then op_resize_sel(st,  1)
+            elseif key == ',' or key == '<' then op_resize_sel(st, -1)
+
+            -- Move selected notes with z / x
+            elseif key == 'z' or key == 'Z' then op_move_sel(st, -1,  0)
+            elseif key == 'x' or key == 'X' then op_move_sel(st,  1,  0)
+
+            -- Operations
+            elseif key == 'q' or key == 'Q' then op_quantize(st)
+            elseif key == 'r' or key == 'R' then op_reverse(st)
+            elseif key == 'i' or key == 'I' then op_invert(st)
+            elseif key == 'c' or key == 'C' then op_copy(st)
+            elseif key == 'v' or key == 'V' then op_paste(st)
+            elseif key == 'ctrl-x' then
+                op_copy(st)
+                local cnt = sel_count(st.notes)
+                if cnt > 0 then
+                    local new = {}
+                    for _, n in ipairs(st.notes) do
+                        if not n.sel then new[#new+1] = n end
+                    end
+                    st.notes = new; st.dirty = true
+                    st.status = "Cut " .. cnt .. " notes"
+                end
+
+            elseif key == 'h' or key == 'H' then
+                op_move_sel(st, -1,  0)
+            elseif key == 'l' or key == 'L' then
+                local val = read_line(h - 1, "Loop length (beats): ",
+                                      string.format("%.2f", st.loop_len))
+                tui.clear()
+                if val then
+                    local n = tonumber(val)
+                    if n and n > 0 then
+                        st.loop_len = n; st.dirty = true
+                        st.status = string.format("Loop length: %.2f beats", n)
+                    end
+                end
+            elseif key == 'k' or key == 'K' then op_move_sel(st,  0,  1)
+            elseif key == 'j' or key == 'J' then op_move_sel(st,  0, -1)
+
+            elseif key == 't' or key == 'T' then
+                local val = read_line(h - 1, "Transpose semitones: ", "0")
+                tui.clear()
+                if val then
+                    local n = tonumber(val)
+                    if n then op_transpose(st, math.floor(n)) end
+                end
+
+            elseif key == 'o' or key == 'O' then
+                st.looping = not st.looping; st.dirty = true
+                st.status = "Looping: " .. (st.looping and "ON" or "OFF")
+
+            -- Add CC lane
+            elseif key == 'f' or key == 'F' then
+                local val = read_line(h - 1, "Add CC lane (0-127, or 128=Pitch Bend): ", "")
+                tui.clear()
+                if val then
+                    local n = tonumber(val)
+                    if n and math.floor(n) == n and n >= 0 and n <= 128 then
+                        local cc_num = math.floor(n)
+                        -- Check for duplicate
+                        local dup = false
+                        for _, existing in ipairs(st.cc_lanes) do
+                            if existing == cc_num then dup = true; break end
+                        end
+                        if dup then
+                            st.status = string.format("CC lane %d already exists", cc_num)
+                        else
+                            st.cc_lanes[#st.cc_lanes+1] = cc_num
+                            st.active_lane = #st.cc_lanes
+                            -- Sync cc_cur_val
+                            local Q = Q_VALS[st.q_idx]
+                            local ev_val = cc_event_at_beat(st.cc_extras, cc_num, st.cursor_beat, Q)
+                            if ev_val ~= nil then
+                                st.cc_cur_val = ev_val
+                            else
+                                local held = cc_value_before_beat(st.cc_extras, cc_num, st.cursor_beat)
+                                st.cc_cur_val = held or ((cc_num == CC_PB) and 0 or 64)
+                            end
+                            local lbl = lane_label(cc_num, st.cc_names)
+                            st.status = string.format("Added CC lane: %s", lbl)
+                        end
+                    else
+                        st.status = "Invalid CC number (0-128)"
+                    end
+                end
             end
         end
 
