@@ -1,6 +1,8 @@
 -- sequencer/piano_roll.lua
 -- Full-screen piano roll editor.
--- Entry point: piano_roll.open(clip, raw_events) → events, loop_len, is_looping | nil
+-- Entry point: piano_roll.open(clip, raw_events, drum_map, cc_names) → events, loop_len, is_looping | nil
+--   drum_map  : {[note_number]=name} or nil
+--   cc_names  : {[cc_number]=name}   or nil  (global CC name overrides)
 
 local M = {}
 
@@ -515,7 +517,7 @@ end
 
 -- ── Entry point ───────────────────────────────────────────────────────────────
 
-function M.open(clip, raw_events, drum_map)
+function M.open(clip, raw_events, drum_map, cc_names)
     RST = tui.reset()
 
     local w, h = tui.size()
@@ -535,6 +537,7 @@ function M.open(clip, raw_events, drum_map)
         status       = "Ready. ENTER=add/del  S=save  ESC=cancel",
         dirty        = false,
         drum_map     = drum_map,  -- {[note]=name} or nil
+        cc_names     = cc_names,  -- {[cc_number]=name} or nil
     }
 
     tui.clear()

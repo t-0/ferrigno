@@ -114,6 +114,29 @@ for _, inst in ipairs(instruments) do
     reload_drum_map(inst)
 end
 
+-- ── Load CC name maps per instrument ─────────────────────────────────────────
+-- cc_name_maps[inst.id] = {
+--   global  = {[cc_number] = row_table},   -- note == -1 entries
+--   by_note = {[note] = {[cc_number] = row_table}},
+-- }
+local cc_name_maps = {}
+local function reload_cc_names(inst)
+    local rows = db_mod.get_cc_names(db, inst.id)
+    local m = { global = {}, by_note = {} }
+    for _, row in ipairs(rows) do
+        if row.note == -1 then
+            m.global[row.cc_number] = row
+        else
+            if not m.by_note[row.note] then m.by_note[row.note] = {} end
+            m.by_note[row.note][row.cc_number] = row
+        end
+    end
+    cc_name_maps[inst.id] = m
+end
+for _, inst in ipairs(instruments) do
+    reload_cc_names(inst)
+end
+
 -- Ensure at least 8 scene rows exist; NUM_SLOTS is dynamic after that.
 local scenes    = db_mod.ensure_scenes(db, song.id, 8)
 local NUM_SLOTS = #scenes
@@ -838,6 +861,151 @@ local function edit_drum_map(inst)
     tui.clear()
 end
 
+-- Standard MIDI CC numbers and their conventional names.
+local STANDARD_CC_NAMES = {
+    [0]  = "Bank MSB",     [1]  = "Mod Wheel",    [2]  = "Breath",
+    [4]  = "Foot Ctrl",    [5]  = "Portamento T",  [6]  = "Data Entry",
+    [7]  = "Volume",       [8]  = "Balance",        [10] = "Pan",
+    [11] = "Expression",   [12] = "Effect 1",       [13] = "Effect 2",
+    [32] = "Bank LSB",     [64] = "Sustain",        [65] = "Portamento",
+    [66] = "Sostenuto",    [67] = "Soft Pedal",     [68] = "Legato",
+    [71] = "Resonance",    [72] = "Release",        [73] = "Attack",
+    [74] = "Cutoff",       [91] = "Reverb",         [93] = "Chorus",
+    [128] = "Pitch Bend",
+}
+
+-- CC name editor for an instrument.
+-- For keyboard instruments: global CC → name mapping.
+-- For drum instruments: global or per-note CC → name mapping.
+local function edit_cc_names(inst)
+    local is_drum = (inst.type == 'drum')
+
+    local function load_entries()
+        local rows = db_mod.get_cc_names(db, inst.id)
+        table.sort(rows, function(a, b)
+            if a.cc_number ~= b.cc_number then return a.cc_number < b.cc_number end
+            return a.note < b.note
+        end)
+        return rows
+    end
+
+    local function cc_label(cc)
+        if cc == 128 then return " PB" end
+        return string.format("%3d", cc)
+    end
+
+    local function note_label(note)
+        if note == -1 then return "[global  ]" end
+        local dm   = drum_maps[inst.id]
+        local name = dm and dm[note]
+        if name then
+            return string.format("[%3d %-4s]", note, name:sub(1, 4))
+        end
+        return string.format("[%3d     ]", note)
+    end
+
+    local entries = load_entries()
+    local sel     = math.max(1, #entries)
+
+    local function draw()
+        local w, h = tui.size()
+        tui.hide_cursor()
+        tui.clear()
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "CC Names — " .. inst.name, tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(3, 2, "↑↓=select  A=add  E/Enter=rename  D=delete  ESC=done",
+            tui.BRIGHT_BLACK, tui.BLACK, 0)
+        if #entries == 0 then
+            tui.print_at(5, 2, "(no CC names — press A to add)", tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            for i, e in ipairs(entries) do
+                local note_part = is_drum and ("  " .. note_label(e.note)) or ""
+                local label = string.format(" CC%s%s  %s",
+                    cc_label(e.cc_number), note_part, e.name or '')
+                if i == sel then
+                    tui.print_at(4 + i, 2, "►" .. label, tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(4 + i, 2, " " .. label, tui.WHITE, tui.BLACK, 0)
+                end
+            end
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = read_key_live()
+        if key == 'esc' then
+            break
+        elseif key == 'up' then
+            sel = math.max(1, sel - 1)
+        elseif key == 'down' then
+            sel = math.min(math.max(1, #entries), sel + 1)
+        elseif key == 'a' or key == 'A' then
+            tui.clear()
+            local cc_s = ui.read_line(3, "CC number (0-127, 128=pitch bend): ", '')
+            if cc_s then
+                local cc = tonumber(cc_s)
+                if cc and cc >= 0 and cc <= 128 then
+                    cc = math.floor(cc)
+                    local note  = -1
+                    local valid = true
+                    if is_drum then
+                        tui.clear()
+                        local note_s = ui.read_line(3, "Note (0-127, or blank=global): ", '')
+                        if note_s == nil then
+                            valid = false   -- ESC
+                        elseif note_s ~= '' then
+                            local n = tonumber(note_s)
+                            if n then note = math.floor(math.max(0, math.min(127, n))) end
+                        end
+                    end
+                    if valid then
+                        tui.clear()
+                        local default_name = STANDARD_CC_NAMES[cc] or ''
+                        local name_s = ui.read_line(3, "Name: ", default_name)
+                        if name_s and name_s ~= '' then
+                            local entry = {
+                                instrument_id = inst.id,
+                                cc_number     = cc,
+                                note          = note,
+                                name          = name_s,
+                            }
+                            db_mod.upsert_cc_name(db, entry)
+                            entries = load_entries()
+                            for i, e in ipairs(entries) do
+                                if e.cc_number == cc and e.note == note then
+                                    sel = i; break
+                                end
+                            end
+                            reload_cc_names(inst)
+                        end
+                    end
+                else
+                    ui.set_status("Invalid CC number — use 0-128", tui.YELLOW)
+                end
+            end
+        elseif (key == 'e' or key == 'E' or key == 'enter' or key == 'return') and #entries > 0 then
+            tui.clear()
+            local e      = entries[sel]
+            local name_s = ui.read_line(3, "Name: ", e.name)
+            if name_s and name_s ~= '' then
+                e.name = name_s
+                db_mod.upsert_cc_name(db, e)
+                reload_cc_names(inst)
+            end
+        elseif (key == 'd' or key == 'D') and #entries > 0 then
+            local e = entries[sel]
+            if e.id then db_mod.delete_cc_name(db, e.id) end
+            table.remove(entries, sel)
+            sel = math.max(1, math.min(sel, #entries))
+            reload_cc_names(inst)
+        end
+        draw()
+    end
+    tui.clear()
+end
+
 -- Edit an instrument's definition (MIDI settings, name, patch).
 -- Accepts the instrument object directly.
 local function edit_instrument_def(inst)
@@ -894,6 +1062,7 @@ local function edit_instrument_def(inst)
     local edit_buf   = ''
     local do_sysex   = false
     local do_drummap = false
+    local do_ccnames = false
 
     local function pad(s, n)
         s = tostring(s or '')
@@ -953,7 +1122,7 @@ local function edit_instrument_def(inst)
         else
             local drum_hint = (type_opts[vals[2]] == 'drum') and "  M=drum map" or ""
             tui.print_at(hint_row, 1,
-                pad("  ↑↓/Tab=navigate  ←→=cycle options  Enter=edit  S=save  X=sysex" .. drum_hint .. "  ESC=cancel", w),
+                pad("  ↑↓/Tab=navigate  ←→=cycle options  Enter=edit  S=save  X=sysex  N=cc names" .. drum_hint .. "  ESC=cancel", w),
                 tui.BRIGHT_BLACK, tui.BLACK, 0)
         end
         tui.flush()
@@ -997,6 +1166,9 @@ local function edit_instrument_def(inst)
                 break
             elseif (key == 'm' or key == 'M') and type_opts[vals[2]] == 'drum' then
                 do_drummap = true
+                break
+            elseif key == 'n' or key == 'N' then
+                do_ccnames = true
                 break
             elseif key == 'tab' or key == 'down' then
                 sel = (sel % #fields) + 1
@@ -1061,6 +1233,9 @@ local function edit_instrument_def(inst)
     if do_drummap then
         edit_drum_map(inst)
     end
+    if do_ccnames then
+        edit_cc_names(inst)
+    end
 
     tui.clear()
     ui.set_status("Instrument updated: " .. inst.name)
@@ -1077,7 +1252,7 @@ local function instruments_page()
 
         tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
         tui.print_at(1, 2, "Instruments", tui.WHITE, tui.BLUE, tui.BOLD)
-        tui.print_at(3, 2, "↑↓=select  E/Enter=edit  A=add  D=delete  X=sysex  ESC=close",
+        tui.print_at(3, 2, "↑↓=select  E/Enter=edit  A=add  D=delete  X=sysex  N=cc names  ESC=close",
             tui.BRIGHT_BLACK, tui.BLACK, 0)
 
         if #instruments == 0 then
@@ -1159,6 +1334,11 @@ local function instruments_page()
             if instruments[sel] then
                 tui.clear()
                 edit_sysex(instruments[sel])
+            end
+        elseif key == 'n' or key == 'N' then
+            if instruments[sel] then
+                tui.clear()
+                edit_cc_names(instruments[sel])
             end
         end
         draw()
@@ -1638,7 +1818,15 @@ local function edit_clip_piano_roll()
         return
     end
     local dm = (inst and inst.type == 'drum') and drum_maps[inst.id] or nil
-    local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {}, dm)
+    -- Build flat {[cc_number]=name} from the instrument's global CC name map.
+    local cc_names_flat = {}
+    local ccm = inst and cc_name_maps[inst.id]
+    if ccm and ccm.global then
+        for cc, row in pairs(ccm.global) do
+            cc_names_flat[cc] = row.name
+        end
+    end
+    local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {}, dm, cc_names_flat)
     tui.clear()
 
     if new_evts then

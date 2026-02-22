@@ -125,6 +125,14 @@ function M.init_schema(db)
             channel_override INTEGER          DEFAULT NULL,
             UNIQUE(studio_id, instrument_name)
         );
+        CREATE TABLE IF NOT EXISTS cc_names (
+            id            INTEGER PRIMARY KEY,
+            instrument_id INTEGER NOT NULL,
+            cc_number     INTEGER NOT NULL,
+            note          INTEGER NOT NULL DEFAULT -1,
+            name          TEXT    NOT NULL DEFAULT '',
+            UNIQUE(instrument_id, cc_number, note)
+        );
     ]])
     if not ok then error("Schema init failed: " .. tostring(err)) end
     -- Migrate existing databases: add columns that may be absent.
@@ -494,6 +502,36 @@ function M.save_studio_instruments(db, studio_id, list)
             e.port_override    or nil,
             e.channel_override or nil)
     end
+end
+
+-- ── CC name maps ──────────────────────────────────────────────────────────────
+
+-- Returns all CC name rows for an instrument, ordered by cc_number then note.
+function M.get_cc_names(db, instrument_id)
+    return db:query(
+        "SELECT * FROM cc_names WHERE instrument_id=? ORDER BY cc_number, note",
+        instrument_id) or {}
+end
+
+-- Insert or update a CC name entry.
+-- For new entries (no id) uses ON CONFLICT upsert; sets entry.id on insert.
+function M.upsert_cc_name(db, entry)
+    if entry.id then
+        run(db, "UPDATE cc_names SET name=? WHERE id=?",
+            entry.name or '', entry.id)
+    else
+        run(db, [[
+            INSERT INTO cc_names (instrument_id, cc_number, note, name)
+            VALUES (?,?,?,?)
+            ON CONFLICT(instrument_id, cc_number, note) DO UPDATE SET name=excluded.name
+        ]], entry.instrument_id, entry.cc_number, entry.note or -1, entry.name or '')
+        entry.id = db:last_insert_rowid()
+    end
+    return entry
+end
+
+function M.delete_cc_name(db, id)
+    run(db, "DELETE FROM cc_names WHERE id=?", id)
 end
 
 return M
