@@ -276,6 +276,142 @@ local function read_line(prompt_row, label, default)
     end
 end
 
+-- ── Help overlay ─────────────────────────────────────────────────────────────
+
+local HELP_NOTE = {
+    { "title",   "Piano Roll — Note Mode" },
+    { "section", "Navigation" },
+    { "entry",   "←  /  →",              "Move cursor by Q step" },
+    { "entry",   "↑  /  ↓",              "Move cursor pitch up / down" },
+    { "entry",   "Shift ← → ↑ ↓",        "Extend selection range" },
+    { "entry",   "PgUp  /  PgDn",         "Scroll view ± 1 octave" },
+    { "entry",   "Home",                  "Jump to beat 0" },
+    { "blank" },
+    { "section", "Editing" },
+    { "entry",   "Enter",                 "Add note / delete note at cursor" },
+    { "entry",   "Del  /  Backspace",     "Delete note or selected notes" },
+    { "entry",   "Space",                 "Toggle note selection" },
+    { "entry",   "A",                     "Select all / deselect all" },
+    { "blank" },
+    { "section", "Transpose & Length" },
+    { "entry",   "=  /  -",              "±1 semitone" },
+    { "entry",   "+  /  _",              "±1 octave" },
+    { "entry",   "T",                     "Prompt exact transpose amount" },
+    { "entry",   ".  /  >",              "Lengthen note(s) by Q" },
+    { "entry",   ",  /  <",              "Shorten note(s) by Q" },
+    { "blank" },
+    { "section", "Position (selection)" },
+    { "entry",   "Z  /  X",              "Move selection left / right by Q" },
+    { "entry",   "H  /  L",              "Move selection left / right (HJKL)" },
+    { "entry",   "J  /  K",              "Move selection down / up" },
+    { "blank" },
+    { "section", "Operations" },
+    { "entry",   "Q",                     "Quantize to grid" },
+    { "entry",   "R",                     "Reverse notes in loop" },
+    { "entry",   "I",                     "Invert pitches" },
+    { "entry",   "C  /  V  /  Ctrl-X",   "Copy / Paste / Cut" },
+    { "blank" },
+    { "section", "View" },
+    { "entry",   "[  /  ]",              "Zoom out / in" },
+    { "entry",   "{  /  }",              "Coarser / finer Q grid" },
+    { "blank" },
+    { "section", "Loop & Clip" },
+    { "entry",   "L",                     "Set loop length (prompt)" },
+    { "entry",   "O",                     "Toggle loop on / off" },
+    { "blank" },
+    { "section", "CC Lanes" },
+    { "entry",   "F",                     "Add CC or Pitch Bend lane (0–128)" },
+    { "entry",   "Tab",                   "Enter first CC lane" },
+    { "blank" },
+    { "section", "Save / Exit" },
+    { "entry",   "S",                     "Save and exit" },
+    { "entry",   "ESC",                   "Cancel (confirm if unsaved)" },
+    { "entry",   "?",                     "Show this help" },
+}
+
+local HELP_CC = {
+    { "title",   "Piano Roll — CC Lane Mode" },
+    { "section", "Navigation" },
+    { "entry",   "←  /  →",              "Move cursor by Q step" },
+    { "entry",   "Home",                  "Jump to beat 0" },
+    { "entry",   "Tab",                   "Cycle to next lane / back to note mode" },
+    { "blank" },
+    { "section", "Value" },
+    { "entry",   "↑  /  ↓",              "+1 / −1  (CC);  +64 / −64  (Pitch Bend)" },
+    { "entry",   "Shift ↑  /  ↓",        "+10 / −10  (CC);  +512 / −512  (PB)" },
+    { "entry",   "V",                     "Prompt exact value" },
+    { "blank" },
+    { "section", "Editing" },
+    { "entry",   "Enter",                 "Place event at cursor with staged value" },
+    { "entry",   "Del  /  Backspace",     "Erase event(s) at cursor" },
+    { "blank" },
+    { "section", "Lane" },
+    { "entry",   "-",                     "Remove this CC lane" },
+    { "entry",   "F  (in note mode)",     "Add a new CC or Pitch Bend lane" },
+    { "blank" },
+    { "section", "View" },
+    { "entry",   "[  /  ]",              "Zoom out / in" },
+    { "entry",   "{  /  }",              "Coarser / finer Q grid" },
+    { "blank" },
+    { "section", "Save / Exit" },
+    { "entry",   "S",                     "Save and exit" },
+    { "entry",   "ESC",                   "Cancel (confirm if unsaved)" },
+    { "entry",   "?",                     "Show this help" },
+}
+
+local HELP_KEY_W = 24   -- chars reserved for the key column
+
+local function show_help(mode, w, h)
+    local items = (mode == "cc") and HELP_CC or HELP_NOTE
+    tui.hide_cursor()
+    tui.clear()
+
+    -- Header
+    tui.print_at(1, 1, pad(" Piano Roll Help", w), tui.WHITE, tui.BLUE, tui.BOLD)
+    -- Footer
+    tui.print_at(h, 1, pad(" ESC or ? = close help", w), tui.BRIGHT_BLACK, tui.BLACK, 0)
+
+    local row = 3
+    for _, item in ipairs(items) do
+        if row > h - 1 then break end
+        local kind = item[1]
+        if kind == "blank" then
+            row = row + 1
+        elseif kind == "title" then
+            -- already shown in header; skip
+        elseif kind == "section" then
+            tui.print_at(row, 1,
+                pad("  " .. item[2], w),
+                tui.CYAN, tui.BLACK, tui.BOLD)
+            row = row + 1
+        elseif kind == "entry" then
+            local key_str  = "    " .. item[2]
+            local desc_str = item[3]
+            -- Key column: bright white
+            tui.print_at(row, 1,
+                pad(key_str, HELP_KEY_W),
+                tui.BRIGHT_WHITE, tui.BLACK, 0)
+            -- Desc column: normal white
+            tui.move(row, HELP_KEY_W + 1)
+            tui.print(tui.color(tui.WHITE, tui.BLACK, 0))
+            tui.print(pad(desc_str, w - HELP_KEY_W))
+            tui.print(tui.reset())
+            row = row + 1
+        end
+    end
+
+    -- Block until ESC or ?
+    while true do
+        local key = tui.read_key(10)
+        if not key then
+            if M.on_idle then M.on_idle() end
+        elseif key == 'esc' or key == '?' then
+            break
+        end
+    end
+    tui.clear()
+end
+
 -- ── Renderer ─────────────────────────────────────────────────────────────────
 
 -- Emit an ANSI color code only when the color changes (run-length encode).
@@ -964,6 +1100,9 @@ function M.open(clip, raw_events, drum_map, cc_names)
                         st.status = string.format("CC lane removed; now on %s", lbl)
                     end
                 end
+
+            elseif key == '?' then
+                show_help("cc", w, h)
             end
 
         -- ── Note mode keys ────────────────────────────────────────────────────
@@ -1064,6 +1203,10 @@ function M.open(clip, raw_events, drum_map, cc_names)
             elseif key == 'o' or key == 'O' then
                 st.looping = not st.looping; st.dirty = true
                 st.status = "Looping: " .. (st.looping and "ON" or "OFF")
+
+            -- Help
+            elseif key == '?' then
+                show_help("note", w, h)
 
             -- Add CC lane
             elseif key == 'f' or key == 'F' then
