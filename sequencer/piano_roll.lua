@@ -157,12 +157,26 @@ local function draw(st, w, h)
     local gw   = w - PIANO_W          -- grid width in chars
     local gh   = h - 4                -- grid height in pitch rows
 
+    local function pitch_label(pitch)
+        if st.drum_map then
+            local name = st.drum_map[pitch]
+            if name then
+                if #name >= PIANO_W then return name:sub(1, PIANO_W) end
+                return name .. string.rep(' ', PIANO_W - #name)
+            end
+            local s = tostring(pitch)
+            return string.rep(' ', PIANO_W - #s) .. s
+        end
+        return note_name(pitch)
+    end
+
     tui.hide_cursor()
 
     -- ── Row 1: header ─────────────────────────────────────────────────────────
     local sel = sel_count(st.notes)
+    local roll_type = st.drum_map and "Drum Roll" or "Piano Roll"
     local hdr = string.format(
-        " Piano Roll | %s | Loop:%.2f %s | Q:%s | Zoom:%d | Sel:%d",
+        " %s | %s | Loop:%.2f %s | Q:%s | Zoom:%d | Sel:%d", roll_type,
         pad(st.clip.name ~= '' and st.clip.name or "Clip", 10),
         st.loop_len,
         st.looping and "[LOOP]" or "[ ONE]",
@@ -246,7 +260,7 @@ local function draw(st, w, h)
             else
                 emit(tui.BLACK, is_c and tui.BRIGHT_WHITE or tui.WHITE, 0)
             end
-            parts[#parts+1] = note_name(pitch)
+            parts[#parts+1] = pitch_label(pitch)
 
             -- Grid columns
             for col = 0, gw - 1 do
@@ -501,7 +515,7 @@ end
 
 -- ── Entry point ───────────────────────────────────────────────────────────────
 
-function M.open(clip, raw_events)
+function M.open(clip, raw_events, drum_map)
     RST = tui.reset()
 
     local w, h = tui.size()
@@ -520,6 +534,7 @@ function M.open(clip, raw_events)
         clipboard    = {},
         status       = "Ready. ENTER=add/del  S=save  ESC=cancel",
         dirty        = false,
+        drum_map     = drum_map,  -- {[note]=name} or nil
     }
 
     tui.clear()

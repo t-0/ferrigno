@@ -105,6 +105,13 @@ function M.init_schema(db)
             gate          REAL    NOT NULL DEFAULT 0.8,
             hold_mode     INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS drum_map (
+            id            INTEGER PRIMARY KEY,
+            instrument_id INTEGER NOT NULL,
+            note          INTEGER NOT NULL,
+            name          TEXT    NOT NULL DEFAULT '',
+            UNIQUE(instrument_id, note)
+        );
         CREATE TABLE IF NOT EXISTS studios (
             id    INTEGER PRIMARY KEY,
             name  TEXT NOT NULL
@@ -133,6 +140,7 @@ function M.init_schema(db)
         "clips        ADD COLUMN loop_start    REAL    NOT NULL DEFAULT 0.0",
         "clips        ADD COLUMN loop_length   REAL    DEFAULT NULL",
         "song         ADD COLUMN studio_id     INTEGER DEFAULT NULL",
+        "instruments  ADD COLUMN type          TEXT    NOT NULL DEFAULT 'keyboard'",
     }) do
         pcall(function() db:exec("ALTER TABLE " .. col) end)
     end
@@ -174,7 +182,7 @@ end
 function M.upsert_instrument(db, inst, song_id)
     if inst.id then
         run(db,
-            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, color=?, bank_msb=?, bank_lsb=?, program=? WHERE id=?",
+            "UPDATE instruments SET name=?, midi_output=?, midi_input=?, midi_channel=?, color=?, bank_msb=?, bank_lsb=?, program=?, type=? WHERE id=?",
             inst.name,
             inst.midi_output  or '',
             inst.midi_input   or '',
@@ -183,10 +191,11 @@ function M.upsert_instrument(db, inst, song_id)
             inst.bank_msb,
             inst.bank_lsb,
             inst.program,
+            inst.type         or 'keyboard',
             inst.id)
     else
         run(db,
-            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,color,bank_msb,bank_lsb,program) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO instruments (song_id,name,midi_output,midi_input,midi_channel,color,bank_msb,bank_lsb,program,type) VALUES (?,?,?,?,?,?,?,?,?,?)",
             song_id,
             inst.name,
             inst.midi_output  or '',
@@ -195,7 +204,8 @@ function M.upsert_instrument(db, inst, song_id)
             inst.color        or 0,
             inst.bank_msb,
             inst.bank_lsb,
-            inst.program)
+            inst.program,
+            inst.type         or 'keyboard')
         inst.id = db:last_insert_rowid()
     end
     return inst
@@ -424,6 +434,24 @@ function M.save_arp_settings(db, instrument_id, state)
         state.rate    or 0.25,
         state.gate    or 0.8,
         state.hold    and 1 or 0)
+end
+
+-- ── Drum maps ─────────────────────────────────────────────────────────────────
+
+function M.get_drum_map(db, instrument_id)
+    return db:query(
+        "SELECT * FROM drum_map WHERE instrument_id=? ORDER BY note",
+        instrument_id) or {}
+end
+
+-- Replace all drum map entries for an instrument.
+function M.save_drum_map(db, instrument_id, entries)
+    run(db, "DELETE FROM drum_map WHERE instrument_id=?", instrument_id)
+    for _, e in ipairs(entries) do
+        run(db,
+            "INSERT INTO drum_map (instrument_id, note, name) VALUES (?,?,?)",
+            instrument_id, e.note, e.name or '')
+    end
 end
 
 -- ── Studios ───────────────────────────────────────────────────────────────────

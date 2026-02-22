@@ -101,6 +101,19 @@ for _, inst in ipairs(instruments) do
     sysex_dumps[inst.id] = db_mod.get_sysex_dumps(db, inst.id)
 end
 
+-- ── Load drum maps per instrument ────────────────────────────────────────────
+-- drum_maps[inst.id] = {[note_number] = name_string}
+local drum_maps = {}
+local function reload_drum_map(inst)
+    local entries = db_mod.get_drum_map(db, inst.id)
+    local dm = {}
+    for _, e in ipairs(entries) do dm[e.note] = e.name end
+    drum_maps[inst.id] = dm
+end
+for _, inst in ipairs(instruments) do
+    reload_drum_map(inst)
+end
+
 -- Ensure at least 8 scene rows exist; NUM_SLOTS is dynamic after that.
 local scenes    = db_mod.ensure_scenes(db, song.id, 8)
 local NUM_SLOTS = #scenes
@@ -716,6 +729,115 @@ local function edit_sysex(inst)
     end
 end
 
+-- Drum map editor: note → name label assignments for a drum instrument.
+local function edit_drum_map(inst)
+    local function load_entries()
+        local entries = {}
+        for note, name in pairs(drum_maps[inst.id] or {}) do
+            entries[#entries+1] = { note = note, name = name }
+        end
+        table.sort(entries, function(a, b) return a.note < b.note end)
+        return entries
+    end
+
+    local function save_entries(entries)
+        db_mod.save_drum_map(db, inst.id, entries)
+        reload_drum_map(inst)
+    end
+
+    local function parse_note_input(s)
+        s = (s or ''):match("^%s*(.-)%s*$")
+        local n = tonumber(s)
+        if n then return math.floor(math.max(0, math.min(127, n))) end
+        local note_vals = {C=0,D=2,E=4,F=5,G=7,A=9,B=11}
+        local letter, mod, oct = s:upper():match("^([A-G])([#B]?)(-?%d+)$")
+        if letter and note_vals[letter] then
+            local semi = note_vals[letter]
+            if mod == '#' then semi = semi + 1 elseif mod == 'B' then semi = semi - 1 end
+            return math.max(0, math.min(127, (tonumber(oct) + 1) * 12 + semi))
+        end
+        return nil
+    end
+
+    local entries = load_entries()
+    local sel = math.max(1, #entries)
+
+    local function draw()
+        local w, h = tui.size()
+        tui.hide_cursor()
+        tui.clear()
+        tui.print_at(1, 1, string.rep(' ', w), tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(1, 2, "Drum Map — " .. inst.name, tui.WHITE, tui.BLUE, tui.BOLD)
+        tui.print_at(3, 2, "↑↓=select  A=add  E/Enter=rename  D=delete  ESC=done",
+            tui.BRIGHT_BLACK, tui.BLACK, 0)
+        if #entries == 0 then
+            tui.print_at(5, 2, "(no entries — press A to add)", tui.BRIGHT_BLACK, tui.BLACK, 0)
+        else
+            for i, e in ipairs(entries) do
+                local nn = ({"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"})[(e.note % 12) + 1]
+                local note_s = string.format("%-3d  %-3s%-2d",
+                    e.note, nn, math.floor(e.note / 12) - 1)
+                local label = string.format(" %s  %s", note_s, e.name)
+                if i == sel then
+                    tui.print_at(4 + i, 2, "►" .. label, tui.BLACK, tui.CYAN, tui.BOLD)
+                else
+                    tui.print_at(4 + i, 2, " " .. label, tui.WHITE, tui.BLACK, 0)
+                end
+            end
+        end
+        tui.flush()
+    end
+
+    draw()
+    while true do
+        local key = read_key_live()
+        if key == 'esc' then
+            break
+        elseif key == 'up' then
+            sel = math.max(1, sel - 1)
+        elseif key == 'down' then
+            sel = math.min(math.max(1, #entries), sel + 1)
+        elseif key == 'a' or key == 'A' then
+            tui.clear()
+            local note_s = ui.read_line(3, "Note (0-127 or name e.g. C2): ", '')
+            if note_s then
+                local note = parse_note_input(note_s)
+                if note then
+                    tui.clear()
+                    local name_s = ui.read_line(3, "Name: ", '')
+                    if name_s and name_s ~= '' then
+                        for i = #entries, 1, -1 do
+                            if entries[i].note == note then table.remove(entries, i) end
+                        end
+                        entries[#entries+1] = { note = note, name = name_s }
+                        table.sort(entries, function(a, b) return a.note < b.note end)
+                        for i, e in ipairs(entries) do
+                            if e.note == note then sel = i; break end
+                        end
+                        save_entries(entries)
+                    end
+                else
+                    ui.set_status("Invalid note — use 0-127 or name like C2", tui.YELLOW)
+                end
+            end
+        elseif (key == 'e' or key == 'E' or key == 'enter' or key == 'return') and #entries > 0 then
+            tui.clear()
+            local e = entries[sel]
+            local name_s = ui.read_line(3, "Name: ", e.name)
+            if name_s and name_s ~= '' then
+                e.name = name_s
+                save_entries(entries)
+            end
+        elseif (key == 'd' or key == 'D') and #entries > 0 then
+            table.remove(entries, sel)
+            sel = math.max(1, math.min(sel, #entries))
+            save_entries(entries)
+        end
+        draw()
+    end
+    tui.clear()
+end
+
 -- Edit an instrument's definition (MIDI settings, name, patch).
 -- Accepts the instrument object directly.
 local function edit_instrument_def(inst)
@@ -737,8 +859,15 @@ local function edit_instrument_def(inst)
         return 1
     end
 
+    local type_opts = {"keyboard", "drum"}
+    local function type_index(t)
+        for i, v in ipairs(type_opts) do if v == (t or 'keyboard') then return i end end
+        return 1
+    end
+
     local fields = {
         { label="Name",        type="text"                                     },
+        { label="Type",        type="picker", opts=type_opts                   },
         { label="MIDI Output", type="picker", opts=dest_opts                   },
         { label="MIDI Input",  type="picker", opts=src_opts                    },
         { label="Channel",     type="number", min=1,   max=16,  nullable=false },
@@ -749,6 +878,7 @@ local function edit_instrument_def(inst)
 
     local vals = {
         inst.name or '',
+        type_index(inst.type),
         opt_index(dest_opts, inst.midi_output or ''),
         opt_index(src_opts,  inst.midi_input  or ''),
         tostring(inst.midi_channel or 1),
@@ -757,12 +887,13 @@ local function edit_instrument_def(inst)
         inst.program  ~= nil and tostring(inst.program)  or '',
     }
 
-    local LABEL_W  = 14
-    local VAL_COL  = LABEL_W + 5
-    local sel      = 1
-    local editing  = false
-    local edit_buf = ''
-    local do_sysex = false
+    local LABEL_W    = 14
+    local VAL_COL    = LABEL_W + 5
+    local sel        = 1
+    local editing    = false
+    local edit_buf   = ''
+    local do_sysex   = false
+    local do_drummap = false
 
     local function pad(s, n)
         s = tostring(s or '')
@@ -820,8 +951,9 @@ local function edit_instrument_def(inst)
                 pad("  Enter=confirm  ESC=cancel edit", w),
                 tui.BRIGHT_BLACK, tui.BLACK, 0)
         else
+            local drum_hint = (type_opts[vals[2]] == 'drum') and "  M=drum map" or ""
             tui.print_at(hint_row, 1,
-                pad("  ↑↓/Tab=navigate  ←→=cycle options  Enter=edit  S=save  X=sysex  ESC=cancel", w),
+                pad("  ↑↓/Tab=navigate  ←→=cycle options  Enter=edit  S=save  X=sysex" .. drum_hint .. "  ESC=cancel", w),
                 tui.BRIGHT_BLACK, tui.BLACK, 0)
         end
         tui.flush()
@@ -863,6 +995,9 @@ local function edit_instrument_def(inst)
             elseif key == 'x' or key == 'X' then
                 do_sysex = true
                 break
+            elseif (key == 'm' or key == 'M') and type_opts[vals[2]] == 'drum' then
+                do_drummap = true
+                break
             elseif key == 'tab' or key == 'down' then
                 sel = (sel % #fields) + 1
             elseif key == 'up' then
@@ -895,12 +1030,13 @@ local function edit_instrument_def(inst)
     end
 
     local new_name        = vals[1] ~= '' and vals[1] or inst.name
-    inst.midi_output      = (dest_opts[vals[2]] == "None") and '' or (dest_opts[vals[2]] or '')
-    inst.midi_input       = (src_opts[vals[3]]  == "None") and '' or (src_opts[vals[3]]  or '')
-    inst.midi_channel     = math.max(1, math.min(16, tonumber(vals[4]) or 1))
-    inst.bank_msb         = parse_opt_num(vals[5], 0, 127)
-    inst.bank_lsb         = parse_opt_num(vals[6], 0, 127)
-    inst.program          = parse_opt_num(vals[7], 0, 127)
+    inst.type             = type_opts[vals[2]] or 'keyboard'
+    inst.midi_output      = (dest_opts[vals[3]] == "None") and '' or (dest_opts[vals[3]] or '')
+    inst.midi_input       = (src_opts[vals[4]]  == "None") and '' or (src_opts[vals[4]]  or '')
+    inst.midi_channel     = math.max(1, math.min(16, tonumber(vals[5]) or 1))
+    inst.bank_msb         = parse_opt_num(vals[6], 0, 127)
+    inst.bank_lsb         = parse_opt_num(vals[7], 0, 127)
+    inst.program          = parse_opt_num(vals[8], 0, 127)
 
     -- Handle name change: update instruments_by_name and all track references.
     if new_name ~= old_name then
@@ -921,6 +1057,9 @@ local function edit_instrument_def(inst)
 
     if do_sysex then
         edit_sysex(inst)
+    end
+    if do_drummap then
+        edit_drum_map(inst)
     end
 
     tui.clear()
@@ -1498,7 +1637,8 @@ local function edit_clip_piano_roll()
         ui.set_status("No clip here — press N to create one first", tui.YELLOW)
         return
     end
-    local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {})
+    local dm = (inst and inst.type == 'drum') and drum_maps[inst.id] or nil
+    local new_evts, new_len, new_loop = piano_roll.open(clip, events[clip.id] or {}, dm)
     tui.clear()
 
     if new_evts then
