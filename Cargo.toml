@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "src/rust/ferrigno-macros",
+    "src/rust/ferrigno-library",
+    "src/rust/ferrigno-interpreter",
+    "src/rust/ferrigno-compiler",
+]
+resolver = "3"
