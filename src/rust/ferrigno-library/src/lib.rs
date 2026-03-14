@@ -13,7 +13,9 @@ pub mod coroutinestatus;
 pub mod debuginfo;
 pub mod dumpstate;
 pub mod dynamicdata;
-pub mod embedded_resources;
+pub mod embedded_resources {
+    include!(concat!(env!("OUT_DIR"), "/embedded_resources.rs"));
+}
 pub mod expressiondescription;
 pub mod expressionkind;
 pub mod f2i;
