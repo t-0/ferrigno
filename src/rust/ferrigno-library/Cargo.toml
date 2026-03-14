@@ -1,7 +1,11 @@
 [package]
 name = "ferrigno-library"
-version = "0.1.0"
-edition = "2024"
+description = "Core library for the Ferrigno Lua 5.5 runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-ferrigno-macros = { path = "../ferrigno-macros" }
+ferrigno-macros = { path = "../ferrigno-macros", version = "0.1.0" }
