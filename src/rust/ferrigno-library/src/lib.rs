@@ -38,7 +38,6 @@ pub mod loadstate;
 pub mod localvariable;
 pub mod longjump;
 pub mod luastate;
-pub mod macros;
 pub mod matchstate;
 pub mod nativeendian;
 pub mod node;

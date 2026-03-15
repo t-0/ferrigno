@@ -3,26 +3,5 @@
 version = 4
 
 [[package]]
-name = "ferrigno-compiler"
-version = "0.1.0"
-dependencies = [
- "ferrigno-library",
-]
-
-[[package]]
-name = "ferrigno-interpreter"
-version = "0.1.0"
-dependencies = [
- "ferrigno-library",
-]
-
-[[package]]
 name = "ferrigno-library"
-version = "0.1.0"
-dependencies = [
- "ferrigno-macros",
-]
-
-[[package]]
-name = "ferrigno-macros"
-version = "0.1.0"
+version = "0.1.1"
