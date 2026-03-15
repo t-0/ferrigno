@@ -1,12 +1,12 @@
 use std::ffi::c_void;
 use std::ptr::*;
 
-use ferrigno_library::dumpstate::*;
-use ferrigno_library::global::lua_gc;
-use ferrigno_library::luastate::LuaState;
-use ferrigno_library::prototype::*;
-use ferrigno_library::state::*;
-use ferrigno_library::status::*;
+use ferrigno::dumpstate::*;
+use ferrigno::global::lua_gc;
+use ferrigno::luastate::LuaState;
+use ferrigno::prototype::*;
+use ferrigno::state::*;
+use ferrigno::status::*;
 
 const PROGNAME: &str = "ferrignoc";
 

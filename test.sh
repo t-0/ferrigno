@@ -17,7 +17,7 @@ do
             exit 1
         fi
     fi
-    if ! pushd "src/rust/ferrigno-library/lua/tests"
+    if ! pushd "src/rust/ferrigno/lua/tests"
     then
         printf "ERROR\n" 1>&2
         exit 1

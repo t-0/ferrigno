@@ -1,6 +1,6 @@
 [package]
-name = "ferrigno-library"
-description = "Core library for the Ferrigno Lua 5.5 runtime"
+name = "ferrigno"
+description = "Ferrigno Lua 5.5 runtime"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
