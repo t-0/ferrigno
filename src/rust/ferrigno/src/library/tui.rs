@@ -520,7 +520,7 @@ pub unsafe fn tui_raw(state: *mut State) -> i32 {
         }
         let mut t: Termios = std::mem::zeroed();
         if tcgetattr(STDIN_FILENO, &mut t) != 0 {
-            return lual_error(state, c"tui.raw: tcgetattr failed".as_ptr());
+            return lual_error(state, c"tui.raw: tcgetattr failed".as_ptr(), &[]);
         }
 
         *SAVED_TERMIOS.lock().unwrap() = Some(t);

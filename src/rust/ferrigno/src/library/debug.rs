@@ -82,7 +82,7 @@ pub unsafe fn db_getinfo(state: *mut State) -> i32 {
             0;
         }
         if lua_type(state, arg + 1) == Some(TagType::Closure) {
-            options = lua_pushfstring(state, c">%s".as_ptr(), options);
+            options = lua_pushfstring(state, c">%s".as_ptr(), &[options.into()]);
             lua_pushvalue(state, arg + 1);
             lua_xmove(state, other_state, 1);
         } else if lua_getstack(other_state, lual_checkinteger(state, arg + 1) as i32, &mut debuginfo) == 0 {
@@ -296,7 +296,7 @@ pub unsafe fn db_debug(state: *mut State) -> i32 {
             ) != Status::OK
                 || CallS::api_call(state, 0, 0, 0, 0, None) != Status::OK
             {
-                eprintln!("{}", std::ffi::CStr::from_ptr(lual_tolstring(state, -1, null_mut())).display());
+                eprintln!("{}", std::ffi::CStr::from_ptr(lual_tolstring(state, -1, null_mut())).to_string_lossy());
             }
             lua_settop(state, 0);
         }

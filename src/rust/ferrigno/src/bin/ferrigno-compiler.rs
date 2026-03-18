@@ -304,7 +304,7 @@ fn main() {
             | Some(s) => s,
         };
         let state = state.state();
-        lua_gc(state, 0);
+        lua_gc(state, 0, &[]);
 
         // Load all input files
         for filename in &opts.files {

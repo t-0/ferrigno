@@ -62,7 +62,7 @@ unsafe fn ft_reduce(state: *mut State) -> i32 {
             start = 1;
         } else {
             if len == 0 {
-                return lual_error(state, c"reduce of empty table with no initial value".as_ptr());
+                return lual_error(state, c"reduce of empty table with no initial value".as_ptr(), &[]);
             }
             lua_rawgeti(state, 2, 1);
             start = 2;
@@ -156,7 +156,7 @@ unsafe fn ft_compose(state: *mut State) -> i32 {
     unsafe {
         let nargs = (*state).get_top();
         if nargs == 0 {
-            return lual_error(state, c"compose requires at least one function".as_ptr());
+            return lual_error(state, c"compose requires at least one function".as_ptr(), &[]);
         }
         (*state).lua_createtable();
         for i in 1..=nargs {

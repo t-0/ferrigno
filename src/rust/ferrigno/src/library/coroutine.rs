@@ -57,13 +57,13 @@ unsafe fn luab_close(state: *mut State) -> i32 {
             },
             | CoroutineStatus::Running => {
                 if coroutine == (*(*state).interpreter_global).global_maininterpreter {
-                    lual_error(state, c"cannot close main thread".as_ptr())
+                    lual_error(state, c"cannot close main thread".as_ptr(), &[])
                 } else {
                     lua_closethread(coroutine, state);
                     0 // does not return
                 }
             },
-            | x => lual_error(state, c"cannot close a %s coroutine".as_ptr(), x.get_name()),
+            | x => lual_error(state, c"cannot close a %s coroutine".as_ptr(), &[x.get_name().into()]),
         }
     }
 }

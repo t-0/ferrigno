@@ -1,4 +1,3 @@
-#![feature(default_field_values, c_variadic, cstr_display)]
 pub mod absolutelineinfo;
 pub mod blockcontrol;
 pub mod buffer;
@@ -20,6 +19,7 @@ pub mod expressiondescription;
 pub mod expressionkind;
 pub mod f2i;
 pub mod filehandle;
+pub mod fmtarg;
 pub mod forloop;
 pub mod functions;
 pub mod functionstate;

@@ -136,7 +136,7 @@ pub unsafe fn luav_idiv(state: *mut State, m: i64, n: i64) -> i64 {
     unsafe {
         if (n as usize).wrapping_add(1_usize) <= 1 {
             if n == 0 {
-                luag_runerror(state, c"attempt to divide by zero".as_ptr());
+                luag_runerror(state, c"attempt to divide by zero".as_ptr(), &[]);
             }
             (0usize).wrapping_sub(m as usize) as i64
         } else {
@@ -152,7 +152,7 @@ pub unsafe fn luav_mod(state: *mut State, m: i64, n: i64) -> i64 {
     unsafe {
         if (n as usize).wrapping_add(1_usize) <= 1 {
             if n == 0 {
-                luag_runerror(state, c"attempt to perform 'n%%0'".as_ptr());
+                luag_runerror(state, c"attempt to perform 'n%%0'".as_ptr(), &[]);
             }
             0
         } else {

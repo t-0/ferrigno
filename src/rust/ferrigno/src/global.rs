@@ -1000,14 +1000,13 @@ pub unsafe fn markold(global: *mut Global, from: *mut Object, to: *mut Object) {
         }
     }
 }
-pub unsafe extern "C-unwind" fn lua_gc(state: *mut State, what: i32, args: ...) -> i32 {
+pub unsafe fn lua_gc(state: *mut State, what: i32, args: &[i32]) -> i32 {
     unsafe {
         let mut res: i32 = 0;
         let global: *mut Global = (*state).interpreter_global;
         if (*global).global_gcstep as i32 & 2 != 0 {
             return -1;
         }
-        let mut args = args;
         match what {
             | GC_STOP => {
                 (*global).global_gcstep = 1;
@@ -1026,7 +1025,7 @@ pub unsafe extern "C-unwind" fn lua_gc(state: *mut State, what: i32, args: ...) 
                 res = (((*global).global_count_total_bytes + (*global).global_count_gc_debt) as usize & 0x3ff_usize) as i32;
             },
             | GC_STEP => {
-                let n: i64 = args.arg::<usize>() as i64;
+                let n: i64 = args.first().copied().unwrap_or(0) as i64;
                 let oldstp: u8 = (*global).global_gcstep;
                 let mut work: i32 = 0;
                 (*global).global_gcstep = 0;
@@ -1061,8 +1060,8 @@ pub unsafe extern "C-unwind" fn lua_gc(state: *mut State, what: i32, args: ...) 
                 (*global).luac_changemode(state, GCKind::Incremental);
             },
             | GC_PARAM => {
-                let param: i32 = args.arg::<i32>();
-                let value: i32 = args.arg::<i32>();
+                let param: i32 = args[0];
+                let value: i32 = args[1];
                 if param >= 0 && (param as usize) < GCPN {
                     res = applyparam((*global).global_gcparams[param as usize], 100) as i32;
                     if value >= 0 {

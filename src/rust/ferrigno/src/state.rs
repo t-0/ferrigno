@@ -380,7 +380,7 @@ impl State {
     }
     pub unsafe fn too_big(&mut self) -> ! {
         unsafe {
-            luag_runerror(self, c"memory allocation error: block too big".as_ptr());
+            luag_runerror(self, c"memory allocation error: block too big".as_ptr(), &[]);
         }
     }
     pub unsafe fn push_state(&mut self) -> bool {
@@ -430,7 +430,7 @@ impl State {
     pub unsafe fn luae_checkcstack(&mut self) {
         unsafe {
             if self.interpreter_count_c_calls & INTERPRETER_C_CALLS_MASK == LUAI_MAXCCALLS {
-                luag_runerror(self, c"C stack overflow".as_ptr());
+                luag_runerror(self, c"C stack overflow".as_ptr(), &[]);
             } else if self.interpreter_count_c_calls & INTERPRETER_C_CALLS_MASK >= LUAI_MAXCCALLS_ERRERR {
                 self.luad_errerr();
             }
@@ -703,7 +703,7 @@ pub unsafe fn luad_growstack(state: *mut State, n: i32, should_raise_error: bool
         }
         luad_reallocstack(state, LUAI_MAXSTACK + LUAI_MAXCCALLS as i32, should_raise_error);
         if should_raise_error {
-            luag_runerror(state, c"stack overflow".as_ptr());
+            luag_runerror(state, c"stack overflow".as_ptr(), &[]);
         }
         0
     }
@@ -992,7 +992,7 @@ pub unsafe fn luad_pretailcall(
                 },
                 | _ => {
                     if ccmt_count >= MAX_CCMT {
-                        luag_runerror(state, c"'__call' chain too long".as_ptr());
+                        luag_runerror(state, c"'__call' chain too long".as_ptr(), &[]);
                     }
                     ccmt_count += 1;
                     function = tryfunctm(state, function);
@@ -1047,7 +1047,7 @@ pub unsafe fn luad_precall(state: *mut State, mut function: *mut TValue, count_r
                 },
                 | _ => {
                     if ccmt_count >= MAX_CCMT {
-                        luag_runerror(state, c"'__call' chain too long".as_ptr());
+                        luag_runerror(state, c"'__call' chain too long".as_ptr(), &[]);
                     }
                     ccmt_count += 1;
                     function = tryfunctm(state, function);
@@ -1253,9 +1253,9 @@ pub unsafe fn lua_yieldk(state: *mut State, count_results: i32, ctx: i64, k: Con
         let callinfo = (*state).interpreter_callinfo;
         if !(*state).is_yieldable() {
             if state != (*(*state).interpreter_global).global_maininterpreter {
-                luag_runerror(state, c"attempt to yield across a C-call boundary".as_ptr());
+                luag_runerror(state, c"attempt to yield across a C-call boundary".as_ptr(), &[]);
             } else {
-                luag_runerror(state, c"attempt to yield from outside a coroutine".as_ptr());
+                luag_runerror(state, c"attempt to yield from outside a coroutine".as_ptr(), &[]);
             }
         }
         (*state).interpreter_status = Status::Yield;
@@ -1297,7 +1297,7 @@ pub unsafe fn luad_pcall(
 pub unsafe fn checkmode(state: *mut State, mode: *const i8, x: *const i8) {
     unsafe {
         if !mode.is_null() && (cstr_chr(mode, *x.add(0))).is_null() {
-            luao_pushfstring(state, c"attempt to load a %s chunk (mode is '%s')".as_ptr(), x, mode);
+            luao_pushfstring(state, c"attempt to load a %s chunk (mode is '%s')".as_ptr(), &[x.into(), mode.into()]);
             luad_throw(state, Status::SyntaxError);
         }
     }
@@ -1690,14 +1690,14 @@ pub unsafe fn lua_pushstring(state: *mut State, mut s: *const i8) -> *const i8 {
         s
     }
 }
-pub unsafe fn lua_pushvfstring(state: *mut State, fmt: *const i8, argp: ::core::ffi::VaList) -> *const i8 {
+pub unsafe fn lua_pushvfstring(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> *const i8 {
     unsafe {
-        let ret = luao_pushvfstring(state, fmt, argp);
+        let ret = luao_pushvfstring(state, fmt, args);
         (*state).do_gc_step_if_should_step();
         ret
     }
 }
-pub unsafe extern "C-unwind" fn lua_pushfstring(state: *mut State, fmt: *const i8, args: ...) -> *const i8 {
+pub unsafe fn lua_pushfstring(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> *const i8 {
     unsafe {
         let ret: *const i8 = luao_pushvfstring(state, fmt, args);
         (*state).do_gc_step_if_should_step();
@@ -2576,7 +2576,7 @@ pub unsafe fn formatvarinfo(state: *mut State, kind: *const i8, name: *const i8)
         if kind.is_null() {
             c"".as_ptr()
         } else {
-            luao_pushfstring(state, c" (%s '%s')".as_ptr(), kind, name)
+            luao_pushfstring(state, c" (%s '%s')".as_ptr(), &[kind.into(), name.into()])
         }
     }
 }
@@ -2607,7 +2607,7 @@ pub unsafe fn varinfo(state: *mut State, tvalue: *const TValue) -> *const i8 {
 pub unsafe fn typeerror(state: *mut State, tvalue: *const TValue, op: *const i8, extra: *const i8) -> ! {
     unsafe {
         let t: *const i8 = luat_objtypename(state, tvalue);
-        luag_runerror(state, c"attempt to %s a %s value%s".as_ptr(), op, t, extra);
+        luag_runerror(state, c"attempt to %s a %s value%s".as_ptr(), &[op.into(), t.into(), extra.into()]);
     }
 }
 pub unsafe fn luag_typeerror(state: *mut State, tvalue: *const TValue, op: *const i8) -> ! {
@@ -2633,8 +2633,7 @@ pub unsafe fn luag_forerror(state: *mut State, tvalue: *const TValue, what: *con
         luag_runerror(
             state,
             c"bad 'for' %s (number expected, got %s)".as_ptr(),
-            what,
-            luat_objtypename(state, tvalue),
+            &[what.into(), luat_objtypename(state, tvalue).into()],
         );
     }
 }
@@ -2663,7 +2662,7 @@ pub unsafe fn luag_tointerror(state: *mut State, p1: *const TValue, mut p2: *con
         if F2I::Equal.convert_tv_i64(p1, &mut temp) == 0 {
             p2 = p1;
         }
-        luag_runerror(state, c"number%s has no integer representation".as_ptr(), varinfo(state, p2));
+        luag_runerror(state, c"number%s has no integer representation".as_ptr(), &[varinfo(state, p2).into()]);
     }
 }
 pub unsafe fn luag_ordererror(state: *mut State, p1: *const TValue, p2: *const TValue) -> ! {
@@ -2671,20 +2670,20 @@ pub unsafe fn luag_ordererror(state: *mut State, p1: *const TValue, p2: *const T
         let t1: *const i8 = luat_objtypename(state, p1);
         let t2: *const i8 = luat_objtypename(state, p2);
         if std::ffi::CStr::from_ptr(t1) == std::ffi::CStr::from_ptr(t2) {
-            luag_runerror(state, c"attempt to compare two %s values".as_ptr(), t1);
+            luag_runerror(state, c"attempt to compare two %s values".as_ptr(), &[t1.into()]);
         } else {
-            luag_runerror(state, c"attempt to compare %s with %s".as_ptr(), t1, t2);
+            luag_runerror(state, c"attempt to compare %s with %s".as_ptr(), &[t1.into(), t2.into()]);
         };
     }
 }
 pub unsafe fn luag_addinfo(state: *mut State, message: *const i8, src: *mut TString, line: i32) -> *const i8 {
     unsafe {
         if src.is_null() {
-            luao_pushfstring(state, c"?:?: %s".as_ptr(), message)
+            luao_pushfstring(state, c"?:?: %s".as_ptr(), &[message.into()])
         } else {
             let mut buffer: [i8; LUA_IDSIZE] = [0; LUA_IDSIZE];
             luao_chunkid(buffer.as_mut_ptr(), (*src).get_contents_mut(), (*src).get_length());
-            luao_pushfstring(state, c"%s:%d: %s".as_ptr(), buffer.as_mut_ptr(), line, message)
+            luao_pushfstring(state, c"%s:%d: %s".as_ptr(), &[buffer.as_mut_ptr().into(), line.into(), message.into()])
         }
     }
 }
@@ -2716,7 +2715,7 @@ pub unsafe fn luag_errormsg(state: *mut State) -> ! {
         luad_throw(state, Status::RuntimeError);
     }
 }
-pub unsafe extern "C-unwind" fn luag_runerror(state: *mut State, fmt: *const i8, args: ...) -> ! {
+pub unsafe fn luag_runerror(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> ! {
     unsafe {
         let callinfo = (*state).interpreter_callinfo;
         (*state).do_gc_step_if_should_step();
@@ -2978,10 +2977,11 @@ pub unsafe fn luao_rawarith(state: *mut State, op: i32, p1: *const TValue, p2: *
         }
     }
 }
-pub unsafe fn luao_pushvfstring(state: *mut State, mut fmt: *const i8, mut argp: ::core::ffi::VaList) -> *const i8 {
+pub unsafe fn luao_pushvfstring(state: *mut State, mut fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> *const i8 {
     unsafe {
         let mut buff_fs = BuffFS::new(state);
         let mut e: *const i8;
+        let mut arg_idx: usize = 0;
         loop {
             e = cstr_chr(fmt, Character::Percent as i8);
             if e.is_null() {
@@ -2990,48 +2990,55 @@ pub unsafe fn luao_pushvfstring(state: *mut State, mut fmt: *const i8, mut argp:
             buff_fs.add_string(fmt, e.offset_from(fmt) as usize);
             match Character::from(*e.add(1) as i32) {
                 | Character::LowerS => {
-                    let mut s: *const i8 = argp.arg::<*mut i8>();
+                    let mut s: *const i8 = args[arg_idx].as_str();
+                    arg_idx += 1;
                     if s.is_null() {
                         s = c"(null)".as_ptr();
                     }
                     buff_fs.add_string(s, cstr_len(s));
                 },
                 | Character::LowerC => {
-                    let c: i8 = argp.arg::<i32>() as u8 as i8;
+                    let c: i8 = args[arg_idx].as_int() as u8 as i8;
+                    arg_idx += 1;
                     buff_fs.add_string(&c, 1_usize);
                 },
                 | Character::LowerD => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
-                    tvalue.set_integer(argp.arg::<i32>() as i64);
+                    tvalue.set_integer(args[arg_idx].as_int() as i64);
+                    arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
                 },
                 | Character::UpperI => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
-                    tvalue.set_integer(argp.arg::<i64>());
+                    tvalue.set_integer(args[arg_idx].as_long());
+                    arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
                 },
                 | Character::LowerF => {
                     let mut tvalue: TValue = TValue::new(TagVariant::NilNil);
-                    tvalue.set_number(argp.arg::<f64>());
+                    tvalue.set_number(args[arg_idx].as_float());
+                    arg_idx += 1;
                     buff_fs.add_number(&mut tvalue);
                 },
                 | Character::LowerP => {
                     let size = 3_usize.wrapping_mul(size_of::<*mut std::ffi::c_void>()).wrapping_add(8);
                     let bf: *mut i8 = buff_fs.get_raw(size);
-                    let p: *mut std::ffi::c_void = argp.arg::<*mut std::ffi::c_void>();
+                    let p: *mut std::ffi::c_void = args[arg_idx].as_ptr();
+                    arg_idx += 1;
                     let length = snprintf_pointer(bf, size, p);
                     buff_fs.add_length(length as usize);
                 },
                 | Character::UpperU => {
                     let mut bf: [i8; 8] = [0; 8];
-                    let length: i32 = luao_utf8esc(bf.as_mut_ptr(), argp.arg::<i64>() as usize);
+                    let length: i32 = luao_utf8esc(bf.as_mut_ptr(), args[arg_idx].as_long() as usize);
+                    arg_idx += 1;
                     buff_fs.add_string(bf.as_mut_ptr().add(8).sub(length as usize), length as usize);
                 },
                 | Character::Percent => {
                     buff_fs.add_string(c"%".as_ptr(), 1_usize);
                 },
                 | _ => {
-                    luag_runerror(state, c"invalid option '%%%c' to 'lua_pushfstring'".as_ptr(), *e.add(1) as i32);
+                    luag_runerror(state, c"invalid option '%%%c' to 'lua_pushfstring'".as_ptr(), &[(*e.add(1) as i32).into()]);
                 },
             }
             fmt = e.add(2);
@@ -3041,7 +3048,7 @@ pub unsafe fn luao_pushvfstring(state: *mut State, mut fmt: *const i8, mut argp:
         (*(*(*state).interpreter_top.stkidrel_pointer.sub(1)).as_string().unwrap()).get_contents_mut()
     }
 }
-pub unsafe extern "C-unwind" fn luao_pushfstring(state: *mut State, fmt: *const i8, args: ...) -> *const i8 {
+pub unsafe fn luao_pushfstring(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> *const i8 {
     unsafe { luao_pushvfstring(state, fmt, args) }
 }
 pub unsafe fn luat_init(state: *mut State) {
@@ -3342,7 +3349,7 @@ pub unsafe fn luat_getvarargs(state: *mut State, callinfo: *mut CallInfo, mut wh
             if (*n_val).get_tagvariant() != TagVariant::NumericInteger
                 || ((*n_val).as_integer().unwrap() as u64) > (i32::MAX / 2) as u64
             {
-                luag_runerror(state, c"vararg table has no proper 'n'".as_ptr());
+                luag_runerror(state, c"vararg table has no proper 'n'".as_ptr(), &[]);
             }
             (*n_val).as_integer().unwrap() as i32
         };
@@ -3650,7 +3657,7 @@ pub unsafe fn checkclosemth(state: *mut State, level: *mut TValue) {
             if vname.is_null() {
                 vname = c"?".as_ptr();
             }
-            luag_runerror(state, c"variable '%s' got a non-closable value".as_ptr(), vname);
+            luag_runerror(state, c"variable '%s' got a non-closable value".as_ptr(), &[vname.into()]);
         }
     }
 }
@@ -5894,7 +5901,7 @@ pub unsafe fn luav_execute(state: *mut State, mut callinfo: *mut CallInfo) {
                                     c"?".as_ptr()
                                 };
                                 (*callinfo).callinfo_u.l.saved_program_counter = program_counter;
-                                luag_runerror(state, c"global '%s' already defined".as_ptr(), name);
+                                luag_runerror(state, c"global '%s' already defined".as_ptr(), &[name.into()]);
                             }
                             continue;
                         },
@@ -6004,21 +6011,19 @@ pub unsafe fn pushfuncname(state: *mut State, debuginfo: *mut DebugInfo) {
             lua_pushfstring(
                 state,
                 c"%s '%s'".as_ptr(),
-                (*debuginfo).debuginfo_name_what,
-                (*debuginfo).debuginfo_name,
+                &[(*debuginfo).debuginfo_name_what.into(), (*debuginfo).debuginfo_name.into()],
             );
         } else if *(*debuginfo).debuginfo_what as i32 == Character::LowerM as i32 {
             lua_pushstring(state, c"main chunk".as_ptr());
         } else if pushglobalfuncname(state, debuginfo) {
-            lua_pushfstring(state, c"function '%s'".as_ptr(), lua_tolstring(state, -1, null_mut()));
+            lua_pushfstring(state, c"function '%s'".as_ptr(), &[lua_tolstring(state, -1, null_mut()).into()]);
             lua_rotate(state, -2, -1);
             lua_settop(state, -2);
         } else if *(*debuginfo).debuginfo_what as i32 != Character::UpperC as i32 {
             lua_pushfstring(
                 state,
                 c"function <%s:%d>".as_ptr(),
-                ((*debuginfo).debuginfo_short_source).as_mut_ptr(),
-                (*debuginfo).debuginfo_line_defined,
+                &[((*debuginfo).debuginfo_short_source).as_mut_ptr().into(), (*debuginfo).debuginfo_line_defined.into()],
             );
         } else {
             lua_pushstring(state, c"?".as_ptr());
@@ -6072,19 +6077,18 @@ pub unsafe fn lual_traceback(state: *mut State, other_state: *mut State, message
             limit2show -= 1;
             if prev_limit == 0 {
                 let n: i32 = last - level - LEVELS2 + 1;
-                lua_pushfstring(state, c"\n\t...\t(skipping %d levels)".as_ptr(), n);
+                lua_pushfstring(state, c"\n\t...\t(skipping %d levels)".as_ptr(), &[n.into()]);
                 b.add_value();
                 level += n;
             } else {
                 lua_getinfo(other_state, c"Slnt".as_ptr(), &mut debuginfo);
                 if debuginfo.debuginfo_current_line <= 0 {
-                    lua_pushfstring(state, c"\n\t%s: in ".as_ptr(), (debuginfo.debuginfo_short_source).as_mut_ptr());
+                    lua_pushfstring(state, c"\n\t%s: in ".as_ptr(), &[(debuginfo.debuginfo_short_source).as_mut_ptr().into()]);
                 } else {
                     lua_pushfstring(
                         state,
                         c"\n\t%s:%d: in ".as_ptr(),
-                        (debuginfo.debuginfo_short_source).as_mut_ptr(),
-                        debuginfo.debuginfo_current_line,
+                        &[(debuginfo.debuginfo_short_source).as_mut_ptr().into(), debuginfo.debuginfo_current_line.into()],
                     );
                 }
                 b.add_value();
@@ -6102,7 +6106,7 @@ pub unsafe fn lual_argerror(state: *mut State, mut arg: i32, extramsg: *const i8
     unsafe {
         let mut debuginfo: DebugInfo = DebugInfo::new();
         if lua_getstack(state, 0, &mut debuginfo) == 0 {
-            return lual_error(state, c"bad argument #%d (%s)".as_ptr(), arg, extramsg);
+            return lual_error(state, c"bad argument #%d (%s)".as_ptr(), &[arg.into(), extramsg.into()]);
         }
         lua_getinfo(state, c"n".as_ptr(), &mut debuginfo);
         if std::ffi::CStr::from_ptr(debuginfo.debuginfo_name_what) == c"method" {
@@ -6111,8 +6115,7 @@ pub unsafe fn lual_argerror(state: *mut State, mut arg: i32, extramsg: *const i8
                 return lual_error(
                     state,
                     c"calling '%s' on bad self (%s)".as_ptr(),
-                    debuginfo.debuginfo_name,
-                    extramsg,
+                    &[debuginfo.debuginfo_name.into(), extramsg.into()],
                 );
             }
         }
@@ -6126,9 +6129,7 @@ pub unsafe fn lual_argerror(state: *mut State, mut arg: i32, extramsg: *const i8
         lual_error(
             state,
             c"bad argument #%d to '%s' (%s)".as_ptr(),
-            arg,
-            debuginfo.debuginfo_name,
-            extramsg,
+            &[arg.into(), debuginfo.debuginfo_name.into(), extramsg.into()],
         )
     }
 }
@@ -6142,7 +6143,7 @@ pub unsafe fn lual_typeerror(state: *mut State, arg: i32, tname: *const i8) -> i
         } else {
             typearg = lua_typename(state, lua_type(state, arg));
         }
-        let message: *const i8 = lua_pushfstring(state, c"%s expected, got %s".as_ptr(), tname, typearg);
+        let message: *const i8 = lua_pushfstring(state, c"%s expected, got %s".as_ptr(), &[tname.into(), typearg.into()]);
         lual_argerror(state, arg, message)
     }
 }
@@ -6160,16 +6161,15 @@ pub unsafe fn lual_where(state: *mut State, level: i32) {
                 lua_pushfstring(
                     state,
                     c"%s:%d: ".as_ptr(),
-                    (debuginfo.debuginfo_short_source).as_mut_ptr(),
-                    debuginfo.debuginfo_current_line,
+                    &[(debuginfo.debuginfo_short_source).as_mut_ptr().into(), debuginfo.debuginfo_current_line.into()],
                 );
                 return;
             }
         }
-        lua_pushfstring(state, c"".as_ptr());
+        lua_pushfstring(state, c"".as_ptr(), &[]);
     }
 }
-pub unsafe extern "C-unwind" fn lual_error(state: *mut State, fmt: *const i8, args: ...) -> i32 {
+pub unsafe fn lual_error(state: *mut State, fmt: *const i8, args: &[crate::fmtarg::FmtArg]) -> i32 {
     unsafe {
         lual_where(state, 1);
         lua_pushvfstring(state, fmt, args);
@@ -6187,7 +6187,7 @@ pub unsafe fn lual_fileresult(state: *mut State, stat: i32, fname: *const i8) ->
             (*state).push_nil();
             let message: *const i8 = if en != 0 { os_strerror(en) } else { c"(no extra info)".as_ptr() };
             if !fname.is_null() {
-                lua_pushfstring(state, c"%s: %s".as_ptr(), fname, message);
+                lua_pushfstring(state, c"%s: %s".as_ptr(), &[fname.into(), message.into()]);
             } else {
                 lua_pushstring(state, message);
             }
@@ -6278,16 +6278,16 @@ pub unsafe fn lual_checkoption(state: *mut State, arg: i32, def: *const i8, lst:
             }
             i += 1;
         }
-        lual_argerror(state, arg, lua_pushfstring(state, c"invalid option '%s'".as_ptr(), name))
+        lual_argerror(state, arg, lua_pushfstring(state, c"invalid option '%s'".as_ptr(), &[name.into()]))
     }
 }
 pub unsafe fn lual_checkstack(state: *mut State, space: i32, message: *const i8) {
     unsafe {
         if lua_checkstack(state, space) == 0 {
             if message.is_null() {
-                lual_error(state, c"stack overflow".as_ptr());
+                lual_error(state, c"stack overflow".as_ptr(), &[]);
             } else {
-                lual_error(state, c"stack overflow (%s)".as_ptr(), message);
+                lual_error(state, c"stack overflow (%s)".as_ptr(), &[message.into()]);
             }
         }
     }
@@ -6396,9 +6396,9 @@ pub unsafe fn errfile(state: *mut State, what: *const i8, fnameindex: i32) -> St
         let err: i32 = get_errno();
         let filename: *const i8 = (lua_tolstring(state, fnameindex, null_mut())).add(1);
         if err != 0 {
-            lua_pushfstring(state, c"cannot %s %s: %s".as_ptr(), what, filename, os_strerror(err));
+            lua_pushfstring(state, c"cannot %s %s: %s".as_ptr(), &[what.into(), filename.into(), os_strerror(err).into()]);
         } else {
-            lua_pushfstring(state, c"cannot %s %s".as_ptr(), what, filename);
+            lua_pushfstring(state, c"cannot %s %s".as_ptr(), &[what.into(), filename.into()]);
         }
         lua_rotate(state, fnameindex, -1);
         lua_settop(state, -2);
@@ -6486,7 +6486,7 @@ pub unsafe fn lual_loadfilex(state: *mut State, filename: *const i8, mode: *cons
                 {
                     set_embedded_base_dir(stripped);
                     let content = skip_shebang(raw);
-                    lua_pushfstring(state, c"@%s".as_ptr(), filename);
+                    lua_pushfstring(state, c"@%s".as_ptr(), &[filename.into()]);
                     let name_ptr = lua_tolstring(state, -1, null_mut());
                     let status = lual_loadbufferx(state, content.as_ptr() as *const i8, content.len(), name_ptr, mode);
                     lua_rotate(state, fnameindex, -1);
@@ -6499,7 +6499,7 @@ pub unsafe fn lual_loadfilex(state: *mut State, filename: *const i8, mode: *cons
             lua_pushstring(state, c"=stdin".as_ptr());
             lf.loadf_source = Some(LoadSource::Stdin);
         } else {
-            lua_pushfstring(state, c"@%s".as_ptr(), filename);
+            lua_pushfstring(state, c"@%s".as_ptr(), &[filename.into()]);
             let fname_cstr = std::ffi::CStr::from_ptr(filename);
             match fname_cstr.to_str().ok().and_then(|s| std::fs::File::open(s).ok()) {
                 | Some(file) => {
@@ -6628,7 +6628,7 @@ pub unsafe fn lual_len(state: *mut State, index: i32) -> i64 {
         lua_len(state, index);
         let l: i64 = lua_tointegerx(state, -1, &mut is_number);
         if !is_number {
-            lual_error(state, c"object length is not an integer".as_ptr());
+            lual_error(state, c"object length is not an integer".as_ptr(), &[]);
         }
         lua_settop(state, -2);
         l
@@ -6639,15 +6639,15 @@ pub unsafe fn lual_tolstring(state: *mut State, mut index: i32, length: *mut usi
         index = lua_absindex(state, index);
         if lual_callmeta(state, index, c"__tostring".as_ptr()) {
             if !lua_isstring(state, -1) {
-                lual_error(state, c"'__tostring' must return a string".as_ptr());
+                lual_error(state, c"'__tostring' must return a string".as_ptr(), &[]);
             }
         } else {
             match lua_type(state, index) {
                 | Some(TagType::Numeric) => {
                     if lua_isinteger(state, index) {
-                        lua_pushfstring(state, c"%I".as_ptr(), lua_tointegerx(state, index, null_mut()));
+                        lua_pushfstring(state, c"%I".as_ptr(), &[lua_tointegerx(state, index, null_mut()).into()]);
                     } else {
-                        lua_pushfstring(state, c"%f".as_ptr(), lua_tonumberx(state, index, null_mut()));
+                        lua_pushfstring(state, c"%f".as_ptr(), &[lua_tonumberx(state, index, null_mut()).into()]);
                     }
                 },
                 | Some(TagType::String) => {
@@ -6669,7 +6669,7 @@ pub unsafe fn lual_tolstring(state: *mut State, mut index: i32, length: *mut usi
                     } else {
                         lua_typename(state, lua_type(state, index))
                     };
-                    lua_pushfstring(state, c"%s: %p".as_ptr(), kind, (*state).to_pointer(index));
+                    lua_pushfstring(state, c"%s: %p".as_ptr(), &[kind.into(), (*state).to_pointer(index).into()]);
                     if tagtype != TagType::Nil {
                         lua_rotate(state, -2, -1);
                         lua_settop(state, -2);
@@ -6792,7 +6792,7 @@ pub unsafe fn panic(state: *mut State) -> i32 {
         };
         eprintln!(
             "PANIC: unprotected error in call to Lua API ({})",
-            std::ffi::CStr::from_ptr(message).display()
+            std::ffi::CStr::from_ptr(message).to_string_lossy()
         );
         0
     }
@@ -6831,7 +6831,7 @@ pub unsafe fn warnfoff(arbitrary_data: *mut std::ffi::c_void, message: *const i8
 pub unsafe fn warnfcont(arbitrary_data: *mut std::ffi::c_void, message: *const i8, tocont: i32) {
     unsafe {
         let state: *mut State = arbitrary_data as *mut State;
-        eprint!("{}", std::ffi::CStr::from_ptr(message).display());
+        eprint!("{}", std::ffi::CStr::from_ptr(message).to_string_lossy());
         if tocont != 0 {
             lua_setwarnf(
                 state,
@@ -6945,7 +6945,7 @@ pub unsafe fn l_print(state: *mut State) {
                     lua_pushfstring(
                         state,
                         c"error calling 'print' (%s)".as_ptr(),
-                        lua_tolstring(state, -1, null_mut()),
+                        &[lua_tolstring(state, -1, null_mut()).into()],
                     ),
                 );
             }
@@ -6958,7 +6958,7 @@ pub static PROGRAM_NAME: AtomicPtr<i8> = AtomicPtr::new(c"lua".as_ptr() as *mut 
 pub unsafe fn lstop(state: *mut State, mut _ar: *mut DebugInfo) {
     unsafe {
         lua_sethook(state, None, 0, 0);
-        lual_error(state, c"interrupted!".as_ptr());
+        lual_error(state, c"interrupted!".as_ptr(), &[]);
     }
 }
 pub unsafe extern "C" fn laction(i: i32) {
@@ -6983,24 +6983,24 @@ pub unsafe fn print_version() {
 }
 pub unsafe fn print_usage(badoption: *const i8) {
     unsafe {
-        eprint!("{}: ", std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).display());
+        eprint!("{}: ", std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).to_string_lossy());
         if *badoption.add(1) as i32 == Character::LowerE as i32 || *badoption.add(1) as i32 == Character::LowerL as i32 {
-            eprintln!("'{}' needs argument", std::ffi::CStr::from_ptr(badoption).display());
+            eprintln!("'{}' needs argument", std::ffi::CStr::from_ptr(badoption).to_string_lossy());
         } else {
-            eprintln!("unrecognized option '{}'", std::ffi::CStr::from_ptr(badoption).display());
+            eprintln!("unrecognized option '{}'", std::ffi::CStr::from_ptr(badoption).to_string_lossy());
         }
         eprint!(
             "usage: {} [options] [script [args]]\nAvailable options are:\n  -e stat   execute string 'stat'\n  -i        enter interactive mode after executing 'script'\n  -l mod    require library 'mod' into global 'mod'\n  -l g=mod  require library 'mod' into global 'g'\n  -v        show version information\n  -E        ignore environment variables\n  -W        turn warnings on\n  --        stop handling options\n  --bare    standard Lua state (skip embedded app)\n  -         stop handling options and execute stdin\n",
-            std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).display(),
+            std::ffi::CStr::from_ptr(PROGRAM_NAME.load(Ordering::Relaxed)).to_string_lossy(),
         );
     }
 }
 pub unsafe fn l_message(pname: *const i8, message: *const i8) {
     unsafe {
         if !pname.is_null() {
-            eprint!("{}: ", std::ffi::CStr::from_ptr(pname).display());
+            eprint!("{}: ", std::ffi::CStr::from_ptr(pname).to_string_lossy());
         }
-        eprintln!("{}", std::ffi::CStr::from_ptr(message).display());
+        eprintln!("{}", std::ffi::CStr::from_ptr(message).to_string_lossy());
     }
 }
 pub unsafe fn report(state: *mut State, status: Status) -> Status {
@@ -7026,7 +7026,7 @@ pub unsafe fn msghandler(state: *mut State) -> i32 {
                 message = lua_pushfstring(
                     state,
                     c"(error object is a %s value)".as_ptr(),
-                    lua_typename(state, lua_type(state, 1)),
+                    &[lua_typename(state, lua_type(state, 1)).into()],
                 );
             }
         }
@@ -7098,7 +7098,7 @@ pub unsafe fn dolibrary(state: *mut State, globname: *mut i8) -> Status {
 pub unsafe fn pushargs(state: *mut State) -> i32 {
     unsafe {
         if lua_getglobal(state, c"arg".as_ptr()) != TagType::Table {
-            lual_error(state, c"'arg' is not a table".as_ptr());
+            lual_error(state, c"'arg' is not a table".as_ptr(), &[]);
         }
         let n: i32 = lual_len(state, -1) as i32;
         lual_checkstack(state, n + 3, c"too many arguments to script".as_ptr());
@@ -7301,7 +7301,7 @@ pub unsafe fn pushline(state: *mut State, firstline: i32) -> bool {
                 *b.add(l) = Character::Null as i8;
             }
             if firstline != 0 && *b.add(0) as i32 == Character::Equal as i32 {
-                lua_pushfstring(state, c"return %s".as_ptr(), b.add(1));
+                lua_pushfstring(state, c"return %s".as_ptr(), &[b.add(1).into()]);
             } else {
                 lua_pushlstring(state, b, l);
             }
@@ -7312,7 +7312,7 @@ pub unsafe fn pushline(state: *mut State, firstline: i32) -> bool {
 pub unsafe fn addreturn(state: *mut State) -> Status {
     unsafe {
         let line: *const i8 = lua_tolstring(state, -1, null_mut());
-        let retline: *const i8 = lua_pushfstring(state, c"return %s;".as_ptr(), line);
+        let retline: *const i8 = lua_pushfstring(state, c"return %s;".as_ptr(), &[line.into()]);
         let status = lual_loadbufferx(state, retline, cstr_len(retline), c"=stdin".as_ptr(), null());
         if status == Status::OK {
             lua_rotate(state, -2, -1);
@@ -7398,7 +7398,7 @@ pub unsafe fn luab_pcall(state: *mut State) -> i32 {
 pub unsafe fn checkstack(state: *mut State, other_state: *mut State, n: i32) {
     unsafe {
         if state != other_state && lua_checkstack(other_state, n) == 0 {
-            lual_error(state, c"stack overflow".as_ptr());
+            lual_error(state, c"stack overflow".as_ptr(), &[]);
         }
     }
 }

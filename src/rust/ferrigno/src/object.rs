@@ -50,9 +50,9 @@ use std::ptr::*;
 #[derive(Copy, Clone, Debug)]
 #[repr(C)]
 pub struct Object {
-    pub object_next: *mut Object = null_mut(),
-    pub object_tagvariant: TagVariant = TagVariant::NilNil,
-    pub object_marked: u8 = 0,
+    pub object_next: *mut Object,
+    pub object_tagvariant: TagVariant,
+    pub object_marked: u8,
 }
 impl TObject for Object {
     fn as_object(&self) -> &Object {
@@ -76,7 +76,7 @@ impl TObject for Object {
 }
 impl Object {
     pub fn new(tagvariant: TagVariant) -> Self {
-        Self { object_next: null_mut(), object_tagvariant: tagvariant, object_marked: 0, .. }
+        Self { object_next: null_mut(), object_tagvariant: tagvariant, object_marked: 0 }
     }
     pub unsafe fn iscleared(global: *mut Global, object: *const Object) -> i32 {
         unsafe {

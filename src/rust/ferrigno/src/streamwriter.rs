@@ -36,7 +36,7 @@ impl StreamWriter {
                 is_strip,
             ) != 0
             {
-                return lual_error(state, c"unable to dump given function".as_ptr());
+                return lual_error(state, c"unable to dump given function".as_ptr(), &[]);
             }
             self.streamwriter_buffer.push_result();
             1

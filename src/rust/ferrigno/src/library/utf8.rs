@@ -100,7 +100,7 @@ pub unsafe fn codepoint(state: *mut State) -> i32 {
             return 0;
         }
         if pose - posi >= MAX_INT as i64 {
-            return lual_error(state, c"string slice too long".as_ptr());
+            return lual_error(state, c"string slice too long".as_ptr(), &[]);
         }
         n = (pose - posi) as i32 + 1;
         lual_checkstack(state, n, c"string slice too long".as_ptr());
@@ -111,7 +111,7 @@ pub unsafe fn codepoint(state: *mut State) -> i32 {
             let mut code: u32 = 0;
             stringpointer = utf8_decode(stringpointer, &mut code, !lax);
             if stringpointer.is_null() {
-                return lual_error(state, c"invalid UTF-8 code".as_ptr());
+                return lual_error(state, c"invalid UTF-8 code".as_ptr(), &[]);
             }
             (*state).push_integer(code as i64);
             n += 1;
@@ -126,7 +126,7 @@ pub unsafe fn pushutfchar(state: *mut State, arg: i32) {
             lual_argerror(state, arg, c"value out of range".as_ptr());
             0;
         }
-        lua_pushfstring(state, c"%U".as_ptr(), code as i64);
+        lua_pushfstring(state, c"%U".as_ptr(), &[(code as i64).into()]);
     }
 }
 pub unsafe fn utfchar(state: *mut State) -> i32 {
@@ -166,7 +166,7 @@ pub unsafe fn byteoffset(state: *mut State) -> i32 {
             }
         } else {
             if *s.add(posi as usize) as i32 & 0xc0_i32 == 0x80_i32 {
-                return lual_error(state, c"initial position is a continuation byte".as_ptr());
+                return lual_error(state, c"initial position is a continuation byte".as_ptr(), &[]);
             }
             if n < 0 {
                 while n < 0 && posi > 0 {
@@ -198,7 +198,7 @@ pub unsafe fn byteoffset(state: *mut State) -> i32 {
         (*state).push_integer(posi + 1);
         if *s.add(posi as usize) as i32 & 0x80_i32 != 0 {
             if *s.add(posi as usize) as i32 & 0xc0_i32 == 0x80_i32 {
-                return lual_error(state, c"initial position is a continuation byte".as_ptr());
+                return lual_error(state, c"initial position is a continuation byte".as_ptr(), &[]);
             }
             while posi + 1 < length as i64 && *s.add((posi + 1) as usize) as i32 & 0xc0_i32 == 0x80_i32 {
                 posi += 1;
@@ -224,7 +224,7 @@ pub unsafe fn iter_aux(state: *mut State, strict: bool) -> i32 {
             let mut code: u32 = 0;
             let next: *const i8 = utf8_decode(s.add(n as usize), &mut code, strict);
             if next.is_null() || *next as i32 & 0xc0_i32 == 0x80_i32 {
-                return lual_error(state, c"invalid UTF-8 code".as_ptr());
+                return lual_error(state, c"invalid UTF-8 code".as_ptr(), &[]);
             }
             (*state).push_integer((n + 1) as i64);
             (*state).push_integer(code as i64);

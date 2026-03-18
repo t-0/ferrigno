@@ -676,7 +676,7 @@ pub unsafe fn toml_parse(state: *mut State) -> i32 {
         let mut len: usize = 0;
         let ptr = lua_tolstring(state, 1, &mut len);
         if ptr.is_null() {
-            return lual_error(state, c"toml.parse: expected string argument".as_ptr());
+            return lual_error(state, c"toml.parse: expected string argument".as_ptr(), &[]);
         }
         let src = std::slice::from_raw_parts(ptr as *const u8, len);
         match parse_document(src) {
@@ -949,7 +949,7 @@ unsafe fn is_array_of_tables(state: *mut State, idx: i32) -> bool {
 pub unsafe fn toml_stringify(state: *mut State) -> i32 {
     unsafe {
         if !matches!(lua_type(state, 1), Some(TagType::Table)) {
-            return lual_error(state, c"toml.stringify: expected table argument".as_ptr());
+            return lual_error(state, c"toml.stringify: expected table argument".as_ptr(), &[]);
         }
         let mut out: Vec<u8> = Vec::new();
         match emit_table_section(state, 1, &mut out, "") {

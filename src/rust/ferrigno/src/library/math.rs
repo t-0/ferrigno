@@ -332,7 +332,7 @@ unsafe fn math_random(state: *mut State) -> i32 {
                 high = lual_checkinteger(state, 2);
             },
             | _ => {
-                return lual_error(state, c"wrong number of arguments".as_ptr());
+                return lual_error(state, c"wrong number of arguments".as_ptr(), &[]);
             },
         }
         if low > high {

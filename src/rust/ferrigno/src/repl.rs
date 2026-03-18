@@ -29,8 +29,8 @@ pub unsafe fn pmain(state: *mut State) -> i32 {
         }
         lual_openlibs(state);
         createargtable(state, argv, argc, script);
-        lua_gc(state, GC_RESTART);
-        lua_gc(state, GC_GENERATIONAL, 0, 0);
+        lua_gc(state, GC_RESTART, &[]);
+        lua_gc(state, GC_GENERATIONAL, &[0, 0]);
         if args & ARGS_NOENV == 0 && handle_luainit(state) != Status::OK {
             return 0;
         }
@@ -92,7 +92,7 @@ pub unsafe fn main_0(argc: i32, argv: *mut *mut i8) -> i32 {
             | Some(s) => s,
         };
         let state = state.state();
-        lua_gc(state, GC_STOP);
+        lua_gc(state, GC_STOP, &[]);
         lua_pushcclosure(state, Some(pmain as unsafe fn(*mut State) -> i32), 0);
         (*state).push_integer(argc as i64);
         lua_pushlightuserdata(state, argv as *mut std::ffi::c_void);

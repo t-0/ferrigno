@@ -30,8 +30,7 @@ impl Header {
                 return lual_error(
                     self.header_interpreter,
                     c"integral size (%d) out of limits [1,%d]".as_ptr(),
-                    size as i32,
-                    16_i32,
+                    &[(size as i32).into(), 16_i32.into()],
                 );
             }
             size as i32
@@ -107,7 +106,7 @@ impl Header {
                 | Character::LowerC => {
                     let csize: usize = getnum(fmt, usize::MAX);
                     if csize == usize::MAX {
-                        lual_error(self.header_interpreter, c"missing size for format option 'c'".as_ptr());
+                        lual_error(self.header_interpreter, c"missing size for format option 'c'".as_ptr(), &[]);
                     }
                     *size = csize;
                     return PackingType::Character;
@@ -133,7 +132,7 @@ impl Header {
                     self.header_maxmimumalignment = self.getnumlimit(fmt, maxalign);
                 },
                 | _ => {
-                    lual_error(self.header_interpreter, c"invalid format option '%c'".as_ptr(), opt);
+                    lual_error(self.header_interpreter, c"invalid format option '%c'".as_ptr(), &[opt.into()]);
                 },
             }
             PackingType::NoOperator
