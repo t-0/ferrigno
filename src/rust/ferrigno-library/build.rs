@@ -31,7 +31,8 @@ fn main() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let lua_dir = Path::new(&manifest_dir).join("lua");
     let lua_dir = lua_dir.canonicalize().expect("lua/ directory not found");
-    let out_path = Path::new("src/embedded_resources.rs");
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+    let out_path = Path::new(&out_dir).join("embedded_resources.rs");
 
     let mut entries: Vec<(String, String)> = Vec::new();
     collect_lua_files(&lua_dir, "", &mut entries);
