@@ -1,10 +1,14 @@
 [package]
 name = "ferrigno-compiler"
-version = "0.1.0"
-edition = "2024"
+description = "Ferrigno Lua 5.5 compiler"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
-ferrigno-library = { path = "../ferrigno-library" }
+ferrigno-library = { path = "../ferrigno-library", version = "0.1.0" }
 
 [[bin]]
 name = "ferrignoc"

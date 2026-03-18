@@ -17,12 +17,12 @@ do
             exit 1
         fi
     fi
-    if ! pushd "src/lua/tests"
+    if ! pushd "src/rust/ferrigno-library/lua/tests"
     then
         printf "ERROR\n" 1>&2
         exit 1
     fi
-    if ! RUST_BACKTRACE=1 "../../../target/${RUST_TARGET_D}/${RUST_PROFILE}/ferrigno" --bare -e"_U=true" all.lua
+    if ! RUST_BACKTRACE=1 "../../../../../target/${RUST_TARGET_D}/${RUST_PROFILE}/ferrigno" --bare -e"_U=true" all.lua
     then
         printf "ERROR\n" 1>&2
         exit 1
