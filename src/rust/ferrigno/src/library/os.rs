@@ -17,7 +17,9 @@ pub struct Tm {
     pub tm_wday: i32,
     pub tm_yday: i32,
     pub tm_isdst: i32,
+    #[cfg(unix)]
     pub tm_gmtoff: i64,
+    #[cfg(unix)]
     pub tm_zone: *mut i8,
 }
 impl Tm {
@@ -32,16 +34,51 @@ impl Tm {
             tm_wday: 0,
             tm_yday: 0,
             tm_isdst: 0,
+            #[cfg(unix)]
             tm_gmtoff: 0,
+            #[cfg(unix)]
             tm_zone: null_mut(),
         }
     }
 }
+#[cfg(unix)]
 unsafe extern "C" {
     fn gmtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
     fn localtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
-    fn strftime(s: *mut i8, max: usize, format: *const i8, tm: *const Tm) -> usize;
     fn mktime(tm: *mut Tm) -> i64;
+}
+#[cfg(windows)]
+unsafe extern "C" {
+    fn _gmtime64_s(result: *mut Tm, timep: *const i64) -> i32;
+    fn _localtime64_s(result: *mut Tm, timep: *const i64) -> i32;
+    fn _mktime64(tm: *mut Tm) -> i64;
+}
+unsafe extern "C" {
+    fn strftime(s: *mut i8, max: usize, format: *const i8, tm: *const Tm) -> usize;
+}
+unsafe fn platform_gmtime(timep: *const i64, result: *mut Tm) -> *mut Tm {
+    unsafe {
+        #[cfg(unix)]
+        { gmtime_r(timep, result) }
+        #[cfg(windows)]
+        { if _gmtime64_s(result, timep) == 0 { result } else { null_mut() } }
+    }
+}
+unsafe fn platform_localtime(timep: *const i64, result: *mut Tm) -> *mut Tm {
+    unsafe {
+        #[cfg(unix)]
+        { localtime_r(timep, result) }
+        #[cfg(windows)]
+        { if _localtime64_s(result, timep) == 0 { result } else { null_mut() } }
+    }
+}
+unsafe fn platform_mktime(tm: *mut Tm) -> i64 {
+    unsafe {
+        #[cfg(unix)]
+        { mktime(tm) }
+        #[cfg(windows)]
+        { _mktime64(tm) }
+    }
 }
 pub unsafe fn os_execute(state: *mut State) -> i32 {
     unsafe {
@@ -53,7 +90,11 @@ pub unsafe fn os_execute(state: *mut State) -> i32 {
         }
         set_errno(0);
         let cmd_str = std::ffi::CStr::from_ptr(cmd).to_str().unwrap_or("");
-        match std::process::Command::new("/bin/sh").arg("-c").arg(cmd_str).status() {
+        #[cfg(unix)]
+        let result = std::process::Command::new("/bin/sh").arg("-c").arg(cmd_str).status();
+        #[cfg(windows)]
+        let result = std::process::Command::new("cmd.exe").arg("/C").arg(cmd_str).status();
+        match result {
             | Ok(status) => {
                 #[cfg(unix)]
                 {
@@ -105,9 +146,9 @@ pub unsafe fn os_tmpname(state: *mut State) -> i32 {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default();
         let unique = dur.as_nanos() ^ (std::process::id() as u128);
-        let mut buffer: [u8; 64] = [0; 64];
-        let path = format!("/tmp/lua_{:x}", unique);
-        let len = path.len().min(63);
+        let mut buffer: [u8; 260] = [0; 260];
+        let path = format!("{}lua_{:x}", std::env::temp_dir().display(), unique);
+        let len = path.len().min(259);
         buffer[..len].copy_from_slice(&path.as_bytes()[..len]);
         buffer[len] = 0;
         // Create the file to reserve the name
@@ -129,21 +170,50 @@ pub unsafe fn os_getenv(state: *mut State) -> i32 {
 }
 pub unsafe fn os_clock(state: *mut State) -> i32 {
     unsafe {
-        #[repr(C)]
-        struct Timespec {
-            tv_sec: i64,
-            tv_nsec: i64,
+        #[cfg(unix)]
+        {
+            #[repr(C)]
+            struct Timespec {
+                tv_sec: i64,
+                tv_nsec: i64,
+            }
+            unsafe extern "C" {
+                fn clock_gettime(clk_id: i32, tp: *mut Timespec) -> i32;
+            }
+            #[cfg(target_os = "macos")]
+            const CLOCK_PROCESS_CPUTIME_ID: i32 = 12;
+            #[cfg(target_os = "linux")]
+            const CLOCK_PROCESS_CPUTIME_ID: i32 = 2;
+            let mut ts = Timespec { tv_sec: 0, tv_nsec: 0 };
+            clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &mut ts);
+            (*state).push_number(ts.tv_sec as f64 + ts.tv_nsec as f64 / 1_000_000_000.0);
         }
-        unsafe extern "C" {
-            fn clock_gettime(clk_id: i32, tp: *mut Timespec) -> i32;
+        #[cfg(windows)]
+        {
+            #[repr(C)]
+            struct FileTime {
+                low: u32,
+                high: u32,
+            }
+            unsafe extern "system" {
+                fn GetCurrentProcess() -> *mut core::ffi::c_void;
+                fn GetProcessTimes(
+                    process: *mut core::ffi::c_void,
+                    creation: *mut FileTime,
+                    exit: *mut FileTime,
+                    kernel: *mut FileTime,
+                    user: *mut FileTime,
+                ) -> i32;
+            }
+            let mut creation: FileTime = std::mem::zeroed();
+            let mut exit: FileTime = std::mem::zeroed();
+            let mut kernel: FileTime = std::mem::zeroed();
+            let mut user: FileTime = std::mem::zeroed();
+            GetProcessTimes(GetCurrentProcess(), &mut creation, &mut exit, &mut kernel, &mut user);
+            let k = (kernel.high as u64) << 32 | kernel.low as u64;
+            let u = (user.high as u64) << 32 | user.low as u64;
+            (*state).push_number((k + u) as f64 / 10_000_000.0);
         }
-        #[cfg(target_os = "macos")]
-        const CLOCK_PROCESS_CPUTIME_ID: i32 = 12;
-        #[cfg(not(target_os = "macos"))]
-        const CLOCK_PROCESS_CPUTIME_ID: i32 = 2;
-        let mut ts = Timespec { tv_sec: 0, tv_nsec: 0 };
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &mut ts);
-        (*state).push_number(ts.tv_sec as f64 + ts.tv_nsec as f64 / 1_000_000_000.0);
         1
     }
 }
@@ -267,10 +337,10 @@ pub unsafe fn os_date(state: *mut State) -> i32 {
         let mut tmr = Tm::zeroed();
         let stm: *mut Tm;
         if *stringpointer as i32 == Character::Exclamation as i32 {
-            stm = gmtime_r(&t, &mut tmr);
+            stm = platform_gmtime(&t, &mut tmr);
             stringpointer = stringpointer.add(1);
         } else {
-            stm = localtime_r(&t, &mut tmr);
+            stm = platform_localtime(&t, &mut tmr);
         }
         if stm.is_null() {
             return lual_error(state, c"date result cannot be represented in this installation".as_ptr(), &[]);
@@ -327,7 +397,7 @@ pub unsafe fn os_time(state: *mut State) -> i32 {
                 timestruct.tm_min = getfield(state, c"min".as_ptr(), 0, 0);
                 timestruct.tm_sec = getfield(state, c"sec".as_ptr(), 0, 0);
                 timestruct.tm_isdst = getboolfield(state, c"isdst".as_ptr());
-                sometime = mktime(&mut timestruct);
+                sometime = platform_mktime(&mut timestruct);
                 setallfields(state, &mut timestruct);
             },
         };

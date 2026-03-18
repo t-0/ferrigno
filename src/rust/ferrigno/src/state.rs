@@ -74,13 +74,22 @@ pub fn set_errno(code: i32) {
             *__error() = code;
         }
     }
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
         unsafe extern "C" {
             fn __errno_location() -> *mut i32;
         }
         unsafe {
             *__errno_location() = code;
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        unsafe extern "C" {
+            fn _set_errno(value: i32) -> i32;
+        }
+        unsafe {
+            _set_errno(code);
         }
     }
 }
