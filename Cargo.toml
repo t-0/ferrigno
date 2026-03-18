@@ -1,12 +1,8 @@
-[package]
-name = "rlua"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-libc = "0.2.175"
-
-[lib]
-name = "rlua"
-path = "src/proc_macros.rs"
-proc-macro = true
+[workspace]
+members = [
+    "src/rust/ferrigno-macros",
+    "src/rust/ferrigno-library",
+    "src/rust/ferrigno-interpreter",
+    "src/rust/ferrigno-compiler",
+]
+resolver = "3"
