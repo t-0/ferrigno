@@ -2,7 +2,7 @@ use std::ptr::*;
 pub fn main() {
     let default_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        if !ferrigno_library::state::in_lua_protected_context() {
+        if !ferrigno::state::in_lua_protected_context() {
             default_hook(info);
         }
     }));
@@ -15,5 +15,5 @@ pub fn main() {
         );
     }
     args.push(null_mut());
-    unsafe { ::std::process::exit(ferrigno_library::repl::main_0((args.len() - 1) as i32, args.as_mut_ptr() as *mut *mut i8) as i32) }
+    unsafe { ::std::process::exit(ferrigno::repl::main_0((args.len() - 1) as i32, args.as_mut_ptr() as *mut *mut i8) as i32) }
 }

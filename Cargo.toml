@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "src/rust/ferrigno-library",
+    "src/rust/ferrigno",
 ]
 resolver = "3"
 
