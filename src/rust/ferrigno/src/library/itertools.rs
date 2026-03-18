@@ -14,7 +14,7 @@ unsafe fn it_range(state: *mut State) -> i32 {
             | 2 => (lual_checkinteger(state, 1), lual_checkinteger(state, 2), 1),
             | _ => (lual_checkinteger(state, 1), lual_checkinteger(state, 2), lual_checkinteger(state, 3)),
         };
-        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr()); }
+        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr(), &[]); }
         (*state).lua_createtable();
         let mut j: i64 = 1;
         let mut i = start;
@@ -72,7 +72,7 @@ unsafe fn it_slice(state: *mut State) -> i32 {
         let start = lual_checkinteger(state, 2).max(1);
         let stop = if nargs >= 3 { lual_checkinteger(state, 3).min(len) } else { len };
         let step = if nargs >= 4 { lual_checkinteger(state, 4) } else { 1 };
-        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr()); }
+        if step == 0 { return lual_error(state, c"step cannot be zero".as_ptr(), &[]); }
         (*state).lua_createtable();
         let mut j: i64 = 1;
         let mut i = start;
@@ -351,7 +351,7 @@ unsafe fn it_batched(state: *mut State) -> i32 {
     unsafe {
         (*state).lual_checktype(1, TagType::Table);
         let n = lual_checkinteger(state, 2);
-        if n <= 0 { return lual_error(state, c"batch size must be positive".as_ptr()); }
+        if n <= 0 { return lual_error(state, c"batch size must be positive".as_ptr(), &[]); }
         let len = get_length_raw(state, 1) as i64;
         (*state).lua_createtable();
         let mut batch_num: i64 = 1;

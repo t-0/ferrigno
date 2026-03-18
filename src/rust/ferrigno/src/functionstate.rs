@@ -198,9 +198,9 @@ pub unsafe fn errorlimit(
         let location: *const i8 = if line == 0 {
             c"main function".as_ptr()
         } else {
-            luao_pushfstring(state, c"function at line %d".as_ptr(), line)
+            luao_pushfstring(state, c"function at line %d".as_ptr(), &[line.into()])
         };
-        let message: *const i8 = luao_pushfstring(state, c"too many %s (limit is %d) in %s".as_ptr(), what, limit, location);
+        let message: *const i8 = luao_pushfstring(state, c"too many %s (limit is %d) in %s".as_ptr(), &[what.into(), limit.into(), location.into()]);
         luax_syntaxerror(state, lexical_state, message);
     }
 }

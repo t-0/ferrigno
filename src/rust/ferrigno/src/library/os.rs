@@ -114,7 +114,7 @@ pub unsafe fn os_tmpname(state: *mut State) -> i32 {
         match std::fs::File::create(&path) {
             | Ok(_) => {},
             | Err(_) => {
-                return lual_error(state, c"unable to generate a unique filename".as_ptr());
+                return lual_error(state, c"unable to generate a unique filename".as_ptr(), &[]);
             },
         }
         lua_pushstring(state, buffer.as_ptr() as *const i8);
@@ -201,9 +201,9 @@ pub unsafe fn getfield(state: *mut State, key: *const i8, d: i32, delta: i32) ->
         let mut res: i64 = lua_tointegerx(state, -1, &mut is_number);
         if !is_number {
             if t != TagType::Nil {
-                return lual_error(state, c"field '%s' is not an integer".as_ptr(), key);
+                return lual_error(state, c"field '%s' is not an integer".as_ptr(), &[key.into()]);
             } else if d < 0 {
-                return lual_error(state, c"field '%s' missing in date table".as_ptr(), key);
+                return lual_error(state, c"field '%s' missing in date table".as_ptr(), &[key.into()]);
             }
             res = d as i64;
         } else {
@@ -213,7 +213,7 @@ pub unsafe fn getfield(state: *mut State, key: *const i8, d: i32, delta: i32) ->
                 ((i32::MIN + delta) as i64 <= res) as i32
             } == 0
             {
-                return lual_error(state, c"field '%s' is out-of-bound".as_ptr(), key);
+                return lual_error(state, c"field '%s' is out-of-bound".as_ptr(), &[key.into()]);
             }
             res -= delta as i64;
         }
@@ -240,7 +240,7 @@ pub unsafe fn checkoption(state: *mut State, conv: *const i8, convlen: i64, buff
         lual_argerror(
             state,
             1,
-            lua_pushfstring(state, c"invalid conversion specifier '%%%s'".as_ptr(), conv),
+            lua_pushfstring(state, c"invalid conversion specifier '%%%s'".as_ptr(), &[conv.into()]),
         );
         conv
     }
@@ -273,7 +273,7 @@ pub unsafe fn os_date(state: *mut State) -> i32 {
             stm = localtime_r(&t, &mut tmr);
         }
         if stm.is_null() {
-            return lual_error(state, c"date result cannot be represented in this installation".as_ptr());
+            return lual_error(state, c"date result cannot be represented in this installation".as_ptr(), &[]);
         }
         if std::ffi::CStr::from_ptr(stringpointer) == c"*t" {
             (*state).lua_createtable();
@@ -332,7 +332,7 @@ pub unsafe fn os_time(state: *mut State) -> i32 {
             },
         };
         if sometime != sometime || sometime == -1_i64 {
-            return lual_error(state, c"time result cannot be represented in this installation".as_ptr());
+            return lual_error(state, c"time result cannot be represented in this installation".as_ptr(), &[]);
         }
         (*state).push_integer(sometime);
         1

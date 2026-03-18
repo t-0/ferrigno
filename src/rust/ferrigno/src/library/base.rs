@@ -79,7 +79,7 @@ pub unsafe fn luab_setmetatable(state: *mut State) -> i32 {
             },
         };
         if lual_getmetafield(state, 1, c"__metatable".as_ptr()) != TagType::Nil {
-            return lual_error(state, c"cannot change a protected metatable".as_ptr());
+            return lual_error(state, c"cannot change a protected metatable".as_ptr(), &[]);
         }
         lua_settop(state, 2);
         lua_setmetatable(state, 1);
@@ -165,8 +165,8 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
         let o: i32 = OPTS_NUMBERS[lual_checkoption(state, 1, c"collect".as_ptr(), OPTS.as_ptr()) as usize];
         match o {
             | GC_COUNT => {
-                let k: i32 = lua_gc(state, o);
-                let b: i32 = lua_gc(state, GC_COUNTB);
+                let k: i32 = lua_gc(state, o, &[]);
+                let b: i32 = lua_gc(state, GC_COUNTB, &[]);
                 if k != -1 {
                     (*state).push_number(k as f64 + b as f64 / 1024.0);
                     return 1;
@@ -174,7 +174,7 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
             },
             | GC_STEP => {
                 let step: i32 = lual_optinteger(state, 2, 0) as i32;
-                let res: i32 = lua_gc(state, o, step);
+                let res: i32 = lua_gc(state, o, &[step]);
                 if res != -1 {
                     (*state).push_boolean(0 != res);
                     return 1;
@@ -182,14 +182,14 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
             },
             | GC_SETPAUSE | GC_SETSTEPMUL => {
                 let p: i32 = lual_optinteger(state, 2, 0) as i32;
-                let previous: i32 = lua_gc(state, o, p);
+                let previous: i32 = lua_gc(state, o, &[p]);
                 if previous != -1 {
                     (*state).push_integer(previous as i64);
                     return 1;
                 }
             },
             | GC_ISRUNNING => {
-                let res: i32 = lua_gc(state, o);
+                let res: i32 = lua_gc(state, o, &[]);
                 if res != -1 {
                     (*state).push_boolean(0 != res);
                     return 1;
@@ -198,13 +198,13 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
             | GC_GENERATIONAL => {
                 let minormul: i32 = lual_optinteger(state, 2, 0) as i32;
                 let majormul: i32 = lual_optinteger(state, 3, 0) as i32;
-                return pushmode(state, lua_gc(state, o, minormul, majormul));
+                return pushmode(state, lua_gc(state, o, &[minormul, majormul]));
             },
             | GC_INCREMENTAL => {
                 let pause: i32 = lual_optinteger(state, 2, 0) as i32;
                 let stepmul: i32 = lual_optinteger(state, 3, 0) as i32;
                 let stepsize: i32 = lual_optinteger(state, 4, 0) as i32;
-                return pushmode(state, lua_gc(state, o, pause, stepmul, stepsize));
+                return pushmode(state, lua_gc(state, o, &[pause, stepmul, stepsize]));
             },
             | GC_PARAM => {
                 // collectgarbage("param", name [, value])
@@ -219,14 +219,14 @@ pub unsafe fn luab_collectgarbage(state: *mut State) -> i32 {
                 ];
                 let param_idx: i32 = lual_checkoption(state, 2, null(), PARAM_NAMES.as_ptr());
                 let value: i32 = lual_optinteger(state, 3, -1) as i32;
-                let res: i32 = lua_gc(state, GC_PARAM, param_idx, value);
+                let res: i32 = lua_gc(state, GC_PARAM, &[param_idx, value]);
                 if res != -1 {
                     (*state).push_integer(res as i64);
                     return 1;
                 }
             },
             | _ => {
-                let res: i32 = lua_gc(state, o);
+                let res: i32 = lua_gc(state, o, &[]);
                 if res != -1 {
                     (*state).push_integer(res as i64);
                     return 1;
@@ -343,7 +343,7 @@ pub unsafe fn generic_reader(state: *mut State, mut _ud: *mut std::ffi::c_void, 
             *size = 0;
             return null();
         } else if !lua_isstring(state, -1) {
-            lual_error(state, c"reader function must return a string".as_ptr());
+            lual_error(state, c"reader function must return a string".as_ptr(), &[]);
         }
         lua_copy(state, -1, 5);
         lua_settop(state, -2);

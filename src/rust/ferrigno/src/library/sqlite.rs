@@ -99,7 +99,7 @@ unsafe fn checkdb(state: *mut State) -> *mut std::ffi::c_void {
     unsafe {
         let p = lual_checkudata(state, 1, DB_META) as *mut SqliteDb;
         if (*p).closed {
-            lual_error(state, c"attempt to use a closed database".as_ptr());
+            lual_error(state, c"attempt to use a closed database".as_ptr(), &[]);
             unreachable!()
         }
         (*p).db
@@ -111,7 +111,7 @@ unsafe fn checkstmt(state: *mut State) -> (*mut std::ffi::c_void, *mut std::ffi:
     unsafe {
         let p = lual_checkudata(state, 1, STMT_META) as *mut SqliteStmt;
         if (*p).closed {
-            lual_error(state, c"attempt to use a finalized statement".as_ptr());
+            lual_error(state, c"attempt to use a finalized statement".as_ptr(), &[]);
             unreachable!()
         }
         ((*p).stmt, (*p).db)

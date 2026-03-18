@@ -49,7 +49,7 @@ pub unsafe fn noenv(state: *mut State) -> bool {
 pub unsafe fn setpath(state: *mut State, fieldname: *const i8, envname: *const i8, dft: *const i8) {
     unsafe {
         let dftmark: *const i8;
-        let nver: *const i8 = lua_pushfstring(state, c"%s%s".as_ptr(), envname, c"_5_5".as_ptr());
+        let nver: *const i8 = lua_pushfstring(state, c"%s%s".as_ptr(), &[envname.into(), c"_5_5".as_ptr().into()]);
         let mut path: *const i8 = os_getenv(nver);
         if path.is_null() {
             path = os_getenv(envname);
@@ -246,7 +246,7 @@ pub unsafe fn findfile(state: *mut State, name: *const i8, pname: *const i8, dir
         lua_getfield(state, LUA_REGISTRYINDEX - 1, pname);
         let path: *const i8 = lua_tolstring(state, -1, null_mut());
         if path.is_null() {
-            lual_error(state, c"'package.%s' must be a string".as_ptr(), pname);
+            lual_error(state, c"'package.%s' must be a string".as_ptr(), &[pname.into()]);
         }
         searchpath(state, name, path, c".".as_ptr(), dirsep)
     }
@@ -260,9 +260,9 @@ pub unsafe fn checkload(state: *mut State, stat: i32, filename: *const i8) -> i3
             lual_error(
                 state,
                 c"error loading module '%s' from file '%s':\n\t%s".as_ptr(),
-                lua_tolstring(state, 1, null_mut()),
-                filename,
-                lua_tolstring(state, -1, null_mut()),
+                &[lua_tolstring(state, 1, null_mut()).into(),
+                filename.into(),
+                lua_tolstring(state, -1, null_mut()).into()],
             )
         }
     }
@@ -287,9 +287,9 @@ pub unsafe fn searcher_embedded(state: *mut State) -> i32 {
                 return lual_error(
                     state,
                     c"error loading module '%s' from embedded resource '%s':\n\t%s".as_ptr(),
-                    name,
-                    c_filename.as_ptr(),
-                    lua_tolstring(state, -1, null_mut()),
+                    &[name.into(),
+                    c_filename.as_ptr().into(),
+                    lua_tolstring(state, -1, null_mut()).into()],
                 );
             }
         }
@@ -316,14 +316,14 @@ pub unsafe fn loadfunc(state: *mut State, filename: *const i8, mut modname: *con
         let mark: *const i8 = cstr_chr(modname, *(c"-".as_ptr()));
         if !mark.is_null() {
             openfunc = lua_pushlstring(state, modname, mark.offset_from(modname) as usize);
-            openfunc = lua_pushfstring(state, c"luaopen_%s".as_ptr(), openfunc);
+            openfunc = lua_pushfstring(state, c"luaopen_%s".as_ptr(), &[openfunc.into()]);
             let stat: i32 = lookforfunc(state, filename, openfunc);
             if stat != 2 {
                 return stat;
             }
             modname = mark.add(1);
         }
-        openfunc = lua_pushfstring(state, c"luaopen_%s".as_ptr(), modname);
+        openfunc = lua_pushfstring(state, c"luaopen_%s".as_ptr(), &[modname.into()]);
         lookforfunc(state, filename, openfunc)
     }
 }
@@ -354,7 +354,7 @@ pub unsafe fn searcher_croot(state: *mut State) -> i32 {
             if stat != 2 {
                 return checkload(state, 0, filename);
             } else {
-                lua_pushfstring(state, c"no module '%s' in file '%s'".as_ptr(), name, filename);
+                lua_pushfstring(state, c"no module '%s' in file '%s'".as_ptr(), &[name.into(), filename.into()]);
                 return 1;
             }
         }
@@ -367,7 +367,7 @@ pub unsafe fn searcher_preload(state: *mut State) -> i32 {
         let name: *const i8 = lual_checklstring(state, 1, null_mut());
         lua_getfield(state, LUA_REGISTRYINDEX, c"_PRELOAD".as_ptr());
         if lua_getfield(state, -1, name) == TagType::Nil {
-            lua_pushfstring(state, c"no field package.preload['%s']".as_ptr(), name);
+            lua_pushfstring(state, c"no field package.preload['%s']".as_ptr(), &[name.into()]);
             1
         } else {
             lua_pushstring(state, c":preload:".as_ptr());
@@ -380,7 +380,7 @@ pub unsafe fn findloader(state: *mut State, name: *const i8) {
         let mut i: i32;
         let mut message = Buffer::new();
         if lua_getfield(state, LUA_REGISTRYINDEX - 1, c"searchers".as_ptr()) != TagType::Table {
-            lual_error(state, c"'package.searchers' must be a table".as_ptr());
+            lual_error(state, c"'package.searchers' must be a table".as_ptr(), &[]);
         }
         message.initialize(state);
         i = 1;
@@ -395,8 +395,8 @@ pub unsafe fn findloader(state: *mut State, name: *const i8) {
                 lual_error(
                     state,
                     c"module '%s' not found:%s".as_ptr(),
-                    name,
-                    lua_tolstring(state, -1, null_mut()),
+                    &[name.into(),
+                    lua_tolstring(state, -1, null_mut()).into()],
                 );
             }
             lua_pushstring(state, name);

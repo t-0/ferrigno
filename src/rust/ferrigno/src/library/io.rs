@@ -231,7 +231,7 @@ pub unsafe fn f_tostring(state: *mut State) -> i32 {
         if (*p).stream_cfunctionclose.is_none() {
             lua_pushstring(state, c"file (closed)".as_ptr());
         } else {
-            lua_pushfstring(state, c"file (%p)".as_ptr(), (*p).stream_handle);
+            lua_pushfstring(state, c"file (%p)".as_ptr(), &[((*p).stream_handle as *mut std::ffi::c_void).into()]);
         }
         1
     }
@@ -242,7 +242,7 @@ pub unsafe fn tofile(state: *mut State) -> *mut IoHandle {
     unsafe {
         let p = lual_checkudata(state, 1, c"FILE*".as_ptr()) as *mut Stream;
         if (*p).stream_cfunctionclose.is_none() {
-            lual_error(state, c"attempt to use a closed file".as_ptr());
+            lual_error(state, c"attempt to use a closed file".as_ptr(), &[]);
         }
         (*p).stream_handle
     }
@@ -383,11 +383,11 @@ pub unsafe fn opencheck(state: *mut State, fname: *const i8, mode: *const i8) {
                     if let Some(code) = e.raw_os_error() {
                         set_errno(code);
                     }
-                    lual_error(state, c"cannot open file '%s' (%s)".as_ptr(), fname, os_strerror(get_errno()));
+                    lual_error(state, c"cannot open file '%s' (%s)".as_ptr(), &[fname.into(), os_strerror(get_errno()).into()]);
                 },
             },
             | None => {
-                lual_error(state, c"invalid mode".as_ptr());
+                lual_error(state, c"invalid mode".as_ptr(), &[]);
             },
         }
     }
@@ -504,7 +504,7 @@ pub unsafe fn getiofile(state: *mut State, findex: *const i8) -> *mut IoHandle {
         lua_getfield(state, LUA_REGISTRYINDEX, findex);
         let p = (*state).to_pointer(-1) as *mut Stream;
         if (*p).stream_cfunctionclose.is_none() {
-            lual_error(state, c"default %s file is closed".as_ptr(), findex.add(4));
+            lual_error(state, c"default %s file is closed".as_ptr(), &[findex.add(4).into()]);
         }
         (*p).stream_handle
     }
@@ -908,7 +908,7 @@ pub unsafe fn io_readline(state: *mut State) -> i32 {
         let p = (*state).to_pointer(LUA_REGISTRYINDEX - 1) as *mut Stream;
         let n = lua_tointegerx(state, LUA_REGISTRYINDEX - 2, null_mut()) as i32;
         if (*p).stream_cfunctionclose.is_none() {
-            return lual_error(state, c"file is already closed".as_ptr());
+            return lual_error(state, c"file is already closed".as_ptr(), &[]);
         }
         lua_settop(state, 1);
         lual_checkstack(state, n, c"too many arguments".as_ptr());
@@ -920,7 +920,7 @@ pub unsafe fn io_readline(state: *mut State) -> i32 {
             return n_read;
         }
         if n_read > 1 {
-            return lual_error(state, c"%s".as_ptr(), lua_tolstring(state, -n_read + 1, null_mut()));
+            return lual_error(state, c"%s".as_ptr(), &[lua_tolstring(state, -n_read + 1, null_mut()).into()]);
         }
         if lua_toboolean(state, LUA_REGISTRYINDEX - 3) {
             lua_settop(state, 0);

@@ -50,7 +50,7 @@ impl MatchState {
                 lual_error(
                     state,
                     c"invalid replacement value (a %s)".as_ptr(),
-                    lua_typename(state, lua_type(state, -1)),
+                    &[lua_typename(state, lua_type(state, -1)).into()],
                 )
             } else {
                 (*b).add_value();
@@ -81,7 +81,7 @@ impl MatchState {
         unsafe {
             if i >= self.level as i32 {
                 if i != 0 {
-                    lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), i + 1);
+                    lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), &[(i + 1).into()]);
                 }
                 *cap = s;
                 e.offset_from(s) as usize
@@ -89,7 +89,7 @@ impl MatchState {
                 let capl: i64 = self.capture[i as usize].matchstatecapture_length;
                 *cap = self.capture[i as usize].matchstatecapture_initial;
                 if capl == -1 {
-                    lual_error(self.matchstate_interpreter, c"unfinished capture".as_ptr());
+                    lual_error(self.matchstate_interpreter, c"unfinished capture".as_ptr(), &[]);
                 } else if capl == -2_i64 {
                     (*(self.matchstate_interpreter))
                         .push_integer((self.capture[i as usize].matchstatecapture_initial).offset_from(self.src_init) as i64 + 1);
@@ -102,7 +102,7 @@ impl MatchState {
         unsafe {
             l -= Character::Digit1 as i32;
             if l < 0 || l >= self.level as i32 || self.capture[l as usize].matchstatecapture_length == -1_i64 {
-                return lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), l + 1);
+                return lual_error(self.matchstate_interpreter, c"invalid capture index %%%d".as_ptr(), &[(l + 1).into()]);
             }
             l
         }
@@ -117,7 +117,7 @@ impl MatchState {
                 }
                 level -= 1;
             }
-            lual_error(self.matchstate_interpreter, c"invalid pattern capture".as_ptr())
+            lual_error(self.matchstate_interpreter, c"invalid pattern capture".as_ptr(), &[])
         }
     }
     pub unsafe fn classend(&mut self, mut p: *const i8) -> *const i8 {
@@ -129,7 +129,7 @@ impl MatchState {
             match *current_p as i32 {
                 | PERCENT => {
                     if p == self.p_end {
-                        lual_error(self.matchstate_interpreter, c"malformed pattern (ends with '%%')".as_ptr());
+                        lual_error(self.matchstate_interpreter, c"malformed pattern (ends with '%%')".as_ptr(), &[]);
                     }
                     p.add(1)
                 },
@@ -142,6 +142,7 @@ impl MatchState {
                             lual_error(
                                 self.matchstate_interpreter,
                                 c"malformed pattern (missing Character::BracketRight)".as_ptr(),
+                                &[],
                             );
                         }
                         let current_p = p;
@@ -183,6 +184,7 @@ impl MatchState {
                 lual_error(
                     self.matchstate_interpreter,
                     c"malformed pattern (missing arguments to '%%b')".as_ptr(),
+                    &[],
                 );
             }
             if *s as i32 != *p as i32 {
@@ -243,7 +245,7 @@ impl MatchState {
         unsafe {
             let level: usize = self.level;
             if level >= MAX_CAPTURES {
-                lual_error(self.matchstate_interpreter, c"too many captures".as_ptr());
+                lual_error(self.matchstate_interpreter, c"too many captures".as_ptr(), &[]);
             }
             self.capture[level].matchstatecapture_initial = s;
             self.capture[level].matchstatecapture_length = what as i64;
@@ -295,7 +297,7 @@ impl MatchState {
             let prev_matchdepth = self.matchdepth;
             self.matchdepth -= 1;
             if prev_matchdepth == 0 {
-                lual_error(self.matchstate_interpreter, c"pattern too complex".as_ptr());
+                lual_error(self.matchstate_interpreter, c"pattern too complex".as_ptr(), &[]);
             }
             loop {
                 if p == self.p_end {
@@ -343,6 +345,7 @@ impl MatchState {
                                         lual_error(
                                             self.matchstate_interpreter,
                                             c"missing Character::BracketLeft after '%%f' in pattern".as_ptr(),
+                                            &[],
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
@@ -388,6 +391,7 @@ impl MatchState {
                                         lual_error(
                                             self.matchstate_interpreter,
                                             c"missing Character::BracketLeft after '%%f' in pattern".as_ptr(),
+                                            &[],
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
@@ -442,6 +446,7 @@ impl MatchState {
                                         lual_error(
                                             self.matchstate_interpreter,
                                             c"missing Character::BracketLeft after '%%f' in pattern".as_ptr(),
+                                            &[],
                                         );
                                     }
                                     let ep: *const i8 = self.classend(p);
@@ -579,7 +584,7 @@ impl MatchState {
                     lual_error(
                         state,
                         c"invalid use of '%c' in replacement string".as_ptr(),
-                        Character::Percent as i32,
+                        &[(Character::Percent as i32).into()],
                     );
                 }
                 l -= p.add(1).offset_from(news) as usize;

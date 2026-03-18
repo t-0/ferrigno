@@ -87,7 +87,7 @@ impl<T> LoadS<T> {
             }
             if newsize >= limit / 2 {
                 if newsize >= limit {
-                    luag_runerror(state, c"too many %s (limit is %d)".as_ptr(), what, limit);
+                    luag_runerror(state, c"too many %s (limit is %d)".as_ptr(), &[what.into(), limit.into()]);
                 }
                 newsize = limit;
             } else {

@@ -476,14 +476,14 @@ pub unsafe fn json_decode(state: *mut State) -> i32 {
                 parser.skip_ws();
                 if parser.pos < parser.input.len() {
                     lua_settop(state, saved_top);
-                    return lual_error(state, c"json.decode: trailing garbage after JSON value".as_ptr());
+                    return lual_error(state, c"json.decode: trailing garbage after JSON value".as_ptr(), &[]);
                 }
                 1
             },
             | Err(msg) => {
                 lua_settop(state, saved_top);
                 let full = format!("json.decode: {}\0", msg);
-                lual_error(state, full.as_ptr() as *const i8)
+                lual_error(state, full.as_ptr() as *const i8, &[])
             },
         }
     }
@@ -500,7 +500,7 @@ pub unsafe fn json_encode(state: *mut State) -> i32 {
             },
             | Err(msg) => {
                 let full = format!("json.encode: {}\0", msg);
-                lual_error(state, full.as_ptr() as *const i8)
+                lual_error(state, full.as_ptr() as *const i8, &[])
             },
         }
     }

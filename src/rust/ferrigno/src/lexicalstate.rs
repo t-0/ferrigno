@@ -294,14 +294,14 @@ pub unsafe fn undefgoto(
         let mut message: *const i8;
         if (*goto_label_description).labeldescription_name == luas_newlstr(state, c"break".as_ptr(), size_of::<[i8; 6]>() - 1) {
             message = c"break outside loop at line %d".as_ptr();
-            message = luao_pushfstring(state, message, (*goto_label_description).labeldescription_line);
+            message = luao_pushfstring(state, message, &[(*goto_label_description).labeldescription_line.into()]);
         } else {
             message = c"no visible label '%s' for <goto> at line %d".as_ptr();
             message = luao_pushfstring(
                 state,
                 message,
-                (*(*goto_label_description).labeldescription_name).get_contents_mut(),
-                (*goto_label_description).labeldescription_line,
+                &[(*(*goto_label_description).labeldescription_name).get_contents_mut().into(),
+                (*goto_label_description).labeldescription_line.into()],
             );
         }
         luak_semerror(state, lexical_state, message);
@@ -909,7 +909,7 @@ pub unsafe fn error_expected(
         luax_syntaxerror(
             state,
             lexical_state,
-            luao_pushfstring(state, c"%s expected".as_ptr(), luax_token2str(state, lexical_state, token)),
+            luao_pushfstring(state, c"%s expected".as_ptr(), &[luax_token2str(state, lexical_state, token).into()]),
         );
     }
 }
@@ -950,9 +950,9 @@ pub unsafe fn check_match(
                     luao_pushfstring(
                         state,
                         c"%s expected (to close %s at line %d)".as_ptr(),
-                        luax_token2str(state, lexical_state, what),
-                        luax_token2str(state, lexical_state, who),
-                        where_pos,
+                        &[luax_token2str(state, lexical_state, what).into(),
+                        luax_token2str(state, lexical_state, who).into(),
+                        where_pos.into()],
                     ),
                 );
             }
@@ -1128,7 +1128,7 @@ pub unsafe fn check_readonly(
             let message: *const i8 = luao_pushfstring(
                 state,
                 c"attempt to assign to const variable '%s'".as_ptr(),
-                (*variable_name).get_contents_mut(),
+                &[(*variable_name).get_contents_mut().into()],
             );
             luak_semerror(state, lexical_state, message);
         }
@@ -1185,7 +1185,7 @@ pub unsafe fn buildglobal(
                 luao_pushfstring(
                     state,
                     c"_ENV is global when accessing variable '%s'".as_ptr(),
-                    (*varname).get_contents_mut(),
+                    &[(*varname).get_contents_mut().into()],
                 ),
             );
         }
@@ -1210,7 +1210,7 @@ pub unsafe fn singlevar(
                     luao_pushfstring(
                         state,
                         c"variable '%s' not declared".as_ptr(),
-                        (*variable_name).get_contents_mut(),
+                        &[(*variable_name).get_contents_mut().into()],
                     ),
                 );
             }
@@ -1280,9 +1280,9 @@ pub unsafe fn jumpscopeerror(
         message = luao_pushfstring(
             state,
             message,
-            (*(*goto_label_description).labeldescription_name).get_contents_mut(),
-            (*goto_label_description).labeldescription_line,
-            variable_name,
+            &[(*(*goto_label_description).labeldescription_name).get_contents_mut().into(),
+            (*goto_label_description).labeldescription_line.into(),
+            variable_name.into()],
         );
         luak_semerror(state, lexical_state, message);
     }
@@ -1550,7 +1550,7 @@ pub unsafe fn checkrepeated(state: *mut State, lexical_state: *mut LexicalState,
         );
         if !lb.is_null() {
             let mut message: *const i8 = c"label '%s' already defined on line %d".as_ptr();
-            message = luao_pushfstring(state, message, (*name).get_contents_mut(), (*lb).labeldescription_line);
+            message = luao_pushfstring(state, message, &[(*name).get_contents_mut().into(), (*lb).labeldescription_line.into()]);
             luak_semerror(state, lexical_state, message);
         }
     }
@@ -1928,7 +1928,7 @@ pub unsafe fn getlocalattribute(
                 luak_semerror(
                     state,
                     lexical_state,
-                    luao_pushfstring(state, c"unknown attribute '%s'".as_ptr(), attr),
+                    luao_pushfstring(state, c"unknown attribute '%s'".as_ptr(), &[attr.into()]),
                 );
             }
         }
@@ -2281,14 +2281,14 @@ pub unsafe fn luax_token2str(state: *mut State, _lexical_state: *mut LexicalStat
     unsafe {
         if token < FIRST_RESERVED {
             if Character::from(token).is_printable() {
-                luao_pushfstring(state, c"'%c'".as_ptr(), token)
+                luao_pushfstring(state, c"'%c'".as_ptr(), &[token.into()])
             } else {
-                luao_pushfstring(state, c"'<\\%d>'".as_ptr(), token)
+                luao_pushfstring(state, c"'<\\%d>'".as_ptr(), &[token.into()])
             }
         } else {
             let s: *const i8 = TOKENS[(token - (FIRST_RESERVED)) as usize];
             if token < Token::EndOfStream as i32 {
-                luao_pushfstring(state, c"'%s'".as_ptr(), s)
+                luao_pushfstring(state, c"'%s'".as_ptr(), &[s.into()])
             } else {
                 s
             }
@@ -2307,7 +2307,7 @@ pub unsafe fn text_token(state: *mut State, lexical_state: *mut LexicalState, to
                 luao_pushfstring(
                     state,
                     c"'%s'".as_ptr(),
-                    (*(*lexical_state).lexicalstate_buffer).buffer_loads.loads_pointer,
+                    &[(*(*lexical_state).lexicalstate_buffer).buffer_loads.loads_pointer.into()],
                 )
             },
             | _ => luax_token2str(state, lexical_state, token),
@@ -2323,7 +2323,7 @@ pub unsafe fn lexerror(state: *mut State, lexical_state: *mut LexicalState, mut 
             (*lexical_state).lexicalstate_linenumber,
         );
         if token != 0 {
-            luao_pushfstring(state, c"%s near %s".as_ptr(), message, text_token(state, lexical_state, token));
+            luao_pushfstring(state, c"%s near %s".as_ptr(), &[message.into(), text_token(state, lexical_state, token).into()]);
         }
         luad_throw(state, Status::SyntaxError);
     }
@@ -2487,7 +2487,7 @@ pub unsafe fn read_long_string(state: *mut State, lexical_state: *mut LexicalSta
                 | None => {
                     let what: *const i8 = if !semantic_info.is_null() { c"string".as_ptr() } else { c"comment".as_ptr() };
                     let message: *const i8 =
-                        luao_pushfstring(state, c"unfinished long %s (starting at line %d)".as_ptr(), what, line);
+                        luao_pushfstring(state, c"unfinished long %s (starting at line %d)".as_ptr(), &[what.into(), line.into()]);
                     lexerror(state, lexical_state, message, Token::EndOfStream as i32);
                 },
                 | Some(Character::BracketRight) => {

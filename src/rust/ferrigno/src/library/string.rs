@@ -89,7 +89,7 @@ pub unsafe fn str_rep(state: *mut State) -> i32 {
             || l.wrapping_add(lsep)
                 > ((if size_of::<usize>() < size_of::<i32>() { !(0usize) } else { MAX_INT }) as usize) / n as usize
         {
-            return lual_error(state, c"resulting string too large".as_ptr());
+            return lual_error(state, c"resulting string too large".as_ptr(), &[]);
         } else {
             let totallen: usize = (n as usize).wrapping_mul(l).wrapping_add(((n - 1) as usize) * lsep);
             let mut b = Buffer::new();
@@ -125,7 +125,7 @@ pub unsafe fn str_byte(state: *mut State) -> i32 {
             return 0;
         }
         if pose - posi >= MAX_INT {
-            return lual_error(state, c"string slice too long".as_ptr());
+            return lual_error(state, c"string slice too long".as_ptr(), &[]);
         }
         let n: i32 = (pose - posi) as i32 + 1;
         lual_checkstack(state, n, c"string slice too long".as_ptr());
@@ -171,9 +171,9 @@ pub unsafe fn trymt(state: *mut State, mtname: *const i8) {
             lual_error(
                 state,
                 c"attempt to %s a '%s' with a '%s'".as_ptr(),
-                mtname.add(2),
-                lua_typename(state, lua_type(state, -2)),
-                lua_typename(state, lua_type(state, -1)),
+                &[mtname.add(2).into(),
+                lua_typename(state, lua_type(state, -2)).into(),
+                lua_typename(state, lua_type(state, -1)).into()],
             );
         }
         lua_rotate(state, -3, 1);
@@ -1112,7 +1112,7 @@ pub unsafe fn checkformat(state: *mut State, form: *const i8, flags: *const i8, 
             }
         }
         if !Character::from(*spec as u8 as i32).is_alpha() {
-            lual_error(state, c"invalid conversion specification: '%s'".as_ptr(), form);
+            lual_error(state, c"invalid conversion specification: '%s'".as_ptr(), &[form.into()]);
         }
     }
 }
@@ -1121,7 +1121,7 @@ pub unsafe fn getformat(state: *mut State, strfrmt: *const i8, mut form: *mut i8
         let mut length = cstr_span(strfrmt, c"-+#0 123456789.".as_ptr());
         length += 1;
         if length >= 22 {
-            lual_error(state, c"invalid format (too long)".as_ptr());
+            lual_error(state, c"invalid format (too long)".as_ptr(), &[]);
         }
         let current_form = form;
         form = form.add(1);
@@ -1223,7 +1223,7 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                         },
                         | Character::LowerQ => {
                             if form[2_usize] as i32 != Character::Null as i32 {
-                                return lual_error(state, c"specifier '%%q' cannot have modifiers".as_ptr());
+                                return lual_error(state, c"specifier '%%q' cannot have modifiers".as_ptr(), &[]);
                             }
                             addliteral(state, &mut b, arg);
                             fmt_action = FMT_DONE;
@@ -1249,7 +1249,7 @@ pub unsafe fn str_format(state: *mut State) -> i32 {
                             fmt_action = FMT_DONE;
                         },
                         | _ => {
-                            return lual_error(state, c"invalid conversion '%s' to 'format'".as_ptr(), form.as_mut_ptr());
+                            return lual_error(state, c"invalid conversion '%s' to 'format'".as_ptr(), &[form.as_mut_ptr().into()]);
                         },
                     }
                     match fmt_action {
@@ -1513,7 +1513,7 @@ pub unsafe fn unpackint(state: *mut State, str: *const i8, islittle: bool, size:
             let fill_mask: i32 = if issigned == 0 || res as i64 >= 0 { 0 } else { (1 << 8) - 1 };
             for i in limit..size {
                 if *str.add((if islittle { i } else { size - 1 - i }) as usize) as u8 as i32 != fill_mask {
-                    lual_error(state, c"%d-byte integer does not fit into Lua Integer".as_ptr(), size);
+                    lual_error(state, c"%d-byte integer does not fit into Lua Integer".as_ptr(), &[size.into()]);
                 }
             }
         }

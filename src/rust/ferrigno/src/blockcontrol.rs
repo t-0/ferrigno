@@ -27,7 +27,6 @@ impl TDefaultNew for BlockControl {
             blockcontrol_count_upvalues: 0,
             blockcontrol_is_loop: false,
             blockcontrol_is_inside_tbc: false,
-            ..
         }
     }
 }

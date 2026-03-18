@@ -36,8 +36,7 @@ impl LoadState {
             luao_pushfstring(
                 self.loadstate_interpreter,
                 c"%s: bad binary format (%s)".as_ptr(),
-                self.loadstate_name,
-                why,
+                &[self.loadstate_name.into(), why.into()],
             );
             luad_throw(self.loadstate_interpreter, Status::SyntaxError);
         }

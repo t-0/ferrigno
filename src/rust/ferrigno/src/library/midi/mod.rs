@@ -59,7 +59,7 @@ unsafe fn check_out(state: *mut State) -> *mut MidiOutputData {
     unsafe {
         let p = lual_checkudata(state, 1, OUT_META) as *mut MidiOutputData;
         if (*p).closed {
-            lual_error(state, c"attempt to use a closed MIDI output port".as_ptr());
+            lual_error(state, c"attempt to use a closed MIDI output port".as_ptr(), &[]);
             unreachable!()
         }
         p
@@ -70,7 +70,7 @@ unsafe fn check_in(state: *mut State) -> *mut MidiInputData {
     unsafe {
         let p = lual_checkudata(state, 1, IN_META) as *mut MidiInputData;
         if (*p).closed {
-            lual_error(state, c"attempt to use a closed MIDI input port".as_ptr());
+            lual_error(state, c"attempt to use a closed MIDI input port".as_ptr(), &[]);
             unreachable!()
         }
         p
@@ -96,7 +96,7 @@ unsafe fn send_data(state: *mut State, out: &mut PlatformOutput) -> i32 {
         }
         if let Err(e) = out.send(&data) {
             let msg = format!("midi:send failed: {}\0", e);
-            return lual_error(state, msg.as_ptr() as *const i8);
+            return lual_error(state, msg.as_ptr() as *const i8, &[]);
         }
         0
     }

@@ -435,7 +435,7 @@ pub unsafe fn concatenate(state: *mut State, mut total: i32) {
                         - tl
                     {
                         (*state).interpreter_top.stkidrel_pointer = top.sub(total as usize);
-                        luag_runerror(state, c"string length overflow".as_ptr());
+                        luag_runerror(state, c"string length overflow".as_ptr(), &[]);
                     }
                     tl = tl.wrapping_add(l);
                     n += 1;

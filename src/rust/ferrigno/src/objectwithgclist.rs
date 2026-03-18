@@ -17,7 +17,6 @@ impl ObjectWithGCList {
         Self {
             objectwithgclist_super: ObjectWithGCListSuper::new(tagvariant),
             objectwithgclist_gclist: null_mut(),
-            ..
         }
     }
     pub unsafe fn correct_gray_list(mut objects: *mut *mut ObjectWithGCList) -> *mut *mut ObjectWithGCList {

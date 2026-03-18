@@ -68,7 +68,6 @@ impl TDefaultNew for Table {
             table_array: null_mut(),
             table_node: null_mut(),
             table_last_free: null_mut(),
-            ..
         }
     }
 }
@@ -527,7 +526,7 @@ pub unsafe fn findindex(state: *mut State, table: *mut Table, key: *mut TValue, 
         } else {
             let n_value: *const TValue = getgeneric(table, key, 1);
             if (*n_value).get_tagvariant() == TagVariant::NilAbsentKey {
-                luag_runerror(state, c"invalid key to 'next'".as_ptr());
+                luag_runerror(state, c"invalid key to 'next'".as_ptr(), &[]);
             }
             i = (n_value as *mut Node).offset_from(&mut *((*table).table_node).add(0) as *mut Node) as u32;
             i.wrapping_add(1_u32).wrapping_add(asize)
@@ -685,7 +684,7 @@ pub unsafe fn setnodevector(state: *mut State, table: *mut Table, mut size: u32)
                         ((!0usize) / size_of::<Node>()) as u32
                     })
             {
-                luag_runerror(state, c"table overflow".as_ptr());
+                luag_runerror(state, c"table overflow".as_ptr(), &[]);
             }
             size = (1 << lsize) as u32;
             (*table).table_node = (*state).allocate((size as usize).wrapping_mul(size_of::<Node>())) as *mut Node;
@@ -1062,7 +1061,7 @@ pub unsafe fn luah_finishset(state: *mut State, table: *mut Table, key: *const T
             let mut aux: TValue = TValue::new(TagVariant::NilNil);
             let mut key = key;
             if (*key).get_tagvariant().to_tag_type().is_nil() {
-                luag_runerror(state, c"table index is nil".as_ptr());
+                luag_runerror(state, c"table index is nil".as_ptr(), &[]);
             } else if (*key).get_tagvariant() == TagVariant::NumericNumber {
                 let number = (*key).as_number().unwrap();
                 let mut k: i64 = 0;
@@ -1070,7 +1069,7 @@ pub unsafe fn luah_finishset(state: *mut State, table: *mut Table, key: *const T
                     aux.set_integer(k);
                     key = &aux;
                 } else if number != number {
-                    luag_runerror(state, c"table index is NaN".as_ptr());
+                    luag_runerror(state, c"table index is NaN".as_ptr(), &[]);
                 }
             } else if (*key).get_tagvariant() == TagVariant::StringLong {
                 let ts = (*key).as_string().unwrap();
@@ -1257,7 +1256,7 @@ pub unsafe fn luav_finishget(state: *mut State, mut t: *const TValue, key: *mut 
             }
             loop_count += 1;
         }
-        luag_runerror(state, c"'__index' chain too long; possible loop".as_ptr());
+        luag_runerror(state, c"'__index' chain too long; possible loop".as_ptr(), &[]);
     }
 }
 pub unsafe fn luav_finishset(state: *mut State, mut t: *const TValue, key: *mut TValue, value: *mut TValue, mut hres: i32) {
@@ -1314,6 +1313,6 @@ pub unsafe fn luav_finishset(state: *mut State, mut t: *const TValue, key: *mut 
             }
             loop_count += 1;
         }
-        luag_runerror(state, c"'__newindex' chain too long; possible loop".as_ptr());
+        luag_runerror(state, c"'__newindex' chain too long; possible loop".as_ptr(), &[]);
     }
 }

@@ -543,7 +543,7 @@ pub unsafe fn response_json(state: *mut State) -> i32 {
         lua_getfield(state, 1, c"text".as_ptr());
         if lua_type(state, -1) != Some(TagType::String) {
             lua_settop(state, -2);
-            return lual_error(state, c"response:json(): no text field".as_ptr());
+            return lual_error(state, c"response:json(): no text field".as_ptr(), &[]);
         }
         let mut slen = 0usize;
         let sptr = lua_tolstring(state, -1, &mut slen);
@@ -559,7 +559,7 @@ pub unsafe fn response_json(state: *mut State) -> i32 {
             | Err(msg) => {
                 lua_settop(state, saved_top);
                 let full = format!("response:json(): {}\0", msg);
-                lual_error(state, full.as_ptr() as *const i8)
+                lual_error(state, full.as_ptr() as *const i8, &[])
             },
         }
     }
@@ -573,7 +573,7 @@ pub unsafe fn response_raise_for_status(state: *mut State) -> i32 {
         lua_settop(state, -2);
         if !(200..400).contains(&code) {
             let msg = format!("HTTP Error: {}\0", code);
-            lual_error(state, msg.as_ptr() as *const i8)
+            lual_error(state, msg.as_ptr() as *const i8, &[])
         } else {
             lua_pushvalue(state, 1); // return self for chaining
             1

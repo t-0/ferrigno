@@ -224,8 +224,8 @@ unsafe fn fm_lcm(state: *mut State) -> i32 {
 unsafe fn fm_factorial(state: *mut State) -> i32 {
     unsafe {
         let n = lual_checkinteger(state, 1);
-        if n < 0 { return lual_error(state, c"factorial of negative number".as_ptr()); }
-        if n > 20 { return lual_error(state, c"factorial argument too large".as_ptr()); }
+        if n < 0 { return lual_error(state, c"factorial of negative number".as_ptr(), &[]); }
+        if n > 20 { return lual_error(state, c"factorial argument too large".as_ptr(), &[]); }
         let mut r: i64 = 1;
         for i in 2..=n { r *= i; }
         (*state).push_integer(r); 1
@@ -379,7 +379,7 @@ unsafe fn fm_random(state: *mut State) -> i32 {
                 if lo > hi { lual_argerror(state, 1, c"interval is empty".as_ptr()); }
                 (*state).push_integer(project(rv, (hi as usize).wrapping_sub(lo as usize), rs).wrapping_add(lo as usize) as i64); 1
             },
-            | _ => lual_error(state, c"wrong number of arguments".as_ptr()),
+            | _ => lual_error(state, c"wrong number of arguments".as_ptr(), &[]),
         }
     }
 }

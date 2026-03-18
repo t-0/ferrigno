@@ -38,7 +38,7 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
         if let (Some(initial), Some(step)) = ((*pinit).as_integer(), (*pstep).as_integer()) {
             let mut limit: i64 = 0;
             if step == 0 {
-                luag_runerror(state, c"'for' step is zero".as_ptr());
+                luag_runerror(state, c"'for' step is zero".as_ptr(), &[]);
             }
             (*ra.add(3)).set_integer(initial);
             if forlimit(state, initial, plimit, &mut limit, step) != 0 {
@@ -88,7 +88,7 @@ pub unsafe fn forprep(state: *mut State, ra: *mut TValue) -> i32 {
                 luag_forerror(state, pinit, c"initial value".as_ptr());
             }
             if step == 0.0 {
-                luag_runerror(state, c"'for' step is zero".as_ptr());
+                luag_runerror(state, c"'for' step is zero".as_ptr(), &[]);
             }
             if if (0.0) < step { (limit < init) as i32 } else { (init < limit) as i32 } != 0 {
                 return 1;

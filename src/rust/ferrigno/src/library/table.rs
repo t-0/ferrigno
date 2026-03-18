@@ -61,7 +61,7 @@ pub unsafe fn table_insert(state: *mut State) -> i32 {
                 }
             },
             | _ => {
-                return lual_error(state, c"wrong number of arguments to 'insert'".as_ptr());
+                return lual_error(state, c"wrong number of arguments to 'insert'".as_ptr(), &[]);
             },
         }
         lua_seti(state, 1, position);
@@ -135,8 +135,8 @@ pub unsafe fn addfield(state: *mut State, b: *mut Buffer, i: i64) {
             lual_error(
                 state,
                 c"invalid value (%s) at index %I in table for 'concat'".as_ptr(),
-                lua_typename(state, lua_type(state, -1)),
-                i,
+                &[lua_typename(state, lua_type(state, -1)).into(),
+                i.into()],
             );
         }
         (*b).add_value();
@@ -196,7 +196,7 @@ pub unsafe fn table_unpack(state: *mut State) -> i32 {
             n += 1;
             lua_checkstack(state, n as i32) == 0
         } {
-            return lual_error(state, c"too many results to unpack".as_ptr());
+            return lual_error(state, c"too many results to unpack".as_ptr(), &[]);
         }
         while i < e {
             lua_geti(state, 1, i);
@@ -263,7 +263,7 @@ pub unsafe fn partition(state: *mut State, low: u32, high: u32) -> u32 {
                     break;
                 }
                 if i == high - 1 {
-                    lual_error(state, c"invalid order function for sorting".as_ptr());
+                    lual_error(state, c"invalid order function for sorting".as_ptr(), &[]);
                 }
                 lua_settop(state, -2);
             }
@@ -274,7 +274,7 @@ pub unsafe fn partition(state: *mut State, low: u32, high: u32) -> u32 {
                     break;
                 }
                 if j < i {
-                    lual_error(state, c"invalid order function for sorting".as_ptr());
+                    lual_error(state, c"invalid order function for sorting".as_ptr(), &[]);
                 }
                 lua_settop(state, -2);
             }

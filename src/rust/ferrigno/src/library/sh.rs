@@ -31,7 +31,7 @@ pub unsafe fn sh_cmd(state: *mut State) -> i32 {
         let mut cmd_len: usize = 0;
         let cmd_ptr = lua_tolstring(state, UPVALUE1, &mut cmd_len);
         if cmd_ptr.is_null() {
-            return lual_error(state, c"sh: invalid command name".as_ptr());
+            return lual_error(state, c"sh: invalid command name".as_ptr(), &[]);
         }
         // Command name is unquoted (it's a simple identifier from Lua)
         cmd.extend_from_slice(std::slice::from_raw_parts(cmd_ptr as *const u8, cmd_len));
@@ -42,7 +42,7 @@ pub unsafe fn sh_cmd(state: *mut State) -> i32 {
             // lual_tolstring coerces any Lua value to string and pushes it
             let arg_ptr = lual_tolstring(state, i, &mut arg_len);
             if arg_ptr.is_null() {
-                return lual_error(state, c"sh: cannot convert argument to string".as_ptr());
+                return lual_error(state, c"sh: cannot convert argument to string".as_ptr(), &[]);
             }
             shell_quote(std::slice::from_raw_parts(arg_ptr as *const u8, arg_len), &mut cmd);
             lua_settop(state, -2); // pop the string pushed by lual_tolstring

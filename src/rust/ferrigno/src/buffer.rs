@@ -42,7 +42,7 @@ impl Buffer {
         unsafe {
             let mut newsize = self.buffer_loads.get_size().wrapping_mul(2);
             if (!0usize) - size < self.buffer_loads.get_length() as usize {
-                lual_error(self.buffer_interpreter, c"buffer too large".as_ptr()) as usize
+                lual_error(self.buffer_interpreter, c"buffer too large".as_ptr(), &[]) as usize
             } else {
                 newsize = newsize.max(self.buffer_loads.get_length() + size as i32);
                 newsize as usize
