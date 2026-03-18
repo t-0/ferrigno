@@ -6,6 +6,13 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "../../../README.md"
 
-[dependencies]
-ferrigno-macros = { path = "../ferrigno-macros", version = "0.1.0" }
+
+[[bin]]
+name = "ferrigno"
+path = "src/bin/ferrigno-interpreter.rs"
+
+[[bin]]
+name = "ferrignoc"
+path = "src/bin/ferrigno-compiler.rs"

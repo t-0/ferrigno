@@ -181,7 +181,6 @@ pub struct LocaleConv {
 unsafe extern "C" {
     pub fn localeconv() -> *mut LocaleConv;
 }
-use ferrigno_macros::make_cstring;
 use std::ptr::*;
 pub const MAXIMUM_SIZE: usize = 0x7FFFFFFFFFFFFFFF;
 pub unsafe fn cstr_chr(s: *const i8, c: i8) -> *const i8 {
@@ -504,7 +503,7 @@ pub unsafe fn luao_chunkid(out: *mut i8, source: *const i8, mut source_length: u
             write(
                 out,
                 &mut pos,
-                std::slice::from_raw_parts(make_cstring!("\"]") as *const u8, suffix_len),
+                std::slice::from_raw_parts(c"\"]".as_ptr() as *const u8, suffix_len),
             );
         };
     }
